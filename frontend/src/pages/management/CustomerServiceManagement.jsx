@@ -289,6 +289,11 @@ export default function CustomerServiceManagement() {
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
 
+  // Team management state
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [availableMembers, setAvailableMembers] = useState([]);
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+
   // Load tickets
   const loadTickets = useCallback(async () => {
     try {
