@@ -507,6 +507,60 @@ export default function CustomerServiceManagement() {
 
   const activeFiltersCount = Object.values(filters).filter(v => v && v !== false).length;
 
+  // Load available members for adding to team
+  const loadAvailableMembers = useCallback(async () => {
+    try {
+      const response = await api.get('/support-tickets/available-members');
+      setAvailableMembers(response.data.available_members || []);
+    } catch (error) {
+      console.error('Failed to load available members:', error);
+    }
+  }, []);
+
+  // Add team member
+  const handleAddTeamMember = async (member) => {
+    try {
+      await api.post('/support-tickets/team-members', {
+        user_id: member.id,
+        name: member.name,
+        email: member.email,
+        role: member.role,
+        department: member.department,
+        type: member.type
+      });
+      
+      toast.success(`${member.name} added to support team`);
+      loadTeamMembers();
+      loadAvailableMembers();
+    } catch (error) {
+      toast.error('Failed to add team member');
+    }
+  };
+
+  // Remove team member
+  const handleRemoveTeamMember = async (member) => {
+    if (member.is_auto) {
+      toast.error('Cannot remove auto-added team members');
+      return;
+    }
+    
+    try {
+      await api.delete(`/support-tickets/team-members/${member.id}`);
+      toast.success(`${member.name} removed from support team`);
+      loadTeamMembers();
+      loadAvailableMembers();
+    } catch (error) {
+      toast.error('Failed to remove team member');
+    }
+  };
+
+  // Load available members when modal opens
+  useEffect(() => {
+    if (showAddMemberModal) {
+      loadAvailableMembers();
+    }
+  }, [showAddMemberModal, loadAvailableMembers]);
+
   // Prepare chart data
   const categoryChartData = stats ? Object.entries(stats.by_category || {}).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })) : [];
   const statusChartData = stats ? Object.entries(stats.by_status || {}).map(([name, value]) => ({ name: name.replace('_', ' ').charAt(0).toUpperCase() + name.replace('_', ' ').slice(1), value })) : [];
