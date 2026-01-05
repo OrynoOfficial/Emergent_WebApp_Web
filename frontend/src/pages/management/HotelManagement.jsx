@@ -500,7 +500,7 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading, onBookingCl
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-lg"><Calendar className="h-5 w-5 text-blue-600" />Recent Bookings</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => navigate('/bookings')} className="gap-1">
+              <Button variant="outline" size="sm" onClick={handleViewAllBookings} className="gap-1">
                 View All <ExternalLink className="h-3 w-3" />
               </Button>
             </div>
