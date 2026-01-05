@@ -553,3 +553,192 @@ async def get_hotel_messages(
     messages.sort(key=lambda x: x.get("created_at", datetime.min), reverse=True)
     
     return {"messages": messages[:limit], "total": len(messages)}
+
+
+# ==================== QUICK ACTION ENDPOINTS ====================
+
+class SupportTicketCreate(BaseModel):
+    subject: str
+    message: str
+    priority: str = "normal"  # low, normal, high, urgent
+    category: str = "general"  # general, technical, billing, feedback
+
+class MeetingScheduleCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    scheduled_date: str
+    scheduled_time: str
+    attendees: List[str] = []
+    meeting_type: str = "internal"  # internal, external, support
+
+@router.post("/communications/support-ticket")
+async def create_support_ticket(
+    data: SupportTicketCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a support ticket"""
+    db = get_database()
+    
+    ticket = {
+        "_id": str(uuid.uuid4()),
+        "subject": data.subject,
+        "message": data.message,
+        "priority": data.priority,
+        "category": data.category,
+        "status": "open",
+        "created_by": current_user["_id"],
+        "created_by_name": current_user.get("full_name", current_user.get("email", "User")),
+        "created_by_email": current_user.get("email", ""),
+        "responses": [],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.hotel_support_tickets.insert_one(ticket)
+    
+    # Also create a notification for this
+    notification = {
+        "_id": str(uuid.uuid4()),
+        "type": "support_ticket",
+        "title": f"Support Ticket: {data.subject}",
+        "message": data.message[:100] + "..." if len(data.message) > 100 else data.message,
+        "user_id": current_user["_id"],
+        "is_read": False,
+        "created_at": datetime.utcnow()
+    }
+    await db.notifications.insert_one(notification)
+    
+    return {"message": "Support ticket created", "ticket_id": ticket["_id"]}
+
+
+@router.get("/communications/support-tickets")
+async def get_support_tickets(
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get support tickets"""
+    db = get_database()
+    
+    query = {}
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        query["created_by"] = current_user["_id"]
+    if status:
+        query["status"] = status
+    
+    tickets = await db.hotel_support_tickets.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for t in tickets:
+        t["id"] = str(t.pop("_id", ""))
+    
+    return {"tickets": tickets}
+
+
+@router.post("/communications/schedule-meeting")
+async def schedule_meeting(
+    data: MeetingScheduleCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Schedule a meeting"""
+    db = get_database()
+    
+    meeting = {
+        "_id": str(uuid.uuid4()),
+        "title": data.title,
+        "description": data.description,
+        "scheduled_date": data.scheduled_date,
+        "scheduled_time": data.scheduled_time,
+        "attendees": data.attendees,
+        "meeting_type": data.meeting_type,
+        "status": "scheduled",
+        "organizer_id": current_user["_id"],
+        "organizer_name": current_user.get("full_name", current_user.get("email", "User")),
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.hotel_meetings.insert_one(meeting)
+    
+    # Create notification
+    notification = {
+        "_id": str(uuid.uuid4()),
+        "type": "meeting",
+        "title": f"Meeting Scheduled: {data.title}",
+        "message": f"Scheduled for {data.scheduled_date} at {data.scheduled_time}",
+        "user_id": current_user["_id"],
+        "is_read": False,
+        "created_at": datetime.utcnow()
+    }
+    await db.notifications.insert_one(notification)
+    
+    return {"message": "Meeting scheduled", "meeting_id": meeting["_id"]}
+
+
+@router.get("/communications/meetings")
+async def get_meetings(
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get scheduled meetings"""
+    db = get_database()
+    
+    query = {"organizer_id": current_user["_id"]}
+    if status:
+        query["status"] = status
+    
+    meetings = await db.hotel_meetings.find(query).sort("scheduled_date", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for m in meetings:
+        m["id"] = str(m.pop("_id", ""))
+    
+    return {"meetings": meetings}
+
+
+@router.get("/communications/notifications")
+async def get_hotel_notifications(
+    is_read: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get real notifications for the user"""
+    db = get_database()
+    
+    query = {"user_id": current_user["_id"]}
+    if is_read is not None:
+        query["is_read"] = is_read
+    
+    notifications = await db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for n in notifications:
+        n["id"] = str(n.pop("_id", ""))
+    
+    # Also get system-wide announcements
+    announcements = await db.hotel_announcements.find({"status": "active"}).sort("created_at", -1).limit(5).to_list(5)
+    for a in announcements:
+        a["id"] = str(a.pop("_id", ""))
+        a["type"] = "announcement"
+    
+    # Combine and sort
+    all_notifications = notifications + announcements
+    all_notifications.sort(key=lambda x: x.get("created_at", datetime.min), reverse=True)
+    
+    return {"notifications": all_notifications[:limit], "unread_count": len([n for n in notifications if not n.get("is_read", True)])}
+
+
+@router.put("/communications/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Mark a notification as read"""
+    db = get_database()
+    
+    await db.notifications.update_one(
+        {"_id": notification_id, "user_id": current_user["_id"]},
+        {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Notification marked as read"}
