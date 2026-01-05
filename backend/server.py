@@ -259,6 +259,7 @@ app.include_router(validation_router)
 app.include_router(activity_log_router)
 app.include_router(public_router)  # Public endpoints (no auth required)
 app.include_router(support_router)  # Support chatbot and live chat
+app.include_router(support_tickets_router)  # Support tickets management
 app.include_router(search_router)  # Global search
 app.include_router(users_router)  # User management
 app.include_router(stripe_checkout_router)  # Stripe Checkout integration
