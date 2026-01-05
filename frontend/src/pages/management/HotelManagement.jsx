@@ -18,7 +18,7 @@ import {
   SlidersHorizontal, Grid3X3, List, ArrowUpDown, Check, Car, Utensils,
   Dumbbell, Waves, Coffee, ParkingCircle, Sparkles, Phone, Mail, 
   AlertTriangle, CheckCircle, Clock, Activity, TrendingDown, Percent,
-  FileText, Megaphone, AlertCircle, ExternalLink, Headphones, Video
+  FileText, Megaphone, AlertCircle, ExternalLink, Headphones, Video, Maximize2
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
