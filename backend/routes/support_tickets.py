@@ -283,19 +283,20 @@ async def get_team_members(
     """Get list of team members who can be assigned tickets"""
     db = get_database()
     
-    # Get employees and admins who can handle support tickets
+    # First, get the support team members from the dedicated collection
+    support_team = await db.support_team_members.find({}, {"_id": 0}).to_list(100)
+    
+    if support_team:
+        return {"team_members": support_team}
+    
+    # Fallback to auto-discovery if no explicit team is set up
+    team_members = []
+    
+    # Get employees
     employees = await db.employees.find(
         {"status": "active"},
         {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "position": 1, "department": 1}
     ).to_list(100)
-    
-    # Also get admin/super_admin users
-    admins = await db.users.find(
-        {"role": {"$in": ["admin", "super_admin"]}, "status": "active"},
-        {"_id": 1, "full_name": 1, "username": 1, "email": 1, "role": 1}
-    ).to_list(100)
-    
-    team_members = []
     
     for emp in employees:
         team_members.append({
@@ -304,8 +305,15 @@ async def get_team_members(
             "email": emp.get("email", ""),
             "role": emp.get("position", "Employee"),
             "department": emp.get("department", "Support"),
-            "type": "employee"
+            "type": "employee",
+            "is_auto": True
         })
+    
+    # Get admins
+    admins = await db.users.find(
+        {"role": {"$in": ["admin", "super_admin"]}, "status": "active"},
+        {"_id": 1, "full_name": 1, "username": 1, "email": 1, "role": 1}
+    ).to_list(100)
     
     for admin in admins:
         team_members.append({
@@ -314,10 +322,126 @@ async def get_team_members(
             "email": admin.get("email", ""),
             "role": admin.get("role", "admin").replace("_", " ").title(),
             "department": "Administration",
-            "type": "admin"
+            "type": "admin",
+            "is_auto": True
         })
     
     return {"team_members": team_members}
+
+
+@router.get("/available-members")
+async def get_available_members(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get list of all users/employees who can be added to the support team"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get existing support team member IDs
+    existing_team = await db.support_team_members.find({}, {"id": 1}).to_list(100)
+    existing_ids = [m.get("id") for m in existing_team]
+    
+    available = []
+    
+    # Get all employees
+    employees = await db.employees.find(
+        {"status": "active"},
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "position": 1, "department": 1}
+    ).to_list(100)
+    
+    for emp in employees:
+        emp_id = emp.get("id", "")
+        if emp_id and emp_id not in existing_ids:
+            available.append({
+                "id": emp_id,
+                "name": f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip(),
+                "email": emp.get("email", ""),
+                "role": emp.get("position", "Employee"),
+                "department": emp.get("department", "General"),
+                "type": "employee"
+            })
+    
+    # Get all users with appropriate roles
+    users = await db.users.find(
+        {"role": {"$in": ["admin", "super_admin", "employee", "operator"]}, "status": "active"},
+        {"_id": 1, "full_name": 1, "username": 1, "email": 1, "role": 1}
+    ).to_list(100)
+    
+    for user in users:
+        user_id = str(user.get("_id", ""))
+        if user_id and user_id not in existing_ids:
+            available.append({
+                "id": user_id,
+                "name": user.get("full_name") or user.get("username", "User"),
+                "email": user.get("email", ""),
+                "role": user.get("role", "user").replace("_", " ").title(),
+                "department": "System Users",
+                "type": "user"
+            })
+    
+    return {"available_members": available}
+
+
+class SupportTeamMemberAdd(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str
+    department: str
+    type: str  # employee, admin, user
+
+
+@router.post("/team-members")
+async def add_team_member(
+    member: SupportTeamMemberAdd,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Add a member to the support team"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to manage support team")
+    
+    # Check if already exists
+    existing = await db.support_team_members.find_one({"id": member.id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Member already in support team")
+    
+    team_member = {
+        "id": member.id,
+        "name": member.name,
+        "email": member.email,
+        "role": member.role,
+        "department": member.department,
+        "type": member.type,
+        "added_by": current_user["_id"],
+        "added_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.support_team_members.insert_one(team_member)
+    
+    return {"message": f"{member.name} added to support team", "member": team_member}
+
+
+@router.delete("/team-members/{member_id}")
+async def remove_team_member(
+    member_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Remove a member from the support team"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to manage support team")
+    
+    result = await db.support_team_members.delete_one({"id": member_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    return {"message": "Team member removed successfully"}
 
 
 @router.get("/{ticket_id}")
