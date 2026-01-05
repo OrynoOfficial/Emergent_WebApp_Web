@@ -297,8 +297,13 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading, onBookingCl
   const recentBookings = data.recentBookings || [];
 
   const handleBookingClick = (booking) => {
-    // Navigate to bookings page with the booking ID
-    navigate(`/bookings?booking_id=${booking.id || booking._id}`);
+    // Navigate to admin bookings page with the booking ID as filter
+    navigate(`/admin/bookings?booking_id=${booking.id || booking._id}`);
+  };
+
+  const handleViewAllBookings = () => {
+    // Navigate to all bookings page
+    navigate('/admin/bookings');
   };
 
   return (
