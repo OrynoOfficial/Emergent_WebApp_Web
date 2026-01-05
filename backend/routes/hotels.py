@@ -165,3 +165,391 @@ async def delete_hotel(
     )
     
     return {"message": "Hotel deleted"}
+
+# ==================== ANALYTICS ENDPOINTS ====================
+
+@router.get("/analytics/dashboard")
+async def get_hotel_dashboard_analytics(
+    period: str = Query("30days", description="Time period: 7days, 30days, 3months, 6months"),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get comprehensive hotel dashboard analytics"""
+    db = get_database()
+    
+    # Period calculation
+    periods = {"7days": 7, "30days": 30, "3months": 90, "6months": 180}
+    days = periods.get(period, 30)
+    start_date = datetime.utcnow() - timedelta(days=days)
+    prev_start = start_date - timedelta(days=days)
+    
+    # Get hotels (filter by operator if not admin)
+    hotel_query = {"is_active": True}
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        hotel_query["operator_id"] = current_user["_id"]
+    
+    hotels = await db.hotels.find(hotel_query).to_list(1000)
+    hotel_ids = [h["_id"] for h in hotels]
+    
+    # Get rooms for these hotels
+    rooms = await db.rooms.find({"hotel_id": {"$in": hotel_ids}}).to_list(1000)
+    
+    # Get room bookings in period
+    bookings = await db.room_bookings.find({
+        "hotel_id": {"$in": hotel_ids},
+        "created_at": {"$gte": start_date}
+    }).to_list(10000)
+    
+    # Previous period bookings for comparison
+    prev_bookings = await db.room_bookings.find({
+        "hotel_id": {"$in": hotel_ids},
+        "created_at": {"$gte": prev_start, "$lt": start_date}
+    }).to_list(10000)
+    
+    # Calculate metrics
+    total_hotels = len(hotels)
+    total_rooms = len(rooms)
+    total_bookings = len(bookings)
+    prev_total_bookings = len(prev_bookings)
+    
+    # Revenue calculation
+    total_revenue = sum(b.get("total_amount", 0) for b in bookings)
+    prev_revenue = sum(b.get("total_amount", 0) for b in prev_bookings)
+    
+    # Growth rates
+    bookings_growth = ((total_bookings - prev_total_bookings) / prev_total_bookings * 100) if prev_total_bookings > 0 else 0
+    revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+    
+    # Occupancy calculation
+    total_available = sum(r.get("total_rooms", 1) for r in rooms)
+    total_occupied = sum(r.get("total_rooms", 1) - r.get("available_rooms", 0) for r in rooms)
+    avg_occupancy = (total_occupied / total_available * 100) if total_available > 0 else 0
+    
+    # Average rating
+    avg_rating = sum(h.get("average_rating", 0) or h.get("star_rating", 3) for h in hotels) / len(hotels) if hotels else 0
+    
+    # Bookings by status
+    status_counts = defaultdict(int)
+    for b in bookings:
+        status_counts[b.get("status", "pending")] += 1
+    
+    # Daily booking trend
+    daily_trend = defaultdict(lambda: {"bookings": 0, "revenue": 0, "checkins": 0})
+    for b in bookings:
+        date_key = b.get("created_at", datetime.utcnow()).strftime("%Y-%m-%d")
+        daily_trend[date_key]["bookings"] += 1
+        daily_trend[date_key]["revenue"] += b.get("total_amount", 0)
+        if b.get("status") == "confirmed":
+            daily_trend[date_key]["checkins"] += 1
+    
+    # Sort and limit to last 14 days
+    daily_data = sorted([{"date": k, **v} for k, v in daily_trend.items()], key=lambda x: x["date"])[-14:]
+    
+    # Revenue by hotel
+    hotel_revenue = defaultdict(lambda: {"revenue": 0, "bookings": 0})
+    hotel_map = {h["_id"]: h.get("name", "Unknown") for h in hotels}
+    for b in bookings:
+        hotel_name = hotel_map.get(b.get("hotel_id"), "Unknown")
+        hotel_revenue[hotel_name]["revenue"] += b.get("total_amount", 0)
+        hotel_revenue[hotel_name]["bookings"] += 1
+    
+    top_hotels = sorted([{"name": k, **v} for k, v in hotel_revenue.items()], key=lambda x: x["revenue"], reverse=True)[:5]
+    
+    # Room type distribution
+    room_types = defaultdict(int)
+    for r in rooms:
+        room_types[r.get("room_type", "standard")] += 1
+    
+    room_distribution = [{"type": k.title(), "count": v} for k, v in room_types.items()]
+    
+    # Star rating distribution
+    star_distribution = defaultdict(int)
+    for h in hotels:
+        star_distribution[h.get("star_rating", 3)] += 1
+    
+    star_data = [{"stars": k, "count": v} for k, v in sorted(star_distribution.items())]
+    
+    # City distribution
+    city_distribution = defaultdict(int)
+    for h in hotels:
+        city_distribution[h.get("city", "Unknown")] += 1
+    
+    city_data = [{"city": k, "count": v} for k, v in sorted(city_distribution.items(), key=lambda x: x[1], reverse=True)][:6]
+    
+    # Recent bookings
+    recent_bookings = await db.room_bookings.find({
+        "hotel_id": {"$in": hotel_ids}
+    }).sort("created_at", -1).limit(10).to_list(10)
+    
+    for rb in recent_bookings:
+        rb["id"] = str(rb.pop("_id", ""))
+        rb["hotel_name"] = hotel_map.get(rb.get("hotel_id"), "Unknown")
+    
+    return {
+        "summary": {
+            "totalHotels": total_hotels,
+            "totalRooms": total_rooms,
+            "totalBookings": total_bookings,
+            "totalRevenue": total_revenue,
+            "avgOccupancy": round(avg_occupancy, 1),
+            "avgRating": round(avg_rating, 1),
+            "bookingsGrowth": round(bookings_growth, 1),
+            "revenueGrowth": round(revenue_growth, 1)
+        },
+        "bookingsByStatus": dict(status_counts),
+        "dailyTrend": daily_data,
+        "topHotels": top_hotels,
+        "roomDistribution": room_distribution,
+        "starDistribution": star_data,
+        "cityDistribution": city_data,
+        "recentBookings": recent_bookings
+    }
+
+
+@router.get("/analytics/occupancy")
+async def get_occupancy_analytics(
+    hotel_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get occupancy analytics for hotels"""
+    db = get_database()
+    
+    hotel_query = {"is_active": True}
+    if hotel_id:
+        hotel_query["_id"] = hotel_id
+    elif current_user.get("role") not in ["admin", "super_admin"]:
+        hotel_query["operator_id"] = current_user["_id"]
+    
+    hotels = await db.hotels.find(hotel_query).to_list(100)
+    
+    occupancy_data = []
+    for hotel in hotels:
+        rooms = await db.rooms.find({"hotel_id": hotel["_id"]}).to_list(100)
+        total = sum(r.get("total_rooms", 1) for r in rooms)
+        available = sum(r.get("available_rooms", 0) for r in rooms)
+        occupied = total - available
+        
+        occupancy_data.append({
+            "hotel_id": hotel["_id"],
+            "hotel_name": hotel.get("name", "Unknown"),
+            "city": hotel.get("city", "Unknown"),
+            "total_rooms": total,
+            "occupied_rooms": occupied,
+            "available_rooms": available,
+            "occupancy_rate": round((occupied / total * 100) if total > 0 else 0, 1)
+        })
+    
+    # Weekly occupancy trend (simulated for now)
+    weekly_trend = []
+    for i in range(7):
+        day = datetime.utcnow() - timedelta(days=6-i)
+        weekly_trend.append({
+            "day": day.strftime("%a"),
+            "date": day.strftime("%Y-%m-%d"),
+            "occupancy": 60 + (i * 5) + (10 if day.weekday() >= 5 else 0)  # Higher on weekends
+        })
+    
+    return {
+        "hotels": occupancy_data,
+        "weeklyTrend": weekly_trend,
+        "averageOccupancy": round(sum(h["occupancy_rate"] for h in occupancy_data) / len(occupancy_data), 1) if occupancy_data else 0
+    }
+
+
+# ==================== COMMUNICATIONS ENDPOINTS ====================
+
+class AnnouncementCreate(BaseModel):
+    title: str
+    message: str
+    target_type: str = "all"  # all, guests, staff, operators
+    priority: str = "normal"  # low, normal, high, urgent
+    hotel_id: Optional[str] = None
+
+class AlertCreate(BaseModel):
+    title: str
+    message: str
+    alert_type: str = "info"  # info, warning, error, success
+    hotel_id: Optional[str] = None
+
+@router.post("/communications/announcements")
+async def create_announcement(
+    data: AnnouncementCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a hotel announcement"""
+    db = get_database()
+    
+    announcement = {
+        "_id": str(uuid.uuid4()),
+        "title": data.title,
+        "message": data.message,
+        "target_type": data.target_type,
+        "priority": data.priority,
+        "hotel_id": data.hotel_id,
+        "created_by": current_user["_id"],
+        "created_by_name": current_user.get("full_name", current_user.get("email", "Admin")),
+        "status": "active",
+        "read_by": [],
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.hotel_announcements.insert_one(announcement)
+    
+    return {"message": "Announcement created", "announcement_id": announcement["_id"]}
+
+
+@router.get("/communications/announcements")
+async def get_announcements(
+    hotel_id: Optional[str] = None,
+    status: str = "active",
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get hotel announcements"""
+    db = get_database()
+    
+    query = {"status": status}
+    if hotel_id:
+        query["hotel_id"] = hotel_id
+    
+    announcements = await db.hotel_announcements.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for a in announcements:
+        a["id"] = str(a.pop("_id", ""))
+    
+    return {"announcements": announcements}
+
+
+@router.post("/communications/alerts")
+async def create_alert(
+    data: AlertCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a hotel alert"""
+    db = get_database()
+    
+    alert = {
+        "_id": str(uuid.uuid4()),
+        "title": data.title,
+        "message": data.message,
+        "alert_type": data.alert_type,
+        "hotel_id": data.hotel_id,
+        "created_by": current_user["_id"],
+        "is_resolved": False,
+        "created_at": datetime.utcnow()
+    }
+    
+    await db.hotel_alerts.insert_one(alert)
+    
+    return {"message": "Alert created", "alert_id": alert["_id"]}
+
+
+@router.get("/communications/alerts")
+async def get_alerts(
+    hotel_id: Optional[str] = None,
+    is_resolved: Optional[bool] = False,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get hotel alerts"""
+    db = get_database()
+    
+    query = {}
+    if hotel_id:
+        query["hotel_id"] = hotel_id
+    if is_resolved is not None:
+        query["is_resolved"] = is_resolved
+    
+    alerts = await db.hotel_alerts.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    for a in alerts:
+        a["id"] = str(a.pop("_id", ""))
+    
+    return {"alerts": alerts}
+
+
+@router.put("/communications/alerts/{alert_id}/resolve")
+async def resolve_alert(
+    alert_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Mark alert as resolved"""
+    db = get_database()
+    
+    result = await db.hotel_alerts.update_one(
+        {"_id": alert_id},
+        {"$set": {"is_resolved": True, "resolved_at": datetime.utcnow(), "resolved_by": current_user["_id"]}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    return {"message": "Alert resolved"}
+
+
+@router.get("/communications/messages")
+async def get_hotel_messages(
+    hotel_id: Optional[str] = None,
+    message_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get hotel messages and notifications"""
+    db = get_database()
+    
+    # Combine announcements, alerts, and system messages
+    messages = []
+    
+    # Get announcements
+    ann_query = {"status": "active"}
+    if hotel_id:
+        ann_query["hotel_id"] = hotel_id
+    announcements = await db.hotel_announcements.find(ann_query).sort("created_at", -1).limit(10).to_list(10)
+    for a in announcements:
+        messages.append({
+            "id": str(a["_id"]),
+            "type": "announcement",
+            "title": a.get("title", "Announcement"),
+            "message": a.get("message", ""),
+            "priority": a.get("priority", "normal"),
+            "created_at": a.get("created_at", datetime.utcnow()),
+            "created_by": a.get("created_by_name", "System")
+        })
+    
+    # Get alerts
+    alert_query = {"is_resolved": False}
+    if hotel_id:
+        alert_query["hotel_id"] = hotel_id
+    alerts = await db.hotel_alerts.find(alert_query).sort("created_at", -1).limit(10).to_list(10)
+    for a in alerts:
+        messages.append({
+            "id": str(a["_id"]),
+            "type": "alert",
+            "title": a.get("title", "Alert"),
+            "message": a.get("message", ""),
+            "alert_type": a.get("alert_type", "info"),
+            "created_at": a.get("created_at", datetime.utcnow()),
+            "is_resolved": a.get("is_resolved", False)
+        })
+    
+    # Get recent bookings as notifications
+    booking_query = {}
+    if hotel_id:
+        booking_query["hotel_id"] = hotel_id
+    recent_bookings = await db.room_bookings.find(booking_query).sort("created_at", -1).limit(5).to_list(5)
+    for b in recent_bookings:
+        messages.append({
+            "id": str(b["_id"]),
+            "type": "booking",
+            "title": f"New Booking - {b.get('guest_name', 'Guest')}",
+            "message": f"Room booking for {b.get('check_in_date', 'N/A')} - {b.get('check_out_date', 'N/A')}",
+            "status": b.get("status", "pending"),
+            "created_at": b.get("created_at", datetime.utcnow())
+        })
+    
+    # Sort by date
+    messages.sort(key=lambda x: x.get("created_at", datetime.min), reverse=True)
+    
+    return {"messages": messages[:limit], "total": len(messages)}
