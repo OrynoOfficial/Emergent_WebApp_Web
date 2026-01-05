@@ -17,7 +17,7 @@ import {
   AlertTriangle, Inbox, Users, UserPlus, Calendar, Tag, ArrowUpDown, X,
   SlidersHorizontal, Eye, Trash2, Mail, Phone, Building2, FileText, Check,
   TrendingUp, TrendingDown, Activity, Zap, BarChart2, PieChart, ExternalLink,
-  Briefcase, UserCheck, Timer, MessageCircle, Archive, Flag
+  Briefcase, UserCheck, Timer, MessageCircle, Archive, Flag, UserMinus, Shield
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
