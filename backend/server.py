@@ -50,6 +50,7 @@ from routes.access_control import router as access_control_router
 from routes.notifications import router as notifications_router
 from routes.public import router as public_router
 from routes.support import router as support_router
+from routes.support_tickets import router as support_tickets_router
 from routes.search import router as search_router
 from routes.users import router as users_router
 from routes.stripe_checkout import router as stripe_checkout_router
