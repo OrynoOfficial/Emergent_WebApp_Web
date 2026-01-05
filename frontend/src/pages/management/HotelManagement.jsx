@@ -14,7 +14,8 @@ import {
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
   Bell, Send, Info, Calendar, Settings, Key, Wifi, Eye, Building2,
   Search, Filter, ChevronLeft, ChevronRight, Upload, X, Image as ImageIcon,
-  SlidersHorizontal, Grid3X3, List, ArrowUpDown, Check
+  SlidersHorizontal, Grid3X3, List, ArrowUpDown, Check, Car, Utensils,
+  Dumbbell, Waves, Coffee, ParkingCircle, Sparkles, Phone, Mail
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -70,11 +71,174 @@ const ROOM_AMENITIES = [
 
 const ITEMS_PER_PAGE = 9;
 
+// Amenity Icon Mapper
+const getAmenityIcon = (amenity) => {
+  const icons = {
+    wifi: <Wifi className="w-3.5 h-3.5" />,
+    pool: <Waves className="w-3.5 h-3.5" />,
+    gym: <Dumbbell className="w-3.5 h-3.5" />,
+    spa: <Sparkles className="w-3.5 h-3.5" />,
+    restaurant: <Utensils className="w-3.5 h-3.5" />,
+    bar: <Coffee className="w-3.5 h-3.5" />,
+    parking: <ParkingCircle className="w-3.5 h-3.5" />,
+    room_service: <Bell className="w-3.5 h-3.5" />,
+    airport_shuttle: <Car className="w-3.5 h-3.5" />,
+  };
+  return icons[amenity] || null;
+};
+
+// Image Carousel Component for Hotel Cards
+const ImageCarousel = ({ images, className = "h-48" }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+  const getImageUrl = (img) => {
+    if (!img) return null;
+    return img.startsWith('/api') ? `${backendUrl}${img}` : img;
+  };
+
+  const goToPrevious = (e) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const goToNext = (e) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  if (!images || images.length === 0) {
+    return (
+      <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center`}>
+        <Hotel className="h-16 w-16 text-slate-300" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} relative group overflow-hidden bg-slate-100`}>
+      {/* Main Image */}
+      <img
+        src={getImageUrl(images[currentIndex])}
+        alt={`Image ${currentIndex + 1}`}
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+
+      {/* Navigation Arrows */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg hover:scale-110"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg hover:scale-110"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </>
+      )}
+
+      {/* Dot Indicators */}
+      {images.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {images.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                idx === currentIndex 
+                  ? 'bg-white w-4' 
+                  : 'bg-white/50 hover:bg-white/75'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Image Counter */}
+      {images.length > 1 && (
+        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+          {currentIndex + 1}/{images.length}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Room Image Carousel Component
+const RoomImageCarousel = ({ images, className = "w-48 h-36" }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+  const getImageUrl = (img) => {
+    if (!img) return null;
+    return img.startsWith('/api') ? `${backendUrl}${img}` : img;
+  };
+
+  const goToPrevious = (e) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const goToNext = (e) => {
+    e.stopPropagation();
+    setCurrentIndex(prev => (prev === images.length - 1 ? 0 : prev + 1));
+  };
+
+  if (!images || images.length === 0) {
+    return (
+      <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0`}>
+        <Bed className="w-12 h-12 text-slate-300" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} relative group overflow-hidden bg-slate-100 flex-shrink-0`}>
+      <img
+        src={getImageUrl(images[currentIndex])}
+        alt={`Room ${currentIndex + 1}`}
+        className="w-full h-full object-cover"
+      />
+      
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={goToPrevious}
+            className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow"
+          >
+            <ChevronLeft className="h-3 w-3" />
+          </button>
+          <button
+            onClick={goToNext}
+            className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow"
+          >
+            <ChevronRight className="h-3 w-3" />
+          </button>
+          <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+            {currentIndex + 1}/{images.length}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 // Image Upload Component
 const ImageUploader = ({ images, onImagesChange, maxImages = 10, minImages = 5 }) => {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+  const getImageUrl = (img) => img.startsWith('/api') ? `${backendUrl}${img}` : img;
 
   const handleFileSelect = async (files) => {
     if (!files || files.length === 0) return;
@@ -156,14 +320,13 @@ const ImageUploader = ({ images, onImagesChange, maxImages = 10, minImages = 5 }
         </span>
       </div>
 
-      {/* Image Preview Grid */}
       {images.length > 0 && (
         <ScrollArea className="w-full whitespace-nowrap rounded-lg border bg-slate-50 p-2">
           <div className="flex gap-2">
             {images.map((img, idx) => (
               <div key={idx} className="relative group flex-shrink-0">
                 <img
-                  src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img}
+                  src={getImageUrl(img)}
                   alt={`Hotel ${idx + 1}`}
                   className="h-20 w-28 object-cover rounded-lg border-2 border-white shadow-sm"
                 />
@@ -186,7 +349,6 @@ const ImageUploader = ({ images, onImagesChange, maxImages = 10, minImages = 5 }
         </ScrollArea>
       )}
 
-      {/* Upload Area */}
       {images.length < maxImages && (
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
@@ -237,6 +399,9 @@ const ImageUploader = ({ images, onImagesChange, maxImages = 10, minImages = 5 }
 const RoomImageUploader = ({ images, onImagesChange, maxImages = 5 }) => {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+
+  const getImageUrl = (img) => img.startsWith('/api') ? `${backendUrl}${img}` : img;
 
   const handleFileSelect = async (files) => {
     if (!files || files.length === 0) return;
@@ -290,7 +455,7 @@ const RoomImageUploader = ({ images, onImagesChange, maxImages = 5 }) => {
           {images.map((img, idx) => (
             <div key={idx} className="relative group">
               <img
-                src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img}
+                src={getImageUrl(img)}
                 alt={`Room ${idx + 1}`}
                 className="h-16 w-24 object-cover rounded border"
               />
@@ -366,14 +531,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       
       {startPage > 1 && (
         <>
-          <Button
-            variant={currentPage === 1 ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onPageChange(1)}
-            className="h-8 w-8 p-0"
-          >
-            1
-          </Button>
+          <Button variant="outline" size="sm" onClick={() => onPageChange(1)} className="h-8 w-8 p-0">1</Button>
           {startPage > 2 && <span className="px-2 text-slate-400">...</span>}
         </>
       )}
@@ -393,14 +551,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       {endPage < totalPages && (
         <>
           {endPage < totalPages - 1 && <span className="px-2 text-slate-400">...</span>}
-          <Button
-            variant={currentPage === totalPages ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => onPageChange(totalPages)}
-            className="h-8 w-8 p-0"
-          >
-            {totalPages}
-          </Button>
+          <Button variant="outline" size="sm" onClick={() => onPageChange(totalPages)} className="h-8 w-8 p-0">{totalPages}</Button>
         </>
       )}
       
@@ -591,6 +742,95 @@ const ExecutiveDashboard = ({ hotels, rooms }) => {
   );
 };
 
+// Modern Hotel Card Component
+const HotelCard = ({ hotel, isSelected, onEdit, onDelete, onViewRooms }) => {
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star key={i} className={`w-3 h-3 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`} />
+    ));
+  };
+
+  return (
+    <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${
+      isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md hover:-translate-y-1'
+    }`}>
+      {/* Image Carousel */}
+      <ImageCarousel images={hotel.images} className="h-48" />
+
+      {/* Star Rating Badge */}
+      <div className="absolute top-3 left-3">
+        <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
+          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+          {hotel.star_rating}
+        </Badge>
+      </div>
+
+      <CardContent className="p-4 space-y-3">
+        {/* Hotel Name & Location */}
+        <div>
+          <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{hotel.name}</h3>
+          <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1">
+            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{hotel.city}, {hotel.country}</span>
+          </div>
+        </div>
+
+        {/* Operator Badge */}
+        {hotel.operator_name && (
+          <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-lg border border-blue-100">
+            <Building2 className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-700 truncate">{hotel.operator_name}</span>
+          </div>
+        )}
+
+        {/* Amenities Grid */}
+        {hotel.amenities && hotel.amenities.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-1.5">
+              {hotel.amenities.slice(0, 6).map((amenity, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md transition-colors"
+                  title={amenity.replace('_', ' ')}
+                >
+                  {getAmenityIcon(amenity)}
+                  <span className="text-xs text-slate-600 capitalize">{amenity.replace('_', ' ')}</span>
+                </div>
+              ))}
+              {hotel.amenities.length > 6 && (
+                <div className="flex items-center bg-[#082c59]/10 px-2 py-1 rounded-md">
+                  <span className="text-xs font-medium text-[#082c59]">+{hotel.amenities.length - 6} more</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <Button 
+            size="sm" 
+            onClick={onViewRooms}
+            className="flex-1 bg-[#082c59] hover:bg-[#0a3a75] text-white"
+          >
+            <Bed className="w-4 h-4 mr-1.5" /> View Rooms
+          </Button>
+          <PermissionGate permission="hotels.edit">
+            <Button size="sm" variant="outline" onClick={onEdit} className="px-3">
+              <Edit className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="hotels.delete">
+            <Button size="sm" variant="outline" onClick={onDelete} className="px-3 text-red-600 hover:bg-red-50 hover:border-red-200">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Main Component
 export default function HotelManagement() {
   const { user } = useAuth();
@@ -628,9 +868,6 @@ export default function HotelManagement() {
   // Dialog States
   const [isHotelDialogOpen, setIsHotelDialogOpen] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [viewingItem, setViewingItem] = useState(null);
-  const [viewingType, setViewingType] = useState('hotel');
   const [editingHotel, setEditingHotel] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
   const [hotelForm, setHotelForm] = useState(DEFAULT_HOTEL_FORM);
@@ -640,12 +877,10 @@ export default function HotelManagement() {
   const filteredHotels = useMemo(() => {
     let result = hotels;
 
-    // Apply operator filter
     if (selectedOperator.id) {
       result = result.filter(h => h.operator_id === selectedOperator.id);
     }
 
-    // Apply search
     if (hotelSearch) {
       const search = hotelSearch.toLowerCase();
       result = result.filter(h =>
@@ -656,7 +891,6 @@ export default function HotelManagement() {
       );
     }
 
-    // Apply filters
     if (hotelFilters.city) {
       result = result.filter(h => h.city === hotelFilters.city);
     }
@@ -670,7 +904,6 @@ export default function HotelManagement() {
     return result;
   }, [hotels, selectedOperator.id, hotelSearch, hotelFilters]);
 
-  // Paginate hotels
   const paginatedHotels = useMemo(() => {
     const start = (hotelPage - 1) * ITEMS_PER_PAGE;
     return filteredHotels.slice(start, start + ITEMS_PER_PAGE);
@@ -682,7 +915,6 @@ export default function HotelManagement() {
   const filteredRooms = useMemo(() => {
     let result = rooms;
 
-    // Apply search
     if (roomSearch) {
       const search = roomSearch.toLowerCase();
       result = result.filter(r =>
@@ -692,7 +924,6 @@ export default function HotelManagement() {
       );
     }
 
-    // Apply filters
     if (roomFilters.roomType) {
       result = result.filter(r => r.room_type === roomFilters.roomType);
     }
@@ -718,7 +949,6 @@ export default function HotelManagement() {
     return result;
   }, [rooms, roomSearch, roomFilters]);
 
-  // Paginate rooms
   const paginatedRooms = useMemo(() => {
     const start = (roomPage - 1) * ITEMS_PER_PAGE;
     return filteredRooms.slice(start, start + ITEMS_PER_PAGE);
@@ -767,7 +997,6 @@ export default function HotelManagement() {
     }
   }, [selectedHotel, loadRooms]);
 
-  // Reset page when filters change
   useEffect(() => {
     setHotelPage(1);
   }, [hotelSearch, hotelFilters, selectedOperator.id]);
@@ -894,15 +1123,10 @@ export default function HotelManagement() {
     }
   };
 
-  const renderStars = (rating) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-    ));
-  };
-
   const clearHotelFilters = () => {
     setHotelFilters({ city: '', starRating: '', amenity: '' });
     setHotelSearch('');
+    setSelectedOperator({ id: '', name: '' });
   };
 
   const clearRoomFilters = () => {
@@ -910,8 +1134,13 @@ export default function HotelManagement() {
     setRoomSearch('');
   };
 
-  const activeHotelFiltersCount = Object.values(hotelFilters).filter(Boolean).length + (hotelSearch ? 1 : 0);
+  const activeHotelFiltersCount = Object.values(hotelFilters).filter(Boolean).length + (hotelSearch ? 1 : 0) + (selectedOperator.id ? 1 : 0);
   const activeRoomFiltersCount = Object.values(roomFilters).filter(Boolean).length + (roomSearch ? 1 : 0);
+
+  const handleViewRooms = (hotel) => {
+    setSelectedHotel(hotel);
+    setActiveTab('rooms');
+  };
 
   return (
     <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
@@ -936,7 +1165,7 @@ export default function HotelManagement() {
             <Hotel className="h-4 w-4" /> Hotels
           </TabsTrigger>
           <TabsTrigger value="rooms" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" disabled={!selectedHotel}>
-            <Bed className="h-4 w-4" /> Rooms
+            <Bed className="h-4 w-4" /> Rooms {selectedHotel && `(${selectedHotel.name})`}
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
             <BarChart2 className="h-4 w-4" /> Analytics
@@ -975,7 +1204,7 @@ export default function HotelManagement() {
                     <SlidersHorizontal className="h-4 w-4" />
                     Filters
                     {activeHotelFiltersCount > 0 && (
-                      <Badge className="ml-1 bg-white text-[#082c59] h-5 w-5 p-0 flex items-center justify-center">
+                      <Badge className="ml-1 bg-white text-[#082c59] h-5 w-5 p-0 flex items-center justify-center text-xs">
                         {activeHotelFiltersCount}
                       </Badge>
                     )}
@@ -1010,80 +1239,82 @@ export default function HotelManagement() {
 
               {/* Expanded Filters */}
               {showHotelFilters && (
-                <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">City</Label>
-                    <Select value={hotelFilters.city} onValueChange={(v) => setHotelFilters(p => ({ ...p, city: v }))}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="All cities" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="">All cities</SelectItem>
-                        {CITIES.map(city => (
-                          <SelectItem key={city} value={city}>{city}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="mt-4 pt-4 border-t">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1.5 block">City</Label>
+                      <Select value={hotelFilters.city || "all"} onValueChange={(v) => setHotelFilters(p => ({ ...p, city: v === "all" ? "" : v }))}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="All cities" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="all">All cities</SelectItem>
+                          {CITIES.map(city => (
+                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Star Rating</Label>
-                    <Select value={hotelFilters.starRating} onValueChange={(v) => setHotelFilters(p => ({ ...p, starRating: v }))}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="All ratings" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="">All ratings</SelectItem>
-                        {[5, 4, 3, 2, 1].map(n => (
-                          <SelectItem key={n} value={String(n)}>{n} Star{n > 1 && 's'}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1.5 block">Star Rating</Label>
+                      <Select value={hotelFilters.starRating || "all"} onValueChange={(v) => setHotelFilters(p => ({ ...p, starRating: v === "all" ? "" : v }))}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="All ratings" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="all">All ratings</SelectItem>
+                          {[5, 4, 3, 2, 1].map(n => (
+                            <SelectItem key={n} value={String(n)}>{n} Star{n > 1 && 's'}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Amenity</Label>
-                    <Select value={hotelFilters.amenity} onValueChange={(v) => setHotelFilters(p => ({ ...p, amenity: v }))}>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Any amenity" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="">Any amenity</SelectItem>
-                        {HOTEL_AMENITIES.map(a => (
-                          <SelectItem key={a} value={a} className="capitalize">{a.replace('_', ' ')}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1.5 block">Amenity</Label>
+                      <Select value={hotelFilters.amenity || "all"} onValueChange={(v) => setHotelFilters(p => ({ ...p, amenity: v === "all" ? "" : v }))}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Any amenity" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="all">Any amenity</SelectItem>
+                          {HOTEL_AMENITIES.map(a => (
+                            <SelectItem key={a} value={a} className="capitalize">{a.replace('_', ' ')}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label className="text-xs text-slate-500 mb-1.5 block">Operator</Label>
-                    <Select 
-                      value={selectedOperator.id || 'all'} 
-                      onValueChange={(value) => {
-                        if (value === 'all') {
-                          setSelectedOperator({ id: '', name: '' });
-                        } else {
-                          const op = operators.find(o => (o._id || o.id) === value);
-                          setSelectedOperator({ id: value, name: op?.name || '' });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="All operators" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All operators</SelectItem>
-                        {operators.map(op => (
-                          <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1.5 block">Operator</Label>
+                      <Select 
+                        value={selectedOperator.id || 'all'} 
+                        onValueChange={(value) => {
+                          if (value === 'all') {
+                            setSelectedOperator({ id: '', name: '' });
+                          } else {
+                            const op = operators.find(o => (o._id || o.id) === value);
+                            setSelectedOperator({ id: value, name: op?.name || '' });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="All operators" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="all">All operators</SelectItem>
+                          {operators.map(op => (
+                            <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {activeHotelFiltersCount > 0 && (
-                    <div className="col-span-full flex justify-end">
-                      <Button variant="ghost" size="sm" onClick={clearHotelFilters} className="text-slate-500">
+                    <div className="mt-4 flex justify-end">
+                      <Button variant="ghost" size="sm" onClick={clearHotelFilters} className="text-slate-500 hover:text-slate-700">
                         <X className="h-4 w-4 mr-1" /> Clear all filters
                       </Button>
                     </div>
@@ -1101,7 +1332,7 @@ export default function HotelManagement() {
             </p>
           </div>
 
-          {/* Hotels Grid/List */}
+          {/* Hotels Grid */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <RefreshCw className="h-8 w-8 animate-spin text-[#082c59]" />
@@ -1121,214 +1352,17 @@ export default function HotelManagement() {
                 )}
               </CardContent>
             </Card>
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedHotels.map(hotel => (
-                <Card
-                  key={hotel._id || hotel.id}
-                  className={`cursor-pointer transition-all hover:shadow-lg overflow-hidden group ${
-                    (selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id) 
-                      ? 'ring-2 ring-[#082c59] shadow-lg' 
-                      : 'shadow-sm'
-                  }`}
-                  onClick={() => {
-                    setSelectedHotel(hotel);
-                    setActiveTab('rooms');
-                  }}
-                >
-                  {/* Hotel Images Carousel */}
-                  <div className="relative h-40 bg-slate-100">
-                    {hotel.images && hotel.images.length > 0 ? (
-                      <ScrollArea className="h-full w-full">
-                        <div className="flex h-40">
-                          {hotel.images.slice(0, 5).map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img}
-                              alt={`${hotel.name} ${idx + 1}`}
-                              className="h-full w-full object-cover flex-shrink-0"
-                            />
-                          ))}
-                        </div>
-                        <ScrollBar orientation="horizontal" />
-                      </ScrollArea>
-                    ) : (
-                      <div className="h-full flex items-center justify-center">
-                        <Hotel className="h-12 w-12 text-slate-300" />
-                      </div>
-                    )}
-                    <div className="absolute top-2 right-2">
-                      <Badge className="bg-white/90 text-[#082c59] shadow-sm">
-                        {hotel.star_rating} ⭐
-                      </Badge>
-                    </div>
-                    {hotel.images && hotel.images.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        +{hotel.images.length - 1} photos
-                      </div>
-                    )}
-                  </div>
-
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg truncate">{hotel.name}</h3>
-                        <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                          <MapPin className="w-3.5 h-3.5 flex-shrink-0" /> 
-                          <span className="truncate">{hotel.city}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {hotel.operator_name && (
-                      <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mb-3 w-fit">
-                        <Building2 className="w-3 h-3" />
-                        <span className="truncate max-w-[150px]">{hotel.operator_name}</span>
-                      </div>
-                    )}
-
-                    {hotel.amenities?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {hotel.amenities.slice(0, 3).map(a => (
-                          <Badge key={a} variant="outline" className="text-xs capitalize bg-slate-50">
-                            {a.replace('_', ' ')}
-                          </Badge>
-                        ))}
-                        {hotel.amenities.length > 3 && (
-                          <Badge variant="outline" className="text-xs bg-slate-50">
-                            +{hotel.amenities.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2 border-t">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setSelectedHotel(hotel);
-                          setActiveTab('rooms');
-                        }}
-                      >
-                        <Bed className="w-4 h-4 mr-1" /> Rooms
-                      </Button>
-                      <PermissionGate permission="hotels.edit">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => { e.stopPropagation(); openHotelDialog(hotel); }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </PermissionGate>
-                      <PermissionGate permission="hotels.delete">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={(e) => { e.stopPropagation(); handleDeleteHotel(hotel); }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </PermissionGate>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           ) : (
-            // List View
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {paginatedHotels.map(hotel => (
-                <Card
+                <HotelCard
                   key={hotel._id || hotel.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    (selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id) 
-                      ? 'ring-2 ring-[#082c59]' 
-                      : ''
-                  }`}
-                  onClick={() => {
-                    setSelectedHotel(hotel);
-                    setActiveTab('rooms');
-                  }}
-                >
-                  <CardContent className="p-4 flex gap-4">
-                    {/* Thumbnail */}
-                    <div className="w-32 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {hotel.images && hotel.images[0] ? (
-                        <img
-                          src={hotel.images[0].startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${hotel.images[0]}` : hotel.images[0]}
-                          alt={hotel.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Hotel className="h-8 w-8 text-slate-300" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold text-lg">{hotel.name}</h3>
-                          <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5" /> {hotel.city}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              {renderStars(hotel.star_rating)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <PermissionGate permission="hotels.edit">
-                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openHotelDialog(hotel); }}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="hotels.delete">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteHotel(hotel); }}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                        </div>
-                      </div>
-
-                      {hotel.amenities?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {hotel.amenities.slice(0, 5).map(a => (
-                            <Badge key={a} variant="outline" className="text-xs capitalize">{a.replace('_', ' ')}</Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Images Preview */}
-                    {hotel.images && hotel.images.length > 1 && (
-                      <div className="hidden lg:flex gap-1 flex-shrink-0">
-                        {hotel.images.slice(1, 4).map((img, idx) => (
-                          <div key={idx} className="w-16 h-24 rounded overflow-hidden">
-                            <img
-                              src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                        {hotel.images.length > 4 && (
-                          <div className="w-16 h-24 rounded bg-slate-100 flex items-center justify-center">
-                            <span className="text-sm text-slate-500">+{hotel.images.length - 4}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                  hotel={hotel}
+                  isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)}
+                  onEdit={() => openHotelDialog(hotel)}
+                  onDelete={() => handleDeleteHotel(hotel)}
+                  onViewRooms={() => handleViewRooms(hotel)}
+                />
               ))}
             </div>
           )}
@@ -1359,11 +1393,11 @@ export default function HotelManagement() {
           ) : (
             <>
               {/* Selected Hotel Info */}
-              <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a3a75] text-white">
+              <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a3a75] text-white overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-white/10 rounded-lg overflow-hidden">
+                      <div className="w-16 h-16 bg-white/10 rounded-lg overflow-hidden flex-shrink-0">
                         {selectedHotel.images && selectedHotel.images[0] ? (
                           <img
                             src={selectedHotel.images[0].startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${selectedHotel.images[0]}` : selectedHotel.images[0]}
@@ -1381,7 +1415,11 @@ export default function HotelManagement() {
                         <div className="flex items-center gap-2 text-white/80 text-sm mt-1">
                           <MapPin className="w-4 h-4" /> {selectedHotel.city}
                           <span className="mx-2">•</span>
-                          {renderStars(selectedHotel.star_rating)}
+                          <div className="flex items-center gap-0.5">
+                            {Array.from({ length: selectedHotel.star_rating || 0 }).map((_, i) => (
+                              <Star key={i} className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1419,7 +1457,7 @@ export default function HotelManagement() {
                         <SlidersHorizontal className="h-4 w-4" />
                         Filters
                         {activeRoomFiltersCount > 0 && (
-                          <Badge className="ml-1 bg-white text-[#082c59] h-5 w-5 p-0 flex items-center justify-center">
+                          <Badge className="ml-1 bg-white text-[#082c59] h-5 w-5 p-0 flex items-center justify-center text-xs">
                             {activeRoomFiltersCount}
                           </Badge>
                         )}
@@ -1434,56 +1472,58 @@ export default function HotelManagement() {
                   </div>
 
                   {showRoomFilters && (
-                    <div className="mt-4 pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <Label className="text-xs text-slate-500 mb-1.5 block">Room Type</Label>
-                        <Select value={roomFilters.roomType} onValueChange={(v) => setRoomFilters(p => ({ ...p, roomType: v }))}>
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="All types" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            <SelectItem value="">All types</SelectItem>
-                            {ROOM_TYPES.map(type => (
-                              <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-1.5 block">Room Type</Label>
+                          <Select value={roomFilters.roomType || "all"} onValueChange={(v) => setRoomFilters(p => ({ ...p, roomType: v === "all" ? "" : v }))}>
+                            <SelectTrigger className="bg-white">
+                              <SelectValue placeholder="All types" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              <SelectItem value="all">All types</SelectItem>
+                              {ROOM_TYPES.map(type => (
+                                <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                      <div>
-                        <Label className="text-xs text-slate-500 mb-1.5 block">Price Range</Label>
-                        <Select value={roomFilters.priceRange} onValueChange={(v) => setRoomFilters(p => ({ ...p, priceRange: v }))}>
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="Any price" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            <SelectItem value="">Any price</SelectItem>
-                            <SelectItem value="0-25000">Under 25,000 FCFA</SelectItem>
-                            <SelectItem value="25000-50000">25,000 - 50,000 FCFA</SelectItem>
-                            <SelectItem value="50000-100000">50,000 - 100,000 FCFA</SelectItem>
-                            <SelectItem value="100000-">Above 100,000 FCFA</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-1.5 block">Price Range</Label>
+                          <Select value={roomFilters.priceRange || "all"} onValueChange={(v) => setRoomFilters(p => ({ ...p, priceRange: v === "all" ? "" : v }))}>
+                            <SelectTrigger className="bg-white">
+                              <SelectValue placeholder="Any price" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              <SelectItem value="all">Any price</SelectItem>
+                              <SelectItem value="0-25000">Under 25,000 FCFA</SelectItem>
+                              <SelectItem value="25000-50000">25,000 - 50,000 FCFA</SelectItem>
+                              <SelectItem value="50000-100000">50,000 - 100,000 FCFA</SelectItem>
+                              <SelectItem value="100000-999999999">Above 100,000 FCFA</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                      <div>
-                        <Label className="text-xs text-slate-500 mb-1.5 block">Availability</Label>
-                        <Select value={roomFilters.availability} onValueChange={(v) => setRoomFilters(p => ({ ...p, availability: v }))}>
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="All" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            <SelectItem value="">All</SelectItem>
-                            <SelectItem value="available">Available</SelectItem>
-                            <SelectItem value="low">Low Stock</SelectItem>
-                            <SelectItem value="soldout">Sold Out</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-1.5 block">Availability</Label>
+                          <Select value={roomFilters.availability || "all"} onValueChange={(v) => setRoomFilters(p => ({ ...p, availability: v === "all" ? "" : v }))}>
+                            <SelectTrigger className="bg-white">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="available">Available</SelectItem>
+                              <SelectItem value="low">Low Stock</SelectItem>
+                              <SelectItem value="soldout">Sold Out</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       {activeRoomFiltersCount > 0 && (
-                        <div className="col-span-full flex justify-end">
-                          <Button variant="ghost" size="sm" onClick={clearRoomFilters} className="text-slate-500">
+                        <div className="mt-4 flex justify-end">
+                          <Button variant="ghost" size="sm" onClick={clearRoomFilters} className="text-slate-500 hover:text-slate-700">
                             <X className="h-4 w-4 mr-1" /> Clear filters
                           </Button>
                         </div>
@@ -1512,7 +1552,7 @@ export default function HotelManagement() {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {paginatedRooms.map(room => {
                     const totalRooms = room.total_rooms || 1;
                     const availableRooms = room.available_rooms ?? totalRooms;
@@ -1520,90 +1560,76 @@ export default function HotelManagement() {
                     const isOutOfStock = availableRooms <= 0;
                     
                     return (
-                      <Card key={room.id || room._id} className="overflow-hidden hover:shadow-md transition-shadow">
+                      <Card key={room.id || room._id} className="overflow-hidden hover:shadow-lg transition-shadow">
                         <div className="flex">
-                          {/* Room Images */}
-                          <div className="w-48 h-36 bg-slate-100 flex-shrink-0 relative">
-                            {room.images && room.images.length > 0 ? (
-                              <ScrollArea className="h-full w-full">
-                                <div className="flex h-36">
-                                  {room.images.map((img, idx) => (
-                                    <img 
-                                      key={idx}
-                                      src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img}
-                                      alt={room.room_name} 
-                                      className="h-full w-48 object-cover flex-shrink-0" 
-                                    />
-                                  ))}
-                                </div>
-                                <ScrollBar orientation="horizontal" />
-                              </ScrollArea>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Bed className="w-12 h-12 text-slate-300" />
-                              </div>
-                            )}
-                            <div className={`absolute top-2 right-2 px-2 py-1 rounded text-xs font-bold ${
-                              isOutOfStock ? 'bg-red-600 text-white' :
-                              isLowStock ? 'bg-amber-500 text-white' :
-                              'bg-green-600 text-white'
-                            }`}>
-                              {availableRooms}/{totalRooms}
-                            </div>
+                          {/* Room Image Carousel */}
+                          <RoomImageCarousel images={room.images} className="w-56 h-40" />
+                          
+                          {/* Availability Badge */}
+                          <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold shadow ${
+                            isOutOfStock ? 'bg-red-600 text-white' :
+                            isLowStock ? 'bg-amber-500 text-white' :
+                            'bg-green-600 text-white'
+                          }`}>
+                            {availableRooms}/{totalRooms} Available
                           </div>
                           
                           {/* Room Details */}
-                          <div className="flex-1 p-4">
+                          <div className="flex-1 p-5">
                             <div className="flex justify-between items-start">
                               <div>
-                                <h4 className="font-bold text-lg">{room.room_name || `Room ${(room.id || room._id)?.slice(-4)}`}</h4>
-                                <p className="text-sm text-slate-500 capitalize">{room.room_type} • {room.bed_type} bed • {room.size_sqm || 25}m²</p>
+                                <h4 className="font-bold text-lg text-slate-800">{room.room_name || `Room ${(room.id || room._id)?.slice(-4)}`}</h4>
+                                <p className="text-sm text-slate-500 capitalize mt-0.5">
+                                  {room.room_type} • {room.bed_type} bed • {room.size_sqm || 25}m²
+                                </p>
                               </div>
                               <div className="text-right">
-                                <p className="text-xl font-bold text-[#082c59]">{formatFCFA(room.base_price || room.price_per_night)}</p>
+                                <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(room.base_price || room.price_per_night)}</p>
                                 <p className="text-xs text-slate-500">per night</p>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-4 mt-3">
-                              <div className="flex items-center gap-1 text-sm text-slate-600">
+                            <div className="flex items-center gap-4 mt-4">
+                              <div className="flex items-center gap-1.5 text-sm text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
                                 <Users className="w-4 h-4" />
                                 <span>{room.capacity} guests</span>
                               </div>
-                              <Badge className={
+                              <Badge className={`${
                                 isOutOfStock ? 'bg-red-100 text-red-800' :
                                 isLowStock ? 'bg-amber-100 text-amber-800' :
                                 'bg-green-100 text-green-800'
-                              }>
-                                {isOutOfStock ? 'Sold Out' : isLowStock ? `Low Stock: ${availableRooms} left` : `${availableRooms} available`}
+                              }`}>
+                                {isOutOfStock ? 'Sold Out' : isLowStock ? `Low Stock` : `Available`}
                               </Badge>
                               {room.amenities && room.amenities.length > 0 && (
-                                <div className="flex gap-1">
-                                  {room.amenities.slice(0, 2).map((a, i) => (
-                                    <Badge key={i} variant="outline" className="text-xs capitalize">
+                                <div className="flex gap-1.5">
+                                  {room.amenities.slice(0, 3).map((a, i) => (
+                                    <span key={i} className="text-xs bg-slate-100 px-2 py-1 rounded capitalize text-slate-600">
                                       {a.replace(/_/g, ' ')}
-                                    </Badge>
+                                    </span>
                                   ))}
-                                  {room.amenities.length > 2 && (
-                                    <Badge variant="outline" className="text-xs">+{room.amenities.length - 2}</Badge>
+                                  {room.amenities.length > 3 && (
+                                    <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">
+                                      +{room.amenities.length - 3}
+                                    </span>
                                   )}
                                 </div>
                               )}
                             </div>
                             
                             {room.description && (
-                              <p className="text-sm text-slate-500 mt-2 line-clamp-1">{room.description}</p>
+                              <p className="text-sm text-slate-500 mt-3 line-clamp-1">{room.description}</p>
                             )}
                           </div>
                           
                           {/* Actions */}
-                          <div className="flex flex-col justify-center gap-2 p-4 border-l bg-slate-50">
+                          <div className="flex flex-col justify-center gap-2 p-4 border-l bg-slate-50/50">
                             <PermissionGate permission="hotels.manage_rooms">
                               <Button size="sm" variant="outline" onClick={() => openRoomDialog(room)} className="bg-white">
-                                <Edit className="w-4 h-4 mr-1" /> Edit
+                                <Edit className="w-4 h-4 mr-1.5" /> Edit
                               </Button>
                               <Button size="sm" variant="outline" className="text-red-600 bg-white hover:bg-red-50" onClick={() => handleDeleteRoom(room.id || room._id)}>
-                                <Trash2 className="w-4 h-4 mr-1" /> Delete
+                                <Trash2 className="w-4 h-4 mr-1.5" /> Delete
                               </Button>
                             </PermissionGate>
                           </div>
@@ -1643,7 +1669,6 @@ export default function HotelManagement() {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            {/* Image Upload Section */}
             <ImageUploader
               images={hotelForm.images}
               onImagesChange={(images) => setHotelForm(p => ({ ...p, images }))}
@@ -1651,7 +1676,6 @@ export default function HotelManagement() {
               minImages={5}
             />
 
-            {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label>Hotel Name *</Label>
@@ -1664,7 +1688,7 @@ export default function HotelManagement() {
               </div>
               <div>
                 <Label>City *</Label>
-                <Select value={hotelForm.city} onValueChange={v => setHotelForm(p => ({ ...p, city: v }))}>
+                <Select value={hotelForm.city || ""} onValueChange={v => setHotelForm(p => ({ ...p, city: v }))}>
                   <SelectTrigger className="bg-white mt-1.5">
                     <SelectValue placeholder="Select city" />
                   </SelectTrigger>
@@ -1690,7 +1714,6 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Operator Selection */}
             <div>
               <Label>Operator</Label>
               <Select 
@@ -1716,7 +1739,6 @@ export default function HotelManagement() {
               </Select>
             </div>
 
-            {/* Address */}
             <div>
               <Label>Address *</Label>
               <Input 
@@ -1727,7 +1749,6 @@ export default function HotelManagement() {
               />
             </div>
 
-            {/* Contact Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Phone</Label>
@@ -1750,7 +1771,6 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Amenities */}
             <div>
               <Label className="mb-2 block">Amenities</Label>
               <div className="flex flex-wrap gap-2">
@@ -1777,13 +1797,12 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <Label>Description</Label>
               <Textarea 
                 value={hotelForm.description} 
                 onChange={e => setHotelForm(p => ({ ...p, description: e.target.value }))} 
-                placeholder="Describe the hotel, its features, and what makes it special..."
+                placeholder="Describe the hotel..."
                 rows={3}
                 className="mt-1.5"
               />
@@ -1815,14 +1834,12 @@ export default function HotelManagement() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            {/* Room Images Upload */}
             <RoomImageUploader
               images={roomForm.images}
               onImagesChange={(images) => setRoomForm(p => ({ ...p, images }))}
               maxImages={5}
             />
 
-            {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Room Name *</Label>
@@ -1848,7 +1865,6 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Pricing & Capacity */}
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label>Price/Night (FCFA) *</Label>
@@ -1899,7 +1915,6 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Room Features */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Bed Type</Label>
@@ -1936,7 +1951,6 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Room Amenities */}
             <div>
               <Label className="mb-2 block">Room Amenities</Label>
               <div className="flex flex-wrap gap-2">
@@ -1963,13 +1977,12 @@ export default function HotelManagement() {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <Label>Description</Label>
               <Textarea 
                 value={roomForm.description} 
                 onChange={e => setRoomForm(p => ({ ...p, description: e.target.value }))} 
-                placeholder="Describe the room features, views, and special amenities..."
+                placeholder="Describe the room..."
                 rows={3}
                 className="mt-1.5"
               />
