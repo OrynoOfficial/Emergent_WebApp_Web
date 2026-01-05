@@ -1,0 +1,265 @@
+from fastapi import APIRouter, HTTPException, status, Depends
+from config.database import get_database
+from middleware.auth import get_current_active_user
+from utils.permissions import require_permission
+from typing import Optional
+from datetime import datetime
+import uuid
+from pydantic import BaseModel
+
+router = APIRouter(prefix="/api/car-rental", tags=["Car Rental"])
+
+class CarRentalCreate(BaseModel):
+    make: str
+    model: str
+    year: int
+    vehicle_type: str
+    seats: int
+    doors: int
+    transmission: str
+    fuel_type: str
+    price_per_day: float
+    price_per_hour: Optional[float] = None
+    city: Optional[str] = None
+    features: Optional[list] = []
+    images: Optional[list] = []
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+
+@router.post("/")
+async def create_car(
+    car_data: CarRentalCreate,
+    current_user: dict = Depends(require_permission("car_rental.create"))
+):
+    """Create a new car rental - requires car_rental.create permission"""
+    db = get_database()
+    
+    # Use provided operator_id or default to current user
+    operator_id = car_data.operator_id or current_user["_id"]
+    operator_name = car_data.operator_name or ""
+    
+    # If operator_id provided but no name, try to fetch it
+    if operator_id and not operator_name:
+        operator = await db.operators.find_one({"_id": operator_id})
+        if operator:
+            operator_name = operator.get("name", "")
+    
+    car = {
+        "_id": str(uuid.uuid4()),
+        **car_data.dict(exclude={"operator_id", "operator_name"}),
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "is_available": True,
+        "average_rating": 0.0,
+        "total_ratings": 0,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.car_rentals.insert_one(car)
+    return {"message": "Car created", "car_id": car["_id"]}
+
+@router.get("/")
+async def get_cars(
+    vehicle_type: Optional[str] = None,
+    transmission: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get available cars"""
+    db = get_database()
+    
+    query = {"is_available": True}
+    if vehicle_type:
+        query["vehicle_type"] = vehicle_type
+    if transmission:
+        query["transmission"] = transmission
+    
+    cars = await db.car_rentals.find(query).skip(skip).limit(limit).to_list(limit)
+    total = await db.car_rentals.count_documents(query)
+    
+    return {"cars": cars, "total": total}
+
+@router.get("/{car_id}")
+async def get_car(car_id: str):
+    """Get car details"""
+    db = get_database()
+    car = await db.car_rentals.find_one({"_id": car_id})
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+    car["id"] = str(car.pop("_id", ""))
+    return car
+
+
+class CarRentalUpdate(BaseModel):
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    vehicle_type: Optional[str] = None
+    seats: Optional[int] = None
+    doors: Optional[int] = None
+    transmission: Optional[str] = None
+    fuel_type: Optional[str] = None
+    price_per_day: Optional[float] = None
+    price_per_hour: Optional[float] = None
+    city: Optional[str] = None
+    features: Optional[list] = None
+    images: Optional[list] = None
+    is_available: Optional[bool] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+
+
+@router.put("/{car_id}")
+async def update_car(
+    car_id: str,
+    car_data: CarRentalUpdate,
+    current_user: dict = Depends(require_permission("car_rental.edit"))
+):
+    """Update a car rental - requires car_rental.edit permission"""
+    db = get_database()
+    
+    car = await db.car_rentals.find_one({"_id": car_id})
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Check authorization for operators (can only edit their own)
+    user_role = current_user.get("role", "")
+    if user_role not in ["admin", "super_admin"]:
+        if car.get("operator_id") != current_user.get("_id"):
+            raise HTTPException(status_code=403, detail="You can only edit your own cars")
+    
+    update_data = {k: v for k, v in car_data.dict().items() if v is not None}
+    
+    # If operator_id is being updated, fetch the operator name
+    if "operator_id" in update_data and update_data["operator_id"]:
+        if not update_data.get("operator_name"):
+            operator = await db.operators.find_one({"_id": update_data["operator_id"]})
+            if operator:
+                update_data["operator_name"] = operator.get("name", "")
+    
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.car_rentals.update_one({"_id": car_id}, {"$set": update_data})
+    
+    return {"message": "Car updated"}
+
+
+@router.delete("/{car_id}")
+async def delete_car(
+    car_id: str,
+    current_user: dict = Depends(require_permission("car_rental.delete"))
+):
+    """Delete a car rental - requires car_rental.delete permission"""
+    db = get_database()
+    
+    car = await db.car_rentals.find_one({"_id": car_id})
+    if not car:
+        raise HTTPException(status_code=404, detail="Car not found")
+    
+    # Check authorization for operators (can only delete their own)
+    user_role = current_user.get("role", "")
+    if user_role not in ["admin", "super_admin"]:
+        if car.get("operator_id") != current_user.get("_id"):
+            raise HTTPException(status_code=403, detail="You can only delete your own cars")
+    
+    # Check for active bookings
+    active_bookings = await db.car_rental_bookings.count_documents({
+        "vehicle_id": car_id,
+        "status": {"$in": ["pending", "confirmed"]}
+    })
+    
+    if active_bookings > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete car with active bookings")
+    
+    await db.car_rentals.delete_one({"_id": car_id})
+    
+    return {"message": "Car deleted"}
+
+
+class CarRentalBookingCreate(BaseModel):
+    vehicle_id: str
+    vehicle_name: str
+    pickup_date: str
+    return_date: str
+    pickup_location: Optional[str] = None
+    driver_name: str
+    driver_email: str
+    driver_phone: str
+    driver_license: str
+    driver_address: Optional[str] = None
+    extras: list = []
+    base_price: float
+    extras_price: float = 0
+    commission: float = 0
+    total_amount: float
+
+
+@router.post("/book")
+async def create_car_rental_booking(
+    booking_data: CarRentalBookingCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a car rental booking"""
+    db = get_database()
+    
+    # Generate booking number
+    booking_count = await db.orders.count_documents({"service_category": "car_rental"})
+    booking_number = f"CAR-{booking_count + 1:06d}"
+    
+    booking = {
+        "_id": str(uuid.uuid4()),
+        "booking_number": booking_number,
+        "user_id": current_user["_id"],
+        "service_category": "car_rental",
+        "service_name": f"Car Rental - {booking_data.vehicle_name}",
+        "vehicle_id": booking_data.vehicle_id,
+        "vehicle_name": booking_data.vehicle_name,
+        "pickup_date": booking_data.pickup_date,
+        "return_date": booking_data.return_date,
+        "pickup_location": booking_data.pickup_location,
+        "driver_name": booking_data.driver_name,
+        "driver_email": booking_data.driver_email,
+        "driver_phone": booking_data.driver_phone,
+        "driver_license": booking_data.driver_license,
+        "driver_address": booking_data.driver_address,
+        "extras": booking_data.extras,
+        "base_price": booking_data.base_price,
+        "extras_price": booking_data.extras_price,
+        "commission": booking_data.commission,
+        "total_amount": booking_data.total_amount,
+        "status": "pending",
+        "payment_status": "pending",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.orders.insert_one(booking)
+    
+    return {
+        "success": True,
+        "message": "Car rental booked successfully",
+        "booking_id": booking["_id"],
+        "booking_number": booking_number
+    }
+
+
+@router.get("/bookings/my")
+async def get_my_car_bookings(
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get user's car rental bookings"""
+    db = get_database()
+    
+    bookings = await db.orders.find(
+        {"user_id": current_user["_id"], "service_category": "car_rental"},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.orders.count_documents(
+        {"user_id": current_user["_id"], "service_category": "car_rental"}
+    )
+    
+    return {"bookings": bookings, "total": total}

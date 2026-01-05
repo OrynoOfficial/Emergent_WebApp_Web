@@ -1,0 +1,217 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from config.database import get_database
+from middleware.auth import get_current_active_user
+from models.promo_code import PromoCodeCreate, PromoCodeValidate
+from typing import Optional
+from datetime import datetime
+import uuid
+
+router = APIRouter(prefix="/api/promo-codes", tags=["Promo Codes"])
+
+@router.post("/")
+async def create_promo_code(
+    promo_data: PromoCodeCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a promo code (admin/operator only)"""
+    db = get_database()
+    
+    if current_user["role"] not in ["admin", "super_admin", "operator"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if code already exists
+    existing = await db.promo_codes.find_one({"code": promo_data.code.upper()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Promo code already exists")
+    
+    promo = {
+        "_id": str(uuid.uuid4()),
+        **promo_data.dict(),
+        "code": promo_data.code.upper(),
+        "times_used": 0,
+        "is_active": True,
+        "created_by": current_user["_id"],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Set operator_id for operator-created codes
+    if current_user["role"] == "operator":
+        promo["operator_id"] = current_user.get("operator_id")
+        promo["operator_name"] = current_user.get("operator_name")
+    
+    await db.promo_codes.insert_one(promo)
+    
+    return {"message": "Promo code created", "code": promo["code"]}
+
+@router.post("/validate")
+async def validate_promo_code(
+    validation: PromoCodeValidate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Validate a promo code"""
+    db = get_database()
+    
+    promo = await db.promo_codes.find_one({
+        "code": validation.code.upper(),
+        "is_active": True
+    })
+    
+    if not promo:
+        raise HTTPException(status_code=404, detail="Invalid promo code")
+    
+    now = datetime.utcnow().isoformat()
+    
+    # Check validity dates
+    if promo["valid_from"] > now:
+        raise HTTPException(status_code=400, detail="Promo code not yet active")
+    if promo["valid_to"] < now:
+        raise HTTPException(status_code=400, detail="Promo code expired")
+    
+    # Check usage limit
+    if promo.get("usage_limit") and promo["times_used"] >= promo["usage_limit"]:
+        raise HTTPException(status_code=400, detail="Promo code usage limit reached")
+    
+    # Check per-user limit
+    user_uses = await db.promo_code_uses.count_documents({
+        "promo_code": promo["code"],
+        "user_id": current_user["_id"]
+    })
+    if user_uses >= promo.get("per_user_limit", 1):
+        raise HTTPException(status_code=400, detail="You have already used this promo code")
+    
+    # Check service type
+    if promo.get("service_types") and validation.service_type:
+        if validation.service_type not in promo["service_types"]:
+            raise HTTPException(status_code=400, detail="Promo code not valid for this service")
+    
+    # Check minimum order amount
+    if promo.get("min_order_amount") and validation.order_amount:
+        if validation.order_amount < promo["min_order_amount"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minimum order amount is {promo['min_order_amount']} XAF"
+            )
+    
+    # Check first order only
+    if promo.get("first_order_only"):
+        user_orders = await db.orders.count_documents({"user_id": current_user["_id"]})
+        if user_orders > 0:
+            raise HTTPException(status_code=400, detail="Promo code is for first order only")
+    
+    # Calculate discount
+    discount = 0
+    if validation.order_amount:
+        if promo["discount_type"] == "percentage":
+            discount = validation.order_amount * (promo["discount_value"] / 100)
+            if promo.get("max_discount_amount") and discount > promo["max_discount_amount"]:
+                discount = promo["max_discount_amount"]
+        else:
+            discount = promo["discount_value"]
+    
+    return {
+        "valid": True,
+        "code": promo["code"],
+        "name": promo["name"],
+        "discount_type": promo["discount_type"],
+        "discount_value": promo["discount_value"],
+        "discount_amount": round(discount, 2) if validation.order_amount else None,
+        "max_discount": promo.get("max_discount_amount")
+    }
+
+@router.post("/use")
+async def use_promo_code(
+    code: str,
+    order_id: str,
+    discount_amount: float,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Record promo code usage"""
+    db = get_database()
+    
+    # Record usage
+    usage = {
+        "_id": str(uuid.uuid4()),
+        "promo_code": code.upper(),
+        "user_id": current_user["_id"],
+        "order_id": order_id,
+        "discount_amount": discount_amount,
+        "used_at": datetime.utcnow()
+    }
+    await db.promo_code_uses.insert_one(usage)
+    
+    # Increment usage count
+    await db.promo_codes.update_one(
+        {"code": code.upper()},
+        {"$inc": {"times_used": 1}}
+    )
+    
+    return {"message": "Promo code applied"}
+
+@router.get("/")
+async def get_promo_codes(
+    is_active: Optional[bool] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get promo codes (admin/operator)"""
+    db = get_database()
+    
+    if current_user["role"] not in ["admin", "super_admin", "operator"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = {}
+    if current_user["role"] == "operator":
+        query["operator_id"] = current_user.get("operator_id")
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    promos = await db.promo_codes.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.promo_codes.count_documents(query)
+    
+    return {"promo_codes": promos, "total": total}
+
+@router.put("/{code}")
+async def update_promo_code(
+    code: str,
+    is_active: bool,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Activate/deactivate a promo code"""
+    db = get_database()
+    
+    if current_user["role"] not in ["admin", "super_admin", "operator"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = {"code": code.upper()}
+    if current_user["role"] == "operator":
+        query["operator_id"] = current_user.get("operator_id")
+    
+    result = await db.promo_codes.update_one(
+        query,
+        {"$set": {"is_active": is_active, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Promo code not found")
+    
+    return {"message": f"Promo code {'activated' if is_active else 'deactivated'}"}
+
+@router.delete("/{code}")
+async def delete_promo_code(
+    code: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Delete a promo code"""
+    db = get_database()
+    
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await db.promo_codes.delete_one({"code": code.upper()})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Promo code not found")
+    
+    return {"message": "Promo code deleted"}

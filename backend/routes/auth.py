@@ -1,0 +1,291 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from models.user import UserCreate, UserLogin, User, Token, UserUpdate
+from utils.auth import (
+    get_password_hash,
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    generate_2fa_secret,
+    verify_2fa_token,
+    generate_2fa_qr_code,
+    generate_phone_otp
+)
+from utils.geolocation import get_country_from_ip, get_location_data
+from utils.email import send_verification_email, send_otp_email
+from config.database import get_database
+from middleware.auth import get_current_active_user
+from datetime import datetime, timedelta
+import uuid
+
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+@router.post("/register", response_model=dict)
+async def register(user_data: UserCreate, request: Request):
+    """Register a new user"""
+    db = get_database()
+    
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Get IP and location data
+    client_ip = request.client.host
+    location_data = get_location_data(client_ip)
+    
+    # Create user
+    user = {
+        "_id": str(uuid.uuid4()),
+        "email": user_data.email,
+        "username": user_data.username,
+        "password_hash": get_password_hash(user_data.password),
+        "full_name": user_data.full_name,
+        "phone": user_data.phone,
+        "role": user_data.role,
+        "status": "pending",
+        "email_verified": False,
+        "email_verification_token": str(uuid.uuid4()),
+        "two_fa_enabled": False,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+        "ip_address": client_ip,
+        "country": location_data.get("country_code"),
+        "phone_country_code": location_data.get("country_code")
+    }
+    
+    await db.users.insert_one(user)
+    
+    # Send verification email
+    verification_link = f"http://localhost:3000/verify-email?token={user['email_verification_token']}"
+    await send_verification_email(user["email"], verification_link)
+    
+    return {
+        "message": "User registered successfully. Please check your email to verify your account.",
+        "user_id": user["_id"]
+    }
+
+@router.post("/login", response_model=Token)
+async def login(credentials: UserLogin, request: Request):
+    """Login user"""
+    db = get_database()
+    
+    # Find user
+    user = await db.users.find_one({"email": credentials.email})
+    if not user or not verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+    
+    # Check if user is active
+    if user["status"] != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is not active"
+        )
+    
+    # Check 2FA
+    if user.get("two_fa_enabled"):
+        if not credentials.otp_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="2FA code required"
+            )
+        
+        if not verify_2fa_token(user["two_fa_secret"], credentials.otp_code):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid 2FA code"
+            )
+    
+    # Update last login
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"last_login": datetime.utcnow()}}
+    )
+    
+    # Create tokens
+    access_token = create_access_token(data={"sub": user["_id"], "email": user["email"]})
+    refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(request: Request):
+    """Refresh access token using refresh token"""
+    from utils.auth import decode_token
+    from pydantic import BaseModel
+    
+    class RefreshRequest(BaseModel):
+        refresh_token: str
+    
+    db = get_database()
+    
+    try:
+        body = await request.json()
+        refresh_token_str = body.get("refresh_token")
+        
+        if not refresh_token_str:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Refresh token required"
+            )
+        
+        # Decode and validate refresh token
+        payload = decode_token(refresh_token_str)
+        
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        
+        user_id = payload.get("sub")
+        user = await db.users.find_one({"_id": user_id})
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        if user["status"] != "active":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is not active"
+            )
+        
+        # Create new tokens
+        access_token = create_access_token(data={"sub": user["_id"], "email": user["email"]})
+        new_refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+
+@router.post("/setup-2fa")
+async def setup_2fa(current_user: dict = Depends(get_current_active_user)):
+    """Setup 2FA for user"""
+    db = get_database()
+    
+    # Generate secret
+    secret = generate_2fa_secret()
+    qr_code = generate_2fa_qr_code(secret, current_user["email"])
+    
+    # Store secret temporarily
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"two_fa_secret": secret, "two_fa_method": "authenticator"}}
+    )
+    
+    return {
+        "secret": secret,
+        "qr_code": qr_code
+    }
+
+@router.post("/verify-2fa")
+async def verify_2fa(
+    otp_code: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Verify and enable 2FA"""
+    db = get_database()
+    
+    if not current_user.get("two_fa_secret"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="2FA not set up"
+        )
+    
+    if not verify_2fa_token(current_user["two_fa_secret"], otp_code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid 2FA code"
+        )
+    
+    # Enable 2FA
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"two_fa_enabled": True}}
+    )
+    
+    return {"message": "2FA enabled successfully"}
+
+@router.get("/me", response_model=dict)
+async def get_me(current_user: dict = Depends(get_current_active_user)):
+    """Get current user info"""
+    # Remove sensitive data
+    user_data = current_user.copy()
+    user_data.pop("password_hash", None)
+    user_data.pop("two_fa_secret", None)
+    user_data.pop("email_verification_token", None)
+    user_data.pop("password_reset_token", None)
+    
+    return user_data
+
+@router.post("/change-password")
+async def change_password(
+    request: Request,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Change user password"""
+    db = get_database()
+    
+    try:
+        body = await request.json()
+        current_password = body.get("current_password")
+        new_password = body.get("new_password")
+        
+        if not current_password or not new_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password and new password are required"
+            )
+        
+        # Verify current password
+        if not verify_password(current_password, current_user["password_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+        
+        # Validate new password length
+        if len(new_password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 8 characters"
+            )
+        
+        # Update password
+        new_hash = get_password_hash(new_password)
+        await db.users.update_one(
+            {"_id": current_user["_id"]},
+            {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}}
+        )
+        
+        return {"message": "Password changed successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password"
+        )

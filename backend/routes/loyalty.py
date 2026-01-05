@@ -1,0 +1,291 @@
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from config.database import get_database
+from middleware.auth import get_current_active_user
+from models.loyalty import LoyaltyTier
+from typing import Optional
+from datetime import datetime, timedelta
+import uuid
+import secrets
+import string
+
+router = APIRouter(prefix="/api/loyalty", tags=["Loyalty"])
+
+# Points earned per currency unit spent
+POINTS_PER_CURRENCY = 0.1  # 10 points per 100 XAF
+
+# Tier thresholds (total points earned)
+TIER_THRESHOLDS = {
+    LoyaltyTier.BRONZE: 0,
+    LoyaltyTier.SILVER: 1000,
+    LoyaltyTier.GOLD: 5000,
+    LoyaltyTier.PLATINUM: 15000
+}
+
+# Tier benefits (bonus multiplier)
+TIER_MULTIPLIERS = {
+    LoyaltyTier.BRONZE: 1.0,
+    LoyaltyTier.SILVER: 1.25,
+    LoyaltyTier.GOLD: 1.5,
+    LoyaltyTier.PLATINUM: 2.0
+}
+
+@router.get("/program")
+async def get_loyalty_program(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get user's loyalty program details"""
+    db = get_database()
+    
+    program = await db.loyalty_programs.find_one({"user_id": current_user["_id"]}, {"_id": 0})
+    
+    if not program:
+        # Create new loyalty program for user
+        program = {
+            "_id": str(uuid.uuid4()),
+            "user_id": current_user["_id"],
+            "total_points": 0,
+            "available_points": 0,
+            "tier": LoyaltyTier.BRONZE,
+            "total_spent": 0,
+            "total_bookings": 0,
+            "joined_at": datetime.utcnow(),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        await db.loyalty_programs.insert_one(program)
+        program.pop("_id")
+    
+    # Add tier info
+    program["tier_multiplier"] = TIER_MULTIPLIERS.get(program["tier"], 1.0)
+    program["next_tier"] = None
+    program["points_to_next_tier"] = None
+    
+    # Calculate next tier
+    tiers = list(TIER_THRESHOLDS.keys())
+    current_idx = tiers.index(program["tier"]) if program["tier"] in tiers else 0
+    if current_idx < len(tiers) - 1:
+        next_tier = tiers[current_idx + 1]
+        program["next_tier"] = next_tier
+        program["points_to_next_tier"] = TIER_THRESHOLDS[next_tier] - program["total_points"]
+    
+    return program
+
+@router.post("/earn")
+async def earn_points(
+    amount: float,
+    order_id: str,
+    service_type: str,
+    description: str = "Purchase reward",
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Earn loyalty points from a purchase"""
+    db = get_database()
+    
+    # Get or create loyalty program
+    program = await db.loyalty_programs.find_one({"user_id": current_user["_id"]})
+    
+    if not program:
+        program = {
+            "_id": str(uuid.uuid4()),
+            "user_id": current_user["_id"],
+            "total_points": 0,
+            "available_points": 0,
+            "tier": LoyaltyTier.BRONZE,
+            "total_spent": 0,
+            "total_bookings": 0,
+            "joined_at": datetime.utcnow(),
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        await db.loyalty_programs.insert_one(program)
+    
+    # Calculate points with tier multiplier
+    multiplier = TIER_MULTIPLIERS.get(program["tier"], 1.0)
+    base_points = int(amount * POINTS_PER_CURRENCY)
+    bonus_points = int(base_points * (multiplier - 1))
+    total_earned = base_points + bonus_points
+    
+    # Create transaction
+    transaction = {
+        "_id": str(uuid.uuid4()),
+        "user_id": current_user["_id"],
+        "loyalty_program_id": program["_id"],
+        "transaction_type": "earn",
+        "points": total_earned,
+        "description": f"{description} (+{bonus_points} bonus)" if bonus_points > 0 else description,
+        "order_id": order_id,
+        "service_type": service_type,
+        "expires_at": datetime.utcnow() + timedelta(days=365),  # Points expire after 1 year
+        "created_at": datetime.utcnow()
+    }
+    await db.loyalty_transactions.insert_one(transaction)
+    
+    # Update program
+    new_total = program["total_points"] + total_earned
+    new_available = program["available_points"] + total_earned
+    new_spent = program["total_spent"] + amount
+    new_bookings = program["total_bookings"] + 1
+    
+    # Check for tier upgrade
+    new_tier = program["tier"]
+    for tier, threshold in reversed(list(TIER_THRESHOLDS.items())):
+        if new_total >= threshold:
+            new_tier = tier
+            break
+    
+    update_data = {
+        "total_points": new_total,
+        "available_points": new_available,
+        "total_spent": new_spent,
+        "total_bookings": new_bookings,
+        "tier": new_tier,
+        "updated_at": datetime.utcnow()
+    }
+    
+    if new_tier != program["tier"]:
+        update_data["tier_updated_at"] = datetime.utcnow()
+    
+    await db.loyalty_programs.update_one({"_id": program["_id"]}, {"$set": update_data})
+    
+    return {
+        "points_earned": total_earned,
+        "base_points": base_points,
+        "bonus_points": bonus_points,
+        "new_total": new_total,
+        "new_tier": new_tier,
+        "tier_upgraded": new_tier != program["tier"]
+    }
+
+@router.get("/transactions")
+async def get_transactions(
+    transaction_type: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get loyalty transactions"""
+    db = get_database()
+    
+    query = {"user_id": current_user["_id"]}
+    if transaction_type:
+        query["transaction_type"] = transaction_type
+    
+    transactions = await db.loyalty_transactions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.loyalty_transactions.count_documents(query)
+    
+    return {"transactions": transactions, "total": total}
+
+@router.get("/rewards")
+async def get_available_rewards(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get available rewards for redemption"""
+    db = get_database()
+    
+    program = await db.loyalty_programs.find_one({"user_id": current_user["_id"]})
+    user_tier = program["tier"] if program else LoyaltyTier.BRONZE
+    
+    # Get rewards available for user's tier
+    tier_order = [LoyaltyTier.BRONZE, LoyaltyTier.SILVER, LoyaltyTier.GOLD, LoyaltyTier.PLATINUM]
+    user_tier_idx = tier_order.index(user_tier)
+    available_tiers = tier_order[:user_tier_idx + 1]
+    
+    rewards = await db.loyalty_rewards.find({
+        "is_active": True,
+        "min_tier": {"$in": available_tiers}
+    }, {"_id": 0}).to_list(100)
+    
+    return {
+        "rewards": rewards,
+        "user_points": program["available_points"] if program else 0,
+        "user_tier": user_tier
+    }
+
+@router.post("/redeem/{reward_id}")
+async def redeem_reward(
+    reward_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Redeem a reward"""
+    db = get_database()
+    
+    # Get reward
+    reward = await db.loyalty_rewards.find_one({"_id": reward_id, "is_active": True})
+    if not reward:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    
+    # Get user's program
+    program = await db.loyalty_programs.find_one({"user_id": current_user["_id"]})
+    if not program:
+        raise HTTPException(status_code=400, detail="No loyalty program found")
+    
+    # Check points
+    if program["available_points"] < reward["points_required"]:
+        raise HTTPException(status_code=400, detail="Insufficient points")
+    
+    # Check tier
+    tier_order = [LoyaltyTier.BRONZE, LoyaltyTier.SILVER, LoyaltyTier.GOLD, LoyaltyTier.PLATINUM]
+    if tier_order.index(program["tier"]) < tier_order.index(reward["min_tier"]):
+        raise HTTPException(status_code=400, detail="Tier requirement not met")
+    
+    # Generate redemption code
+    code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+    
+    # Create redemption
+    redemption = {
+        "_id": str(uuid.uuid4()),
+        "user_id": current_user["_id"],
+        "loyalty_program_id": program["_id"],
+        "reward_id": reward_id,
+        "reward_name": reward["name"],
+        "points_used": reward["points_required"],
+        "status": "pending",
+        "code": code,
+        "expires_at": datetime.utcnow() + timedelta(days=30),
+        "created_at": datetime.utcnow()
+    }
+    await db.loyalty_redemptions.insert_one(redemption)
+    
+    # Deduct points
+    await db.loyalty_programs.update_one(
+        {"_id": program["_id"]},
+        {"$inc": {"available_points": -reward["points_required"]}}
+    )
+    
+    # Create transaction
+    transaction = {
+        "_id": str(uuid.uuid4()),
+        "user_id": current_user["_id"],
+        "loyalty_program_id": program["_id"],
+        "transaction_type": "redeem",
+        "points": -reward["points_required"],
+        "description": f"Redeemed: {reward['name']}",
+        "created_at": datetime.utcnow()
+    }
+    await db.loyalty_transactions.insert_one(transaction)
+    
+    return {
+        "message": "Reward redeemed",
+        "redemption_code": code,
+        "expires_at": redemption["expires_at"].isoformat(),
+        "points_used": reward["points_required"]
+    }
+
+@router.get("/redemptions")
+async def get_redemptions(
+    status: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get user's redemptions"""
+    db = get_database()
+    
+    query = {"user_id": current_user["_id"]}
+    if status:
+        query["status"] = status
+    
+    redemptions = await db.loyalty_redemptions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.loyalty_redemptions.count_documents(query)
+    
+    return {"redemptions": redemptions, "total": total}

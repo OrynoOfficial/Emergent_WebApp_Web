@@ -1,0 +1,793 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
+  LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
+  Bell, Send, Monitor, Ticket, Users, Star, Eye
+} from 'lucide-react';
+import api from '@/api/client';
+import { formatFCFA } from '@/utils/currency';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import PermissionGate from '@/components/common/PermissionGate';
+import { toast } from 'sonner';
+import { activityLogger } from '@/utils/activityLogger';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend
+} from 'recharts';
+
+const CINEMA_AMENITIES = ['3d', 'imax', 'dolby_atmos', 'vip_seating', 'parking', 'snack_bar', 'lounge', 'wheelchair_access'];
+
+const DEFAULT_CINEMA_FORM = {
+  name: '',
+  description: '',
+  address: '',
+  city: '',
+  phone: '',
+  email: '',
+  screens: [],
+  amenities: [],
+  operating_hours: {},
+  images: [],
+  operator_id: '',
+  operator_name: ''
+};
+
+const DEFAULT_MOVIE_FORM = {
+  title: '',
+  genre: '',
+  duration: '',
+  rating: 'PG-13',
+  description: '',
+  show_times: [],
+  ticket_price: ''
+};
+
+// Executive Dashboard
+const ExecutiveDashboard = ({ cinemas, movies }) => {
+  const dashboardData = useMemo(() => {
+    const totalCinemas = cinemas.length;
+    const totalScreens = cinemas.reduce((sum, c) => sum + (c.total_screens || 0), 0);
+    const totalMovies = movies.length;
+
+    // Genre distribution
+    const genreDistribution = {};
+    movies.forEach(m => {
+      const genre = m.genre || 'Other';
+      genreDistribution[genre] = (genreDistribution[genre] || 0) + 1;
+    });
+
+    const genreData = Object.entries(genreDistribution).map(([name, value], i) => ({
+      name,
+      value,
+      color: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'][i % 6]
+    }));
+
+    // Weekly ticket sales (mock)
+    const weeklySales = Array.from({ length: 7 }, (_, i) => ({
+      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+      tickets: Math.floor(Math.random() * 200) + 50,
+      revenue: Math.floor(Math.random() * 500000) + 100000
+    }));
+
+    return { totalCinemas, totalScreens, totalMovies, genreData, weeklySales };
+  }, [cinemas, movies]);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600 mb-1">Total Cinemas</p>
+                <p className="text-2xl font-bold text-red-900">{dashboardData.totalCinemas}</p>
+              </div>
+              <div className="bg-red-200 rounded-full p-3">
+                <Film className="h-6 w-6 text-red-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600 mb-1">Total Screens</p>
+                <p className="text-2xl font-bold text-blue-900">{dashboardData.totalScreens}</p>
+              </div>
+              <div className="bg-blue-200 rounded-full p-3">
+                <Monitor className="h-6 w-6 text-blue-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-600 mb-1">Now Showing</p>
+                <p className="text-2xl font-bold text-purple-900">{dashboardData.totalMovies}</p>
+              </div>
+              <div className="bg-purple-200 rounded-full p-3">
+                <Ticket className="h-6 w-6 text-purple-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600 mb-1">Avg. Occupancy</p>
+                <p className="text-2xl font-bold text-green-900">68%</p>
+              </div>
+              <div className="bg-green-200 rounded-full p-3">
+                <Users className="h-6 w-6 text-green-700" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5 text-red-600" />
+              Weekly Ticket Sales
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboardData.weeklySales}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="day" stroke="#64748b" fontSize={12} />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="tickets" fill="#EF4444" radius={[4, 4, 0, 0]} name="Tickets" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Film className="h-5 w-5 text-purple-600" />
+              Movies by Genre
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 flex items-center justify-center">
+              {dashboardData.genreData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={dashboardData.genreData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
+                      {dashboardData.genreData.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-gray-500">No movies data</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// Communications Hub
+const CommunicationsHub = ({ user }) => {
+  const [messages] = useState([
+    { id: 1, from: 'System', subject: 'New movie premiere - Avatar 3', time: '2 hours ago', unread: true },
+    { id: 2, from: 'Customer', subject: 'Group booking request', time: '5 hours ago', unread: true },
+    { id: 3, from: 'Marketing', subject: 'Weekend promotion approved', time: '1 day ago', unread: false }
+  ]);
+
+  const [announcementText, setAnnouncementText] = useState('');
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Recent Notifications
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {messages.map((msg) => (
+              <div key={msg.id} className={`p-3 rounded-lg border ${msg.unread ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
+                <div className="flex justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{msg.from}</p>
+                    <p className="text-xs text-slate-600">{msg.subject}</p>
+                  </div>
+                  <span className="text-xs text-slate-500">{msg.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Send Announcement</Label>
+            <div className="flex gap-2 mt-2">
+              <Input placeholder="Type announcement..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} />
+              <Button className="bg-[#082c59]" onClick={() => { toast.success('Sent!'); setAnnouncementText(''); }}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="pt-4 space-y-2">
+            <Button variant="outline" className="w-full justify-start"><Bell className="mr-2 h-4 w-4" /> Create Promotion</Button>
+            <Button variant="outline" className="w-full justify-start"><Film className="mr-2 h-4 w-4" /> Add New Movie</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Business Analytics
+const BusinessAnalytics = ({ cinemas, movies }) => {
+  const analyticsData = useMemo(() => {
+    const monthlyTrend = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
+      month,
+      tickets: Math.floor(Math.random() * 1000) + 300,
+      revenue: Math.floor(Math.random() * 3000000) + 500000
+    }));
+
+    return { monthlyTrend };
+  }, [cinemas, movies]);
+
+  return (
+    <div className="space-y-6">
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Monthly Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analyticsData.monthlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip />
+                <Legend />
+                <Line yAxisId="left" type="monotone" dataKey="tickets" stroke="#EF4444" strokeWidth={2} name="Tickets Sold" />
+                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} name="Revenue" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Main Component
+export default function CinemaManagement() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [cinemas, setCinemas] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [operators, setOperators] = useState([]);
+  const [selectedCinema, setSelectedCinema] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [isCinemaDialogOpen, setIsCinemaDialogOpen] = useState(false);
+  const [isMovieDialogOpen, setIsMovieDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState(null);
+  const [viewingType, setViewingType] = useState('cinema');
+  const [editingCinema, setEditingCinema] = useState(null);
+  const [editingMovie, setEditingMovie] = useState(null);
+  const [cinemaForm, setCinemaForm] = useState(DEFAULT_CINEMA_FORM);
+  const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
+
+  const handleViewItem = (item, type) => {
+    setViewingItem(item);
+    setViewingType(type);
+    setIsViewDialogOpen(true);
+    activityLogger.serviceView(item.id, type === 'cinema' ? item.name : item.title);
+  };
+
+  const loadCinemas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/cinemas/');
+      setCinemas(res.data.cinemas || res.data || []);
+      
+      // Load operators
+      try {
+        const opRes = await api.get('/operators/');
+        setOperators(opRes.data.operators || opRes.data || []);
+      } catch (err) {
+        console.error('Failed to load operators:', err);
+      }
+    } catch (error) {
+      console.error('Failed to load cinemas:', error);
+      setCinemas([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadMovies = useCallback(async (cinemaId) => {
+    try {
+      const res = await api.get(`/cinemas/${cinemaId}/movies`);
+      setMovies(res.data.movies || res.data || []);
+    } catch (error) {
+      console.error('Failed to load movies:', error);
+      setMovies([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCinemas();
+  }, [loadCinemas]);
+
+  useEffect(() => {
+    if (selectedCinema) loadMovies(selectedCinema.id);
+  }, [selectedCinema, loadMovies]);
+
+  const openCinemaDialog = (cinema = null) => {
+    setEditingCinema(cinema);
+    setCinemaForm(cinema ? { ...cinema, operator_id: cinema.operator_id || '', operator_name: cinema.operator_name || '' } : DEFAULT_CINEMA_FORM);
+    setIsCinemaDialogOpen(true);
+  };
+
+  const handleSaveCinema = async () => {
+    try {
+      const operator = operators.find(op => (op._id || op.id) === cinemaForm.operator_id);
+      const dataToSend = {
+        ...cinemaForm,
+        operator_name: operator?.name || cinemaForm.operator_name || ''
+      };
+      
+      if (editingCinema) {
+        await api.put(`/cinemas/${editingCinema.id}`, dataToSend);
+        toast.success('Cinema updated');
+      } else {
+        await api.post('/cinemas/', dataToSend);
+        toast.success('Cinema added');
+      }
+      setIsCinemaDialogOpen(false);
+      loadCinemas();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save');
+    }
+  };
+
+  const handleDeleteCinema = async (id) => {
+    if (!confirm('Delete this cinema?')) return;
+    try {
+      await api.delete(`/cinemas/${id}`);
+      toast.success('Cinema deleted');
+      loadCinemas();
+      if (selectedCinema?.id === id) setSelectedCinema(null);
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  const openMovieDialog = (movie = null) => {
+    setEditingMovie(movie);
+    setMovieForm(movie ? { ...movie, ticket_price: movie.ticket_price?.toString() || '' } : DEFAULT_MOVIE_FORM);
+    setIsMovieDialogOpen(true);
+  };
+
+  const handleSaveMovie = async () => {
+    try {
+      const data = { ...movieForm, ticket_price: parseFloat(movieForm.ticket_price) || 0, cinema_id: selectedCinema.id };
+      if (editingMovie) {
+        await api.put(`/cinemas/${selectedCinema.id}/movies/${editingMovie.id}`, data);
+        toast.success('Movie updated');
+      } else {
+        await api.post(`/cinemas/${selectedCinema.id}/movies`, data);
+        toast.success('Movie added');
+      }
+      setIsMovieDialogOpen(false);
+      loadMovies(selectedCinema.id);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save');
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-[#082c59]">Cinema Management Center</h1>
+          <p className="text-gray-600">Manage cinemas, movies, analytics, and communications</p>
+        </div>
+        <Button onClick={loadCinemas} variant="outline" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
+          <TabsTrigger value="management"><Film className="h-4 w-4 mr-2" />Management</TabsTrigger>
+          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="mt-6">
+          <ExecutiveDashboard cinemas={cinemas} movies={movies} />
+        </TabsContent>
+
+        <TabsContent value="management" className="mt-6">
+          <Tabs defaultValue="cinemas">
+            <TabsList>
+              <TabsTrigger value="cinemas">Cinemas</TabsTrigger>
+              <TabsTrigger value="movies" disabled={!selectedCinema}>Movies {selectedCinema && `(${selectedCinema.name})`}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="cinemas">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Cinemas</CardTitle>
+                  <PermissionGate permission="cinemas.create">
+                    <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]">
+                      <Plus className="w-4 h-4 mr-2" /> Add Cinema
+                    </Button>
+                  </PermissionGate>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="text-center py-8">Loading...</div>
+                  ) : cinemas.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No cinemas found.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {cinemas.map(cinema => (
+                        <Card
+                          key={cinema.id}
+                          className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedCinema?.id === cinema.id ? 'ring-2 ring-[#082c59]' : ''}`}
+                          onClick={() => setSelectedCinema(cinema)}
+                        >
+                          <CardContent className="pt-6">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="font-semibold">{cinema.name}</h3>
+                              <Badge variant="outline">{cinema.total_screens} Screens</Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                              <MapPin className="w-4 h-4" />{cinema.city}
+                            </div>
+                            {cinema.amenities?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {cinema.amenities.slice(0, 3).map(a => (
+                                  <Badge key={a} variant="outline" className="text-xs uppercase">{a}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }} title="View Details">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <PermissionGate permission="cinemas.edit">
+                                <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); openCinemaDialog(cinema); }}>
+                                  <Edit className="w-4 h-4 mr-1" /> Edit
+                                </Button>
+                              </PermissionGate>
+                              <PermissionGate permission="cinemas.delete">
+                                <Button size="sm" variant="outline" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteCinema(cinema.id); }}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </PermissionGate>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="movies">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Movies - {selectedCinema?.name}</CardTitle>
+                  <PermissionGate permission="cinemas.edit">
+                    <Button onClick={() => openMovieDialog()} className="bg-[#082c59]">
+                      <Plus className="w-4 h-4 mr-2" /> Add Movie
+                    </Button>
+                  </PermissionGate>
+                </CardHeader>
+                <CardContent>
+                  {movies.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">No movies. Add a movie!</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {movies.map(movie => (
+                        <Card key={movie.id}>
+                          <CardContent className="pt-6">
+                            <h3 className="font-semibold mb-2">{movie.title}</h3>
+                            <div className="space-y-1 text-sm text-gray-500">
+                              <div className="flex items-center gap-2"><Film className="w-4 h-4" />{movie.genre}</div>
+                              <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{movie.duration}</div>
+                              <div className="flex items-center gap-2"><Star className="w-4 h-4" />{movie.rating}</div>
+                            </div>
+                            <div className="mt-3 font-bold text-green-600">{formatFCFA(movie.ticket_price)}</div>
+                            <div className="flex gap-2 mt-4">
+                              <Button size="sm" variant="outline" onClick={() => handleViewItem(movie, 'movie')} title="View Details">
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <PermissionGate permission="cinemas.edit">
+                                <Button size="sm" variant="outline" className="flex-1" onClick={() => openMovieDialog(movie)}>
+                                  <Edit className="w-4 h-4 mr-1" /> Edit
+                                </Button>
+                              </PermissionGate>
+                              <PermissionGate permission="cinemas.delete">
+                                <Button size="sm" variant="outline" className="text-red-600">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </PermissionGate>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="communications" className="mt-6">
+          <CommunicationsHub user={user} />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-6">
+          <BusinessAnalytics cinemas={cinemas} movies={movies} />
+        </TabsContent>
+      </Tabs>
+
+      {/* Cinema Dialog */}
+      <Dialog open={isCinemaDialogOpen} onOpenChange={setIsCinemaDialogOpen}>
+        <DialogContent className="max-w-xl bg-white">
+          <DialogHeader>
+            <DialogTitle>{editingCinema ? 'Edit Cinema' : 'Add Cinema'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Name</Label>
+              <Input value={cinemaForm.name} onChange={e => setCinemaForm(p => ({ ...p, name: e.target.value }))} placeholder="Cinema name" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>City</Label>
+                <Input value={cinemaForm.city} onChange={e => setCinemaForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
+              </div>
+              <div>
+                <Label>Screens</Label>
+                <Input type="number" value={cinemaForm.total_screens} onChange={e => setCinemaForm(p => ({ ...p, total_screens: parseInt(e.target.value) || 1 }))} />
+              </div>
+            </div>
+            <div>
+              <Label>Address</Label>
+              <Input value={cinemaForm.address} onChange={e => setCinemaForm(p => ({ ...p, address: e.target.value }))} placeholder="Full address" />
+            </div>
+            <div>
+              <Label>Operator</Label>
+              <Select 
+                value={cinemaForm.operator_id || ''} 
+                onValueChange={v => {
+                  const op = operators.find(o => (o._id || o.id) === v);
+                  setCinemaForm(p => ({ 
+                    ...p, 
+                    operator_id: v,
+                    operator_name: op?.name || ''
+                  }));
+                }}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select an operator..." />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-60">
+                  {operators.map(op => (
+                    <SelectItem key={op._id || op.id} value={op._id || op.id}>
+                      {op.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Amenities</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {CINEMA_AMENITIES.map(amenity => (
+                  <Badge
+                    key={amenity}
+                    variant={cinemaForm.amenities?.includes(amenity) ? 'default' : 'outline'}
+                    className="cursor-pointer uppercase text-xs"
+                    onClick={() => {
+                      setCinemaForm(p => ({
+                        ...p,
+                        amenities: p.amenities?.includes(amenity)
+                          ? p.amenities.filter(a => a !== amenity)
+                          : [...(p.amenities || []), amenity]
+                      }));
+                    }}
+                  >
+                    {amenity.replace('_', ' ')}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCinemaDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveCinema} className="bg-[#082c59]">{editingCinema ? 'Update' : 'Add'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Movie Dialog */}
+      <Dialog open={isMovieDialogOpen} onOpenChange={setIsMovieDialogOpen}>
+        <DialogContent className="max-w-xl bg-white">
+          <DialogHeader>
+            <DialogTitle>{editingMovie ? 'Edit Movie' : 'Add Movie'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Title</Label>
+              <Input value={movieForm.title} onChange={e => setMovieForm(p => ({ ...p, title: e.target.value }))} placeholder="Movie title" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Genre</Label>
+                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action" />
+              </div>
+              <div>
+                <Label>Duration</Label>
+                <Input value={movieForm.duration} onChange={e => setMovieForm(p => ({ ...p, duration: e.target.value }))} placeholder="2h 30m" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Rating</Label>
+                <Select value={movieForm.rating} onValueChange={v => setMovieForm(p => ({ ...p, rating: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="G">G</SelectItem>
+                    <SelectItem value="PG">PG</SelectItem>
+                    <SelectItem value="PG-13">PG-13</SelectItem>
+                    <SelectItem value="R">R</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Ticket Price (FCFA)</Label>
+                <Input type="number" value={movieForm.ticket_price} onChange={e => setMovieForm(p => ({ ...p, ticket_price: e.target.value }))} placeholder="3000" />
+              </div>
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={movieForm.description} onChange={e => setMovieForm(p => ({ ...p, description: e.target.value }))} placeholder="Movie description..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMovieDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveMovie} className="bg-[#082c59]">{editingMovie ? 'Update' : 'Add'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Film className="h-5 w-5 text-rose-600" />
+              {viewingType === 'cinema' ? 'Cinema Details' : 'Movie Details'}
+            </DialogTitle>
+          </DialogHeader>
+          {viewingItem && viewingType === 'cinema' && (
+            <div className="space-y-4 py-4">
+              <div className="bg-rose-50 rounded-lg p-4">
+                <h3 className="font-bold text-lg text-rose-900">{viewingItem.name}</h3>
+                <p className="text-sm text-rose-700">{viewingItem.total_screens} screens • {viewingItem.total_seats} seats</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Location</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <MapPin className="h-4 w-4" /> {viewingItem.city || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Address</p>
+                  <p className="font-medium">{viewingItem.address || 'N/A'}</p>
+                </div>
+              </div>
+              {viewingItem.amenities?.length > 0 && (
+                <div>
+                  <p className="text-slate-500 text-sm mb-2">Amenities</p>
+                  <div className="flex flex-wrap gap-1">
+                    {viewingItem.amenities.map(a => (
+                      <Badge key={a} variant="outline" className="text-xs uppercase">{a}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {viewingItem && viewingType === 'movie' && (
+            <div className="space-y-4 py-4">
+              <div className="bg-purple-50 rounded-lg p-4">
+                <h3 className="font-bold text-lg text-purple-900">{viewingItem.title}</h3>
+                <Badge className="mt-1">{viewingItem.genre}</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Duration</p>
+                  <p className="font-medium">{viewingItem.duration}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Rating</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Star className="h-4 w-4 text-yellow-500" /> {viewingItem.rating}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Ticket Price</p>
+                  <p className="font-bold text-green-600">{formatFCFA(viewingItem.ticket_price)}</p>
+                </div>
+              </div>
+              {viewingItem.description && (
+                <div>
+                  <p className="text-slate-500 text-sm mb-1">Description</p>
+                  <p className="text-sm bg-slate-50 p-3 rounded">{viewingItem.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              if (viewingType === 'cinema') openCinemaDialog(viewingItem);
+              else openMovieDialog(viewingItem);
+              setIsViewDialogOpen(false);
+            }}>
+              <Edit className="w-4 h-4 mr-2" /> Edit
+            </Button>
+            <Button onClick={() => setIsViewDialogOpen(false)} className="bg-[#082c59]">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

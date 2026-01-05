@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 transition-colors duration-200;
+  }
+
+  .dark body,
+  html.dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  :root {
+    --primary: #082c59;
+    --primary-dark: #051d3d;
+    --primary-light: #0a3a75;
+    --secondary: #e2e8f0;
+  }
+
+  .dark {
+    --primary: #4D96FF;
+    --primary-dark: #3d7ed9;
+    --primary-light: #6aabff;
+    --secondary: #334155;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply bg-[#082c59] text-white hover:bg-[#0a3a75];
+  }
+  .btn-secondary {
+    @apply bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 dark:bg-slate-800 dark:shadow-slate-900/20;
+  }
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#082c59] focus:border-transparent outline-none bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-white;
+  }
+
+  /* Fix for transparent picker components */
+  .date-picker-container,
+  .location-picker-container,
+  [data-radix-popper-content-wrapper] {
+    @apply bg-white dark:bg-slate-800 !important;
+  }
+
+  /* Ensure all dropdown/popover content has solid backgrounds */
+  [role="listbox"],
+  [role="menu"],
+  [role="dialog"],
+  .popover-content,
+  .dropdown-content {
+    @apply bg-white border border-slate-200 shadow-lg dark:bg-slate-800 dark:border-slate-700 !important;
+  }
+
+  /* Calendar/DatePicker specific fixes */
+  .rdp {
+    @apply bg-white dark:bg-slate-800 !important;
+  }
+
+  .rdp-month {
+    @apply bg-white dark:bg-slate-800 !important;
+  }
+
+  .rdp-caption {
+    @apply bg-white dark:bg-slate-800 !important;
+  }
+
+  .rdp-table {
+    @apply bg-white dark:bg-slate-800 !important;
+  }
+
+  /* Enhanced Date Picker Styles */
+  .rdp-day {
+    @apply transition-all duration-150 rounded-lg !important;
+  }
+
+  .rdp-day:hover:not(.rdp-day_selected):not(.rdp-day_disabled) {
+    @apply bg-[#082c59]/10 text-[#082c59] scale-105 !important;
+  }
+
+  .rdp-day_selected {
+    @apply bg-[#082c59] text-white font-semibold shadow-md !important;
+  }
+
+  .rdp-day_selected:hover {
+    @apply bg-[#0a3a75] !important;
+  }
+
+  .rdp-day_today:not(.rdp-day_selected) {
+    @apply bg-amber-100 text-amber-800 font-semibold border-2 border-amber-300 !important;
+  }
+
+  .rdp-day_disabled {
+    @apply text-slate-300 cursor-not-allowed !important;
+  }
+
+  .rdp-nav_button {
+    @apply hover:bg-[#082c59]/10 rounded-lg transition-colors !important;
+  }
+
+  .rdp-caption_label {
+    @apply font-bold text-[#082c59] !important;
+  }
+
+  .rdp-head_cell {
+    @apply text-[#082c59] font-semibold text-xs uppercase !important;
+  }
+
+  /* Select/Dropdown hover effects */
+  [role="option"]:hover,
+  [data-highlighted] {
+    @apply bg-[#082c59]/10 !important;
+  }
+
+  [role="option"][data-state="checked"],
+  [aria-selected="true"] {
+    @apply bg-[#082c59]/20 font-semibold !important;
+  }
+
+  /* Dark mode text colors */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    @apply text-slate-100;
+  }
+
+  .dark p, .dark span, .dark label {
+    @apply text-slate-300;
+  }
+
+  /* Shake animation for validation errors */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Error state styling for inputs */
+  .input-error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+}
