@@ -7,7 +7,7 @@ from config.settings import settings
 
 class LocalStorageService:
     def __init__(self):
-        self.storage_path = getattr(settings, 'LOCAL_STORAGE_PATH', '/app/webapp-backend/uploads')
+        self.storage_path = getattr(settings, 'LOCAL_STORAGE_PATH', '/app/backend/uploads')
         # Create storage directory if it doesn't exist
         Path(self.storage_path).mkdir(parents=True, exist_ok=True)
     
