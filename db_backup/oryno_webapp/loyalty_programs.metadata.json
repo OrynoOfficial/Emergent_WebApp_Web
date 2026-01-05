@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"22bb0e8398a1467081c47eb00ec943ac","collectionName":"loyalty_programs","type":"collection"}
