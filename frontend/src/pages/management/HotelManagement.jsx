@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ import {
   SlidersHorizontal, Grid3X3, List, ArrowUpDown, Check, Car, Utensils,
   Dumbbell, Waves, Coffee, ParkingCircle, Sparkles, Phone, Mail, 
   AlertTriangle, CheckCircle, Clock, Activity, TrendingDown, Percent,
-  FileText, Megaphone, AlertCircle
+  FileText, Megaphone, AlertCircle, ExternalLink, Headphones, Video
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -63,7 +64,7 @@ const getAmenityIcon = (amenity) => {
   return icons[amenity] || null;
 };
 
-// Image Carousel Component
+// Image Carousel Component - Fixed positioning
 const ImageCarousel = ({ images, className = "h-48" }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -81,44 +82,45 @@ const ImageCarousel = ({ images, className = "h-48" }) => {
     <div className={`${className} relative group overflow-hidden bg-slate-100`}>
       <img src={getImageUrl(images[currentIndex])} alt={`Image ${currentIndex + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+      {/* Star badge moved inside carousel with proper positioning */}
       {images.length > 1 && (
         <>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10">
             <ChevronRight className="h-4 w-4" />
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {images.map((_, idx) => (
               <button key={idx} onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }} className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/75'}`} />
             ))}
           </div>
-          <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">{currentIndex + 1}/{images.length}</div>
+          <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full z-10">{currentIndex + 1}/{images.length}</div>
         </>
       )}
     </div>
   );
 };
 
-// Room Image Carousel
+// Room Image Carousel - Fixed positioning
 const RoomImageCarousel = ({ images, className = "w-48 h-36" }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
 
   if (!images?.length) {
-    return <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0`}><Bed className="w-12 h-12 text-slate-300" /></div>;
+    return <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 rounded-l-lg`}><Bed className="w-12 h-12 text-slate-300" /></div>;
   }
 
   return (
-    <div className={`${className} relative group overflow-hidden bg-slate-100 flex-shrink-0`}>
+    <div className={`${className} relative group overflow-hidden bg-slate-100 flex-shrink-0 rounded-l-lg`}>
       <img src={getImageUrl(images[currentIndex])} alt={`Room ${currentIndex + 1}`} className="w-full h-full object-cover" />
       {images.length > 1 && (
         <>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow"><ChevronLeft className="h-3 w-3" /></button>
-          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow"><ChevronRight className="h-3 w-3" /></button>
-          <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">{currentIndex + 1}/{images.length}</div>
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow z-10"><ChevronLeft className="h-3 w-3" /></button>
+          <button onClick={(e) => { e.stopPropagation(); setCurrentIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow z-10"><ChevronRight className="h-3 w-3" /></button>
+          <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded z-10">{currentIndex + 1}/{images.length}</div>
         </>
       )}
     </div>
@@ -259,12 +261,12 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   );
 };
 
-// Modern Executive Dashboard Component with API data
-const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
+// Executive Dashboard with clickable bookings
+const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading, onBookingClick }) => {
+  const navigate = useNavigate();
   const data = analyticsData || {};
   const summary = data.summary || {};
 
-  // Fallback data if API not loaded yet
   const totalHotels = summary.totalHotels ?? hotels.length;
   const totalRooms = summary.totalRooms ?? rooms.length;
   const totalBookings = summary.totalBookings ?? 0;
@@ -275,29 +277,29 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
   const revenueGrowth = summary.revenueGrowth ?? 8.3;
 
   const dailyTrend = data.dailyTrend?.length > 0 ? data.dailyTrend : [
-    { date: 'Mon', bookings: 12, revenue: 450000, checkins: 8 },
-    { date: 'Tue', bookings: 15, revenue: 520000, checkins: 10 },
-    { date: 'Wed', bookings: 18, revenue: 680000, checkins: 14 },
-    { date: 'Thu', bookings: 22, revenue: 780000, checkins: 16 },
-    { date: 'Fri', bookings: 28, revenue: 920000, checkins: 20 },
-    { date: 'Sat', bookings: 35, revenue: 1200000, checkins: 28 },
-    { date: 'Sun', bookings: 25, revenue: 850000, checkins: 18 }
+    { date: 'Mon', bookings: 12, revenue: 450000 },
+    { date: 'Tue', bookings: 15, revenue: 520000 },
+    { date: 'Wed', bookings: 18, revenue: 680000 },
+    { date: 'Thu', bookings: 22, revenue: 780000 },
+    { date: 'Fri', bookings: 28, revenue: 920000 },
+    { date: 'Sat', bookings: 35, revenue: 1200000 },
+    { date: 'Sun', bookings: 25, revenue: 850000 }
   ];
 
   const roomDistribution = data.roomDistribution?.length > 0 ? data.roomDistribution : 
     Object.entries(rooms.reduce((acc, r) => { acc[r.room_type || 'standard'] = (acc[r.room_type || 'standard'] || 0) + 1; return acc; }, {}))
     .map(([type, count], i) => ({ type: type.charAt(0).toUpperCase() + type.slice(1), count, color: CHART_COLORS[i % CHART_COLORS.length] }));
 
-  const cityDistribution = data.cityDistribution?.length > 0 ? data.cityDistribution :
-    Object.entries(hotels.reduce((acc, h) => { acc[h.city || 'Unknown'] = (acc[h.city || 'Unknown'] || 0) + 1; return acc; }, {}))
-    .map(([city, count]) => ({ city, count })).slice(0, 6);
-
   const topHotels = data.topHotels?.length > 0 ? data.topHotels :
     hotels.slice(0, 5).map((h, i) => ({ name: h.name, revenue: (5 - i) * 150000, bookings: (5 - i) * 8 }));
 
   const bookingsByStatus = data.bookingsByStatus || { confirmed: 45, pending: 12, cancelled: 3, completed: 28 };
-
   const recentBookings = data.recentBookings || [];
+
+  const handleBookingClick = (booking) => {
+    // Navigate to bookings page with the booking ID
+    navigate(`/bookings?booking_id=${booking.id || booking._id}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -309,13 +311,9 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
               <div>
                 <p className="text-blue-100 text-sm font-medium">Total Hotels</p>
                 <p className="text-4xl font-bold mt-1">{totalHotels}</p>
-                <p className="text-blue-200 text-xs mt-2 flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> Active properties
-                </p>
+                <p className="text-blue-200 text-xs mt-2 flex items-center gap-1"><Building2 className="h-3 w-3" /> Active properties</p>
               </div>
-              <div className="bg-white/20 rounded-2xl p-4">
-                <Hotel className="h-8 w-8" />
-              </div>
+              <div className="bg-white/20 rounded-2xl p-4"><Hotel className="h-8 w-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -326,13 +324,9 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
               <div>
                 <p className="text-purple-100 text-sm font-medium">Total Rooms</p>
                 <p className="text-4xl font-bold mt-1">{totalRooms}</p>
-                <p className="text-purple-200 text-xs mt-2 flex items-center gap-1">
-                  <Bed className="h-3 w-3" /> Across all hotels
-                </p>
+                <p className="text-purple-200 text-xs mt-2 flex items-center gap-1"><Bed className="h-3 w-3" /> Across all hotels</p>
               </div>
-              <div className="bg-white/20 rounded-2xl p-4">
-                <Bed className="h-8 w-8" />
-              </div>
+              <div className="bg-white/20 rounded-2xl p-4"><Bed className="h-8 w-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -348,9 +342,7 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
                   {revenueGrowth >= 0 ? '+' : ''}{revenueGrowth}% vs last period
                 </p>
               </div>
-              <div className="bg-white/20 rounded-2xl p-4">
-                <DollarSign className="h-8 w-8" />
-              </div>
+              <div className="bg-white/20 rounded-2xl p-4"><DollarSign className="h-8 w-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -361,13 +353,9 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
               <div>
                 <p className="text-amber-100 text-sm font-medium">Avg. Occupancy</p>
                 <p className="text-4xl font-bold mt-1">{avgOccupancy}%</p>
-                <p className="text-amber-200 text-xs mt-2 flex items-center gap-1">
-                  <Activity className="h-3 w-3" /> Current rate
-                </p>
+                <p className="text-amber-200 text-xs mt-2 flex items-center gap-1"><Activity className="h-3 w-3" /> Current rate</p>
               </div>
-              <div className="bg-white/20 rounded-2xl p-4">
-                <Percent className="h-8 w-8" />
-              </div>
+              <div className="bg-white/20 rounded-2xl p-4"><Percent className="h-8 w-8" /></div>
             </div>
           </CardContent>
         </Card>
@@ -431,13 +419,9 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Booking Trend Chart */}
         <Card className="lg:col-span-2 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart2 className="h-5 w-5 text-blue-600" />
-              Bookings & Revenue Trend
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg"><BarChart2 className="h-5 w-5 text-blue-600" />Bookings & Revenue Trend</CardTitle>
             <CardDescription>Daily performance over the last 14 days</CardDescription>
           </CardHeader>
           <CardContent>
@@ -448,7 +432,7 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
                   <XAxis dataKey="date" stroke="#64748b" fontSize={12} tickFormatter={(v) => v.slice(-5) || v} />
                   <YAxis yAxisId="left" stroke="#64748b" fontSize={12} />
                   <YAxis yAxisId="right" orientation="right" stroke="#64748b" fontSize={12} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(value, name) => [name === 'revenue' ? formatFCFA(value) : value, name === 'revenue' ? 'Revenue' : name === 'bookings' ? 'Bookings' : 'Check-ins']} />
+                  <Tooltip formatter={(value, name) => [name === 'revenue' ? formatFCFA(value) : value, name === 'revenue' ? 'Revenue' : 'Bookings']} />
                   <Legend />
                   <Bar yAxisId="left" dataKey="bookings" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Bookings" />
                   <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={3} dot={{ fill: '#10B981' }} name="Revenue" />
@@ -458,13 +442,9 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
           </CardContent>
         </Card>
 
-        {/* Room Type Distribution */}
         <Card className="shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Bed className="h-5 w-5 text-purple-600" />
-              Room Distribution
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg"><Bed className="h-5 w-5 text-purple-600" />Room Distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-52">
@@ -489,68 +469,36 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
         </Card>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Hotels */}
-        <Card className="shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-              Top Performing Hotels
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topHotels.map((hotel, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-slate-400' : i === 2 ? 'bg-amber-600' : 'bg-slate-300'}`}>
-                      {i + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{hotel.name}</p>
-                      <p className="text-xs text-slate-500">{hotel.bookings} bookings</p>
-                    </div>
-                  </div>
-                  <p className="font-bold text-emerald-600">{formatFCFA(hotel.revenue)}</p>
+      {/* Top Hotels */}
+      <Card className="shadow-lg">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg"><TrendingUp className="h-5 w-5 text-emerald-600" />Top Performing Hotels</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            {topHotels.map((hotel, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 ${i === 0 ? 'bg-yellow-500' : i === 1 ? 'bg-slate-400' : i === 2 ? 'bg-amber-600' : 'bg-slate-300'}`}>{i + 1}</div>
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{hotel.name}</p>
+                  <p className="text-xs text-emerald-600 font-semibold">{formatFCFA(hotel.revenue)}</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* City Distribution */}
-        <Card className="shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MapPin className="h-5 w-5 text-red-600" />
-              Hotels by City
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={cityDistribution} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis type="number" stroke="#64748b" fontSize={12} />
-                  <YAxis type="category" dataKey="city" stroke="#64748b" fontSize={12} width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Bookings */}
+      {/* Recent Bookings - Clickable */}
       {recentBookings.length > 0 && (
         <Card className="shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Recent Bookings
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg"><Calendar className="h-5 w-5 text-blue-600" />Recent Bookings</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => navigate('/bookings')} className="gap-1">
+                View All <ExternalLink className="h-3 w-3" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -562,11 +510,12 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
                     <th className="text-left py-2 px-3 font-medium text-slate-600">Check-in</th>
                     <th className="text-left py-2 px-3 font-medium text-slate-600">Status</th>
                     <th className="text-right py-2 px-3 font-medium text-slate-600">Amount</th>
+                    <th className="text-center py-2 px-3 font-medium text-slate-600">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentBookings.slice(0, 5).map((booking, i) => (
-                    <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
+                    <tr key={i} className="border-b last:border-0 hover:bg-slate-50 cursor-pointer" onClick={() => handleBookingClick(booking)}>
                       <td className="py-3 px-3">{booking.guest_name || 'Guest'}</td>
                       <td className="py-3 px-3">{booking.hotel_name || 'Hotel'}</td>
                       <td className="py-3 px-3">{booking.check_in_date || 'N/A'}</td>
@@ -576,6 +525,11 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-right font-medium">{formatFCFA(booking.total_amount || 0)}</td>
+                      <td className="py-3 px-3 text-center">
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -588,9 +542,10 @@ const ExecutiveDashboard = ({ hotels, rooms, analyticsData, loading }) => {
   );
 };
 
-// Communications Hub Component
+// Communications Hub with real notifications and functional quick actions
 const CommunicationsHub = ({ user }) => {
-  const [messages, setMessages] = useState([]);
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [announcementText, setAnnouncementText] = useState('');
@@ -598,16 +553,29 @@ const CommunicationsHub = ({ user }) => {
   const [alertText, setAlertText] = useState('');
   const [alertTitle, setAlertTitle] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Support ticket state
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportPriority, setSupportPriority] = useState('normal');
+  
+  // Meeting state
+  const [showMeetingDialog, setShowMeetingDialog] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDescription, setMeetingDescription] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
 
   const loadCommunications = async () => {
     setLoading(true);
     try {
-      const [msgRes, annRes, alertRes] = await Promise.all([
-        api.get('/hotels/communications/messages').catch(() => ({ data: { messages: [] } })),
+      const [notifRes, annRes, alertRes] = await Promise.all([
+        api.get('/hotels/communications/notifications').catch(() => ({ data: { notifications: [] } })),
         api.get('/hotels/communications/announcements').catch(() => ({ data: { announcements: [] } })),
         api.get('/hotels/communications/alerts').catch(() => ({ data: { alerts: [] } }))
       ]);
-      setMessages(msgRes.data.messages || []);
+      setNotifications(notifRes.data.notifications || []);
       setAnnouncements(annRes.data.announcements || []);
       setAlerts(alertRes.data.alerts || []);
     } catch (error) {
@@ -617,49 +585,26 @@ const CommunicationsHub = ({ user }) => {
     }
   };
 
-  useEffect(() => {
-    loadCommunications();
-  }, []);
+  useEffect(() => { loadCommunications(); }, []);
 
   const sendAnnouncement = async () => {
-    if (!announcementTitle.trim() || !announcementText.trim()) {
-      toast.error('Please enter title and message');
-      return;
-    }
+    if (!announcementTitle.trim() || !announcementText.trim()) { toast.error('Please enter title and message'); return; }
     try {
-      await api.post('/hotels/communications/announcements', {
-        title: announcementTitle,
-        message: announcementText,
-        target_type: 'all',
-        priority: 'normal'
-      });
+      await api.post('/hotels/communications/announcements', { title: announcementTitle, message: announcementText, target_type: 'all', priority: 'normal' });
       toast.success('Announcement sent successfully');
-      setAnnouncementTitle('');
-      setAnnouncementText('');
+      setAnnouncementTitle(''); setAnnouncementText('');
       loadCommunications();
-    } catch (error) {
-      toast.error('Failed to send announcement');
-    }
+    } catch (error) { toast.error('Failed to send announcement'); }
   };
 
   const createAlert = async () => {
-    if (!alertTitle.trim() || !alertText.trim()) {
-      toast.error('Please enter title and description');
-      return;
-    }
+    if (!alertTitle.trim() || !alertText.trim()) { toast.error('Please enter title and description'); return; }
     try {
-      await api.post('/hotels/communications/alerts', {
-        title: alertTitle,
-        message: alertText,
-        alert_type: 'warning'
-      });
+      await api.post('/hotels/communications/alerts', { title: alertTitle, message: alertText, alert_type: 'warning' });
       toast.success('Alert created successfully');
-      setAlertTitle('');
-      setAlertText('');
+      setAlertTitle(''); setAlertText('');
       loadCommunications();
-    } catch (error) {
-      toast.error('Failed to create alert');
-    }
+    } catch (error) { toast.error('Failed to create alert'); }
   };
 
   const resolveAlert = async (alertId) => {
@@ -667,28 +612,43 @@ const CommunicationsHub = ({ user }) => {
       await api.put(`/hotels/communications/alerts/${alertId}/resolve`);
       toast.success('Alert resolved');
       loadCommunications();
-    } catch (error) {
-      toast.error('Failed to resolve alert');
-    }
+    } catch (error) { toast.error('Failed to resolve alert'); }
   };
 
-  const getMessageIcon = (type) => {
+  const submitSupportTicket = async () => {
+    if (!supportSubject.trim() || !supportMessage.trim()) { toast.error('Please fill all fields'); return; }
+    try {
+      await api.post('/hotels/communications/support-ticket', { subject: supportSubject, message: supportMessage, priority: supportPriority, category: 'general' });
+      toast.success('Support ticket submitted successfully');
+      setSupportSubject(''); setSupportMessage(''); setSupportPriority('normal');
+      setShowSupportDialog(false);
+      loadCommunications();
+    } catch (error) { toast.error('Failed to submit support ticket'); }
+  };
+
+  const scheduleMeeting = async () => {
+    if (!meetingTitle.trim() || !meetingDate || !meetingTime) { toast.error('Please fill all required fields'); return; }
+    try {
+      await api.post('/hotels/communications/schedule-meeting', { title: meetingTitle, description: meetingDescription, scheduled_date: meetingDate, scheduled_time: meetingTime, attendees: [], meeting_type: 'internal' });
+      toast.success('Meeting scheduled successfully');
+      setMeetingTitle(''); setMeetingDescription(''); setMeetingDate(''); setMeetingTime('');
+      setShowMeetingDialog(false);
+      loadCommunications();
+    } catch (error) { toast.error('Failed to schedule meeting'); }
+  };
+
+  const getNotificationIcon = (type) => {
     switch (type) {
       case 'announcement': return <Megaphone className="h-4 w-4 text-blue-600" />;
       case 'alert': return <AlertTriangle className="h-4 w-4 text-amber-600" />;
       case 'booking': return <Calendar className="h-4 w-4 text-green-600" />;
-      default: return <MessageSquare className="h-4 w-4 text-slate-600" />;
+      case 'support_ticket': return <Headphones className="h-4 w-4 text-purple-600" />;
+      case 'meeting': return <Video className="h-4 w-4 text-indigo-600" />;
+      default: return <Bell className="h-4 w-4 text-slate-600" />;
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-700 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-700 border-orange-200';
-      case 'normal': return 'bg-blue-100 text-blue-700 border-blue-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <div className="space-y-6">
@@ -696,75 +656,54 @@ const CommunicationsHub = ({ user }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-blue-600 text-sm font-medium">Total Messages</p>
-              <p className="text-2xl font-bold text-blue-800">{messages.length}</p>
-            </div>
-            <MessageSquare className="h-8 w-8 text-blue-500" />
+            <div><p className="text-blue-600 text-sm font-medium">Total Notifications</p><p className="text-2xl font-bold text-blue-800">{notifications.length}</p></div>
+            <Bell className="h-8 w-8 text-blue-500" />
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-purple-600 text-sm font-medium">Announcements</p>
-              <p className="text-2xl font-bold text-purple-800">{announcements.length}</p>
-            </div>
+            <div><p className="text-purple-600 text-sm font-medium">Announcements</p><p className="text-2xl font-bold text-purple-800">{announcements.length}</p></div>
             <Megaphone className="h-8 w-8 text-purple-500" />
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-amber-600 text-sm font-medium">Active Alerts</p>
-              <p className="text-2xl font-bold text-amber-800">{alerts.filter(a => !a.is_resolved).length}</p>
-            </div>
+            <div><p className="text-amber-600 text-sm font-medium">Active Alerts</p><p className="text-2xl font-bold text-amber-800">{alerts.filter(a => !a.is_resolved).length}</p></div>
             <AlertTriangle className="h-8 w-8 text-amber-500" />
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
           <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-green-600 text-sm font-medium">Resolved</p>
-              <p className="text-2xl font-bold text-green-800">{alerts.filter(a => a.is_resolved).length}</p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <div><p className="text-red-600 text-sm font-medium">Unread</p><p className="text-2xl font-bold text-red-800">{unreadCount}</p></div>
+            <MessageSquare className="h-8 w-8 text-red-500" />
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Messages & Notifications */}
+        {/* Notifications */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
-              Recent Messages & Notifications
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-blue-600" />Recent Notifications</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-80">
               <div className="space-y-3 pr-4">
                 {loading ? (
                   <div className="flex items-center justify-center py-8"><RefreshCw className="h-6 w-6 animate-spin text-slate-400" /></div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500"><MessageSquare className="h-12 w-12 mx-auto text-slate-300 mb-2" /><p>No messages yet</p></div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500"><Bell className="h-12 w-12 mx-auto text-slate-300 mb-2" /><p>No notifications yet</p></div>
                 ) : (
-                  messages.map((msg, i) => (
-                    <div key={i} className={`p-3 rounded-lg border transition-colors hover:bg-slate-50 cursor-pointer ${msg.type === 'alert' ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-2">
-                          {getMessageIcon(msg.type)}
-                          <div>
-                            <p className="font-medium text-sm">{msg.title}</p>
-                            <p className="text-xs text-slate-600 line-clamp-2">{msg.message}</p>
-                          </div>
+                  notifications.map((notif, i) => (
+                    <div key={i} className={`p-3 rounded-lg border transition-colors hover:bg-slate-50 ${!notif.is_read ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-start gap-3">
+                        {getNotificationIcon(notif.type)}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{notif.title}</p>
+                          <p className="text-xs text-slate-600 line-clamp-2 mt-0.5">{notif.message}</p>
+                          <p className="text-xs text-slate-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs text-slate-500">{new Date(msg.created_at).toLocaleDateString()}</span>
-                          <Badge className={`text-[10px] ${msg.type === 'alert' ? 'bg-amber-100 text-amber-700' : msg.type === 'booking' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {msg.type}
-                          </Badge>
-                        </div>
+                        {!notif.is_read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />}
                       </div>
                     </div>
                   ))
@@ -777,50 +716,42 @@ const CommunicationsHub = ({ user }) => {
         {/* Quick Actions */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-emerald-600" />
-              Quick Actions
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-emerald-600" />Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             {/* Send Announcement */}
-            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <Label className="text-sm font-medium flex items-center gap-2 text-blue-800">
-                <Megaphone className="h-4 w-4" /> Send Announcement
-              </Label>
-              <Input placeholder="Announcement title..." value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} className="bg-white" />
+            <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <Label className="text-sm font-medium flex items-center gap-2 text-blue-800"><Megaphone className="h-4 w-4" /> Send Announcement</Label>
+              <Input placeholder="Title..." value={announcementTitle} onChange={(e) => setAnnouncementTitle(e.target.value)} className="bg-white" />
               <div className="flex gap-2">
-                <Input placeholder="Type your message..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} className="bg-white" />
-                <Button onClick={sendAnnouncement} className="bg-blue-600 hover:bg-blue-700">
-                  <Send className="h-4 w-4" />
-                </Button>
+                <Input placeholder="Message..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} className="bg-white" />
+                <Button onClick={sendAnnouncement} className="bg-blue-600 hover:bg-blue-700 px-3"><Send className="h-4 w-4" /></Button>
               </div>
             </div>
 
             {/* Create Alert */}
-            <div className="space-y-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
-              <Label className="text-sm font-medium flex items-center gap-2 text-amber-800">
-                <AlertTriangle className="h-4 w-4" /> Create Alert
-              </Label>
+            <div className="space-y-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <Label className="text-sm font-medium flex items-center gap-2 text-amber-800"><AlertTriangle className="h-4 w-4" /> Create Alert</Label>
               <Input placeholder="Alert title..." value={alertTitle} onChange={(e) => setAlertTitle(e.target.value)} className="bg-white" />
               <div className="flex gap-2">
-                <Input placeholder="Describe the alert..." value={alertText} onChange={(e) => setAlertText(e.target.value)} className="bg-white" />
-                <Button onClick={createAlert} variant="outline" className="text-amber-600 border-amber-300 hover:bg-amber-100">
-                  <Bell className="h-4 w-4" />
-                </Button>
+                <Input placeholder="Description..." value={alertText} onChange={(e) => setAlertText(e.target.value)} className="bg-white" />
+                <Button onClick={createAlert} variant="outline" className="text-amber-600 border-amber-300 hover:bg-amber-100 px-3"><Bell className="h-4 w-4" /></Button>
               </div>
             </div>
 
-            {/* Quick Links */}
-            <div className="space-y-2 pt-2">
-              <Button variant="outline" className="w-full justify-start gap-2 hover:bg-slate-50">
-                <Users className="h-4 w-4 text-slate-500" /> Contact Support Team
+            {/* Quick Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button variant="outline" className="justify-start gap-2 hover:bg-slate-50" onClick={() => setShowSupportDialog(true)}>
+                <Headphones className="h-4 w-4 text-purple-500" /> Contact Support
               </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 hover:bg-slate-50">
-                <Calendar className="h-4 w-4 text-slate-500" /> Schedule Meeting
+              <Button variant="outline" className="justify-start gap-2 hover:bg-slate-50" onClick={() => setShowMeetingDialog(true)}>
+                <Video className="h-4 w-4 text-indigo-500" /> Schedule Meeting
               </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 hover:bg-slate-50">
+              <Button variant="outline" className="justify-start gap-2 hover:bg-slate-50" onClick={() => navigate('/reports')}>
                 <FileText className="h-4 w-4 text-slate-500" /> View Reports
+              </Button>
+              <Button variant="outline" className="justify-start gap-2 hover:bg-slate-50" onClick={loadCommunications}>
+                <RefreshCw className="h-4 w-4 text-slate-500" /> Refresh
               </Button>
             </div>
           </CardContent>
@@ -829,50 +760,74 @@ const CommunicationsHub = ({ user }) => {
 
       {/* Active Alerts */}
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600" />
-            Active Alerts
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-amber-600" />Active Alerts</CardTitle></CardHeader>
         <CardContent>
           {alerts.filter(a => !a.is_resolved).length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <CheckCircle className="h-12 w-12 mx-auto text-green-300 mb-2" />
-              <p>No active alerts - All clear!</p>
-            </div>
+            <div className="text-center py-8 text-slate-500"><CheckCircle className="h-12 w-12 mx-auto text-green-300 mb-2" /><p>No active alerts - All clear!</p></div>
           ) : (
             <div className="space-y-3">
               {alerts.filter(a => !a.is_resolved).map((alert, i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <div>
-                      <p className="font-medium text-amber-900">{alert.title}</p>
-                      <p className="text-sm text-amber-700">{alert.message}</p>
-                    </div>
+                    <div><p className="font-medium text-amber-900">{alert.title}</p><p className="text-sm text-amber-700">{alert.message}</p></div>
                   </div>
-                  <Button size="sm" onClick={() => resolveAlert(alert.id)} className="bg-green-600 hover:bg-green-700">
-                    <Check className="h-4 w-4 mr-1" /> Resolve
-                  </Button>
+                  <Button size="sm" onClick={() => resolveAlert(alert.id)} className="bg-green-600 hover:bg-green-700"><Check className="h-4 w-4 mr-1" /> Resolve</Button>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Support Dialog */}
+      <Dialog open={showSupportDialog} onOpenChange={setShowSupportDialog}>
+        <DialogContent className="bg-white">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Headphones className="h-5 w-5 text-purple-600" />Contact Support</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>Subject *</Label><Input value={supportSubject} onChange={(e) => setSupportSubject(e.target.value)} placeholder="What do you need help with?" className="mt-1.5" /></div>
+            <div><Label>Priority</Label>
+              <Select value={supportPriority} onValueChange={setSupportPriority}>
+                <SelectTrigger className="mt-1.5 bg-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white"><SelectItem value="low">Low</SelectItem><SelectItem value="normal">Normal</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="urgent">Urgent</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div><Label>Message *</Label><Textarea value={supportMessage} onChange={(e) => setSupportMessage(e.target.value)} placeholder="Describe your issue..." rows={4} className="mt-1.5" /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowSupportDialog(false)}>Cancel</Button><Button onClick={submitSupportTicket} className="bg-purple-600 hover:bg-purple-700">Submit Ticket</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Meeting Dialog */}
+      <Dialog open={showMeetingDialog} onOpenChange={setShowMeetingDialog}>
+        <DialogContent className="bg-white">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Video className="h-5 w-5 text-indigo-600" />Schedule Meeting</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div><Label>Meeting Title *</Label><Input value={meetingTitle} onChange={(e) => setMeetingTitle(e.target.value)} placeholder="Meeting title..." className="mt-1.5" /></div>
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Date *</Label><Input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className="mt-1.5" /></div>
+              <div><Label>Time *</Label><Input type="time" value={meetingTime} onChange={(e) => setMeetingTime(e.target.value)} className="mt-1.5" /></div>
+            </div>
+            <div><Label>Description</Label><Textarea value={meetingDescription} onChange={(e) => setMeetingDescription(e.target.value)} placeholder="Meeting details..." rows={3} className="mt-1.5" /></div>
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => setShowMeetingDialog(false)}>Cancel</Button><Button onClick={scheduleMeeting} className="bg-indigo-600 hover:bg-indigo-700">Schedule</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// Hotel Card Component
+// Hotel Card Component - Fixed star badge positioning
 const HotelCard = ({ hotel, isSelected, onEdit, onDelete, onViewRooms }) => (
-  <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md hover:-translate-y-1'}`}>
-    <ImageCarousel images={hotel.images} className="h-48" />
-    <div className="absolute top-3 left-3">
-      <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
-        <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />{hotel.star_rating}
-      </Badge>
+  <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl relative ${isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md hover:-translate-y-1'}`}>
+    <div className="relative">
+      <ImageCarousel images={hotel.images} className="h-48" />
+      {/* Star badge inside the image container */}
+      <div className="absolute top-3 left-3 z-20">
+        <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
+          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />{hotel.star_rating}
+        </Badge>
+      </div>
     </div>
     <CardContent className="p-4 space-y-3">
       <div>
@@ -909,6 +864,7 @@ const HotelCard = ({ hotel, isSelected, onEdit, onDelete, onViewRooms }) => (
 // Main Component
 export default function HotelManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [hotels, setHotels] = useState([]);
   const [selectedHotel, setSelectedHotel] = useState(null);
@@ -938,7 +894,7 @@ export default function HotelManagement() {
   const [hotelForm, setHotelForm] = useState(DEFAULT_HOTEL_FORM);
   const [roomForm, setRoomForm] = useState(DEFAULT_ROOM_FORM);
 
-  // Filtered and paginated data
+  // Filtered data
   const filteredHotels = useMemo(() => {
     let result = hotels;
     if (selectedOperator.id) result = result.filter(h => h.operator_id === selectedOperator.id);
@@ -991,10 +947,7 @@ export default function HotelManagement() {
 
   const loadAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
-    try {
-      const res = await api.get('/hotels/analytics/dashboard?period=30days');
-      setAnalyticsData(res.data);
-    } catch (error) { console.error('Failed to load analytics:', error); }
+    try { const res = await api.get('/hotels/analytics/dashboard?period=30days'); setAnalyticsData(res.data); } catch {}
     finally { setAnalyticsLoading(false); }
   }, []);
 
@@ -1059,7 +1012,7 @@ export default function HotelManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#082c59]">Hotel Management Center</h1>
-          <p className="text-slate-500 mt-1">Manage hotels, rooms, communications, and view analytics</p>
+          <p className="text-slate-500 mt-1">Manage hotels, rooms, and communications</p>
         </div>
         <Button onClick={() => { loadHotels(); loadAnalytics(); }} variant="outline" disabled={loading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh
@@ -1067,12 +1020,11 @@ export default function HotelManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 bg-white shadow-sm">
+        <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
           <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><LayoutDashboard className="h-4 w-4" /> Dashboard</TabsTrigger>
           <TabsTrigger value="hotels" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Hotel className="h-4 w-4" /> Hotels</TabsTrigger>
           <TabsTrigger value="rooms" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" disabled={!selectedHotel}><Bed className="h-4 w-4" /> Rooms</TabsTrigger>
           <TabsTrigger value="communications" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><MessageSquare className="h-4 w-4" /> Communications</TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><BarChart2 className="h-4 w-4" /> Analytics</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -1165,9 +1117,10 @@ export default function HotelManagement() {
                     const isLow = avail <= Math.ceil(total * 0.2) && avail > 0, isOut = avail <= 0;
                     return (
                       <Card key={room.id || room._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="flex">
+                        <div className="flex relative">
                           <RoomImageCarousel images={room.images} className="w-56 h-40" />
-                          <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold shadow ${isOut ? 'bg-red-600 text-white' : isLow ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'}`}>{avail}/{total}</div>
+                          {/* Availability badge - fixed positioning inside the card */}
+                          <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold shadow z-20 ${isOut ? 'bg-red-600 text-white' : isLow ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'}`}>{avail}/{total}</div>
                           <div className="flex-1 p-5">
                             <div className="flex justify-between items-start">
                               <div><h4 className="font-bold text-lg">{room.room_name || 'Room'}</h4><p className="text-sm text-slate-500 capitalize">{room.room_type} • {room.bed_type} bed</p></div>
@@ -1198,11 +1151,6 @@ export default function HotelManagement() {
         {/* Communications Tab */}
         <TabsContent value="communications" className="mt-6">
           <CommunicationsHub user={user} />
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="mt-6">
-          <ExecutiveDashboard hotels={hotels} rooms={rooms} analyticsData={analyticsData} loading={analyticsLoading} />
         </TabsContent>
       </Tabs>
 
