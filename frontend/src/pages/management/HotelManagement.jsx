@@ -1073,9 +1073,13 @@ export default function HotelManagement() {
           <p className="text-sm text-slate-500">Showing {paginatedHotels.length} of {filteredHotels.length} hotels</p>
           {loading ? <div className="flex items-center justify-center py-20"><RefreshCw className="h-8 w-8 animate-spin text-[#082c59]" /></div> : filteredHotels.length === 0 ? (
             <Card className="shadow-sm"><CardContent className="py-16 text-center"><Hotel className="h-16 w-16 mx-auto text-slate-300 mb-4" /><h3 className="text-lg font-medium text-slate-700">No hotels found</h3></CardContent></Card>
-          ) : (
+          ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {paginatedHotels.map(hotel => <HotelCard key={hotel._id || hotel.id} hotel={hotel} isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)} onEdit={() => openHotelDialog(hotel)} onDelete={() => handleDeleteHotel(hotel)} onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }} />)}
+              {paginatedHotels.map(hotel => <HotelCard key={hotel._id || hotel.id} hotel={hotel} viewMode="grid" isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)} onEdit={() => openHotelDialog(hotel)} onDelete={() => handleDeleteHotel(hotel)} onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }} />)}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {paginatedHotels.map(hotel => <HotelCard key={hotel._id || hotel.id} hotel={hotel} viewMode="list" isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)} onEdit={() => openHotelDialog(hotel)} onDelete={() => handleDeleteHotel(hotel)} onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }} />)}
             </div>
           )}
           <Pagination currentPage={hotelPage} totalPages={totalHotelPages} onPageChange={setHotelPage} />
