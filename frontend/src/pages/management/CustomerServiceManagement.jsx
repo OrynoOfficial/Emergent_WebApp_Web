@@ -1033,7 +1033,7 @@ export default function CustomerServiceManagement() {
                     <p className="text-sm text-blue-700 mt-1">
                       Tickets can only be assigned to members listed here. Add team members based on their roles - 
                       Admins and Super Admins have full access, while employees can handle tickets assigned to them.
-                      Members marked as "Auto-added" are detected from system roles and cannot be removed from here.
+                      Members marked as &quot;Auto-added&quot; are detected from system roles and cannot be removed from here.
                     </p>
                   </div>
                 </div>
