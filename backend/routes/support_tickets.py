@@ -416,11 +416,14 @@ async def add_team_member(
         "role": member.role,
         "department": member.department,
         "type": member.type,
-        "added_by": current_user["_id"],
+        "added_by": str(current_user.get("_id", "")),
         "added_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.support_team_members.insert_one(team_member)
+    
+    # Remove _id from response
+    team_member.pop("_id", None)
     
     return {"message": f"{member.name} added to support team", "member": team_member}
 
