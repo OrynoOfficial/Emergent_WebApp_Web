@@ -17,6 +17,7 @@ class HotelCreate(BaseModel):
     country: str
     star_rating: Optional[int] = None
     amenities: list = []
+    images: list = []  # Support for multiple hotel images (5-10)
     phone: Optional[str] = None
     email: Optional[str] = None
     operator_id: Optional[str] = None
