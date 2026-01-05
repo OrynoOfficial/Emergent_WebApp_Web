@@ -822,49 +822,99 @@ const CommunicationsHub = ({ user }) => {
   );
 };
 
-// Hotel Card Component - Fixed star badge positioning
-const HotelCard = ({ hotel, isSelected, onEdit, onDelete, onViewRooms }) => (
-  <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl relative ${isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md hover:-translate-y-1'}`}>
-    <div className="relative">
-      <ImageCarousel images={hotel.images} className="h-48" />
-      {/* Star badge inside the image container */}
-      <div className="absolute top-3 left-3 z-20">
-        <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
-          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />{hotel.star_rating}
-        </Badge>
-      </div>
-    </div>
-    <CardContent className="p-4 space-y-3">
-      <div>
-        <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{hotel.name}</h3>
-        <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1">
-          <MapPin className="w-3.5 h-3.5" /><span>{hotel.city}, {hotel.country}</span>
-        </div>
-      </div>
-      {hotel.operator_name && (
-        <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-lg border border-blue-100">
-          <Building2 className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-blue-700 truncate">{hotel.operator_name}</span>
-        </div>
-      )}
-      {hotel.amenities?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {hotel.amenities.slice(0, 6).map((amenity, idx) => (
-            <div key={idx} className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md" title={amenity.replace('_', ' ')}>
-              {getAmenityIcon(amenity)}<span className="text-xs text-slate-600 capitalize">{amenity.replace('_', ' ')}</span>
+// Hotel Card Component - Supports both grid and list view
+const HotelCard = ({ hotel, isSelected, onEdit, onDelete, onViewRooms, viewMode = 'grid' }) => {
+  if (viewMode === 'list') {
+    return (
+      <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md'}`}>
+        <div className="flex">
+          <div className="relative w-56 shrink-0">
+            <ImageCarousel images={hotel.images} className="h-full min-h-[160px]" />
+            <div className="absolute top-3 left-3 z-20">
+              <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
+                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />{hotel.star_rating}
+              </Badge>
             </div>
-          ))}
-          {hotel.amenities.length > 6 && <div className="flex items-center bg-[#082c59]/10 px-2 py-1 rounded-md"><span className="text-xs font-medium text-[#082c59]">+{hotel.amenities.length - 6}</span></div>}
+          </div>
+          <div className="flex-1 p-5">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="font-bold text-lg text-slate-800">{hotel.name}</h3>
+                <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1">
+                  <MapPin className="w-3.5 h-3.5" /><span>{hotel.city}, {hotel.country}</span>
+                </div>
+              </div>
+              {hotel.operator_name && (
+                <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-lg border border-blue-100">
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700 truncate max-w-[150px]">{hotel.operator_name}</span>
+                </div>
+              )}
+            </div>
+            {hotel.amenities?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {hotel.amenities.slice(0, 8).map((amenity, idx) => (
+                  <div key={idx} className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md" title={amenity.replace('_', ' ')}>
+                    {getAmenityIcon(amenity)}<span className="text-xs text-slate-600 capitalize">{amenity.replace('_', ' ')}</span>
+                  </div>
+                ))}
+                {hotel.amenities.length > 8 && <div className="flex items-center bg-[#082c59]/10 px-2 py-1 rounded-md"><span className="text-xs font-medium text-[#082c59]">+{hotel.amenities.length - 8}</span></div>}
+              </div>
+            )}
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <Button size="sm" onClick={onViewRooms} className="bg-[#082c59] hover:bg-[#0a3a75]"><Bed className="w-4 h-4 mr-1.5" /> View Rooms</Button>
+              <PermissionGate permission="hotels.edit"><Button size="sm" variant="outline" onClick={onEdit} className="px-3"><Edit className="w-4 h-4 mr-1" /> Edit</Button></PermissionGate>
+              <PermissionGate permission="hotels.delete"><Button size="sm" variant="outline" onClick={onDelete} className="px-3 text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4 mr-1" /> Delete</Button></PermissionGate>
+            </div>
+          </div>
         </div>
-      )}
-      <div className="flex gap-2 pt-2 border-t border-slate-100">
-        <Button size="sm" onClick={onViewRooms} className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]"><Bed className="w-4 h-4 mr-1.5" /> View Rooms</Button>
-        <PermissionGate permission="hotels.edit"><Button size="sm" variant="outline" onClick={onEdit} className="px-3"><Edit className="w-4 h-4" /></Button></PermissionGate>
-        <PermissionGate permission="hotels.delete"><Button size="sm" variant="outline" onClick={onDelete} className="px-3 text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button></PermissionGate>
+      </Card>
+    );
+  }
+
+  // Grid view (default)
+  return (
+    <Card className={`overflow-hidden transition-all duration-300 hover:shadow-xl relative ${isSelected ? 'ring-2 ring-[#082c59] shadow-xl' : 'shadow-md hover:-translate-y-1'}`}>
+      <div className="relative">
+        <ImageCarousel images={hotel.images} className="h-48" />
+        <div className="absolute top-3 left-3 z-20">
+          <Badge className="bg-white/95 text-slate-800 shadow-lg font-semibold gap-1">
+            <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />{hotel.star_rating}
+          </Badge>
+        </div>
       </div>
-    </CardContent>
-  </Card>
-);
+      <CardContent className="p-4 space-y-3">
+        <div>
+          <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{hotel.name}</h3>
+          <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1">
+            <MapPin className="w-3.5 h-3.5" /><span>{hotel.city}, {hotel.country}</span>
+          </div>
+        </div>
+        {hotel.operator_name && (
+          <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 rounded-lg border border-blue-100">
+            <Building2 className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-700 truncate">{hotel.operator_name}</span>
+          </div>
+        )}
+        {hotel.amenities?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {hotel.amenities.slice(0, 6).map((amenity, idx) => (
+              <div key={idx} className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded-md" title={amenity.replace('_', ' ')}>
+                {getAmenityIcon(amenity)}<span className="text-xs text-slate-600 capitalize">{amenity.replace('_', ' ')}</span>
+              </div>
+            ))}
+            {hotel.amenities.length > 6 && <div className="flex items-center bg-[#082c59]/10 px-2 py-1 rounded-md"><span className="text-xs font-medium text-[#082c59]">+{hotel.amenities.length - 6}</span></div>}
+          </div>
+        )}
+        <div className="flex gap-2 pt-2 border-t border-slate-100">
+          <Button size="sm" onClick={onViewRooms} className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]"><Bed className="w-4 h-4 mr-1.5" /> View Rooms</Button>
+          <PermissionGate permission="hotels.edit"><Button size="sm" variant="outline" onClick={onEdit} className="px-3"><Edit className="w-4 h-4" /></Button></PermissionGate>
+          <PermissionGate permission="hotels.delete"><Button size="sm" variant="outline" onClick={onDelete} className="px-3 text-red-600 hover:bg-red-50"><Trash2 className="w-4 h-4" /></Button></PermissionGate>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // Main Component
 export default function HotelManagement() {
