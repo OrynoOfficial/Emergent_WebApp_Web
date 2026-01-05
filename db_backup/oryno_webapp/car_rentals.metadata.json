@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"d58b2357cd5141c2a0b3130e74822f31","collectionName":"car_rentals","type":"collection"}
