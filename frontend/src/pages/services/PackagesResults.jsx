@@ -56,7 +56,7 @@ const getServiceIcon = (type) => {
 const ServiceCardGrid = ({ service, packageSize, onSelect }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const price = service.prices_by_size?.[packageSize] || 0;
-  const Icon = getServiceIcon(service.service_type);
+  const ServiceIcon = getServiceIcon(service.service_type);
   
   return (
     <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
@@ -70,7 +70,7 @@ const ServiceCardGrid = ({ service, packageSize, onSelect }) => {
         </button>
         
         <Badge className={`absolute top-3 left-3 ${SERVICE_TYPE_COLORS[service.service_type]}`}>
-          <Icon className="w-3 h-3 mr-1" />
+          <ServiceIcon className="w-3 h-3 mr-1" />
           {SERVICE_TYPE_LABELS[service.service_type]}
         </Badge>
         
@@ -132,7 +132,7 @@ const ServiceCardGrid = ({ service, packageSize, onSelect }) => {
 // List View Service Card
 const ServiceCardList = ({ service, packageSize, onSelect }) => {
   const price = service.prices_by_size?.[packageSize] || 0;
-  const Icon = getServiceIcon(service.service_type);
+  const ServiceIcon = getServiceIcon(service.service_type);
   
   return (
     <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
@@ -140,7 +140,7 @@ const ServiceCardList = ({ service, packageSize, onSelect }) => {
         {/* Left Section */}
         <div className="md:w-1/4 p-6 bg-gradient-to-br from-[#082c59] to-[#0a3a75] text-white flex flex-col justify-center">
           <Badge className={`w-fit mb-2 ${SERVICE_TYPE_COLORS[service.service_type]}`}>
-            <Icon className="w-3 h-3 mr-1" />
+            <ServiceIcon className="w-3 h-3 mr-1" />
             {SERVICE_TYPE_LABELS[service.service_type]}
           </Badge>
           <div className="flex items-center gap-2 mb-1">
