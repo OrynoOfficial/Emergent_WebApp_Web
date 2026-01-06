@@ -98,7 +98,7 @@ const ICON_COLORS = {
 };
 
 export default function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, operatorContext, isOperatorUser, operatorServiceTypes, operatorType } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { hasPermission, hasAnyPermission, canAccessModule, isSuperAdmin: isSuperAdminPerm, loading: permissionsLoading } = usePermissions();
