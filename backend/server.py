@@ -269,6 +269,7 @@ app.include_router(stripe_checkout_router)  # Stripe Checkout integration
 app.include_router(momo_checkout_router)  # MTN MoMo Mobile Money integration
 app.include_router(operator_users_router)  # Operator users management
 app.include_router(system_settings_router)  # System settings (session timeout, etc.)
+app.include_router(operator_roles_router)  # Operator roles and permissions management
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
