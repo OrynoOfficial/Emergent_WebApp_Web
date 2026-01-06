@@ -318,7 +318,7 @@ export default function CarRentalResults() {
       returnDate,
       days
     }));
-    navigate(`/services/car-rental/booking/${vehicle.id}`);
+    navigate(`/services/car-rental/booking`);
   };
 
   if (loading) {
