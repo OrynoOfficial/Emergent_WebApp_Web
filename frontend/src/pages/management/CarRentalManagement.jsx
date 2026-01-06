@@ -21,11 +21,14 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
+const CHART_COLORS = ['#22C55E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 const CAR_FEATURES = ['ac', 'gps', 'bluetooth', 'sunroof', 'leather_seats', 'backup_camera', 'cruise_control', 'heated_seats'];
 const CAR_TYPES = ['economy', 'compact', 'sedan', 'suv', 'luxury', 'sports', 'van', 'pickup'];
 
@@ -48,220 +51,60 @@ const DEFAULT_CAR_FORM = {
   operator_name: ''
 };
 
-// Executive Dashboard
-const ExecutiveDashboard = ({ cars }) => {
-  const dashboardData = useMemo(() => {
+// Car Rental specific dashboard data generator
+const useCarRentalDashboardData = (cars) => {
+  return useMemo(() => {
     const totalCars = cars.length;
     const availableCars = cars.filter(c => c.is_available).length;
-    const avgPrice = cars.length > 0
-      ? Math.round(cars.reduce((sum, c) => sum + (c.price_per_day || 0), 0) / cars.length)
-      : 0;
+    const totalRevenue = cars.reduce((sum, c) => sum + (c.price_per_day || 0) * 8, 0);
+    const utilization = totalCars > 0 ? Math.round(((totalCars - availableCars) / totalCars) * 100) : 0;
 
-    // Car type distribution
-    const typeDistribution = {};
+    // Type distribution
+    const typeCount = {};
     cars.forEach(c => {
       const type = c.car_type || 'sedan';
-      typeDistribution[type] = (typeDistribution[type] || 0) + 1;
+      typeCount[type] = (typeCount[type] || 0) + 1;
     });
-
-    const typeData = Object.entries(typeDistribution).map(([name, value], i) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value,
-      color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'][i % 6]
+    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      count,
+      color: CHART_COLORS[i]
     }));
 
-    // Weekly bookings (mock)
-    const weeklyBookings = Array.from({ length: 7 }, (_, i) => ({
-      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      bookings: Math.floor(Math.random() * 20) + 5,
-      revenue: Math.floor(Math.random() * 300000) + 50000
-    }));
+    // Daily trend - fixed data
+    const dailyTrend = [
+      { date: 'Mon', bookings: 12, revenue: 180000 },
+      { date: 'Tue', bookings: 15, revenue: 220000 },
+      { date: 'Wed', bookings: 18, revenue: 280000 },
+      { date: 'Thu', bookings: 22, revenue: 350000 },
+      { date: 'Fri', bookings: 28, revenue: 450000 },
+      { date: 'Sat', bookings: 35, revenue: 580000 },
+      { date: 'Sun', bookings: 25, revenue: 420000 }
+    ];
 
-    return { totalCars, availableCars, avgPrice, typeData, weeklyBookings };
+    return {
+      stats: {
+        totalItems: totalCars,
+        activeItems: availableCars,
+        totalBookings: totalCars * 6 + 25,
+        totalRevenue: totalRevenue || totalCars * 180000,
+        avgRating: 4.3,
+        occupancyRate: utilization,
+        bookingsGrowth: 18.5,
+        revenueGrowth: 14.2
+      },
+      bookingsByStatus: {
+        confirmed: Math.max(28, totalCars * 3),
+        pending: Math.max(8, totalCars),
+        cancelled: 2,
+        completed: Math.max(22, totalCars * 2)
+      },
+      dailyTrend,
+      distribution,
+      secondaryCount: availableCars,
+      recentBookings: []
+    };
   }, [cars]);
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600 mb-1">Total Fleet</p>
-                <p className="text-2xl font-bold text-green-900">{dashboardData.totalCars}</p>
-              </div>
-              <div className="bg-green-200 rounded-full p-3">
-                <Car className="h-6 w-6 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Available Now</p>
-                <p className="text-2xl font-bold text-blue-900">{dashboardData.availableCars}</p>
-              </div>
-              <div className="bg-blue-200 rounded-full p-3">
-                <Key className="h-6 w-6 text-blue-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-600 mb-1">Avg. Daily Rate</p>
-                <p className="text-2xl font-bold text-yellow-900">{formatFCFA(dashboardData.avgPrice)}</p>
-              </div>
-              <div className="bg-yellow-200 rounded-full p-3">
-                <DollarSign className="h-6 w-6 text-yellow-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-1">Utilization</p>
-                <p className="text-2xl font-bold text-purple-900">
-                  {dashboardData.totalCars > 0 ? Math.round(((dashboardData.totalCars - dashboardData.availableCars) / dashboardData.totalCars) * 100) : 0}%
-                </p>
-              </div>
-              <div className="bg-purple-200 rounded-full p-3">
-                <TrendingUp className="h-6 w-6 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="h-5 w-5 text-green-600" />
-              Weekly Bookings & Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData.weeklyBookings}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="day" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="bookings" fill="#22C55E" radius={[4, 4, 0, 0]} name="Bookings" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Car className="h-5 w-5 text-blue-600" />
-              Fleet Distribution
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center">
-              {dashboardData.typeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={dashboardData.typeData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {dashboardData.typeData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500">No fleet data</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// Communications Hub
-const CommunicationsHub = ({ user }) => {
-  const [messages] = useState([
-    { id: 1, from: 'Booking Alert', subject: 'New rental request - SUV', time: '1 hour ago', unread: true },
-    { id: 2, from: 'Maintenance', subject: 'Vehicle inspection due - Toyota Corolla', time: '3 hours ago', unread: true },
-    { id: 3, from: 'Customer', subject: 'Extension request - Booking #1234', time: '1 day ago', unread: false }
-  ]);
-
-  const [announcementText, setAnnouncementText] = useState('');
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Recent Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`p-3 rounded-lg border ${msg.unread ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
-                <div className="flex justify-between">
-                  <div>
-                    <p className="font-medium text-sm">{msg.from}</p>
-                    <p className="text-xs text-slate-600">{msg.subject}</p>
-                  </div>
-                  <span className="text-xs text-slate-500">{msg.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Send Announcement</Label>
-            <div className="flex gap-2 mt-2">
-              <Input placeholder="Type announcement..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} />
-              <Button className="bg-[#082c59]" onClick={() => { toast.success('Sent!'); setAnnouncementText(''); }}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="pt-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start"><Bell className="mr-2 h-4 w-4" /> Create Special Offer</Button>
-            <Button variant="outline" className="w-full justify-start"><Settings className="mr-2 h-4 w-4" /> Schedule Maintenance</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 };
 
 // Business Analytics
@@ -273,15 +116,19 @@ const BusinessAnalytics = ({ cars }) => {
       cityData[city] = (cityData[city] || 0) + 1;
     });
 
-    const monthlyTrend = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
-      month,
-      bookings: Math.floor(Math.random() * 100) + 30,
-      revenue: Math.floor(Math.random() * 2000000) + 300000
-    }));
+    // Fixed monthly trend data
+    const monthlyTrend = [
+      { month: 'Jan', bookings: 65, revenue: 980000 },
+      { month: 'Feb', bookings: 78, revenue: 1180000 },
+      { month: 'Mar', bookings: 92, revenue: 1420000 },
+      { month: 'Apr', bookings: 85, revenue: 1280000 },
+      { month: 'May', bookings: 110, revenue: 1750000 },
+      { month: 'Jun', bookings: 125, revenue: 2050000 }
+    ];
 
     return {
       cityData: Object.entries(cityData).map(([name, value], i) => ({
-        name, value, color: ['#22C55E', '#3B82F6', '#F59E0B', '#EF4444'][i % 4]
+        name, value, color: CHART_COLORS[i % CHART_COLORS.length]
       })),
       monthlyTrend
     };
