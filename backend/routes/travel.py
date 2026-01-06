@@ -69,3 +69,50 @@ async def get_travel_route(route_id: str):
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
     return route
+
+
+@router.get("/management/my-routes")
+async def get_my_travel_routes(
+    search: Optional[str] = None,
+    origin: Optional[str] = None,
+    destination: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get travel routes for the current user's operator (operator-scoped).
+    Super admin and admin can see all routes.
+    Operator users can only see routes belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"route_name": {"$regex": search, "$options": "i"}},
+            {"origin": {"$regex": search, "$options": "i"}},
+            {"destination": {"$regex": search, "$options": "i"}}
+        ]
+    if origin:
+        query["origin"] = {"$regex": origin, "$options": "i"}
+    if destination:
+        query["destination"] = {"$regex": destination, "$options": "i"}
+    
+    routes = await db.travel_routes.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.travel_routes.count_documents(query)
+    
+    # Transform _id to id
+    for route in routes:
+        route["id"] = str(route.pop("_id", ""))
+    
+    return {
+        "routes": routes, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
