@@ -515,7 +515,12 @@ export default function PackageManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Packages"
+            serviceTag="packages"
+            serviceIcon={<Package className="h-5 w-5 text-blue-600" />}
+            primaryColor="blue"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
