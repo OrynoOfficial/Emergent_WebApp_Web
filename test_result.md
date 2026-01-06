@@ -2521,3 +2521,30 @@ The travel round-trip feature allows users to search for bus tickets with a retu
 - Super Admin: superadmin@oryno.com / testpassword123
 - Admin: admin@test.com / testpassword123
 - Customer: customer@test.com / testpassword123
+
+## Session Timeout Configuration Feature Testing (2026-01-06)
+
+### Feature Description:
+Configurable session timeout in Settings page for admin/super_admin users.
+- Default: 30 minutes
+- Minimum: 15 minutes  
+- Maximum: 2 hours (120 minutes)
+- Only super_admin can modify, admin can view
+
+### Test Cases:
+1. Public endpoint returns default session timeout settings
+2. Super admin can view session timeout settings
+3. Super admin can update session timeout (within range)
+4. Admin can view but NOT update session timeout
+5. New logins use the configured session timeout
+6. Settings UI shows session timeout configuration with presets
+
+### Test Credentials:
+- Super Admin: superadmin@oryno.com / testpassword123
+- Admin: admin@test.com / testpassword123
+
+### API Endpoints:
+- GET /api/system-settings/public/session-timeout (no auth)
+- GET /api/system-settings/ (admin/super_admin)
+- PUT /api/system-settings/session-timeout (super_admin only)
+
