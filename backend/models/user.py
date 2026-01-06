@@ -60,6 +60,15 @@ class User(BaseModel):
     status: UserStatus = UserStatus.ACTIVE
     profile_picture: Optional[str] = None
     
+    # Operator Assignment Fields (for operator-scoped users)
+    operator_id: Optional[str] = None           # Which operator they belong to
+    operator_name: Optional[str] = None         # Denormalized for convenience
+    operator_role: Optional[str] = None         # "owner" | "local_admin" | "local_user"
+    operator_type: Optional[str] = None         # Service type of the operator
+    
+    # Scoped Permissions (for local users within an operator)
+    scoped_permissions: List[str] = []
+    
     # Custom permissions (override role defaults)
     custom_permissions: List[str] = []
     
