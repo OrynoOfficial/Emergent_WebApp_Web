@@ -193,6 +193,9 @@ export default function CarRentalManagement() {
   const [editingCar, setEditingCar] = useState(null);
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
+  // Use the car rental dashboard data hook
+  const dashboardData = useCarRentalDashboardData(cars);
+
   const handleViewCar = (car) => {
     setViewingCar(car);
     setIsViewDialogOpen(true);
