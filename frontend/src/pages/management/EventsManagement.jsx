@@ -328,6 +328,9 @@ export default function EventsManagement() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
 
+  // Use the events dashboard data hook
+  const dashboardData = useEventsDashboardData(events);
+
   const handleViewEvent = (event) => {
     setViewingEvent(event);
     setIsViewDialogOpen(true);
