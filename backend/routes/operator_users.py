@@ -2,7 +2,7 @@
 Operator Users Management API
 Handles user assignment, creation, and management within operators
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status as http_status, Depends, Query
 from pydantic import BaseModel, EmailStr
 from config.database import get_database
 from middleware.auth import get_current_active_user
