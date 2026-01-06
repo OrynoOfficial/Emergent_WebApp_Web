@@ -60,12 +60,12 @@ const DEFAULT_VEHICLE_FORM = {
   notes: ''
 };
 
-// Executive Dashboard Component
-const ExecutiveDashboard = ({ routes, vehicles, stats }) => {
-  // Calculate dashboard metrics
-  const dashboardData = useMemo(() => {
+// Travel-specific dashboard data generator
+const useTravelDashboardData = (routes, vehicles) => {
+  return useMemo(() => {
     const activeRoutes = routes.filter(r => r.status === 'active');
-    const totalRevenue = activeRoutes.reduce((sum, r) => sum + (r.price || 0) * 10, 0); // Estimated
+    const activeVehicles = vehicles.filter(v => v.maintenance_status === 'active');
+    const totalRevenue = activeRoutes.reduce((sum, r) => sum + (r.price || 0) * 10, 0);
     const avgOccupancy = activeRoutes.length > 0 
       ? Math.round(activeRoutes.reduce((sum, r) => {
           const occupied = (r.total_seats || 0) - (r.available_seats || 0);
@@ -73,167 +73,43 @@ const ExecutiveDashboard = ({ routes, vehicles, stats }) => {
         }, 0) / activeRoutes.length)
       : 0;
 
-    // Route performance data
-    const routePerformance = activeRoutes.slice(0, 5).map((r, i) => ({
-      name: `${r.from_city} - ${r.to_city}`.substring(0, 15),
-      bookings: Math.floor(Math.random() * 50) + 20,
-      revenue: (r.price || 5000) * (Math.floor(Math.random() * 30) + 10),
-      color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'][i]
-    }));
+    // Route distribution by vehicle type
+    const routeDistribution = ['normal', 'vip', 'luxury'].map((type, i) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      count: routes.filter(r => r.vehicle_type === type).length,
+      color: CHART_COLORS[i]
+    })).filter(d => d.count > 0);
 
-    // Weekly revenue trend
-    const weeklyRevenue = Array.from({ length: 7 }, (_, i) => ({
-      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      revenue: Math.floor(Math.random() * 500000) + 200000
+    // Daily trend (mock)
+    const dailyTrend = Array.from({ length: 7 }, (_, i) => ({
+      date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+      bookings: Math.floor(Math.random() * 40) + 15,
+      revenue: Math.floor(Math.random() * 600000) + 200000
     }));
 
     return {
-      totalRoutes: routes.length,
-      activeRoutes: activeRoutes.length,
-      totalVehicles: vehicles.length,
-      activeVehicles: vehicles.filter(v => v.maintenance_status === 'active').length,
-      totalRevenue,
-      avgOccupancy,
-      routePerformance,
-      weeklyRevenue
+      stats: {
+        totalItems: routes.length,
+        activeItems: activeRoutes.length,
+        totalBookings: Math.floor(Math.random() * 200) + 50,
+        totalRevenue,
+        avgRating: 4.2,
+        occupancyRate: avgOccupancy,
+        bookingsGrowth: 12.5,
+        revenueGrowth: 8.3
+      },
+      bookingsByStatus: {
+        confirmed: Math.floor(Math.random() * 50) + 20,
+        pending: Math.floor(Math.random() * 15) + 5,
+        cancelled: Math.floor(Math.random() * 5) + 1,
+        completed: Math.floor(Math.random() * 30) + 10
+      },
+      dailyTrend,
+      distribution: routeDistribution,
+      secondaryCount: activeVehicles.length,
+      recentBookings: []
     };
   }, [routes, vehicles]);
-
-  return (
-    <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Total Routes</p>
-                <p className="text-2xl font-bold text-blue-900">{dashboardData.totalRoutes}</p>
-                <p className="text-xs text-blue-700 mt-1">{dashboardData.activeRoutes} active</p>
-              </div>
-              <div className="bg-blue-200 rounded-full p-3">
-                <MapPin className="h-6 w-6 text-blue-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600 mb-1">Est. Revenue</p>
-                <p className="text-2xl font-bold text-green-900">{formatFCFA(dashboardData.totalRevenue)}</p>
-                <div className="flex items-center mt-1">
-                  <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-                  <span className="text-xs text-green-600">+12% this week</span>
-                </div>
-              </div>
-              <div className="bg-green-200 rounded-full p-3">
-                <DollarSign className="h-6 w-6 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-1">Fleet Size</p>
-                <p className="text-2xl font-bold text-purple-900">{dashboardData.totalVehicles}</p>
-                <p className="text-xs text-purple-700 mt-1">{dashboardData.activeVehicles} active</p>
-              </div>
-              <div className="bg-purple-200 rounded-full p-3">
-                <Bus className="h-6 w-6 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-600 mb-1">Avg. Occupancy</p>
-                <p className="text-2xl font-bold text-orange-900">{dashboardData.avgOccupancy}%</p>
-                <p className="text-xs text-orange-700 mt-1">Seat utilization</p>
-              </div>
-              <div className="bg-orange-200 rounded-full p-3">
-                <Users className="h-6 w-6 text-orange-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Revenue Chart */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="h-5 w-5 text-blue-600" />
-              Weekly Revenue Trend
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData.weeklyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="day" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} tickFormatter={(v) => `${(v/1000)}k`} />
-                  <Tooltip formatter={(v) => formatFCFA(v)} />
-                  <Bar dataKey="revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Route Performance */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              Top Routes by Bookings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dashboardData.routePerformance}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="bookings"
-                  >
-                    {dashboardData.routePerformance.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {dashboardData.routePerformance.map((route, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: route.color }} />
-                  <span className="truncate">{route.name}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
 };
 
 // Communications Hub Component
