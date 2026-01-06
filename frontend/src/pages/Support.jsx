@@ -451,17 +451,31 @@ export default function Support() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post('/support/ticket', {
+      // Use the new support-tickets API endpoint
+      await api.post('/support-tickets/', {
         subject: contactForm.subject,
-        message: contactForm.message,
-        user_email: contactForm.email,
-        user_name: contactForm.name,
-        priority: 'medium'
+        description: contactForm.message,
+        category: 'inquiry',
+        priority: 'medium',
+        source: 'web'
       });
-      toast.success('Message sent successfully! We\'ll get back to you soon.');
+      toast.success('Your ticket has been submitted! We\'ll get back to you soon.');
       setContactForm({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      toast.error('Failed to send message. Please try again.');
+      // Fallback to old endpoint if new one not available
+      try {
+        await api.post('/support/ticket', {
+          subject: contactForm.subject,
+          message: contactForm.message,
+          user_email: contactForm.email,
+          user_name: contactForm.name,
+          priority: 'medium'
+        });
+        toast.success('Message sent successfully! We\'ll get back to you soon.');
+        setContactForm({ name: '', email: '', subject: '', message: '' });
+      } catch (fallbackError) {
+        toast.error('Failed to send message. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
