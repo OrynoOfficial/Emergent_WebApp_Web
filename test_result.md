@@ -1,7 +1,15 @@
 # Test Results - Hotel Management & Customer Service Updates
 
 ## Current Testing Focus
-1. Session Timeout Configuration Feature - COMPLETED ✅
+1. Multi-Tenant Permission System - COMPLETED ✅
+   - POST /api/auth/login - Login with operator context
+   - GET /api/auth/me - User profile with permissions
+   - GET /api/operator-roles/operators/{operator_id}/roles - Operator roles management
+   - GET /api/operator-roles/users/me/permissions - User permissions endpoint
+   - GET /api/hotels/management/my-hotels - Operator-scoped hotel management
+   - GET /api/operator-roles/operators/{operator_id}/delegatable-permissions - Permission delegation
+
+2. Session Timeout Configuration Feature - COMPLETED ✅
    - GET /api/system-settings/public/session-timeout - Public endpoint (no auth)
    - GET /api/system-settings/ - Authenticated endpoint (admin/super_admin)
    - PUT /api/system-settings/session-timeout - Update endpoint (super_admin only)
@@ -9,7 +17,7 @@
    - Boundary value testing (15-120 minutes)
    - Permission enforcement testing
 
-2. Operator Users Management System - COMPLETED ✅
+3. Operator Users Management System - COMPLETED ✅
    - GET /api/operators/{operator_id}/users - List users for operator
    - GET /api/operators/{operator_id}/stats - User statistics  
    - GET /api/operators/{operator_id}/users/available - Available users for assignment
