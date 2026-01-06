@@ -181,4 +181,52 @@ async def get_my_event_bookings(
         {"user_id": current_user["_id"], "service_category": "event"}
     )
     
+
+
+
+@router.get("/management/my-events")
+async def get_my_events(
+    search: Optional[str] = None,
+    event_type: Optional[str] = None,
+    city: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get events for the current user's operator (operator-scoped).
+    Super admin and admin can see all events.
+    Operator users can only see events belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"venue": {"$regex": search, "$options": "i"}}
+        ]
+    if event_type:
+        query["event_type"] = event_type
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    
+    events = await db.events.find(query).sort("event_date", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.events.count_documents(query)
+    
+    # Transform _id to id
+    for event in events:
+        event["id"] = str(event.pop("_id", ""))
+    
+    return {
+        "events": events, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
     return {"bookings": bookings, "total": total}
