@@ -11,6 +11,14 @@ class UserRole(str, Enum):
     CUSTOMER = "customer"
     EMPLOYEE = "employee"
 
+
+class OperatorUserRole(str, Enum):
+    """Role within an operator organization"""
+    OWNER = "owner"              # Original creator, cannot be removed
+    LOCAL_ADMIN = "local_admin"  # Can manage operator's data and create local users
+    LOCAL_USER = "local_user"    # Limited access to operator's data
+
+
 # Role hierarchy for permission checks (higher index = more permissions)
 ROLE_HIERARCHY = {
     UserRole.CUSTOMER: 0,
@@ -19,6 +27,13 @@ ROLE_HIERARCHY = {
     UserRole.OPERATOR: 3,
     UserRole.ADMIN: 4,
     UserRole.SUPER_ADMIN: 5
+}
+
+# Operator role hierarchy
+OPERATOR_ROLE_HIERARCHY = {
+    OperatorUserRole.LOCAL_USER: 0,
+    OperatorUserRole.LOCAL_ADMIN: 1,
+    OperatorUserRole.OWNER: 2
 }
 
 def can_manage_role(manager_role: str, target_role: str) -> bool:
