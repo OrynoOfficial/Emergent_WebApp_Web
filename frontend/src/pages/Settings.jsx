@@ -103,6 +103,15 @@ export default function Settings() {
     payment_gateway: 'stripe',
   });
 
+  // Session timeout settings
+  const [sessionTimeoutConfig, setSessionTimeoutConfig] = useState({
+    session_timeout_minutes: 30,
+    min_session_timeout: 15,
+    max_session_timeout: 120,
+    loading: true,
+    saving: false,
+  });
+
   // Content data (Data Protection, Legal, About)
   const [contentData, setContentData] = useState({
     data_protection: { title: '', content: '' },
