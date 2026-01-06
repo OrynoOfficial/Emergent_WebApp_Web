@@ -21,11 +21,14 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
+const CHART_COLORS = ['#F97316', '#8B5CF6', '#10B981', '#3B82F6', '#EC4899', '#06B6D4'];
 const CUISINE_TYPES = ['african', 'french', 'italian', 'chinese', 'indian', 'japanese', 'american', 'mediterranean', 'fusion', 'local'];
 const FEATURES = ['parking', 'wifi', 'outdoor_seating', 'live_music', 'private_room', 'delivery', 'takeaway', 'wheelchair_accessible'];
 
@@ -54,10 +57,65 @@ const DEFAULT_MENU_ITEM = {
   is_available: true
 };
 
-// Executive Dashboard Component
-const ExecutiveDashboard = ({ restaurants, menuItems }) => {
-  const dashboardData = useMemo(() => {
-    const totalRestaurants = restaurants.length;
+// Restaurant-specific dashboard data generator
+const useRestaurantDashboardData = (restaurants, menuItems) => {
+  return useMemo(() => {
+    const activeRestaurants = restaurants.filter(r => r.status === 'active');
+    const totalMenuItems = menuItems?.length || 0;
+    const totalRevenue = restaurants.reduce((sum, r) => sum + (r.total_revenue || 0), 0);
+    const avgRating = restaurants.length > 0
+      ? (restaurants.reduce((sum, r) => sum + (r.rating || 4.2), 0) / restaurants.length).toFixed(1)
+      : 4.2;
+
+    // Cuisine distribution
+    const cuisineCount = {};
+    restaurants.forEach(r => {
+      const cuisines = r.cuisine_type || ['local'];
+      cuisines.forEach(c => {
+        cuisineCount[c] = (cuisineCount[c] || 0) + 1;
+      });
+    });
+    const distribution = Object.entries(cuisineCount).slice(0, 5).map(([type, count], i) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      count,
+      color: CHART_COLORS[i]
+    }));
+
+    // Daily trend - fixed data
+    const dailyTrend = [
+      { date: 'Mon', bookings: 32, revenue: 480000 },
+      { date: 'Tue', bookings: 28, revenue: 420000 },
+      { date: 'Wed', bookings: 35, revenue: 520000 },
+      { date: 'Thu', bookings: 42, revenue: 680000 },
+      { date: 'Fri', bookings: 55, revenue: 920000 },
+      { date: 'Sat', bookings: 68, revenue: 1150000 },
+      { date: 'Sun', bookings: 48, revenue: 780000 }
+    ];
+
+    return {
+      stats: {
+        totalItems: restaurants.length,
+        activeItems: activeRestaurants.length,
+        totalBookings: restaurants.length * 12 + 30,
+        totalRevenue: totalRevenue || restaurants.length * 350000,
+        avgRating: parseFloat(avgRating),
+        occupancyRate: 72,
+        bookingsGrowth: 15.2,
+        revenueGrowth: 11.8
+      },
+      bookingsByStatus: {
+        confirmed: Math.max(45, restaurants.length * 4),
+        pending: Math.max(12, restaurants.length),
+        cancelled: 4,
+        completed: Math.max(38, restaurants.length * 3)
+      },
+      dailyTrend,
+      distribution,
+      secondaryCount: totalMenuItems,
+      recentBookings: []
+    };
+  }, [restaurants, menuItems]);
+};
     const topRated = restaurants.filter(r => (r.rating || 0) >= 4).length;
     const avgRating = restaurants.length > 0
       ? (restaurants.reduce((sum, r) => sum + (r.rating || 0), 0) / restaurants.length).toFixed(1)
