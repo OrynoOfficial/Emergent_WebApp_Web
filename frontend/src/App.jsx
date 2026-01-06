@@ -58,6 +58,7 @@ import CinemaManagement from './pages/management/CinemaManagement';
 import PackageManagement from './pages/management/PackageManagement';
 import CustomerServiceManagement from './pages/management/CustomerServiceManagement';
 import AccessGroupManagement from './pages/management/AccessGroupManagement';
+import TeamRolesManagement from './pages/management/TeamRolesManagement';
 
 // Service Pages
 import Hotels from './pages/services/Hotels';
