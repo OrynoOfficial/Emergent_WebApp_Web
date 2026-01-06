@@ -181,7 +181,90 @@
 
 ## Backend Testing Results
 
-### OPERATOR USERS MANAGEMENT SYSTEM TESTING (Current Review Request) ✅ FULLY WORKING
+### SESSION TIMEOUT CONFIGURATION FEATURE TESTING (Current Review Request) ✅ FULLY WORKING
+
+#### Complete Session Timeout Configuration Feature Testing ✅ ALL WORKING
+**Test Date:** 2026-01-06 (Latest - Current Review Request)
+**Status:** ✅ 100% SUCCESS RATE (18/18 tests passed)
+**API Base URL:** https://multitenant-rbac.preview.emergentagent.com/api
+**Test Results:**
+
+**Authentication:**
+- ✅ Super Admin login: WORKING (superadmin@oryno.com / testpassword123)
+- ✅ Admin login: WORKING (admin@test.com / testpassword123)
+- ✅ Customer login: WORKING (customer@test.com / testpassword123)
+
+**Test 1: Public Session Timeout Endpoint ✅ WORKING:**
+- ✅ GET /api/system-settings/public/session-timeout: WORKING (200 status, no auth required)
+- ✅ Response structure complete: session_timeout_minutes: 30, min_session_timeout: 15, max_session_timeout: 120
+- ✅ Public endpoint accessible without authentication as designed
+- ✅ Returns current timeout settings for frontend login page
+
+**Test 2: Authenticated Settings Endpoint ✅ WORKING:**
+- ✅ GET /api/system-settings/ (super_admin): WORKING (200 status)
+- ✅ GET /api/system-settings/ (admin): WORKING (200 status)
+- ✅ GET /api/system-settings/ (customer): CORRECTLY DENIED (403 status)
+- ✅ Response structure complete: session_timeout_minutes, min_session_timeout, max_session_timeout, updated_at, updated_by
+- ✅ Permission enforcement working correctly (admin/super_admin can view, customer denied)
+
+**Test 3: Session Timeout Update Tests ✅ ALL WORKING:**
+- ✅ PUT /api/system-settings/session-timeout (super_admin, 60min): WORKING (200 status)
+- ✅ PUT /api/system-settings/session-timeout (super_admin, 15min): WORKING (200 status) - Minimum boundary
+- ✅ PUT /api/system-settings/session-timeout (super_admin, 120min): WORKING (200 status) - Maximum boundary
+- ✅ PUT /api/system-settings/session-timeout (super_admin, 14min): CORRECTLY REJECTED (422 status) - Below minimum
+- ✅ PUT /api/system-settings/session-timeout (super_admin, 121min): CORRECTLY REJECTED (422 status) - Above maximum
+- ✅ PUT /api/system-settings/session-timeout (admin, 45min): CORRECTLY DENIED (403 status) - Permission denied
+- ✅ Boundary validation working with proper Pydantic error messages
+- ✅ Permission enforcement: Only super_admin can modify settings
+
+**Test 4: JWT Token Expiration Validation ✅ WORKING:**
+- ✅ JWT tokens correctly use dynamic session timeout from system settings
+- ✅ Token expiration verified for 60-minute timeout: Token expires in ~60.0 minutes
+- ✅ Login endpoint integrates with system settings for token generation
+- ✅ Token refresh endpoint uses dynamic timeout values
+- ✅ JWT payload contains correct expiration timestamp
+
+**Test 5: Settings Persistence and Reset ✅ WORKING:**
+- ✅ Settings persist correctly in MongoDB system_settings collection
+- ✅ Settings reset to default (30 minutes) working correctly
+- ✅ Final verification: Public endpoint returns updated settings
+- ✅ Activity logging working for all timeout changes
+
+**Security Verification:**
+- ✅ Public endpoint accessible without authentication (as designed)
+- ✅ Settings retrieval restricted to admin and super_admin roles
+- ✅ Settings modification restricted to super_admin role only
+- ✅ Boundary validation prevents invalid timeout values (15-120 minutes)
+- ✅ JWT tokens automatically use configured timeout values
+- ✅ Activity logs created for all settings changes
+
+**API Endpoints Tested:**
+- ✅ GET /api/system-settings/public/session-timeout (public endpoint)
+- ✅ GET /api/system-settings/ (authenticated settings retrieval)
+- ✅ PUT /api/system-settings/session-timeout (settings update)
+- ✅ POST /api/auth/login (JWT token generation with dynamic timeout)
+
+**Core Functionality Verification:**
+- ✅ End-to-end session timeout configuration: View → Update → Verify → Reset workflow working
+- ✅ Dynamic JWT token expiration based on system settings
+- ✅ Boundary value validation with proper error messages
+- ✅ Role-based permission enforcement across all endpoints
+- ✅ Settings persistence and retrieval working correctly
+
+**Database Integration:**
+- ✅ System_settings collection: Settings stored and retrieved correctly
+- ✅ Activity_logs collection: All timeout changes logged for audit trail
+- ✅ Default settings creation: System creates default settings if none exist
+- ✅ Data consistency: All operations maintain data integrity
+
+**Issues Found:**
+- ✅ NO CRITICAL ISSUES: All session timeout configuration functionality working correctly
+- ✅ All required API endpoints responding correctly
+- ✅ Authentication and authorization working properly
+- ✅ JWT token integration working as designed
+- ✅ Boundary validation and error handling working correctly
+
+### OPERATOR USERS MANAGEMENT SYSTEM TESTING (Previous Review Request) ✅ FULLY WORKING
 
 #### Complete Operator Users Management System Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
