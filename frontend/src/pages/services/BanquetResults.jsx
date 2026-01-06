@@ -46,7 +46,7 @@ const getAmenityIcon = (amenity) => {
 // Grid View Venue Card
 const VenueCardGrid = ({ venue, onBook }) => {
   const [isFavorite, setIsFavorite] = useState(false);
-  const Icon = getVenueIcon(venue.venue_type);
+  const VenueIcon = getVenueIcon(venue.venue_type);
   const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
   const image = venue.images?.[0] || defaultImage;
   
@@ -71,7 +71,7 @@ const VenueCardGrid = ({ venue, onBook }) => {
         
         {/* Type Badge */}
         <Badge className={`absolute top-3 left-3 capitalize ${VENUE_TYPE_COLORS[venue.venue_type] || 'bg-purple-600'}`}>
-          <Icon className="w-3 h-3 mr-1" />
+          <VenueIcon className="w-3 h-3 mr-1" />
           {venue.venue_type}
         </Badge>
         
@@ -127,7 +127,7 @@ const VenueCardGrid = ({ venue, onBook }) => {
 
 // List View Venue Card
 const VenueCardList = ({ venue, onBook }) => {
-  const Icon = getVenueIcon(venue.venue_type);
+  const VenueIcon = getVenueIcon(venue.venue_type);
   const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
   const image = venue.images?.[0] || defaultImage;
   
@@ -138,7 +138,7 @@ const VenueCardList = ({ venue, onBook }) => {
         <div className="md:w-1/3 h-48 md:h-auto relative">
           <img src={image} alt={venue.name} className="w-full h-full object-cover" />
           <Badge className={`absolute top-3 left-3 capitalize ${VENUE_TYPE_COLORS[venue.venue_type] || 'bg-purple-600'}`}>
-            <Icon className="w-3 h-3 mr-1" />
+            <VenueIcon className="w-3 h-3 mr-1" />
             {venue.venue_type}
           </Badge>
           {venue.rating && (
