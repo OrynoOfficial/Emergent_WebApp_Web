@@ -275,7 +275,7 @@ class RestaurantUpdate(BaseModel):
     features: Optional[list] = None
     opening_hours: Optional[dict] = None
     rating: Optional[float] = None
-    status: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class MenuItemUpdate(BaseModel):
