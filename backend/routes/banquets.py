@@ -300,3 +300,51 @@ async def get_my_banquet_bookings(
     total = await db.banquet_bookings.count_documents(query)
     
     return {"bookings": bookings, "total": total}
+
+
+
+@router.get("/management/my-venues")
+async def get_my_venues(
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    venue_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get banquet venues for the current user's operator (operator-scoped).
+    Super admin and admin can see all venues.
+    Operator users can only see venues belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}}
+        ]
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    if venue_type:
+        query["venue_type"] = venue_type
+    
+    venues = await db.banquets.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.banquets.count_documents(query)
+    
+    # Transform _id to id
+    for venue in venues:
+        venue["id"] = str(venue.pop("_id", ""))
+    
+    return {
+        "venues": venues, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
