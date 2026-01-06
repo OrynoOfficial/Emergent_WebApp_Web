@@ -615,7 +615,12 @@ export default function CinemaManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Cinema"
+            serviceTag="cinema"
+            serviceIcon={<Film className="h-5 w-5 text-red-600" />}
+            primaryColor="red"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
