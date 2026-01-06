@@ -1,13 +1,16 @@
-# Test Results - Customer Service Center Revamp
+# Test Results - Hotel Management & Customer Service Updates
 
 ## Current Testing Focus
-1. Customer Service Center - Complete Revamp - IN PROGRESS
-   - Modern dashboard with KPI cards and charts
-   - Tickets list with search, filters, and pagination
-   - Ticket detail modal with conversation view
-   - Team assignment functionality
-   - Bulk actions (assign, update status)
-   - Support for both customer and operator tickets
+1. Hotel Management Center Updates - IN PROGRESS
+   - Room cards with more information (guests, bed, floor, sqm, stock percentage)
+   - Hotels list view maintaining all card components
+   - Recent Bookings linking to /admin/bookings
+   - View All button navigating correctly
+
+2. Customer Service Center - Team Management - IN PROGRESS
+   - Add team member functionality
+   - Remove team member functionality
+   - Team member cards with role badges
 
 ## Test Credentials
 - Super Admin: superadmin@oryno.com / Oryno@2024
