@@ -328,7 +328,7 @@ async def get_trip_analytics(
         "dailyData": daily_list,
         "routeStats": route_list,
         "operatorStats": operator_list
-
+    }
 
 
 @router.get("/operator/dashboard")
