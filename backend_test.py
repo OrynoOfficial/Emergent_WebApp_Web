@@ -639,5 +639,5 @@ class SessionTimeoutTester:
         print("  ✅ Settings persistence and retrieval")
 
 if __name__ == "__main__":
-    tester = SessionTimeoutTester()
+    tester = RestaurantMenuTester()
     tester.run_comprehensive_test()
