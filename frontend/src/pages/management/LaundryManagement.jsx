@@ -158,6 +158,9 @@ export default function LaundryManagement() {
   const [editingPressing, setEditingPressing] = useState(null);
   const [pressingForm, setPressingForm] = useState(DEFAULT_PRESSING_FORM);
 
+  // Use the laundry dashboard data hook
+  const dashboardData = useLaundryDashboardData(pressings);
+
   const handleViewPressing = (pressing) => {
     setViewingPressing(pressing);
     setIsViewDialogOpen(true);
