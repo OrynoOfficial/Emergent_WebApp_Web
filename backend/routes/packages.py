@@ -298,3 +298,48 @@ async def get_operator_packages(
     total = await db.packages.count_documents(query)
     
     return {"packages": packages, "total": total}
+
+
+
+@router.get("/management/my-services")
+async def get_my_package_services(
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get package services for the current user's operator (operator-scoped).
+    Super admin and admin can see all services.
+    Operator users can only see services belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}}
+        ]
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    
+    services = await db.package_services.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.package_services.count_documents(query)
+    
+    # Transform _id to id
+    for service in services:
+        service["id"] = str(service.pop("_id", ""))
+    
+    return {
+        "services": services, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
