@@ -1,93 +1,131 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
-import { ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2, Search, LayoutGrid, List, SlidersHorizontal, Heart, Droplets, Wind, Scissors } from 'lucide-react';
 import { pressingApi } from '@/api/management';
 import { formatFCFA } from '@/utils/currency';
 
 const MOCK_SERVICES = [
-  {
-    id: '1',
-    name: 'Clean & Fresh Laundry',
-    address: 'Avenue Kennedy, Yaoundé',
-    city: 'Yaoundé',
-    rating: 4.8,
-    reviews: 234,
-    services: ['Washing', 'Ironing', 'Dry Cleaning'],
-    delivery: true,
-    express: true,
-    minPrice: 500,
-    image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=400'
-  },
-  {
-    id: '2',
-    name: 'Premium Pressing',
-    address: 'Rue de la Joie, Yaoundé',
-    city: 'Yaoundé',
-    rating: 4.6,
-    reviews: 189,
-    services: ['Ironing', 'Dry Cleaning', 'Leather Care'],
-    delivery: true,
-    express: false,
-    minPrice: 300,
-    image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=400'
-  },
-  {
-    id: '3',
-    name: 'Express Clean',
-    address: 'Boulevard Central, Yaoundé',
-    city: 'Yaoundé',
-    rating: 4.9,
-    reviews: 312,
-    services: ['Washing', 'Ironing', 'Express Service'],
-    delivery: true,
-    express: true,
-    minPrice: 600,
-    image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400'
-  },
-  {
-    id: '4',
-    name: 'Family Laundromat',
-    address: 'Quartier Bastos, Yaoundé',
-    city: 'Yaoundé',
-    rating: 4.5,
-    reviews: 156,
-    services: ['Washing', 'Ironing'],
-    delivery: false,
-    express: false,
-    minPrice: 400,
-    image: 'https://images.unsplash.com/photo-1469504512102-900f29606341?w=400'
-  },
-  {
-    id: '5',
-    name: 'Deluxe Dry Cleaners',
-    address: 'Avenue Foch, Yaoundé',
-    city: 'Yaoundé',
-    rating: 4.7,
-    reviews: 278,
-    services: ['Dry Cleaning', 'Leather Care', 'Alterations'],
-    delivery: true,
-    express: true,
-    minPrice: 1500,
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400'
-  }
+  { id: '1', name: 'Clean & Fresh Laundry', address: 'Avenue Kennedy, Yaoundé', city: 'Yaoundé', rating: 4.8, reviews: 234, services: ['Washing', 'Ironing', 'Dry Cleaning'], delivery: true, express: true, minPrice: 500, image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=400', description: 'Professional laundry services with same-day delivery option.' },
+  { id: '2', name: 'Premium Pressing', address: 'Rue de la Joie, Yaoundé', city: 'Yaoundé', rating: 4.6, reviews: 189, services: ['Ironing', 'Dry Cleaning', 'Leather Care'], delivery: true, express: false, minPrice: 300, image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=400', description: 'Specialized in delicate fabrics and premium garments.' },
+  { id: '3', name: 'Express Clean', address: 'Boulevard Central, Yaoundé', city: 'Yaoundé', rating: 4.9, reviews: 312, services: ['Washing', 'Ironing', 'Express Service'], delivery: true, express: true, minPrice: 600, image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400', description: 'Fastest turnaround in town - 2 hour express available.' },
+  { id: '4', name: 'Family Laundromat', address: 'Quartier Bastos, Yaoundé', city: 'Yaoundé', rating: 4.5, reviews: 156, services: ['Washing', 'Ironing'], delivery: false, express: false, minPrice: 400, image: 'https://images.unsplash.com/photo-1469504512102-900f29606341?w=400', description: 'Affordable family-friendly laundry services.' },
+  { id: '5', name: 'Deluxe Dry Cleaners', address: 'Avenue Foch, Yaoundé', city: 'Yaoundé', rating: 4.7, reviews: 278, services: ['Dry Cleaning', 'Leather Care', 'Alterations'], delivery: true, express: true, minPrice: 1500, image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400', description: 'Luxury dry cleaning for your finest garments.' }
 ];
 
-const ServiceCard = ({ service, onBook }) => {
+const getServiceIcon = (service) => {
+  const s = service?.toLowerCase();
+  if (s?.includes('wash')) return Droplets;
+  if (s?.includes('iron')) return Wind;
+  if (s?.includes('dry')) return Sparkles;
+  if (s?.includes('alter')) return Scissors;
+  return Shirt;
+};
+
+// Grid View Service Card
+const ServiceCardGrid = ({ service, onBook }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
+  
   return (
-    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 bg-white">
-      <div className="md:flex">
+    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+      {/* Image */}
+      <div className="h-48 relative overflow-hidden">
+        <img
+          src={service.image}
+          alt={service.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        
+        {/* Favorite button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
+        >
+          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+        </button>
+        
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          {service.express && (
+            <Badge className="bg-orange-500 text-white">
+              <Sparkles className="w-3 h-3 mr-1" /> Express
+            </Badge>
+          )}
+          {service.delivery && (
+            <Badge className="bg-emerald-500 text-white">
+              <Truck className="w-3 h-3 mr-1" /> Delivery
+            </Badge>
+          )}
+        </div>
+        
+        {/* Rating */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+          {service.rating} ({service.reviews})
+        </div>
+      </div>
+      
+      {/* Content */}
+      <CardContent className="p-5">
+        <h3 className="font-bold text-lg text-slate-900 mb-1 line-clamp-1">{service.name}</h3>
+        <div className="flex items-center text-slate-500 text-sm mb-3">
+          <MapPin className="w-4 h-4 mr-1" /> {service.address}
+        </div>
+        
+        {/* Services */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {service.services?.slice(0, 3).map((s, idx) => {
+            const Icon = getServiceIcon(s);
+            return (
+              <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
+                <Icon className="h-3 w-3 text-[#082c59]" />
+                <span className="text-xs text-slate-600">{s}</span>
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Price & CTA */}
+        <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+          <div>
+            <div className="text-xs text-slate-500">Starting from</div>
+            <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(service.minPrice)}</div>
+            <div className="text-xs text-slate-500">/item</div>
+          </div>
+          <Button onClick={() => onBook(service)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl">
+            <Shirt className="w-4 h-4 mr-2" /> Book
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// List View Service Card
+const ServiceCardList = ({ service, onBook }) => {
+  return (
+    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
+      <div className="flex flex-col md:flex-row">
         {/* Image */}
         <div className="md:w-1/4 h-48 md:h-auto relative">
-          <img 
-            src={service.image} 
-            alt={service.name} 
-            className="w-full h-full object-cover"
-          />
+          <img src={service.image} alt={service.name} className="w-full h-full object-cover" />
+          <div className="absolute top-3 left-3 flex flex-col gap-2">
+            {service.express && (
+              <Badge className="bg-orange-500 text-white">
+                <Sparkles className="w-3 h-3 mr-1" /> Express
+              </Badge>
+            )}
+            {service.delivery && (
+              <Badge className="bg-emerald-500 text-white">
+                <Truck className="w-3 h-3 mr-1" /> Delivery
+              </Badge>
+            )}
+          </div>
         </div>
         
         {/* Details */}
@@ -106,27 +144,19 @@ const ServiceCard = ({ service, onBook }) => {
             </div>
           </div>
           
+          <p className="text-slate-600 mb-4 line-clamp-2">{service.description}</p>
+          
           {/* Services */}
           <div className="flex flex-wrap gap-2 mb-4">
-            {service.services.map((s, i) => (
-              <Badge key={i} variant="secondary" className="text-xs">
-                {s}
-              </Badge>
-            ))}
-          </div>
-          
-          {/* Features */}
-          <div className="flex flex-wrap gap-4 mb-4">
-            {service.delivery && (
-              <div className="flex items-center gap-1 text-sm text-green-600">
-                <Truck className="w-4 h-4" /> Free Pickup & Delivery
-              </div>
-            )}
-            {service.express && (
-              <div className="flex items-center gap-1 text-sm text-orange-600">
-                <Sparkles className="w-4 h-4" /> Express Available
-              </div>
-            )}
+            {service.services?.map((s, idx) => {
+              const Icon = getServiceIcon(s);
+              return (
+                <Badge key={idx} variant="outline" className="bg-slate-50">
+                  <Icon className="w-3 h-3 mr-1" />
+                  {s}
+                </Badge>
+              );
+            })}
           </div>
           
           {/* Price and Book */}
@@ -136,7 +166,7 @@ const ServiceCard = ({ service, onBook }) => {
               <span className="text-2xl font-bold text-[#082c59] ml-2">{formatFCFA(service.minPrice)}</span>
               <span className="text-sm text-gray-500">/item</span>
             </div>
-            <Button onClick={() => onBook(service)} className="bg-[#082c59] hover:bg-[#0a3a75]">
+            <Button onClick={() => onBook(service)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl">
               <Shirt className="w-4 h-4 mr-2" /> Book Now
             </Button>
           </div>
@@ -149,133 +179,176 @@ const ServiceCard = ({ service, onBook }) => {
 export default function LaundryResults() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deliveryFilter, setDeliveryFilter] = useState('all');
+
   const city = searchParams.get('city') || '';
-  const serviceType = searchParams.get('service') || '';
-  const date = searchParams.get('date') || '';
-  const wantDelivery = searchParams.get('delivery') === 'true';
-  const wantExpress = searchParams.get('express') === 'true';
 
   useEffect(() => {
     loadServices();
-  }, [city, serviceType]);
+  }, [searchParams]);
 
   const loadServices = async () => {
     setLoading(true);
     try {
-      const res = await pressingApi.list({ city, service_type: serviceType });
-      if (res.data?.services?.length > 0) {
+      const res = await pressingApi.list({ city });
+      if (res.data.services?.length > 0) {
         setServices(res.data.services);
       } else {
-        // Filter mock data
-        let filtered = [...MOCK_SERVICES];
-        if (city) {
-          filtered = filtered.filter(s => s.city.toLowerCase().includes(city.toLowerCase()));
-        }
-        if (serviceType) {
-          filtered = filtered.filter(s => s.services.some(srv => srv.toLowerCase().includes(serviceType.toLowerCase())));
-        }
-        if (wantDelivery) {
-          filtered = filtered.filter(s => s.delivery);
-        }
-        if (wantExpress) {
-          filtered = filtered.filter(s => s.express);
-        }
-        // If no match, show all with updated city
-        if (filtered.length === 0) {
-          filtered = MOCK_SERVICES.map(s => ({ ...s, city: city || s.city }));
-        }
-        setServices(filtered);
+        setServices(MOCK_SERVICES);
       }
     } catch (error) {
-      console.error('Failed to load services:', error);
       setServices(MOCK_SERVICES);
     } finally {
       setLoading(false);
     }
   };
 
-  const sortedServices = [...services].sort((a, b) => {
-    switch (sortBy) {
-      case 'price': return a.minPrice - b.minPrice;
-      case 'rating': return b.rating - a.rating;
-      case 'reviews': return b.reviews - a.reviews;
-      default: return 0;
+  const filteredServices = useMemo(() => {
+    let filtered = [...services];
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.name?.toLowerCase().includes(query) ||
+        s.address?.toLowerCase().includes(query)
+      );
     }
-  });
+    
+    if (deliveryFilter === 'delivery') {
+      filtered = filtered.filter(s => s.delivery);
+    } else if (deliveryFilter === 'express') {
+      filtered = filtered.filter(s => s.express);
+    }
+    
+    switch (sortBy) {
+      case 'price_low':
+        return filtered.sort((a, b) => a.minPrice - b.minPrice);
+      case 'price_high':
+        return filtered.sort((a, b) => b.minPrice - a.minPrice);
+      case 'reviews':
+        return filtered.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
+      case 'rating':
+      default:
+        return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    }
+  }, [services, sortBy, searchQuery, deliveryFilter]);
 
   const handleBook = (service) => {
-    sessionStorage.setItem('selectedLaundryService', JSON.stringify(service));
+    sessionStorage.setItem('selectedLaundry', JSON.stringify(service));
     navigate(`/services/laundry/booking/${service.id}`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-[#082c59] mx-auto mb-4" />
+          <p className="text-slate-600">Finding laundry services...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/services/laundry')}>
-                <ArrowLeft className="w-4 h-4 mr-2" /> Back
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-[#082c59]">Laundry Services</h1>
-                <p className="text-sm text-gray-600">
-                  {city && `${city}`}
-                  {serviceType && ` • ${serviceType}`}
-                  {date && ` • ${format(new Date(date), 'MMM dd, yyyy')}`}
-                </p>
-              </div>
+      <div className="bg-white border-b shadow-sm sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/laundry')} className="gap-2">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-[#082c59]">Laundry Services</h1>
+              <p className="text-sm text-slate-500">{filteredServices.length} services found</p>
             </div>
-            
-            <Select value={sortBy} onValueChange={setSortBy}>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search services..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-slate-50 border-slate-200"
+              />
+            </div>
+            <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
               <SelectTrigger className="w-40 bg-white">
+                <Truck className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Services</SelectItem>
+                <SelectItem value="delivery">With Delivery</SelectItem>
+                <SelectItem value="express">Express Only</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-48 bg-white">
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="rating">Top Rated</SelectItem>
-                <SelectItem value="price">Price: Low to High</SelectItem>
-                <SelectItem value="reviews">Most Reviewed</SelectItem>
+                <SelectItem value="reviews">Most Reviews</SelectItem>
+                <SelectItem value="price_low">Price: Low to High</SelectItem>
+                <SelectItem value="price_high">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
+            <div className="flex items-center bg-slate-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Results */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {loading ? (
-          <div className="text-center py-20">
-            <Loader2 className="w-12 h-12 animate-spin text-[#082c59] mx-auto mb-4" />
-            <p className="text-gray-600">Finding laundry services...</p>
-          </div>
-        ) : sortedServices.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-lg">
-            <Shirt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">No services found</h2>
-            <p className="text-gray-500 mb-4">Try adjusting your search criteria</p>
-            <Button onClick={() => navigate('/services/laundry')} className="bg-[#082c59] hover:bg-[#0a3a75]">
-              Search Again
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {filteredServices.length === 0 ? (
+          <div className="text-center py-16">
+            <Shirt className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">No services found</h3>
+            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
+            <Button onClick={() => navigate('/services/laundry')} className="bg-[#082c59]">
+              Modify Search
             </Button>
           </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredServices.map((service) => (
+              <ServiceCardGrid key={service.id} service={service} onBook={handleBook} />
+            ))}
+          </div>
         ) : (
-          <>
-            <p className="text-gray-600 mb-4">{sortedServices.length} service{sortedServices.length > 1 ? 's' : ''} found</p>
-            <div className="space-y-6">
-              {sortedServices.map(service => (
-                <ServiceCard 
-                  key={service.id} 
-                  service={service}
-                  onBook={handleBook}
-                />
-              ))}
-            </div>
-          </>
+          <div className="space-y-4">
+            {filteredServices.map((service) => (
+              <ServiceCardList key={service.id} service={service} onBook={handleBook} />
+            ))}
+          </div>
         )}
       </div>
     </div>
