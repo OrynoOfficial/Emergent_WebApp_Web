@@ -541,64 +541,74 @@ export default function TravelBooking() {
                   </div>
                 </div>
                 
-                {showSeatSelection ? (
-                  <div className="space-y-6">
-                    <p className="text-sm text-slate-600">
-                      Select your preferred seats. Reserved seats are held for 15 minutes.
-                    </p>
-                    
-                    {/* Outbound Seat Map */}
-                    <div>
-                      <h4 className="font-semibold text-slate-800 mb-3">
-                        Outbound: {outbound.from_city} → {outbound.to_city}
-                        <span className="text-sm font-normal text-slate-600 ml-2">
-                          ({selectedSeats.length}/{passengers.length} selected)
-                        </span>
-                      </h4>
-                      <LiveSeatMap
-                        routeId={outbound.id}
-                        departureDate={format(outboundDate, 'yyyy-MM-dd')}
-                        maxSeats={passengers.length}
-                        selectedSeats={selectedSeats}
-                        onSeatsChange={handleSeatsChange}
-                        allowSeatSwapping={true}
-                      />
-                    </div>
-
-                    {/* Return Seat Map */}
-                    {isRoundTrip && returnTrip && (
+                <div className="p-6">
+                  {showSeatSelection ? (
+                    <div className="space-y-6">
+                      <p className="text-sm text-slate-600">
+                        Select your preferred seats. Reserved seats are held for 15 minutes.
+                      </p>
+                      
+                      {/* Outbound Seat Map */}
                       <div>
                         <h4 className="font-semibold text-slate-800 mb-3">
-                          Return: {returnTrip.from_city} → {returnTrip.to_city}
+                          Outbound: {outbound.from_city} → {outbound.to_city}
                           <span className="text-sm font-normal text-slate-600 ml-2">
-                            ({returnSelectedSeats.length}/{passengers.length} selected)
+                            ({selectedSeats.length}/{passengers.length} selected)
                           </span>
                         </h4>
                         <LiveSeatMap
-                          routeId={returnTrip.id}
-                          departureDate={bookingData.returnDate}
+                          routeId={outbound.id}
+                          departureDate={format(outboundDate, 'yyyy-MM-dd')}
                           maxSeats={passengers.length}
-                          selectedSeats={returnSelectedSeats}
-                          onSeatsChange={handleReturnSeatsChange}
+                          selectedSeats={selectedSeats}
+                          onSeatsChange={handleSeatsChange}
                           allowSeatSwapping={true}
                         />
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 bg-slate-50 rounded-lg">
-                    <Armchair className="w-12 h-12 mx-auto text-slate-400 mb-2" />
-                    <p className="text-slate-600">Seats will be auto-assigned at check-in</p>
-                  </div>
-                )}
+
+                      {/* Return Seat Map */}
+                      {isRoundTrip && returnTrip && (
+                        <div>
+                          <h4 className="font-semibold text-slate-800 mb-3">
+                            Return: {returnTrip.from_city} → {returnTrip.to_city}
+                            <span className="text-sm font-normal text-slate-600 ml-2">
+                              ({returnSelectedSeats.length}/{passengers.length} selected)
+                            </span>
+                          </h4>
+                          <LiveSeatMap
+                            routeId={returnTrip.id}
+                            departureDate={bookingData.returnDate}
+                            maxSeats={passengers.length}
+                            selectedSeats={returnSelectedSeats}
+                            onSeatsChange={handleReturnSeatsChange}
+                            allowSeatSwapping={true}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-slate-50 rounded-xl">
+                      <Armchair className="w-12 h-12 mx-auto text-slate-400 mb-2" />
+                      <p className="text-slate-600">Seats will be auto-assigned at check-in</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Baggage & Extras */}
-              <div className="rounded-2xl p-6 shadow-lg bg-white">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShoppingBag className="w-6 h-6 text-amber-600" />
-                  <h3 className="text-xl font-bold text-slate-800">Baggage</h3>
+              <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <ShoppingBag className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Baggage & Extras</h3>
+                      <p className="text-sm text-white/70">Add additional luggage</p>
+                    </div>
+                  </div>
                 </div>
+                <div className="p-6">
                 
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
                   <h4 className="font-medium text-green-800 mb-1">✓ Included per person</h4>
