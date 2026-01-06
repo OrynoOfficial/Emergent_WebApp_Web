@@ -609,7 +609,12 @@ export default function RestaurantManagement() {
 
         {/* Communications Tab */}
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Restaurants"
+            serviceTag="restaurants"
+            serviceIcon={<Utensils className="h-5 w-5 text-orange-600" />}
+            primaryColor="orange"
+          />
         </TabsContent>
 
         {/* Analytics Tab */}
