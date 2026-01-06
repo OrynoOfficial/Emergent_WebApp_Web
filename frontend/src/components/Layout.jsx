@@ -538,7 +538,8 @@ export default function Layout({ children }) {
     canManageRestaurants, canManageBanquets, canManageCinema, canManagePressing, canManagePackages,
     canViewAnalytics, canViewUsers, canViewOperators, canViewEmployees,
     canViewCommission, canViewValidation, canViewActivity, canViewPermissions,
-    hasAnyPermission, hasPermission
+    hasAnyPermission, hasPermission,
+    isOperatorUser, operatorServiceTypes, operatorType
   ]);
 
   const renderNavItem = (item) => {
