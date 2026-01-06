@@ -345,6 +345,9 @@ export default function CinemaManagement() {
   const [cinemaForm, setCinemaForm] = useState(DEFAULT_CINEMA_FORM);
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
 
+  // Use the cinema dashboard data hook
+  const dashboardData = useCinemaDashboardData(cinemas, movies);
+
   const handleViewItem = (item, type) => {
     setViewingItem(item);
     setViewingType(type);
