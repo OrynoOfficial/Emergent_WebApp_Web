@@ -400,7 +400,7 @@ export default function RestaurantsResults() {
       time,
       guests
     }));
-    navigate(`/services/restaurants/${restaurant.id}/menu`);
+    navigate(`/services/restaurants/booking`);
   };
 
   if (loading) {
