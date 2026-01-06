@@ -102,9 +102,21 @@ export default function LaundryBooking() {
   const loadService = async () => {
     try {
       setLoading(true);
+      // First try sessionStorage
+      const storedService = sessionStorage.getItem('selectedLaundry');
+      if (storedService) {
+        const parsed = JSON.parse(storedService);
+        if (parsed.id === id || !id) {
+          setService(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+      // Then try API
       const res = await pressingApi.get(id);
       setService(res.data);
     } catch (error) {
+      // Fallback to mock data
       setService({
         id: id,
         name: 'Express Clean',
