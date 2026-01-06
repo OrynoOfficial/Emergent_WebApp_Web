@@ -252,7 +252,7 @@ export default function EventsResults() {
 
   const handleBook = (event) => {
     sessionStorage.setItem('selectedEvent', JSON.stringify(event));
-    navigate(`/services/events/booking/${event.id}`);
+    navigate(`/services/events/booking`);
   };
 
   if (loading) {
