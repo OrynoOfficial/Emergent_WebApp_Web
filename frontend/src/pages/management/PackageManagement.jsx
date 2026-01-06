@@ -489,7 +489,7 @@ export default function PackageManagement() {
               </div>
               {viewingPackage.inclusions?.length > 0 && (
                 <div>
-                  <p className="text-slate-500 text-sm mb-2">What's Included</p>
+                  <p className="text-slate-500 text-sm mb-2">What&apos;s Included</p>
                   <div className="flex flex-wrap gap-1">
                     {viewingPackage.inclusions.map(i => (
                       <Badge key={i} variant="outline" className="text-xs capitalize">{i}</Badge>
