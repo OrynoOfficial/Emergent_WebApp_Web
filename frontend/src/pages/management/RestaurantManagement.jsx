@@ -254,6 +254,9 @@ export default function RestaurantManagement() {
   const [restaurantForm, setRestaurantForm] = useState(DEFAULT_RESTAURANT_FORM);
   const [menuForm, setMenuForm] = useState(DEFAULT_MENU_ITEM);
 
+  // Use the restaurant dashboard data hook
+  const dashboardData = useRestaurantDashboardData(restaurants, menuItems);
+
   // View restaurant handler
   const handleViewRestaurant = (restaurant) => {
     setViewingRestaurant(restaurant);
