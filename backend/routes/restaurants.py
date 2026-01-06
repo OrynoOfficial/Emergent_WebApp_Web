@@ -256,3 +256,49 @@ async def get_restaurant_orders(
         }, {"_id": 0}).to_list(100)
     
     return {"orders": orders}
+
+
+@router.get("/management/my-restaurants")
+async def get_my_restaurants(
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    cuisine: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get restaurants for the current user's operator (operator-scoped).
+    Super admin and admin can see all restaurants.
+    Operator users can only see restaurants belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}}
+        ]
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    if cuisine:
+        query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
+    
+    restaurants = await db.restaurants.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.restaurants.count_documents(query)
+    
+    # Transform _id to id
+    for restaurant in restaurants:
+        restaurant["id"] = str(restaurant.pop("_id", ""))
+    
+    return {
+        "restaurants": restaurants, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
