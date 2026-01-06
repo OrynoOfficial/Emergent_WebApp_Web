@@ -118,10 +118,30 @@ async def login(credentials: UserLogin, request: Request):
     )
     refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
     
+    # Build operator context if user is assigned to an operator
+    operator_context = None
+    if user.get("operator_id"):
+        operator = await db.operators.find_one({"_id": user["operator_id"]})
+        if operator:
+            operator_context = {
+                "operator_id": operator["_id"],
+                "operator_name": operator.get("name"),
+                "operator_type": operator.get("operator_type"),
+                "service_types": operator.get("service_types", []),
+                "operator_role": user.get("operator_role"),
+            }
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user": {
+            "id": user["_id"],
+            "email": user["email"],
+            "full_name": user.get("full_name"),
+            "role": user.get("role"),
+            "operator_context": operator_context,
+        }
     }
 
 @router.post("/refresh", response_model=Token)
