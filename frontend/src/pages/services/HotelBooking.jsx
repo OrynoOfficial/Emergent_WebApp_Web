@@ -8,7 +8,12 @@ import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
-import { ArrowLeft, Hotel, MapPin, Calendar, Users, CreditCard, Star, Wifi, Car, Coffee, Check, CheckCircle2, X, Loader2 } from 'lucide-react';
+import { Separator } from '../../components/ui/separator';
+import { 
+  ArrowLeft, Hotel, MapPin, Calendar, Users, CreditCard, Star, Wifi, Car, Coffee, 
+  Check, CheckCircle2, X, Loader2, Shield, Clock, Bed, Maximize, Phone, Mail, User,
+  FileText, Gift, Tag, ChevronRight
+} from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
@@ -106,6 +111,36 @@ const translations = {
   }
 };
 
+// Step indicator component
+const StepIndicator = ({ currentStep }) => {
+  const steps = [
+    { number: 1, label: 'Guest Details', icon: User },
+    { number: 2, label: 'Review', icon: FileText },
+    { number: 3, label: 'Payment', icon: CreditCard },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.number}>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+            currentStep >= step.number 
+              ? 'bg-[#082c59] text-white' 
+              : 'bg-slate-100 text-slate-400'
+          }`}>
+            <step.icon className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">{step.label}</span>
+            <span className="text-sm font-medium sm:hidden">{step.number}</span>
+          </div>
+          {idx < steps.length - 1 && (
+            <ChevronRight className={`w-5 h-5 ${currentStep > step.number ? 'text-[#082c59]' : 'text-slate-300'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 export default function HotelBooking() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -117,6 +152,7 @@ export default function HotelBooking() {
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -162,7 +198,6 @@ export default function HotelBooking() {
         setHotel(storedHotel);
         setSearchParams(storedParams);
 
-        // Pre-fill email from user
         if (user?.email) {
           setFormData(prev => ({ ...prev, email: user.email }));
         }
@@ -178,7 +213,6 @@ export default function HotelBooking() {
     loadData();
   }, [navigate, user]);
 
-  // Calculate nights and pricing
   useEffect(() => {
     if (hotel && searchParams) {
       const nights = calculateNights();
@@ -306,7 +340,6 @@ export default function HotelBooking() {
 
     if (response.success || response.transactionRef) {
       try {
-        // Create the room reservation in the backend
         const reservationPayload = {
           hotel_id: hotel.hotel_id || hotel.id,
           room_id: hotel.room_id || hotel.id,
@@ -324,7 +357,6 @@ export default function HotelBooking() {
         toast.success(`${t('bookingSuccess')} Booking #${reservationResponse.data.booking_id}`);
         sessionStorage.removeItem('selectedHotel');
         sessionStorage.removeItem('hotelSearchParams');
-        // Navigate back to hotel search page after successful booking
         navigate('/services/hotels');
       } catch (error) {
         console.error('Reservation creation failed:', error);
@@ -368,9 +400,9 @@ export default function HotelBooking() {
     
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
+    setCurrentStep(3);
     
     try {
-      // Create order first if not already created
       if (!orderId) {
         const orderPayload = {
           service_type: 'hotel',
@@ -415,13 +447,11 @@ export default function HotelBooking() {
     }
   };
   
-  // Callback when MoMo dialog opens - hide the overlay since MoMo has its own UI
   const handleMoMoDialogOpen = () => {
     setShowPaymentOverlay(false);
     setPaymentInProgress(false);
   };
   
-  // Callback when payment processing state changes
   const handleProcessingChange = (isProcessing) => {
     setShowPaymentOverlay(isProcessing);
     if (!isProcessing) {
@@ -431,10 +461,13 @@ export default function HotelBooking() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
-          <Hotel className="h-12 w-12 mx-auto mb-4 text-[#052c59] animate-pulse" />
-          <p className="text-slate-600">Loading booking details...</p>
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-[#082c59]/20 rounded-full animate-pulse"></div>
+            <Hotel className="h-10 w-10 text-[#082c59] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+          </div>
+          <p className="text-slate-600 mt-4 font-medium">Loading booking details...</p>
         </div>
       </div>
     );
@@ -442,10 +475,13 @@ export default function HotelBooking() {
 
   if (!hotel || !searchParams) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="max-w-md mx-auto text-center p-8">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
+        <Card className="max-w-md mx-auto text-center p-8 shadow-xl">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-amber-600" />
+          </div>
           <p className="text-slate-600 mb-4">Booking session expired. Please search again.</p>
-          <Button onClick={() => navigate('/services/hotels')} className="bg-[#052c59]">
+          <Button onClick={() => navigate('/services/hotels')} className="bg-[#082c59]">
             Back to Search
           </Button>
         </Card>
@@ -454,231 +490,281 @@ export default function HotelBooking() {
   }
 
   return (
-    <div className="bg-white p-4 min-h-screen md:p-8">
-      {/* Payment Processing Overlay */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <PaymentProcessingOverlay 
         isVisible={showPaymentOverlay} 
         message="Processing payment, please do not refresh page"
       />
       
-      <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="flex items-center mb-6">
-          <Button
-            variant="ghost"
-            className="mr-4"
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{t('title')}</h1>
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">{t('title')}</h1>
+              <p className="text-sm text-slate-500">{hotel.name}</p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Step Indicator */}
+        <StepIndicator currentStep={currentStep} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Forms */}
           <div className="lg:col-span-2 space-y-6">
             {/* Guest Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Users className="h-6 w-6 text-[#052c59]" />
-                  {t('guestInfo')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{t('guestInfo')}</h3>
+                    <p className="text-sm text-white/70">Who will be staying?</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
                 {/* I'm the Guest toggle */}
-                <div className="md:col-span-2">
-                  <div className="flex items-center space-x-2 bg-slate-100 p-3 rounded-lg">
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-slate-700">{t('imSender')}</span>
+                    </div>
                     <Switch
-                      id="imSender"
                       checked={isSender}
                       onCheckedChange={handleIsSenderChange}
                     />
-                    <Label htmlFor="imSender">{t('imSender')}</Label>
+                  </div>
+                  <p className="text-sm text-slate-500 mt-2 ml-8">Fill form with your account details</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">
+                      {t('firstName')} <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        disabled={isSender}
+                        className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                        placeholder="Enter first name"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">
+                      {t('lastName')} <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        disabled={isSender}
+                        className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                        placeholder="Enter last name"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+                      {t('email')} <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-medium text-slate-700">
+                      {t('phone')} <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        disabled={isSender}
+                        className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                        placeholder="+237 xxx xxx xxx"
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">{t('firstName')} *</Label>
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    disabled={isSender}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">{t('lastName')} *</Label>
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    disabled={isSender}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t('email')} *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">{t('phone')} *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    disabled={isSender}
-                    required
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">{t('address')}</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">{t('city')}</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country">{t('country')}</Label>
-                  <Input
-                    id="country"
-                    value={formData.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Special Requests */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('specialRequests')}</CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Gift className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{t('specialRequests')}</h3>
+                    <p className="text-sm text-white/70">Let us know your preferences</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
                 <Textarea
-                  placeholder={t('specialRequest')}
+                  placeholder="E.g., Early check-in, high floor preference, extra pillows..."
                   value={formData.specialRequests}
                   onChange={(e) => handleInputChange('specialRequests', e.target.value)}
                   rows={4}
+                  className="rounded-xl border-slate-200 focus:ring-2 focus:ring-amber-500/20"
                 />
-              </CardContent>
-            </Card>
+                <p className="text-xs text-slate-500 mt-2">
+                  Special requests are subject to availability and cannot be guaranteed.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Right Column - Summary */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             {/* Hotel Details Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Hotel className="h-6 w-6 text-[#052c59]" />
-                  {t('hotelDetails')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative h-48 rounded-lg overflow-hidden">
-                  <img
-                    src={hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070'}
-                    alt={hotel.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-lg">{hotel.name}</h3>
-                    <div className="flex items-center">
-                      {Array.from({ length: hotel.star_rating || 3 }).map((_, i) => (
-                        <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                      ))}
-                    </div>
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="relative h-48">
+                <img
+                  src={hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070'}
+                  alt={hotel.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <div className="flex items-center gap-1 mb-1">
+                    {Array.from({ length: hotel.star_rating || 3 }).map((_, i) => (
+                      <Star key={i} className="h-4 w-4 text-amber-400 fill-amber-400" />
+                    ))}
                   </div>
-                  <div className="flex items-center text-slate-600 text-sm mb-3">
+                  <h3 className="font-bold text-lg">{hotel.name}</h3>
+                  <div className="flex items-center text-sm text-white/80">
                     <MapPin className="h-4 w-4 mr-1" />
                     <span>{hotel.city}</span>
                   </div>
-
-                  {/* Amenities */}
-                  <div className="space-y-2">
-                    {hotel.amenities?.includes('wifi') && (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <Check className="h-4 w-4" />
-                        <Wifi className="h-4 w-4" />
-                        <span>{t('wifiIncluded')}</span>
-                      </div>
-                    )}
-                    {hotel.amenities?.includes('breakfast') && (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <Check className="h-4 w-4" />
-                        <Coffee className="h-4 w-4" />
-                        <span>{t('breakfastIncluded')}</span>
-                      </div>
-                    )}
-                    {hotel.amenities?.includes('parking') && (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <Check className="h-4 w-4" />
-                        <Car className="h-4 w-4" />
-                        <span>{t('parkingIncluded')}</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              
+              <div className="p-5 space-y-4">
+                {/* Room Type */}
+                {hotel.room_type && (
+                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                    <Bed className="h-5 w-5 text-[#082c59]" />
+                    <div>
+                      <p className="text-xs text-slate-500">Room Type</p>
+                      <p className="font-medium text-slate-900">{hotel.room_type}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Amenities */}
+                <div className="space-y-2">
+                  {hotel.amenities?.includes('wifi') && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600">
+                      <Check className="h-4 w-4" />
+                      <Wifi className="h-4 w-4" />
+                      <span>{t('wifiIncluded')}</span>
+                    </div>
+                  )}
+                  {hotel.amenities?.includes('breakfast') && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600">
+                      <Check className="h-4 w-4" />
+                      <Coffee className="h-4 w-4" />
+                      <span>{t('breakfastIncluded')}</span>
+                    </div>
+                  )}
+                  {hotel.amenities?.includes('parking') && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600">
+                      <Check className="h-4 w-4" />
+                      <Car className="h-4 w-4" />
+                      <span>{t('parkingIncluded')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Booking Summary Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Calendar className="h-6 w-6 text-green-600" />
-                  Booking Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <div className="text-slate-500">{t('checkIn')}</div>
-                    <div className="font-medium">{format(new Date(searchParams.checkIn), 'MMM dd, yyyy')}</div>
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Calendar className="h-6 w-6" />
                   </div>
                   <div>
-                    <div className="text-slate-500">{t('checkOut')}</div>
-                    <div className="font-medium">{format(new Date(searchParams.checkOut), 'MMM dd, yyyy')}</div>
+                    <h3 className="font-bold text-lg">Booking Summary</h3>
+                    <p className="text-sm text-white/70">Your stay details</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-5 space-y-4">
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-xs text-slate-500 font-medium">{t('checkIn')}</p>
+                    <p className="font-bold text-slate-900">{format(new Date(searchParams.checkIn), 'MMM dd')}</p>
+                    <p className="text-xs text-slate-500">{format(new Date(searchParams.checkIn), 'yyyy')}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <p className="text-xs text-slate-500 font-medium">{t('checkOut')}</p>
+                    <p className="font-bold text-slate-900">{format(new Date(searchParams.checkOut), 'MMM dd')}</p>
+                    <p className="text-xs text-slate-500">{format(new Date(searchParams.checkOut), 'yyyy')}</p>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center text-sm">
-                  <span>{t('guests')}:</span>
-                  <span>{searchParams.adults} {t('adults')}{searchParams.children > 0 && `, ${searchParams.children} ${t('children')}`}</span>
+                {/* Guests & Duration */}
+                <div className="flex justify-between items-center text-sm p-3 bg-blue-50 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span className="text-slate-700">{searchParams.adults} {t('adults')}</span>
+                    {searchParams.children > 0 && <span className="text-slate-500">+ {searchParams.children} {t('children')}</span>}
+                  </div>
+                  <Badge className="bg-blue-600">{nights} {t('nights')}</Badge>
                 </div>
 
-                <div className="flex justify-between items-center text-sm">
-                  <span>Duration:</span>
-                  <span>{nights} {t('nights')}</span>
-                </div>
+                <Separator />
 
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span>{t('subtotal')}</span>
-                    <span className="text-emerald-600 font-semibold">{formatCurrency(pricing.subtotal)}</span>
+                {/* Pricing Breakdown */}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Room ({nights} nights)</span>
+                    <span className="font-medium">{formatCurrency(pricing.baseAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Taxes & Fees (10%)</span>
+                    <span className="font-medium">{formatCurrency(pricing.taxes)}</span>
                   </div>
 
-                  {/* Commission Breakdown */}
                   <CommissionBreakdown
                     basePrice={commissionData.basePrice}
                     commissionRate={commissionData.commissionRate}
@@ -688,77 +774,89 @@ export default function HotelBooking() {
                   />
 
                   {/* Promo Code */}
-                  <div className="space-y-2 pt-2">
+                  <div className="pt-2">
                     {!appliedPromo ? (
                       <div className="flex gap-2">
-                        <Input
-                          placeholder={t('promoCodePlaceholder')}
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value)}
-                          className="flex-1"
-                        />
+                        <div className="relative flex-1">
+                          <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            placeholder={t('promoCodePlaceholder')}
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            className="pl-10 h-10 rounded-xl"
+                          />
+                        </div>
                         <Button
                           type="button"
                           onClick={validatePromoCode}
                           variant="outline"
+                          className="rounded-xl"
                         >
                           {t('applyButton')}
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
                         <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          <span className="text-sm text-green-800 font-medium">
-                            {appliedPromo.code}
-                          </span>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span className="text-sm text-emerald-800 font-medium">{appliedPromo.code}</span>
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={handleRemovePromo}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
                         >
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
                     )}
-                    {promoError && <p className="text-red-600 text-sm">{promoError}</p>}
+                    {promoError && <p className="text-red-600 text-xs mt-1">{promoError}</p>}
                   </div>
 
                   {pricing.discount > 0 && appliedPromo && (
-                    <div className="flex justify-between text-green-600">
+                    <div className="flex justify-between text-emerald-600 font-medium">
                       <span>{t('discount', { code: appliedPromo.code })}</span>
-                      <span className="font-semibold">-{formatCurrency(pricing.discount)}</span>
+                      <span>-{formatCurrency(pricing.discount)}</span>
                     </div>
                   )}
 
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between items-center text-lg font-bold">
-                      <span>{t('totalAmount')}</span>
-                      <span className="text-emerald-600">{formatCurrency(pricing.total)}</span>
+                  <Separator />
+
+                  {/* Total */}
+                  <div className="p-4 bg-gradient-to-r from-[#082c59] to-[#0a4a8f] rounded-xl text-white">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{t('totalAmount')}</span>
+                      <span className="text-2xl font-bold">{formatCurrency(pricing.total)}</span>
                     </div>
                   </div>
                 </div>
 
                 {hotel.free_cancellation && (
-                  <Badge variant="outline" className="w-full justify-center text-green-600 border-green-200">
-                    {t('freeCancellation')}
-                  </Badge>
+                  <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl text-emerald-700">
+                    <Shield className="h-5 w-5" />
+                    <span className="text-sm font-medium">{t('freeCancellation')}</span>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Payment Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <CreditCard className="h-6 w-6 text-purple-600" />
-                  {t('paymentInfo')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{t('paymentInfo')}</h3>
+                    <p className="text-sm text-white/70">Secure payment</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-5">
                 <PaymentMethodsSelection
                   amount={pricing.total}
                   customerPhone={formData.phone}
@@ -776,13 +874,27 @@ export default function HotelBooking() {
                 <Button
                   onClick={handlePayButtonClick}
                   disabled={!isBookingDataComplete || paymentInProgress}
-                  className="w-full bg-[#052c59] hover:bg-[#052c59]/90 text-white py-3 h-12 text-base rounded-xl shadow-lg mt-4"
+                  className="w-full bg-gradient-to-r from-[#082c59] to-[#0a4a8f] hover:from-[#0a3a75] hover:to-[#0a5aa5] text-white h-14 text-base rounded-xl shadow-lg shadow-[#082c59]/20 mt-4"
                 >
-                  {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {paymentInProgress ? 'Processing Payment...' : `Pay ${formatCurrency(pricing.total)}`}
+                  {paymentInProgress ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="mr-2 h-5 w-5" />
+                      Pay {formatCurrency(pricing.total)}
+                    </>
+                  )}
                 </Button>
-              </CardContent>
-            </Card>
+                
+                <p className="text-xs text-slate-500 text-center mt-3 flex items-center justify-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  Your payment is secured with SSL encryption
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
