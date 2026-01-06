@@ -720,9 +720,21 @@ export default function Layout({ children }) {
                 <h1 className="text-xl lg:text-2xl font-bold text-[#082c59]">
                   Welcome back, {user?.full_name?.split(' ')[0] || 'User'}!
                 </h1>
-                <p className="text-sm text-slate-500 hidden sm:block">
-                  Manage your services and bookings
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-slate-500 hidden sm:block">
+                    {isOperatorUser && operatorContext ? (
+                      <>Managing <span className="font-medium text-[#082c59]">{operatorContext.operator_name}</span></>
+                    ) : (
+                      'Manage your services and bookings'
+                    )}
+                  </p>
+                  {isOperatorUser && operatorContext && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full hidden sm:inline-flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {operatorContext.operator_role || 'Team Member'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
