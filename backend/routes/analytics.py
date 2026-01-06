@@ -328,4 +328,105 @@ async def get_trip_analytics(
         "dailyData": daily_list,
         "routeStats": route_list,
         "operatorStats": operator_list
+
+
+
+@router.get("/operator/dashboard")
+async def get_operator_dashboard_analytics(
+    period: str = Query("30days", description="Time period"),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get dashboard analytics for operator users (operator-scoped).
+    Super admin and admin can see all data.
+    Operator users can only see their operator's data.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    days = get_period_days(period)
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Build base query with operator filter
+    base_filter = get_operator_filter(current_user)
+    
+    # Get orders for this operator
+    order_query = {**base_filter, "created_at": {"$gte": start_date}}
+    orders = await db.orders.find(order_query).to_list(10000)
+    
+    # Calculate summary stats
+    total_orders = len(orders)
+    total_revenue = sum(o.get("total_amount", 0) for o in orders)
+    completed_orders = len([o for o in orders if o.get("status") == "completed"])
+    pending_orders = len([o for o in orders if o.get("status") == "pending"])
+    cancelled_orders = len([o for o in orders if o.get("status") in ["cancelled", "refunded"]])
+    
+    # Average order value
+    avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+    
+    # Completion rate
+    completion_rate = (completed_orders / total_orders * 100) if total_orders > 0 else 0
+    
+    # Orders by service category
+    orders_by_category = {}
+    for order in orders:
+        category = order.get("service_category", "other")
+        orders_by_category[category] = orders_by_category.get(category, 0) + 1
+    
+    # Revenue by service category
+    revenue_by_category = {}
+    for order in orders:
+        category = order.get("service_category", "other")
+        revenue_by_category[category] = revenue_by_category.get(category, 0) + order.get("total_amount", 0)
+    
+    # Daily revenue for chart
+    daily_revenue = defaultdict(float)
+    daily_orders = defaultdict(int)
+    for order in orders:
+        created = order.get("created_at")
+        if created:
+            day_key = created.strftime("%Y-%m-%d")
+            daily_revenue[day_key] += order.get("total_amount", 0)
+            daily_orders[day_key] += 1
+    
+    # Sort and limit to last 30 days
+    sorted_days = sorted(daily_revenue.keys())[-30:]
+    daily_data = [
+        {"date": day, "revenue": daily_revenue[day], "orders": daily_orders[day]}
+        for day in sorted_days
+    ]
+    
+    # Calculate growth (compare to previous period)
+    prev_start = start_date - timedelta(days=days)
+    prev_query = {**base_filter, "created_at": {"$gte": prev_start, "$lt": start_date}}
+    prev_orders = await db.orders.find(prev_query).to_list(10000)
+    prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders)
+    
+    revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
+    orders_growth = ((total_orders - len(prev_orders)) / len(prev_orders) * 100) if len(prev_orders) > 0 else 0
+    
+    # Get operator context info
+    operator_context = current_user.get("_operator_context", {})
+    
+    return {
+        "summary": {
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "completed_orders": completed_orders,
+            "pending_orders": pending_orders,
+            "cancelled_orders": cancelled_orders,
+            "avg_order_value": round(avg_order_value, 2),
+            "completion_rate": round(completion_rate, 1),
+            "revenue_growth": round(revenue_growth, 1),
+            "orders_growth": round(orders_growth, 1),
+        },
+        "orders_by_category": orders_by_category,
+        "revenue_by_category": revenue_by_category,
+        "daily_data": daily_data,
+        "period": period,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"],
+        "operator_name": operator_context.get("operator_name") if operator_context else None
+    }
+
     }
