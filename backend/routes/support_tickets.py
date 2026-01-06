@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status as http_status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_permission
