@@ -466,42 +466,46 @@ export default function TravelBooking() {
   const outboundDate = outbound.tripDate ? new Date(outbound.tripDate) : new Date();
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Payment Processing Overlay */}
       <PaymentProcessingOverlay 
         isVisible={showPaymentOverlay} 
         message="Processing payment, please do not refresh page"
       />
       
-      <div className="min-h-screen py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header */}
-          <div className="flex items-center mb-8">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="mr-4 bg-white hover:bg-slate-100 rounded-full shadow"
-            >
-              <ArrowLeft className="h-5 w-5 text-[#082c59]" />
+      {/* Sticky Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#082c59]">
-              Complete Your Booking
-            </h1>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Complete Your Booking</h1>
+              <p className="text-sm text-slate-500">{outbound.from_city} → {outbound.to_city}</p>
+            </div>
           </div>
-
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Forms */}
             <div className="lg:col-span-2 space-y-6">
               {/* Traveler Details */}
-              <div className="rounded-2xl p-6 shadow-lg bg-white">
-                <div className="flex items-center gap-2 mb-6">
-                  <Users className="w-6 h-6 text-blue-600" />
-                  <h3 className="text-xl font-bold text-slate-800">
-                    Traveler Details ({passengers.length} passenger{passengers.length > 1 ? 's' : ''})
-                  </h3>
+              <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <Users className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Traveler Details</h3>
+                      <p className="text-sm text-white/70">{passengers.length} passenger{passengers.length > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-4">
+                <div className="p-6 space-y-4">
                   {passengers.map((passenger, index) => (
                     <PassengerForm
                       key={passenger.id}
@@ -515,18 +519,25 @@ export default function TravelBooking() {
               </div>
 
               {/* Seat Selection */}
-              <div className="rounded-2xl p-6 shadow-lg bg-white">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <Armchair className="w-6 h-6 text-purple-600" />
-                    <h3 className="text-xl font-bold text-slate-800">Choose Your Seats</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">Enable seat selection</span>
-                    <Switch
-                      checked={showSeatSelection}
-                      onCheckedChange={setShowSeatSelection}
-                    />
+              <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
+                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-5">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <Armchair className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">Choose Your Seats</h3>
+                        <p className="text-sm text-white/70">Optional seat selection</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white/70">Enable</span>
+                      <Switch
+                        checked={showSeatSelection}
+                        onCheckedChange={setShowSeatSelection}
+                      />
+                    </div>
                   </div>
                 </div>
                 
