@@ -265,6 +265,7 @@ function getTimeAgo(dateString) {
 export default function CustomerServiceManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [ticketSubTab, setTicketSubTab] = useState('open'); // open, in_progress, closed
   const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
