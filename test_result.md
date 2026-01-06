@@ -106,7 +106,7 @@
 #### Complete MTN MoMo Payment Integration Testing ✅ ALL WORKING
 **Test Date:** 2026-01-04 (Latest - Current Review Request)
 **Status:** ✅ 78.6% SUCCESS RATE (11/14 tests passed - 3 expected failures due to order reuse)
-**API Base URL:** https://oryno-dashboard.preview.emergentagent.com/api
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -205,7 +205,7 @@
 #### Complete Comprehensive Permissions Enforcement System Testing ✅ MOSTLY WORKING
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 88.6% SUCCESS RATE (39/44 tests passed, 5 minor issues)
-**API Base URL:** https://oryno-dashboard.preview.emergentagent.com/api
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -796,7 +796,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### HOTEL MANAGEMENT CENTER AND CUSTOMER SERVICE CENTER TESTING - ✅ 95% SUCCESS RATE - MOSTLY WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 95% SUCCESS RATE - ALL MAJOR FEATURES WORKING CORRECTLY
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
 **Test Results:**
 
 **Authentication:**
@@ -863,7 +863,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### CUSTOMER SERVICE CENTER REVAMP TESTING - ✅ 100% SUCCESS RATE - FULLY WORKING
 **Test Date:** 2026-01-05 (Previous - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - ALL FEATURES WORKING CORRECTLY
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com/management/customer-service
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com/management/customer-service
 **Test Results:**
 
 **Authentication:**
@@ -1015,7 +1015,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete Hotel Booking Page Fixes Testing ✅ 100% SUCCESS RATE
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All 5 fixes verified and working)
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
 **Test Results:**
 
 **Authentication:**
@@ -1097,7 +1097,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete Travel Round-Trip Backend API Testing ✅ ALL BACKEND FUNCTIONALITY WORKING
 **Test Date:** 2026-01-04 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - ALL BACKEND APIS FOR ROUND-TRIP BOOKING WORKING CORRECTLY
-**API Base URL:** https://oryno-dashboard.preview.emergentagent.com/api
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1193,7 +1193,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Previous Frontend Testing Results (Authentication Session Issues)
 **Test Date:** 2026-01-04 (Previous Session)
 **Status:** ✅ ROUND-TRIP FUNCTIONALITY VERIFIED + ❌ AUTHENTICATION SESSION PERSISTENCE ISSUE CONFIRMED
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
 **Test Results:**
 
 **Authentication Session Persistence Fix Verification:**
@@ -1276,7 +1276,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete MTN MoMo Payment Flow Testing ❌ AUTHENTICATION BLOCKING ISSUE + TOKEN KEY FIX APPLIED
 **Test Date:** 2025-01-04 (Latest - Current Review Request)
 **Status:** ❌ CANNOT COMPLETE FULL UI TESTING DUE TO AUTHENTICATION SESSION PERSISTENCE ISSUE + ✅ TOKEN KEY INCONSISTENCY FIXED
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
 **Test Results:**
 
 **Authentication:**
@@ -1384,7 +1384,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete PermissionGate Feature Testing ✅ 95% SUCCESS RATE
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 95% SUCCESS RATE (19/20 tests passed, 1 minor issue)
-**Frontend URL:** https://oryno-dashboard.preview.emergentagent.com
+**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
 **Test Results:**
 
 **Test Credentials Verified:**
@@ -1530,7 +1530,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete Room CRUD Operations Testing ✅ ALL WORKING
 **Test Date:** 2025-01-03 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All 7 tests passed)
-**API Base URL:** https://oryno-dashboard.preview.emergentagent.com/api
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1595,7 +1595,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### Complete Stripe Checkout Integration Testing ✅ FULLY WORKING
 **Test Date:** 2025-01-03 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All Stripe tests passed)
-**API Base URL:** https://oryno-dashboard.preview.emergentagent.com/api
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1773,7 +1773,7 @@ Re-verified all endpoints after testing agent reported car rental issue:
 
 **Authentication & Navigation:**
 - ✅ Super Admin login: WORKING (superadmin@oryno.com / testpassword123)
-- ✅ Hotel Management page access: WORKING (https://oryno-dashboard.preview.emergentagent.com/management/hotels)
+- ✅ Hotel Management page access: WORKING (https://admin-dashboard-642.preview.emergentagent.com/management/hotels)
 
 **Backend API Verification:**
 - ✅ Hotels API: WORKING (6 hotels with operator data)
