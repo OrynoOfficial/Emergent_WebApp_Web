@@ -146,6 +146,7 @@ async def get_restaurant_menu(restaurant_id: str):
             "price": item.get("price", 0),
             "description": item.get("description", ""),
             "image": item.get("image", ""),
+            "is_available": item.get("is_available", True),
             "available": item.get("is_available", True),
             "popular": item.get("popular", False)
         })
@@ -153,18 +154,18 @@ async def get_restaurant_menu(restaurant_id: str):
     # If no menu items, return demo data
     if not items:
         items = [
-            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "available": True, "popular": True},
-            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "available": True, "popular": True},
-            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "available": True, "popular": True},
-            {"id": "4", "name": "Eru Soup", "category": "mains", "price": 6000, "description": "Spinach-like vegetable soup with waterleaf", "image": "", "available": True},
-            {"id": "5", "name": "Koki Beans", "category": "starters", "price": 2500, "description": "Steamed bean cake wrapped in banana leaves", "image": "", "available": True},
-            {"id": "6", "name": "Accra Banana", "category": "starters", "price": 1500, "description": "Fried ripe banana fritters", "image": "", "available": True},
-            {"id": "7", "name": "Fresh Fruit Salad", "category": "desserts", "price": 2000, "description": "Seasonal tropical fruits", "image": "", "available": True},
-            {"id": "8", "name": "Gâteau de Manioc", "category": "desserts", "price": 2500, "description": "Traditional cassava cake", "image": "", "available": True},
-            {"id": "9", "name": "Fresh Juice", "category": "drinks", "price": 1500, "description": "Orange, pineapple, or passion fruit", "image": "", "available": True},
-            {"id": "10", "name": "Bissap (Hibiscus)", "category": "drinks", "price": 1000, "description": "Refreshing hibiscus drink", "image": "", "available": True},
-            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "available": True, "popular": True},
-            {"id": "12", "name": "Suya Skewers", "category": "starters", "price": 3000, "description": "Spiced grilled meat skewers", "image": "", "available": True}
+            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "is_available": True, "available": True, "popular": True},
+            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "is_available": True, "available": True, "popular": True},
+            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "is_available": True, "available": True, "popular": True},
+            {"id": "4", "name": "Eru Soup", "category": "mains", "price": 6000, "description": "Spinach-like vegetable soup with waterleaf", "image": "", "is_available": True, "available": True},
+            {"id": "5", "name": "Koki Beans", "category": "starters", "price": 2500, "description": "Steamed bean cake wrapped in banana leaves", "image": "", "is_available": True, "available": True},
+            {"id": "6", "name": "Accra Banana", "category": "starters", "price": 1500, "description": "Fried ripe banana fritters", "image": "", "is_available": True, "available": True},
+            {"id": "7", "name": "Fresh Fruit Salad", "category": "desserts", "price": 2000, "description": "Seasonal tropical fruits", "image": "", "is_available": True, "available": True},
+            {"id": "8", "name": "Gâteau de Manioc", "category": "desserts", "price": 2500, "description": "Traditional cassava cake", "image": "", "is_available": True, "available": True},
+            {"id": "9", "name": "Fresh Juice", "category": "drinks", "price": 1500, "description": "Orange, pineapple, or passion fruit", "image": "", "is_available": True, "available": True},
+            {"id": "10", "name": "Bissap (Hibiscus)", "category": "drinks", "price": 1000, "description": "Refreshing hibiscus drink", "image": "", "is_available": True, "available": True},
+            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "is_available": True, "available": True, "popular": True},
+            {"id": "12", "name": "Suya Skewers", "category": "starters", "price": 3000, "description": "Spiced grilled meat skewers", "image": "", "is_available": True, "available": True}
         ]
     
     return {"items": items}
