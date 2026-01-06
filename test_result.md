@@ -43,7 +43,29 @@
 
 ## Changes Made in This Session
 
-### 1. Operator Users Management System (COMPLETED ✅)
+### 1. Session Timeout Configuration Feature (COMPLETED ✅)
+- **Backend API Implementation:** Complete session timeout configuration system implemented
+  - GET /api/system-settings/public/session-timeout - Public endpoint returning timeout settings (no auth required)
+  - GET /api/system-settings/ - Authenticated endpoint for admin/super_admin to view all settings
+  - PUT /api/system-settings/session-timeout - Update endpoint for super_admin to modify timeout (15-120 minutes)
+  - Dynamic JWT token expiration based on configured session timeout
+  - Activity logging for timeout changes
+  - Proper validation and error handling
+
+- **Security Features:** Comprehensive permission enforcement
+  - Public endpoint accessible without authentication
+  - Settings retrieval restricted to admin and super_admin roles
+  - Settings modification restricted to super_admin role only
+  - Boundary validation (15-120 minutes) with proper error messages
+  - JWT tokens automatically use configured timeout values
+
+- **Integration Features:**
+  - Login endpoint uses dynamic session timeout from system settings
+  - Token refresh endpoint uses dynamic session timeout
+  - Settings persist in MongoDB system_settings collection
+  - Default timeout of 30 minutes with configurable range
+
+### 2. Operator Users Management System (COMPLETED ✅)
 - **Backend API Implementation:** Complete operator users management system implemented
   - GET /api/operators/{operator_id}/users - List users assigned to an operator
   - GET /api/operators/{operator_id}/stats - Get user statistics (total, active, by role)
