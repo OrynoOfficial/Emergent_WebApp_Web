@@ -728,124 +728,128 @@ export default function TravelBooking() {
 
                     {/* Extras */}
                     {extraLuggage > 0 && (
-                  <div className="pt-4 border-t border-slate-200 mb-4">
-                    <div className="flex justify-between text-sm text-slate-700">
-                      <span>Extra Luggage × {extraLuggage}</span>
-                      <span className="text-emerald-600">{formatCurrency(pricing.extras)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pricing */}
-                <div className="pt-4 border-t border-slate-200 space-y-2">
-                  <div className="flex justify-between text-slate-700">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(pricing.subtotal)}</span>
-                  </div>
-                  
-                  <CommissionBreakdown
-                    basePrice={pricing.subtotal}
-                    commissionRate={pricing.commissionRate}
-                    commissionAmount={pricing.commission}
-                    totalAmount={pricing.subtotal + pricing.commission}
-                    showDetails={true}
-                  />
-
-                  {/* Promo Code */}
-                  <div className="space-y-2 pt-2">
-                    {!appliedPromo ? (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Promo code"
-                          value={promoCode}
-                          onChange={(e) => setPromoCode(e.target.value)}
-                          className="flex-1 bg-slate-50 border-slate-300"
-                        />
-                        <Button
-                          onClick={validatePromoCode}
-                          variant="outline"
-                          className="bg-slate-50 hover:bg-slate-100"
-                        >
-                          Apply
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          <span className="text-sm text-green-800 font-medium">{appliedPromo.code}</span>
+                      <div className="pt-4 border-t border-slate-200 mb-4">
+                        <div className="flex justify-between text-sm text-slate-700">
+                          <span>Extra Luggage × {extraLuggage}</span>
+                          <span className="text-emerald-600">{formatCurrency(pricing.extras)}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => { setAppliedPromo(null); setPromoCode(''); }}
-                          className="text-red-600 hover:text-red-700 h-7 px-2"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
                       </div>
                     )}
-                    {promoError && <p className="text-red-600 text-sm">{promoError}</p>}
                   </div>
 
-                  {pricing.discount > 0 && appliedPromo && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discount ({appliedPromo.code})</span>
-                      <span>-{formatCurrency(pricing.discount)}</span>
+                  {/* Pricing Summary */}
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 -mx-5 p-5 rounded-b-xl">
+                    <h4 className="font-semibold text-white mb-3">Payment Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-slate-300">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(pricing.subtotal)}</span>
+                      </div>
+                      
+                      <CommissionBreakdown
+                        basePrice={pricing.subtotal}
+                        commissionRate={pricing.commissionRate}
+                        commissionAmount={pricing.commission}
+                        totalAmount={pricing.subtotal + pricing.commission}
+                        showDetails={true}
+                      />
+
+                      {/* Promo Code */}
+                      <div className="space-y-2 pt-2">
+                        {!appliedPromo ? (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Promo code"
+                              value={promoCode}
+                              onChange={(e) => setPromoCode(e.target.value)}
+                              className="flex-1 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                            />
+                            <Button
+                              onClick={validatePromoCode}
+                              variant="outline"
+                              className="bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
+                            >
+                              Apply
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                              <span className="text-sm text-green-400 font-medium">{appliedPromo.code}</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setAppliedPromo(null); setPromoCode(''); }}
+                              className="text-red-400 hover:text-red-300 h-7 px-2"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                        {promoError && <p className="text-red-400 text-sm">{promoError}</p>}
+                      </div>
+
+                      {pricing.discount > 0 && appliedPromo && (
+                        <div className="flex justify-between text-green-400">
+                          <span>Discount ({appliedPromo.code})</span>
+                          <span>-{formatCurrency(pricing.discount)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-700">
+                        <span className="text-white font-semibold">Total</span>
+                        <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="flex justify-between text-xl font-bold pt-2 border-t border-slate-200 text-slate-800">
-                    <span>Total</span>
-                    <span className="text-emerald-600">{formatCurrency(pricing.total)}</span>
+                    {/* Payment */}
+                    <div className="pt-4 mt-4 border-t border-slate-700">
+                      <PaymentMethodsSelection
+                        amount={pricing.total}
+                        customerPhone={passengers[0]?.phoneNumber}
+                        customerEmail={user?.email}
+                        serviceDetails={{
+                          service_category: 'travel',
+                          service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
+                          operator_id: outbound.operator_id,
+                          operator_name: outbound.operator_name,
+                          booking_details: {
+                            outbound,
+                            return: returnTrip,
+                            passengers,
+                            extraLuggage,
+                            selectedSeats: showSeatSelection ? selectedSeats : [],
+                            returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
+                            seat_booking_ids: showSeatSelection ? seatBookingIds : [],
+                            return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
+                          }
+                        }}
+                        onPaymentInitiated={handlePaymentInitiated}
+                        disabled={!isFormValid || paymentInProgress}
+                        triggerPayment={triggerPayment}
+                        onTrigger={() => setPaymentInProgress(true)}
+                        orderId={orderId}
+                        onMoMoDialogOpen={handleMoMoDialogOpen}
+                        onProcessingChange={handleProcessingChange}
+                      />
+                      
+                      <Button
+                        onClick={handlePayButtonClick}
+                        disabled={!isFormValid || paymentInProgress}
+                        className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white mt-4 rounded-xl shadow-lg font-semibold"
+                      >
+                        {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bus className="mr-2 h-4 w-4" />}
+                        {paymentInProgress ? 'Processing...' : `Book Trip • ${formatCurrency(pricing.total)}`}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-
-                {/* Payment */}
-                <div className="pt-6">
-                  <PaymentMethodsSelection
-                    amount={pricing.total}
-                    customerPhone={passengers[0]?.phoneNumber}
-                    customerEmail={user?.email}
-                    serviceDetails={{
-                      service_category: 'travel',
-                      service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
-                      operator_id: outbound.operator_id,
-                      operator_name: outbound.operator_name,
-                      booking_details: {
-                        outbound,
-                        return: returnTrip,
-                        passengers,
-                        extraLuggage,
-                        selectedSeats: showSeatSelection ? selectedSeats : [],
-                        returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
-                        seat_booking_ids: showSeatSelection ? seatBookingIds : [],
-                        return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
-                      }
-                    }}
-                    onPaymentInitiated={handlePaymentInitiated}
-                    disabled={!isFormValid || paymentInProgress}
-                    triggerPayment={triggerPayment}
-                    onTrigger={() => setPaymentInProgress(true)}
-                    orderId={orderId}
-                    onMoMoDialogOpen={handleMoMoDialogOpen}
-                    onProcessingChange={handleProcessingChange}
-                  />
-                  
-                  <Button
-                    onClick={handlePayButtonClick}
-                    disabled={!isFormValid || paymentInProgress}
-                    className="w-full h-12 text-lg bg-gradient-to-r from-[#082c59] to-[#0a4a8f] hover:from-[#0a3a75] hover:to-[#0c5aa3] text-white mt-4 rounded-xl shadow-lg"
-                  >
-                    {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {paymentInProgress ? 'Processing...' : `Pay ${formatCurrency(pricing.total)}`}
-                  </Button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 }
