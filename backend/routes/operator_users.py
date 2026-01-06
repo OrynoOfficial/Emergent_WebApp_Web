@@ -305,7 +305,7 @@ async def update_operator_user(
     db = get_database()
     
     # Verify access
-    operator = await verify_operator_access(current_user, operator_id, db, require_admin=True)
+    await verify_operator_access(current_user, operator_id, db, require_admin=True)
     
     # Get the target user
     target_user = await db.users.find_one({"_id": user_id, "operator_id": operator_id})
@@ -355,7 +355,7 @@ async def remove_operator_user(
     db = get_database()
     
     # Verify access
-    operator = await verify_operator_access(current_user, operator_id, db, require_admin=True)
+    await verify_operator_access(current_user, operator_id, db, require_admin=True)
     
     # Get the target user
     target_user = await db.users.find_one({"_id": user_id, "operator_id": operator_id})
