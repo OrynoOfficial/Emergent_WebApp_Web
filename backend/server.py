@@ -57,6 +57,7 @@ from routes.stripe_checkout import router as stripe_checkout_router
 from routes.momo_checkout import router as momo_checkout_router
 from routes.operator_users import router as operator_users_router
 from routes.system_settings import router as system_settings_router
+from routes.operator_roles import router as operator_roles_router
 
 # Create the main app
 app = FastAPI(
