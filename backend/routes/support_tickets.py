@@ -85,6 +85,10 @@ async def create_ticket(
         # Related info
         "related_order_id": ticket_data.related_order_id,
         "related_service_type": ticket_data.related_service_type,
+        # Service and operator info for operator support integration
+        "service_tag": ticket_data.service_tag,
+        "operator_id": ticket_data.operator_id,
+        "operator_name": ticket_data.operator_name,
         # Assignment
         "assigned_to": None,
         "assigned_to_name": None,
