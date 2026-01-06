@@ -305,7 +305,19 @@ export default function CarRentalManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard cars={cars} />
+          <ServiceExecutiveDashboard
+            serviceType="Car Rental"
+            serviceIcon={<Car className="h-8 w-8" />}
+            primaryColor="green"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Vehicles"
+            secondaryLabel="Available"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
