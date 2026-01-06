@@ -262,4 +262,52 @@ async def get_my_car_bookings(
         {"user_id": current_user["_id"], "service_category": "car_rental"}
     )
     
+
+
+
+@router.get("/management/my-vehicles")
+async def get_my_vehicles(
+    search: Optional[str] = None,
+    vehicle_type: Optional[str] = None,
+    city: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get vehicles for the current user's operator (operator-scoped).
+    Super admin and admin can see all vehicles.
+    Operator users can only see vehicles belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"make": {"$regex": search, "$options": "i"}},
+            {"model": {"$regex": search, "$options": "i"}}
+        ]
+    if vehicle_type:
+        query["vehicle_type"] = vehicle_type
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    
+    vehicles = await db.car_rentals.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.car_rentals.count_documents(query)
+    
+    # Transform _id to id
+    for vehicle in vehicles:
+        vehicle["id"] = str(vehicle.pop("_id", ""))
+    
+    return {
+        "vehicles": vehicles, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
     return {"bookings": bookings, "total": total}
