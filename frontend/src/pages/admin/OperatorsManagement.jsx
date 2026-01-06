@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building, Plus, Search, Edit, Trash2, Eye, Ban, CheckCircle,
-  Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign
+  Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotels', 'travel', 'car_rental', 'restaurants', 'events', 'cinema', 'laundry', 'banquet'];
