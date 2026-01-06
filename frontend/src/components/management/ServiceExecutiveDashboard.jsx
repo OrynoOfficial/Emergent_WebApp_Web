@@ -69,22 +69,28 @@ export default function ServiceExecutiveDashboard({
     revenueGrowth = 0
   } = stats;
   
-  // Generate mock data if not provided
+  // Generate default data if not provided (using seeded values instead of random)
   const chartDailyTrend = useMemo(() => {
     if (dailyTrend.length > 0) return dailyTrend;
-    return Array.from({ length: 7 }, (_, i) => ({
-      date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      bookings: Math.floor(Math.random() * 30) + 5,
-      revenue: Math.floor(Math.random() * 500000) + 100000
-    }));
+    // Default mock data with fixed values instead of random
+    return [
+      { date: 'Mon', bookings: 18, revenue: 320000 },
+      { date: 'Tue', bookings: 22, revenue: 410000 },
+      { date: 'Wed', bookings: 15, revenue: 280000 },
+      { date: 'Thu', bookings: 28, revenue: 520000 },
+      { date: 'Fri', bookings: 35, revenue: 680000 },
+      { date: 'Sat', bookings: 42, revenue: 820000 },
+      { date: 'Sun', bookings: 30, revenue: 580000 }
+    ];
   }, [dailyTrend]);
   
   const chartDistribution = useMemo(() => {
     if (distribution.length > 0) return distribution;
+    // Default mock data with fixed values
     return [
-      { type: 'Standard', count: Math.floor(Math.random() * 20) + 5, color: CHART_COLORS[0] },
-      { type: 'Premium', count: Math.floor(Math.random() * 15) + 3, color: CHART_COLORS[1] },
-      { type: 'VIP', count: Math.floor(Math.random() * 10) + 2, color: CHART_COLORS[2] }
+      { type: 'Standard', count: 15, color: CHART_COLORS[0] },
+      { type: 'Premium', count: 8, color: CHART_COLORS[1] },
+      { type: 'VIP', count: 4, color: CHART_COLORS[2] }
     ];
   }, [distribution]);
   
