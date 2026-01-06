@@ -40,7 +40,7 @@ const DEFAULT_MENU_ITEM = {
   name: '', description: '', category: '', price: '', is_available: true, image: '', popular: false
 };
 
-// Dashboard data generator
+// Dashboard data generator - use seeded pseudo-random for mock data
 const useDashboardData = (restaurants, menuItems) => {
   return useMemo(() => {
     const activeRestaurants = restaurants.filter(r => r.status === 'active');
@@ -61,25 +61,29 @@ const useDashboardData = (restaurants, menuItems) => {
       type: type.charAt(0).toUpperCase() + type.slice(1), count
     }));
 
-    // Monthly trend (mock)
-    const dailyTrend = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
-      name: day, reservations: Math.floor(Math.random() * 30) + 10
+    // Monthly trend (deterministic based on restaurants count)
+    const baseTrend = restaurants.length || 1;
+    const dailyTrend = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => ({
+      name: day, reservations: baseTrend * 3 + (i * 2) + 10
     }));
 
+    // Bookings by status (deterministic)
+    const baseBookings = restaurants.length || 1;
+    
     return {
       stats: {
         totalItems: restaurants.length,
         activeItems: activeRestaurants.length,
         avgRating: parseFloat(avgRating),
         totalRevenue: totalRevenue || restaurants.length * 350000,
-        pendingBookings: Math.floor(Math.random() * 20) + 5,
-        completedToday: Math.floor(Math.random() * 15) + 3
+        pendingBookings: baseBookings * 2 + 5,
+        completedToday: baseBookings + 3
       },
       bookingsByStatus: [
-        { name: 'Pending', value: Math.floor(Math.random() * 20) + 5 },
-        { name: 'Confirmed', value: Math.floor(Math.random() * 30) + 10 },
-        { name: 'Completed', value: Math.floor(Math.random() * 50) + 20 },
-        { name: 'Cancelled', value: Math.floor(Math.random() * 10) + 2 }
+        { name: 'Pending', value: baseBookings * 2 + 5 },
+        { name: 'Confirmed', value: baseBookings * 3 + 10 },
+        { name: 'Completed', value: baseBookings * 5 + 20 },
+        { name: 'Cancelled', value: baseBookings + 2 }
       ],
       dailyTrend,
       distribution,
