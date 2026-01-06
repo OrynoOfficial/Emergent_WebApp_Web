@@ -80,18 +80,22 @@ const useTravelDashboardData = (routes, vehicles) => {
       color: CHART_COLORS[i]
     })).filter(d => d.count > 0);
 
-    // Daily trend (mock)
-    const dailyTrend = Array.from({ length: 7 }, (_, i) => ({
-      date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      bookings: Math.floor(Math.random() * 40) + 15,
-      revenue: Math.floor(Math.random() * 600000) + 200000
-    }));
+    // Daily trend - fixed data instead of random
+    const dailyTrend = [
+      { date: 'Mon', bookings: 25, revenue: 380000 },
+      { date: 'Tue', bookings: 32, revenue: 450000 },
+      { date: 'Wed', bookings: 28, revenue: 420000 },
+      { date: 'Thu', bookings: 38, revenue: 580000 },
+      { date: 'Fri', bookings: 45, revenue: 720000 },
+      { date: 'Sat', bookings: 52, revenue: 850000 },
+      { date: 'Sun', bookings: 35, revenue: 540000 }
+    ];
 
     return {
       stats: {
         totalItems: routes.length,
         activeItems: activeRoutes.length,
-        totalBookings: Math.floor(Math.random() * 200) + 50,
+        totalBookings: routes.length * 8 + 50, // Calculated based on routes
         totalRevenue,
         avgRating: 4.2,
         occupancyRate: avgOccupancy,
@@ -99,10 +103,10 @@ const useTravelDashboardData = (routes, vehicles) => {
         revenueGrowth: 8.3
       },
       bookingsByStatus: {
-        confirmed: Math.floor(Math.random() * 50) + 20,
-        pending: Math.floor(Math.random() * 15) + 5,
-        cancelled: Math.floor(Math.random() * 5) + 1,
-        completed: Math.floor(Math.random() * 30) + 10
+        confirmed: Math.max(35, routes.length * 3),
+        pending: Math.max(10, routes.length),
+        cancelled: 3,
+        completed: Math.max(25, routes.length * 2)
       },
       dailyTrend,
       distribution: routeDistribution,
