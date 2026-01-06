@@ -20,7 +20,9 @@ const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
     const parsed = parse(dateString, formatString, new Date());
     if (isValid(parsed)) return parsed;
-  } catch (e) {}
+  } catch (e) {
+    // Invalid date format, use backup
+  }
   return backupDate;
 };
 
