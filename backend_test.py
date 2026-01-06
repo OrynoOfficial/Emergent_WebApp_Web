@@ -1271,6 +1271,230 @@ class ORynoAPITester:
         
         print("\n--- STRIPE CHECKOUT INTEGRATION TEST COMPLETE ---")
 
+    def test_service_management_dashboard_communications(self):
+        """Test Service Management Dashboard and Communications Revamp (Current Review Request)"""
+        print("\n" + "="*50)
+        print("TESTING SERVICE MANAGEMENT DASHBOARD & COMMUNICATIONS REVAMP")
+        print("="*50)
+        
+        # Test 1: Login with superadmin credentials
+        print("\n--- STEP 1: LOGIN WITH SUPERADMIN CREDENTIALS ---")
+        
+        success, response = self.run_test(
+            "Login Super Admin (superadmin@oryno.com / testpassword123)",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "superadmin@oryno.com", "password": "testpassword123"}
+        )
+        
+        if success and 'access_token' in response:
+            self.tokens['super_admin'] = response['access_token']
+            print("   ✅ Super admin login successful")
+        else:
+            print("   ❌ Super admin login failed - cannot proceed with tests")
+            return
+        
+        # Test 2: Test GET /api/support-tickets/operators-by-service?service_type=Travel
+        print("\n--- STEP 2: TEST OPERATORS BY SERVICE ENDPOINT ---")
+        
+        success, operators_response = self.run_test(
+            "Get operators filtered by Travel service",
+            "GET",
+            "support-tickets/operators-by-service?service_type=Travel",
+            200,
+            user_role='super_admin'
+        )
+        
+        travel_operators = []
+        if success:
+            operators = operators_response.get('operators', [])
+            service_type = operators_response.get('service_type')
+            print(f"   ✅ Retrieved {len(operators)} operators for {service_type} service")
+            travel_operators = operators
+            
+            if operators:
+                for op in operators[:3]:  # Show first 3 operators
+                    print(f"     - {op.get('name', 'Unknown')} ({op.get('email', 'No email')}) - Type: {op.get('operator_type', 'Unknown')}")
+            else:
+                print("   ⚠️  No operators found for Travel service")
+        else:
+            print("   ❌ Failed to get operators by service")
+        
+        # Test 3: Test other service types
+        print("\n--- STEP 3: TEST OTHER SERVICE TYPES ---")
+        
+        service_types = ["Restaurants", "Car Rental", "Laundry"]
+        for service_type in service_types:
+            success, service_operators = self.run_test(
+                f"Get operators for {service_type} service",
+                "GET",
+                f"support-tickets/operators-by-service?service_type={service_type}",
+                200,
+                user_role='super_admin'
+            )
+            
+            if success:
+                operators = service_operators.get('operators', [])
+                print(f"   ✅ {service_type}: {len(operators)} operators found")
+            else:
+                print(f"   ❌ {service_type}: Failed to get operators")
+        
+        # Test 4: Test POST /api/support-tickets/ with new fields
+        print("\n--- STEP 4: TEST SUPPORT TICKET CREATION WITH NEW FIELDS ---")
+        
+        if travel_operators:
+            selected_operator = travel_operators[0]
+            
+            ticket_data = {
+                "subject": "Test Support Ticket from Travel Management",
+                "description": "This is a test ticket created from Travel Management Communications tab",
+                "category": "operator",
+                "priority": "medium",
+                "source": "web",
+                "service_tag": "Travel",
+                "operator_id": selected_operator.get('id'),
+                "operator_name": selected_operator.get('name')
+            }
+            
+            success, ticket_response = self.run_test(
+                "Create support ticket with service_tag and operator info",
+                "POST",
+                "support-tickets/",
+                200,
+                data=ticket_data,
+                user_role='super_admin'
+            )
+            
+            if success:
+                ticket_number = ticket_response.get('ticket_number')
+                ticket_id = ticket_response.get('ticket_id')
+                print(f"   ✅ Support ticket created successfully")
+                print(f"     Ticket Number: {ticket_number}")
+                print(f"     Ticket ID: {ticket_id}")
+                print(f"     Service Tag: Travel")
+                print(f"     Operator: {selected_operator.get('name')}")
+                
+                # Verify the ticket was created with correct fields
+                success, ticket_details = self.run_test(
+                    "Get created ticket details",
+                    "GET",
+                    f"support-tickets/{ticket_id}",
+                    200,
+                    user_role='super_admin'
+                )
+                
+                if success:
+                    service_tag = ticket_details.get('service_tag')
+                    operator_id = ticket_details.get('operator_id')
+                    operator_name = ticket_details.get('operator_name')
+                    
+                    print(f"   ✅ Ticket verification:")
+                    print(f"     Service Tag: {service_tag}")
+                    print(f"     Operator ID: {operator_id}")
+                    print(f"     Operator Name: {operator_name}")
+                    
+                    # Verify fields match what we sent
+                    if service_tag == "Travel":
+                        print("   ✅ Service tag correctly set to 'Travel'")
+                    else:
+                        print(f"   ❌ Service tag mismatch: expected 'Travel', got '{service_tag}'")
+                    
+                    if operator_id == selected_operator.get('id'):
+                        print("   ✅ Operator ID correctly set")
+                    else:
+                        print(f"   ❌ Operator ID mismatch")
+                    
+                    if operator_name == selected_operator.get('name'):
+                        print("   ✅ Operator name correctly set")
+                    else:
+                        print(f"   ❌ Operator name mismatch")
+                else:
+                    print("   ❌ Failed to get ticket details for verification")
+            else:
+                print("   ❌ Failed to create support ticket")
+        else:
+            print("   ⚠️  Skipping ticket creation - no Travel operators available")
+        
+        # Test 5: Test support ticket listing and filtering
+        print("\n--- STEP 5: TEST SUPPORT TICKET LISTING ---")
+        
+        success, tickets_list = self.run_test(
+            "Get all support tickets",
+            "GET",
+            "support-tickets/",
+            200,
+            user_role='super_admin'
+        )
+        
+        if success:
+            tickets = tickets_list.get('tickets', [])
+            total = tickets_list.get('total', 0)
+            print(f"   ✅ Retrieved {len(tickets)} tickets (total: {total})")
+            
+            # Find tickets with service tags
+            service_tagged_tickets = [t for t in tickets if t.get('service_tag')]
+            print(f"   ✅ Found {len(service_tagged_tickets)} tickets with service tags")
+            
+            if service_tagged_tickets:
+                for ticket in service_tagged_tickets[:3]:  # Show first 3
+                    print(f"     - {ticket.get('ticket_number')}: {ticket.get('service_tag')} - {ticket.get('operator_name', 'No operator')}")
+        else:
+            print("   ❌ Failed to get support tickets list")
+        
+        # Test 6: Test support ticket statistics
+        print("\n--- STEP 6: TEST SUPPORT TICKET STATISTICS ---")
+        
+        success, stats_response = self.run_test(
+            "Get support ticket statistics",
+            "GET",
+            "support-tickets/stats",
+            200,
+            user_role='super_admin'
+        )
+        
+        if success:
+            stats = stats_response.get('stats', {})
+            print(f"   ✅ Support ticket statistics retrieved:")
+            print(f"     Total Tickets: {stats.get('total_tickets', 0)}")
+            print(f"     Open Tickets: {stats.get('open_tickets', 0)}")
+            print(f"     In Progress: {stats.get('in_progress_tickets', 0)}")
+            print(f"     Resolved: {stats.get('resolved_tickets', 0)}")
+            print(f"     Unassigned: {stats.get('unassigned_tickets', 0)}")
+            print(f"     Urgent: {stats.get('urgent_tickets', 0)}")
+            
+            # Check for service-specific stats if available
+            by_service = stats.get('by_service', {})
+            if by_service:
+                print(f"   ✅ Tickets by service:")
+                for service, count in by_service.items():
+                    print(f"     {service}: {count}")
+        else:
+            print("   ❌ Failed to get support ticket statistics")
+        
+        # Test 7: Test team members endpoint
+        print("\n--- STEP 7: TEST TEAM MEMBERS ENDPOINT ---")
+        
+        success, team_response = self.run_test(
+            "Get support team members",
+            "GET",
+            "support-tickets/team-members",
+            200,
+            user_role='super_admin'
+        )
+        
+        if success:
+            team_members = team_response.get('team_members', [])
+            print(f"   ✅ Retrieved {len(team_members)} team members")
+            
+            if team_members:
+                for member in team_members[:3]:  # Show first 3
+                    print(f"     - {member.get('name', 'Unknown')} ({member.get('role', 'Unknown role')}) - {member.get('department', 'No dept')}")
+        else:
+            print("   ❌ Failed to get team members")
+        
+        print("\n--- SERVICE MANAGEMENT DASHBOARD & COMMUNICATIONS TEST COMPLETE ---")
+
     def test_travel_round_trip_backend_apis(self):
         """Test Travel Round-Trip Backend APIs (Current Review Request)"""
         print("\n" + "="*50)
