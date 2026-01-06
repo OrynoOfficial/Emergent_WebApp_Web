@@ -325,6 +325,9 @@ export default function BanquetManagement() {
   const [editingBanquet, setEditingBanquet] = useState(null);
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
 
+  // Use the banquet dashboard data hook
+  const dashboardData = useBanquetDashboardData(banquets);
+
   const handleViewBanquet = (banquet) => {
     setViewingBanquet(banquet);
     setIsViewDialogOpen(true);
