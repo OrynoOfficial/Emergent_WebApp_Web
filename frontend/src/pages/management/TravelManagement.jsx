@@ -459,7 +459,19 @@ export default function TravelManagement() {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard routes={routes} vehicles={vehicles} stats={stats} />
+          <ServiceExecutiveDashboard
+            serviceType="Travel"
+            serviceIcon={<Bus className="h-8 w-8" />}
+            primaryColor="blue"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Routes"
+            secondaryLabel="Vehicles"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         {/* Management Tab */}
