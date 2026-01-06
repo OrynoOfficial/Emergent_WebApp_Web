@@ -1,19 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Film, Clock, MapPin, ArrowLeft, Calendar, Armchair, Plus, Minus, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { 
+  Film, Clock, MapPin, ArrowLeft, Calendar, Armchair, Plus, Minus, Loader2,
+  CreditCard, User, Phone, Mail, CheckCircle2, Popcorn, Star
+} from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import api from '@/api/client';
-import { formatFCFA } from '@/utils/currency';
+import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
+import { format } from 'date-fns';
 
 const ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const SEATS_PER_ROW = 12;
+
+const TICKET_TYPES = [
+  { id: 'adult', name: 'Adult', multiplier: 1, icon: User },
+  { id: 'child', name: 'Child', multiplier: 0.5, description: '50% off' },
+  { id: 'senior', name: 'Senior', multiplier: 0.7, description: '30% off' }
+];
+
+// Step Indicator Component
+const StepIndicator = ({ currentStep }) => {
+  const steps = [
+    { num: 1, label: 'Seats' },
+    { num: 2, label: 'Details' },
+    { num: 3, label: 'Payment' }
+  ];
+
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.num}>
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+              currentStep >= step.num 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
+                : 'bg-slate-200 text-slate-500'
+            }`}>
+              {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.num}
+            </div>
+            <span className={`text-xs mt-2 font-medium ${
+              currentStep >= step.num ? 'text-indigo-600' : 'text-slate-400'
+            }`}>{step.label}</span>
+          </div>
+          {idx < steps.length - 1 && (
+            <div className={`w-20 h-1 mx-2 rounded-full transition-all ${
+              currentStep > step.num ? 'bg-indigo-600' : 'bg-slate-200'
+            }`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 export default function CinemaBooking() {
   const { showtimeId } = useParams();
@@ -27,10 +75,30 @@ export default function CinemaBooking() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [bookedSeats, setBookedSeats] = useState(['A3', 'A4', 'B5', 'B6', 'C7', 'D8', 'D9', 'E10']);
   const [ticketCounts, setTicketCounts] = useState({ adult: 1, child: 0, senior: 0 });
+  const [currentStep, setCurrentStep] = useState(1);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+  
+  const [isSelf, setIsSelf] = useState(false);
+  const [paymentInProgress, setPaymentInProgress] = useState(false);
+  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
+  const [triggerPayment, setTriggerPayment] = useState(false);
+  const [orderId, setOrderId] = useState(null);
+  const [booking, setBooking] = useState(false);
 
   useEffect(() => {
     loadData();
   }, [showtimeId]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setFormData(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user]);
 
   const loadData = async () => {
     try {
@@ -60,6 +128,20 @@ export default function CinemaBooking() {
     }
   };
 
+  const handleSelfChange = (checked) => {
+    setIsSelf(checked);
+    if (checked && user) {
+      setFormData(prev => ({
+        ...prev,
+        name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        email: user.email || '',
+        phone: user.phone || ''
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, name: '', phone: '' }));
+    }
+  };
+
   const toggleSeat = (seatId) => {
     if (bookedSeats.includes(seatId)) return;
     setSelectedSeats(prev => 
@@ -71,96 +153,190 @@ export default function CinemaBooking() {
 
   const getTotalTickets = () => ticketCounts.adult + ticketCounts.child + ticketCounts.senior;
 
-  const calculateTotal = () => {
+  const calculatePricing = () => {
     const basePrice = showtime?.price || 0;
-    return (ticketCounts.adult * basePrice) + 
+    const subtotal = (ticketCounts.adult * basePrice) + 
            (ticketCounts.child * basePrice * 0.5) + 
            (ticketCounts.senior * basePrice * 0.7);
+    const commissionRate = 5;
+    const commission = subtotal * (commissionRate / 100);
+    
+    return {
+      subtotal,
+      commissionRate,
+      commission,
+      total: subtotal + commission
+    };
   };
 
-  const [booking, setBooking] = useState(false);
+  const handlePaymentInitiated = async (response) => {
+    setPaymentInProgress(false);
+    setShowPaymentOverlay(false);
+    setTriggerPayment(false);
 
-  const handleBooking = async () => {
+    if (response.redirectUrl) {
+      toast.info('Redirecting to payment...');
+      window.location.href = response.redirectUrl;
+      return;
+    }
+
+    if (response.success || response.transactionRef) {
+      toast.success(`Booking confirmed! Enjoy your movie!`);
+      navigate('/orders');
+    }
+  };
+
+  const handlePaymentError = (error) => {
+    setPaymentInProgress(false);
+    setShowPaymentOverlay(false);
+    setTriggerPayment(false);
+    toast.error(error.message || 'Payment failed');
+  };
+
+  const handleSubmit = async () => {
     if (selectedSeats.length !== getTotalTickets()) {
       toast.error(`Please select ${getTotalTickets()} seats`);
       return;
     }
+
+    if (!formData.name || !formData.email || !formData.phone) {
+      toast.error('Please fill in all contact details');
+      return;
+    }
     
-    setBooking(true);
+    setPaymentInProgress(true);
+    setShowPaymentOverlay(true);
+    setCurrentStep(3);
+
     try {
-      // Call the cinema booking API - seats should be in the body as a list
-      const response = await api.post(`/cinema/showtimes/${showtimeId}/book`, selectedSeats);
-      
-      toast.success(`Booking confirmed! Booking ID: ${response.data.booking_id}`);
-      navigate('/orders', { 
-        state: { 
-          bookingId: response.data.booking_id,
-          service: 'cinema',
-          message: 'Cinema booking confirmed!'
+      const pricing = calculatePricing();
+      const orderPayload = {
+        service_type: 'cinema',
+        service_id: showtimeId,
+        service_name: `${film?.title} - ${showtime?.cinema_name}`,
+        total_amount: pricing.total,
+        currency: 'XAF',
+        status: 'pending',
+        payment_status: 'pending',
+        booking_details: {
+          ...formData,
+          film_title: film?.title,
+          cinema: showtime?.cinema_name,
+          screen: showtime?.screen_name,
+          show_date: showtime?.show_date,
+          show_time: showtime?.show_time,
+          seats: selectedSeats,
+          ticket_counts: ticketCounts
         }
-      });
+      };
+
+      const response = await api.post('/orders/create', orderPayload);
+      
+      if (response.data?.order_id || response.data?.id) {
+        setOrderId(response.data.order_id || response.data.id);
+        setTriggerPayment(true);
+      }
     } catch (error) {
-      console.error('Booking failed:', error);
-      toast.error(error.response?.data?.detail || 'Booking failed. Please try again.');
-    } finally {
-      setBooking(false);
+      toast.error('Failed to create booking');
+      setPaymentInProgress(false);
+      setShowPaymentOverlay(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
+  const pricing = calculatePricing();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-indigo-900">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-indigo-500/30 rounded-full animate-pulse"></div>
+            <Film className="h-10 w-10 text-indigo-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+          </div>
+          <p className="text-slate-300 mt-4 font-medium">Loading showtime...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-indigo-900">
+      <PaymentProcessingOverlay 
+        isVisible={showPaymentOverlay} 
+        message="Processing your booking..."
+      />
+      
       {/* Header */}
-      <div className="bg-black/50">
+      <div className="bg-black/50 backdrop-blur-sm border-b border-white/10 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-white">Book Your Seats</h1>
+              <p className="text-sm text-slate-400">{film?.title}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Movie & Showtime Info */}
-        <Card className="bg-gray-800 border-gray-700 mb-6">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <StepIndicator currentStep={currentStep} />
+
+        {/* Movie Info Card */}
+        <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm mb-8">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white mb-2">{film?.title}</h1>
-                <div className="flex flex-wrap gap-4 text-gray-300">
-                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {showtime?.cinema_name}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {showtime?.show_date}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {showtime?.show_time}</span>
-                  <Badge className="uppercase">{showtime?.screen_type}</Badge>
+                <div className="flex items-center gap-3 mb-2">
+                  <Film className="w-6 h-6 text-indigo-400" />
+                  <h2 className="text-2xl font-bold text-white">{film?.title}</h2>
+                </div>
+                <div className="flex flex-wrap gap-4 text-slate-300">
+                  <span className="flex items-center gap-1"><MapPin className="w-4 h-4 text-indigo-400" /> {showtime?.cinema_name}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4 text-indigo-400" /> {showtime?.show_date}</span>
+                  <span className="flex items-center gap-1"><Clock className="w-4 h-4 text-indigo-400" /> {showtime?.show_time}</span>
+                  <Badge className="bg-indigo-600 uppercase">{showtime?.screen_type}</Badge>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold text-white">{formatFCFA(showtime?.price)}</div>
-                <div className="text-gray-400 text-sm">per ticket</div>
+                <div className="text-3xl font-bold text-white">{formatCurrency(showtime?.price)}</div>
+                <div className="text-slate-400 text-sm">per ticket</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Seat Selection */}
-          <div className="lg:col-span-2">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Select Your Seats</CardTitle>
-              </CardHeader>
-              <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Seat Selection & Form */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Seat Selection */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Armchair className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Select Your Seats</h3>
+                    <p className="text-sm text-white/70">Choose {getTotalTickets()} seat{getTotalTickets() > 1 ? 's' : ''}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <CardContent className="p-6">
                 {/* Screen */}
                 <div className="relative mb-8">
-                  <div className="h-2 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full mb-2"></div>
-                  <p className="text-center text-gray-500 text-sm">SCREEN</p>
+                  <div className="h-3 bg-gradient-to-r from-transparent via-indigo-500 to-transparent rounded-full mb-2 shadow-lg shadow-indigo-500/50"></div>
+                  <p className="text-center text-slate-500 text-sm">SCREEN</p>
                 </div>
 
                 {/* Seats Grid */}
-                <div className="flex flex-col items-center gap-2 mb-6">
+                <div className="flex flex-col items-center gap-2 mb-6 overflow-x-auto pb-4">
                   {ROWS.map(row => (
                     <div key={row} className="flex items-center gap-2">
-                      <span className="w-6 text-gray-500 text-sm">{row}</span>
+                      <span className="w-6 text-slate-500 text-sm font-medium">{row}</span>
                       <div className="flex gap-1">
                         {Array.from({ length: SEATS_PER_ROW }, (_, i) => {
                           const seatId = `${row}${i + 1}`;
@@ -171,10 +347,10 @@ export default function CinemaBooking() {
                               key={seatId}
                               onClick={() => toggleSeat(seatId)}
                               disabled={isBooked}
-                              className={`w-7 h-7 rounded-t-lg text-xs font-medium transition-colors ${
-                                isBooked ? 'bg-gray-600 text-gray-500 cursor-not-allowed' :
-                                isSelected ? 'bg-[#082c59] text-white' :
-                                'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                              className={`w-8 h-8 rounded-t-lg text-xs font-medium transition-all transform hover:scale-105 ${
+                                isBooked ? 'bg-slate-700 text-slate-600 cursor-not-allowed' :
+                                isSelected ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/50' :
+                                'bg-slate-600 text-slate-300 hover:bg-slate-500'
                               }`}
                             >
                               {i + 1}
@@ -182,7 +358,7 @@ export default function CinemaBooking() {
                           );
                         })}
                       </div>
-                      <span className="w-6 text-gray-500 text-sm">{row}</span>
+                      <span className="w-6 text-slate-500 text-sm font-medium">{row}</span>
                     </div>
                   ))}
                 </div>
@@ -190,97 +366,268 @@ export default function CinemaBooking() {
                 {/* Legend */}
                 <div className="flex justify-center gap-6 text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gray-700 rounded-t-lg"></div>
-                    <span className="text-gray-400">Available</span>
+                    <div className="w-6 h-6 bg-slate-600 rounded-t-lg"></div>
+                    <span className="text-slate-400">Available</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-[#082c59] rounded-t-lg"></div>
-                    <span className="text-gray-400">Selected</span>
+                    <div className="w-6 h-6 bg-indigo-500 rounded-t-lg shadow-lg shadow-indigo-500/50"></div>
+                    <span className="text-slate-400">Selected</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gray-600 rounded-t-lg"></div>
-                    <span className="text-gray-400">Booked</span>
+                    <div className="w-6 h-6 bg-slate-700 rounded-t-lg"></div>
+                    <span className="text-slate-400">Booked</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Ticket Types */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Popcorn className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Ticket Types</h3>
+                    <p className="text-sm text-white/70">Select your ticket categories</p>
+                  </div>
+                </div>
+              </div>
+              
+              <CardContent className="p-6 space-y-4">
+                {/* Adult */}
+                <div className="flex justify-between items-center p-4 bg-slate-700/50 rounded-xl">
+                  <div>
+                    <div className="text-white font-medium">Adult</div>
+                    <div className="text-slate-400 text-sm">{formatCurrency(showtime?.price)}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, adult: Math.max(0, p.adult - 1) }))}><Minus className="w-4 h-4" /></Button>
+                    <span className="w-8 text-center text-white text-lg font-bold">{ticketCounts.adult}</span>
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, adult: p.adult + 1 }))}><Plus className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+                
+                {/* Child */}
+                <div className="flex justify-between items-center p-4 bg-slate-700/50 rounded-xl">
+                  <div>
+                    <div className="text-white font-medium">Child <Badge className="ml-2 bg-green-600 text-xs">50% off</Badge></div>
+                    <div className="text-slate-400 text-sm">{formatCurrency((showtime?.price || 0) * 0.5)}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, child: Math.max(0, p.child - 1) }))}><Minus className="w-4 h-4" /></Button>
+                    <span className="w-8 text-center text-white text-lg font-bold">{ticketCounts.child}</span>
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, child: p.child + 1 }))}><Plus className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+                
+                {/* Senior */}
+                <div className="flex justify-between items-center p-4 bg-slate-700/50 rounded-xl">
+                  <div>
+                    <div className="text-white font-medium">Senior <Badge className="ml-2 bg-amber-600 text-xs">30% off</Badge></div>
+                    <div className="text-slate-400 text-sm">{formatCurrency((showtime?.price || 0) * 0.7)}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, senior: Math.max(0, p.senior - 1) }))}><Minus className="w-4 h-4" /></Button>
+                    <span className="w-8 text-center text-white text-lg font-bold">{ticketCounts.senior}</span>
+                    <Button size="icon" variant="outline" className="h-10 w-10 border-slate-600 text-white hover:bg-slate-700" onClick={() => setTicketCounts(p => ({ ...p, senior: p.senior + 1 }))}><Plus className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Information */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Contact Information</h3>
+                    <p className="text-sm text-white/70">Where should we send your tickets?</p>
+                  </div>
+                </div>
+              </div>
+              
+              <CardContent className="p-6">
+                <div className="mb-6 p-4 bg-indigo-500/20 rounded-xl border border-indigo-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-indigo-400" />
+                      <span className="font-medium text-white">Use my account details</span>
+                    </div>
+                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 font-medium">Full Name *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="John Doe"
+                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                        disabled={isSelf}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-300 font-medium">Email Address *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="john@example.com"
+                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-slate-300 font-medium">Phone Number *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+237 6XX XXX XXX"
+                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                        disabled={isSelf}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Section */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Payment Method</h3>
+                    <p className="text-sm text-white/70">Secure payment options</p>
+                  </div>
+                </div>
+              </div>
+              
+              <CardContent className="p-6">
+                <PaymentMethodsSelection
+                  amount={pricing.total}
+                  orderId={orderId}
+                  serviceName={film?.title || 'Cinema'}
+                  onPaymentInitiated={handlePaymentInitiated}
+                  onPaymentError={handlePaymentError}
+                  triggerPayment={triggerPayment}
+                />
               </CardContent>
             </Card>
           </div>
 
-          {/* Booking Summary */}
-          <div>
-            <Card className="bg-gray-800 border-gray-700 sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-white">Booking Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Ticket Types */}
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-white">Adult</div>
-                      <div className="text-gray-400 text-sm">{formatFCFA(showtime?.price)}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, adult: Math.max(0, p.adult - 1) }))}><Minus className="w-4 h-4" /></Button>
-                      <span className="w-8 text-center text-white">{ticketCounts.adult}</span>
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, adult: p.adult + 1 }))}><Plus className="w-4 h-4" /></Button>
-                    </div>
+          {/* Right Column - Summary */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
+                {/* Movie Preview */}
+                <div className="relative h-48 bg-gradient-to-br from-indigo-600 to-purple-700">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Film className="w-20 h-20 text-white/20" />
                   </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-white">Child (50% off)</div>
-                      <div className="text-gray-400 text-sm">{formatFCFA((showtime?.price || 0) * 0.5)}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, child: Math.max(0, p.child - 1) }))}><Minus className="w-4 h-4" /></Button>
-                      <span className="w-8 text-center text-white">{ticketCounts.child}</span>
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, child: p.child + 1 }))}><Plus className="w-4 h-4" /></Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-white">Senior (30% off)</div>
-                      <div className="text-gray-400 text-sm">{formatFCFA((showtime?.price || 0) * 0.7)}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, senior: Math.max(0, p.senior - 1) }))}><Minus className="w-4 h-4" /></Button>
-                      <span className="w-8 text-center text-white">{ticketCounts.senior}</span>
-                      <Button size="icon" variant="outline" className="h-8 w-8 border-gray-600" onClick={() => setTicketCounts(p => ({ ...p, senior: p.senior + 1 }))}><Plus className="w-4 h-4" /></Button>
-                    </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <Badge className="absolute top-4 left-4 bg-indigo-600 uppercase">{showtime?.screen_type}</Badge>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <h3 className="text-white font-bold text-lg line-clamp-2">{film?.title}</h3>
+                    <p className="text-slate-300 text-sm">{showtime?.screen_name}</p>
                   </div>
                 </div>
 
-                {/* Selected Seats */}
-                <div className="border-t border-gray-700 pt-4">
-                  <div className="text-gray-400 text-sm mb-2">Selected Seats ({selectedSeats.length}/{getTotalTickets()})</div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSeats.length > 0 ? selectedSeats.map(seat => (
-                      <Badge key={seat} className="bg-[#082c59]">{seat}</Badge>
-                    )) : <span className="text-gray-500 text-sm">No seats selected</span>}
+                <CardContent className="p-5">
+                  {/* Showtime Details */}
+                  <div className="mb-4 pb-4 border-b border-slate-700">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <MapPin className="w-4 h-4 text-indigo-400" />
+                        <span>{showtime?.cinema_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <Calendar className="w-4 h-4 text-indigo-400" />
+                        <span>{showtime?.show_date}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-300">
+                        <Clock className="w-4 h-4 text-indigo-400" />
+                        <span>{showtime?.show_time}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Total */}
-                <div className="border-t border-gray-700 pt-4">
-                  <div className="flex justify-between text-lg font-bold text-white">
-                    <span>Total</span>
-                    <span>{formatFCFA(calculateTotal())}</span>
+                  {/* Selected Seats */}
+                  <div className="mb-4 pb-4 border-b border-slate-700">
+                    <h4 className="font-semibold text-white mb-3">Selected Seats ({selectedSeats.length}/{getTotalTickets()})</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSeats.length > 0 ? selectedSeats.map(seat => (
+                        <Badge key={seat} className="bg-indigo-600">{seat}</Badge>
+                      )) : <span className="text-slate-500 text-sm">No seats selected</span>}
+                    </div>
                   </div>
-                </div>
 
-                <Button 
-                  onClick={handleBooking} 
-                  className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12" 
-                  disabled={booking || getTotalTickets() === 0 || selectedSeats.length !== getTotalTickets()}
-                >
-                  {booking ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-                  ) : selectedSeats.length !== getTotalTickets() 
-                    ? `Select ${getTotalTickets() - selectedSeats.length} more seat(s)`
-                    : 'Confirm Booking'}
-                </Button>
-              </CardContent>
-            </Card>
+                  {/* Pricing Summary */}
+                  <div className="bg-slate-900/50 -mx-5 -mb-5 p-5 rounded-b-xl">
+                    <h4 className="font-semibold text-white mb-3">Order Summary</h4>
+                    <div className="space-y-2 text-sm">
+                      {ticketCounts.adult > 0 && (
+                        <div className="flex justify-between text-slate-300">
+                          <span>Adult × {ticketCounts.adult}</span>
+                          <span>{formatCurrency(ticketCounts.adult * (showtime?.price || 0))}</span>
+                        </div>
+                      )}
+                      {ticketCounts.child > 0 && (
+                        <div className="flex justify-between text-slate-300">
+                          <span>Child × {ticketCounts.child}</span>
+                          <span>{formatCurrency(ticketCounts.child * (showtime?.price || 0) * 0.5)}</span>
+                        </div>
+                      )}
+                      {ticketCounts.senior > 0 && (
+                        <div className="flex justify-between text-slate-300">
+                          <span>Senior × {ticketCounts.senior}</span>
+                          <span>{formatCurrency(ticketCounts.senior * (showtime?.price || 0) * 0.7)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-300">
+                        <span>Service Fee</span>
+                        <span>+{formatCurrency(pricing.commission)}</span>
+                      </div>
+                      <div className="pt-3 mt-3 border-t border-slate-700">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white font-semibold">Total</span>
+                          <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={paymentInProgress || getTotalTickets() === 0 || selectedSeats.length !== getTotalTickets()}
+                      className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white h-12 font-semibold rounded-xl"
+                    >
+                      {paymentInProgress ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
+                      ) : selectedSeats.length !== getTotalTickets() 
+                        ? `Select ${getTotalTickets() - selectedSeats.length} more seat(s)`
+                        : 'Confirm Booking'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
