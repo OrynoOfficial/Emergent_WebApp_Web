@@ -438,7 +438,19 @@ export default function PackageManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard packages={packages} />
+          <ServiceExecutiveDashboard
+            serviceType="Packages"
+            serviceIcon={<Package className="h-8 w-8" />}
+            primaryColor="blue"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Packages"
+            secondaryLabel="Avg. Duration (days)"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
