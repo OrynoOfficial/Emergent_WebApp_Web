@@ -373,7 +373,7 @@ export default function CarRentalBooking() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      <span className="font-medium text-slate-700">I'm the driver</span>
+                      <span className="font-medium text-slate-700">I&apos;m the driver</span>
                     </div>
                     <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
                   </div>

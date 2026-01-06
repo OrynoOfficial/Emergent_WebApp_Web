@@ -287,7 +287,7 @@ export default function RestaurantBooking() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-orange-600" />
-                      <span className="font-medium text-slate-700">I'm the guest</span>
+                      <span className="font-medium text-slate-700">I&apos;m the guest</span>
                     </div>
                     <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
                   </div>
