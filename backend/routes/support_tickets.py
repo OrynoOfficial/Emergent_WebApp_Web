@@ -396,6 +396,41 @@ async def get_available_members(
     return {"available_members": available}
 
 
+@router.get("/operators-by-service")
+async def get_operators_by_service(
+    service_type: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get operators filtered by service type for support ticket creation"""
+    db = get_database()
+    
+    # Map service types to operator types
+    service_operator_map = {
+        "Hotels": "hotels",
+        "Travel": "travel",
+        "Restaurants": "restaurants",
+        "Car Rental": "car_rental",
+        "Events": "events",
+        "Laundry": "pressing",  # Laundry is called pressing in the system
+        "Banquet": "banquets",
+        "Cinema": "cinema",
+        "Packages": "packages"
+    }
+    
+    operator_type = service_operator_map.get(service_type)
+    
+    query = {"status": "active"}
+    if operator_type:
+        query["operator_type"] = operator_type
+    
+    operators = await db.operators.find(query, {"_id": 1, "name": 1, "email": 1, "operator_type": 1}).to_list(1000)
+    
+    for op in operators:
+        op["id"] = str(op.pop("_id", ""))
+    
+    return {"operators": operators, "service_type": service_type}
+
+
 class SupportTeamMemberAdd(BaseModel):
     id: str
     name: str
