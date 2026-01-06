@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-01-04T18:03:17.868746",
-  "total_tests": 53,
-  "passed_tests": 48,
-  "success_rate": 90.56603773584906,
+  "timestamp": "2026-01-06T00:55:05.425584",
+  "total_tests": 63,
+  "passed_tests": 57,
+  "success_rate": 90.47619047619048,
   "tokens_obtained": [
     "super_admin",
     "admin",
@@ -14,319 +14,379 @@
       "test": "Login super_admin user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:13.816550"
+      "timestamp": "2026-01-06T00:55:01.288242"
     },
     {
       "test": "Login admin user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.088014"
+      "timestamp": "2026-01-06T00:55:01.552700"
     },
     {
       "test": "Login customer user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.366676"
+      "timestamp": "2026-01-06T00:55:01.821639"
     },
     {
       "test": "Login operator user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.635501"
+      "timestamp": "2026-01-06T00:55:02.092419"
+    },
+    {
+      "test": "Login Super Admin (superadmin@oryno.com / testpassword123)",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.359371"
+    },
+    {
+      "test": "Get operators filtered by Travel service",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.380402"
+    },
+    {
+      "test": "Get operators for Restaurants service",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.399931"
+    },
+    {
+      "test": "Get operators for Car Rental service",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.416257"
+    },
+    {
+      "test": "Get operators for Laundry service",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.438059"
+    },
+    {
+      "test": "Create support ticket with service_tag and operator info",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.471054"
+    },
+    {
+      "test": "Get created ticket details",
+      "success": false,
+      "details": "Expected 200, got 404 - {'detail': 'Ticket not found'}",
+      "timestamp": "2026-01-06T00:55:02.492067"
+    },
+    {
+      "test": "Get all support tickets",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.508508"
+    },
+    {
+      "test": "Get support ticket statistics",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.537217"
+    },
+    {
+      "test": "Get support team members",
+      "success": true,
+      "details": "",
+      "timestamp": "2026-01-06T00:55:02.562718"
     },
     {
       "test": "Search outbound routes (Douala to Yaound\u00e9)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.660448"
+      "timestamp": "2026-01-06T00:55:02.582105"
     },
     {
       "test": "Search return routes (Yaound\u00e9 to Douala)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.686581"
+      "timestamp": "2026-01-06T00:55:02.599933"
     },
     {
       "test": "Get seat availability for outbound route",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.723547"
+      "timestamp": "2026-01-06T00:55:02.623579"
     },
     {
       "test": "Get seat availability for return route",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.741920"
+      "timestamp": "2026-01-06T00:55:02.648285"
     },
     {
       "test": "Reserve seats for outbound trip",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.775652"
+      "timestamp": "2026-01-06T00:55:02.714497"
     },
     {
       "test": "Reserve seats for return trip",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.798922"
+      "timestamp": "2026-01-06T00:55:02.736274"
     },
     {
       "test": "Get user's seat bookings",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.826510"
+      "timestamp": "2026-01-06T00:55:02.756568"
     },
     {
       "test": "Get user's orders",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.847652"
+      "timestamp": "2026-01-06T00:55:02.778272"
     },
     {
       "test": "Release outbound reserved seats",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.872070"
+      "timestamp": "2026-01-06T00:55:02.836379"
     },
     {
       "test": "Release return reserved seats",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:14.889902"
+      "timestamp": "2026-01-06T00:55:02.852560"
     },
     {
       "test": "Login super_admin user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:15.198942"
+      "timestamp": "2026-01-06T00:55:03.114870"
     },
     {
       "test": "Login admin user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:15.471637"
+      "timestamp": "2026-01-06T00:55:03.378925"
     },
     {
       "test": "Login customer user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:15.742042"
+      "timestamp": "2026-01-06T00:55:03.644233"
     },
     {
       "test": "Login operator user",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.014655"
+      "timestamp": "2026-01-06T00:55:03.906346"
     },
     {
       "test": "Super admin - GET /api/access/my-permissions",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.036115"
+      "timestamp": "2026-01-06T00:55:03.927234"
     },
     {
       "test": "Super admin - POST /api/hotels/ (should SUCCEED)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.110561"
+      "timestamp": "2026-01-06T00:55:03.952232"
     },
     {
       "test": "Get operators list for deletion test",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.135236"
+      "timestamp": "2026-01-06T00:55:03.972536"
     },
     {
       "test": "Super admin - DELETE /api/operators/{id} (should SUCCEED)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.155502"
+      "timestamp": "2026-01-06T00:55:04.032391"
     },
     {
       "test": "Admin - GET /api/access/my-permissions",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.174098"
+      "timestamp": "2026-01-06T00:55:04.051587"
     },
     {
       "test": "Get admin user details",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.232457"
+      "timestamp": "2026-01-06T00:55:04.068595"
     },
     {
       "test": "Admin - DELETE /api/hotels/{id} (no permission - should FAIL with 403)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.252113"
+      "timestamp": "2026-01-06T00:55:04.085773"
     },
     {
       "test": "Admin - GET /api/access/roles (check access.view_roles requirement)",
       "success": false,
       "details": "Expected 200, got 403 - {'detail': 'Permission denied. Required permission: access.view_roles'}",
-      "timestamp": "2026-01-04T18:03:16.270332"
+      "timestamp": "2026-01-06T00:55:04.147073"
     },
     {
       "test": "Admin - POST /api/access/roles (check access.create_roles requirement)",
       "success": false,
       "details": "Expected 200, got 403 - {'detail': 'Permission denied. Required permission: access.create_roles'}",
-      "timestamp": "2026-01-04T18:03:16.290607"
+      "timestamp": "2026-01-06T00:55:04.163345"
     },
     {
       "test": "Admin - GET /api/validation/pending (check validation.view requirement)",
       "success": false,
       "details": "Expected 200, got 403 - {'detail': 'Permission denied. Required permission: validation.view'}",
-      "timestamp": "2026-01-04T18:03:16.307285"
+      "timestamp": "2026-01-06T00:55:04.180412"
     },
     {
       "test": "Customer - GET /api/access/my-permissions",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.325330"
+      "timestamp": "2026-01-06T00:55:04.199328"
     },
     {
       "test": "Customer - GET /api/users (should FAIL - no users.view permission)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.348304"
+      "timestamp": "2026-01-06T00:55:04.214472"
     },
     {
       "test": "Customer - GET /api/operators (should FAIL - no operators.view permission)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.365673"
+      "timestamp": "2026-01-06T00:55:04.233001"
     },
     {
       "test": "Cleanup - Delete test hotel",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.388381"
+      "timestamp": "2026-01-06T00:55:04.250157"
     },
     {
       "test": "Get hotels list (should return 5 hotels)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.427421"
+      "timestamp": "2026-01-06T00:55:04.282562"
     },
     {
       "test": "Get events list (should return 5 events)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.461903"
+      "timestamp": "2026-01-06T00:55:04.315915"
     },
     {
       "test": "Get car rental vehicles (should return 5 vehicles)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.481979"
+      "timestamp": "2026-01-06T00:55:04.336282"
     },
     {
       "test": "Get travel routes (should return 5 routes)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.500803"
+      "timestamp": "2026-01-06T00:55:04.348329"
     },
     {
       "test": "Get operators list (with auth)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.520946"
+      "timestamp": "2026-01-06T00:55:04.373645"
     },
     {
       "test": "Get customer user details",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:16.540035"
+      "timestamp": "2026-01-06T00:55:04.388751"
     },
     {
       "test": "Create Stripe checkout session",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.107111"
+      "timestamp": "2026-01-06T00:55:04.900048"
     },
     {
       "test": "Get checkout session status",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.506408"
+      "timestamp": "2026-01-06T00:55:05.147193"
     },
     {
       "test": "Get user payment transactions",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.527053"
+      "timestamp": "2026-01-06T00:55:05.164543"
     },
     {
       "test": "Get user profile (admin)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.585485"
+      "timestamp": "2026-01-06T00:55:05.183050"
     },
     {
       "test": "Get user profile (customer)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.601128"
+      "timestamp": "2026-01-06T00:55:05.207100"
     },
     {
       "test": "Get user profile (operator)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.658452"
+      "timestamp": "2026-01-06T00:55:05.222946"
     },
     {
       "test": "Admin access to analytics dashboard",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.675338"
+      "timestamp": "2026-01-06T00:55:05.241080"
     },
     {
       "test": "Operator access to analytics dashboard",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.693755"
+      "timestamp": "2026-01-06T00:55:05.258590"
     },
     {
       "test": "Customer access to analytics dashboard",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.712915"
+      "timestamp": "2026-01-06T00:55:05.278905"
     },
     {
       "test": "Admin access to admin analytics",
       "success": false,
       "details": "Expected 200, got 403 - {'detail': 'Permission denied. Required permission: analytics.view_dashboard'}",
-      "timestamp": "2026-01-04T18:03:17.731652"
+      "timestamp": "2026-01-06T00:55:05.294739"
     },
     {
       "test": "Customer access to admin analytics (should fail)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.748509"
+      "timestamp": "2026-01-06T00:55:05.313785"
     },
     {
       "test": "Get hotels list",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.786002"
+      "timestamp": "2026-01-06T00:55:05.344568"
     },
     {
       "test": "Get restaurants list",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.818040"
+      "timestamp": "2026-01-06T00:55:05.374512"
     },
     {
       "test": "Get customer orders",
       "success": false,
       "details": "Expected 200, got 403 - {'detail': 'Not authenticated'}",
-      "timestamp": "2026-01-04T18:03:17.848584"
+      "timestamp": "2026-01-06T00:55:05.403717"
     },
     {
       "test": "Get orders list (admin)",
       "success": true,
       "details": "",
-      "timestamp": "2026-01-04T18:03:17.868142"
+      "timestamp": "2026-01-06T00:55:05.425024"
     }
   ]
 }
