@@ -567,7 +567,7 @@ export default function OperatorRolesManagement({ operatorId, operatorName }) {
               Delete Role
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the role "{selectedRole?.name}"?
+              Are you sure you want to delete the role &ldquo;{selectedRole?.name}&rdquo;?
             </DialogDescription>
           </DialogHeader>
           
