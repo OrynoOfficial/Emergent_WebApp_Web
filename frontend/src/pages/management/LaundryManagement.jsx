@@ -331,7 +331,12 @@ export default function LaundryManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Laundry"
+            serviceTag="pressing"
+            serviceIcon={<Shirt className="h-5 w-5 text-cyan-600" />}
+            primaryColor="teal"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
