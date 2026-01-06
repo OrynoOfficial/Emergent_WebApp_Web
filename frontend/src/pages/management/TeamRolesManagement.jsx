@@ -25,6 +25,7 @@ export default function TeamRolesManagement() {
 
   // Check if user is an operator user
   const isOperatorUser = user?.operator_id && ['owner', 'local_admin', 'local_user'].includes(user?.operator_role);
+  const isPlatformAdmin = user?.role === 'super_admin' || user?.role === 'admin';
   const canManageTeam = user?.operator_role === 'owner' || user?.operator_role === 'local_admin';
   const canManageRoles = user?.operator_role === 'owner';
 
@@ -50,7 +51,7 @@ export default function TeamRolesManagement() {
     }
   };
 
-  // Not an operator user
+  // Not an operator user - show different message for admins vs regular users
   if (!loading && !isOperatorUser) {
     return (
       <div className="min-h-screen bg-slate-50 p-6">
@@ -59,11 +60,29 @@ export default function TeamRolesManagement() {
             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
               <AlertCircle className="w-8 h-8 text-amber-600" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Access Restricted</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              {isPlatformAdmin ? 'Admin Access' : 'Access Restricted'}
+            </h3>
             <p className="text-slate-500 max-w-sm">
-              This page is only accessible to operator team members. 
-              If you believe you should have access, please contact your administrator.
+              {isPlatformAdmin ? (
+                <>
+                  As a platform administrator, you can manage operator teams through the 
+                  <a href="/admin/operators" className="text-blue-600 hover:underline mx-1">Operators Management</a>
+                  page. Click on any operator and navigate to the Team or Roles tab.
+                </>
+              ) : (
+                'This page is only accessible to operator team members. If you believe you should have access, please contact your administrator.'
+              )}
             </p>
+            {isPlatformAdmin && (
+              <Button 
+                onClick={() => window.location.href = '/admin/operators'}
+                className="mt-4 bg-blue-600 hover:bg-blue-700"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                Go to Operators Management
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
