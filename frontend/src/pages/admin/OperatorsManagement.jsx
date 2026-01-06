@@ -498,6 +498,13 @@ export default function OperatorsManagement() {
                   embedded={true}
                 />
               </TabsContent>
+              
+              <TabsContent value="roles" className="mt-4 max-h-[50vh] overflow-y-auto">
+                <OperatorRolesManagement 
+                  operatorId={selectedOperator._id || selectedOperator.id} 
+                  operatorName={selectedOperator.name}
+                />
+              </TabsContent>
             </Tabs>
           )}
         </DialogContent>
