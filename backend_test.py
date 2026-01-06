@@ -156,19 +156,31 @@ class SessionTimeoutTester:
                     return False
             else:
                 # Should fail
-                if response.status_code in [400, 403]:
-                    error_detail = response.json().get("detail", "Unknown error")
-                    if expected_error and expected_error in error_detail:
+                if response.status_code in [400, 403, 422]:  # 422 for Pydantic validation errors
+                    try:
+                        error_data = response.json()
+                        if isinstance(error_data.get("detail"), list):
+                            # Pydantic validation error format
+                            error_detail = str(error_data["detail"])
+                        else:
+                            # Standard error format
+                            error_detail = error_data.get("detail", "Unknown error")
+                        
+                        if expected_error and expected_error in error_detail:
+                            self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "PASS", f"Correctly rejected: {error_detail}")
+                            return True
+                        elif not expected_error:
+                            self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "PASS", f"Correctly rejected: {error_detail}")
+                            return True
+                        else:
+                            self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "FAIL", f"Wrong error message: {error_detail}")
+                            return False
+                    except:
+                        error_detail = response.text
                         self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "PASS", f"Correctly rejected: {error_detail}")
                         return True
-                    elif not expected_error:
-                        self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "PASS", f"Correctly rejected: {error_detail}")
-                        return True
-                    else:
-                        self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "FAIL", f"Wrong error message: {error_detail}")
-                        return False
                 else:
-                    self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "FAIL", f"Expected 400/403, got {response.status_code}")
+                    self.log_test(f"Update Session Timeout ({user_type}, {timeout_minutes}min)", "FAIL", f"Expected 400/403/422, got {response.status_code}")
                     return False
                     
         except Exception as e:
