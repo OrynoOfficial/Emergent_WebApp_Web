@@ -970,9 +970,12 @@ export default function CustomerServiceManagement() {
             )}
 
             {/* Tickets Count */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">
-                Showing {tickets.length} of {total} tickets
+            <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-3 rounded-lg">
+              <p className="text-sm text-slate-600 font-medium">
+                Showing <span className="text-[#082c59]">{tickets.length}</span> of <span className="text-[#082c59]">{total}</span> tickets
+                <span className="text-slate-400 ml-2">
+                  ({ticketSubTab === 'open' ? 'Open & Pending' : ticketSubTab === 'in_progress' ? 'In Progress' : 'Resolved & Closed'})
+                </span>
               </p>
               <div className="flex items-center gap-2">
                 <Checkbox checked={selectedTickets.length === tickets.length && tickets.length > 0} onCheckedChange={handleSelectAll} />
@@ -982,15 +985,41 @@ export default function CustomerServiceManagement() {
 
             {/* Tickets List */}
             {loading ? (
-              <div className="flex items-center justify-center py-20">
+              <div className="flex items-center justify-center py-20 bg-white rounded-xl shadow-sm">
                 <RefreshCw className="w-8 h-8 animate-spin text-[#082c59]" />
               </div>
             ) : tickets.length === 0 ? (
-              <Card className="shadow-sm">
+              <Card className={`shadow-sm border-0 ${
+                ticketSubTab === 'open' ? 'bg-gradient-to-br from-blue-50 to-white' :
+                ticketSubTab === 'in_progress' ? 'bg-gradient-to-br from-purple-50 to-white' :
+                'bg-gradient-to-br from-green-50 to-white'
+              }`}>
                 <CardContent className="py-16 text-center">
-                  <Inbox className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-700">No tickets found</h3>
-                  <p className="text-slate-500 mt-1">Try adjusting your filters or search term</p>
+                  {ticketSubTab === 'open' ? (
+                    <>
+                      <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Inbox className="w-8 h-8 text-blue-500" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-800">No open tickets</h3>
+                      <p className="text-slate-500 mt-1">All caught up! No pending tickets waiting for attention.</p>
+                    </>
+                  ) : ticketSubTab === 'in_progress' ? (
+                    <>
+                      <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Activity className="w-8 h-8 text-purple-500" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-800">No tickets in progress</h3>
+                      <p className="text-slate-500 mt-1">No tickets are currently being worked on.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-8 h-8 text-green-500" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-800">No closed tickets</h3>
+                      <p className="text-slate-500 mt-1">No tickets have been resolved or closed yet.</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ) : (
