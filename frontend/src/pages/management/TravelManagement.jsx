@@ -251,6 +251,9 @@ export default function TravelManagement() {
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
 
+  // Use the travel dashboard data hook
+  const dashboardData = useTravelDashboardData(routes, vehicles);
+
   // View item handler
   const handleViewItem = (item, type) => {
     setViewingItem(item);
