@@ -110,6 +110,7 @@ export default function Settings() {
     max_session_timeout: 120,
     loading: true,
     saving: false,
+    saveSuccess: false,
   });
 
   // Content data (Data Protection, Legal, About)
