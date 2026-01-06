@@ -762,6 +762,15 @@ function App() {
             }
           />
           
+          <Route
+            path="/management/team-roles"
+            element={
+              <ProtectedRoute requiredRoles={['operator', 'admin']}>
+                <TeamRolesManagement />
+              </ProtectedRoute>
+            }
+          />
+          
           {/* Static Pages */}
           <Route path="/help" element={<HelpCenter />} />
           <Route path="/contact" element={<ContactUs />} />
