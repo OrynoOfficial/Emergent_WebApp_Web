@@ -503,7 +503,12 @@ export default function BanquetManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Banquet"
+            serviceTag="banquets"
+            serviceIcon={<UtensilsCrossed className="h-5 w-5 text-pink-600" />}
+            primaryColor="pink"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
