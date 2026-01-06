@@ -22,12 +22,15 @@ import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import SeatLayoutEditor from '@/components/travel/SeatLayoutEditor';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
 const AMENITIES_OPTIONS = ['wifi', 'ac', 'power_outlet', 'restroom', 'tv_screen', 'reclining_seats', 'refreshments'];
+const CHART_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F97316', '#10B981', '#06B6D4'];
 
 const DEFAULT_ROUTE_FORM = {
   from_city: '',
