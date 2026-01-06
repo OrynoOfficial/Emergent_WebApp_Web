@@ -29,11 +29,34 @@
    - Team member cards with role badges
 
 ## Test Credentials
-- Super Admin: superadmin@oryno.com / Oryno@2024
+- Super Admin: superadmin@oryno.com / testpassword123
 - Admin: admin@test.com / testpassword123
 - Customer: customer@test.com / testpassword123
 
 ## Changes Made in This Session
+
+### 1. Operator Users Management System (COMPLETED ✅)
+- **Backend API Implementation:** Complete operator users management system implemented
+  - GET /api/operators/{operator_id}/users - List users assigned to an operator
+  - GET /api/operators/{operator_id}/stats - Get user statistics (total, active, by role)
+  - GET /api/operators/{operator_id}/users/available - Get users available for assignment
+  - POST /api/operators/{operator_id}/users - Create new user and assign to operator
+  - POST /api/operators/{operator_id}/users/assign - Assign existing user to operator
+  - PUT /api/operators/{operator_id}/users/{user_id} - Update user role/permissions within operator
+  - DELETE /api/operators/{operator_id}/users/{user_id} - Remove user from operator (unassign)
+
+- **Role Hierarchy:** Proper role hierarchy implemented
+  - Owner > Local Admin > Local User
+  - Super admins and admins can manage any operator's users
+  - Local admins can manage local users but not other admins
+  - Proper permission checks and security restrictions
+
+- **User Assignment Features:**
+  - Create new users directly for an operator
+  - Assign existing unassigned users to operators
+  - Update user roles within operators (local_admin, local_user)
+  - Remove users from operators (reverts to customer role)
+  - Scoped permissions support for fine-grained access control
 
 ### 1. Service Management Dashboard & Communications Revamp (COMPLETED ✅)
 - **ServiceExecutiveDashboard Component:** Implemented reusable dashboard component across all 8 service management pages
