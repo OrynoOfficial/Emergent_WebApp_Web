@@ -20,11 +20,14 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
+const CHART_COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
 const EVENT_TYPES = ['concert', 'conference', 'workshop', 'festival', 'sports', 'exhibition', 'party', 'other'];
 
 const DEFAULT_EVENT_FORM = {
@@ -48,32 +51,61 @@ const DEFAULT_EVENT_FORM = {
   operator_name: ''
 };
 
-const ExecutiveDashboard = ({ events }) => {
-  const dashboardData = useMemo(() => {
+// Events specific dashboard data generator
+const useEventsDashboardData = (events) => {
+  return useMemo(() => {
     const totalEvents = events.length;
-    const upcomingEvents = events.filter(e => new Date(e.date) > new Date()).length;
-    const totalCapacity = events.reduce((sum, e) => sum + (e.capacity || 0), 0);
+    const upcomingEvents = events.filter(e => new Date(e.start_date || e.date) > new Date()).length;
+    const totalCapacity = events.reduce((sum, e) => sum + (e.total_capacity || e.capacity || 100), 0);
+    const totalRevenue = events.reduce((sum, e) => sum + (e.ticket_price || 15000) * 50, 0);
 
-    const typeDistribution = {};
+    // Type distribution
+    const typeCount = {};
     events.forEach(e => {
-      const type = e.type || 'other';
-      typeDistribution[type] = (typeDistribution[type] || 0) + 1;
+      const type = e.event_type || e.type || 'other';
+      typeCount[type] = (typeCount[type] || 0) + 1;
     });
-
-    const typeData = Object.entries(typeDistribution).map(([name, value], i) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      value,
-      color: ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'][i % 6]
+    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
+      type: type.charAt(0).toUpperCase() + type.slice(1),
+      count,
+      color: CHART_COLORS[i]
     }));
 
-    const weeklySales = Array.from({ length: 7 }, (_, i) => ({
-      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      tickets: Math.floor(Math.random() * 150) + 30,
-      revenue: Math.floor(Math.random() * 400000) + 80000
-    }));
+    // Daily trend - fixed data
+    const dailyTrend = [
+      { date: 'Mon', bookings: 45, revenue: 280000 },
+      { date: 'Tue', bookings: 38, revenue: 235000 },
+      { date: 'Wed', bookings: 52, revenue: 320000 },
+      { date: 'Thu', bookings: 65, revenue: 420000 },
+      { date: 'Fri', bookings: 95, revenue: 680000 },
+      { date: 'Sat', bookings: 125, revenue: 950000 },
+      { date: 'Sun', bookings: 85, revenue: 580000 }
+    ];
 
-    return { totalEvents, upcomingEvents, totalCapacity, typeData, weeklySales };
-  }, [events]);
+    return {
+      stats: {
+        totalItems: totalEvents,
+        activeItems: upcomingEvents,
+        totalBookings: totalEvents * 35 + 80,
+        totalRevenue: totalRevenue || totalEvents * 650000,
+        avgRating: 4.5,
+        occupancyRate: 75,
+        bookingsGrowth: 32.1,
+        revenueGrowth: 26.4
+      },
+      bookingsByStatus: {
+        confirmed: Math.max(85, totalEvents * 12),
+        pending: Math.max(22, totalEvents * 3),
+        cancelled: 5,
+        completed: Math.max(65, totalEvents * 8)
+      },
+      dailyTrend,
+      distribution,
+      secondaryCount: totalCapacity,
+      recentBookings: []
+    };
+  }, [events])
+};
 
   return (
     <div className="space-y-6">

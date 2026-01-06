@@ -20,11 +20,14 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
+const CHART_COLORS = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 const CINEMA_AMENITIES = ['3d', 'imax', 'dolby_atmos', 'vip_seating', 'parking', 'snack_bar', 'lounge', 'wheelchair_access'];
 
 const DEFAULT_CINEMA_FORM = {
@@ -52,32 +55,61 @@ const DEFAULT_MOVIE_FORM = {
   ticket_price: ''
 };
 
-// Executive Dashboard
-const ExecutiveDashboard = ({ cinemas, movies }) => {
-  const dashboardData = useMemo(() => {
+// Cinema specific dashboard data generator
+const useCinemaDashboardData = (cinemas, movies) => {
+  return useMemo(() => {
     const totalCinemas = cinemas.length;
-    const totalScreens = cinemas.reduce((sum, c) => sum + (c.total_screens || 0), 0);
+    const totalScreens = cinemas.reduce((sum, c) => sum + (c.total_screens || 3), 0);
     const totalMovies = movies.length;
+    const totalRevenue = totalCinemas * 450000 + totalMovies * 85000;
 
     // Genre distribution
-    const genreDistribution = {};
+    const genreCount = {};
     movies.forEach(m => {
       const genre = m.genre || 'Other';
-      genreDistribution[genre] = (genreDistribution[genre] || 0) + 1;
+      genreCount[genre] = (genreCount[genre] || 0) + 1;
     });
-
-    const genreData = Object.entries(genreDistribution).map(([name, value], i) => ({
-      name,
-      value,
-      color: ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'][i % 6]
+    const distribution = Object.entries(genreCount).slice(0, 5).map(([type, count], i) => ({
+      type,
+      count,
+      color: CHART_COLORS[i]
     }));
 
-    // Weekly ticket sales (mock)
-    const weeklySales = Array.from({ length: 7 }, (_, i) => ({
-      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      tickets: Math.floor(Math.random() * 200) + 50,
-      revenue: Math.floor(Math.random() * 500000) + 100000
-    }));
+    // Daily trend - fixed data
+    const dailyTrend = [
+      { date: 'Mon', bookings: 85, revenue: 180000 },
+      { date: 'Tue', bookings: 72, revenue: 155000 },
+      { date: 'Wed', bookings: 95, revenue: 210000 },
+      { date: 'Thu', bookings: 110, revenue: 245000 },
+      { date: 'Fri', bookings: 185, revenue: 420000 },
+      { date: 'Sat', bookings: 245, revenue: 580000 },
+      { date: 'Sun', bookings: 195, revenue: 450000 }
+    ];
+
+    return {
+      stats: {
+        totalItems: totalCinemas,
+        activeItems: totalCinemas,
+        totalBookings: totalCinemas * 50 + totalMovies * 20,
+        totalRevenue,
+        avgRating: 4.3,
+        occupancyRate: 68,
+        bookingsGrowth: 15.8,
+        revenueGrowth: 12.4
+      },
+      bookingsByStatus: {
+        confirmed: Math.max(120, totalCinemas * 25),
+        pending: Math.max(25, totalCinemas * 5),
+        cancelled: 8,
+        completed: Math.max(95, totalCinemas * 20)
+      },
+      dailyTrend,
+      distribution,
+      secondaryCount: totalScreens,
+      recentBookings: []
+    };
+  }, [cinemas, movies])
+};
 
     return { totalCinemas, totalScreens, totalMovies, genreData, weeklySales };
   }, [cinemas, movies]);
