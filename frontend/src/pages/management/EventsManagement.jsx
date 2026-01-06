@@ -457,7 +457,19 @@ export default function EventsManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard events={events} />
+          <ServiceExecutiveDashboard
+            serviceType="Events"
+            serviceIcon={<Calendar className="h-8 w-8" />}
+            primaryColor="purple"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Events"
+            secondaryLabel="Total Capacity"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
