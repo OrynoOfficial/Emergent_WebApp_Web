@@ -111,16 +111,20 @@ export default function PackageBooking() {
       return;
     }
     
-    setService(JSON.parse(storedService));
-    setSearchParams(JSON.parse(storedParams));
+    const parsedService = JSON.parse(storedService);
+    const parsedParams = JSON.parse(storedParams);
+    setService(parsedService);
+    setSearchParams(parsedParams);
     setLoading(false);
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (user?.email) {
+    if (user?.email && booking.sender_email !== user.email) {
       setBooking(prev => ({ ...prev, sender_email: user.email }));
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email]);
 
   const handleSenderSelfChange = (checked) => {
     setIsSenderSelf(checked);
