@@ -130,7 +130,7 @@ async def create_ticket(
 
 @router.get("/")
 async def get_tickets(
-    status: Optional[str] = None,
+    status: Optional[List[str]] = Query(None),
     priority: Optional[str] = None,
     category: Optional[str] = None,
     user_type: Optional[str] = None,  # customer or operator
@@ -155,8 +155,12 @@ async def get_tickets(
     if current_user.get("role") not in ["admin", "super_admin", "employee"]:
         query["customer_id"] = current_user["_id"]
     
+    # Handle multiple statuses (for sub-tabs)
     if status:
-        query["status"] = status
+        if len(status) == 1:
+            query["status"] = status[0]
+        else:
+            query["status"] = {"$in": status}
     if priority:
         query["priority"] = priority
     if category:
