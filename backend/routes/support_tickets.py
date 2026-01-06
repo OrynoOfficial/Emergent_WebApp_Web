@@ -19,6 +19,10 @@ class TicketCreate(BaseModel):
     source: str = "web"  # web, mobile, email, phone, chat
     related_order_id: Optional[str] = None
     related_service_type: Optional[str] = None
+    # New fields for operator support integration
+    service_tag: Optional[str] = None  # Hotels, Travel, Restaurants, Car Rental, Events, Laundry, Banquet, Cinema, Packages
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
 
 class TicketUpdate(BaseModel):
     subject: Optional[str] = None
