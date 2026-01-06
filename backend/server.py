@@ -265,6 +265,7 @@ app.include_router(search_router)  # Global search
 app.include_router(users_router)  # User management
 app.include_router(stripe_checkout_router)  # Stripe Checkout integration
 app.include_router(momo_checkout_router)  # MTN MoMo Mobile Money integration
+app.include_router(operator_users_router)  # Operator users management
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
