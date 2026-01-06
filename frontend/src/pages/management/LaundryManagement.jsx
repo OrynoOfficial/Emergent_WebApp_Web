@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -19,11 +20,14 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
+const CHART_COLORS = ['#06B6D4', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#3B82F6'];
 const SERVICES = ['washing', 'dry_cleaning', 'ironing', 'folding', 'express', 'pickup_delivery'];
 
 const DEFAULT_PRESSING_FORM = {
@@ -45,213 +49,72 @@ const DEFAULT_PRESSING_FORM = {
   operator_name: ''
 };
 
-const ExecutiveDashboard = ({ pressings }) => {
-  const dashboardData = useMemo(() => {
+// Laundry specific dashboard data generator
+const useLaundryDashboardData = (pressings) => {
+  return useMemo(() => {
     const totalShops = pressings.length;
-    const avgPrice = pressings.length > 0
-      ? Math.round(pressings.reduce((sum, p) => sum + (p.price_per_kg || 0), 0) / pressings.length)
-      : 0;
+    const totalRevenue = pressings.reduce((sum, p) => sum + (p.price_per_kg || 0) * 50, 0);
 
-    const serviceDistribution = {};
+    // Services distribution
+    const serviceCount = {};
     pressings.forEach(p => {
       (p.services || []).forEach(s => {
-        serviceDistribution[s] = (serviceDistribution[s] || 0) + 1;
+        serviceCount[s] = (serviceCount[s] || 0) + 1;
       });
     });
-
-    const serviceData = Object.entries(serviceDistribution).map(([name, value], i) => ({
-      name: name.replace('_', ' ').charAt(0).toUpperCase() + name.replace('_', ' ').slice(1),
-      value,
-      color: ['#06B6D4', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#3B82F6'][i % 6]
+    const distribution = Object.entries(serviceCount).slice(0, 5).map(([type, count], i) => ({
+      type: type.replace('_', ' ').charAt(0).toUpperCase() + type.replace('_', ' ').slice(1),
+      count,
+      color: CHART_COLORS[i]
     }));
 
-    const weeklyOrders = Array.from({ length: 7 }, (_, i) => ({
-      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-      orders: Math.floor(Math.random() * 50) + 20,
-      revenue: Math.floor(Math.random() * 150000) + 30000
-    }));
+    // Daily trend - fixed data
+    const dailyTrend = [
+      { date: 'Mon', bookings: 35, revenue: 85000 },
+      { date: 'Tue', bookings: 42, revenue: 105000 },
+      { date: 'Wed', bookings: 38, revenue: 92000 },
+      { date: 'Thu', bookings: 48, revenue: 120000 },
+      { date: 'Fri', bookings: 55, revenue: 145000 },
+      { date: 'Sat', bookings: 62, revenue: 165000 },
+      { date: 'Sun', bookings: 28, revenue: 68000 }
+    ];
 
-    return { totalShops, avgPrice, serviceData, weeklyOrders };
+    return {
+      stats: {
+        totalItems: totalShops,
+        activeItems: totalShops,
+        totalBookings: totalShops * 15 + 45,
+        totalRevenue: totalRevenue || totalShops * 250000,
+        avgRating: 4.4,
+        occupancyRate: 94,
+        bookingsGrowth: 22.3,
+        revenueGrowth: 18.6
+      },
+      bookingsByStatus: {
+        confirmed: Math.max(42, totalShops * 5),
+        pending: Math.max(15, totalShops * 2),
+        cancelled: 3,
+        completed: Math.max(35, totalShops * 4)
+      },
+      dailyTrend,
+      distribution,
+      secondaryCount: Object.keys(serviceCount).length,
+      recentBookings: []
+    };
   }, [pressings]);
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-cyan-50 to-cyan-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-cyan-600 mb-1">Total Shops</p>
-                <p className="text-2xl font-bold text-cyan-900">{dashboardData.totalShops}</p>
-              </div>
-              <div className="bg-cyan-200 rounded-full p-3">
-                <Shirt className="h-6 w-6 text-cyan-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Avg. Price/kg</p>
-                <p className="text-2xl font-bold text-blue-900">{formatFCFA(dashboardData.avgPrice)}</p>
-              </div>
-              <div className="bg-blue-200 rounded-full p-3">
-                <DollarSign className="h-6 w-6 text-blue-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-1">Today's Orders</p>
-                <p className="text-2xl font-bold text-purple-900">47</p>
-              </div>
-              <div className="bg-purple-200 rounded-full p-3">
-                <Package className="h-6 w-6 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600 mb-1">Completion Rate</p>
-                <p className="text-2xl font-bold text-green-900">94%</p>
-              </div>
-              <div className="bg-green-200 rounded-full p-3">
-                <TrendingUp className="h-6 w-6 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart2 className="h-5 w-5 text-cyan-600" />
-              Weekly Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData.weeklyOrders}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="day" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="orders" fill="#06B6D4" radius={[4, 4, 0, 0]} name="Orders" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Droplets className="h-5 w-5 text-purple-600" />
-              Services Offered
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64 flex items-center justify-center">
-              {dashboardData.serviceData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={dashboardData.serviceData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value">
-                      {dashboardData.serviceData.map((entry, i) => (<Cell key={i} fill={entry.color} />))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-gray-500">No data</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-const CommunicationsHub = ({ user }) => {
-  const [messages] = useState([
-    { id: 1, from: 'Customer', subject: 'Express order request', time: '30 min ago', unread: true },
-    { id: 2, from: 'System', subject: 'Low inventory alert - detergent', time: '2 hours ago', unread: true },
-    { id: 3, from: 'Staff', subject: 'Machine maintenance required', time: '1 day ago', unread: false }
-  ]);
-
-  const [announcementText, setAnnouncementText] = useState('');
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Recent Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`p-3 rounded-lg border ${msg.unread ? 'bg-cyan-50 border-cyan-200' : 'bg-white'}`}>
-                <div className="flex justify-between">
-                  <div>
-                    <p className="font-medium text-sm">{msg.from}</p>
-                    <p className="text-xs text-slate-600">{msg.subject}</p>
-                  </div>
-                  <span className="text-xs text-slate-500">{msg.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Send Announcement</Label>
-            <div className="flex gap-2 mt-2">
-              <Input placeholder="Type announcement..." value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} />
-              <Button className="bg-[#082c59]" onClick={() => { toast.success('Sent!'); setAnnouncementText(''); }}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="pt-4 space-y-2">
-            <Button variant="outline" className="w-full justify-start"><Bell className="mr-2 h-4 w-4" /> Create Promotion</Button>
-            <Button variant="outline" className="w-full justify-start"><Package className="mr-2 h-4 w-4" /> Track Orders</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 };
 
 const BusinessAnalytics = ({ pressings }) => {
   const analyticsData = useMemo(() => {
-    const monthlyTrend = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
-      month,
-      orders: Math.floor(Math.random() * 300) + 100,
-      revenue: Math.floor(Math.random() * 800000) + 200000
-    }));
+    // Fixed monthly trend data
+    const monthlyTrend = [
+      { month: 'Jan', orders: 185, revenue: 420000 },
+      { month: 'Feb', orders: 210, revenue: 485000 },
+      { month: 'Mar', orders: 245, revenue: 580000 },
+      { month: 'Apr', orders: 228, revenue: 520000 },
+      { month: 'May', orders: 275, revenue: 680000 },
+      { month: 'Jun', orders: 310, revenue: 820000 }
+    ];
 
     return { monthlyTrend };
   }, [pressings]);
