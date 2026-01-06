@@ -107,8 +107,15 @@ async def login(credentials: UserLogin, request: Request):
         {"$set": {"last_login": datetime.utcnow()}}
     )
     
-    # Create tokens
-    access_token = create_access_token(data={"sub": user["_id"], "email": user["email"]})
+    # Get dynamic session timeout from system settings
+    from routes.system_settings import get_session_timeout_minutes
+    session_timeout = await get_session_timeout_minutes()
+    
+    # Create tokens with dynamic timeout
+    access_token = create_access_token(
+        data={"sub": user["_id"], "email": user["email"]},
+        timeout_minutes=session_timeout
+    )
     refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
     
     return {
