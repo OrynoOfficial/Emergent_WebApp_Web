@@ -22,7 +22,8 @@ from routes.services import router as services_router
 from routes.orders import router as orders_router
 from routes.hotels import router as hotels_router
 from routes.restaurants import router as restaurants_router
-from routes.travel_routes import router as travel_router
+from routes.travel_routes import router as travel_routes_router
+from routes.travel import router as travel_router
 from routes.car_rental import router as car_rental_router
 from routes.events import router as events_router
 from routes.uploads import router as uploads_router
