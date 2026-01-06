@@ -266,8 +266,8 @@ class SessionTimeoutTester:
         self.test_update_session_timeout("super_admin", 120, should_succeed=True)  # Max value
         
         # Invalid updates (boundary violations)
-        self.test_update_session_timeout("super_admin", 14, should_succeed=False, expected_error="cannot be less than 15")
-        self.test_update_session_timeout("super_admin", 121, should_succeed=False, expected_error="cannot exceed 120")
+        self.test_update_session_timeout("super_admin", 14, should_succeed=False, expected_error="greater than or equal to 15")
+        self.test_update_session_timeout("super_admin", 121, should_succeed=False, expected_error="less than or equal to 120")
         
         # Permission tests (admin should be denied)
         if admin_login:
