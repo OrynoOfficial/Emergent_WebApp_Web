@@ -3120,3 +3120,52 @@ Each endpoint filters data by operator_id for non-admin users.
 4. Test all 3 pages have consistent modern UI with gradient headers
 5. Test interactive elements (seat selection, form inputs, toggles)
 6. Test backend restaurant endpoints (PUT/DELETE for restaurants and menu items)
+
+## CURRENT SESSION - OPERATOR ROLE MANAGEMENT & REFACTORING (2026-01-06)
+
+### Tasks Completed:
+
+1. **Operator Role Management Frontend UI - NEW DEDICATED PAGE**
+   - Created `/app/frontend/src/pages/management/TeamRolesManagement.jsx`
+   - Added route `/management/team-roles` accessible to operator owners and local admins
+   - Added "Team & Roles" link in sidebar for operator users
+   - Features:
+     - Team Members tab - view/manage team members using existing OperatorTeamManagement component
+     - Roles & Permissions tab - create/manage custom roles using existing OperatorRolesManagement component
+     - Modern UI with gradient headers matching other pages
+     - Help card explaining role hierarchy (Owner, Local Admin, Local User)
+     - Access control - only owners can manage roles, admins can manage team
+
+2. **Management Pages Refactoring - Shared Components Created**
+   - Created `/app/frontend/src/components/management/shared/` folder with reusable components:
+     
+     **DashboardStats.jsx**
+     - `StatCard` - Individual stat card with trend indicators
+     - `StatsGrid` - Grid layout for multiple stat cards
+     - `MiniBarChart`, `MiniPieChart`, `MiniAreaChart` - Small charts for dashboards
+     
+     **DataTable.jsx**
+     - `SearchFilter` - Search bar with filters, view toggle, refresh button
+     - `Pagination` - Page navigation with item counter
+     - `EmptyState` - Empty state with icon, title, description, action
+     - `ActionMenu` - Dropdown menu for item actions
+     - `StatusBadge` - Reusable status badge component
+     
+     **ImageCarousel.jsx**
+     - `ImageCarousel` - Horizontal scrollable images with navigation and fullscreen
+     - `ImageThumbnails` - Thumbnail strip for image selection
+     
+     **FormDialog.jsx**
+     - `FormDialog` - Reusable form dialog wrapper
+     - `ConfirmDialog` - Confirmation dialog for destructive actions
+     - `FormField`, `FormInput`, `FormTextarea`, `FormSelect` - Form field components
+     - `FormCheckboxGroup` - Multi-select checkbox group
+     
+     **index.js** - Exports all components for easy importing
+
+### Tests to Run:
+1. Test /management/team-roles page loads for operator users
+2. Test Team Members tab functionality
+3. Test Roles & Permissions tab functionality
+4. Verify sidebar shows "Team & Roles" link for operator users only
+5. Test shared components don't break existing pages
