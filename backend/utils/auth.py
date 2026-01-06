@@ -25,11 +25,19 @@ def get_password_hash(password: str) -> str:
         password = password[:72]
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token"""
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, timeout_minutes: Optional[int] = None) -> str:
+    """Create a JWT access token
+    
+    Args:
+        data: Token payload data
+        expires_delta: Optional explicit expiration timedelta
+        timeout_minutes: Optional session timeout in minutes (from system settings)
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
+    elif timeout_minutes:
+        expire = datetime.utcnow() + timedelta(minutes=timeout_minutes)
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
