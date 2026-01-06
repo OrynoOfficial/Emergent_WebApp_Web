@@ -150,14 +150,14 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
               <Label>Assign to Operator</Label>
               <Select value={form.operator_id || ''} onValueChange={(v) => {
                 const op = operators.find(o => o.id === v);
-                updateForm('operator_id', v);
+                updateForm('operator_id', v === 'none' ? '' : v);
                 updateForm('operator_name', op?.name || '');
               }}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select operator" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="">No operator</SelectItem>
+                  <SelectItem value="none">No operator</SelectItem>
                   {operators.map(op => (
                     <SelectItem key={op.id} value={op.id}>{op.name}</SelectItem>
                   ))}
