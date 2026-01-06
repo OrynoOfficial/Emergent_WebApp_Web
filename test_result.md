@@ -2663,3 +2663,33 @@ Configurable session timeout in Settings page for admin/super_admin users.
 - GET /api/system-settings/ (admin/super_admin)
 - PUT /api/system-settings/session-timeout (super_admin only)
 
+
+## Multi-Tenant Permission System Testing (2026-01-06)
+
+### Feature Description:
+Comprehensive multi-tenant permission system for operator-scoped environments.
+- Operator users have scoped-down views restricted to their operator's services
+- Permission inheritance through roles (owner > local_admin > local_user)
+- Custom role creation and permission delegation
+- Data filtering based on operator_id
+
+### Test Cases:
+1. Auth middleware injects operator context and effective permissions
+2. Login endpoint returns operator context
+3. /me endpoint returns operator context and effective permissions
+4. Super admin gets wildcard (*) permissions
+5. Operator roles endpoint returns system and custom roles
+6. Permission delegation works within operator scope
+7. Data scoping (e.g., hotels/management/my-hotels) filters by operator_id
+
+### Test Credentials:
+- Super Admin: superadmin@oryno.com / testpassword123
+- Admin: admin@test.com / testpassword123
+
+### API Endpoints:
+- GET /api/auth/me (with operator context)
+- GET /api/operator-roles/operators/{operator_id}/roles
+- GET /api/operator-roles/users/me/permissions
+- GET /api/hotels/management/my-hotels (operator-scoped)
+- POST /api/operator-roles/operators/{operator_id}/roles (create custom role)
+
