@@ -40,7 +40,7 @@ const getEventIcon = (type) => {
 // Grid View Event Card
 const EventCardGrid = ({ event, onBook }) => {
   const [isFavorite, setIsFavorite] = useState(false);
-  const Icon = getEventIcon(event.type);
+  const EventIcon = getEventIcon(event.type);
   
   return (
     <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
@@ -63,7 +63,7 @@ const EventCardGrid = ({ event, onBook }) => {
         
         {/* Type Badge */}
         <Badge className={`absolute top-3 left-3 ${EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
-          <Icon className="w-3 h-3 mr-1" />
+          <EventIcon className="w-3 h-3 mr-1" />
           {event.type}
         </Badge>
         
@@ -119,7 +119,7 @@ const EventCardGrid = ({ event, onBook }) => {
 
 // List View Event Card
 const EventCardList = ({ event, onBook }) => {
-  const Icon = getEventIcon(event.type);
+  const EventIcon = getEventIcon(event.type);
   
   return (
     <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
@@ -128,7 +128,7 @@ const EventCardList = ({ event, onBook }) => {
         <div className="md:w-1/3 h-48 md:h-auto relative">
           <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
           <Badge className={`absolute top-3 left-3 ${EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
-            <Icon className="w-3 h-3 mr-1" />
+            <EventIcon className="w-3 h-3 mr-1" />
             {event.type}
           </Badge>
         </div>
