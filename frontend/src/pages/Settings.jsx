@@ -959,101 +959,113 @@ export default function Settings() {
           <div className="space-y-6">
             <h3 className="font-bold text-slate-900">System Configuration</h3>
             
-            {/* Session Timeout Configuration */}
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 mb-3">
-                <Lock className="h-5 w-5 text-blue-600" />
-                <h4 className="font-medium text-blue-900">Session Timeout</h4>
-              </div>
-              <p className="text-sm text-blue-700 mb-4">
-                Configure how long users can stay logged in before requiring re-authentication.
-                Changes will apply to new login sessions.
-              </p>
-              
-              {sessionTimeoutConfig.loading ? (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Loading settings...</span>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="session_timeout">
-                      Session Duration (minutes)
-                    </Label>
-                    <div className="flex items-center gap-4 mt-2">
-                      <Input
-                        id="session_timeout"
-                        type="number"
-                        min={sessionTimeoutConfig.min_session_timeout}
-                        max={sessionTimeoutConfig.max_session_timeout}
-                        value={sessionTimeoutConfig.session_timeout_minutes}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || sessionTimeoutConfig.min_session_timeout;
-                          setSessionTimeoutConfig(prev => ({
-                            ...prev,
-                            session_timeout_minutes: Math.min(
-                              Math.max(value, prev.min_session_timeout),
-                              prev.max_session_timeout
-                            ),
-                          }));
-                        }}
-                        className="w-24 bg-white"
-                        disabled={user?.role !== 'super_admin'}
-                      />
-                      <span className="text-sm text-slate-500">
-                        Min: {sessionTimeoutConfig.min_session_timeout} min | Max: {sessionTimeoutConfig.max_session_timeout} min ({sessionTimeoutConfig.max_session_timeout / 60} hours)
-                      </span>
+            {/* Session Timeout Configuration - Modern Card Design */}
+            <div className="bg-gradient-to-br from-slate-50 to-blue-50/50 rounded-xl border border-slate-200 overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-100 rounded-lg">
+                      <Lock className="h-5 w-5 text-blue-600" />
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Default: 30 minutes. Current setting will be applied to all new login sessions.
-                    </p>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">Session Timeout</h4>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        Auto-logout after inactivity period
+                      </p>
+                    </div>
                   </div>
-                  
-                  {/* Quick preset buttons */}
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { label: '15 min', value: 15 },
-                      { label: '30 min', value: 30 },
-                      { label: '1 hour', value: 60 },
-                      { label: '2 hours', value: 120 },
-                    ].map((preset) => (
-                      <button
-                        key={preset.value}
-                        onClick={() => setSessionTimeoutConfig(prev => ({ ...prev, session_timeout_minutes: preset.value }))}
-                        disabled={user?.role !== 'super_admin'}
-                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                          sessionTimeoutConfig.session_timeout_minutes === preset.value
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                  
-                  {user?.role === 'super_admin' ? (
-                    <Button 
-                      onClick={handleSaveSessionTimeout} 
-                      disabled={sessionTimeoutConfig.saving}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {sessionTimeoutConfig.saving ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="mr-2 h-4 w-4" />
-                      )}
-                      Save Session Timeout
-                    </Button>
-                  ) : (
-                    <p className="text-sm text-amber-600 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Only Super Admins can modify session timeout settings
-                    </p>
+                  {sessionTimeoutConfig.saveSuccess && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium animate-pulse">
+                      <Check className="h-4 w-4" />
+                      Saved
+                    </div>
                   )}
                 </div>
-              )}
+                
+                {sessionTimeoutConfig.loading ? (
+                  <div className="flex items-center gap-2 text-slate-500 mt-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Loading settings...</span>
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="flex-1">
+                        <Label htmlFor="session_timeout_select" className="text-sm font-medium text-slate-700">
+                          Session Duration
+                        </Label>
+                        <select
+                          id="session_timeout_select"
+                          value={sessionTimeoutConfig.session_timeout_minutes}
+                          onChange={(e) => setSessionTimeoutConfig(prev => ({
+                            ...prev,
+                            session_timeout_minutes: parseInt(e.target.value),
+                            saveSuccess: false,
+                          }))}
+                          disabled={user?.role !== 'super_admin'}
+                          className="mt-1.5 w-full sm:w-48 h-11 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed transition-all appearance-none cursor-pointer"
+                          style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'right 12px center',
+                            backgroundSize: '16px',
+                            paddingRight: '40px'
+                          }}
+                        >
+                          <option value={15}>15 minutes</option>
+                          <option value={30}>30 minutes (Default)</option>
+                          <option value={45}>45 minutes</option>
+                          <option value={60}>1 hour</option>
+                          <option value={90}>1.5 hours</option>
+                          <option value={120}>2 hours (Maximum)</option>
+                        </select>
+                      </div>
+                      
+                      {user?.role === 'super_admin' && (
+                        <Button 
+                          onClick={handleSaveSessionTimeout} 
+                          disabled={sessionTimeoutConfig.saving}
+                          className={`h-11 px-5 transition-all duration-300 ${
+                            sessionTimeoutConfig.saveSuccess 
+                              ? 'bg-green-600 hover:bg-green-700' 
+                              : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
+                        >
+                          {sessionTimeoutConfig.saving ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : sessionTimeoutConfig.saveSuccess ? (
+                            <>
+                              <Check className="mr-2 h-4 w-4" />
+                              Saved!
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {user?.role !== 'super_admin' && (
+                      <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <p className="text-sm text-amber-700">
+                          Only Super Admins can modify session timeout settings
+                        </p>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-slate-500">
+                      Changes apply to new login sessions. Current sessions remain active until their original timeout.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <Separator />
