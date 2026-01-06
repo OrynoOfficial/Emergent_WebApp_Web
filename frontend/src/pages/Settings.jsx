@@ -340,6 +340,21 @@ export default function Settings() {
     toast.success('Logged out successfully');
   };
 
+  const handleSaveSessionTimeout = async () => {
+    setSessionTimeoutConfig(prev => ({ ...prev, saving: true }));
+    try {
+      await api.put('/system-settings/session-timeout', {
+        session_timeout_minutes: sessionTimeoutConfig.session_timeout_minutes,
+      });
+      toast.success('Session timeout updated successfully');
+    } catch (error) {
+      console.error('Session timeout save error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update session timeout');
+    } finally {
+      setSessionTimeoutConfig(prev => ({ ...prev, saving: false }));
+    }
+  };
+
   const renderSectionContent = () => {
     const isCustomer = user?.role === 'customer' || !user?.role;
     
