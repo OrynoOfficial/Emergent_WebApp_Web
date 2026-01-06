@@ -76,7 +76,7 @@ async def verify_operator_resource_access(
     if not resource:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Resource not found"
+            detail="Resource not found"
         )
     
     # Super admin and admin can access any resource
