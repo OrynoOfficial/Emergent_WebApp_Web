@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 class ORynoAPITester:
-    def __init__(self, base_url="https://admin-dashboard-642.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://multitenant-rbac.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
         self.tests_run = 0
@@ -1117,7 +1117,7 @@ class ORynoAPITester:
         
         checkout_data = {
             "order_id": created_order_id,
-            "origin_url": "https://admin-dashboard-642.preview.emergentagent.com"
+            "origin_url": "https://multitenant-rbac.preview.emergentagent.com"
         }
         
         success, checkout_response = self.run_test(
