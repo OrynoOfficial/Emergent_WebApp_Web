@@ -24,6 +24,18 @@ export const AuthProvider = ({ children }) => {
     }
     return null;
   });
+  const [operatorContext, setOperatorContext] = useState(() => {
+    const cached = localStorage.getItem('operator_context');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [effectivePermissions, setEffectivePermissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUser = useCallback(async () => {
@@ -36,9 +48,22 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.getCurrentUser();
       const userData = response.data;
+      
+      // Extract operator context and permissions from user data
+      const opContext = userData.operator_context || null;
+      const permissions = userData.effective_permissions || [];
+      
       setUser(userData);
-      // Cache user data for resilience
+      setOperatorContext(opContext);
+      setEffectivePermissions(permissions);
+      
+      // Cache data for resilience
       localStorage.setItem('user', JSON.stringify(userData));
+      if (opContext) {
+        localStorage.setItem('operator_context', JSON.stringify(opContext));
+      } else {
+        localStorage.removeItem('operator_context');
+      }
     } catch (error) {
       console.error('Failed to fetch user:', error);
       // Only clear on explicit 401, keep cached user for other errors
@@ -46,14 +71,21 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
+        localStorage.removeItem('operator_context');
         setUser(null);
+        setOperatorContext(null);
+        setEffectivePermissions([]);
       } else {
         // For network errors, use cached user
         console.warn('Network error while fetching user, using cached data');
         const cachedUser = localStorage.getItem('user');
+        const cachedOpContext = localStorage.getItem('operator_context');
         if (cachedUser) {
           try {
             setUser(JSON.parse(cachedUser));
+            if (cachedOpContext) {
+              setOperatorContext(JSON.parse(cachedOpContext));
+            }
           } catch (e) {
             // Invalid cached data, but don't clear token
           }
@@ -74,6 +106,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
     
+    // Store operator context from login response if available
+    if (userData?.operator_context) {
+      localStorage.setItem('operator_context', JSON.stringify(userData.operator_context));
+      setOperatorContext(userData.operator_context);
+    }
+    
     // Fetch full user data after login
     await fetchUser();
     
@@ -89,7 +127,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    localStorage.removeItem('operator_context');
     setUser(null);
+    setOperatorContext(null);
+    setEffectivePermissions([]);
     window.location.href = '/login';
   };
 
@@ -101,6 +142,13 @@ export const AuthProvider = ({ children }) => {
     }
   }, [fetchUser]);
 
+  // Helper to check if user is an operator user (assigned to an operator)
+  const isOperatorUser = !!operatorContext;
+  
+  // Get operator's allowed service types
+  const operatorServiceTypes = operatorContext?.service_types || [];
+  const operatorType = operatorContext?.operator_type || null;
+
   const value = {
     user,
     loading,
@@ -109,6 +157,12 @@ export const AuthProvider = ({ children }) => {
     logout,
     reAuthenticate,
     isAuthenticated: !!user || !!localStorage.getItem('access_token'),
+    // Operator-related data
+    operatorContext,
+    effectivePermissions,
+    isOperatorUser,
+    operatorServiceTypes,
+    operatorType,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
