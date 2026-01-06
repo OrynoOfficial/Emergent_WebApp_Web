@@ -635,7 +635,12 @@ export default function TravelManagement() {
 
         {/* Communications Tab */}
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Travel"
+            serviceTag="travel"
+            serviceIcon={<Bus className="h-5 w-5 text-blue-600" />}
+            primaryColor="blue"
+          />
         </TabsContent>
 
         {/* Analytics Tab */}
