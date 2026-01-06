@@ -29,6 +29,7 @@ const getServiceIcon = (service) => {
 // Grid View Service Card
 const ServiceCardGrid = ({ service, onBook }) => {
   const [isFavorite, setIsFavorite] = useState(false);
+  const ServiceIcon = getServiceIcon(service.services?.[0]);
   
   return (
     <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
