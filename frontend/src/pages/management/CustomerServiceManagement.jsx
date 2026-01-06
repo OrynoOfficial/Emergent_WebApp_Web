@@ -399,6 +399,12 @@ export default function CustomerServiceManagement() {
     setCurrentPage(1);
   }, [filters, searchTerm]);
 
+  // Sub-tab change resets page and clears selection
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedTickets([]);
+  }, [ticketSubTab]);
+
   // Handle ticket selection
   const handleSelectTicket = (ticketId, checked) => {
     setSelectedTickets(prev => 
