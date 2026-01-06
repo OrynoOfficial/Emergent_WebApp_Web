@@ -342,12 +342,17 @@ export default function Settings() {
   };
 
   const handleSaveSessionTimeout = async () => {
-    setSessionTimeoutConfig(prev => ({ ...prev, saving: true }));
+    setSessionTimeoutConfig(prev => ({ ...prev, saving: true, saveSuccess: false }));
     try {
       await api.put('/system-settings/session-timeout', {
         session_timeout_minutes: sessionTimeoutConfig.session_timeout_minutes,
       });
       toast.success('Session timeout updated successfully');
+      setSessionTimeoutConfig(prev => ({ ...prev, saveSuccess: true }));
+      // Reset success indicator after 3 seconds
+      setTimeout(() => {
+        setSessionTimeoutConfig(prev => ({ ...prev, saveSuccess: false }));
+      }, 3000);
     } catch (error) {
       console.error('Session timeout save error:', error);
       toast.error(error.response?.data?.detail || 'Failed to update session timeout');
