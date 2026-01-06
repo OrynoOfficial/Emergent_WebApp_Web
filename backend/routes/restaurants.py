@@ -258,6 +258,160 @@ async def get_restaurant_orders(
     return {"orders": orders}
 
 
+class RestaurantUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    cuisine_type: Optional[list] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    accepts_reservations: Optional[bool] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+    images: Optional[list] = None
+    price_range: Optional[str] = None
+    features: Optional[list] = None
+    opening_hours: Optional[dict] = None
+    rating: Optional[float] = None
+    status: Optional[str] = None
+
+
+class MenuItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    price: Optional[float] = None
+    image: Optional[str] = None
+    available: Optional[bool] = None
+    is_available: Optional[bool] = None
+    popular: Optional[bool] = None
+
+
+@router.put("/{restaurant_id}")
+async def update_restaurant(
+    restaurant_id: str,
+    update_data: RestaurantUpdate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Update a restaurant"""
+    db = get_database()
+    
+    if current_user["role"] not in ["operator", "admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if restaurant exists
+    existing = await db.restaurants.find_one({"_id": restaurant_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    # For operator users, ensure they own this restaurant
+    if current_user["role"] == "operator":
+        operator_id = current_user.get("operator_id") or current_user.get("_id")
+        if existing.get("operator_id") != operator_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this restaurant")
+    
+    # Build update dict excluding None values
+    update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+    update_dict["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.restaurants.update_one(
+        {"_id": restaurant_id},
+        {"$set": update_dict}
+    )
+    
+    return {"message": "Restaurant updated successfully"}
+
+
+@router.delete("/{restaurant_id}")
+async def delete_restaurant(
+    restaurant_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Delete a restaurant"""
+    db = get_database()
+    
+    if current_user["role"] not in ["operator", "admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if restaurant exists
+    existing = await db.restaurants.find_one({"_id": restaurant_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    # For operator users, ensure they own this restaurant
+    if current_user["role"] == "operator":
+        operator_id = current_user.get("operator_id") or current_user.get("_id")
+        if existing.get("operator_id") != operator_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this restaurant")
+    
+    # Delete the restaurant
+    await db.restaurants.delete_one({"_id": restaurant_id})
+    
+    # Also delete associated menu items
+    await db.restaurant_menu.delete_many({"restaurant_id": restaurant_id})
+    
+    return {"message": "Restaurant deleted successfully"}
+
+
+@router.put("/{restaurant_id}/menu/{item_id}")
+async def update_menu_item(
+    restaurant_id: str,
+    item_id: str,
+    update_data: MenuItemUpdate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Update a menu item"""
+    db = get_database()
+    
+    if current_user["role"] not in ["operator", "admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if menu item exists
+    existing = await db.restaurant_menu.find_one({"_id": item_id, "restaurant_id": restaurant_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    # Build update dict excluding None values
+    update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+    
+    # Handle both 'available' and 'is_available' fields
+    if "available" in update_dict:
+        update_dict["is_available"] = update_dict.pop("available")
+    
+    update_dict["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.restaurant_menu.update_one(
+        {"_id": item_id, "restaurant_id": restaurant_id},
+        {"$set": update_dict}
+    )
+    
+    return {"message": "Menu item updated successfully"}
+
+
+@router.delete("/{restaurant_id}/menu/{item_id}")
+async def delete_menu_item(
+    restaurant_id: str,
+    item_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Delete a menu item"""
+    db = get_database()
+    
+    if current_user["role"] not in ["operator", "admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if menu item exists
+    existing = await db.restaurant_menu.find_one({"_id": item_id, "restaurant_id": restaurant_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    await db.restaurant_menu.delete_one({"_id": item_id, "restaurant_id": restaurant_id})
+    
+    return {"message": "Menu item deleted successfully"}
+
+
 @router.get("/management/my-restaurants")
 async def get_my_restaurants(
     search: Optional[str] = None,
