@@ -100,6 +100,57 @@ async def get_hotels(
     
     return {"hotels": hotels, "total": total}
 
+
+@router.get("/management/my-hotels")
+async def get_my_hotels(
+    search: Optional[str] = None,
+    city: Optional[str] = None,
+    star_rating: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get hotels for the current user's operator (operator-scoped).
+    Super admin and admin can see all hotels.
+    Operator users can only see hotels belonging to their operator.
+    """
+    from middleware.auth import get_operator_filter
+    
+    db = get_database()
+    
+    # Build base query with operator filter
+    query = get_operator_filter(current_user)
+    
+    # Add optional filters
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}}
+        ]
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    if star_rating:
+        query["star_rating"] = star_rating
+    
+    hotels = await db.hotels.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.hotels.count_documents(query)
+    
+    # Transform _id to id
+    for hotel in hotels:
+        hotel["id"] = str(hotel.pop("_id", ""))
+        
+        # Get room count for this hotel
+        room_count = await db.rooms.count_documents({"hotel_id": hotel["id"]})
+        hotel["room_count"] = room_count
+    
+    return {
+        "hotels": hotels, 
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
+
 @router.get("/{hotel_id}")
 async def get_hotel(hotel_id: str):
     """Get hotel details - public endpoint"""
