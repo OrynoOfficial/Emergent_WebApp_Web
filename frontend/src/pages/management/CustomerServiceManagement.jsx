@@ -767,8 +767,54 @@ export default function CustomerServiceManagement() {
 
           {/* Tickets Tab */}
           <TabsContent value="tickets" className="mt-6 space-y-4">
+            {/* Sub-tabs for ticket categories */}
+            <div className="bg-white rounded-xl shadow-sm p-1.5 inline-flex gap-1">
+              <button
+                onClick={() => setTicketSubTab('open')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  ticketSubTab === 'open'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Inbox className="w-4 h-4" />
+                Open
+                <Badge className={`ml-1 ${ticketSubTab === 'open' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'} text-xs h-5 min-w-[20px] flex items-center justify-center`}>
+                  {(stats?.by_status?.open || 0) + (stats?.by_status?.pending || 0)}
+                </Badge>
+              </button>
+              <button
+                onClick={() => setTicketSubTab('in_progress')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  ticketSubTab === 'in_progress'
+                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Activity className="w-4 h-4" />
+                In Progress
+                <Badge className={`ml-1 ${ticketSubTab === 'in_progress' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'} text-xs h-5 min-w-[20px] flex items-center justify-center`}>
+                  {stats?.by_status?.in_progress || 0}
+                </Badge>
+              </button>
+              <button
+                onClick={() => setTicketSubTab('closed')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  ticketSubTab === 'closed'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Closed
+                <Badge className={`ml-1 ${ticketSubTab === 'closed' ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'} text-xs h-5 min-w-[20px] flex items-center justify-center`}>
+                  {(stats?.by_status?.resolved || 0) + (stats?.by_status?.closed || 0)}
+                </Badge>
+              </button>
+            </div>
+
             {/* Search and Filters Bar */}
-            <Card className="shadow-sm">
+            <Card className="shadow-sm border-0 bg-gradient-to-r from-slate-50 to-white">
               <CardContent className="p-4">
                 <div className="flex flex-col lg:flex-row gap-4">
                   {/* Search */}
@@ -778,7 +824,7 @@ export default function CustomerServiceManagement() {
                       placeholder="Search tickets by subject, name, email, or ticket number..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-white"
+                      className="pl-10 bg-white border-slate-200 shadow-sm"
                     />
                   </div>
                   
@@ -787,7 +833,7 @@ export default function CustomerServiceManagement() {
                     <Button
                       variant={showFilters ? 'default' : 'outline'}
                       onClick={() => setShowFilters(!showFilters)}
-                      className={`gap-2 ${showFilters ? 'bg-[#082c59]' : ''}`}
+                      className={`gap-2 shadow-sm ${showFilters ? 'bg-[#082c59]' : 'bg-white'}`}
                     >
                       <SlidersHorizontal className="w-4 h-4" />
                       Filters
@@ -799,7 +845,7 @@ export default function CustomerServiceManagement() {
                     </Button>
                     
                     <Select value={sortBy} onValueChange={setSortBy}>
-                      <SelectTrigger className="w-40 bg-white">
+                      <SelectTrigger className="w-40 bg-white shadow-sm">
                         <ArrowUpDown className="w-4 h-4 mr-2" />
                         <SelectValue />
                       </SelectTrigger>
