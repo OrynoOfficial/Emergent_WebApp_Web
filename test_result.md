@@ -2828,3 +2828,31 @@ Frontend updates for multi-tenant permission system:
 ### Test Credentials:
 - Super Admin: superadmin@oryno.com / testpassword123
 
+
+## Operator-Scoped Service Endpoints Testing (2026-01-06)
+
+### Feature Description:
+Added operator-scoped management endpoints to all service routes.
+Each endpoint filters data by operator_id for non-admin users.
+
+### New Endpoints:
+1. GET /api/hotels/management/my-hotels - Hotels
+2. GET /api/travel/management/my-routes - Travel routes
+3. GET /api/restaurants/management/my-restaurants - Restaurants
+4. GET /api/car-rental/management/my-vehicles - Vehicles
+5. GET /api/events/management/my-events - Events
+6. GET /api/cinema/management/my-cinemas - Cinemas
+7. GET /api/banquets/management/my-venues - Banquet venues
+8. GET /api/pressing/management/my-shops - Laundry shops
+9. GET /api/packages/management/my-services - Package services
+10. GET /api/analytics/operator/dashboard - Operator analytics
+
+### Test Cases:
+- Super admin sees all data (is_operator_scoped: false)
+- Operator user sees only their operator's data (is_operator_scoped: true)
+- Search and filter parameters work correctly
+- Response includes total count and items
+
+### Test Credentials:
+- Super Admin: superadmin@oryno.com / testpassword123
+
