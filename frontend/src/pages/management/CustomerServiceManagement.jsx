@@ -313,13 +313,35 @@ export default function CustomerServiceManagement() {
   const [availableMembers, setAvailableMembers] = useState([]);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
 
+  // Get status filters based on sub-tab
+  const getSubTabStatuses = useCallback(() => {
+    switch (ticketSubTab) {
+      case 'open':
+        return ['open', 'pending'];
+      case 'in_progress':
+        return ['in_progress'];
+      case 'closed':
+        return ['resolved', 'closed'];
+      default:
+        return [];
+    }
+  }, [ticketSubTab]);
+
   // Load tickets
   const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
       
-      if (filters.status) params.append('status', filters.status);
+      // Apply sub-tab status filter (multiple statuses)
+      const subTabStatuses = getSubTabStatuses();
+      if (subTabStatuses.length > 0 && !filters.status) {
+        // If no manual status filter, use sub-tab statuses
+        subTabStatuses.forEach(s => params.append('status', s));
+      } else if (filters.status) {
+        params.append('status', filters.status);
+      }
+      
       if (filters.priority) params.append('priority', filters.priority);
       if (filters.category) params.append('category', filters.category);
       if (filters.user_type) params.append('user_type', filters.user_type);
@@ -341,7 +363,7 @@ export default function CustomerServiceManagement() {
     } finally {
       setLoading(false);
     }
-  }, [filters, searchTerm, sortBy, sortOrder, currentPage]);
+  }, [filters, searchTerm, sortBy, sortOrder, currentPage, getSubTabStatuses]);
 
   // Load stats
   const loadStats = useCallback(async () => {
