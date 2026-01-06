@@ -434,7 +434,19 @@ export default function RestaurantManagement() {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard restaurants={restaurants} menuItems={menuItems} />
+          <ServiceExecutiveDashboard
+            serviceType="Restaurants"
+            serviceIcon={<Utensils className="h-8 w-8" />}
+            primaryColor="orange"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Restaurants"
+            secondaryLabel="Menu Items"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         {/* Management Tab */}
