@@ -4001,7 +4001,10 @@ def main():
     # Test login with correct credentials first
     tester.test_user_registration_and_login()
     
-    # Service Management Dashboard & Communications Revamp (Current Review Request)
+    # Operator Users Management (Current Review Request)
+    tester.test_operator_users_management()
+    
+    # Service Management Dashboard & Communications Revamp (Previous Review Request)
     tester.test_service_management_dashboard_communications()
     
     # Travel Round-Trip Backend APIs (Previous Review Request)
