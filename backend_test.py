@@ -1832,6 +1832,272 @@ class ORynoAPITester:
         print("   - Orders are created separately for each trip")
         print("   - User can view all their bookings and orders")
 
+    def test_operator_users_management(self):
+        """Test Operator Users Management system (Current Review Request)"""
+        print("\n" + "="*50)
+        print("TESTING OPERATOR USERS MANAGEMENT SYSTEM")
+        print("="*50)
+        
+        # Test 1: Login with superadmin credentials
+        print("\n--- STEP 1: LOGIN WITH SUPERADMIN CREDENTIALS ---")
+        
+        success, response = self.run_test(
+            "Login Super Admin (superadmin@oryno.com / testpassword123)",
+            "POST",
+            "auth/login",
+            200,
+            data={"email": "superadmin@oryno.com", "password": "testpassword123"}
+        )
+        
+        if success and 'access_token' in response:
+            self.tokens['super_admin'] = response['access_token']
+            print("   ✅ Super admin login successful")
+        else:
+            print("   ❌ Super admin login failed - cannot proceed with tests")
+            return
+        
+        # Test 2: Get operators list to get an operator ID
+        print("\n--- STEP 2: GET OPERATOR ID ---")
+        
+        success, operators_data = self.run_test(
+            "Get operators list",
+            "GET",
+            "operators/",
+            200,
+            user_role='super_admin'
+        )
+        
+        operator_id = None
+        if success:
+            operators = operators_data.get('operators', [])
+            if operators:
+                operator_id = operators[0].get('id') or operators[0].get('_id')
+                operator_name = operators[0].get('name', 'Unknown')
+                print(f"   ✅ Using operator: {operator_name} (ID: {operator_id})")
+            else:
+                print("   ❌ No operators found - cannot proceed with tests")
+                return
+        else:
+            print("   ❌ Failed to get operators list")
+            return
+        
+        # Test 3: GET /api/operators/{operator_id}/users - List users for operator
+        print("\n--- STEP 3: GET OPERATOR USERS LIST ---")
+        
+        success, users_data = self.run_test(
+            "Get operator users list",
+            "GET",
+            f"operators/{operator_id}/users",
+            200,
+            user_role='super_admin'
+        )
+        
+        if success:
+            users = users_data.get('users', [])
+            total = users_data.get('total', 0)
+            operator_info = users_data.get('operator', {})
+            print(f"   ✅ Retrieved {len(users)} users for operator (total: {total})")
+            print(f"   Operator: {operator_info.get('name', 'Unknown')}")
+            
+            if users:
+                for user in users[:3]:  # Show first 3 users
+                    print(f"     - {user.get('full_name', 'Unknown')} ({user.get('email', 'No email')}) - Role: {user.get('operator_role', 'Unknown')}")
+        else:
+            print("   ❌ Failed to get operator users list")
+        
+        # Test 4: GET /api/operators/{operator_id}/stats - Get user statistics
+        print("\n--- STEP 4: GET OPERATOR USER STATS ---")
+        
+        success, stats_data = self.run_test(
+            "Get operator user statistics",
+            "GET",
+            f"operators/{operator_id}/stats",
+            200,
+            user_role='super_admin'
+        )
+        
+        if success:
+            total_users = stats_data.get('total_users', 0)
+            active_users = stats_data.get('active_users', 0)
+            by_role = stats_data.get('by_role', {})
+            
+            print(f"   ✅ Operator user statistics retrieved:")
+            print(f"     Total Users: {total_users}")
+            print(f"     Active Users: {active_users}")
+            print(f"     Owners: {by_role.get('owner', 0)}")
+            print(f"     Local Admins: {by_role.get('local_admin', 0)}")
+            print(f"     Local Users: {by_role.get('local_user', 0)}")
+        else:
+            print("   ❌ Failed to get operator user statistics")
+        
+        # Test 5: GET /api/operators/{operator_id}/users/available - Get available users
+        print("\n--- STEP 5: GET AVAILABLE USERS FOR ASSIGNMENT ---")
+        
+        success, available_data = self.run_test(
+            "Get available users for assignment",
+            "GET",
+            f"operators/{operator_id}/users/available",
+            200,
+            user_role='super_admin'
+        )
+        
+        available_user_id = None
+        if success:
+            available_users = available_data.get('users', [])
+            total_available = available_data.get('total', 0)
+            print(f"   ✅ Retrieved {len(available_users)} available users (total: {total_available})")
+            
+            if available_users:
+                available_user_id = available_users[0].get('id')
+                print(f"     - {available_users[0].get('full_name', 'Unknown')} ({available_users[0].get('email', 'No email')})")
+                print(f"     Available user ID for assignment: {available_user_id}")
+        else:
+            print("   ❌ Failed to get available users")
+        
+        # Test 6: POST /api/operators/{operator_id}/users - Create new operator user
+        print("\n--- STEP 6: CREATE NEW OPERATOR USER ---")
+        
+        import time
+        timestamp = str(int(time.time()))
+        
+        user_create_data = {
+            "email": f"test.localuser{timestamp}@operator.com",
+            "password": "testpassword123",
+            "full_name": "Test Local User",
+            "phone": "+237600000001",
+            "operator_role": "local_user",
+            "scoped_permissions": ["bookings.view", "services.view"]
+        }
+        
+        success, create_response = self.run_test(
+            "Create new operator user",
+            "POST",
+            f"operators/{operator_id}/users",
+            200,
+            data=user_create_data,
+            user_role='super_admin'
+        )
+        
+        created_user_id = None
+        if success:
+            created_user_id = create_response.get('user_id')
+            user_email = create_response.get('email')
+            operator_role = create_response.get('operator_role')
+            message = create_response.get('message')
+            
+            print(f"   ✅ User created successfully:")
+            print(f"     User ID: {created_user_id}")
+            print(f"     Email: {user_email}")
+            print(f"     Operator Role: {operator_role}")
+            print(f"     Message: {message}")
+        else:
+            print("   ❌ Failed to create new operator user")
+        
+        # Test 7: POST /api/operators/{operator_id}/users/assign - Assign existing user
+        print("\n--- STEP 7: ASSIGN EXISTING USER TO OPERATOR ---")
+        
+        if available_user_id:
+            assign_data = {
+                "user_id": available_user_id,
+                "operator_role": "local_admin",
+                "scoped_permissions": []
+            }
+            
+            success, assign_response = self.run_test(
+                "Assign existing user to operator",
+                "POST",
+                f"operators/{operator_id}/users/assign",
+                200,
+                data=assign_data,
+                user_role='super_admin'
+            )
+            
+            if success:
+                assigned_user_id = assign_response.get('user_id')
+                assigned_operator_id = assign_response.get('operator_id')
+                assigned_role = assign_response.get('operator_role')
+                message = assign_response.get('message')
+                
+                print(f"   ✅ User assigned successfully:")
+                print(f"     User ID: {assigned_user_id}")
+                print(f"     Operator ID: {assigned_operator_id}")
+                print(f"     Operator Role: {assigned_role}")
+                print(f"     Message: {message}")
+            else:
+                print("   ❌ Failed to assign existing user to operator")
+        else:
+            print("   ⚠️  Skipping user assignment - no available users found")
+        
+        # Test 8: PUT /api/operators/{operator_id}/users/{user_id} - Update operator user
+        print("\n--- STEP 8: UPDATE OPERATOR USER ---")
+        
+        if created_user_id:
+            update_data = {
+                "operator_role": "local_admin",
+                "status": "active"
+            }
+            
+            success, update_response = self.run_test(
+                "Update operator user role",
+                "PUT",
+                f"operators/{operator_id}/users/{created_user_id}",
+                200,
+                data=update_data,
+                user_role='super_admin'
+            )
+            
+            if success:
+                message = update_response.get('message')
+                updated_user_id = update_response.get('user_id')
+                
+                print(f"   ✅ User updated successfully:")
+                print(f"     User ID: {updated_user_id}")
+                print(f"     Message: {message}")
+            else:
+                print("   ❌ Failed to update operator user")
+        else:
+            print("   ⚠️  Skipping user update - no created user available")
+        
+        # Test 9: DELETE /api/operators/{operator_id}/users/{user_id} - Remove operator user
+        print("\n--- STEP 9: REMOVE OPERATOR USER ---")
+        
+        if created_user_id:
+            success, remove_response = self.run_test(
+                "Remove operator user (unassign)",
+                "DELETE",
+                f"operators/{operator_id}/users/{created_user_id}",
+                200,
+                user_role='super_admin'
+            )
+            
+            if success:
+                message = remove_response.get('message')
+                removed_user_id = remove_response.get('user_id')
+                
+                print(f"   ✅ User removed successfully:")
+                print(f"     User ID: {removed_user_id}")
+                print(f"     Message: {message}")
+                
+                # Verify user was unassigned (should be reverted to customer role)
+                success, final_stats = self.run_test(
+                    "Verify user removal - check updated stats",
+                    "GET",
+                    f"operators/{operator_id}/stats",
+                    200,
+                    user_role='super_admin'
+                )
+                
+                if success:
+                    print(f"   ✅ Updated stats after removal:")
+                    print(f"     Total Users: {final_stats.get('total_users', 0)}")
+                    print(f"     Active Users: {final_stats.get('active_users', 0)}")
+            else:
+                print("   ❌ Failed to remove operator user")
+        else:
+            print("   ⚠️  Skipping user removal - no created user available")
+        
+        print("\n--- OPERATOR USERS MANAGEMENT TEST COMPLETE ---")
+
     def test_mtn_momo_payment_integration(self):
         """Test MTN MoMo Mobile Money payment integration (Current Review Request)"""
         print("\n" + "="*50)
