@@ -428,5 +428,3 @@ async def get_operator_dashboard_analytics(
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"],
         "operator_name": operator_context.get("operator_name") if operator_context else None
     }
-
-    }
