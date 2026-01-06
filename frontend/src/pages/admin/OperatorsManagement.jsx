@@ -449,6 +449,12 @@ export default function OperatorsManagement() {
                 >
                   <Users className="h-4 w-4 mr-2" /> Team
                 </TabsTrigger>
+                <TabsTrigger 
+                  value="roles"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none px-4 py-2"
+                >
+                  <Shield className="h-4 w-4 mr-2" /> Roles
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="details" className="mt-4">
