@@ -617,7 +617,7 @@ export default function TravelBooking() {
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-slate-50">
+                <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl bg-slate-50">
                   <div>
                     <h4 className="font-medium text-slate-800">Extra Luggage (20 kg)</h4>
                     <p className="text-sm text-slate-600">{formatCurrency(EXTRA_LUGGAGE_PRICE)} per piece</p>
@@ -628,96 +628,106 @@ export default function TravelBooking() {
                       size="icon"
                       onClick={() => setExtraLuggage(Math.max(0, extraLuggage - 1))}
                       disabled={extraLuggage === 0}
-                      className="bg-white hover:bg-slate-100 border-slate-300"
+                      className="bg-white hover:bg-slate-100 border-slate-300 h-10 w-10 rounded-full"
                     >
                       <Minus className="w-4 h-4" />
                     </Button>
-                    <span className="w-8 text-center font-medium text-slate-800">{extraLuggage}</span>
+                    <span className="w-8 text-center font-bold text-lg text-slate-800">{extraLuggage}</span>
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => setExtraLuggage(extraLuggage + 1)}
-                      className="bg-white hover:bg-slate-100 border-slate-300"
+                      className="bg-white hover:bg-slate-100 border-slate-300 h-10 w-10 rounded-full"
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
 
             {/* Right Column - Summary */}
             <div className="lg:col-span-1">
-              <div className="sticky top-8 rounded-2xl p-6 shadow-lg bg-white">
-                <div className="flex items-center gap-2 mb-6">
-                  <DollarSign className="h-6 w-6 text-emerald-600" />
-                  <h3 className="text-xl font-bold text-slate-800">Trip Summary</h3>
-                </div>
+              <div className="sticky top-24">
+                <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
+                    <div className="flex items-center gap-3 text-white">
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <Bus className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">Trip Summary</h3>
+                        <p className="text-sm text-white/70">{passengers.length} passenger{passengers.length > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-5">
+                    {/* Outbound Trip */}
+                    <div className="space-y-3 mb-4">
+                      <h4 className="font-semibold text-slate-800">Outbound Trip</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Bus className="w-4 h-4 text-blue-500" />
+                          <span>{outbound.operator_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <MapPin className="w-4 h-4 text-blue-500" />
+                          <span>{outbound.from_city} → {outbound.to_city}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Calendar className="w-4 h-4 text-blue-500" />
+                          <span>{format(outboundDate, 'MMM d, yyyy')}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Clock className="w-4 h-4 text-blue-500" />
+                          <span>{outbound.departure_time} - {outbound.arrival_time}</span>
+                        </div>
+                        {showSeatSelection && selectedSeats.length > 0 && (
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Armchair className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium">Seats: {selectedSeats.join(', ')}</span>
+                          </div>
+                        )}
+                        <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.outboundPrice)}</p>
+                      </div>
+                    </div>
 
-                {/* Outbound Trip */}
-                <div className="space-y-3 mb-4">
-                  <h4 className="font-semibold text-slate-800">Outbound Trip</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Bus className="w-4 h-4 text-slate-500" />
-                      <span>{outbound.operator_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <MapPin className="w-4 h-4 text-slate-500" />
-                      <span>{outbound.from_city} → {outbound.to_city}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Calendar className="w-4 h-4 text-slate-500" />
-                      <span>{format(outboundDate, 'MMM d, yyyy')}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Clock className="w-4 h-4 text-slate-500" />
-                      <span>{outbound.departure_time} - {outbound.arrival_time}</span>
-                    </div>
-                    {showSeatSelection && selectedSeats.length > 0 && (
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <Armchair className="w-4 h-4 text-slate-500" />
-                        <span className="font-medium">Seats: {selectedSeats.join(', ')}</span>
+                    {/* Return Trip */}
+                    {isRoundTrip && returnTrip && (
+                      <div className="space-y-3 mb-4 pt-4 border-t border-slate-200">
+                        <h4 className="font-semibold text-slate-800">Return Trip</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Bus className="w-4 h-4 text-blue-500" />
+                            <span>{returnTrip.operator_name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <MapPin className="w-4 h-4 text-blue-500" />
+                            <span>{returnTrip.from_city} → {returnTrip.to_city}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Calendar className="w-4 h-4 text-blue-500" />
+                            <span>{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'MMM d, yyyy') : 'Date TBD'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Clock className="w-4 h-4 text-blue-500" />
+                            <span>{returnTrip.departure_time} - {returnTrip.arrival_time}</span>
+                          </div>
+                          {showSeatSelection && returnSelectedSeats.length > 0 && (
+                            <div className="flex items-center gap-2 text-slate-700">
+                              <Armchair className="w-4 h-4 text-blue-500" />
+                              <span className="font-medium">Seats: {returnSelectedSeats.join(', ')}</span>
+                            </div>
+                          )}
+                          <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.returnPrice)}</p>
+                        </div>
                       </div>
                     )}
-                    <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.outboundPrice)}</p>
-                  </div>
-                </div>
 
-                {/* Return Trip */}
-                {isRoundTrip && returnTrip && (
-                  <div className="space-y-3 mb-4 pt-4 border-t border-slate-200">
-                    <h4 className="font-semibold text-slate-800">Return Trip</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <Bus className="w-4 h-4 text-slate-500" />
-                        <span>{returnTrip.operator_name}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <MapPin className="w-4 h-4 text-slate-500" />
-                        <span>{returnTrip.from_city} → {returnTrip.to_city}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <Calendar className="w-4 h-4 text-slate-500" />
-                        <span>{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'MMM d, yyyy') : 'Date TBD'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <Clock className="w-4 h-4 text-slate-500" />
-                        <span>{returnTrip.departure_time} - {returnTrip.arrival_time}</span>
-                      </div>
-                      {showSeatSelection && returnSelectedSeats.length > 0 && (
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Armchair className="w-4 h-4 text-slate-500" />
-                          <span className="font-medium">Seats: {returnSelectedSeats.join(', ')}</span>
-                        </div>
-                      )}
-                      <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.returnPrice)}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Extras */}
-                {extraLuggage > 0 && (
+                    {/* Extras */}
+                    {extraLuggage > 0 && (
                   <div className="pt-4 border-t border-slate-200 mb-4">
                     <div className="flex justify-between text-sm text-slate-700">
                       <span>Extra Luggage × {extraLuggage}</span>
