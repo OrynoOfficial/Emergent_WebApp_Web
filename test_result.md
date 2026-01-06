@@ -2088,3 +2088,53 @@ The travel round-trip feature allows users to search for bus tickets with a retu
 - `/app/new-frontend/src/pages/services/TravelBooking.jsx` - Booking page showing both trips
 
 ### Current Test Status: ✅ COMPLETED - FULLY WORKING
+
+## Current Testing Focus (2026-01-06 - SERVICE MANAGEMENT REVAMP)
+### SERVICE MANAGEMENT PAGES - DASHBOARD AND COMMUNICATIONS TABS REVAMP
+**Test Date:** 2026-01-06
+**Status:** IN PROGRESS
+**Test Focus:** Revamp Dashboard and Communications tabs across all service management pages
+
+**Changes Made:**
+1. Created reusable components:
+   - `/app/frontend/src/components/management/ServiceExecutiveDashboard.jsx` - Reusable dashboard component matching Hotel's design
+   - `/app/frontend/src/components/management/ServiceCommunicationsHub.jsx` - Reusable communications component with Contact Support feature
+
+2. Backend Updates:
+   - `/app/backend/routes/support_tickets.py` - Added `service_tag`, `operator_id`, `operator_name` fields to ticket creation
+   - Added `GET /api/support-tickets/operators-by-service` endpoint to get operators by service type
+
+3. Service Management Pages Updated:
+   - ✅ Travel Management - Dashboard and Communications tabs updated
+   - ✅ Restaurant Management - Dashboard and Communications tabs updated
+   - ✅ Car Rental Management - Dashboard and Communications tabs updated
+   - ✅ Laundry Management - Dashboard and Communications tabs updated
+   - ⏳ Banquet Management - Pending
+   - ⏳ Cinema Management - Pending
+   - ⏳ Package Management - Pending
+
+4. Customer Support Page:
+   - `/app/frontend/src/pages/Support.jsx` - Updated ticket submission to use new API with fallback
+
+5. Communications Hub Features:
+   - Notifications panel with unread indicator
+   - Quick Actions (Send Announcement, Create Alert)
+   - Contact Support dialog with:
+     - Operator selection (auto-filled for operators, dropdown for admin/super_admin)
+     - Service tag auto-included based on page context
+     - Subject and message fields
+     - Priority selection
+   - Schedule Meeting feature
+   - Active Alerts management
+
+**Test Cases:**
+1. Verify Dashboard tab matches Hotel's design (KPI cards, charts, distribution)
+2. Verify Communications tab has all Quick Actions
+3. Test Contact Support dialog with operator selection
+4. Test service tag and operator info are included in ticket
+5. Test across different user roles (operator, admin, super_admin)
+
+**Test Credentials:**
+- Super Admin: superadmin@oryno.com / testpassword123
+- Admin: admin@test.com / testpassword123
+- Customer: customer@test.com / testpassword123
