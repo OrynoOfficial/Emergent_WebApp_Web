@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Session Timeout Configuration Feature Testing
-Tests the new session timeout configuration system including:
-- Public session timeout endpoint
-- Authenticated settings retrieval
-- Session timeout updates (super_admin only)
-- JWT token validation with dynamic timeout
+Restaurant Management Page Functionality Testing
+Tests the restaurant menu API functionality including:
+- Get restaurants list
+- Get menu items for restaurant
+- Create new menu item
+- Update menu item
+- Delete menu item
 """
 
 import requests
