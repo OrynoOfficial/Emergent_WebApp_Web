@@ -258,7 +258,19 @@ export default function LaundryManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard pressings={pressings} />
+          <ServiceExecutiveDashboard
+            serviceType="Laundry"
+            serviceIcon={<Shirt className="h-8 w-8" />}
+            primaryColor="teal"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Shops"
+            secondaryLabel="Services"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
