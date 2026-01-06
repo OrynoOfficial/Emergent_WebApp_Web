@@ -793,10 +793,10 @@ Previous authentication session issues with service routes have been resolved - 
   message: "TRAVEL ROUND-TRIP BACKEND API TESTING COMPLETE (2026-01-04 - CURRENT REVIEW REQUEST): ✅ 100% SUCCESS RATE - ALL BACKEND APIS FOR ROUND-TRIP BOOKING WORKING CORRECTLY. ✅ ROUTE SEARCH: Both directions working perfectly - Douala → Yaoundé (1 route found: Cameroon Express Services, 5000 FCFA) and Yaoundé → Douala (1 route found: Oryno Travel & Hospitality, 7500 FCFA). ✅ SEAT AVAILABILITY: Both routes returning proper availability data (Outbound: 50 total seats, 50 available; Return: 30 total seats, 30 available). ✅ SEAT RESERVATION: Successfully reserved seats for both trips (Outbound: A1,A2 for 10000 FCFA; Return: B1,B2 for 15000 FCFA) with proper 10-minute timeout. ✅ ORDER CREATION: Both trips created separate orders (TRV-000015 and TRV-000016) with correct amounts and booking details. ✅ USER BOOKINGS: Successfully retrieved and verified both bookings in user's booking list. ✅ CLEANUP: Successfully released reserved seats for both trips. ✅ BACKEND CONCLUSION: All backend APIs fully support round-trip booking functionality - route search works for both directions, seat availability and reservation work for both trips, orders are created separately for each trip, user can view all bookings and orders. The backend infrastructure is completely ready for round-trip booking."
 
 ## Current Testing Focus (2026-01-06 - Latest Session)
-### HOTEL MANAGEMENT CENTER AND CUSTOMER SERVICE CENTER TESTING - ✅ 95% SUCCESS RATE - MOSTLY WORKING
+### SERVICE MANAGEMENT DASHBOARD & COMMUNICATIONS REVAMP TESTING - ✅ 90.5% SUCCESS RATE - MOSTLY WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
-**Status:** ✅ 95% SUCCESS RATE - ALL MAJOR FEATURES WORKING CORRECTLY
-**Frontend URL:** https://admin-dashboard-642.preview.emergentagent.com
+**Status:** ✅ 90.5% SUCCESS RATE (57/63 tests passed) - ALL MAJOR FEATURES WORKING CORRECTLY
+**API Base URL:** https://admin-dashboard-642.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
