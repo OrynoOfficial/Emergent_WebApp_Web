@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { 
   ArrowLeft, Star, MapPin, Wifi, Car, Utensils, Droplets, Dumbbell,
   CheckCircle, Clock, Users, CalendarIcon, Bed, Maximize, Plane,
-  Landmark, ChevronLeft, ChevronRight, X, Eye
+  Landmark, ChevronLeft, ChevronRight, X, Eye, Coffee, Sparkles
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
