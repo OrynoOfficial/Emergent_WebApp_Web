@@ -362,7 +362,7 @@ export default function PackageBooking() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-slate-700">I'm the sender</span>
+                      <span className="font-medium text-slate-700">I&apos;m the sender</span>
                     </div>
                     <Switch checked={isSenderSelf} onCheckedChange={handleSenderSelfChange} />
                   </div>
