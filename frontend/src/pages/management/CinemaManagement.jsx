@@ -479,7 +479,19 @@ export default function CinemaManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard cinemas={cinemas} movies={movies} />
+          <ServiceExecutiveDashboard
+            serviceType="Cinema"
+            serviceIcon={<Film className="h-8 w-8" />}
+            primaryColor="red"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Cinemas"
+            secondaryLabel="Screens"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
