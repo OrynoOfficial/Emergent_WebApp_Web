@@ -426,42 +426,72 @@ export default function OperatorsManagement() {
 
       {/* View Operator Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="bg-white max-w-lg">
+        <DialogContent className="bg-white max-w-3xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Operator Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              {selectedOperator?.name || 'Operator Details'}
+            </DialogTitle>
           </DialogHeader>
           {selectedOperator && (
-            <div className="space-y-6 py-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Building className="w-8 h-8 text-blue-600" />
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+                <TabsTrigger 
+                  value="details" 
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none px-4 py-2"
+                >
+                  <Building className="h-4 w-4 mr-2" /> Details
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="team"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none px-4 py-2"
+                >
+                  <Users className="h-4 w-4 mr-2" /> Team
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details" className="mt-4">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Building className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{selectedOperator.name}</h3>
+                      {getStatusBadge(selectedOperator.status)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /><span>{selectedOperator.email}</span></div>
+                    <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /><span>{selectedOperator.phone}</span></div>
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span>{selectedOperator.city}</span></div>
+                    <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" /><span>Joined {selectedOperator.joined_date}</span></div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                    <div className="text-center p-4 bg-slate-50 rounded-lg">
+                      <p className="text-2xl font-bold text-[#082c59]">{selectedOperator.total_bookings?.toLocaleString()}</p>
+                      <p className="text-sm text-gray-500">Total Bookings</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-lg">
+                      <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(selectedOperator.revenue || 0)}</p>
+                      <p className="text-sm text-gray-500">Revenue</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-lg">
+                      <p className="text-2xl font-bold text-[#082c59]">{selectedOperator.rating || '-'}</p>
+                      <p className="text-sm text-gray-500">Rating</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold">{selectedOperator.name}</h3>
-                  {getStatusBadge(selectedOperator.status)}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /><span>{selectedOperator.email}</span></div>
-                <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /><span>{selectedOperator.phone}</span></div>
-                <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span>{selectedOperator.city}</span></div>
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" /><span>Joined {selectedOperator.joined_date}</span></div>
-              </div>
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
-                  <p className="text-2xl font-bold text-[#082c59]">{selectedOperator.total_bookings?.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500">Total Bookings</p>
-                </div>
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
-                  <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(selectedOperator.revenue || 0)}</p>
-                  <p className="text-sm text-gray-500">Revenue</p>
-                </div>
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
-                  <p className="text-2xl font-bold text-[#082c59]">{selectedOperator.rating || '-'}</p>
-                  <p className="text-sm text-gray-500">Rating</p>
-                </div>
-              </div>
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="team" className="mt-4 max-h-[50vh] overflow-y-auto">
+                <OperatorTeamManagement 
+                  operatorId={selectedOperator._id || selectedOperator.id} 
+                  operatorName={selectedOperator.name}
+                  embedded={true}
+                />
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
