@@ -334,6 +334,9 @@ export default function PackageManagement() {
   const [editingPackage, setEditingPackage] = useState(null);
   const [packageForm, setPackageForm] = useState(DEFAULT_PACKAGE_FORM);
 
+  // Use the package dashboard data hook
+  const dashboardData = usePackageDashboardData(packages);
+
   const handleViewPackage = (pkg) => {
     setViewingPackage(pkg);
     setIsViewDialogOpen(true);
