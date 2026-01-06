@@ -67,7 +67,7 @@ async def register(user_data: UserCreate, request: Request):
         "user_id": user["_id"]
     }
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login(credentials: UserLogin, request: Request):
     """Login user"""
     db = get_database()
