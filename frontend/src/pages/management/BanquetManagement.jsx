@@ -427,7 +427,19 @@ export default function BanquetManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
-          <ExecutiveDashboard banquets={banquets} />
+          <ServiceExecutiveDashboard
+            serviceType="Banquet"
+            serviceIcon={<UtensilsCrossed className="h-8 w-8" />}
+            primaryColor="pink"
+            stats={dashboardData.stats}
+            bookingsByStatus={dashboardData.bookingsByStatus}
+            dailyTrend={dashboardData.dailyTrend}
+            distribution={dashboardData.distribution}
+            recentBookings={dashboardData.recentBookings}
+            itemLabel="Halls"
+            secondaryLabel="Total Capacity"
+            secondaryCount={dashboardData.secondaryCount}
+          />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6">
