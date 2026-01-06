@@ -154,6 +154,31 @@ export default function Settings() {
     }
   }, [user]);
 
+  // Load session timeout settings for admins
+  useEffect(() => {
+    const loadSessionTimeoutSettings = async () => {
+      if (user?.role === 'admin' || user?.role === 'super_admin') {
+        try {
+          const response = await api.get('/system-settings/');
+          if (response.data) {
+            setSessionTimeoutConfig(prev => ({
+              ...prev,
+              session_timeout_minutes: response.data.session_timeout_minutes,
+              min_session_timeout: response.data.min_session_timeout,
+              max_session_timeout: response.data.max_session_timeout,
+              loading: false,
+            }));
+          }
+        } catch (error) {
+          console.log('Could not load session timeout settings:', error);
+          setSessionTimeoutConfig(prev => ({ ...prev, loading: false }));
+        }
+      }
+    };
+    
+    loadSessionTimeoutSettings();
+  }, [user?.role]);
+
   // Handle avatar upload
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
