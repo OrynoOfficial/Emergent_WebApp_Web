@@ -95,9 +95,21 @@ export default function BanquetBooking() {
   const loadVenue = async () => {
     try {
       setLoading(true);
+      // First try sessionStorage
+      const storedVenue = sessionStorage.getItem('selectedVenue');
+      if (storedVenue) {
+        const parsed = JSON.parse(storedVenue);
+        if (parsed.id === id || !id) {
+          setVenue(parsed);
+          setLoading(false);
+          return;
+        }
+      }
+      // Then try API
       const res = await banquetApi.get(id);
       setVenue(res.data);
     } catch (error) {
+      // Fallback to mock data
       setVenue({
         id: id,
         name: 'Grand Palace Hall',
