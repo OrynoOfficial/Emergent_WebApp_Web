@@ -2805,3 +2805,24 @@ Comprehensive multi-tenant permission system for operator-scoped environments.
 - GET /api/hotels/management/my-hotels (operator-scoped)
 - POST /api/operator-roles/operators/{operator_id}/roles (create custom role)
 
+
+## Frontend Multi-Tenant Updates Testing (2026-01-06)
+
+### Feature Description:
+Frontend updates for multi-tenant permission system:
+1. AuthContext updated to store operator context and effective permissions
+2. Layout navigation filters services based on operator service types
+3. Operator context indicator in header for operator users
+4. New OperatorRolesManagement component for managing custom roles
+
+### Test Cases:
+1. Super admin can see all services in navigation
+2. Operator users only see services their operator manages
+3. Operator context badge shows in header for operator users
+4. OperatorsManagement has new "Roles" tab
+5. Custom roles can be created, edited, and deleted
+6. Permissions selector shows categorized permissions
+
+### Test Credentials:
+- Super Admin: superadmin@oryno.com / testpassword123
+
