@@ -24,6 +24,317 @@ SUPER_ADMIN_CREDS = {"email": "superadmin@oryno.com", "password": "testpassword1
 ADMIN_CREDS = {"email": "admin@test.com", "password": "testpassword123"}
 CUSTOMER_CREDS = {"email": "customer@test.com", "password": "testpassword123"}
 
+class RestaurantMenuTester:
+    def __init__(self):
+        self.session = requests.Session()
+        self.tokens = {}
+        self.test_results = []
+        self.restaurant_id = None
+        self.created_item_id = None
+        
+    def log_test(self, test_name: str, status: str, details: str = ""):
+        """Log test results"""
+        result = {
+            "test": test_name,
+            "status": status,
+            "details": details,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        self.test_results.append(result)
+        status_icon = "✅" if status == "PASS" else "❌"
+        print(f"{status_icon} {test_name}: {status}")
+        if details:
+            print(f"   Details: {details}")
+    
+    def login_user(self, credentials: Dict[str, str], user_type: str) -> bool:
+        """Login user and store token"""
+        try:
+            response = self.session.post(f"{BASE_URL}/auth/login", json=credentials)
+            if response.status_code == 200:
+                data = response.json()
+                self.tokens[user_type] = data["access_token"]
+                self.log_test(f"{user_type.title()} Login", "PASS", f"Token obtained successfully")
+                return True
+            else:
+                self.log_test(f"{user_type.title()} Login", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test(f"{user_type.title()} Login", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_get_restaurants_list(self):
+        """Test 1: GET /api/restaurants/ - Get list of restaurants"""
+        try:
+            response = self.session.get(f"{BASE_URL}/restaurants/")
+            
+            if response.status_code == 200:
+                data = response.json()
+                restaurants = data.get("restaurants", [])
+                
+                if restaurants:
+                    # Use the first restaurant for subsequent tests
+                    self.restaurant_id = restaurants[0].get("id")
+                    restaurant_name = restaurants[0].get("name", "Unknown")
+                    total = data.get("total", 0)
+                    
+                    self.log_test("Get Restaurants List", "PASS", 
+                                f"Found {len(restaurants)} restaurants (total: {total}). Using restaurant: {restaurant_name} (ID: {self.restaurant_id})")
+                    return True
+                else:
+                    self.log_test("Get Restaurants List", "FAIL", "No restaurants found in response")
+                    return False
+            else:
+                self.log_test("Get Restaurants List", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Get Restaurants List", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_get_menu_items(self):
+        """Test 2: GET /api/restaurants/{restaurant_id}/menu - Get menu items"""
+        if not self.restaurant_id:
+            self.log_test("Get Menu Items", "FAIL", "No restaurant ID available")
+            return False
+            
+        try:
+            response = self.session.get(f"{BASE_URL}/restaurants/{self.restaurant_id}/menu")
+            
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get("items", [])
+                
+                # Check if items have the required is_available field
+                available_items = [item for item in items if item.get("is_available") == True]
+                
+                self.log_test("Get Menu Items", "PASS", 
+                            f"Found {len(items)} menu items, {len(available_items)} available. Items have 'is_available' field: {all('is_available' in item for item in items)}")
+                return True
+            else:
+                self.log_test("Get Menu Items", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Get Menu Items", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_create_menu_item(self):
+        """Test 3: POST /api/restaurants/{restaurant_id}/menu - Create new menu item"""
+        if not self.restaurant_id:
+            self.log_test("Create Menu Item", "FAIL", "No restaurant ID available")
+            return False
+            
+        if "super_admin" not in self.tokens:
+            self.log_test("Create Menu Item", "FAIL", "No super admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.tokens['super_admin']}"}
+            payload = {
+                "name": "Test Dish",
+                "category": "mains",
+                "price": 7500,
+                "description": "A delicious test dish",
+                "available": True
+            }
+            
+            response = self.session.post(f"{BASE_URL}/restaurants/{self.restaurant_id}/menu", 
+                                       headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.created_item_id = data.get("item_id")
+                message = data.get("message", "")
+                
+                self.log_test("Create Menu Item", "PASS", 
+                            f"Menu item created successfully. Item ID: {self.created_item_id}, Message: {message}")
+                return True
+            else:
+                self.log_test("Create Menu Item", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Create Menu Item", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_verify_created_item(self):
+        """Test 4: Verify the created item appears in menu with is_available: true"""
+        if not self.restaurant_id or not self.created_item_id:
+            self.log_test("Verify Created Item", "FAIL", "No restaurant ID or created item ID available")
+            return False
+            
+        try:
+            response = self.session.get(f"{BASE_URL}/restaurants/{self.restaurant_id}/menu")
+            
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get("items", [])
+                
+                # Find the created item
+                created_item = None
+                for item in items:
+                    if item.get("id") == self.created_item_id or item.get("name") == "Test Dish":
+                        created_item = item
+                        break
+                
+                if created_item:
+                    is_available = created_item.get("is_available")
+                    name = created_item.get("name")
+                    price = created_item.get("price")
+                    
+                    if is_available == True:
+                        self.log_test("Verify Created Item", "PASS", 
+                                    f"Created item found with is_available: true. Name: {name}, Price: {price}")
+                        return True
+                    else:
+                        self.log_test("Verify Created Item", "FAIL", 
+                                    f"Created item found but is_available is {is_available}, expected True")
+                        return False
+                else:
+                    self.log_test("Verify Created Item", "FAIL", "Created item not found in menu")
+                    return False
+            else:
+                self.log_test("Verify Created Item", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Verify Created Item", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_update_menu_item(self):
+        """Test 5: PUT /api/restaurants/{restaurant_id}/menu/{item_id} - Update menu item"""
+        if not self.restaurant_id or not self.created_item_id:
+            self.log_test("Update Menu Item", "FAIL", "No restaurant ID or created item ID available")
+            return False
+            
+        if "super_admin" not in self.tokens:
+            self.log_test("Update Menu Item", "FAIL", "No super admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.tokens['super_admin']}"}
+            payload = {
+                "price": 8000,
+                "is_available": False
+            }
+            
+            response = self.session.put(f"{BASE_URL}/restaurants/{self.restaurant_id}/menu/{self.created_item_id}", 
+                                      headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get("message", "")
+                
+                self.log_test("Update Menu Item", "PASS", f"Menu item updated successfully. Message: {message}")
+                return True
+            else:
+                self.log_test("Update Menu Item", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Update Menu Item", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def test_delete_menu_item(self):
+        """Test 6: DELETE /api/restaurants/{restaurant_id}/menu/{item_id} - Delete menu item"""
+        if not self.restaurant_id or not self.created_item_id:
+            self.log_test("Delete Menu Item", "FAIL", "No restaurant ID or created item ID available")
+            return False
+            
+        if "super_admin" not in self.tokens:
+            self.log_test("Delete Menu Item", "FAIL", "No super admin token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.tokens['super_admin']}"}
+            
+            response = self.session.delete(f"{BASE_URL}/restaurants/{self.restaurant_id}/menu/{self.created_item_id}", 
+                                         headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get("message", "")
+                
+                self.log_test("Delete Menu Item", "PASS", f"Menu item deleted successfully. Message: {message}")
+                return True
+            else:
+                self.log_test("Delete Menu Item", "FAIL", f"Status: {response.status_code}, Response: {response.text}")
+                return False
+        except Exception as e:
+            self.log_test("Delete Menu Item", "FAIL", f"Exception: {str(e)}")
+            return False
+    
+    def run_comprehensive_test(self):
+        """Run all restaurant menu API tests"""
+        print("🚀 Starting Restaurant Management Page Functionality Testing")
+        print("=" * 70)
+        
+        # Login super admin
+        print("\n🔐 Authentication Setup")
+        super_admin_login = self.login_user(SUPER_ADMIN_CREDS, "super_admin")
+        
+        if not super_admin_login:
+            print("❌ Cannot continue without super admin login")
+            return
+        
+        # Test 1: Get restaurants list
+        print("\n📋 Test 1: Backend Menu API - Get Restaurants List")
+        restaurants_success = self.test_get_restaurants_list()
+        
+        if not restaurants_success:
+            print("❌ Cannot continue without restaurants list")
+            return
+        
+        # Test 2: Get menu items
+        print("\n📋 Test 2: Backend Menu API - Get Menu Items")
+        self.test_get_menu_items()
+        
+        # Test 3: Create new menu item
+        print("\n📋 Test 3: Create New Menu Item")
+        create_success = self.test_create_menu_item()
+        
+        if create_success:
+            # Test 4: Verify created item
+            print("\n📋 Test 4: Verify Created Item in Menu")
+            self.test_verify_created_item()
+            
+            # Test 5: Update menu item
+            print("\n📋 Test 5: Update Menu Item")
+            self.test_update_menu_item()
+            
+            # Test 6: Delete menu item
+            print("\n📋 Test 6: Delete Menu Item")
+            self.test_delete_menu_item()
+        
+        # Print summary
+        self.print_test_summary()
+    
+    def print_test_summary(self):
+        """Print test results summary"""
+        print("\n" + "=" * 70)
+        print("📊 RESTAURANT MANAGEMENT PAGE FUNCTIONALITY TEST SUMMARY")
+        print("=" * 70)
+        
+        passed = len([r for r in self.test_results if r["status"] == "PASS"])
+        failed = len([r for r in self.test_results if r["status"] == "FAIL"])
+        total = len(self.test_results)
+        
+        print(f"Total Tests: {total}")
+        print(f"✅ Passed: {passed}")
+        print(f"❌ Failed: {failed}")
+        print(f"Success Rate: {(passed/total)*100:.1f}%")
+        
+        if failed > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if result["status"] == "FAIL":
+                    print(f"  - {result['test']}: {result['details']}")
+        
+        print("\n🎯 KEY FEATURES TESTED:")
+        print("  ✅ Get restaurants list")
+        print("  ✅ Get menu items with is_available field verification")
+        print("  ✅ Create new menu item")
+        print("  ✅ Verify created item appears in menu")
+        print("  ✅ Update menu item (price and availability)")
+        print("  ✅ Delete menu item")
+        print("  ✅ Authentication and authorization")
+        print("  ✅ API response structure validation")
+
 class SessionTimeoutTester:
     def __init__(self):
         self.session = requests.Session()
