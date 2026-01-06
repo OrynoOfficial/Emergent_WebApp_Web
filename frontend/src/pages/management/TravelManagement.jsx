@@ -132,18 +132,21 @@ const BusinessAnalytics = ({ routes, vehicles }) => {
       color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'][i % 5]
     }));
 
-    // Vehicle utilization
-    const vehicleUtilization = vehicles.slice(0, 6).map(v => ({
+    // Vehicle utilization - fixed values based on index
+    const vehicleUtilization = vehicles.slice(0, 6).map((v, i) => ({
       name: v.vehicle_name?.substring(0, 10) || 'Vehicle',
-      utilization: Math.floor(Math.random() * 40) + 60
+      utilization: 65 + (i * 5) // Sequential values: 65, 70, 75, 80, 85, 90
     }));
 
-    // Monthly trend
-    const monthlyTrend = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
-      month,
-      bookings: Math.floor(Math.random() * 200) + 100,
-      revenue: Math.floor(Math.random() * 2000000) + 500000
-    }));
+    // Monthly trend - fixed values
+    const monthlyTrend = [
+      { month: 'Jan', bookings: 145, revenue: 890000 },
+      { month: 'Feb', bookings: 168, revenue: 1020000 },
+      { month: 'Mar', bookings: 192, revenue: 1180000 },
+      { month: 'Apr', bookings: 156, revenue: 960000 },
+      { month: 'May', bookings: 210, revenue: 1350000 },
+      { month: 'Jun', bookings: 235, revenue: 1520000 }
+    ];
 
     return { routeDistribution, vehicleUtilization, monthlyTrend };
   }, [routes, vehicles]);
