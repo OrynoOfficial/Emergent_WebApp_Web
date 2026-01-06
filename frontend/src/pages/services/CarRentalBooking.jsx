@@ -92,17 +92,19 @@ export default function CarRentalBooking() {
           navigate('/services/car-rental');
           return;
         }
-        const carData = stored.vehicle ? {
-          ...stored.vehicle,
-          pickupDate: stored.pickupDate,
-          returnDate: stored.returnDate,
-          pricePerDay: stored.vehicle.price_per_day,
-          image: stored.vehicle.image || stored.vehicle.images?.[0] || '',
-          transmission: stored.vehicle.transmission,
-          fuel: stored.vehicle.fuel_type,
-          type: stored.vehicle.type,
-          pickupLocation: stored.vehicle.pickup_locations?.[0] || stored.pickupLocation || 'Selected Location'
-        } : stored;
+        // Handle both formats: {vehicle: {...}} or direct vehicle object
+        const vehicleData = stored.vehicle || stored;
+        const carData = {
+          ...vehicleData,
+          pickupDate: stored.pickupDate || vehicleData.pickupDate,
+          returnDate: stored.returnDate || vehicleData.returnDate,
+          pricePerDay: vehicleData.price_per_day || vehicleData.pricePerDay,
+          image: vehicleData.image || vehicleData.images?.[0] || '',
+          transmission: vehicleData.transmission,
+          fuel: vehicleData.fuel_type || vehicleData.fuel,
+          type: vehicleData.type,
+          pickupLocation: vehicleData.pickup_locations?.[0] || stored.pickupLocation || vehicleData.pickupLocation || 'Selected Location'
+        };
         setCar(carData);
         
         if (user?.email) {
