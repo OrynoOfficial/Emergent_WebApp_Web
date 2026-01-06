@@ -822,7 +822,15 @@ export default function HotelDetails() {
 
         {/* Room Selection Section */}
         <div id="rooms" className="mt-12 pt-8 border-t">
-          <h2 className="text-3xl font-bold mb-6">Choose your room</h2>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900">Choose your room</h2>
+              <p className="text-slate-500 mt-1">Select from our premium accommodations</p>
+            </div>
+            <Badge variant="outline" className="text-sm px-4 py-2">
+              {rooms.length} room{rooms.length !== 1 ? ' types' : ' type'} available
+            </Badge>
+          </div>
           
           {/* Booking Controls */}
           <div className="sticky top-0 bg-white/80 backdrop-blur-md z-10 py-4 mb-6 rounded-lg">
