@@ -530,7 +530,12 @@ export default function EventsManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Events"
+            serviceTag="events"
+            serviceIcon={<Calendar className="h-5 w-5 text-purple-600" />}
+            primaryColor="purple"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
