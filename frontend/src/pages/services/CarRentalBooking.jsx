@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
-import { ArrowLeft, Car, MapPin, Calendar, Users, Fuel, Settings, CreditCard, Check, Loader2 } from 'lucide-react';
+import { 
+  ArrowLeft, Car, MapPin, Calendar, Users, Fuel, Settings, CreditCard, Check, 
+  Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield
+} from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
@@ -18,11 +21,46 @@ import api from '../../api/client';
 import { toast } from 'sonner';
 
 const EXTRAS = [
-  { id: 'driver', name: 'With Driver', price: 25000, description: 'Professional driver included' },
-  { id: 'gps', name: 'GPS Navigation', price: 5000, description: 'Never get lost' },
-  { id: 'child_seat', name: 'Child Seat', price: 3000, description: 'Safety for little ones' },
-  { id: 'insurance', name: 'Full Insurance', price: 15000, description: 'Complete coverage' }
+  { id: 'driver', name: 'Professional Driver', price: 25000, icon: User, description: 'Experienced driver included' },
+  { id: 'gps', name: 'GPS Navigation', price: 5000, icon: MapPin, description: 'Never get lost' },
+  { id: 'child_seat', name: 'Child Seat', price: 3000, icon: Users, description: 'Safety for little ones' },
+  { id: 'insurance', name: 'Full Insurance', price: 15000, icon: Shield, description: 'Complete coverage' }
 ];
+
+// Step Indicator Component
+const StepIndicator = ({ currentStep }) => {
+  const steps = [
+    { num: 1, label: 'Extras' },
+    { num: 2, label: 'Details' },
+    { num: 3, label: 'Payment' }
+  ];
+
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.num}>
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+              currentStep >= step.num 
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' 
+                : 'bg-slate-200 text-slate-500'
+            }`}>
+              {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.num}
+            </div>
+            <span className={`text-xs mt-2 font-medium ${
+              currentStep >= step.num ? 'text-emerald-600' : 'text-slate-400'
+            }`}>{step.label}</span>
+          </div>
+          {idx < steps.length - 1 && (
+            <div className={`w-20 h-1 mx-2 rounded-full transition-all ${
+              currentStep > step.num ? 'bg-emerald-500' : 'bg-slate-200'
+            }`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
 
 export default function CarRentalBooking() {
   const { user } = useAuth();
@@ -32,6 +70,7 @@ export default function CarRentalBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [orderId, setOrderId] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -48,23 +87,21 @@ export default function CarRentalBooking() {
   useEffect(() => {
     const loadData = () => {
       try {
-        // Try both storage keys for backward compatibility
-        const stored = JSON.parse(sessionStorage.getItem('carRentalBookingDetails') || sessionStorage.getItem('selectedCar') || 'null');
+        const stored = JSON.parse(sessionStorage.getItem('carRentalBookingDetails') || sessionStorage.getItem('selectedVehicle') || 'null');
         if (!stored) {
           navigate('/services/car-rental');
           return;
         }
-        // Handle data from CarRentalDetails (carRentalBookingDetails) format
         const carData = stored.vehicle ? {
           ...stored.vehicle,
           pickupDate: stored.pickupDate,
           returnDate: stored.returnDate,
           pricePerDay: stored.vehicle.price_per_day,
-          image: stored.vehicle.image || '',
+          image: stored.vehicle.image || stored.vehicle.images?.[0] || '',
           transmission: stored.vehicle.transmission,
           fuel: stored.vehicle.fuel_type,
           type: stored.vehicle.type,
-          pickupLocation: stored.vehicle.pickup_locations?.[0] || 'Selected Location'
+          pickupLocation: stored.vehicle.pickup_locations?.[0] || stored.pickupLocation || 'Selected Location'
         } : stored;
         setCar(carData);
         
@@ -102,11 +139,17 @@ export default function CarRentalBooking() {
     );
   };
 
+  const getDays = () => {
+    if (!car?.pickupDate || !car?.returnDate) return car?.days || 1;
+    return Math.max(1, differenceInDays(new Date(car.returnDate), new Date(car.pickupDate)));
+  };
+
   const calculatePricing = () => {
     if (!car) return { base: 0, extras: 0, commission: 0, total: 0 };
     
-    const days = Math.max(1, differenceInDays(new Date(car.returnDate), new Date(car.pickupDate)));
-    const base = car.pricePerDay * days;
+    const days = getDays();
+    const dailyRate = car.pricePerDay || car.price_per_day || 35000;
+    const base = dailyRate * days;
     
     const extrasTotal = selectedExtras.reduce((sum, extraId) => {
       const extra = EXTRAS.find(e => e.id === extraId);
@@ -118,6 +161,7 @@ export default function CarRentalBooking() {
     const commission = subtotal * (commissionRate / 100);
     
     return {
+      dailyRate,
       days,
       base,
       extras: extrasTotal,
@@ -133,73 +177,97 @@ export default function CarRentalBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    if (response.redirectUrl) {
+      toast.info('Redirecting to payment...');
+      window.location.href = response.redirectUrl;
+      return;
+    }
+
     if (response.success || response.transactionRef) {
-      try {
-        // Create the booking in the backend
-        const bookingPayload = {
-          vehicle_id: car.id || car._id || 'temp-id',
-          vehicle_name: car.name,
+      toast.success('Booking confirmed!');
+      navigate('/orders');
+    }
+  };
+
+  const handlePaymentError = (error) => {
+    setPaymentInProgress(false);
+    setShowPaymentOverlay(false);
+    setTriggerPayment(false);
+    toast.error(error.message || 'Payment failed');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setPaymentInProgress(true);
+    setShowPaymentOverlay(true);
+    setCurrentStep(3);
+
+    try {
+      const pricing = calculatePricing();
+      const orderPayload = {
+        service_type: 'car_rental',
+        service_id: car.id,
+        service_name: car.name,
+        total_amount: pricing.total,
+        currency: 'XAF',
+        status: 'pending',
+        payment_status: 'pending',
+        booking_details: {
+          ...formData,
+          car_id: car.id,
+          car_name: car.name,
           pickup_date: car.pickupDate,
           return_date: car.returnDate,
           pickup_location: car.pickupLocation,
-          driver_name: formData.name,
-          driver_email: formData.email,
-          driver_phone: formData.phone,
-          driver_license: formData.licenseNumber,
-          driver_address: formData.address,
           extras: selectedExtras,
-          base_price: pricing.base,
-          extras_price: pricing.extras,
-          commission: pricing.commission,
-          total_amount: pricing.total
-        };
+          days: pricing.days
+        }
+      };
 
-        const bookingResponse = await api.post('/car-rental/book', bookingPayload);
-        
-        toast.success(`Booking Confirmed! Booking #${bookingResponse.data.booking_number}`);
-        sessionStorage.removeItem('selectedCar');
-        sessionStorage.removeItem('carRentalBookingDetails');
-        navigate('/orders');
-      } catch (error) {
-        console.error('Booking creation failed:', error);
-        toast.error(error.response?.data?.detail || 'Booking failed. Please try again.');
+      const response = await api.post('/orders/create', orderPayload);
+      
+      if (response.data?.order_id || response.data?.id) {
+        setOrderId(response.data.order_id || response.data.id);
+        setTriggerPayment(true);
       }
-    } else {
-      toast.error(`Booking Failed: ${response.message || 'Unknown error'}`);
+    } catch (error) {
+      toast.error('Failed to create booking');
+      setPaymentInProgress(false);
+      setShowPaymentOverlay(false);
     }
   };
 
   const pricing = calculatePricing();
-  const isFormValid = formData.name && formData.email && formData.phone && formData.licenseNumber;
-  
-  // Callback when MoMo dialog opens - hide the overlay since MoMo has its own UI
-  const handleMoMoDialogOpen = () => {
-    setShowPaymentOverlay(false);
-    setPaymentInProgress(false);
-  };
-  
-  // Callback when payment processing state changes
-  const handleProcessingChange = (isProcessing) => {
-    setShowPaymentOverlay(isProcessing);
-    if (!isProcessing) {
-      setPaymentInProgress(false);
-    }
-  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-[#052c59]" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-emerald-50">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-emerald-500/20 rounded-full animate-pulse"></div>
+            <Car className="h-10 w-10 text-emerald-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+          </div>
+          <p className="text-slate-600 mt-4 font-medium">Loading vehicle details...</p>
+        </div>
       </div>
     );
   }
 
   if (!car) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Card className="max-w-md mx-auto text-center p-8">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-emerald-50">
+        <Card className="max-w-md mx-auto text-center p-8 shadow-xl">
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-emerald-600" />
+          </div>
           <p className="text-slate-600 mb-4">Session expired. Please search again.</p>
-          <Button onClick={() => navigate('/services/car-rental')} className="bg-[#052c59]">
+          <Button onClick={() => navigate('/services/car-rental')} className="bg-emerald-500 hover:bg-emerald-600">
             Back to Search
           </Button>
         </Card>
@@ -208,261 +276,287 @@ export default function CarRentalBooking() {
   }
 
   return (
-    <div className="bg-slate-50 p-4 min-h-screen md:p-8">
-      {/* Payment Processing Overlay */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
       <PaymentProcessingOverlay 
         isVisible={showPaymentOverlay} 
-        message="Processing payment, please do not refresh page"
+        message="Processing your booking..."
       />
       
-      <div className="mx-auto max-w-6xl">
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" className="mr-4" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">Complete Your Rental</h1>
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Complete Your Booking</h1>
+              <p className="text-sm text-slate-500">{car.name}</p>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <StepIndicator currentStep={currentStep} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left - Form */}
+          {/* Left Column - Forms */}
           <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Users className="h-6 w-6 text-[#052c59]" />
-                  Driver Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-2 bg-slate-100 p-3 rounded-lg">
-                  <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
-                  <Label>I am the driver</Label>
+            {/* Extras Selection */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <Star className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Add Extras</h3>
+                    <p className="text-sm text-white/70">Enhance your rental experience</p>
+                  </div>
                 </div>
-                
+              </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {EXTRAS.map((extra) => {
+                    const isSelected = selectedExtras.includes(extra.id);
+                    const ExtraIcon = extra.icon;
+                    return (
+                      <div
+                        key={extra.id}
+                        onClick={() => toggleExtra(extra.id)}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-emerald-500 bg-emerald-50' 
+                            : 'border-slate-200 hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 rounded-lg ${isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                            <ExtraIcon className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-slate-800">{extra.name}</h4>
+                              <Checkbox checked={isSelected} className="pointer-events-none" />
+                            </div>
+                            <p className="text-sm text-slate-500 mt-1">{extra.description}</p>
+                            <p className="text-emerald-600 font-semibold mt-2">
+                              +{formatCurrency(extra.price)}/day
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Driver Information */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Driver Information</h3>
+                    <p className="text-sm text-white/70">Who will be driving?</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      <span className="font-medium text-slate-700">I'm the driver</span>
+                    </div>
+                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Full Name *</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      disabled={isSelf}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Phone Number *</Label>
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      disabled={isSelf}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email *</Label>
-                    <Input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Driver&apos;s License Number *</Label>
-                    <Input
-                      value={formData.licenseNumber}
-                      onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                      placeholder="Enter license number"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Address</Label>
-                    <Input
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Extras */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Add-Ons</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {EXTRAS.map(extra => (
-                  <div
-                    key={extra.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedExtras.includes(extra.id) ? 'border-[#052c59] bg-blue-50' : 'hover:bg-slate-50'
-                    }`}
-                    onClick={() => toggleExtra(extra.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox checked={selectedExtras.includes(extra.id)} />
-                      <div>
-                        <h4 className="font-semibold">{extra.name}</h4>
-                        <p className="text-sm text-slate-600">{extra.description}</p>
-                      </div>
+                    <Label className="text-slate-700 font-medium">Full Name *</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="John Doe"
+                        className="pl-10 h-12 bg-slate-50 border-slate-200"
+                        disabled={isSelf}
+                      />
                     </div>
-                    <p className="font-semibold text-[#052c59]">{formatCurrency(extra.price)}/day</p>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right - Summary */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Car className="h-6 w-6 text-[#052c59]" />
-                  Rental Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="relative h-32 rounded-lg overflow-hidden">
-                  <img src={car.image} alt={car.name} className="w-full h-full object-cover" />
-                </div>
-                
-                <div>
-                  <h3 className="font-bold text-lg">{car.name}</h3>
-                  <Badge>{car.type}</Badge>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2 text-sm text-slate-600">
-                  <div className="flex items-center gap-1">
-                    <Users className="h-4 w-4" />
-                    <span>{car.seats} seats</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Settings className="h-4 w-4" />
-                    <span>{car.transmission}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Fuel className="h-4 w-4" />
-                    <span>{car.fuel}</span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span>{car.pickupLocation}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-slate-400" />
-                    <span>{format(new Date(car.pickupDate), 'MMM dd')} - {format(new Date(car.returnDate), 'MMM dd, yyyy')}</span>
-                  </div>
-                </div>
-                
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>{pricing.days} day{pricing.days > 1 ? 's' : ''} × {formatCurrency(car.pricePerDay)}</span>
-                    <span>{formatCurrency(pricing.base)}</span>
-                  </div>
-                  {pricing.extras > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Add-ons</span>
-                      <span>{formatCurrency(pricing.extras)}</span>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-medium">Email Address *</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="john@example.com"
+                        className="pl-10 h-12 bg-slate-50 border-slate-200"
+                      />
                     </div>
-                  )}
-                  
-                  <CommissionBreakdown
-                    basePrice={pricing.subtotal}
-                    commissionRate={pricing.commissionRate}
-                    commissionAmount={pricing.commission}
-                    totalAmount={pricing.total}
-                    showDetails={true}
-                  />
-                  
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span className="text-emerald-600">{formatCurrency(pricing.total)}</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-medium">Phone Number *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="+237 6XX XXX XXX"
+                        className="pl-10 h-12 bg-slate-50 border-slate-200"
+                        disabled={isSelf}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-700 font-medium">License Number *</Label>
+                    <div className="relative">
+                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        value={formData.licenseNumber}
+                        onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
+                        placeholder="DL123456789"
+                        className="pl-10 h-12 bg-slate-50 border-slate-200"
+                      />
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <CreditCard className="h-6 w-6 text-purple-600" />
-                  Payment
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+            {/* Payment Section */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
+                <div className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-white/20 rounded-xl">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Payment Method</h3>
+                    <p className="text-sm text-white/70">Secure payment options</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
                 <PaymentMethodsSelection
                   amount={pricing.total}
-                  customerPhone={formData.phone}
-                  customerEmail={formData.email}
-                  serviceDetails={{
-                    service_category: 'car_rental',
-                    service_title: car.name,
-                    booking_details: { ...car, ...formData, selectedExtras }
-                  }}
-                  onPaymentInitiated={handlePaymentInitiated}
-                  disabled={!isFormValid || paymentInProgress}
-                  triggerPayment={triggerPayment}
-                  onTrigger={() => setPaymentInProgress(true)}
                   orderId={orderId}
-                  onMoMoDialogOpen={handleMoMoDialogOpen}
-                  onProcessingChange={handleProcessingChange}
+                  serviceName={car?.name || 'Car Rental'}
+                  onPaymentInitiated={handlePaymentInitiated}
+                  onPaymentError={handlePaymentError}
+                  triggerPayment={triggerPayment}
                 />
+              </div>
+            </div>
+          </div>
 
-                <Button
-                  onClick={async () => { 
-                    if (isFormValid && !paymentInProgress) {
-                      setPaymentInProgress(true);
-                      setShowPaymentOverlay(true);
-                      try {
-                        // Create order first
-                        if (!orderId) {
-                          const orderPayload = {
-                            service_type: 'car_rental',
-                            service_id: car.id || car._id,
-                            service_name: `${car.make || car.brand} ${car.model}`,
-                            total_amount: pricing.total,
-                            currency: 'XAF',
-                            status: 'pending',
-                            payment_status: 'pending',
-                            booking_details: {
-                              ...formData,
-                              car_id: car.id || car._id,
-                              car_name: `${car.make || car.brand} ${car.model}`,
-                              pickup_date: car.pickupDate,
-                              return_date: car.returnDate,
-                              extras: selectedExtras
-                            }
-                          };
-                          const response = await api.post('/orders/create', orderPayload);
-                          if (response.data?.order_id) {
-                            setOrderId(response.data.order_id);
-                            setTriggerPayment(true);
-                          } else {
-                            throw new Error('Failed to create order');
-                          }
-                        } else {
-                          setTriggerPayment(true);
-                        }
-                      } catch (error) {
-                        console.error('Order creation failed:', error);
-                        toast.error('Failed to create order. Please try again.');
-                        setPaymentInProgress(false);
-                        setShowPaymentOverlay(false);
-                      }
-                    }
-                  }}
-                  disabled={!isFormValid || paymentInProgress}
-                  className="w-full bg-[#052c59] hover:bg-[#052c59]/90 mt-4"
-                >
-                  {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {paymentInProgress ? 'Processing...' : `Pay ${formatCurrency(pricing.total)}`}
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Right Column - Summary */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                {/* Vehicle Preview */}
+                <div className="relative h-48 bg-gradient-to-br from-emerald-400 to-emerald-600">
+                  {car.image || car.images?.[0] ? (
+                    <img src={car.image || car.images?.[0]} alt={car.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Car className="w-16 h-16 text-white/50" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <Badge className="absolute top-4 left-4 bg-emerald-500 capitalize">{car.type}</Badge>
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <h3 className="text-white font-bold text-lg">{car.name}</h3>
+                    <div className="flex items-center gap-3 text-white/80 text-sm mt-1">
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {car.seats || 5}</span>
+                      <span className="flex items-center gap-1"><Settings className="w-3 h-3" /> {car.transmission}</span>
+                      <span className="flex items-center gap-1"><Fuel className="w-3 h-3" /> {car.fuel || car.fuel_type}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  {/* Rental Details */}
+                  <div className="mb-4 pb-4 border-b border-slate-100">
+                    <h4 className="font-semibold text-slate-800 mb-3">Rental Details</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <MapPin className="w-4 h-4 text-emerald-500" />
+                        <span>{car.pickupLocation}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Calendar className="w-4 h-4 text-emerald-500" />
+                        <span>
+                          {car.pickupDate ? format(new Date(car.pickupDate), 'MMM d') : 'Start'} 
+                          {' → '}
+                          {car.returnDate ? format(new Date(car.returnDate), 'MMM d, yyyy') : 'End'}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700">
+                        {pricing.days} day{pricing.days > 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Pricing Summary */}
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 -mx-5 -mb-5 p-5 rounded-b-2xl">
+                    <h4 className="font-semibold text-white mb-3">Price Breakdown</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between text-slate-300">
+                        <span>{formatCurrency(pricing.dailyRate)} × {pricing.days} days</span>
+                        <span>{formatCurrency(pricing.base)}</span>
+                      </div>
+                      {pricing.extras > 0 && (
+                        <div className="flex justify-between text-slate-300">
+                          <span>Extras</span>
+                          <span>+{formatCurrency(pricing.extras)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-300">
+                        <span>Service Fee</span>
+                        <span>+{formatCurrency(pricing.commission)}</span>
+                      </div>
+                      <div className="pt-3 mt-3 border-t border-slate-700">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white font-semibold">Total</span>
+                          <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleSubmit}
+                      disabled={paymentInProgress}
+                      className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white h-12 font-semibold rounded-xl"
+                    >
+                      {paymentInProgress ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Car className="w-4 h-4 mr-2" />
+                          Confirm Booking
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
