@@ -1,7 +1,15 @@
 # Test Results - Hotel Management & Customer Service Updates
 
 ## Current Testing Focus
-1. Operator Users Management System - COMPLETED ✅
+1. Session Timeout Configuration Feature - COMPLETED ✅
+   - GET /api/system-settings/public/session-timeout - Public endpoint (no auth)
+   - GET /api/system-settings/ - Authenticated endpoint (admin/super_admin)
+   - PUT /api/system-settings/session-timeout - Update endpoint (super_admin only)
+   - JWT token validation with dynamic timeout
+   - Boundary value testing (15-120 minutes)
+   - Permission enforcement testing
+
+2. Operator Users Management System - COMPLETED ✅
    - GET /api/operators/{operator_id}/users - List users for operator
    - GET /api/operators/{operator_id}/stats - User statistics  
    - GET /api/operators/{operator_id}/users/available - Available users for assignment
