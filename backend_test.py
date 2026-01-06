@@ -3735,7 +3735,10 @@ def main():
     # Test login with correct credentials first
     tester.test_user_registration_and_login()
     
-    # Travel Round-Trip Backend APIs (Current Review Request)
+    # Service Management Dashboard & Communications Revamp (Current Review Request)
+    tester.test_service_management_dashboard_communications()
+    
+    # Travel Round-Trip Backend APIs (Previous Review Request)
     tester.test_travel_round_trip_backend_apis()
     
     # Permissions Enforcement System (Previous Review Request)
