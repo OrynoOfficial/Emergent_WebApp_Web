@@ -380,7 +380,12 @@ export default function CarRentalManagement() {
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
-          <CommunicationsHub user={user} />
+          <ServiceCommunicationsHub
+            serviceType="Car Rental"
+            serviceTag="car_rental"
+            serviceIcon={<Car className="h-5 w-5 text-green-600" />}
+            primaryColor="green"
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
