@@ -264,13 +264,21 @@ async def verify_2fa(
 
 @router.get("/me", response_model=dict)
 async def get_me(current_user: dict = Depends(get_current_active_user)):
-    """Get current user info"""
+    """Get current user info with operator context"""
     # Remove sensitive data
     user_data = current_user.copy()
     user_data.pop("password_hash", None)
     user_data.pop("two_fa_secret", None)
     user_data.pop("email_verification_token", None)
     user_data.pop("password_reset_token", None)
+    
+    # Convert _id to id for frontend
+    if "_id" in user_data:
+        user_data["id"] = user_data.pop("_id")
+    
+    # Include operator context and permissions
+    user_data["operator_context"] = user_data.pop("_operator_context", None)
+    user_data["effective_permissions"] = user_data.pop("_effective_permissions", [])
     
     return user_data
 
