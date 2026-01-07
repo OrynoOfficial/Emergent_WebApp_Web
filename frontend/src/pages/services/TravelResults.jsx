@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../components/ui/sheet';
 import { Input } from '../../components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { 
   ArrowLeft, Clock, Bus, Star, MapPin, Users, Armchair, Wifi, Coffee, UtensilsCrossed, 
   Loader2, ArrowRight, Calendar, SlidersHorizontal, LayoutGrid, List, Heart, 
-  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X
+  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image
 } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
@@ -48,13 +48,44 @@ const getVehicleTypeStyle = (vehicleType) => {
   switch(vehicleType?.toLowerCase()) {
     case 'vip': return 'bg-gradient-to-r from-purple-500 to-purple-600 text-white';
     case 'comfort': return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
-    case 'normal': return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
     default: return 'bg-gradient-to-r from-slate-500 to-slate-600 text-white';
   }
 };
 
-// Modern Trip Card for Grid View
-const TripCardGrid = ({ trip, onSelect, tripDate }) => {
+// Vehicle Image Thumbnail Component
+const VehicleImageThumbnails = ({ images, vehicleName, onImageClick }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+  const displayImages = (images || []).slice(0, 4);
+  
+  if (!displayImages.length) return null;
+  
+  return (
+    <div className="flex gap-1 mt-2">
+      {displayImages.map((img, idx) => (
+        <button 
+          key={idx}
+          onClick={(e) => { e.stopPropagation(); onImageClick(img, vehicleName); }}
+          className="w-10 h-8 rounded overflow-hidden bg-slate-100 hover:ring-2 hover:ring-blue-400 transition-all"
+        >
+          <img 
+            src={getImageUrl(img)} 
+            alt={`${vehicleName} ${idx + 1}`} 
+            className="w-full h-full object-cover"
+          />
+        </button>
+      ))}
+      {(images || []).length > 4 && (
+        <div className="w-10 h-8 rounded bg-slate-200 flex items-center justify-center text-xs text-slate-600">
+          +{images.length - 4}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Modern Trip Card for Grid View with Vehicle Info
+const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const tripAmenities = trip.amenities?.length > 0 ? trip.amenities : getDefaultAmenities(trip.vehicle_type);
 
@@ -106,7 +137,7 @@ const TripCardGrid = ({ trip, onSelect, tripDate }) => {
         </div>
 
         {/* Quick Info */}
-        <div className="flex items-center justify-between text-sm bg-slate-50 rounded-xl p-3 mb-4">
+        <div className="flex items-center justify-between text-sm bg-slate-50 rounded-xl p-3 mb-3">
           <div className="flex items-center gap-1.5 text-orange-600">
             <Armchair className="w-4 h-4" />
             <span className="font-medium">{trip.available_seats || 40} seats</span>
@@ -116,6 +147,23 @@ const TripCardGrid = ({ trip, onSelect, tripDate }) => {
             <span className="font-medium">Insured</span>
           </div>
         </div>
+
+        {/* Vehicle Name & Images */}
+        {trip.vehicle_name && (
+          <div className="bg-blue-50 rounded-lg p-2.5 mb-3">
+            <div className="flex items-center gap-2">
+              <Bus className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">{trip.vehicle_name}</span>
+            </div>
+            {trip.vehicle_images?.length > 0 && (
+              <VehicleImageThumbnails 
+                images={trip.vehicle_images} 
+                vehicleName={trip.vehicle_name}
+                onImageClick={onImageClick}
+              />
+            )}
+          </div>
+        )}
 
         {/* Amenities */}
         <div className="flex flex-wrap gap-1.5 mb-4">
@@ -154,8 +202,8 @@ const TripCardGrid = ({ trip, onSelect, tripDate }) => {
   );
 };
 
-// Modern Trip Card for List View
-const TripCardList = ({ trip, onSelect, tripDate }) => {
+// Modern Trip Card for List View with Vehicle Info
+const TripCardList = ({ trip, onSelect, tripDate, onImageClick }) => {
   const tripAmenities = trip.amenities?.length > 0 ? trip.amenities : getDefaultAmenities(trip.vehicle_type);
 
   return (
@@ -209,6 +257,23 @@ const TripCardList = ({ trip, onSelect, tripDate }) => {
             </div>
           </div>
 
+          {/* Vehicle Name & Images */}
+          {trip.vehicle_name && (
+            <div className="bg-blue-50 rounded-lg p-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Bus className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-800">{trip.vehicle_name}</span>
+              </div>
+              {trip.vehicle_images?.length > 0 && (
+                <VehicleImageThumbnails 
+                  images={trip.vehicle_images} 
+                  vehicleName={trip.vehicle_name}
+                  onImageClick={onImageClick}
+                />
+              )}
+            </div>
+          )}
+
           {/* Amenities */}
           <div className="flex flex-wrap gap-2">
             {tripAmenities.map((amenity, idx) => {
@@ -242,7 +307,7 @@ const TripCardList = ({ trip, onSelect, tripDate }) => {
 
 export default function TravelResults() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   
   const [trips, setTrips] = useState([]);
@@ -254,6 +319,17 @@ export default function TravelResults() {
   const [startDateOffset, setStartDateOffset] = useState(0);
   const [endDateOffset, setEndDateOffset] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Editable search state
+  const [isEditingSearch, setIsEditingSearch] = useState(false);
+  const [editFrom, setEditFrom] = useState('');
+  const [editTo, setEditTo] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editPassengers, setEditPassengers] = useState(1);
+  
+  // Image preview state
+  const [previewImage, setPreviewImage] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState('');
 
   const from = searchParams.get('from') || '';
   const to = searchParams.get('to') || '';
@@ -268,13 +344,21 @@ export default function TravelResults() {
     return safeParse(baseDate, 'yyyy-MM-dd', new Date());
   }, [view, returnDate, date]);
 
+  // Initialize edit fields
+  useEffect(() => {
+    setEditFrom(from);
+    setEditTo(to);
+    setEditDate(date);
+    setEditPassengers(passengers);
+  }, [from, to, date, passengers]);
+
   const getMockTrips = useCallback((fromCity, toCity) => [
-    { id: 'ret-1', operator_name: 'Vatican Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '06:00', arrival_time: '09:30', price: 5000, vehicle_type: 'VIP', available_seats: 35, duration: '3h 30m', amenities: ['WiFi', 'Air Conditioning', 'Refreshments'] },
-    { id: 'ret-2', operator_name: 'Finex Voyage', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '08:00', arrival_time: '11:30', price: 4500, vehicle_type: 'Comfort', available_seats: 42, duration: '3h 30m', amenities: ['Air Conditioning', 'Comfortable Seats'] },
-    { id: 'ret-3', operator_name: 'Touristique Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '10:00', arrival_time: '13:30', price: 3500, vehicle_type: 'Normal', available_seats: 45, duration: '3h 30m', amenities: ['Air Conditioning'] },
-    { id: 'ret-4', operator_name: 'Vatican Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '14:00', arrival_time: '17:30', price: 5000, vehicle_type: 'VIP', available_seats: 28, duration: '3h 30m', amenities: ['WiFi', 'Air Conditioning', 'Refreshments', 'Reclining Seats'] },
-    { id: 'ret-5', operator_name: 'General Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '16:00', arrival_time: '19:30', price: 4000, vehicle_type: 'Comfort', available_seats: 38, duration: '3h 30m', amenities: ['Air Conditioning', 'Snacks'] },
-    { id: 'ret-6', operator_name: 'Buca Voyage', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '18:00', arrival_time: '21:30', price: 3000, vehicle_type: 'Normal', available_seats: 50, duration: '3h 30m', amenities: ['Air Conditioning'] },
+    { id: 'ret-1', operator_name: 'Vatican Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '06:00', arrival_time: '09:30', price: 5000, vehicle_type: 'VIP', available_seats: 35, duration: '3h 30m', amenities: ['WiFi', 'Air Conditioning', 'Refreshments'], vehicle_name: 'Mercedes Sprinter VIP', vehicle_images: [] },
+    { id: 'ret-2', operator_name: 'Finex Voyage', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '08:00', arrival_time: '11:30', price: 4500, vehicle_type: 'Comfort', available_seats: 42, duration: '3h 30m', amenities: ['Air Conditioning', 'Comfortable Seats'], vehicle_name: 'Toyota Coaster' },
+    { id: 'ret-3', operator_name: 'Touristique Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '10:00', arrival_time: '13:30', price: 3500, vehicle_type: 'Normal', available_seats: 45, duration: '3h 30m', amenities: ['Air Conditioning'], vehicle_name: 'Yutong Bus' },
+    { id: 'ret-4', operator_name: 'Vatican Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '14:00', arrival_time: '17:30', price: 5000, vehicle_type: 'VIP', available_seats: 28, duration: '3h 30m', amenities: ['WiFi', 'Air Conditioning', 'Refreshments', 'Reclining Seats'], vehicle_name: 'Mercedes Sprinter Executive' },
+    { id: 'ret-5', operator_name: 'General Express', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '16:00', arrival_time: '19:30', price: 4000, vehicle_type: 'Comfort', available_seats: 38, duration: '3h 30m', amenities: ['Air Conditioning', 'Snacks'], vehicle_name: 'Higer Bus' },
+    { id: 'ret-6', operator_name: 'Buca Voyage', from_city: fromCity || 'Douala', to_city: toCity || 'Yaoundé', departure_time: '18:00', arrival_time: '21:30', price: 3000, vehicle_type: 'Normal', available_seats: 50, duration: '3h 30m', amenities: ['Air Conditioning'], vehicle_name: 'Standard Coach' },
   ], []);
 
   const loadTrips = useCallback(async () => {
@@ -316,53 +400,67 @@ export default function TravelResults() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(trip => 
         trip.operator_name?.toLowerCase().includes(query) ||
-        trip.vehicle_type?.toLowerCase().includes(query)
+        trip.vehicle_type?.toLowerCase().includes(query) ||
+        trip.vehicle_name?.toLowerCase().includes(query)
       );
     }
     
-    switch (sortBy) {
-      case 'price_asc':
-        return filtered.sort((a, b) => a.price - b.price);
-      case 'price_desc':
-        return filtered.sort((a, b) => b.price - a.price);
-      case 'departure':
-      default:
-        return filtered.sort((a, b) => a.departure_time.localeCompare(b.departure_time));
-    }
-  }, [trips, sortBy, searchQuery]);
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price_asc': return (a.price || 0) - (b.price || 0);
+        case 'price_desc': return (b.price || 0) - (a.price || 0);
+        case 'departure':
+        default:
+          const timeA = a.departure_time?.replace(':', '') || '0000';
+          const timeB = b.departure_time?.replace(':', '') || '0000';
+          return parseInt(timeA) - parseInt(timeB);
+      }
+    });
+    
+    return filtered;
+  }, [trips, searchQuery, sortBy]);
 
-  const handleSelectTrip = (trip) => {
+  const handleTripSelect = (trip) => {
     if (isRoundTrip && view === 'outbound') {
-      setSelectedOutbound({
-        ...trip,
-        from_city: from,
-        to_city: to,
-        tripDate: date
-      });
+      setSelectedOutbound(trip);
       setView('return');
-      setStartDateOffset(0);
-      setEndDateOffset(2);
-      return;
+    } else {
+      const searchData = { from, to, date, passengers };
+      if (returnDate) searchData.returnDate = returnDate;
+      
+      const bookingData = isRoundTrip
+        ? { outbound: selectedOutbound, return: trip, ...searchData }
+        : { trip, ...searchData };
+      
+      navigate('/services/travel/booking', { state: bookingData });
     }
-
-    const outboundTrip = selectedOutbound || trip;
-    const returnTrip = isRoundTrip && view === 'return' ? {
-      ...trip,
-      from_city: to,
-      to_city: from,
-      tripDate: returnDate
-    } : null;
-
-    sessionStorage.setItem('selectedTrip', JSON.stringify({
-      outbound: outboundTrip,
-      return: returnTrip,
-      passengers,
-      departureDate: date,
-      returnDate: returnDate
-    }));
-
-    navigate('/services/travel/booking');
   };
+
+  const handleImageClick = (imageUrl, title) => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    const fullUrl = imageUrl?.startsWith('/api') ? `${backendUrl}${imageUrl}` : imageUrl;
+    setPreviewImage(fullUrl);
+    setPreviewTitle(title);
+  };
+
+  const handleUpdateSearch = () => {
+    const newParams = new URLSearchParams();
+    newParams.set('from', editFrom);
+    newParams.set('to', editTo);
+    newParams.set('date', editDate);
+    newParams.set('passengers', editPassengers.toString());
+    if (returnDate) newParams.set('return', returnDate);
+    setSearchParams(newParams);
+    setIsEditingSearch(false);
+  };
+
+  const tripDate = format(searchBaseDate, 'yyyy-MM-dd');
+
+  const returnTrip = isRoundTrip && view === 'return' ? {
+    ...trips[0],
+    from_city: to,
+    to_city: from
+  } : null;
 
   if (isLoading) {
     return (
@@ -384,15 +482,97 @@ export default function TravelResults() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/travel')} className="gap-2">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-[#082c59]">
-                {view === 'return' ? `${to} → ${from}` : `${from} → ${to}`}
-              </h1>
-              <p className="text-sm text-slate-500">
-                {filteredAndSortedTrips.length} trips found • {format(searchBaseDate, 'EEE, MMM d, yyyy')} • {passengers} passenger{passengers > 1 ? 's' : ''}
-              </p>
-            </div>
           </div>
+
+          {/* Highlighted Search Criteria Header - Editable */}
+          <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a3a75] text-white mb-4">
+            <CardContent className="p-4">
+              {isEditingSearch ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">From</label>
+                    <Input 
+                      value={editFrom} 
+                      onChange={(e) => setEditFrom(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      placeholder="Departure city"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">To</label>
+                    <Input 
+                      value={editTo} 
+                      onChange={(e) => setEditTo(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      placeholder="Destination city"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Date</label>
+                    <Input 
+                      type="date"
+                      value={editDate} 
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Passengers</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={editPassengers} 
+                        onChange={(e) => setEditPassengers(parseInt(e.target.value) || 1)}
+                        className="bg-white/10 border-white/20 text-white flex-1"
+                      />
+                      <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-[#082c59] hover:bg-white/90">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                        <Bus className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">{view === 'return' ? `${to} → ${from}` : `${from} → ${to}`}</h2>
+                        <div className="flex items-center gap-2 text-white/80 text-sm mt-0.5">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>Travel Route</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-4 pl-6 border-l border-white/20">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{format(searchBaseDate, 'EEE, MMM d, yyyy')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{passengers} passenger{passengers > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditingSearch(true)}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <Edit2 className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Round Trip Indicator */}
           {isRoundTrip && (
@@ -418,7 +598,7 @@ export default function TravelResults() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="text"
-                placeholder="Search by operator..."
+                placeholder="Search by operator or vehicle..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-slate-50 border-slate-200"
@@ -457,41 +637,71 @@ export default function TravelResults() {
         </div>
       </div>
 
-      {/* Results */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Results Summary */}
+      <div className="max-w-7xl mx-auto px-4 py-4">
+        <p className="text-sm text-slate-600">
+          {filteredAndSortedTrips.length} trips found
+        </p>
+      </div>
+
+      {/* Trip Cards */}
+      <div className="max-w-7xl mx-auto px-4 pb-8">
         {filteredAndSortedTrips.length === 0 ? (
-          <div className="text-center py-16">
-            <Bus className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No trips found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
-            <Button onClick={() => navigate('/services/travel')} className="bg-[#082c59]">
-              Modify Search
+          <Card className="p-12 text-center">
+            <Bus className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No trips found</h3>
+            <p className="text-slate-500 mb-4">Try adjusting your search criteria</p>
+            <Button onClick={() => setIsEditingSearch(true)} className="bg-[#082c59]">
+              <Edit2 className="w-4 h-4 mr-2" /> Modify Search
             </Button>
-          </div>
+          </Card>
         ) : viewMode === 'grid' ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAndSortedTrips.map((trip, idx) => (
-              <TripCardGrid
-                key={`${trip.id}-${idx}`}
-                trip={trip}
-                onSelect={handleSelectTrip}
-                tripDate={searchBaseDate}
+              <TripCardGrid 
+                key={trip.id || idx} 
+                trip={trip} 
+                onSelect={handleTripSelect}
+                tripDate={tripDate}
+                onImageClick={handleImageClick}
               />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredAndSortedTrips.map((trip, idx) => (
-              <TripCardList
-                key={`${trip.id}-${idx}`}
-                trip={trip}
-                onSelect={handleSelectTrip}
-                tripDate={searchBaseDate}
+              <TripCardList 
+                key={trip.id || idx} 
+                trip={trip} 
+                onSelect={handleTripSelect}
+                tripDate={tripDate}
+                onImageClick={handleImageClick}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" />
+              {previewTitle}
+            </DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <div className="flex items-center justify-center p-4">
+              <img 
+                src={previewImage} 
+                alt={previewTitle}
+                className="max-w-full max-h-[60vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
