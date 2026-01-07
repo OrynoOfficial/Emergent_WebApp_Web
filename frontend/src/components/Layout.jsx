@@ -671,7 +671,8 @@ export default function Layout({ children }) {
                 );
               })}
             </div>
-          </div>
+            </div>
+          )}
         </div>
       );
     }
