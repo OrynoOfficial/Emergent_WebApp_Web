@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
-  Utensils, Plus, LayoutDashboard, BarChart2, MessageSquare,
-  RefreshCw, MapPin, Star, Clock, Phone, Mail, Save, Trash2
+  Utensils, Plus, LayoutDashboard, MessageSquare, RefreshCw, MapPin, Star, 
+  Clock, Phone, Mail, Save, Trash2, Edit, Eye, ChevronRight, X, Menu, 
+  DollarSign, ChevronLeft
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -17,18 +18,26 @@ import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 
 // Shared components
-import { StatsGrid, MiniBarChart, MiniPieChart } from '@/components/management/shared';
 import { SearchFilter, Pagination, EmptyState, ConfirmDialog } from '@/components/management/shared';
 import { ImageCarousel } from '@/components/management/shared';
 
 // Restaurant-specific components
-import { RestaurantCard, MenuItemCard, RestaurantForm, MenuItemForm } from '@/components/management/restaurant';
+import { RestaurantForm, MenuItemForm } from '@/components/management/restaurant';
 
 // Service components
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 
 const ITEMS_PER_PAGE = 8;
+const PRICE_RANGE_LABELS = { budget: '$', moderate: '$$', upscale: '$$$', fine_dining: '$$$$' };
+const CATEGORY_COLORS = {
+  starters: 'bg-blue-100 text-blue-700',
+  mains: 'bg-orange-100 text-orange-700',
+  desserts: 'bg-pink-100 text-pink-700',
+  drinks: 'bg-cyan-100 text-cyan-700',
+  specials: 'bg-purple-100 text-purple-700',
+  sides: 'bg-green-100 text-green-700'
+};
 
 const DEFAULT_RESTAURANT_FORM = {
   name: '', description: '', cuisine_type: [], address: '', city: '', country: 'Cameroon',
@@ -40,7 +49,7 @@ const DEFAULT_MENU_ITEM = {
   name: '', description: '', category: '', price: '', is_available: true, image: '', popular: false
 };
 
-// Dashboard data generator - use seeded pseudo-random for mock data
+// Dashboard data generator
 const useDashboardData = (restaurants, menuItems) => {
   return useMemo(() => {
     const activeRestaurants = restaurants.filter(r => r.status === 'active');
@@ -50,7 +59,6 @@ const useDashboardData = (restaurants, menuItems) => {
       ? (restaurants.reduce((sum, r) => sum + (r.rating || 4.2), 0) / restaurants.length).toFixed(1)
       : 4.2;
 
-    // Cuisine distribution
     const cuisineCount = {};
     restaurants.forEach(r => {
       (r.cuisine_type || ['local']).forEach(c => {
@@ -61,13 +69,11 @@ const useDashboardData = (restaurants, menuItems) => {
       type: type.charAt(0).toUpperCase() + type.slice(1), count
     }));
 
-    // Monthly trend (deterministic based on restaurants count)
     const baseTrend = restaurants.length || 1;
     const dailyTrend = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => ({
       name: day, reservations: baseTrend * 3 + (i * 2) + 10
     }));
 
-    // Bookings by status (deterministic)
     const baseBookings = restaurants.length || 1;
     
     return {
@@ -79,17 +85,173 @@ const useDashboardData = (restaurants, menuItems) => {
         pendingBookings: baseBookings * 2 + 5,
         completedToday: baseBookings + 3
       },
-      bookingsByStatus: [
-        { name: 'Pending', value: baseBookings * 2 + 5 },
-        { name: 'Confirmed', value: baseBookings * 3 + 10 },
-        { name: 'Completed', value: baseBookings * 5 + 20 },
-        { name: 'Cancelled', value: baseBookings + 2 }
-      ],
+      bookingsByStatus: {
+        confirmed: baseBookings * 3 + 10,
+        pending: baseBookings * 2 + 5,
+        completed: baseBookings * 5 + 20,
+        cancelled: baseBookings + 2
+      },
       dailyTrend,
       distribution,
       secondaryCount: totalMenuItems
     };
   }, [restaurants, menuItems]);
+};
+
+// Modern Restaurant Card Component
+const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, canDelete }) => {
+  const images = restaurant.images?.filter(img => img) || [];
+  const cuisineTypes = restaurant.cuisine_type || [];
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+
+  return (
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-md">
+      {/* Image Section */}
+      <div className="relative h-44 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
+        {images.length > 0 ? (
+          <img 
+            src={getImageUrl(images[0])} 
+            alt={restaurant.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            onError={(e) => { e.target.src = 'https://placehold.co/400x300/f1f5f9/64748b?text=No+Image'; }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Utensils className="w-16 h-16 text-slate-300" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute top-3 left-3">
+          <Badge className={restaurant.status === 'active' ? 'bg-emerald-500 text-white border-0' : 'bg-slate-500 text-white border-0'}>
+            {restaurant.status || 'Active'}
+          </Badge>
+        </div>
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 px-2 py-1 rounded-lg">
+          <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+          <span className="font-semibold text-sm">{restaurant.rating || 4.5}</span>
+        </div>
+        <div className="absolute bottom-3 left-3 right-3 text-white">
+          <h3 className="font-bold text-lg truncate">{restaurant.name}</h3>
+          <div className="flex items-center gap-1 text-white/90 text-sm">
+            <MapPin className="w-3.5 h-3.5" />
+            <span className="truncate">{restaurant.address || restaurant.city}</span>
+          </div>
+        </div>
+      </div>
+      
+      <CardContent className="p-4">
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <Badge variant="outline">{PRICE_RANGE_LABELS[restaurant.price_range] || '$$'}</Badge>
+          {cuisineTypes.slice(0, 2).map(c => (
+            <Badge key={c} variant="secondary" className="capitalize text-xs">{c}</Badge>
+          ))}
+          {cuisineTypes.length > 2 && (
+            <Badge variant="outline" className="text-xs">+{cuisineTypes.length - 2}</Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 text-sm text-slate-500 mb-3">
+          <div className="flex items-center gap-1">
+            <Phone className="w-3.5 h-3.5" />
+            <span>{restaurant.phone || 'No phone'}</span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-3 border-t">
+          <Button 
+            size="sm" 
+            onClick={() => onViewMenu(restaurant)} 
+            className="flex-1 bg-orange-600 hover:bg-orange-700"
+          >
+            <Menu className="w-4 h-4 mr-1" /> View Menu
+          </Button>
+          {canEdit && (
+            <PermissionGate permission="restaurants.edit">
+              <Button size="sm" variant="outline" onClick={() => onEdit(restaurant)}>
+                <Edit className="w-4 h-4" />
+              </Button>
+            </PermissionGate>
+          )}
+          {canDelete && (
+            <PermissionGate permission="restaurants.delete">
+              <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => onDelete(restaurant)}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </PermissionGate>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Enhanced Menu Item Card with more info
+const EnhancedMenuItemCard = ({ item, onEdit, onDelete, canEdit, canDelete }) => {
+  const isAvailable = item.is_available !== false && item.available !== false;
+  const categoryColor = CATEGORY_COLORS[item.category] || 'bg-slate-100 text-slate-700';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+
+  return (
+    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+      <div className="flex">
+        {/* Image with scrollable thumbnails */}
+        <div className="w-32 h-32 flex-shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden relative">
+          {item.image ? (
+            <img 
+              src={getImageUrl(item.image)} 
+              alt={item.name}
+              className="w-full h-full object-cover"
+              onError={(e) => { e.target.src = 'https://placehold.co/200x200/f1f5f9/64748b?text=No+Image'; }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Utensils className="w-10 h-10 text-slate-300" />
+            </div>
+          )}
+          {item.popular && (
+            <div className="absolute top-1 left-1">
+              <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0.5">Popular</Badge>
+            </div>
+          )}
+        </div>
+        
+        {/* Info Section */}
+        <div className="flex-1 p-3 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h4 className="font-bold text-slate-900 line-clamp-1">{item.name}</h4>
+              <Badge className={`${categoryColor} text-xs`}>{item.category}</Badge>
+            </div>
+            <p className="text-xs text-slate-500 line-clamp-2 mb-2">{item.description || 'No description'}</p>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-lg text-orange-600">{formatFCFA(item.price)}</span>
+              <Badge className={`text-xs ${isAvailable ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {isAvailable ? 'Available' : 'Unavailable'}
+              </Badge>
+            </div>
+            
+            <div className="flex gap-1">
+              {canEdit && (
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(item)}>
+                  <Edit className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600" onClick={() => onDelete(item)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 };
 
 export default function RestaurantManagement() {
@@ -111,7 +273,7 @@ export default function RestaurantManagement() {
   
   // Selection state
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [menuViewMode, setMenuViewMode] = useState('grid');
+  const [showMenuPanel, setShowMenuPanel] = useState(false);
   
   // Dialog state
   const [isRestaurantDialogOpen, setIsRestaurantDialogOpen] = useState(false);
@@ -154,7 +316,7 @@ export default function RestaurantManagement() {
     }
   }, []);
 
-  // Load operators for assignment
+  // Load operators
   const loadOperators = useCallback(async () => {
     try {
       const res = await api.get('/operators/');
@@ -193,6 +355,18 @@ export default function RestaurantManagement() {
   }, [filteredRestaurants, currentPage]);
 
   const totalPages = Math.ceil(filteredRestaurants.length / ITEMS_PER_PAGE);
+
+  // Handle View Menu - opens menu panel on right
+  const handleViewMenu = (restaurant) => {
+    setSelectedRestaurant(restaurant);
+    setShowMenuPanel(true);
+  };
+
+  // Handle View Restaurant Details
+  const handleViewRestaurant = (restaurant) => {
+    setSelectedRestaurant(restaurant);
+    setIsViewDialogOpen(true);
+  };
 
   // Restaurant CRUD
   const openRestaurantDialog = (restaurant = null) => {
@@ -245,6 +419,7 @@ export default function RestaurantManagement() {
       setDeleteTarget(null);
       if (selectedRestaurant?.id === deleteTarget.item.id) {
         setSelectedRestaurant(null);
+        setShowMenuPanel(false);
       }
       loadRestaurants();
     } catch (error) {
@@ -358,9 +533,6 @@ export default function RestaurantManagement() {
             <TabsTrigger value="communications" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-lg px-4 py-2">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-lg px-4 py-2">
-              <BarChart2 className="h-4 w-4 mr-2" /> Analytics
-            </TabsTrigger>
           </TabsList>
 
           {/* Dashboard Tab */}
@@ -381,9 +553,9 @@ export default function RestaurantManagement() {
 
           {/* Management Tab */}
           <TabsContent value="management">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="flex gap-6">
               {/* Restaurants List */}
-              <div className="lg:col-span-2">
+              <div className={`${showMenuPanel ? 'flex-1' : 'w-full'} transition-all duration-300`}>
                 <Card className="shadow-lg border-0">
                   <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-xl">
                     <div className="flex items-center justify-between">
@@ -428,13 +600,12 @@ export default function RestaurantManagement() {
                       />
                     ) : (
                       <>
-                        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}>
+                        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
                           {paginatedRestaurants.map(restaurant => (
                             <RestaurantCard
                               key={restaurant.id}
                               restaurant={restaurant}
-                              viewMode={viewMode}
-                              onView={(r) => { setSelectedRestaurant(r); setIsViewDialogOpen(true); }}
+                              onViewMenu={handleViewMenu}
                               onEdit={openRestaurantDialog}
                               onDelete={confirmDeleteRestaurant}
                               canEdit={canEdit}
@@ -458,42 +629,72 @@ export default function RestaurantManagement() {
                 </Card>
               </div>
 
-              {/* Menu Panel */}
-              <div className="lg:col-span-1">
-                <Card className="shadow-lg border-0 sticky top-4">
-                  <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-t-xl">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      Menu Items
-                      {selectedRestaurant && (
-                        <Badge variant="secondary" className="bg-white/20 text-white">
-                          {selectedRestaurant.name}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    {!selectedRestaurant ? (
-                      <div className="text-center py-8 text-slate-500">
-                        <Utensils className="h-12 w-12 mx-auto mb-3 text-slate-300" />
-                        <p>Select a restaurant to view menu</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="text-sm text-slate-500">{menuItems.length} items</span>
-                          <PermissionGate permission="restaurants.edit">
-                            <Button size="sm" onClick={() => openMenuDialog()} className="bg-amber-600 hover:bg-amber-700">
-                              <Plus className="h-4 w-4 mr-1" /> Add Item
-                            </Button>
-                          </PermissionGate>
+              {/* Menu Panel (Slide-in from right) */}
+              {showMenuPanel && selectedRestaurant && (
+                <div className="w-[420px] flex-shrink-0 animate-in slide-in-from-right duration-300">
+                  <Card className="shadow-lg border-0 sticky top-4">
+                    <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-t-xl">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Menu className="h-5 w-5" />
+                            {selectedRestaurant.name}
+                          </CardTitle>
+                          <p className="text-amber-100 text-sm mt-1">Menu Items</p>
                         </div>
-                        <ScrollArea className="h-[400px]">
-                          <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-white hover:bg-white/20"
+                            onClick={() => handleViewRestaurant(selectedRestaurant)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-white hover:bg-white/20"
+                            onClick={() => openRestaurantDialog(selectedRestaurant)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-white hover:bg-white/20"
+                            onClick={() => { setShowMenuPanel(false); setSelectedRestaurant(null); }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <span className="text-sm text-slate-500 font-medium">{menuItems.length} items</span>
+                        <PermissionGate permission="restaurants.edit">
+                          <Button size="sm" onClick={() => openMenuDialog()} className="bg-amber-600 hover:bg-amber-700">
+                            <Plus className="h-4 w-4 mr-1" /> Add Item
+                          </Button>
+                        </PermissionGate>
+                      </div>
+                      
+                      <ScrollArea className="h-[500px] pr-2">
+                        {menuItems.length === 0 ? (
+                          <div className="text-center py-8 text-slate-500">
+                            <Utensils className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                            <p>No menu items yet</p>
+                            <Button size="sm" onClick={() => openMenuDialog()} className="mt-3 bg-amber-600">
+                              <Plus className="h-4 w-4 mr-1" /> Add First Item
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
                             {menuItems.map(item => (
-                              <MenuItemCard
+                              <EnhancedMenuItemCard
                                 key={item.id}
                                 item={item}
-                                viewMode="list"
                                 onEdit={openMenuDialog}
                                 onDelete={confirmDeleteMenuItem}
                                 canEdit={canEdit}
@@ -501,12 +702,12 @@ export default function RestaurantManagement() {
                               />
                             ))}
                           </div>
-                        </ScrollArea>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -514,34 +715,12 @@ export default function RestaurantManagement() {
           <TabsContent value="communications">
             <ServiceCommunicationsHub serviceType="Restaurants" serviceIcon={<Utensils className="h-6 w-6" />} />
           </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Reservations by Day</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MiniBarChart data={dashboardData.dailyTrend} dataKey="reservations" nameKey="name" height={250} />
-                </CardContent>
-              </Card>
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Cuisine Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MiniPieChart data={dashboardData.distribution} dataKey="count" nameKey="type" height={250} />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
 
       {/* Restaurant Dialog */}
       <Dialog open={isRestaurantDialogOpen} onOpenChange={setIsRestaurantDialogOpen}>
-        <DialogContent className="bg-white max-w-lg">
+        <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Utensils className="h-5 w-5 text-orange-600" />
@@ -581,13 +760,16 @@ export default function RestaurantManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* View Restaurant Dialog */}
+      {/* View Restaurant Dialog - with Edit button */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="bg-white max-w-2xl">
+        <DialogContent className="bg-white max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedRestaurant && (
             <>
               <DialogHeader>
-                <DialogTitle>{selectedRestaurant.name}</DialogTitle>
+                <DialogTitle className="flex items-center gap-2">
+                  <Utensils className="h-5 w-5 text-orange-600" />
+                  {selectedRestaurant.name}
+                </DialogTitle>
                 <DialogDescription>Restaurant details and information</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -595,11 +777,11 @@ export default function RestaurantManagement() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-slate-500">Location</label>
-                    <p className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {selectedRestaurant.city}, {selectedRestaurant.country}</p>
+                    <p className="flex items-center gap-1 font-medium"><MapPin className="w-4 h-4" /> {selectedRestaurant.city}, {selectedRestaurant.country}</p>
                   </div>
                   <div>
                     <label className="text-sm text-slate-500">Rating</label>
-                    <p className="flex items-center gap-1"><Star className="w-4 h-4 text-amber-500" /> {selectedRestaurant.rating || 4.5}</p>
+                    <p className="flex items-center gap-1 font-medium"><Star className="w-4 h-4 text-amber-500" /> {selectedRestaurant.rating || 4.5}</p>
                   </div>
                   <div>
                     <label className="text-sm text-slate-500">Phone</label>
@@ -608,6 +790,14 @@ export default function RestaurantManagement() {
                   <div>
                     <label className="text-sm text-slate-500">Email</label>
                     <p className="flex items-center gap-1"><Mail className="w-4 h-4" /> {selectedRestaurant.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Price Range</label>
+                    <p className="font-medium">{PRICE_RANGE_LABELS[selectedRestaurant.price_range] || '$$'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-500">Address</label>
+                    <p className="font-medium">{selectedRestaurant.address || 'N/A'}</p>
                   </div>
                 </div>
                 {selectedRestaurant.description && (
@@ -625,9 +815,26 @@ export default function RestaurantManagement() {
                   ))}
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => { openRestaurantDialog(selectedRestaurant); setIsViewDialogOpen(false); }}>
-                  Edit
+              <DialogFooter className="gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => { 
+                    handleViewMenu(selectedRestaurant); 
+                    setIsViewDialogOpen(false); 
+                  }}
+                  className="gap-2"
+                >
+                  <Menu className="w-4 h-4" /> View Menu
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => { 
+                    openRestaurantDialog(selectedRestaurant); 
+                    setIsViewDialogOpen(false); 
+                  }}
+                  className="gap-2"
+                >
+                  <Edit className="w-4 h-4" /> Edit
                 </Button>
                 <Button onClick={() => setIsViewDialogOpen(false)} className="bg-orange-600 hover:bg-orange-700">Close</Button>
               </DialogFooter>
