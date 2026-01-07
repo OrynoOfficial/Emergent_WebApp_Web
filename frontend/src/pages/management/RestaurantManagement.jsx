@@ -624,6 +624,8 @@ export default function RestaurantManagement() {
                               onDelete={confirmDeleteRestaurant}
                               canEdit={canEdit}
                               canDelete={canDelete}
+                              isSelected={showMenuPanel && selectedRestaurant?.id === restaurant.id}
+                              isOtherSelected={showMenuPanel && selectedRestaurant?.id !== restaurant.id}
                             />
                           ))}
                         </div>
