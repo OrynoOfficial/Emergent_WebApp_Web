@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Hotel, Plus, LayoutDashboard, MessageSquare, RefreshCw, Bed,
-  MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save
+  MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save, Building2
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
