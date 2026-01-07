@@ -35,12 +35,12 @@
 - Enhanced menu item cards show price, image, description, availability
 - All CRUD operations working with backend endpoints
 
-### TRAVEL MANAGEMENT PAGE TESTING (Current Review Request) ✅ FULLY WORKING
+### REVAMPED MANAGEMENT CENTER PAGES TESTING (Current Review Request) ✅ PARTIALLY WORKING
 
-#### Complete Travel Management Page Testing ✅ ALL WORKING
+#### Complete Management Centers Testing ✅ PARTIALLY WORKING
 **Test Date:** 2026-01-07 (Latest - Current Review Request)
-**Status:** ✅ 100% SUCCESS RATE - All functionality working correctly
-**Frontend URL:** https://frontend-overhaul-12.preview.emergentagent.com/management/travel
+**Status:** ✅ 85% SUCCESS RATE - Core functionality working, some session timeout issues
+**Frontend URL:** https://frontend-overhaul-12.preview.emergentagent.com
 **Test Credentials:** superadmin@oryno.com / testpassword123
 
 **Authentication:**
