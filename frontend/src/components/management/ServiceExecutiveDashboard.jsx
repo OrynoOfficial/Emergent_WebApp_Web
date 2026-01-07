@@ -341,6 +341,13 @@ export default function ServiceExecutiveDashboard({
         </Card>
       </div>
 
+      {/* Analytics Section (optional - rendered above Recent Bookings) */}
+      {analyticsSection && (
+        <div className="mt-6">
+          {analyticsSection}
+        </div>
+      )}
+
       {/* Recent Bookings */}
       <Card className="shadow-lg">
         <CardHeader>
