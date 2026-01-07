@@ -33,6 +33,7 @@ class Vehicle(BaseModel):
     operator_id: str
     operator_name: str
     amenities: List[str] = []  # wifi, ac, power_outlet, restroom, tv_screen, reclining_seats, refreshments
+    images: List[str] = []  # List of image URLs
     seat_layout: Optional[SeatLayout] = None
     total_seats: int = 0
     maintenance_status: MaintenanceStatus = MaintenanceStatus.ACTIVE
@@ -53,6 +54,7 @@ class VehicleCreate(BaseModel):
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
     amenities: List[str] = []
+    images: List[str] = []  # List of image URLs
     seat_layout: Optional[Dict[str, Any]] = None
     total_seats: int = 0
     maintenance_status: MaintenanceStatus = MaintenanceStatus.ACTIVE
@@ -65,7 +67,10 @@ class VehicleUpdate(BaseModel):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     year: Optional[int] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
     amenities: Optional[List[str]] = None
+    images: Optional[List[str]] = None  # List of image URLs
     seat_layout: Optional[Dict[str, Any]] = None
     total_seats: Optional[int] = None
     maintenance_status: Optional[MaintenanceStatus] = None
