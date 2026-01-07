@@ -77,6 +77,34 @@
 - ✅ Add Route button working and accessible
 - ✅ Add Vehicle button working and accessible
 
+**Route Modal Tests ✅ FULLY WORKING:**
+- ✅ Route View modal displays operator with prominent indigo gradient background
+- ✅ Operator section uses bg-gradient-to-r from-indigo-50 to-purple-50 with border-indigo-200
+- ✅ Operator display includes Building2 icon with indigo-600 color
+- ✅ "Assigned Operator" label with indigo-600 font-medium styling
+- ✅ Operator name displayed with font-bold text-indigo-900 text-lg styling
+
+**Edit Route Dialog ✅ FULLY WORKING:**
+- ✅ Edit Route dialog opens correctly
+- ✅ "Assigned Operator" label with Building2 icon and indigo-600 styling
+- ✅ Operator dropdown with proper SelectTrigger and SelectContent components
+- ✅ Current operator displayed correctly
+- ✅ Can select different operator from dropdown list
+- ✅ Update button saves operator changes correctly
+
+**Vehicle Tests ✅ FULLY WORKING:**
+- ✅ Vehicle cards show image thumbnails (scrollable with ChevronLeft/ChevronRight controls)
+- ✅ Operator assignment displayed with indigo background (bg-indigo-50 rounded-lg border-indigo-100)
+- ✅ Building2 icon with indigo-600 color for operator display
+- ✅ Operator name with text-indigo-800 font-medium styling
+
+**Edit Vehicle Dialog ✅ FULLY WORKING:**
+- ✅ Modal is scrollable with ScrollArea and max-h-[70vh] pr-4 styling
+- ✅ Image upload section at top with VehicleImageUploader component
+- ✅ Operator dropdown available with "Assigned Operator" label
+- ✅ All form fields work properly with proper grid layout
+- ✅ Operator selection updates both operator_id and operator_name fields
+
 ## 2. CAR RENTAL MANAGEMENT CENTER (/management/car-rental) ✅ FULLY WORKING
 
 **Dashboard Tab ✅ FULLY WORKING:**
