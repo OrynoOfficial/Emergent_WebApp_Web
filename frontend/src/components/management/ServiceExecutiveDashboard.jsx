@@ -40,6 +40,7 @@ const CHART_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F97316', '#10B981', '#0
  * @param {string} props.secondaryLabel - Secondary metric label (e.g., "Rooms", "Routes", "Menu Items")
  * @param {number} props.secondaryCount - Secondary metric count
  * @param {function} props.onViewAllBookings - Handler for "View All Bookings" button
+ * @param {React.ReactNode} props.analyticsSection - Optional analytics section to render above Recent Bookings
  */
 export default function ServiceExecutiveDashboard({
   serviceType = "Service",
@@ -53,7 +54,8 @@ export default function ServiceExecutiveDashboard({
   itemLabel = "Items",
   secondaryLabel = "Sub-items",
   secondaryCount = 0,
-  onViewAllBookings
+  onViewAllBookings,
+  analyticsSection = null
 }) {
   const navigate = useNavigate();
   
