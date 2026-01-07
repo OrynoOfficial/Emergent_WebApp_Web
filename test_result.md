@@ -45,98 +45,70 @@
 
 **Authentication:**
 - ✅ Super Admin login: WORKING (superadmin@oryno.com / testpassword123)
-- ✅ Successfully accessed Travel Management page
+- ✅ Successfully accessed all Management Centers
+- ⚠️ Session timeout issues during extended testing
 
-**Test 1: Dashboard Tab ✅ FULLY WORKING:**
+## 1. TRAVEL MANAGEMENT CENTER (/management/travel) ✅ FULLY WORKING
+
+**Dashboard Tab ✅ FULLY WORKING:**
 - ✅ Dashboard tab active by default
-- ✅ First row stats cards: Total Routes (5), Vehicles (5), Total Revenue (387,500 FCFA), Avg. Utilization (27%)
-- ✅ Second row stats cards: Total Bookings (90), Avg. Rating (4.2★), Confirmed (35), Pending (10)
-- ✅ Bookings & Revenue Trend chart: WORKING (bar + line chart with 7-day data)
-- ✅ Distribution pie chart: WORKING (Normal: 2, Vip: 2, Luxury: 1)
-- ✅ All KPI cards displaying correct data with proper styling and gradients
-- ✅ Charts rendering correctly with interactive tooltips
+- ✅ Analytics charts appear ABOVE Recent Bookings section as required:
+  - ✅ "Bookings & Revenue Trend" chart (bar + line chart with 7-day data)
+  - ✅ "Distribution" pie chart (Normal: 2, Vip: 2, Luxury: 1)
+- ✅ NO Analytics tab exists in navigation (as required)
+- ✅ KPI cards: Total Routes (5), Vehicles (5), Total Revenue (387,500 FCFA), Avg. Utilization (27%)
+- ✅ Second row stats: Total Bookings (90), Avg. Rating (4.2★), Confirmed (35), Pending (10)
 
-**Test 2: Management Tab ✅ FULLY WORKING:**
-- ✅ Management tab navigation: WORKING
-- ✅ Routes sub-tab: WORKING (RouteTable component loads correctly)
-- ✅ Routes table headers: WORKING (Route, Schedule, Vehicle, Price, Status, Actions)
-- ✅ Vehicles sub-tab: WORKING (VehicleGrid component loads correctly)
-- ✅ Vehicle cards display: WORKING (showing vehicle information with proper layout)
-- ✅ Add Route button: WORKING (visible and accessible)
-- ✅ Add Vehicle button: WORKING (visible and accessible)
+**Management Tab ✅ FULLY WORKING:**
+- ✅ Management tab navigation working
+- ✅ Routes sub-tab with modernized cards showing gradient headers with route info
+- ✅ Vehicles sub-tab with modernized cards with status badges
+- ✅ Search functionality working for both routes and vehicles
+- ✅ Add Route button working and accessible
+- ✅ Add Vehicle button working and accessible
 
-**Test 3: Communications Tab ✅ FULLY WORKING:**
-- ✅ Communications tab navigation: WORKING
-- ✅ Recent Notifications section: WORKING (displays notification panel)
-- ✅ Quick Actions section: WORKING (all action buttons present)
-- ✅ Send Announcement: WORKING (input fields and send button)
-- ✅ Create Alert: WORKING (alert creation functionality)
-- ✅ Contact Support: WORKING (support button available)
-- ✅ Schedule Meeting: WORKING (meeting scheduling button)
+## 2. CAR RENTAL MANAGEMENT CENTER (/management/car-rental) ✅ FULLY WORKING
 
-**Test 4: Analytics Tab ✅ FULLY WORKING:**
-- ✅ Analytics tab navigation: WORKING
-- ✅ Monthly Performance Trend chart: WORKING (line chart with bookings and revenue data)
-- ✅ Routes by Origin City chart: WORKING (pie chart showing route distribution)
-- ✅ Vehicle Utilization Rate chart: WORKING (bar chart showing utilization percentages)
-- ✅ All charts rendering correctly with proper data visualization
+**Dashboard Tab ✅ FULLY WORKING:**
+- ✅ Dashboard tab active by default
+- ✅ Analytics charts appear ABOVE Recent Bookings section as required:
+  - ✅ "Monthly Performance" chart found
+  - ✅ "Fleet by Location" chart found
+- ✅ NO Analytics tab exists in navigation (as required)
 
-**Test 5: Page Header and Navigation ✅ FULLY WORKING:**
-- ✅ Page header: WORKING ("Travel Management Center" title and description)
-- ✅ Page description: WORKING ("Manage routes, vehicles, analytics, and communications")
-- ✅ Refresh button: WORKING (refresh functionality)
-- ✅ Tab navigation: WORKING (smooth switching between all tabs)
-- ✅ Page layout: WORKING (responsive design with proper spacing)
+**Fleet Management Tab ✅ FULLY WORKING:**
+- ✅ Fleet Management tab accessible
+- ✅ Modernized car cards with images, specs, and pricing
+- ✅ "View" button on car cards working
+- ✅ Car details dialog opens with:
+  - ✅ Image carousel with thumbnails (scrollable)
+  - ✅ Full car details (brand, model, year, seats, fuel, price, etc.)
+  - ✅ Edit button in the dialog
 
-**Modular Components Verification ✅:**
-- ✅ ServiceExecutiveDashboard: WORKING (blue theme, travel-specific metrics)
-- ✅ ServiceCommunicationsHub: WORKING (travel service tag, notifications)
-- ✅ RouteTable: WORKING (table with route data, headers, and actions)
-- ✅ VehicleGrid: WORKING (grid layout with vehicle cards)
-- ✅ VehicleCard: WORKING (individual vehicle information display)
-- ✅ BusinessAnalytics: WORKING (three charts with travel analytics)
-- ✅ Shared components: WORKING (proper integration across all tabs)
+## 3. RESTAURANT MANAGEMENT CENTER (/management/restaurants) ✅ FULLY WORKING
 
-**UI/UX Verification ✅:**
-- ✅ Color scheme: WORKING (blue theme #082c59 consistently applied)
-- ✅ Responsive design: WORKING (proper layout on desktop)
-- ✅ Interactive elements: WORKING (buttons, tabs, filters all responsive)
-- ✅ Visual feedback: WORKING (hover states, active states, loading states)
-- ✅ Typography: WORKING (consistent font sizes and weights)
-- ✅ Icons: WORKING (Lucide icons properly displayed)
+**Dashboard Tab ✅ FULLY WORKING:**
+- ✅ Dashboard tab active by default
+- ✅ NO Analytics tab exists in navigation (as required)
 
-**Data Integration ✅:**
-- ✅ Route data: WORKING (5 routes displayed with complete information)
-- ✅ Vehicle data: WORKING (5 vehicles displayed with proper information)
-- ✅ Statistics: WORKING (real-time metrics calculation)
-- ✅ Charts data: WORKING (trend and distribution data rendering)
-- ✅ API integration: WORKING (data fetching from backend)
+**Management Tab ✅ FULLY WORKING:**
+- ✅ Management tab accessible
+- ✅ Restaurant cards have "View Menu" button (orange button)
+- ✅ "View Menu" opens slide-in panel on RIGHT side with:
+  - ✅ Restaurant name in header
+  - ✅ Eye icon (view), Edit icon, and Close (X) button in header
+  - ✅ Menu items list with images, prices, availability
+  - ✅ Add Item button
+- ✅ Eye icon in menu panel header opens View Restaurant dialog with Edit button
+- ✅ Edit button exists in the View Restaurant dialog
+- ✅ View icon button does NOT disappear after being clicked
 
 **Issues Found:**
-- ✅ NO CRITICAL ISSUES: All travel management functionality working correctly
-- ✅ All required components rendering and functioning properly
-- ✅ Navigation between tabs working seamlessly
-- ✅ Modular architecture successfully implemented
-- ✅ Refactoring from 997 to 442 lines successful without functionality loss
-
-**Performance Verification:**
-- ✅ Page load time: ACCEPTABLE (loads within 3 seconds)
-- ✅ Tab switching: SMOOTH (instant transitions)
-- ✅ Component rendering: EFFICIENT (no visible lag)
-- ✅ Memory usage: OPTIMIZED (modular components loading efficiently)
-
-**Security Verification:**
-- ✅ Authentication: WORKING (super admin access properly validated)
-- ✅ Permission gates: WORKING (edit/delete buttons properly protected)
-- ✅ Data access: WORKING (appropriate data scoping for user role)
-
-**Overall Assessment:**
-- ✅ **REFACTORING SUCCESS**: 56% code reduction achieved without functionality loss
-- ✅ **MODULAR ARCHITECTURE**: All components properly separated and reusable
-- ✅ **UI CONSISTENCY**: Consistent design language across all tabs
-- ✅ **FUNCTIONALITY COMPLETE**: All required features working correctly
-- ✅ **PERFORMANCE OPTIMIZED**: Fast loading and smooth interactions
-- ✅ **READY FOR PRODUCTION**: No blocking issues found
+- ⚠️ Session timeout during extended testing (not a critical functional issue)
+- ✅ All core functionality working as specified in review request
+- ✅ All required UI elements present and functional
+- ✅ No Analytics tabs found in any management center (as required)
+- ✅ Analytics charts properly positioned above Recent Bookings sections
 1. Dashboard tab - displays metrics correctly ✅
 2. Hotels tab - search, filter, grid/list view, add/edit/delete ✅
 3. Rooms tab - room management after selecting hotel ✅
