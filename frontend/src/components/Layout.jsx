@@ -547,21 +547,43 @@ export default function Layout({ children }) {
     isOperatorUser, operatorServiceTypes, operatorType
   ]);
 
+  // State for flyout menus
+  const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const submenuTimeoutRef = useRef(null);
+
+  const handleSubmenuEnter = (key) => {
+    if (submenuTimeoutRef.current) {
+      clearTimeout(submenuTimeoutRef.current);
+    }
+    setActiveSubmenu(key);
+  };
+
+  const handleSubmenuLeave = () => {
+    submenuTimeoutRef.current = setTimeout(() => {
+      setActiveSubmenu(null);
+    }, 150);
+  };
+
   const renderNavItem = (item) => {
     const isActive = item.path && location.pathname === item.path;
     const hasActiveChild = item.submenu?.some(sub => location.pathname === sub.path);
-    const isExpanded = expandedMenus[item.key];
+    const isSubmenuOpen = activeSubmenu === item.key;
     const iconColor = getIconColor(item.key);
 
     if (item.isDropdown) {
       return (
-        <div key={item.key} className="mb-1">
+        <div 
+          key={item.key} 
+          className="mb-1 relative"
+          onMouseEnter={() => handleSubmenuEnter(item.key)}
+          onMouseLeave={handleSubmenuLeave}
+        >
           <button
-            onClick={() => toggleMenu(item.key)}
+            onClick={() => setActiveSubmenu(isSubmenuOpen ? null : item.key)}
             className={`
               w-full flex items-center justify-between px-4 py-3 rounded-lg
               transition-all duration-200 ease-out
-              ${hasActiveChild 
+              ${hasActiveChild || isSubmenuOpen
                 ? 'bg-white/15 border-l-3 border-l-[#4D96FF]' 
                 : 'hover:bg-white/10'
               }
@@ -572,20 +594,38 @@ export default function Layout({ children }) {
               <item.icon className="h-5 w-5 transition-transform duration-200" style={{ color: iconColor }} />
               <span className="font-medium text-slate-200">{item.label}</span>
             </div>
-            <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            </div>
+            <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-90' : ''}`} />
           </button>
           
-          <div className={`
-            overflow-hidden transition-all duration-300 ease-out
-            ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}
-          `}>
-            <div className="ml-4 mt-1 space-y-1 py-1">
+          {/* Flyout Submenu */}
+          <div 
+            className={`
+              absolute left-full top-0 ml-2 z-[60]
+              min-w-[240px] max-h-[70vh] overflow-y-auto
+              bg-[#0a3566] rounded-xl shadow-2xl border border-white/10
+              transform transition-all duration-200 ease-out origin-left
+              ${isSubmenuOpen 
+                ? 'opacity-100 scale-100 translate-x-0 pointer-events-auto' 
+                : 'opacity-0 scale-95 -translate-x-2 pointer-events-none'
+              }
+            `}
+            onMouseEnter={() => handleSubmenuEnter(item.key)}
+            onMouseLeave={handleSubmenuLeave}
+          >
+            {/* Submenu header */}
+            <div className="px-4 py-3 border-b border-white/10 bg-white/5">
+              <div className="flex items-center gap-2">
+                <item.icon className="h-4 w-4" style={{ color: iconColor }} />
+                <span className="font-semibold text-white text-sm">{item.label}</span>
+              </div>
+            </div>
+            
+            {/* Submenu items */}
+            <div className="py-2 px-2">
               {item.submenu.map((sub, idx) => {
                 if (sub.isDivider) {
                   return (
-                    <div key={sub.key} className="px-4 py-2 text-xs text-slate-500 font-medium">
+                    <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
                       {sub.label}
                     </div>
                   );
@@ -596,21 +636,38 @@ export default function Layout({ children }) {
                   <Link
                     key={sub.key}
                     to={sub.path}
-                    onClick={() => setSidebarOpen(false)}
-                    style={{ animationDelay: `${idx * 30}ms` }}
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      setActiveSubmenu(null);
+                    }}
                     className={`
-                      flex items-center gap-3 px-4 py-2.5 rounded-lg
-                      transition-all duration-200 ease-out
+                      flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1
+                      transition-all duration-150 ease-out
                       ${isSubActive
-                        ? 'bg-white/15 text-white border-l-2 border-l-[#4D96FF]'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        ? 'bg-[#4D96FF]/20 text-white border-l-2 border-l-[#4D96FF]'
+                        : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }
-                      active:scale-[0.98]
-                      ${isExpanded ? 'animate-fadeIn' : ''}
+                      group
                     `}
                   >
-                    <sub.icon className="h-4 w-4 transition-transform duration-200 hover:scale-110" style={{ color: subIconColor }} />
-                    <span className="text-sm">{sub.label}</span>
+                    <div className={`
+                      p-1.5 rounded-lg transition-all duration-150
+                      ${isSubActive ? 'bg-white/10' : 'bg-white/5 group-hover:bg-white/10'}
+                    `}>
+                      <sub.icon className="h-4 w-4" style={{ color: subIconColor }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium block truncate">{sub.label}</span>
+                      {sub.description && (
+                        <span className="text-xs text-slate-500 block truncate">{sub.description}</span>
+                      )}
+                    </div>
+                    <ArrowRight className={`
+                      h-3.5 w-3.5 text-slate-500 
+                      transition-all duration-150
+                      opacity-0 -translate-x-2
+                      group-hover:opacity-100 group-hover:translate-x-0
+                    `} />
                   </Link>
                 );
               })}
