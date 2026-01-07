@@ -625,61 +625,59 @@ export default function Layout({ children }) {
                     <span className="font-semibold text-white">{item.label}</span>
                   </div>
                 </div>
-            </>
-          )}
             
-            {/* Submenu items */}
-            <div className="py-2 px-2">
-              {item.submenu.map((sub, idx) => {
-                if (sub.isDivider) {
-                  return (
-                    <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-400 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
-                      {sub.label}
-                    </div>
-                  );
-                }
-                const subIconColor = getIconColor(sub.key);
-                const isSubActive = location.pathname === sub.path;
-                return (
-                  <Link
-                    key={sub.key}
-                    to={sub.path}
-                    onClick={() => {
-                      setSidebarOpen(false);
-                      setActiveSubmenu(null);
-                    }}
-                    className={`
-                      flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1
-                      transition-all duration-150 ease-out
-                      ${isSubActive
-                        ? 'bg-[#4D96FF]/25 text-white border-l-2 border-l-[#4D96FF]'
-                        : 'text-slate-300 hover:text-white hover:bg-white/10'
-                      }
-                      group
-                    `}
-                  >
-                    <div className={`
-                      p-1.5 rounded-lg transition-all duration-150
-                      ${isSubActive ? 'bg-white/15' : 'bg-white/5 group-hover:bg-white/10'}
-                    `}>
-                      <sub.icon className="h-4 w-4" style={{ color: subIconColor }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium block truncate">{sub.label}</span>
-                      {sub.description && (
-                        <span className="text-xs text-slate-500 block truncate">{sub.description}</span>
-                      )}
-                    </div>
-                    <ArrowRight className={`
-                      h-3.5 w-3.5 text-slate-500 
-                      transition-all duration-150
-                      opacity-0 -translate-x-2
-                      group-hover:opacity-100 group-hover:translate-x-0
-                    `} />
-                  </Link>
-                );
-              })}
-            </div>
+                {/* Submenu items */}
+                <div className="py-2 px-2">
+                  {item.submenu.map((sub, idx) => {
+                    if (sub.isDivider) {
+                      return (
+                        <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-400 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
+                          {sub.label}
+                        </div>
+                      );
+                    }
+                    const subIconColor = getIconColor(sub.key);
+                    const isSubActive = location.pathname === sub.path;
+                    return (
+                      <Link
+                        key={sub.key}
+                        to={sub.path}
+                        onClick={() => {
+                          setSidebarOpen(false);
+                          setActiveSubmenu(null);
+                        }}
+                        className={`
+                          flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1
+                          transition-all duration-150 ease-out
+                          ${isSubActive
+                            ? 'bg-[#4D96FF]/25 text-white border-l-2 border-l-[#4D96FF]'
+                            : 'text-slate-300 hover:text-white hover:bg-white/10'
+                          }
+                          group
+                        `}
+                      >
+                        <div className={`
+                          p-1.5 rounded-lg transition-all duration-150
+                          ${isSubActive ? 'bg-white/15' : 'bg-white/5 group-hover:bg-white/10'}
+                        `}>
+                          <sub.icon className="h-4 w-4" style={{ color: subIconColor }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium block truncate">{sub.label}</span>
+                          {sub.description && (
+                            <span className="text-xs text-slate-500 block truncate">{sub.description}</span>
+                          )}
+                        </div>
+                        <ArrowRight className={`
+                          h-3.5 w-3.5 text-slate-500 
+                          transition-all duration-150
+                          opacity-0 -translate-x-2
+                          group-hover:opacity-100 group-hover:translate-x-0
+                        `} />
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}
