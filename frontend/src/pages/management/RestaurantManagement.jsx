@@ -8,7 +8,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Utensils, Plus, LayoutDashboard, MessageSquare, RefreshCw, MapPin, Star, 
   Clock, Phone, Mail, Save, Trash2, Edit, Eye, ChevronRight, X, Menu, 
-  DollarSign, ChevronLeft
+  DollarSign, ChevronLeft, Building2
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
