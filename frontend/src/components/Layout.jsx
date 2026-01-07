@@ -718,7 +718,7 @@ export default function Layout({ children }) {
         transform transition-transform duration-300 ease-out
         lg:translate-x-0 
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        shadow-2xl
+        shadow-2xl overflow-visible
       `}>
         <div className="flex flex-col h-full">
           {/* Logo Header */}
