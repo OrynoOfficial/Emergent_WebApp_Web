@@ -141,6 +141,14 @@ const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, can
       </div>
       
       <CardContent className="p-4">
+        {/* Operator Assignment */}
+        {restaurant.operator_name && (
+          <div className="flex items-center gap-2 mb-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <Building2 className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+            <span className="text-sm font-medium text-indigo-800 truncate">{restaurant.operator_name}</span>
+          </div>
+        )}
+        
         <div className="flex flex-wrap gap-1.5 mb-3">
           <Badge variant="outline">{PRICE_RANGE_LABELS[restaurant.price_range] || '$$'}</Badge>
           {cuisineTypes.slice(0, 2).map(c => (
