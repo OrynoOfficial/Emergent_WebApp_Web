@@ -294,8 +294,13 @@ const RouteCard = ({ route, onView, onEdit, onDelete, onApprove, isAdmin }) => {
   );
 };
 
-// Modern Vehicle Card Component
+// Modern Vehicle Card Component with Images
 const VehicleCard = ({ vehicle, onView, onEdit, onDelete }) => {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+  const images = vehicle.images?.filter(img => img) || [];
+  
   const statusColors = {
     active: 'bg-emerald-500',
     maintenance: 'bg-amber-500',
@@ -304,10 +309,40 @@ const VehicleCard = ({ vehicle, onView, onEdit, onDelete }) => {
 
   return (
     <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-md">
-      <div className="relative h-40 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Bus className="w-20 h-20 text-slate-300" />
-        </div>
+      <div className="relative h-44 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
+        {images.length > 0 ? (
+          <>
+            <img 
+              src={getImageUrl(images[currentImageIndex])} 
+              alt={vehicle.vehicle_name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            />
+            {images.length > 1 && (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} 
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow z-10"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow z-10"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  {currentImageIndex + 1}/{images.length}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Bus className="w-20 h-20 text-slate-300" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
         <div className="absolute top-3 left-3">
           <Badge className={`${statusColors[vehicle.maintenance_status]} text-white border-0`}>
             {vehicle.maintenance_status}
@@ -331,6 +366,14 @@ const VehicleCard = ({ vehicle, onView, onEdit, onDelete }) => {
             <p className="text-xs text-slate-500">seats</p>
           </div>
         </div>
+        
+        {/* Operator Assignment */}
+        {vehicle.operator_name && (
+          <div className="flex items-center gap-2 mb-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-800 truncate">{vehicle.operator_name}</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="p-2 bg-slate-50 rounded-lg">
