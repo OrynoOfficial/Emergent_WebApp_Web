@@ -599,25 +599,34 @@ export default function Layout({ children }) {
           
           {/* Flyout Submenu - positioned fixed to escape overflow */}
           {isSubmenuOpen && (
-            <div 
-              className="fixed z-[9999] min-w-[260px] max-h-[75vh] overflow-y-auto
-                         bg-[#0a3566] rounded-xl shadow-2xl border border-white/10
-                         animate-in fade-in slide-in-from-left-2 duration-200"
-              style={{ 
-                left: '288px', 
-                top: 'auto',
-                marginTop: '-48px'
-              }}
-              onMouseEnter={() => handleSubmenuEnter(item.key)}
-              onMouseLeave={handleSubmenuLeave}
-            >
-              {/* Submenu header */}
-              <div className="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-white/10 to-transparent sticky top-0 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <item.icon className="h-4 w-4" style={{ color: iconColor }} />
-                  <span className="font-semibold text-white text-sm">{item.label}</span>
+            <>
+              {/* Backdrop for click-away */}
+              <div 
+                className="fixed inset-0 z-[9998]" 
+                onClick={() => setActiveSubmenu(null)}
+              />
+              <div 
+                className="fixed z-[9999] min-w-[280px] max-h-[80vh] overflow-y-auto
+                           bg-gradient-to-br from-[#0a3566] to-[#082c59] rounded-xl shadow-2xl 
+                           border border-white/20 backdrop-blur-sm"
+                style={{ 
+                  left: '290px', 
+                  top: '120px'
+                }}
+                onMouseEnter={() => handleSubmenuEnter(item.key)}
+                onMouseLeave={handleSubmenuLeave}
+              >
+                {/* Submenu header */}
+                <div className="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-white/10 to-transparent sticky top-0 backdrop-blur-sm rounded-t-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/10 rounded-lg">
+                      <item.icon className="h-4 w-4" style={{ color: iconColor }} />
+                    </div>
+                    <span className="font-semibold text-white">{item.label}</span>
+                  </div>
                 </div>
-              </div>
+            </>
+          )}
             
             {/* Submenu items */}
             <div className="py-2 px-2">
