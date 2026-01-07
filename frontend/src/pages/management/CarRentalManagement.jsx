@@ -711,6 +711,21 @@ export default function CarRentalManagement() {
                 <p className="text-emerald-700">{viewingCar.year} • {viewingCar.transmission} • {viewingCar.car_type}</p>
               </div>
               
+              {/* Operator Assignment - Prominent Display */}
+              {viewingCar.operator_name && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-indigo-600 font-medium">Assigned Operator</p>
+                      <p className="font-bold text-indigo-900 text-lg">{viewingCar.operator_name}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 bg-slate-50 rounded-lg text-center">
                   <Users className="h-5 w-5 mx-auto text-slate-500 mb-1" />
