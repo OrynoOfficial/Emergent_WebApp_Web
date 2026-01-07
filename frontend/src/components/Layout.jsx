@@ -720,7 +720,7 @@ export default function Layout({ children }) {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         shadow-2xl overflow-visible
       `}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-visible">
           {/* Logo Header */}
           <div className="bg-[#082c59] px-6 py-5 border-b border-white/10">
             <div className="flex items-center gap-3">
