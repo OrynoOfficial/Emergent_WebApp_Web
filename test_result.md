@@ -16,18 +16,28 @@
 - Removed Analytics tab and moved charts to Dashboard (above Recent Bookings)
 - Modernized Management Menu (Routes and Vehicles) with card-based UI
 - Routes now show as gradient cards with departure/arrival info, pricing, amenities
-- Vehicles show with status badges, specifications, and features
+- Route modal shows operator with prominent colored display
+- Edit Route shows operator selection with update capability
+- Vehicles show with status badges, specifications, features, and operator assignment
+- Vehicle cards now show image thumbnails (scrollable)
+- Vehicle form has image upload functionality
+- Edit Vehicle modal is scrollable with proper height
 - Added search functionality for both routes and vehicles
+- Backend APIs: PUT /api/travel/routes/{id}, DELETE /api/travel/routes/{id}, POST /api/travel/routes/{id}/approve
 
 ### Car Rental Management Revamp - COMPLETED ✅
 - Removed Analytics tab and moved charts to Dashboard
 - Modernized Fleet Management with card-based UI
 - Added car image thumbnails in the View modal (scrollable)
-- Car cards show image, pricing, specs, features, and status
-- View modal includes full car details with image carousel
+- Car cards show image, pricing, specs, features, status, AND operator
+- View modal shows operator with prominent colored display
+- All Edit car menu items connected to backend endpoints
 
 ### Restaurant Management Revamp - COMPLETED ✅
 - Removed Analytics tab
+- Restaurant cards now show assigned operator
+- Restaurant name is more pronounced in menu panel header
+- Menu panel header shows restaurant name prominently with operator
 - Added "View Menu" button to restaurant cards (opens menu on right panel)
 - Fixed View icon functionality (no longer disappears)
 - Added Edit button to View Restaurant dialog
