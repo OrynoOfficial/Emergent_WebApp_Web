@@ -132,7 +132,7 @@ class TravelRouteUpdate(BaseModel):
     amenities: Optional[list] = None
     valid_from: Optional[str] = None
     valid_to: Optional[str] = None
-    status: Optional[str] = None
+    route_status: Optional[str] = None
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
 
@@ -154,7 +154,14 @@ async def update_travel_route(
     if current_user["role"] == "operator" and route.get("operator_id") != current_user.get("operator_id"):
         raise HTTPException(status_code=403, detail="Not authorized to update this route")
     
-    update_data = {k: v for k, v in route_data.dict().items() if v is not None}
+    update_data = {}
+    for k, v in route_data.dict().items():
+        if v is not None:
+            # Map route_status back to status in DB
+            if k == "route_status":
+                update_data["status"] = v
+            else:
+                update_data[k] = v
     update_data["updated_at"] = datetime.utcnow()
     
     await db.travel_routes.update_one({"_id": route_id}, {"$set": update_data})
