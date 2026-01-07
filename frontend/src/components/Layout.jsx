@@ -633,7 +633,7 @@ export default function Layout({ children }) {
               {item.submenu.map((sub, idx) => {
                 if (sub.isDivider) {
                   return (
-                    <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-500 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
+                    <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-400 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
                       {sub.label}
                     </div>
                   );
@@ -652,7 +652,7 @@ export default function Layout({ children }) {
                       flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1
                       transition-all duration-150 ease-out
                       ${isSubActive
-                        ? 'bg-[#4D96FF]/20 text-white border-l-2 border-l-[#4D96FF]'
+                        ? 'bg-[#4D96FF]/25 text-white border-l-2 border-l-[#4D96FF]'
                         : 'text-slate-300 hover:text-white hover:bg-white/10'
                       }
                       group
@@ -660,7 +660,7 @@ export default function Layout({ children }) {
                   >
                     <div className={`
                       p-1.5 rounded-lg transition-all duration-150
-                      ${isSubActive ? 'bg-white/10' : 'bg-white/5 group-hover:bg-white/10'}
+                      ${isSubActive ? 'bg-white/15' : 'bg-white/5 group-hover:bg-white/10'}
                     `}>
                       <sub.icon className="h-4 w-4" style={{ color: subIconColor }} />
                     </div>
@@ -680,7 +680,8 @@ export default function Layout({ children }) {
                 );
               })}
             </div>
-            </div>
+              </div>
+            </>
           )}
         </div>
       );
