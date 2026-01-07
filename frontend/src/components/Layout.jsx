@@ -744,7 +744,7 @@ export default function Layout({ children }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4 sidebar-scroll">
+          <nav className="flex-1 overflow-y-auto overflow-x-visible px-3 py-4 sidebar-scroll">
             {navigationItems.map(renderNavItem)}
           </nav>
 
