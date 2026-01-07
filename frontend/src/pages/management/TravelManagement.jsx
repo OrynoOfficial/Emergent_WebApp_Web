@@ -9,7 +9,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
   MapPin, Clock, Users, ArrowRight, Eye, CheckCircle, Search, Filter, TrendingUp,
-  DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee
+  DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { travelRouteApi, vehicleApi, operatorApi } from '@/api/management';
 import { useAuth } from '@/contexts/AuthContext';
