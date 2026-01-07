@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -9,21 +9,21 @@ import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
 
 // Room Image Carousel Component
-function RoomImageCarousel({ images, className = "w-48 h-36" }) {
+function RoomImageCarousel({ images, className = "w-48 h-36", rounded = "rounded-l-lg" }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
 
   if (!images?.length) {
     return (
-      <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 rounded-l-lg`}>
+      <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 ${rounded}`}>
         <Bed className="w-12 h-12 text-slate-300" />
       </div>
     );
   }
 
   return (
-    <div className={`${className} relative group overflow-hidden bg-slate-100 flex-shrink-0 rounded-l-lg`}>
+    <div className={`${className} relative group overflow-hidden bg-slate-100 flex-shrink-0 ${rounded}`}>
       <img src={getImageUrl(images[currentIndex])} alt={`Room ${currentIndex + 1}`} className="w-full h-full object-cover" />
       {images.length > 1 && (
         <>
@@ -51,17 +51,84 @@ function RoomImageCarousel({ images, className = "w-48 h-36" }) {
 /**
  * RoomCard - Card component for displaying room information
  */
-export function RoomCard({ room, onEdit, onDelete }) {
+export function RoomCard({ room, onEdit, onDelete, viewMode = 'list' }) {
   const total = room.total_rooms || 1;
   const avail = room.available_rooms ?? total;
   const isLow = avail <= Math.ceil(total * 0.2) && avail > 0;
   const isOut = avail <= 0;
   const stockPercent = Math.round((avail / total) * 100);
 
+  // Grid View
+  if (viewMode === 'grid') {
+    return (
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+        <div className="relative">
+          <RoomImageCarousel images={room.images} className="w-full h-40" rounded="rounded-t-lg" />
+          <div className={`absolute top-3 left-3 px-2 py-1 rounded-lg text-xs font-bold shadow-lg z-20 ${isOut ? 'bg-red-600 text-white' : isLow ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'}`}>
+            {avail}/{total} left
+          </div>
+        </div>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h4 className="font-bold text-slate-800">{room.room_name || 'Room'}</h4>
+              <p className="text-xs text-slate-500 capitalize">{room.room_type} • {room.bed_type} bed</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-[#082c59]">{formatFCFA(room.base_price || room.price_per_night)}</p>
+              <p className="text-[10px] text-slate-500">per night</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            <div className="flex flex-col items-center p-1.5 bg-slate-50 rounded">
+              <Users className="w-3 h-3 text-slate-500" />
+              <span className="text-xs font-semibold">{room.capacity}</span>
+            </div>
+            <div className="flex flex-col items-center p-1.5 bg-slate-50 rounded">
+              <Bed className="w-3 h-3 text-slate-500" />
+              <span className="text-xs font-semibold capitalize">{(room.bed_type || 'Queen').slice(0, 4)}</span>
+            </div>
+            <div className="flex flex-col items-center p-1.5 bg-slate-50 rounded">
+              <Building2 className="w-3 h-3 text-slate-500" />
+              <span className="text-xs font-semibold">{room.floor || '-'}</span>
+            </div>
+            <div className="flex flex-col items-center p-1.5 bg-slate-50 rounded">
+              <Maximize2 className="w-3 h-3 text-slate-500" />
+              <span className="text-xs font-semibold">{room.size_sqm || '-'}m²</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full ${isOut ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-green-500'}`}
+                style={{ width: `${stockPercent}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-slate-500">{stockPercent}%</span>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t">
+            <PermissionGate permission="hotels.manage_rooms">
+              <Button size="sm" variant="outline" onClick={() => onEdit(room)} className="flex-1">
+                <Edit className="w-3 h-3 mr-1" /> Edit
+              </Button>
+              <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => onDelete(room.id || room._id)}>
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </PermissionGate>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // List View (default)
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="flex relative">
-        <RoomImageCarousel images={room.images} className="w-64 h-48" />
+        <RoomImageCarousel images={room.images} className="w-64 h-48" rounded="rounded-l-lg" />
         
         {/* Availability badge */}
         <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg z-20 ${isOut ? 'bg-red-600 text-white' : isLow ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'}`}>
