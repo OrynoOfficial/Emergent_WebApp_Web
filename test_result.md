@@ -162,6 +162,27 @@
 - ✅ Edit button exists in the View Restaurant dialog
 - ✅ View icon button does NOT disappear after being clicked
 
+**Restaurant Card Tests ✅ FULLY WORKING:**
+- ✅ Restaurant cards show assigned operator with indigo background
+- ✅ Operator display uses bg-indigo-50 rounded-lg border-indigo-100 styling
+- ✅ Building2 icon with indigo-600 color and flex-shrink-0 for proper alignment
+- ✅ Operator name with text-indigo-800 font-medium truncate styling
+
+**Menu Panel Tests ✅ FULLY WORKING:**
+- ✅ "View Menu" button opens menu panel correctly
+- ✅ Menu panel header shows restaurant name prominently with text-xl font-bold truncate
+- ✅ Operator name displayed in header with text-amber-200 text-xs truncate styling
+- ✅ Menu Items label with amber-100 text-sm styling
+- ✅ View button (Eye icon) with proper hover states and title="View Restaurant"
+- ✅ Edit button with proper hover states and title="Edit Restaurant"
+- ✅ Close button (X icon) with proper hover states and title="Close Menu"
+- ✅ All buttons use h-8 w-8 text-white hover:bg-white/20 styling
+
+**Restaurant Name Prominence ✅ FULLY WORKING:**
+- ✅ Restaurant name displayed with text-xl font-bold truncate in menu panel header
+- ✅ Proper flex-1 min-w-0 container for text overflow handling
+- ✅ CardTitle component ensures proper typography hierarchy
+
 **Issues Found:**
 - ⚠️ Session timeout during extended testing (not a critical functional issue)
 - ✅ All core functionality working as specified in review request
