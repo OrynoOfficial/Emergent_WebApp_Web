@@ -99,14 +99,20 @@ const useDashboardData = (restaurants, menuItems) => {
 };
 
 // Modern Restaurant Card Component
-const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, canDelete }) => {
+const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, canDelete, isSelected = false, isOtherSelected = false }) => {
   const images = restaurant.images?.filter(img => img) || [];
   const cuisineTypes = restaurant.cuisine_type || [];
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
 
   return (
-    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-md">
+    <Card className={`group overflow-hidden transition-all duration-300 border-0 shadow-md ${
+      isSelected 
+        ? 'ring-2 ring-orange-500 shadow-xl shadow-orange-100 scale-[1.02]' 
+        : isOtherSelected 
+          ? 'opacity-60 hover:opacity-80' 
+          : 'hover:shadow-xl'
+    }`}>
       {/* Image Section */}
       <div className="relative h-44 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
         {images.length > 0 ? (
