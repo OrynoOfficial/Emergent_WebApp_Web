@@ -285,6 +285,14 @@ const CarCard = ({ car, onView, onEdit, onDelete }) => {
             </>
           )}
         </div>
+        
+        {/* Operator Assignment */}
+        {car.operator_name && (
+          <div className="flex items-center gap-2 mb-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-800 truncate">{car.operator_name}</span>
+          </div>
+        )}
 
         {car.features?.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
