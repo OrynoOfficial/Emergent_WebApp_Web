@@ -605,6 +605,12 @@ export default function HotelManagement() {
                         <div className="flex items-center gap-2 text-white/80 text-sm mt-1">
                           <MapPin className="w-4 h-4" /> {selectedHotel.city}
                         </div>
+                        {selectedHotel.operator_name && (
+                          <div className="flex items-center gap-2 mt-1.5 bg-white/10 px-2 py-1 rounded-md w-fit">
+                            <Building2 className="w-3.5 h-3.5 text-white/70" />
+                            <span className="text-white/90 text-xs font-medium">{selectedHotel.operator_name}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <Button 
@@ -631,6 +637,25 @@ export default function HotelManagement() {
                         />
                       </div>
                       <div className="flex gap-2">
+                        {/* View Mode Toggle */}
+                        <div className="flex border rounded-lg overflow-hidden">
+                          <Button 
+                            variant={roomViewMode === 'grid' ? 'default' : 'ghost'} 
+                            size="sm" 
+                            onClick={() => setRoomViewMode('grid')} 
+                            className={`rounded-none ${roomViewMode === 'grid' ? 'bg-[#082c59]' : ''}`}
+                          >
+                            <Grid3X3 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant={roomViewMode === 'list' ? 'default' : 'ghost'} 
+                            size="sm" 
+                            onClick={() => setRoomViewMode('list')} 
+                            className={`rounded-none ${roomViewMode === 'list' ? 'bg-[#082c59]' : ''}`}
+                          >
+                            <List className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <Button 
                           variant={showRoomFilters ? 'default' : 'outline'} 
                           onClick={() => setShowRoomFilters(!showRoomFilters)} 
