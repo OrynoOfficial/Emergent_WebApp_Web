@@ -641,21 +641,30 @@ export default function RestaurantManagement() {
               {showMenuPanel && selectedRestaurant && (
                 <div className="w-[420px] flex-shrink-0 animate-in slide-in-from-right duration-300">
                   <Card className="shadow-lg border-0 sticky top-4">
-                    <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-t-xl">
+                    <CardHeader className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-t-xl pb-3">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Menu className="h-5 w-5" />
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-xl font-bold truncate">
                             {selectedRestaurant.name}
                           </CardTitle>
-                          <p className="text-amber-100 text-sm mt-1">Menu Items</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Menu className="h-4 w-4 text-amber-200" />
+                            <span className="text-amber-100 text-sm">Menu Items</span>
+                            {selectedRestaurant.operator_name && (
+                              <>
+                                <span className="text-amber-200">•</span>
+                                <span className="text-amber-200 text-xs truncate">{selectedRestaurant.operator_name}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1 flex-shrink-0">
                           <Button 
                             size="icon" 
                             variant="ghost" 
                             className="h-8 w-8 text-white hover:bg-white/20"
                             onClick={() => handleViewRestaurant(selectedRestaurant)}
+                            title="View Restaurant"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -664,6 +673,7 @@ export default function RestaurantManagement() {
                             variant="ghost" 
                             className="h-8 w-8 text-white hover:bg-white/20"
                             onClick={() => openRestaurantDialog(selectedRestaurant)}
+                            title="Edit Restaurant"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -672,6 +682,7 @@ export default function RestaurantManagement() {
                             variant="ghost" 
                             className="h-8 w-8 text-white hover:bg-white/20"
                             onClick={() => { setShowMenuPanel(false); setSelectedRestaurant(null); }}
+                            title="Close Menu"
                           >
                             <X className="h-4 w-4" />
                           </Button>
