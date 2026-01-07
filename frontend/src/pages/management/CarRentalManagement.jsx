@@ -11,7 +11,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
   LayoutDashboard, MessageSquare, TrendingUp, RefreshCw,
-  Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight
+  Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
