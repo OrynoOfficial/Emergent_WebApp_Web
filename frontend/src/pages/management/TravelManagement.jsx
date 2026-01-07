@@ -838,6 +838,7 @@ export default function TravelManagement() {
             form={vehicleForm}
             onChange={setVehicleForm}
             onOpenSeatLayout={() => setIsSeatLayoutOpen(true)}
+            operators={operators}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsVehicleDialogOpen(false)}>Cancel</Button>
