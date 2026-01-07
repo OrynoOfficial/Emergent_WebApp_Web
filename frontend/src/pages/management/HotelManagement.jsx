@@ -111,6 +111,7 @@ export default function HotelManagement() {
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState('grid');
+  const [roomViewMode, setRoomViewMode] = useState('list');
   const [hotelSearch, setHotelSearch] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
   const [showHotelFilters, setShowHotelFilters] = useState(false);
