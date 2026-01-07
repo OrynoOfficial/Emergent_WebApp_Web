@@ -194,7 +194,7 @@ export default function HotelManagement() {
       try { 
         const opRes = await api.get('/operators/'); 
         setOperators(opRes.data.operators || opRes.data || []); 
-      } catch {}
+      } catch { /* ignore operators fetch error */ }
     } catch { setHotels([]); }
     finally { setLoading(false); }
   }, []);
