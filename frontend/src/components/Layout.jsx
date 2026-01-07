@@ -574,7 +574,7 @@ export default function Layout({ children }) {
       return (
         <div 
           key={item.key} 
-          className="mb-1 relative"
+          className="mb-1 relative group/menu"
           onMouseEnter={() => handleSubmenuEnter(item.key)}
           onMouseLeave={handleSubmenuLeave}
         >
@@ -597,28 +597,27 @@ export default function Layout({ children }) {
             <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-90' : ''}`} />
           </button>
           
-          {/* Flyout Submenu */}
-          <div 
-            className={`
-              absolute left-full top-0 ml-2 z-[60]
-              min-w-[240px] max-h-[70vh] overflow-y-auto
-              bg-[#0a3566] rounded-xl shadow-2xl border border-white/10
-              transform transition-all duration-200 ease-out origin-left
-              ${isSubmenuOpen 
-                ? 'opacity-100 scale-100 translate-x-0 pointer-events-auto' 
-                : 'opacity-0 scale-95 -translate-x-2 pointer-events-none'
-              }
-            `}
-            onMouseEnter={() => handleSubmenuEnter(item.key)}
-            onMouseLeave={handleSubmenuLeave}
-          >
-            {/* Submenu header */}
-            <div className="px-4 py-3 border-b border-white/10 bg-white/5">
-              <div className="flex items-center gap-2">
-                <item.icon className="h-4 w-4" style={{ color: iconColor }} />
-                <span className="font-semibold text-white text-sm">{item.label}</span>
+          {/* Flyout Submenu - positioned fixed to escape overflow */}
+          {isSubmenuOpen && (
+            <div 
+              className="fixed z-[9999] min-w-[260px] max-h-[75vh] overflow-y-auto
+                         bg-[#0a3566] rounded-xl shadow-2xl border border-white/10
+                         animate-in fade-in slide-in-from-left-2 duration-200"
+              style={{ 
+                left: '288px', 
+                top: 'auto',
+                marginTop: '-48px'
+              }}
+              onMouseEnter={() => handleSubmenuEnter(item.key)}
+              onMouseLeave={handleSubmenuLeave}
+            >
+              {/* Submenu header */}
+              <div className="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-white/10 to-transparent sticky top-0 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <item.icon className="h-4 w-4" style={{ color: iconColor }} />
+                  <span className="font-semibold text-white text-sm">{item.label}</span>
+                </div>
               </div>
-            </div>
             
             {/* Submenu items */}
             <div className="py-2 px-2">
