@@ -116,3 +116,91 @@ async def get_my_travel_routes(
         "total": total,
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
     }
+
+
+class TravelRouteUpdate(BaseModel):
+    from_city: Optional[str] = None
+    to_city: Optional[str] = None
+    departure_time: Optional[str] = None
+    arrival_time: Optional[str] = None
+    duration: Optional[str] = None
+    price: Optional[float] = None
+    vehicle_id: Optional[str] = None
+    vehicle_name: Optional[str] = None
+    vehicle_type: Optional[str] = None
+    total_seats: Optional[int] = None
+    amenities: Optional[list] = None
+    valid_from: Optional[str] = None
+    valid_to: Optional[str] = None
+    status: Optional[str] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+
+
+@router.put("/routes/{route_id}")
+async def update_travel_route(
+    route_id: str,
+    route_data: TravelRouteUpdate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Update a travel route"""
+    db = get_database()
+    
+    route = await db.travel_routes.find_one({"_id": route_id})
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    
+    # Check authorization
+    if current_user["role"] == "operator" and route.get("operator_id") != current_user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Not authorized to update this route")
+    
+    update_data = {k: v for k, v in route_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.travel_routes.update_one({"_id": route_id}, {"$set": update_data})
+    
+    return {"message": "Route updated", "route_id": route_id}
+
+
+@router.delete("/routes/{route_id}")
+async def delete_travel_route(
+    route_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Delete a travel route"""
+    db = get_database()
+    
+    route = await db.travel_routes.find_one({"_id": route_id})
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    
+    # Check authorization
+    if current_user["role"] == "operator" and route.get("operator_id") != current_user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Not authorized to delete this route")
+    
+    await db.travel_routes.delete_one({"_id": route_id})
+    
+    return {"message": "Route deleted", "route_id": route_id}
+
+
+@router.post("/routes/{route_id}/approve")
+async def approve_travel_route(
+    route_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Approve a pending travel route"""
+    if current_user["role"] not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can approve routes")
+    
+    db = get_database()
+    
+    route = await db.travel_routes.find_one({"_id": route_id})
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+    
+    await db.travel_routes.update_one(
+        {"_id": route_id}, 
+        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Route approved", "route_id": route_id}
