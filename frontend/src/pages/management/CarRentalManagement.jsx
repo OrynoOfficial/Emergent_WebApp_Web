@@ -7,17 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
-  Car, Plus, Edit, Trash2, MapPin, Calendar, Users, DollarSign,
-  LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Info, Fuel, Settings, Key, Eye
+  Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
+  LayoutDashboard, MessageSquare, TrendingUp, RefreshCw,
+  Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
@@ -25,7 +23,7 @@ import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveD
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend
+  LineChart, Line, Legend
 } from 'recharts';
 
 const CHART_COLORS = ['#22C55E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -33,22 +31,10 @@ const CAR_FEATURES = ['ac', 'gps', 'bluetooth', 'sunroof', 'leather_seats', 'bac
 const CAR_TYPES = ['economy', 'compact', 'sedan', 'suv', 'luxury', 'sports', 'van', 'pickup'];
 
 const DEFAULT_CAR_FORM = {
-  make: '',
-  model: '',
-  year: new Date().getFullYear(),
-  vehicle_type: 'sedan',
-  seats: 5,
-  doors: 4,
-  transmission: 'automatic',
-  fuel_type: 'petrol',
-  price_per_day: '',
-  price_per_hour: '',
-  city: '',
-  features: [],
-  images: [],
-  is_available: true,
-  operator_id: '',
-  operator_name: ''
+  brand: '', model: '', year: new Date().getFullYear(), car_type: 'sedan',
+  seats: 5, doors: 4, transmission: 'automatic', fuel_type: 'petrol',
+  price_per_day: '', price_per_hour: '', city: '', features: [],
+  images: [], is_available: true, operator_id: '', operator_name: '', plate_number: ''
 };
 
 // Car Rental specific dashboard data generator
@@ -59,7 +45,6 @@ const useCarRentalDashboardData = (cars) => {
     const totalRevenue = cars.reduce((sum, c) => sum + (c.price_per_day || 0) * 8, 0);
     const utilization = totalCars > 0 ? Math.round(((totalCars - availableCars) / totalCars) * 100) : 0;
 
-    // Type distribution
     const typeCount = {};
     cars.forEach(c => {
       const type = c.car_type || 'sedan';
@@ -71,7 +56,6 @@ const useCarRentalDashboardData = (cars) => {
       color: CHART_COLORS[i]
     }));
 
-    // Daily trend - fixed data
     const dailyTrend = [
       { date: 'Mon', bookings: 12, revenue: 180000 },
       { date: 'Tue', bookings: 15, revenue: 220000 },
@@ -101,14 +85,13 @@ const useCarRentalDashboardData = (cars) => {
       },
       dailyTrend,
       distribution,
-      secondaryCount: availableCars,
-      recentBookings: []
+      secondaryCount: availableCars
     };
   }, [cars]);
 };
 
-// Business Analytics
-const BusinessAnalytics = ({ cars }) => {
+// Analytics Section for Dashboard
+const CarRentalAnalyticsSection = ({ cars }) => {
   const analyticsData = useMemo(() => {
     const cityData = {};
     cars.forEach(c => {
@@ -116,7 +99,6 @@ const BusinessAnalytics = ({ cars }) => {
       cityData[city] = (cityData[city] || 0) + 1;
     });
 
-    // Fixed monthly trend data
     const monthlyTrend = [
       { month: 'Jan', bookings: 65, revenue: 980000 },
       { month: 'Feb', bookings: 78, revenue: 1180000 },
@@ -135,13 +117,16 @@ const BusinessAnalytics = ({ cars }) => {
   }, [cars]);
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Monthly Performance</CardTitle>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Card className="shadow-lg lg:col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <TrendingUp className="h-5 w-5 text-emerald-600" />
+            Monthly Performance
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-72">
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analyticsData.monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -159,8 +144,8 @@ const BusinessAnalytics = ({ cars }) => {
       </Card>
 
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Fleet by Location</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Fleet by Location</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">
@@ -168,7 +153,7 @@ const BusinessAnalytics = ({ cars }) => {
               <BarChart data={analyticsData.cityData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={80} />
+                <YAxis dataKey="name" type="category" width={70} fontSize={11} />
                 <Tooltip />
                 <Bar dataKey="value" fill="#22C55E" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -180,6 +165,158 @@ const BusinessAnalytics = ({ cars }) => {
   );
 };
 
+// Image Carousel Component for Car Modal
+const CarImageCarousel = ({ images, className = "h-48" }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+
+  if (!images?.length) {
+    return (
+      <div className={`${className} bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center rounded-lg`}>
+        <Car className="h-16 w-16 text-slate-300" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} relative group overflow-hidden bg-slate-100 rounded-lg`}>
+      <img 
+        src={getImageUrl(images[currentIndex])} 
+        alt={`Car ${currentIndex + 1}`} 
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+      />
+      {images.length > 1 && (
+        <>
+          <button 
+            onClick={() => setCurrentIndex(prev => prev === 0 ? images.length - 1 : prev - 1)} 
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button 
+            onClick={() => setCurrentIndex(prev => prev === images.length - 1 ? 0 : prev + 1)} 
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {images.map((_, idx) => (
+              <button 
+                key={idx} 
+                onClick={() => setCurrentIndex(idx)} 
+                className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/75'}`} 
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Modern Car Card Component
+const CarCard = ({ car, onView, onEdit, onDelete }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+  const images = car.images?.filter(img => img) || [];
+
+  return (
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-md">
+      {/* Image Section */}
+      <div className="relative h-44 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
+        {images.length > 0 ? (
+          <img 
+            src={getImageUrl(images[0])} 
+            alt={`${car.brand} ${car.model}`}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Car className="w-20 h-20 text-slate-300" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute top-3 left-3">
+          <Badge className={car.is_available ? 'bg-emerald-500 text-white border-0' : 'bg-red-500 text-white border-0'}>
+            {car.is_available ? 'Available' : 'Rented'}
+          </Badge>
+        </div>
+        <div className="absolute top-3 right-3">
+          <Badge variant="outline" className="bg-white/90 capitalize">{car.car_type}</Badge>
+        </div>
+        <div className="absolute bottom-3 left-3 text-white">
+          <h3 className="font-bold text-lg">{car.brand} {car.model}</h3>
+          <p className="text-white/80 text-sm">{car.year} • {car.transmission}</p>
+        </div>
+      </div>
+      
+      <CardContent className="p-4">
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
+            <Users className="w-4 h-4 mx-auto text-slate-500 mb-1" />
+            <p className="text-xs text-slate-500">Seats</p>
+            <p className="font-semibold text-sm">{car.seats}</p>
+          </div>
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
+            <Fuel className="w-4 h-4 mx-auto text-slate-500 mb-1" />
+            <p className="text-xs text-slate-500">Fuel</p>
+            <p className="font-semibold text-sm capitalize">{car.fuel_type?.slice(0, 6)}</p>
+          </div>
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
+            <Gauge className="w-4 h-4 mx-auto text-slate-500 mb-1" />
+            <p className="text-xs text-slate-500">Trans.</p>
+            <p className="font-semibold text-sm capitalize">{car.transmission?.slice(0, 4)}</p>
+          </div>
+          <div className="text-center p-2 bg-emerald-50 rounded-lg">
+            <DollarSign className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+            <p className="text-xs text-slate-500">Day</p>
+            <p className="font-bold text-sm text-emerald-600">{(car.price_per_day/1000).toFixed(0)}k</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-3 text-sm text-slate-600">
+          <MapPin className="w-4 h-4" />
+          <span>{car.city || 'N/A'}</span>
+          {car.plate_number && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{car.plate_number}</span>
+            </>
+          )}
+        </div>
+
+        {car.features?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {car.features.slice(0, 4).map(f => (
+              <Badge key={f} variant="outline" className="text-xs capitalize">{f.replace('_', ' ')}</Badge>
+            ))}
+            {car.features.length > 4 && (
+              <Badge variant="outline" className="text-xs">+{car.features.length - 4}</Badge>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-3 border-t">
+          <Button size="sm" variant="outline" onClick={() => onView(car)} className="flex-1">
+            <Eye className="w-4 h-4 mr-1" /> View
+          </Button>
+          <PermissionGate permission="car_rental.edit">
+            <Button size="sm" variant="outline" onClick={() => onEdit(car)}>
+              <Edit className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="car_rental.delete">
+            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => onDelete(car)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Main Component
 export default function CarRentalManagement() {
   const { user } = useAuth();
@@ -187,14 +324,26 @@ export default function CarRentalManagement() {
   const [cars, setCars] = useState([]);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [carSearch, setCarSearch] = useState('');
   const [isCarDialogOpen, setIsCarDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewingCar, setViewingCar] = useState(null);
   const [editingCar, setEditingCar] = useState(null);
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
-  // Use the car rental dashboard data hook
   const dashboardData = useCarRentalDashboardData(cars);
+
+  // Filtered cars
+  const filteredCars = useMemo(() => {
+    if (!carSearch) return cars;
+    const s = carSearch.toLowerCase();
+    return cars.filter(c => 
+      c.brand?.toLowerCase().includes(s) || 
+      c.model?.toLowerCase().includes(s) ||
+      c.city?.toLowerCase().includes(s) ||
+      c.plate_number?.toLowerCase().includes(s)
+    );
+  }, [cars, carSearch]);
 
   const handleViewCar = (car) => {
     setViewingCar(car);
@@ -208,7 +357,6 @@ export default function CarRentalManagement() {
       const res = await api.get('/car-rental/');
       setCars(res.data.cars || res.data || []);
       
-      // Load operators
       try {
         const opRes = await api.get('/operators/');
         setOperators(opRes.data.operators || opRes.data || []);
@@ -245,7 +393,6 @@ export default function CarRentalManagement() {
 
   const handleSaveCar = async () => {
     try {
-      // Find operator name if only ID is set
       const operator = operators.find(op => (op._id || op.id) === carForm.operator_id);
       const data = { 
         ...carForm, 
@@ -284,120 +431,128 @@ export default function CarRentalManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Car Rental Management Center</h1>
-          <p className="text-gray-600">Manage fleet, bookings, analytics, and communications</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Car className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Car Rental Management Center</h1>
+                <p className="text-slate-500">Manage fleet, bookings, and communications</p>
+              </div>
+            </div>
+            <Button onClick={loadCars} variant="outline" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
-        <Button onClick={loadCars} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management"><Car className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
-        </TabsList>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-white border shadow-sm p-1 rounded-xl mb-6">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+              <LayoutDashboard className="h-4 w-4 mr-2" />Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="management" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+              <Car className="h-4 w-4 mr-2" />Fleet Management
+            </TabsTrigger>
+            <TabsTrigger value="communications" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+              <MessageSquare className="h-4 w-4 mr-2" />Communications
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="dashboard" className="mt-6">
-          <ServiceExecutiveDashboard
-            serviceType="Car Rental"
-            serviceIcon={<Car className="h-8 w-8" />}
-            primaryColor="green"
-            stats={dashboardData.stats}
-            bookingsByStatus={dashboardData.bookingsByStatus}
-            dailyTrend={dashboardData.dailyTrend}
-            distribution={dashboardData.distribution}
-            recentBookings={dashboardData.recentBookings}
-            itemLabel="Vehicles"
-            secondaryLabel="Available"
-            secondaryCount={dashboardData.secondaryCount}
-          />
-        </TabsContent>
+          <TabsContent value="dashboard" className="mt-6">
+            <ServiceExecutiveDashboard
+              serviceType="Car Rental"
+              serviceIcon={<Car className="h-8 w-8" />}
+              primaryColor="green"
+              stats={dashboardData.stats}
+              bookingsByStatus={dashboardData.bookingsByStatus}
+              dailyTrend={dashboardData.dailyTrend}
+              distribution={dashboardData.distribution}
+              itemLabel="Vehicles"
+              secondaryLabel="Available"
+              secondaryCount={dashboardData.secondaryCount}
+              analyticsSection={<CarRentalAnalyticsSection cars={cars} />}
+            />
+          </TabsContent>
 
-        <TabsContent value="management" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Fleet Management</CardTitle>
+          <TabsContent value="management" className="mt-6 space-y-4">
+            {/* Search and Add */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by brand, model, city, or plate..."
+                  value={carSearch}
+                  onChange={(e) => setCarSearch(e.target.value)}
+                  className="pl-10 bg-white"
+                />
+              </div>
               <PermissionGate permission="car_rental.create">
-                <Button onClick={() => openCarDialog()} className="bg-[#082c59]">
+                <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700">
                   <Plus className="w-4 h-4 mr-2" /> Add Car
                 </Button>
               </PermissionGate>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : cars.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No cars found. Add your first car!</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {cars.map(car => (
-                    <Card key={car._id || car.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-semibold">{car.brand} {car.model}</h3>
-                            <p className="text-sm text-gray-500">{car.year} • {car.car_type}</p>
-                          </div>
-                          <Badge className={car.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                            {car.is_available ? 'Available' : 'Rented'}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" />{car.city}</div>
-                          <div className="flex items-center gap-2"><Users className="w-4 h-4 text-gray-400" />{car.seats} seats</div>
-                          <div className="flex items-center gap-2"><Fuel className="w-4 h-4 text-gray-400" />{car.fuel_type}</div>
-                        </div>
-                        <div className="mt-3 font-bold text-green-600">{formatFCFA(car.price_per_day)}/day</div>
-                        <div className="flex gap-2 mt-4">
-                          <Button size="sm" variant="outline" onClick={() => handleViewCar(car)} title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <PermissionGate permission="car_rental.edit">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => openCarDialog(car)}>
-                              <Edit className="w-4 h-4 mr-1" /> Edit
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="car_rental.delete">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteCar(car)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        <TabsContent value="communications" className="mt-6">
-          <ServiceCommunicationsHub
-            serviceType="Car Rental"
-            serviceTag="car_rental"
-            serviceIcon={<Car className="h-5 w-5 text-green-600" />}
-            primaryColor="green"
-          />
-        </TabsContent>
+            {/* Cars Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-emerald-500" />
+              </div>
+            ) : filteredCars.length === 0 ? (
+              <Card className="p-12 text-center">
+                <Car className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No cars found</h3>
+                <p className="text-slate-500 mb-4">
+                  {carSearch ? 'Try adjusting your search' : 'Add your first car to get started'}
+                </p>
+                <Button onClick={() => openCarDialog()} className="bg-emerald-600">
+                  <Plus className="w-4 h-4 mr-2" /> Add Car
+                </Button>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredCars.map(car => (
+                  <CarCard
+                    key={car._id || car.id}
+                    car={car}
+                    onView={handleViewCar}
+                    onEdit={openCarDialog}
+                    onDelete={handleDeleteCar}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="analytics" className="mt-6">
-          <BusinessAnalytics cars={cars} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="communications" className="mt-6">
+            <ServiceCommunicationsHub
+              serviceType="Car Rental"
+              serviceTag="car_rental"
+              serviceIcon={<Car className="h-5 w-5 text-emerald-600" />}
+              primaryColor="green"
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Car Dialog */}
       <Dialog open={isCarDialogOpen} onOpenChange={setIsCarDialogOpen}>
         <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingCar ? 'Edit Car' : 'Add Car'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Car className="h-5 w-5 text-emerald-600" />
+              {editingCar ? 'Edit Car' : 'Add Car'}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div>
@@ -426,12 +581,26 @@ export default function CarRentalManagement() {
               <Input value={carForm.city} onChange={e => setCarForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
             </div>
             <div>
+              <Label>Plate Number</Label>
+              <Input value={carForm.plate_number} onChange={e => setCarForm(p => ({ ...p, plate_number: e.target.value }))} placeholder="LT 1234 AB" />
+            </div>
+            <div>
               <Label>Price/Day (FCFA)</Label>
               <Input type="number" value={carForm.price_per_day} onChange={e => setCarForm(p => ({ ...p, price_per_day: e.target.value }))} placeholder="25000" />
             </div>
             <div>
               <Label>Seats</Label>
               <Input type="number" value={carForm.seats} onChange={e => setCarForm(p => ({ ...p, seats: parseInt(e.target.value) }))} />
+            </div>
+            <div>
+              <Label>Transmission</Label>
+              <Select value={carForm.transmission} onValueChange={v => setCarForm(p => ({ ...p, transmission: v }))}>
+                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="automatic">Automatic</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Fuel Type</Label>
@@ -451,11 +620,7 @@ export default function CarRentalManagement() {
                 value={carForm.operator_id || ''} 
                 onValueChange={v => {
                   const op = operators.find(o => (o._id || o.id) === v);
-                  setCarForm(p => ({ 
-                    ...p, 
-                    operator_id: v,
-                    operator_name: op?.name || ''
-                  }));
+                  setCarForm(p => ({ ...p, operator_id: v, operator_name: op?.name || '' }));
                 }}
               >
                 <SelectTrigger className="bg-white">
@@ -463,13 +628,10 @@ export default function CarRentalManagement() {
                 </SelectTrigger>
                 <SelectContent className="bg-white max-h-60">
                   {operators.map(op => (
-                    <SelectItem key={op._id || op.id} value={op._id || op.id}>
-                      {op.name}
-                    </SelectItem>
+                    <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500 mt-1">Select the operator managing this vehicle</p>
             </div>
             <div className="col-span-2">
               <Label>Features</Label>
@@ -496,26 +658,69 @@ export default function CarRentalManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCarDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCar} className="bg-[#082c59]">{editingCar ? 'Update' : 'Add'}</Button>
+            <Button onClick={handleSaveCar} className="bg-emerald-600">{editingCar ? 'Update' : 'Add'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* View Car Dialog */}
+      {/* View Car Dialog - Enhanced with Image Carousel */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg bg-white">
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Car className="h-5 w-5 text-blue-600" />
+              <Car className="h-5 w-5 text-emerald-600" />
               Car Details
             </DialogTitle>
           </DialogHeader>
           {viewingCar && (
             <div className="space-y-4 py-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-bold text-lg text-blue-900">{viewingCar.brand} {viewingCar.model}</h3>
-                <p className="text-sm text-blue-700">{viewingCar.year} • {viewingCar.transmission}</p>
+              {/* Image Carousel */}
+              <CarImageCarousel images={viewingCar.images} className="h-56" />
+
+              {/* Thumbnails */}
+              {viewingCar.images?.length > 1 && (
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <div className="flex gap-2">
+                    {viewingCar.images.map((img, idx) => {
+                      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                      const getImageUrl = (i) => i?.startsWith('/api') ? `${backendUrl}${i}` : i;
+                      return (
+                        <img 
+                          key={idx}
+                          src={getImageUrl(img)}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="h-16 w-24 object-cover rounded-lg border-2 border-white shadow-sm cursor-pointer hover:ring-2 hover:ring-emerald-500"
+                        />
+                      );
+                    })}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              )}
+
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="font-bold text-xl text-emerald-900">{viewingCar.brand} {viewingCar.model}</h3>
+                <p className="text-emerald-700">{viewingCar.year} • {viewingCar.transmission} • {viewingCar.car_type}</p>
               </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 bg-slate-50 rounded-lg text-center">
+                  <Users className="h-5 w-5 mx-auto text-slate-500 mb-1" />
+                  <p className="text-xs text-slate-500">Seats</p>
+                  <p className="font-bold">{viewingCar.seats}</p>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-lg text-center">
+                  <Fuel className="h-5 w-5 mx-auto text-slate-500 mb-1" />
+                  <p className="text-xs text-slate-500">Fuel</p>
+                  <p className="font-bold capitalize">{viewingCar.fuel_type}</p>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-lg text-center">
+                  <DollarSign className="h-5 w-5 mx-auto text-emerald-600 mb-1" />
+                  <p className="text-xs text-slate-500">Per Day</p>
+                  <p className="font-bold text-emerald-600">{formatFCFA(viewingCar.price_per_day)}</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Location</p>
@@ -524,28 +729,21 @@ export default function CarRentalManagement() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-slate-500">Fuel Type</p>
-                  <p className="font-medium capitalize">{viewingCar.fuel_type || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Seats</p>
-                  <p className="font-medium">{viewingCar.seats} passengers</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Price/Day</p>
-                  <p className="font-bold text-green-600">{formatFCFA(viewingCar.price_per_day)}</p>
-                </div>
-                <div>
                   <p className="text-slate-500">Plate Number</p>
-                  <p className="font-medium">{viewingCar.plate_number || 'N/A'}</p>
+                  <p className="font-medium font-mono">{viewingCar.plate_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Operator</p>
+                  <p className="font-medium">{viewingCar.operator_name || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">Status</p>
-                  <Badge className={viewingCar.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
-                    {viewingCar.status}
+                  <Badge className={viewingCar.is_available ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
+                    {viewingCar.is_available ? 'Available' : 'Rented'}
                   </Badge>
                 </div>
               </div>
+
               {viewingCar.features?.length > 0 && (
                 <div>
                   <p className="text-slate-500 text-sm mb-2">Features</p>
@@ -562,7 +760,7 @@ export default function CarRentalManagement() {
             <Button variant="outline" onClick={() => { openCarDialog(viewingCar); setIsViewDialogOpen(false); }}>
               <Edit className="w-4 h-4 mr-2" /> Edit
             </Button>
-            <Button onClick={() => setIsViewDialogOpen(false)} className="bg-[#082c59]">Close</Button>
+            <Button onClick={() => setIsViewDialogOpen(false)} className="bg-emerald-600">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
