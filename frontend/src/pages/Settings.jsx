@@ -19,8 +19,8 @@ import {
 import api from '../api/client';
 import { toast } from 'sonner';
 
-// Settings menu items configuration
-const SETTINGS_SECTIONS = [
+// Settings menu items configuration - for Customers
+const CUSTOMER_SETTINGS_SECTIONS = [
   { key: 'profile', label: 'Profile', icon: User, description: 'Manage your personal information' },
   { key: 'security', label: 'Security', icon: Shield, description: 'Password and authentication settings' },
   { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
@@ -31,7 +31,18 @@ const SETTINGS_SECTIONS = [
   { key: 'about', label: 'About / Impressum', icon: Info, description: 'App information' },
 ];
 
-// Admin-only settings sections
+// Settings menu items for Operators (no Payment Methods)
+const OPERATOR_SETTINGS_SECTIONS = [
+  { key: 'profile', label: 'Profile', icon: User, description: 'Manage your personal information' },
+  { key: 'security', label: 'Security', icon: Shield, description: 'Password and authentication settings' },
+  { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
+  { key: 'preferences', label: 'Preferences', icon: Globe, description: 'Language, currency, and display' },
+  { key: 'data_protection', label: 'Data Protection', icon: Lock, description: 'Privacy and data settings' },
+  { key: 'legal', label: 'Legal Information', icon: FileText, description: 'Terms and conditions' },
+  { key: 'about', label: 'About / Impressum', icon: Info, description: 'App information' },
+];
+
+// Admin-only settings sections (in addition to base sections)
 const ADMIN_SETTINGS_SECTIONS = [
   { key: 'system', label: 'System Configuration', icon: Database, description: 'Global system settings' },
   { key: 'api_keys', label: 'API Keys', icon: Key, description: 'Manage API integrations' },
