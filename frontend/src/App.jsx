@@ -652,15 +652,6 @@ function App() {
             }
           />
           
-          <Route
-            path="/admin/data-analytics"
-            element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <DataAnalytics />
-              </ProtectedRoute>
-            }
-          />
-          
           {/* Management Routes */}
           <Route
             path="/management/travel"
