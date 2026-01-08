@@ -114,7 +114,7 @@ const ScrollableImageGallery = ({ images, onImageClick, hotelName }) => {
   );
 };
 
-// Grid View Hotel Card
+// Grid View Hotel Card - Compact Design
 const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -122,8 +122,6 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
   
   const defaultImages = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070',
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070',
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=2070',
   ];
   
   const images = hotel.images && hotel.images.length > 0 ? hotel.images : defaultImages;
@@ -131,82 +129,78 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
 
   return (
     <>
-      <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-        {/* Image Section */}
-        <div className="relative h-52 overflow-hidden">
-          <ScrollableImageGallery
-            images={images}
-            hotelName={hotel.name}
-            onImageClick={(idx) => { setSelectedImageIndex(idx); setGalleryOpen(true); }}
+      <Card className="group overflow-hidden bg-white rounded-xl border-0 shadow-sm hover:shadow-lg transition-all duration-300">
+        {/* Image Section - Reduced height */}
+        <div className="relative h-36 overflow-hidden">
+          <img
+            src={images[0]}
+            alt={hotel.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onClick={() => { setSelectedImageIndex(0); setGalleryOpen(true); }}
           />
           
           {/* Favorite button */}
           <button
             onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white shadow-md transition-all"
+            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
           >
-            <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
           </button>
           
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <div className="absolute top-2 left-2 flex gap-1">
             {hotel.free_cancellation && (
-              <Badge className="bg-emerald-500 text-white text-xs shadow-md">Free Cancellation</Badge>
+              <Badge className="bg-emerald-500 text-white text-[10px] px-2 py-0.5">Free Cancel</Badge>
             )}
             {hotel.breakfast_included && (
-              <Badge className="bg-orange-500 text-white text-xs shadow-md">Breakfast Included</Badge>
+              <Badge className="bg-orange-500 text-white text-[10px] px-2 py-0.5">Breakfast</Badge>
             )}
           </div>
+          
+          {/* Rating badge */}
+          {hotel.guest_rating && (
+            <div className="absolute bottom-2 right-2 bg-[#082c59] text-white px-2 py-0.5 rounded text-xs font-bold">
+              {hotel.guest_rating.toFixed(1)}
+            </div>
+          )}
         </div>
         
-        {/* Content */}
-        <CardContent className="p-5">
-          {/* Stars & Rating */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1">
-              {[...Array(hotel.star_rating || 0)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            {hotel.guest_rating && (
-              <div className="flex items-center gap-1.5">
-                <span className="bg-[#082c59] text-white text-xs font-bold px-2 py-1 rounded-md">
-                  {hotel.guest_rating.toFixed(1)}
-                </span>
-                <span className="text-xs text-slate-500">
-                  {hotel.guest_rating >= 9 ? 'Excellent' : hotel.guest_rating >= 8 ? 'Very Good' : 'Good'}
-                </span>
-              </div>
-            )}
+        {/* Content - Compact */}
+        <CardContent className="p-3">
+          {/* Stars */}
+          <div className="flex items-center gap-0.5 mb-1">
+            {[...Array(hotel.star_rating || 0)].map((_, i) => (
+              <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+            ))}
           </div>
           
           {/* Name & Location */}
-          <h3 className="font-bold text-lg text-slate-900 mb-1 line-clamp-1">{hotel.name}</h3>
-          <div className="flex items-center text-slate-500 text-sm mb-3">
-            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+          <h3 className="font-bold text-sm text-slate-900 mb-0.5 line-clamp-1">{hotel.name}</h3>
+          <div className="flex items-center text-slate-500 text-xs mb-2">
+            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
             <span className="line-clamp-1">{hotel.address || hotel.city}</span>
           </div>
           
-          {/* Amenities */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {hotel.amenities?.slice(0, 4).map((amenity, idx) => (
-              <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
-                <AmenityIcon amenity={amenity} className="h-3 w-3 text-slate-600" />
-                <span className="text-xs text-slate-600 capitalize">{amenity}</span>
+          {/* Amenities - Compact */}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {hotel.amenities?.slice(0, 3).map((amenity, idx) => (
+              <div key={idx} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600 capitalize">
+                <AmenityIcon amenity={amenity} className="h-2.5 w-2.5" />
+                {amenity}
               </div>
             ))}
           </div>
           
           {/* Price & CTA */}
-          <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <div>
-              <div className="text-xs text-slate-500">From</div>
-              <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(hotel.price_per_night)}</div>
-              <div className="text-xs text-slate-500">per night</div>
+              <div className="text-lg font-bold text-[#082c59]">{formatFCFA(hotel.price_per_night)}</div>
+              <div className="text-[10px] text-slate-500">per night</div>
             </div>
             <Button
               onClick={() => onViewDetails(hotel)}
-              className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl px-5"
+              size="sm"
+              className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs px-3 h-8"
             >
               View Deal
             </Button>
