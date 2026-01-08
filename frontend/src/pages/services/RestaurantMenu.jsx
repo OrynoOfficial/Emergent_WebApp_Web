@@ -395,10 +395,32 @@ export default function RestaurantMenu() {
               </CardContent>
             </Card>
 
-            {/* Order Button */}
-            <Button onClick={handleOrder} disabled={cartCount === 0 || isOrdering} className="w-full bg-[#082c59] h-12 text-lg">
-              {isOrdering ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <CheckCircle className="h-5 w-5 mr-2" />}
-              {isOrdering ? 'Processing...' : `Place Order - ${formatFCFA(total)}`}
+            {/* Order Button - Proceed to Booking */}
+            <Button 
+              onClick={() => {
+                // Store cart and order details for booking page
+                const orderDetails = {
+                  restaurant,
+                  items: getCartItems().map(i => ({ ...i })),
+                  order_type: orderType,
+                  subtotal,
+                  discount,
+                  total,
+                  promo_code: promoDiscount > 0 ? promoCode : null,
+                  reservation_date: orderType === 'dine-in' ? format(reservationDate, 'yyyy-MM-dd') : null,
+                  reservation_time: orderType === 'dine-in' ? reservationTime : null,
+                  guests: orderType === 'dine-in' ? guests : null,
+                  special_requests: specialRequests
+                };
+                sessionStorage.setItem('restaurantOrder', JSON.stringify(orderDetails));
+                sessionStorage.setItem('selectedRestaurant', JSON.stringify(restaurant));
+                navigate('/services/restaurants/booking');
+              }} 
+              disabled={cartCount === 0} 
+              className="w-full bg-[#082c59] h-12 text-lg"
+            >
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Proceed to Booking - {formatFCFA(total)}
             </Button>
           </div>
         </div>
