@@ -376,7 +376,8 @@ export default function RestaurantsResults() {
       time,
       guests
     }));
-    navigate(`/services/restaurants/booking`);
+    // Navigate to menu page first, where user can select items before booking
+    navigate(`/services/restaurants/menu?id=${restaurant.id}`);
   };
 
   if (loading) {
