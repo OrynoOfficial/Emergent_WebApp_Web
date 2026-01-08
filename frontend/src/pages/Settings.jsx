@@ -133,8 +133,24 @@ export default function Settings() {
   const [editingContent, setEditingContent] = useState(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isOperator = user?.role === 'operator' || !!user?.operator_id;
+  const isCustomer = !isAdmin && !isOperator;
 
-  // Load notification preferences from backend on mount
+  // Determine which settings sections to show based on role
+  const getSettingsSections = () => {
+    if (isAdmin) {
+      // Admins see all sections including system config
+      return [...OPERATOR_SETTINGS_SECTIONS, ...ADMIN_SETTINGS_SECTIONS];
+    } else if (isOperator) {
+      // Operators see everything except Payment Methods
+      return OPERATOR_SETTINGS_SECTIONS;
+    } else {
+      // Customers see all base sections including Payment Methods
+      return CUSTOMER_SETTINGS_SECTIONS;
+    }
+  };
+
+  const allSections = getSettingsSections();
   useEffect(() => {
     const loadNotificationPreferences = async () => {
       try {
