@@ -258,10 +258,6 @@ export default function Settings() {
     }
   };
 
-  const allSections = isAdmin 
-    ? [...SETTINGS_SECTIONS, ...ADMIN_SETTINGS_SECTIONS]
-    : SETTINGS_SECTIONS;
-
   const handleSaveProfile = async () => {
     setSaving(true);
     setSaveSuccess(prev => ({ ...prev, profile: false }));
