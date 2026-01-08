@@ -132,15 +132,53 @@ const SERVICE_CATEGORIES = [
 ];
 
 export default function BrowseServices() {
-  const { user } = useAuth();
+  const { user, isOperatorUser, operatorServiceTypes, operatorType } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAdmin = user?.role === 'admin';
-  const isOperator = user?.role === 'operator';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isOperator = user?.role === 'operator' || isOperatorUser;
   const canManage = isAdmin || isOperator;
 
-  const filteredServices = SERVICE_CATEGORIES.filter(service =>
+  // Map service keys to service types for filtering
+  const serviceTypeMapping = {
+    'travel': 'travel',
+    'hotels': 'hotel',
+    'car_rental': 'car_rental',
+    'restaurants': 'restaurant',
+    'packages': 'package',
+    'banquet': 'banquet',
+    'laundry': 'laundry',
+    'events': 'events',
+    'entertainment': 'cinema',
+  };
+
+  // Filter services based on operator's assigned service types
+  const getVisibleServices = () => {
+    // Admin/Super Admin sees all services
+    if (isAdmin) return SERVICE_CATEGORIES;
+    
+    // Operators only see their assigned services
+    if (isOperatorUser) {
+      const allowedTypes = operatorServiceTypes.length > 0 
+        ? operatorServiceTypes 
+        : (operatorType ? [operatorType] : []);
+      
+      if (allowedTypes.length > 0) {
+        return SERVICE_CATEGORIES.filter(service => {
+          const serviceType = serviceTypeMapping[service.key];
+          return allowedTypes.includes(serviceType);
+        });
+      }
+    }
+    
+    // Customers see all services
+    return SERVICE_CATEGORIES;
+  };
+
+  const visibleServices = getVisibleServices();
+
+  const filteredServices = visibleServices.filter(service =>
     service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
