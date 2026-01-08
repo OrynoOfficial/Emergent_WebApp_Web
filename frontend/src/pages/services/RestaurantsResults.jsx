@@ -101,7 +101,7 @@ const ScrollableImageGallery = ({ images, onImageClick, name }) => {
   );
 };
 
-// Grid View Restaurant Card
+// Grid View Restaurant Card - Compact Design
 const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -109,92 +109,79 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
   
   const defaultImages = [
     'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070',
-    'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?q=80&w=2074',
-    'https://images.unsplash.com/photo-1552566626-52f8b828add9?q=80&w=2070',
   ];
   
   const images = restaurant.images?.length > 0 ? restaurant.images : defaultImages;
 
   return (
     <>
-      <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-        {/* Image Section */}
-        <div className="relative h-52 overflow-hidden">
-          <ScrollableImageGallery
-            images={images}
-            name={restaurant.name}
-            onImageClick={(idx) => { setSelectedImageIndex(idx); setGalleryOpen(true); }}
+      <Card className="group overflow-hidden bg-white rounded-xl border-0 shadow-sm hover:shadow-lg transition-all duration-300">
+        {/* Image Section - Reduced height */}
+        <div className="relative h-36 overflow-hidden">
+          <img
+            src={images[0]}
+            alt={restaurant.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onClick={() => { setSelectedImageIndex(0); setGalleryOpen(true); }}
           />
           
           {/* Favorite button */}
           <button
             onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white shadow-md transition-all"
+            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
           >
-            <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
           </button>
           
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            <Badge className="bg-orange-500 text-white text-xs shadow-md">
+          <div className="absolute top-2 left-2 flex gap-1.5">
+            <Badge className="bg-orange-500 text-white text-[10px] px-2 py-0.5 shadow-sm">
               {restaurant.cuisine || 'African'}
             </Badge>
             {restaurant.price_range && (
-              <Badge className="bg-emerald-500 text-white text-xs shadow-md">
+              <Badge className="bg-emerald-500 text-white text-[10px] px-2 py-0.5 shadow-sm">
                 {restaurant.price_range}
               </Badge>
             )}
           </div>
+          
+          {/* Rating badge */}
+          {restaurant.rating && (
+            <div className="absolute bottom-2 right-2 bg-white/90 px-2 py-0.5 rounded flex items-center gap-1">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-bold">{restaurant.rating.toFixed(1)}</span>
+            </div>
+          )}
         </div>
         
-        {/* Content */}
-        <CardContent className="p-5">
-          {/* Rating */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1">
-              {[...Array(Math.floor(restaurant.rating || 4))].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-              ))}
-            </div>
-            {restaurant.rating && (
-              <div className="flex items-center gap-1.5">
-                <span className="bg-[#082c59] text-white text-xs font-bold px-2 py-1 rounded-md">
-                  {restaurant.rating.toFixed(1)}
-                </span>
-              </div>
-            )}
-          </div>
-          
+        {/* Content - More compact */}
+        <CardContent className="p-3">
           {/* Name & Location */}
-          <h3 className="font-bold text-lg text-slate-900 mb-1 line-clamp-1">{restaurant.name}</h3>
-          <div className="flex items-center text-slate-500 text-sm mb-3">
-            <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+          <h3 className="font-bold text-sm text-slate-900 mb-0.5 line-clamp-1">{restaurant.name}</h3>
+          <div className="flex items-center text-slate-500 text-xs mb-2">
+            <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
             <span className="line-clamp-1">{restaurant.address || restaurant.city}</span>
           </div>
           
-          {/* Features */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {restaurant.features?.slice(0, 3).map((feature, idx) => {
-              const Icon = getFeatureIcon(feature);
-              return (
-                <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
-                  <Icon className="h-3 w-3 text-slate-600" />
-                  <span className="text-xs text-slate-600 capitalize">{feature}</span>
-                </div>
-              );
-            })}
-          </div>
+          {/* Features - Inline */}
+          {restaurant.features?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {restaurant.features.slice(0, 2).map((feature, idx) => (
+                <span key={idx} className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded capitalize">{feature}</span>
+              ))}
+            </div>
+          )}
           
           {/* Price & CTA */}
-          <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
             <div>
-              <div className="text-xs text-slate-500">Average</div>
-              <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(restaurant.average_price || 15000)}</div>
-              <div className="text-xs text-slate-500">per person</div>
+              <div className="text-lg font-bold text-[#082c59]">{formatFCFA(restaurant.average_price || 15000)}</div>
+              <div className="text-[10px] text-slate-500">per person</div>
             </div>
             <Button
               onClick={() => onViewDetails(restaurant)}
-              className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl px-5"
+              size="sm"
+              className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs px-3 h-8"
             >
               View Menu
             </Button>
@@ -243,7 +230,7 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
   );
 };
 
-// List View Restaurant Card
+// List View Restaurant Card - Compact Design
 const RestaurantCardList = ({ restaurant, onViewDetails }) => {
   const defaultImages = [
     'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070',
@@ -251,69 +238,58 @@ const RestaurantCardList = ({ restaurant, onViewDetails }) => {
   const images = restaurant.images?.length > 0 ? restaurant.images : defaultImages;
 
   return (
-    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
-      <div className="flex flex-col lg:flex-row">
-        {/* Image Section */}
-        <div className="lg:w-2/5 relative h-64 lg:h-auto min-h-[250px]">
+    <Card className="overflow-hidden bg-white rounded-xl border-0 shadow-sm hover:shadow-md transition-all">
+      <div className="flex">
+        {/* Image Section - Reduced width */}
+        <div className="w-40 md:w-52 relative flex-shrink-0">
           <img
             src={images[0]}
             alt={restaurant.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover min-h-[160px]"
           />
-          <div className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-            {images.length} photos
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            <Badge className="bg-orange-500 text-white text-[10px] px-2 py-0.5">{restaurant.cuisine || 'African'}</Badge>
           </div>
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            <Badge className="bg-orange-500 text-white shadow-md">{restaurant.cuisine || 'African'}</Badge>
-          </div>
+          {restaurant.rating && (
+            <div className="absolute bottom-2 left-2 bg-white/90 px-2 py-0.5 rounded flex items-center gap-1">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-bold">{restaurant.rating.toFixed(1)}</span>
+            </div>
+          )}
         </div>
         
         {/* Content Section */}
-        <div className="lg:w-3/5 p-6 flex flex-col justify-between">
+        <div className="flex-1 p-4 flex flex-col justify-between">
           <div>
-            {/* Rating & Name */}
-            <div className="flex items-center gap-2 mb-2">
-              {[...Array(Math.floor(restaurant.rating || 4))].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-              ))}
-              <span className="text-sm text-slate-500">{restaurant.rating || 4} Star Restaurant</span>
-            </div>
-            <h3 className="font-bold text-xl text-slate-900 mb-2">{restaurant.name}</h3>
-            <div className="flex items-center text-slate-500 text-sm mb-3">
-              <MapPin className="w-4 h-4 mr-1" />
+            <h3 className="font-bold text-base text-slate-900 mb-1">{restaurant.name}</h3>
+            <div className="flex items-center text-slate-500 text-xs mb-2">
+              <MapPin className="w-3 h-3 mr-1" />
               {restaurant.address || restaurant.city}
             </div>
             
-            <p className="text-slate-600 mb-4 line-clamp-2">{restaurant.description || 'Experience authentic cuisine in a warm and welcoming atmosphere.'}</p>
+            <p className="text-slate-600 text-sm mb-2 line-clamp-1">{restaurant.description || 'Experience authentic cuisine in a warm and welcoming atmosphere.'}</p>
             
-            {/* Features */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {restaurant.features?.slice(0, 5).map((feature, idx) => {
-                const Icon = getFeatureIcon(feature);
-                return (
-                  <Badge key={idx} variant="outline" className="bg-slate-50">
-                    <Icon className="w-3 h-3 mr-1" />
-                    {feature}
-                  </Badge>
-                );
-              })}
-              {restaurant.features?.length > 5 && (
-                <Badge variant="outline" className="bg-slate-50">+{restaurant.features.length - 5} more</Badge>
-              )}
-            </div>
+            {/* Features - Inline */}
+            {restaurant.features?.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {restaurant.features.slice(0, 3).map((feature, idx) => (
+                  <span key={idx} className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded capitalize">{feature}</span>
+                ))}
+                {restaurant.features.length > 3 && (
+                  <span className="text-[10px] text-slate-500">+{restaurant.features.length - 3}</span>
+                )}
+              </div>
+            )}
           </div>
           
           {/* Price & CTA */}
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center justify-between pt-2 mt-2 border-t">
             <div>
-              <div className="text-sm text-slate-500">Average per person</div>
-              <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(restaurant.average_price || 15000)}</div>
-              <div className="bg-emerald-50 text-emerald-700 text-xs px-2 py-1 rounded-full inline-block mt-1">
-                {restaurant.price_range || '$$'}
-              </div>
+              <div className="text-lg font-bold text-[#082c59]">{formatFCFA(restaurant.average_price || 15000)}</div>
+              <div className="text-[10px] text-slate-500">per person • {restaurant.price_range || '$$'}</div>
             </div>
-            <Button onClick={() => onViewDetails(restaurant)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl">
-              View Menu & Reserve
+            <Button onClick={() => onViewDetails(restaurant)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8">
+              View Menu
             </Button>
           </div>
         </div>
