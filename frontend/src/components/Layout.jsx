@@ -369,46 +369,172 @@ export default function Layout({ children }) {
   const getIconColor = (key) => ICON_COLORS[key] || '#94a3b8';
 
   const navigationItems = useMemo(() => {
+    // Determine user's effective role
+    const isCustomer = userRole === USER_ROLES.CUSTOMER || (!userRole && !isOperatorUser && !isSuperAdmin);
+    const isAdminOrSuper = isSuperAdmin || userRole === USER_ROLES.ADMIN;
+    
     // Helper function to check if operator can access a service type
     const canOperatorAccessService = (serviceType) => {
       // Super admin and admin can access all services
-      if (isSuperAdmin || userRole === USER_ROLES.ADMIN) return true;
+      if (isAdminOrSuper) return true;
       
-      // Non-operator users (customers) can browse all services
-      if (!isOperatorUser) return true;
+      // Customer can browse all services
+      if (isCustomer) return true;
       
       // Operator users can only access their assigned service types
-      if (operatorServiceTypes.length > 0) {
-        return operatorServiceTypes.includes(serviceType);
+      if (isOperatorUser) {
+        if (operatorServiceTypes.length > 0) {
+          return operatorServiceTypes.includes(serviceType);
+        }
+        // Fall back to operator_type if service_types not set
+        if (operatorType) {
+          return operatorType === serviceType;
+        }
+        return false;
       }
       
-      // Fall back to operator_type if service_types not set
-      if (operatorType) {
-        return operatorType === serviceType;
-      }
-      
-      return false;
-    };
-    
-    // Service type mappings for navigation items
-    const serviceTypeMap = {
-      'hotels': 'hotel',
-      'restaurants': 'restaurant',
-      'travel': 'travel',
-      'car-rental': 'car_rental',
-      'events': 'events',
-      'packages': 'package',
-      'laundry': 'laundry',
-      'cinema': 'cinema',
-      'banquet': 'banquet',
+      return true;
     };
 
-    const items = [
-      // Dashboard - Always visible
-      { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    ];
+    const items = [];
     
-    // Services menu - For customers, show all services. For operators, filter by their service types
+    // ==================== CUSTOMER NAVIGATION ====================
+    if (isCustomer) {
+      // Dashboard
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' });
+      
+      // Services - All services visible for customers
+      const allServices = [
+        { key: 'browse', label: 'Browse Services', path: '/services', icon: ShoppingBag, serviceType: null },
+        { key: 'hotels', label: 'Hotels', path: '/services/hotels', icon: Hotel, serviceType: 'hotel' },
+        { key: 'restaurants', label: 'Restaurants', path: '/services/restaurants', icon: Utensils, serviceType: 'restaurant' },
+        { key: 'travel', label: 'Travel', path: '/services/travel', icon: Bus, serviceType: 'travel' },
+        { key: 'car-rental', label: 'Car Rental', path: '/services/car-rental', icon: Car, serviceType: 'car_rental' },
+        { key: 'events', label: 'Events', path: '/services/events', icon: Calendar, serviceType: 'events' },
+        { key: 'packages', label: 'Packages', path: '/services/packages', icon: Package, serviceType: 'package' },
+        { key: 'laundry', label: 'Laundry', path: '/services/laundry', icon: Sparkles, serviceType: 'laundry' },
+        { key: 'cinema', label: 'Cinema', path: '/services/cinema', icon: Film, serviceType: 'cinema' },
+        { key: 'banquet', label: 'Banquet', path: '/services/banquet', icon: Gift, serviceType: 'banquet' },
+      ];
+      
+      items.push({
+        key: 'services',
+        label: 'Services',
+        icon: ShoppingBag,
+        isDropdown: true,
+        submenu: allServices
+      });
+      
+      // My Orders
+      items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
+      
+      // Receipts
+      items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
+      
+      // Loyalty
+      items.push({ key: 'loyalty', label: 'Loyalty', icon: Award, path: '/loyalty' });
+      
+      // My Ratings
+      items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
+      
+      // Support
+      items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
+      
+      // Settings
+      items.push({ key: 'settings', label: 'Settings', icon: Settings, path: '/settings' });
+      
+      return items;
+    }
+    
+    // ==================== OPERATOR NAVIGATION ====================
+    if (isOperatorUser && !isAdminOrSuper) {
+      // Dashboard/Analytics - For operators, Dashboard shows Analytics (landing page)
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/analytics' });
+      
+      // Services - Only assigned services visible (no Browse Services for operators)
+      const operatorServices = [
+        { key: 'hotels', label: 'Hotels', path: '/services/hotels', icon: Hotel, serviceType: 'hotel' },
+        { key: 'restaurants', label: 'Restaurants', path: '/services/restaurants', icon: Utensils, serviceType: 'restaurant' },
+        { key: 'travel', label: 'Travel', path: '/services/travel', icon: Bus, serviceType: 'travel' },
+        { key: 'car-rental', label: 'Car Rental', path: '/services/car-rental', icon: Car, serviceType: 'car_rental' },
+        { key: 'events', label: 'Events', path: '/services/events', icon: Calendar, serviceType: 'events' },
+        { key: 'packages', label: 'Packages', path: '/services/packages', icon: Package, serviceType: 'package' },
+        { key: 'laundry', label: 'Laundry', path: '/services/laundry', icon: Sparkles, serviceType: 'laundry' },
+        { key: 'cinema', label: 'Cinema', path: '/services/cinema', icon: Film, serviceType: 'cinema' },
+        { key: 'banquet', label: 'Banquet', path: '/services/banquet', icon: Gift, serviceType: 'banquet' },
+      ].filter(s => canOperatorAccessService(s.serviceType));
+      
+      if (operatorServices.length > 0) {
+        items.push({
+          key: 'services',
+          label: 'Services',
+          icon: ShoppingBag,
+          isDropdown: true,
+          submenu: operatorServices
+        });
+      }
+      
+      // Service Management - Only assigned services
+      const managementItems = [
+        { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel' },
+        { key: 'travel-mgmt', label: 'Travel', path: '/management/travel', icon: Bus, serviceType: 'travel' },
+        { key: 'car-mgmt', label: 'Car Rental', path: '/management/car-rental', icon: Car, serviceType: 'car_rental' },
+        { key: 'restaurant-mgmt', label: 'Restaurants', path: '/management/restaurants', icon: Utensils, serviceType: 'restaurant' },
+        { key: 'events-mgmt', label: 'Events', path: '/management/events', icon: Calendar, serviceType: 'events' },
+        { key: 'laundry-mgmt', label: 'Laundry', path: '/management/laundry', icon: Sparkles, serviceType: 'laundry' },
+        { key: 'banquet-mgmt', label: 'Banquet', path: '/management/banquet', icon: Gift, serviceType: 'banquet' },
+        { key: 'cinema-mgmt', label: 'Cinema', path: '/management/cinema', icon: Film, serviceType: 'cinema' },
+        { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package' },
+      ].filter(item => canOperatorAccessService(item.serviceType));
+      
+      if (managementItems.length > 0) {
+        items.push({
+          key: 'service-mgmt',
+          label: 'Service Management',
+          icon: BarChart,
+          isDropdown: true,
+          submenu: managementItems
+        });
+      }
+      
+      // Team & Roles - Only for owner or local_admin
+      if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
+        items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
+      }
+      
+      // Admin Config - Limited for operators: All Bookings, Bills, Sales, Audit Log only
+      const operatorAdminSubmenu = [
+        { key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar },
+        { key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText },
+        { key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp },
+        { key: 'audit-logs', label: 'Audit Log', path: '/admin/audit-logs', icon: History },
+      ];
+      
+      items.push({
+        key: 'management',
+        label: 'Admin Config',
+        icon: Settings,
+        isDropdown: true,
+        submenu: operatorAdminSubmenu
+      });
+      
+      // My Ratings
+      items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
+      
+      // Support
+      items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
+      
+      // Settings
+      items.push({ key: 'settings', label: 'Settings', icon: Settings, path: '/settings' });
+      
+      return items;
+    }
+    
+    // ==================== ADMIN / SUPER ADMIN NAVIGATION ====================
+    // Dashboard
+    items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' });
+    
+    // Services - All services visible
     const allServices = [
       { key: 'browse', label: 'Browse Services', path: '/services', icon: ShoppingBag, serviceType: null },
       { key: 'hotels', label: 'Hotels', path: '/services/hotels', icon: Hotel, serviceType: 'hotel' },
@@ -422,20 +548,15 @@ export default function Layout({ children }) {
       { key: 'banquet', label: 'Banquet', path: '/services/banquet', icon: Gift, serviceType: 'banquet' },
     ];
     
-    // Filter services for operator users, show all for others
-    const filteredServices = isOperatorUser && !isSuperAdmin
-      ? allServices.filter(s => s.serviceType === null || canOperatorAccessService(s.serviceType))
-      : allServices;
-    
     items.push({
       key: 'services',
       label: 'Services',
       icon: ShoppingBag,
       isDropdown: true,
-      submenu: filteredServices
+      submenu: allServices
     });
 
-    // Service Management - Only show if user has ANY management permission
+    // Service Management - All services
     if (canManage) {
       const allManagementItems = [
         { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel', canManage: canManageHotels },
@@ -449,10 +570,7 @@ export default function Layout({ children }) {
         { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package', canManage: canManagePackages },
       ];
       
-      // Filter by both permission AND operator service types
-      const managementSubmenu = allManagementItems.filter(item => 
-        item.canManage && canOperatorAccessService(item.serviceType)
-      );
+      const managementSubmenu = allManagementItems.filter(item => item.canManage);
       
       if (managementSubmenu.length > 0) {
         items.push({
@@ -470,33 +588,32 @@ export default function Layout({ children }) {
       items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
     }
 
-    // My Orders - Always visible
+    // My Orders
     items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
     
-    // Receipts - Always visible
+    // Receipts
     items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
     
-    // Loyalty - Always visible
+    // Loyalty
     items.push({ key: 'loyalty', label: 'Loyalty', icon: Award, path: '/loyalty' });
 
-    // Admin Config - Only show if user has ANY admin config permission
+    // Admin Config - Full access for admin/super_admin
     if (canAccessAdminConfig) {
       const adminSubmenu = [];
       
-      // Analytics section - visible if user has analytics permissions
+      // Analytics section
       if (canViewAnalytics) {
         adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
-        adminSubmenu.push({ key: 'data-analytics', label: 'Data Analytics', path: '/admin/data-analytics', icon: TrendingUp });
         adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
         adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
       }
       
-      // Customer service - visible if user has support permissions
+      // Customer service
       if (hasAnyPermission(['support.view_tickets', 'support.manage_tickets'])) {
         adminSubmenu.push({ key: 'customer-service', label: 'Customer Service', path: '/management/customer-service', icon: HeadphonesIcon });
       }
       
-      // Admin-only items with permission checks
+      // Admin-only items
       const adminOnlyItems = [];
       
       if (canViewUsers) adminOnlyItems.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
@@ -510,7 +627,6 @@ export default function Layout({ children }) {
       if (isSuperAdmin) adminOnlyItems.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
       if (canViewValidation) adminOnlyItems.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       
-      // Add divider and admin items if any exist
       if (adminOnlyItems.length > 0 && adminSubmenu.length > 0) {
         adminSubmenu.push({ key: 'divider-admin', label: '── Admin ──', path: '', icon: Settings, isDivider: true });
       }
@@ -527,18 +643,18 @@ export default function Layout({ children }) {
       }
     }
 
-    // My Ratings - Always visible
+    // My Ratings
     items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
     
-    // Support - Always visible
+    // Support
     items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
     
-    // Settings - Always visible
+    // Settings
     items.push({ key: 'settings', label: 'Settings', icon: Settings, path: '/settings' });
 
     return items;
   }, [
-    userRole, isSuperAdmin, canManage, canAccessAdminConfig,
+    user, userRole, isSuperAdmin, canManage, canAccessAdminConfig,
     canManageHotels, canManageTravel, canManageCars, canManageEvents,
     canManageRestaurants, canManageBanquets, canManageCinema, canManagePressing, canManagePackages,
     canViewAnalytics, canViewUsers, canViewOperators, canViewEmployees,
