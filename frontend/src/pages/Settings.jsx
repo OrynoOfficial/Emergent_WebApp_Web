@@ -151,6 +151,8 @@ export default function Settings() {
   };
 
   const allSections = getSettingsSections();
+
+  // Load notification preferences from backend on mount
   useEffect(() => {
     const loadNotificationPreferences = async () => {
       try {
