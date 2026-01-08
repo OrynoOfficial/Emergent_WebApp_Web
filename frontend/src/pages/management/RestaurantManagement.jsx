@@ -801,6 +801,18 @@ export default function RestaurantManagement() {
               </DialogHeader>
               <div className="space-y-4">
                 <ImageCarousel images={selectedRestaurant.images || []} height={200} emptyIcon={Utensils} />
+                
+                {/* Operator Assignment - Added */}
+                {selectedRestaurant.operator_name && (
+                  <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                    <Building2 className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-indigo-600">Operated by</p>
+                      <p className="font-medium text-indigo-800">{selectedRestaurant.operator_name}</p>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm text-slate-500">Location</label>
