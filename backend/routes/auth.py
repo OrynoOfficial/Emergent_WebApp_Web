@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=dict)
 async def register(user_data: UserCreate, request: Request):
-    """Register a new user"""
+    """Register a new user - Always assigns 'customer' role for self-registration"""
     db = get_database()
     
     # Check if user already exists
@@ -36,6 +36,10 @@ async def register(user_data: UserCreate, request: Request):
     client_ip = request.client.host
     location_data = get_location_data(client_ip)
     
+    # IMPORTANT: Self-registered users ALWAYS get 'customer' role
+    # Operator accounts can only be created by admins/super_admins
+    assigned_role = "customer"
+    
     # Create user
     user = {
         "_id": str(uuid.uuid4()),
@@ -44,7 +48,7 @@ async def register(user_data: UserCreate, request: Request):
         "password_hash": get_password_hash(user_data.password),
         "full_name": user_data.full_name,
         "phone": user_data.phone,
-        "role": user_data.role,
+        "role": assigned_role,  # Always customer for self-registration
         "status": "pending",
         "email_verified": False,
         "email_verification_token": str(uuid.uuid4()),
