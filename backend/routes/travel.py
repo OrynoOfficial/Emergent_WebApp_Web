@@ -132,9 +132,14 @@ async def get_my_travel_routes(
     routes = await db.travel_routes.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.travel_routes.count_documents(query)
     
-    # Transform _id to id
+    # Transform _id to id and enrich with vehicle images
     for route in routes:
         route["id"] = str(route.pop("_id", ""))
+        vehicle_id = route.get("vehicle_id")
+        if vehicle_id:
+            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1})
+            if vehicle:
+                route["vehicle_images"] = vehicle.get("images", [])
     
     return {
         "routes": routes, 
