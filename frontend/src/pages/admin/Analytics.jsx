@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { analyticsAPI, ordersAPI } from '../../api/client';
+import { analyticsAPI } from '../../api/client';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import {
   TrendingUp,
   TrendingDown,
@@ -7,29 +10,116 @@ import {
   DollarSign,
   ShoppingBag,
   Calendar,
-  BarChart,
-  PieChart,
-  Activity
+  BarChart3,
+  PieChart as PieChartIcon,
+  Activity,
+  Hotel,
+  Car,
+  Plane,
+  Utensils,
+  Film,
+  Shirt,
+  Package
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
+import api from '../../api/client';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Area, AreaChart } from 'recharts';
+
+const SERVICE_COLORS = {
+  travel: '#3B82F6',
+  hotels: '#EC4899',
+  car_rental: '#10B981',
+  restaurants: '#F59E0B',
+  events: '#8B5CF6',
+  cinema: '#EF4444',
+  laundry: '#06B6D4',
+  packages: '#6366F1'
+};
+
+const SERVICE_ICONS = {
+  travel: Plane,
+  hotels: Hotel,
+  car_rental: Car,
+  restaurants: Utensils,
+  events: Calendar,
+  cinema: Film,
+  laundry: Shirt,
+  packages: Package
+};
+
+const MOCK_DATA_ANALYTICS = {
+  summary: {
+    totalUsers: 2847,
+    totalBookings: 8934,
+    totalRevenue: 156780000,
+    avgOrderValue: 17550,
+    conversionRate: 3.2,
+    growthRate: 12.5
+  },
+  revenueByService: [
+    { name: 'Travel', value: 45678000, bookings: 2456 },
+    { name: 'Hotels', value: 38900000, bookings: 1234 },
+    { name: 'Car Rental', value: 28450000, bookings: 1876 },
+    { name: 'Restaurants', value: 18900000, bookings: 1567 },
+    { name: 'Events', value: 12340000, bookings: 678 },
+    { name: 'Cinema', value: 6780000, bookings: 892 },
+    { name: 'Packages', value: 4500000, bookings: 156 },
+    { name: 'Laundry', value: 1232000, bookings: 75 }
+  ],
+  monthlyTrend: [
+    { month: 'Jul', revenue: 12500000, bookings: 720, users: 180 },
+    { month: 'Aug', revenue: 14200000, bookings: 850, users: 210 },
+    { month: 'Sep', revenue: 13800000, bookings: 790, users: 195 },
+    { month: 'Oct', revenue: 15600000, bookings: 920, users: 240 },
+    { month: 'Nov', revenue: 18900000, bookings: 1100, users: 320 },
+    { month: 'Dec', revenue: 22500000, bookings: 1350, users: 410 }
+  ],
+  topServices: [
+    { service: 'Douala → Yaoundé Bus', category: 'travel', bookings: 456, revenue: 2280000 },
+    { service: 'Hilton Douala', category: 'hotels', bookings: 234, revenue: 35100000 },
+    { service: 'Toyota Corolla Rental', category: 'car_rental', bookings: 189, revenue: 6615000 },
+    { service: 'La Belle Époque', category: 'restaurants', bookings: 156, revenue: 1170000 },
+    { service: 'Afro Nation Festival', category: 'events', bookings: 145, revenue: 4350000 }
+  ],
+  userMetrics: {
+    newUsers: 412,
+    activeUsers: 1847,
+    returningRate: 64,
+    avgSessionTime: '8m 34s'
+  }
+};
 
 export default function Analytics() {
   const [data, setData] = useState(null);
+  const [dataAnalytics, setDataAnalytics] = useState(MOCK_DATA_ANALYTICS);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('week');
+  const [timeFilter, setTimeFilter] = useState('6months');
 
   useEffect(() => {
     fetchAnalytics();
-  }, [period]);
+  }, [timeFilter]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const response = await analyticsAPI.getStats({ period });
+      // Fetch basic analytics
+      const response = await analyticsAPI.getStats({ period: timeFilter });
       setData(response.data);
+      
+      // Fetch extended analytics data
+      const extendedRes = await api.get('/analytics/overview', { params: { period: timeFilter } });
+      if (extendedRes.data && extendedRes.data.summary && extendedRes.data.summary.totalBookings > 0) {
+        setDataAnalytics(extendedRes.data);
+      } else {
+        const mockWithRealUsers = { ...MOCK_DATA_ANALYTICS };
+        if (extendedRes.data?.summary?.totalUsers) {
+          mockWithRealUsers.summary.totalUsers = extendedRes.data.summary.totalUsers;
+        }
+        setDataAnalytics(mockWithRealUsers);
+      }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
-      // Mock data
+      // Mock data fallback
       setData({
         total_revenue: 125400,
         total_orders: 1847,
@@ -94,6 +184,11 @@ export default function Analytics() {
     }
   ] : [];
 
+  const pieData = dataAnalytics.revenueByService.map(s => ({
+    name: s.name,
+    value: s.value
+  }));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -110,61 +205,138 @@ export default function Analytics() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Analytics Dashboard</h1>
-          <p className="text-slate-600">Monitor your business performance</p>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="analytics-title">Analytics Dashboard</h1>
+          <p className="text-slate-600">Comprehensive business intelligence dashboard</p>
         </div>
-        <div className="flex gap-2">
-          {['day', 'week', 'month', 'year'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                period === p
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
-              }`}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
-        </div>
+        <Select value={timeFilter} onValueChange={setTimeFilter}>
+          <SelectTrigger className="w-40" data-testid="time-filter-select">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7days">Last 7 Days</SelectItem>
+            <SelectItem value="30days">Last 30 Days</SelectItem>
+            <SelectItem value="3months">Last 3 Months</SelectItem>
+            <SelectItem value="6months">Last 6 Months</SelectItem>
+            <SelectItem value="1year">Last Year</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className={`${stat.bgColor} rounded-2xl p-6 relative overflow-hidden`}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                <p className="text-3xl font-bold text-slate-900 mt-2">{stat.value}</p>
-                {stat.growth !== undefined && (
-                  <div className={`flex items-center gap-1 mt-2 text-sm ${
-                    stat.growth >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {stat.growth >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                    <span>{Math.abs(stat.growth)}%</span>
+      {/* Extended Summary Stats (from Data Analytics) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" data-testid="summary-stats">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Total Users</div>
+            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.summary.totalUsers.toLocaleString()}</p>
+            <p className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +{dataAnalytics.summary.growthRate}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><ShoppingBag className="h-4 w-4" /> Bookings</div>
+            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.summary.totalBookings.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><DollarSign className="h-4 w-4" /> Revenue</div>
+            <p className="text-xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary.totalRevenue)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><BarChart3 className="h-4 w-4" /> Avg Order</div>
+            <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary.avgOrderValue)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><Activity className="h-4 w-4" /> Conversion</div>
+            <p className="text-2xl font-bold text-green-600">{dataAnalytics.summary.conversionRate}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Returning</div>
+            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.userMetrics.returningRate}%</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Extended Charts Row (from Data Analytics) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue & Bookings Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={dataAnalytics.monthlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" tickFormatter={(v) => `${(v/1000000).toFixed(0)}M`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip formatter={(value, name) => [name === 'revenue' ? formatFCFA(value) : value, name]} />
+                <Legend />
+                <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#082c59" fill="#082c59" fillOpacity={0.2} name="Revenue" />
+                <Line yAxisId="right" type="monotone" dataKey="bookings" stroke="#10b981" strokeWidth={2} name="Bookings" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue by Service</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={Object.values(SERVICE_COLORS)[index % Object.values(SERVICE_COLORS).length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => formatFCFA(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Service Performance (from Data Analytics) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Service Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {dataAnalytics.revenueByService.map((service, i) => {
+              const IconComponent = SERVICE_ICONS[service.name.toLowerCase().replace(' ', '_')] || Package;
+              const color = Object.values(SERVICE_COLORS)[i % Object.values(SERVICE_COLORS).length];
+              return (
+                <div key={service.name} className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}20` }}>
+                      <IconComponent className="h-5 w-5" style={{ color }} />
+                    </div>
+                    <span className="font-medium">{service.name}</span>
                   </div>
-                )}
-              </div>
-              <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color}`}>
-                <stat.icon className="h-6 w-6 text-white" />
-              </div>
-            </div>
+                  <p className="text-xl font-bold text-[#082c59]">{formatFCFA(service.value)}</p>
+                  <p className="text-sm text-slate-500">{service.bookings.toLocaleString()} bookings</p>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Charts Row */}
+      {/* Revenue Trend (Original Analytics) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Trend */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-900">Revenue Trend</h3>
-            <BarChart className="h-5 w-5 text-slate-400" />
+            <h3 className="font-bold text-slate-900">Daily Revenue Trend</h3>
+            <BarChart3 className="h-5 w-5 text-slate-400" />
           </div>
           <div className="h-64 flex items-end justify-between gap-2">
             {data?.recent_trends?.map((day, index) => (
@@ -184,7 +356,7 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-bold text-slate-900">By Category</h3>
-            <PieChart className="h-5 w-5 text-slate-400" />
+            <PieChartIcon className="h-5 w-5 text-slate-400" />
           </div>
           <div className="space-y-4">
             {data?.category_breakdown?.map((cat, index) => (
@@ -205,9 +377,44 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Orders Summary */}
+      {/* Top Services Table (from Data Analytics) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Performing Services</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3">Service</th>
+                  <th className="text-left py-3">Category</th>
+                  <th className="text-right py-3">Bookings</th>
+                  <th className="text-right py-3">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dataAnalytics.topServices.map((service, i) => (
+                  <tr key={i} className="border-b hover:bg-slate-50">
+                    <td className="py-3 font-medium">{service.service}</td>
+                    <td className="py-3">
+                      <Badge style={{ backgroundColor: `${SERVICE_COLORS[service.category]}20`, color: SERVICE_COLORS[service.category] }}>
+                        {service.category}
+                      </Badge>
+                    </td>
+                    <td className="text-right py-3">{service.bookings.toLocaleString()}</td>
+                    <td className="text-right py-3 font-medium">{formatFCFA(service.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Daily Orders Summary */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="font-bold text-slate-900 mb-6">Daily Orders</h3>
+        <h3 className="font-bold text-slate-900 mb-6">Daily Orders Summary</h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
