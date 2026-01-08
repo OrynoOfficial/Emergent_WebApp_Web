@@ -44,20 +44,45 @@ async def create_travel_route(
 async def get_travel_routes(
     origin: Optional[str] = None,
     destination: Optional[str] = None,
+    from_city: Optional[str] = None,
+    to_city: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get travel routes"""
+    """Get travel routes with vehicle images"""
     db = get_database()
     
     query = {"is_active": True}
-    if origin:
-        query["origin"] = {"$regex": origin, "$options": "i"}
-    if destination:
-        query["destination"] = {"$regex": destination, "$options": "i"}
+    # Support both origin/destination and from_city/to_city parameters
+    search_origin = origin or from_city
+    search_destination = destination or to_city
+    
+    if search_origin:
+        query["$or"] = [
+            {"origin": {"$regex": search_origin, "$options": "i"}},
+            {"from_city": {"$regex": search_origin, "$options": "i"}}
+        ]
+    if search_destination:
+        dest_query = {"$or": [
+            {"destination": {"$regex": search_destination, "$options": "i"}},
+            {"to_city": {"$regex": search_destination, "$options": "i"}}
+        ]}
+        if "$or" in query:
+            query = {"$and": [query, dest_query]}
+        else:
+            query.update(dest_query)
     
     routes = await db.travel_routes.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.travel_routes.count_documents(query)
+    
+    # Enrich routes with vehicle images
+    for route in routes:
+        route["id"] = str(route.pop("_id", route.get("id", "")))
+        vehicle_id = route.get("vehicle_id")
+        if vehicle_id:
+            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1})
+            if vehicle:
+                route["vehicle_images"] = vehicle.get("images", [])
     
     return {"routes": routes, "total": total}
 
