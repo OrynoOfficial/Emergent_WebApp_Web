@@ -267,174 +267,111 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
   );
 };
 
-// Detail/List View Hotel Card
+// Detail/List View Hotel Card - Compact Design
 const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const scrollRef = useRef(null);
   
   const defaultImages = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070',
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070',
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=2070',
   ];
   
   const images = hotel.images && hotel.images.length > 0 ? hotel.images : defaultImages;
   const totalPrice = hotel.price_per_night * nights;
 
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -150 : 150,
-        behavior: 'smooth'
-      });
-    }
-  };
-
   return (
     <>
-      <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
-        <div className="flex flex-col lg:flex-row">
-          {/* Image Section with horizontal scroll */}
-          <div className="lg:w-2/5 relative">
-            <div className="relative group h-64 lg:h-full min-h-[280px]">
-              {/* Scroll buttons */}
-              <button
-                onClick={() => scroll('left')}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => scroll('right')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-              
-              {/* Scrollable images */}
-              <div
-                ref={scrollRef}
-                className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                {images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => { setSelectedImageIndex(idx); setGalleryOpen(true); }}
-                    className="flex-shrink-0 w-full h-full snap-start cursor-pointer relative"
-                  >
-                    <img
-                      src={img}
-                      alt={`${hotel.name} ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-              
-              {/* Image counter */}
-              <div className="absolute bottom-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                {images.length} photos
-              </div>
-              
-              {/* Badges */}
-              <div className="absolute top-3 left-3 flex flex-col gap-2">
-                {hotel.free_cancellation && (
-                  <Badge className="bg-emerald-500 text-white shadow-md">Free Cancellation</Badge>
-                )}
-              </div>
+      <Card className="overflow-hidden bg-white rounded-xl border-0 shadow-sm hover:shadow-md transition-all">
+        <div className="flex">
+          {/* Image Section - Reduced width */}
+          <div className="w-48 md:w-64 relative flex-shrink-0">
+            <img
+              src={images[0]}
+              alt={hotel.name}
+              className="w-full h-full object-cover min-h-[180px] cursor-pointer"
+              onClick={() => { setSelectedImageIndex(0); setGalleryOpen(true); }}
+            />
+            {/* Image counter */}
+            <div className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded">
+              {images.length} photos
+            </div>
+            {/* Badges */}
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
+              {hotel.free_cancellation && (
+                <Badge className="bg-emerald-500 text-white text-[10px] px-2 py-0.5">Free Cancel</Badge>
+              )}
             </div>
           </div>
           
-          {/* Details Section */}
-          <div className="lg:w-3/5 p-6">
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="flex">
-                      {[...Array(hotel.star_rating || 0)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      ))}
-                    </div>
-                    <span className="text-sm text-slate-500">{hotel.star_rating} Star Hotel</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{hotel.name}</h3>
-                  <div className="flex items-center text-slate-500 text-sm">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    <span>{hotel.address || hotel.city}</span>
-                  </div>
+          {/* Details Section - Compact */}
+          <div className="flex-1 p-4 flex flex-col">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-1 mb-1">
+                  {[...Array(hotel.star_rating || 0)].map((_, i) => (
+                    <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  ))}
                 </div>
-                
-                {/* Rating */}
-                {hotel.guest_rating && (
-                  <div className="text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-slate-700">
-                          {hotel.guest_rating >= 9 ? 'Excellent' : hotel.guest_rating >= 8 ? 'Very Good' : 'Good'}
-                        </p>
-                        <p className="text-xs text-slate-500">{hotel.total_reviews || 100}+ reviews</p>
-                      </div>
-                      <div className="bg-[#082c59] text-white font-bold px-3 py-2 rounded-lg text-lg">
-                        {hotel.guest_rating.toFixed(1)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Description */}
-              <p className="text-slate-600 text-sm mb-4 line-clamp-2">{hotel.description}</p>
-              
-              {/* Amenities */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {hotel.amenities?.slice(0, 6).map((amenity, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
-                    <AmenityIcon amenity={amenity} className="h-4 w-4 text-slate-600" />
-                    <span className="text-sm text-slate-700 capitalize">{amenity}</span>
-                  </div>
-                ))}
-                {hotel.amenities?.length > 6 && (
-                  <div className="px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
-                    <span className="text-sm text-slate-500">+{hotel.amenities.length - 6} more</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Feature badges */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {hotel.breakfast_included && (
-                  <div className="flex items-center gap-1 text-sm text-orange-600">
-                    <Check className="h-4 w-4" />
-                    <span>Breakfast Included</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Price & CTA */}
-              <div className="mt-auto flex items-end justify-between pt-4 border-t border-slate-100">
-                <div>
-                  <p className="text-sm text-slate-500">From</p>
-                  <p className="text-3xl font-bold text-[#082c59]">{formatFCFA(hotel.price_per_night)}</p>
-                  <p className="text-sm text-slate-500">per night</p>
-                  {nights > 1 && (
-                    <div className="mt-2 px-3 py-2 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-200">
-                      <p className="text-xs text-slate-500">{nights} nights total</p>
-                      <p className="text-lg font-bold text-[#082c59]">{formatFCFA(totalPrice)}</p>
-                    </div>
-                  )}
+                <h3 className="text-base font-bold text-slate-900 mb-1 line-clamp-1">{hotel.name}</h3>
+                <div className="flex items-center text-slate-500 text-xs">
+                  <MapPin className="w-3 h-3 mr-1" />
+                  <span className="line-clamp-1">{hotel.address || hotel.city}</span>
                 </div>
-                <Button
-                  onClick={() => onViewDetails(hotel)}
-                  size="lg"
-                  className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl px-8 h-12"
-                >
-                  View Details
-                </Button>
               </div>
+              
+              {/* Rating */}
+              {hotel.guest_rating && (
+                <div className="text-right ml-2">
+                  <div className="bg-[#082c59] text-white font-bold px-2 py-1 rounded text-sm">
+                    {hotel.guest_rating.toFixed(1)}
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {hotel.guest_rating >= 9 ? 'Excellent' : hotel.guest_rating >= 8 ? 'Very Good' : 'Good'}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* Amenities - Compact */}
+            <div className="flex flex-wrap gap-1 mb-2">
+              {hotel.amenities?.slice(0, 5).map((amenity, idx) => (
+                <div key={idx} className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-50 rounded text-[10px] text-slate-600 capitalize">
+                  <AmenityIcon amenity={amenity} className="h-2.5 w-2.5" />
+                  {amenity}
+                </div>
+              ))}
+              {hotel.amenities?.length > 5 && (
+                <span className="text-[10px] text-slate-500 px-1.5 py-0.5">+{hotel.amenities.length - 5}</span>
+              )}
+            </div>
+            
+            {/* Feature badges */}
+            {hotel.breakfast_included && (
+              <div className="flex items-center gap-1 text-xs text-orange-600 mb-2">
+                <Check className="h-3 w-3" />
+                <span>Breakfast Included</span>
+              </div>
+            )}
+            
+            {/* Price & CTA */}
+            <div className="mt-auto flex items-center justify-between pt-2 border-t border-slate-100">
+              <div>
+                <p className="text-lg font-bold text-[#082c59]">{formatFCFA(hotel.price_per_night)}</p>
+                <p className="text-[10px] text-slate-500">per night</p>
+                {nights > 1 && (
+                  <p className="text-xs font-medium text-slate-600 mt-0.5">
+                    {nights} nights: {formatFCFA(totalPrice)}
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={() => onViewDetails(hotel)}
+                size="sm"
+                className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8 px-4"
+              >
+                View Details
+              </Button>
             </div>
           </div>
         </div>
