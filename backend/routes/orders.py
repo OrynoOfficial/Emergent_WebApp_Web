@@ -160,16 +160,30 @@ async def create_direct_order(
 async def get_user_orders(
     current_user: dict = Depends(get_current_active_user),
     skip: int = 0,
-    limit: int = 20
+    limit: int = 100
 ):
-    """Get user's orders"""
+    """Get orders - Admin sees all, others see their own"""
     db = get_database()
     
-    # Admin and operators can see all orders
-    if current_user.get("role") in ["admin", "operator"]:
+    user_role = current_user.get("role", "customer")
+    user_id = current_user.get("id") or current_user.get("_id")
+    
+    # Admin and super_admin can see all orders
+    if user_role in ["admin", "super_admin"]:
         query = {}
+    # Operators see orders for their services
+    elif user_role == "operator" or current_user.get("operator_id"):
+        operator_id = current_user.get("operator_id")
+        if operator_id:
+            query = {"$or": [
+                {"user_id": user_id},
+                {"operator_id": operator_id}
+            ]}
+        else:
+            query = {"user_id": user_id}
     else:
-        query = {"user_id": current_user.get("id", current_user.get("_id"))}
+        # Customers see only their own orders
+        query = {"user_id": user_id}
     
     orders_cursor = db.orders.find(query).sort("created_at", -1).skip(skip).limit(limit)
     orders = await orders_cursor.to_list(limit)
@@ -182,6 +196,14 @@ async def get_user_orders(
         order_id = order.get("id") or str(order.get("_id", "")) or order.get("order_number")
         processed_order = {k: v for k, v in order.items() if k != "_id"}
         processed_order["id"] = order_id
+        
+        # Get customer name for admin view
+        if user_role in ["admin", "super_admin"] and order.get("user_id"):
+            customer = await db.users.find_one({"_id": order["user_id"]}, {"full_name": 1, "email": 1})
+            if customer:
+                processed_order["customer_name"] = customer.get("full_name", "Unknown")
+                processed_order["customer_email"] = customer.get("email", "")
+        
         processed_orders.append(processed_order)
     
     return {
