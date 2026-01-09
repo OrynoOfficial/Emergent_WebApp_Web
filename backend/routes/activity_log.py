@@ -253,7 +253,8 @@ async def get_activity_stats(
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get activity statistics for dashboard"""
-    if current_user.get("role") != "admin":
+    user_role = current_user.get("role")
+    if user_role not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     db = get_database()
