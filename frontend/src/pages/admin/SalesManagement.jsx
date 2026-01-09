@@ -83,9 +83,14 @@ export default function SalesManagement() {
   const fetchSalesData = async () => {
     setLoading(true);
     try {
-      // Fetch real orders data
-      const ordersRes = await ordersAPI.getAll({ limit: 1000 });
+      // Fetch real orders data and payment methods in parallel
+      const [ordersRes, paymentMethodsRes] = await Promise.all([
+        ordersAPI.getAll({ limit: 1000 }),
+        ordersAPI.getPaymentMethods({ time_range: timeRange })
+      ]);
+      
       const orders = ordersRes.data?.orders || [];
+      const paymentData = paymentMethodsRes.data || {};
       
       // Calculate totals from real data
       const totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
@@ -95,7 +100,7 @@ export default function SalesManagement() {
       // Calculate by service type
       const byService = {};
       orders.forEach(order => {
-        const serviceType = order.service_type || 'other';
+        const serviceType = order.service_type || order.service_category || 'other';
         if (!byService[serviceType]) {
           byService[serviceType] = { sales: 0, orders: 0 };
         }
@@ -124,6 +129,7 @@ export default function SalesManagement() {
           conversionChange: 0.8
         },
         salesByService,
+        paymentMethods: paymentData.payment_methods || [],
         orders
       });
     } catch (error) {
@@ -147,6 +153,12 @@ export default function SalesManagement() {
           { service: 'restaurants', name: 'Restaurants', sales: 5500000, orders: 125, percentage: 11, change: -2.1 },
           { service: 'events', name: 'Events', sales: 2500000, orders: 28, percentage: 5, change: 25.0 },
           { service: 'packages', name: 'Packages', sales: 1000000, orders: 12, percentage: 3, change: 45.0 }
+        ],
+        paymentMethods: [
+          { method: 'MTN Mobile Money', amount: 22310000, percentage: 46, color: 'bg-yellow-500' },
+          { method: 'Orange Money', amount: 14550000, percentage: 30, color: 'bg-orange-500' },
+          { method: 'Card Payment', amount: 8730000, percentage: 18, color: 'bg-blue-500' },
+          { method: 'Bank Transfer', amount: 2910000, percentage: 6, color: 'bg-gray-500' }
         ],
         orders: []
       });
