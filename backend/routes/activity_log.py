@@ -306,3 +306,88 @@ async def get_action_types(
         "entity_types": ["user", "order", "service", "payment", "settings", "validation"],
         "severities": ["info", "warning", "error"]
     }
+
+
+# Local permissions for operators to manage team audit view
+class LocalPermissionUpdate(BaseModel):
+    user_id: str
+    permission: str
+    action: str  # "add" or "remove"
+
+@router.post("/local-permissions")
+async def update_local_permission(
+    request: LocalPermissionUpdate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Allow operator owners to assign/remove local permissions (like team_audit.view)"""
+    db = get_database()
+    
+    user_role = current_user.get("role")
+    user_id = current_user.get("id")
+    operator_id = current_user.get("operator_id")
+    
+    # Only operators can manage local permissions
+    if user_role != "operator":
+        raise HTTPException(status_code=403, detail="Only operators can manage local permissions")
+    
+    # Check if current user is owner
+    if not operator_id:
+        raise HTTPException(status_code=403, detail="No operator context")
+    
+    operator_data = await db.operators.find_one({"_id": ObjectId(operator_id)}, {"owner_user_id": 1})
+    if not operator_data or str(operator_data.get("owner_user_id")) != user_id:
+        # Check if user has permission to assign permissions
+        user_data = await db.users.find_one({"_id": ObjectId(user_id)}, {"local_permissions": 1})
+        local_perms = user_data.get("local_permissions", []) if user_data else []
+        if "team_permissions.manage" not in local_perms:
+            raise HTTPException(status_code=403, detail="Only owner or users with team_permissions.manage can manage local permissions")
+    
+    # Verify target user belongs to same operator
+    target_user = await db.users.find_one({"_id": ObjectId(request.user_id)})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user.get("operator_id") != operator_id:
+        raise HTTPException(status_code=403, detail="Can only manage permissions for users in your operator")
+    
+    # Valid local permissions
+    valid_permissions = ["team_audit.view", "team_permissions.manage"]
+    if request.permission not in valid_permissions:
+        raise HTTPException(status_code=400, detail=f"Invalid permission. Valid: {valid_permissions}")
+    
+    # Update user's local permissions
+    if request.action == "add":
+        await db.users.update_one(
+            {"_id": ObjectId(request.user_id)},
+            {"$addToSet": {"local_permissions": request.permission}}
+        )
+    elif request.action == "remove":
+        await db.users.update_one(
+            {"_id": ObjectId(request.user_id)},
+            {"$pull": {"local_permissions": request.permission}}
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Action must be 'add' or 'remove'")
+    
+    return {"message": f"Permission {request.permission} {request.action}ed successfully"}
+
+@router.get("/local-permissions/{user_id}")
+async def get_local_permissions(
+    user_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get local permissions for a user (owner only)"""
+    db = get_database()
+    
+    operator_id = current_user.get("operator_id")
+    
+    # Verify target user belongs to same operator
+    target_user = await db.users.find_one({"_id": ObjectId(user_id)}, {"local_permissions": 1, "operator_id": 1})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user.get("operator_id") != operator_id:
+        raise HTTPException(status_code=403, detail="Can only view permissions for users in your operator")
+    
+    return {"permissions": target_user.get("local_permissions", [])}
+
