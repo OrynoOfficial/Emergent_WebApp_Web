@@ -336,36 +336,49 @@ export default function CarRentalBooking() {
           {/* Left Column - Forms */}
           <div className="lg:col-span-2 space-y-6">
             {/* Extras Selection */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${extrasConfirmed ? 'ring-2 ring-emerald-500' : ''}`}>
               <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <Star className="h-6 w-6" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <Star className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Add Extras <span className="text-white/80 text-sm font-normal">(Required)</span></h3>
+                      <p className="text-sm text-white/70">Select extras or choose "No Extras"</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Add Extras</h3>
-                    <p className="text-sm text-white/70">Enhance your rental experience</p>
-                  </div>
+                  {extrasConfirmed && (
+                    <Badge className="bg-white/20 text-white border-0">
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Confirmed
+                    </Badge>
+                  )}
                 </div>
               </div>
               
               <div className="p-6">
+                {!extrasConfirmed && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                    Please select at least one option or "No Extras" to continue
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {EXTRAS.map((extra) => {
                     const isSelected = selectedExtras.includes(extra.id);
                     const ExtraIcon = extra.icon;
+                    const isNoExtras = extra.id === 'none';
                     return (
                       <div
                         key={extra.id}
-                        onClick={() => toggleExtra(extra.id)}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        onClick={() => !extrasConfirmed && toggleExtra(extra.id)}
+                        className={`p-4 rounded-xl border-2 transition-all ${extrasConfirmed ? 'cursor-default opacity-80' : 'cursor-pointer'} ${
                           isSelected 
-                            ? 'border-emerald-500 bg-emerald-50' 
+                            ? isNoExtras ? 'border-slate-500 bg-slate-50' : 'border-emerald-500 bg-emerald-50' 
                             : 'border-slate-200 hover:border-emerald-300'
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                          <div className={`p-2 rounded-lg ${isSelected ? (isNoExtras ? 'bg-slate-500 text-white' : 'bg-emerald-500 text-white') : 'bg-slate-100 text-slate-600'}`}>
                             <ExtraIcon className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
@@ -374,29 +387,57 @@ export default function CarRentalBooking() {
                               <Checkbox checked={isSelected} className="pointer-events-none" />
                             </div>
                             <p className="text-sm text-slate-500 mt-1">{extra.description}</p>
-                            <p className="text-emerald-600 font-semibold mt-2">
-                              +{formatCurrency(extra.price)}/day
-                            </p>
+                            {extra.price > 0 ? (
+                              <p className="text-emerald-600 font-semibold mt-2">
+                                +{formatCurrency(extra.price)}/day
+                              </p>
+                            ) : (
+                              <p className="text-slate-500 font-medium mt-2">Free</p>
+                            )}
                           </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
+                {!extrasConfirmed && selectedExtras.length > 0 && (
+                  <Button 
+                    onClick={confirmExtras}
+                    className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600"
+                  >
+                    <Check className="w-4 h-4 mr-2" /> Confirm Extras Selection
+                  </Button>
+                )}
+                {extrasConfirmed && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setExtrasConfirmed(false)}
+                    className="w-full mt-4"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" /> Edit Extras
+                  </Button>
+                )}
               </div>
             </div>
 
             {/* Driver Information */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${!extrasConfirmed ? 'opacity-60' : isDriverInfoComplete ? 'ring-2 ring-emerald-500' : ''}`}>
               <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <User className="h-6 w-6" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <User className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Driver Information <span className="text-white/80 text-sm font-normal">(Required)</span></h3>
+                      <p className="text-sm text-white/70">Who will be driving?</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Driver Information</h3>
-                    <p className="text-sm text-white/70">Who will be driving?</p>
-                  </div>
+                  {isDriverInfoComplete && extrasConfirmed && (
+                    <Badge className="bg-white/20 text-white border-0">
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Complete
+                    </Badge>
+                  )}
                 </div>
               </div>
               
