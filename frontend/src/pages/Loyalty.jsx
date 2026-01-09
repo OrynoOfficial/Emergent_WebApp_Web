@@ -672,33 +672,55 @@ function AdminLoyaltyView() {
     }
   };
 
+  const [savingReward, setSavingReward] = useState(false);
+
   const handleSaveReward = async () => {
+    if (!rewardForm.title || !rewardForm.points_required) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    setSavingReward(true);
     try {
+      const payload = {
+        title: rewardForm.title,
+        description: rewardForm.description,
+        points_required: parseInt(rewardForm.points_required),
+        min_tier: rewardForm.min_tier,
+        type: rewardForm.type,
+        discount_value: rewardForm.discount_value ? parseFloat(rewardForm.discount_value) : null
+      };
+
       if (editingReward) {
-        await api.put(`/loyalty/rewards/${editingReward.id}`, rewardForm);
-        setRewards(prev => prev.map(r => r.id === editingReward.id ? { ...r, ...rewardForm } : r));
-        toast.success('Reward updated successfully');
+        await api.put(`/loyalty/admin/rewards/${editingReward.id}`, payload);
+        setRewards(prev => prev.map(r => r.id === editingReward.id ? { ...r, ...payload } : r));
+        toast.success('Reward updated successfully!');
       } else {
-        const res = await api.post('/loyalty/rewards', rewardForm);
-        setRewards(prev => [...prev, { id: Date.now().toString(), ...rewardForm }]);
-        toast.success('Reward created successfully');
+        const res = await api.post('/loyalty/admin/rewards', payload);
+        const newReward = res.data?.reward || { id: Date.now().toString(), ...payload };
+        setRewards(prev => [...prev, newReward]);
+        toast.success('Reward created successfully!');
       }
       setShowRewardDialog(false);
       setEditingReward(null);
       setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' });
     } catch (error) {
-      toast.error('Failed to save reward');
+      console.error('Failed to save reward:', error);
+      toast.error(error.response?.data?.detail || 'Failed to save reward');
+    } finally {
+      setSavingReward(false);
     }
   };
 
   const handleDeleteReward = async (rewardId) => {
     if (!confirm('Are you sure you want to delete this reward?')) return;
     try {
-      await api.delete(`/loyalty/rewards/${rewardId}`);
+      await api.delete(`/loyalty/admin/rewards/${rewardId}`);
       setRewards(prev => prev.filter(r => r.id !== rewardId));
-      toast.success('Reward deleted');
+      toast.success('Reward deleted successfully!');
     } catch (error) {
-      toast.error('Failed to delete reward');
+      console.error('Failed to delete reward:', error);
+      toast.error(error.response?.data?.detail || 'Failed to delete reward');
     }
   };
 
