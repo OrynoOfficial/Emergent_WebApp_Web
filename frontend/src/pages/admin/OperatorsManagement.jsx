@@ -512,7 +512,7 @@ export default function OperatorsManagement() {
 
       {/* Edit Operator Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="bg-white max-w-lg">
+        <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Operator</DialogTitle>
           </DialogHeader>
@@ -545,6 +545,49 @@ export default function OperatorsManagement() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            {/* Service Types Assignment */}
+            <div>
+              <Label className="text-sm font-medium">Assigned Services</Label>
+              <p className="text-xs text-slate-500 mb-2">Select which services this operator can provide</p>
+              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg">
+                {SERVICE_TYPES.filter(s => s !== 'all').map(service => (
+                  <label key={service} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={editForm.service_types?.includes(service) || false}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setEditForm(p => ({
+                          ...p,
+                          service_types: checked
+                            ? [...(p.service_types || []), service]
+                            : (p.service_types || []).filter(s => s !== service)
+                        }));
+                      }}
+                      className="rounded text-[#082c59] focus:ring-[#082c59]"
+                    />
+                    <span className="text-sm capitalize">{service.replace('_', ' ')}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            {/* Primary Service Type */}
+            <div>
+              <Label>Primary Service Type</Label>
+              <Select 
+                value={editForm.operator_type || ''} 
+                onValueChange={v => setEditForm(p => ({ ...p, operator_type: v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select primary type" /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {(editForm.service_types || []).map(s => (
+                    <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex justify-end gap-2">
