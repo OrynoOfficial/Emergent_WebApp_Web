@@ -442,13 +442,19 @@ export default function CarRentalBooking() {
               </div>
               
               <div className="p-6">
+              <div className="p-6">
+                {!extrasConfirmed && (
+                  <div className="mb-4 p-3 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600">
+                    Please confirm your extras selection first
+                  </div>
+                )}
                 <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                       <span className="font-medium text-slate-700">I&apos;m the driver</span>
                     </div>
-                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
+                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} disabled={!extrasConfirmed} />
                   </div>
                 </div>
 
@@ -462,7 +468,7 @@ export default function CarRentalBooking() {
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="John Doe"
                         className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf}
+                        disabled={isSelf || !extrasConfirmed}
                       />
                     </div>
                   </div>
@@ -476,6 +482,7 @@ export default function CarRentalBooking() {
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                         placeholder="john@example.com"
                         className="pl-10 h-12 bg-slate-50 border-slate-200"
+                        disabled={!extrasConfirmed}
                       />
                     </div>
                   </div>
@@ -488,7 +495,7 @@ export default function CarRentalBooking() {
                         onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                         placeholder="+237 6XX XXX XXX"
                         className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf}
+                        disabled={isSelf || !extrasConfirmed}
                       />
                     </div>
                   </div>
@@ -501,6 +508,7 @@ export default function CarRentalBooking() {
                         onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
                         placeholder="DL123456789"
                         className="pl-10 h-12 bg-slate-50 border-slate-200"
+                        disabled={!extrasConfirmed}
                       />
                     </div>
                   </div>
@@ -509,16 +517,23 @@ export default function CarRentalBooking() {
             </div>
 
             {/* Payment Section */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${!canSelectPayment ? 'opacity-60' : selectedPaymentMethod ? 'ring-2 ring-emerald-500' : ''}`}>
               <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <CreditCard className="h-6 w-6" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <CreditCard className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg">Payment Method</h3>
+                      <p className="text-sm text-white/70">Secure payment options</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Payment Method</h3>
-                    <p className="text-sm text-white/70">Secure payment options</p>
-                  </div>
+                  {selectedPaymentMethod && (
+                    <Badge className="bg-white/20 text-white border-0">
+                      <CheckCircle2 className="w-4 h-4 mr-1" /> Selected
+                    </Badge>
+                  )}
                 </div>
               </div>
               
