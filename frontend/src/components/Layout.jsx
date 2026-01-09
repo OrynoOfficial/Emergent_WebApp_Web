@@ -640,21 +640,21 @@ export default function Layout({ children }) {
         if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       } else if (isRegularAdmin) {
         // Regular Admin gets limited access (no Employees, Commission, Database)
-        if (canViewAnalytics) {
-          adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
-          adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
-          adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
-        }
+        // Grant default access to analytics items for admin role
+        adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
+        adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
+        adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
         
         // Admin-only items (excluding Employees, Commission, Database)
-        if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
-        if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
-        // Removed: Employees, Commission, Database
-        if (hasPermission('payments.view')) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
-        if (hasPermission('analytics.view_revenue')) adminSubmenu.push({ key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
-        if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
-        if (canViewPermissions) adminSubmenu.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
-        if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
+        // Grant default access for admin role
+        adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
+        adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
+        // Removed: Employees, Commission, Database (as per user request)
+        adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
+        adminSubmenu.push({ key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
+        adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
+        adminSubmenu.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
+        adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       }
       
       if (adminSubmenu.length > 0) {
