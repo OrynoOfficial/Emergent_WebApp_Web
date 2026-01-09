@@ -203,3 +203,12 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Operator Audit Logs: Owner can see team members' logs, local permission "team_audit.view" supported
 - [x] Backend: Role-based audit log filtering (/api/activity/logs)
 - [x] Backend: Local permissions management API (/api/activity/local-permissions)
+
+## Completed Features (Jan 9, 2026 - Session 3)
+- [x] Fixed Services page "Manage" button - now navigates to /management/* instead of /manage/*
+- [x] Fixed Admin User Management - Admin can now see users (with default permissions)
+- [x] Admin User Management filters out super_admin users (only super admins can see other super admins)
+- [x] Added default permissions for admin role (users.view, operators.view, orders.view, etc.)
+- [x] Fixed Operator Audit Logs - Added operator to requiredRoles in App.jsx route
+- [x] Operator Analytics shows personalized context banner with assigned services
+- [x] Backend analytics endpoint filters by operator_id for operators
