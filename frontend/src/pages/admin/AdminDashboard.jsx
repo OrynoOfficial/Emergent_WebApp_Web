@@ -370,9 +370,7 @@ export default function AdminDashboard() {
                       color: '#fff'
                     }}
                   />
-                  <Legend
-                    formatter={(value) => <span className="text-slate-300">{value}</span>}
-                  />
+                  <Legend formatter={legendFormatter} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
