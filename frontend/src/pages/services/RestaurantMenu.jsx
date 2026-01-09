@@ -239,7 +239,7 @@ export default function RestaurantMenu() {
               <h1 className="text-2xl font-bold">{restaurant.name}</h1>
               <div className="flex items-center gap-4 text-sm text-slate-200">
                 <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {restaurant.city}</span>
-                <span className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400" /> {restaurant.rating}</span>
+                <span className="flex items-center gap-1"><Star className="h-4 w-4 text-yellow-400" /> {restaurant.average_rating || restaurant.rating || 'N/A'}</span>
                 <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {formatOpeningHours(restaurant.opening_hours)}</span>
               </div>
             </div>
