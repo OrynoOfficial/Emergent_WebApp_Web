@@ -123,7 +123,7 @@ const SERVICE_CATEGORIES = [
     icon: Clapperboard,
     emoji: '🎬',
     path: '/services/entertainment',
-    managePath: '/manage/entertainment',
+    managePath: '/management/cinema',
     image: 'https://images.unsplash.com/photo-1513106580091-1d82408b8cd6?q=80&w=2069',
     description: 'Browse showtimes, book seats, and enjoy the latest blockbusters and entertainment',
     color: 'from-slate-700 to-slate-900',
