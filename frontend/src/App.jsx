@@ -528,6 +528,15 @@ function App() {
           />
           
           <Route
+            path="/admin/admin-dashboard"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/bookings"
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
