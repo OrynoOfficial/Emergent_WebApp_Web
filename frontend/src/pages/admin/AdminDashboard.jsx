@@ -31,6 +31,39 @@ import { Link } from 'react-router-dom';
 
 const COLORS = ['#4D96FF', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'];
 
+// StatCard component moved outside to prevent re-creation on each render
+const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subValue }) => (
+  <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all">
+    <CardContent className="p-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-slate-400 text-sm font-medium">{title}</p>
+          <p className="text-2xl font-bold text-white mt-1">{value}</p>
+          {subValue && (
+            <p className="text-xs text-slate-500 mt-1">{subValue}</p>
+          )}
+        </div>
+        <div className={`p-3 rounded-xl ${color}`}>
+          <Icon className="h-6 w-6 text-white" />
+        </div>
+      </div>
+      {trend && (
+        <div className="flex items-center gap-1 mt-3">
+          {trend === 'up' ? (
+            <TrendingUp className="h-4 w-4 text-emerald-400" />
+          ) : (
+            <TrendingDown className="h-4 w-4 text-red-400" />
+          )}
+          <span className={`text-sm ${trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
+            {trendValue}
+          </span>
+          <span className="text-slate-500 text-sm">vs last period</span>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
+
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7days');
