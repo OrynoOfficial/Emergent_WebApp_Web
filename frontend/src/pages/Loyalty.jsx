@@ -636,8 +636,8 @@ function AdminLoyaltyView() {
     setLoading(true);
     try {
       // Load rewards
-      const rewardsRes = await api.get('/loyalty/rewards');
-      if (rewardsRes.data.rewards?.length > 0) {
+      const rewardsRes = await api.get('/loyalty/admin/rewards');
+      if (rewardsRes.data?.rewards?.length > 0) {
         setRewards(rewardsRes.data.rewards);
       }
 
@@ -649,11 +649,13 @@ function AdminLoyaltyView() {
 
       // Load members
       const membersRes = await api.get('/loyalty/admin/members');
-      setMembers(membersRes.data.members || []);
+      if (membersRes.data?.members) {
+        setMembers(membersRes.data.members);
+      }
 
     } catch (error) {
       console.error('Failed to load admin data:', error);
-      // Set mock data
+      // Set mock data for demo
       setProgramStats({
         totalMembers: 2847,
         totalPointsIssued: 458900,
