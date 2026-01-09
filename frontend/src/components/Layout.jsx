@@ -583,11 +583,6 @@ export default function Layout({ children }) {
       }
     }
 
-    // Team & Roles - Only show if user is an operator (owner or local_admin)
-    if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
-      items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
-    }
-
     // My Orders
     items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
     
