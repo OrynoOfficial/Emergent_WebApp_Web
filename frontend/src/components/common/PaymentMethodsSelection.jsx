@@ -410,7 +410,14 @@ const PaymentMethodsSelection = ({
           {paymentMethods.map((method) => (
             <button
               key={method.id}
-              onClick={() => !method.isDisabled && setSelectedMethodInternal(method.id)}
+              onClick={() => {
+                if (!method.isDisabled) {
+                  setSelectedMethodInternal(method.id);
+                  if (onMethodSelected) {
+                    onMethodSelected(method.id);
+                  }
+                }
+              }}
               disabled={disabled || isProcessingInternal || method.isDisabled}
               className={`
                 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all
