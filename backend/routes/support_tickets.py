@@ -375,13 +375,34 @@ async def get_available_members(
     if current_user.get("role") not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get existing support team member IDs
+    # Get existing support team member IDs from the dedicated collection
     existing_team = await db.support_team_members.find({}, {"id": 1}).to_list(100)
-    existing_ids = [m.get("id") for m in existing_team]
+    existing_ids = set(m.get("id") for m in existing_team if m.get("id"))
+    
+    # If no explicit team exists, also get auto-discovered team member IDs
+    # This mirrors the logic in get_team_members for consistency
+    if not existing_team:
+        # Get employee IDs
+        employees = await db.employees.find(
+            {"status": "active"},
+            {"id": 1}
+        ).to_list(100)
+        for emp in employees:
+            if emp.get("id"):
+                existing_ids.add(emp.get("id"))
+        
+        # Get admin user IDs
+        admins = await db.users.find(
+            {"role": {"$in": ["admin", "super_admin"]}, "status": "active"},
+            {"_id": 1}
+        ).to_list(100)
+        for admin in admins:
+            if admin.get("_id"):
+                existing_ids.add(str(admin.get("_id")))
     
     available = []
     
-    # Get all employees
+    # Get all employees who are NOT already in the team
     employees = await db.employees.find(
         {"status": "active"},
         {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "position": 1, "department": 1}
@@ -399,9 +420,10 @@ async def get_available_members(
                 "type": "employee"
             })
     
-    # Get all users with appropriate roles
+    # Get all users with appropriate roles who are NOT already in the team
+    # Only include operators (admins are auto-added to team)
     users = await db.users.find(
-        {"role": {"$in": ["admin", "super_admin", "employee", "operator"]}, "status": "active"},
+        {"role": {"$in": ["operator"]}, "status": "active"},
         {"_id": 1, "full_name": 1, "username": 1, "email": 1, "role": 1}
     ).to_list(100)
     
