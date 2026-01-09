@@ -1017,6 +1017,7 @@ export default function Permissions() {
             ))}
           </div>
         </TabsContent>
+        )}
 
         {/* User Permissions Tab */}
         <TabsContent value="users" className="mt-6">
