@@ -176,27 +176,24 @@ export default function SalesManagement() {
     { method: 'Bank Transfer', amount: Math.floor(salesSummary.totalSales * 0.06), percentage: 6, color: 'bg-gray-500' }
   ];
 
-  const StatCard = ({ title, value, change, icon: Icon, prefix = '' }) => (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500 mb-1">{title}</p>
-            <p className="text-2xl font-bold">{prefix}{typeof value === 'number' && value > 1000 ? value.toLocaleString() : value}</p>
-            {change !== undefined && (
-              <div className={`flex items-center gap-1 mt-2 text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {change >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                <span>{Math.abs(change)}% vs last period</span>
-              </div>
-            )}
-          </div>
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <Icon className="w-6 h-6 text-[#082c59]" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  // Daily sales trend data
+  const dailySales = [
+    { date: 'Dec 16', sales: Math.floor(salesSummary.totalSales * 0.12), orders: Math.floor(salesSummary.totalOrders * 0.12) },
+    { date: 'Dec 17', sales: Math.floor(salesSummary.totalSales * 0.14), orders: Math.floor(salesSummary.totalOrders * 0.14) },
+    { date: 'Dec 18', sales: Math.floor(salesSummary.totalSales * 0.11), orders: Math.floor(salesSummary.totalOrders * 0.11) },
+    { date: 'Dec 19', sales: Math.floor(salesSummary.totalSales * 0.15), orders: Math.floor(salesSummary.totalOrders * 0.15) },
+    { date: 'Dec 20', sales: Math.floor(salesSummary.totalSales * 0.18), orders: Math.floor(salesSummary.totalOrders * 0.18) },
+    { date: 'Dec 21', sales: Math.floor(salesSummary.totalSales * 0.16), orders: Math.floor(salesSummary.totalOrders * 0.16) },
+    { date: 'Dec 22', sales: Math.floor(salesSummary.totalSales * 0.14), orders: Math.floor(salesSummary.totalOrders * 0.14) }
+  ];
+
+  // Top selling products
+  const topProducts = salesByService.slice(0, 5).map((item, idx) => ({
+    name: `${item.name} - Top Item ${idx + 1}`,
+    category: item.service,
+    sales: Math.floor(item.sales * 0.3),
+    units: Math.floor(item.orders * 0.2)
+  }));
 
   return (
     <div className="p-6 space-y-6">
