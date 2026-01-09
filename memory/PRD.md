@@ -3,141 +3,113 @@
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
 
-## User Roles & Permissions (Implemented Jan 2026)
+## User Roles & Permissions (Updated Jan 2026)
 
 ### Customer Role
 - **Landing**: Dashboard (standard customer view)
 - **Navigation Items**:
   - Dashboard
-  - Services (all sub-menus - browse, hotels, restaurants, travel, car-rental, events, packages, laundry, cinema, banquet)
-  - My Orders
-  - Receipts
-  - Loyalty
-  - My Ratings (view their reviews, edit reviews)
-  - Support (ticket management system)
+  - Services (all sub-menus)
+  - **My Orders** (filtered by customer)
+  - **Receipts** (filtered by customer)
+  - **Loyalty** (customer loyalty rewards view)
+  - **My Ratings** (customer's reviews)
+  - **Support** (ticket management for customers)
   - Settings
-- **Settings Sections**: Profile, Security, Notifications, Preferences, Payment Methods, Data Protection, Legal Information, About/Impressum
-- **Registration**: All self-registered users automatically get `customer` role (enforced in backend)
-- **NOT Accessible**: Team & Roles, Admin Config, Service Management, Analytics
+- **NOT Accessible**: Team & Roles, Admin Config, Service Management, Analytics, Customer Service
 
 ### Operator Role
 - **Landing**: Analytics page (redirected from Dashboard)
 - **Navigation Items**:
   - Dashboard (shows Analytics)
-  - Services (ONLY assigned service types visible)
+  - Services (ONLY assigned service types)
   - Service Management (ONLY assigned service types)
-  - Team & Roles (for owner/local_admin only)
+  - Team & Roles (for owner/local_admin)
   - Admin Config (LIMITED: All Bookings, Bills, Sales, Audit Log only)
-  - My Ratings (view customer reviews for their services, respond to reviews)
-  - Support (ticket management system)
+  - **My Orders** (filtered by operator's services)
+  - **Receipts** (filtered by operator's services)
+  - **My Ratings** (customer reviews for operator's services, with respond ability)
+  - **Support** (ticket management for operators)
   - Settings
-- **Settings Sections**: Profile, Security, Notifications, Preferences, Data Protection, Legal Information, About/Impressum (NO Payment Methods)
-- **Account Creation**: Operator accounts can ONLY be created by Admins/Super Admins - cannot self-register
+- **NOT Accessible**: Loyalty/Loyalty Program (completely removed for operators)
 
-### Admin Role
-- **Access**: Controlled by Super Admin via custom roles and permissions
-- **Navigation Items**: Based on assigned permissions
-- **Settings Sections**: All sections including System Configuration and API Keys
-
-### Super Admin Role
-- **Access**: Full platform control
-- **Navigation Items**: All items visible
-- **Settings Sections**: All sections including System Configuration and API Keys
+### Admin / Super Admin Role
+- **Landing**: Dashboard
+- **Navigation Items**:
+  - Dashboard
+  - Services (all)
+  - Service Management (all)
+  - **All Orders** (platform-wide view)
+  - **All Receipts** (platform-wide view)
+  - **Loyalty Program** (admin management view - create/edit/delete rewards, view members, configure tiers)
+  - Admin Config (full access)
+  - **All Ratings** (platform-wide ratings with filters)
+  - **Customer Service** (admin backend for support tickets - replaces Support menu)
+  - Settings
 
 ## Key Pages & Features
 
-### Dashboard (Dashboard.jsx)
-- Customer view: Shows orders, spending, activity
-- Removed "Operator Dashboard" modal (was showing for all users)
-- Clean stats cards with spending by category, weekly activity
+### Orders Page
+- **Admin View**: "All Orders" - Shows all orders from all users/operators across the platform
+- **Operator View**: "My Orders" - Shows orders for their assigned services
+- **Customer View**: "My Orders" - Shows only their personal orders
 
-### Support Page (Support.jsx) - NEW
-- **Ticket Management System**:
-  - Stats cards: Total Tickets, Open, In Progress, Resolved
-  - Quick contact options: Call Us, Email Us, Live Chat
-  - My Tickets tab: View/search/filter tickets
-  - FAQ tab: Expandable FAQ sections
-  - Create new ticket dialog with category, priority
-  - View ticket detail with conversation history
-  - Reply to tickets
-- **AI Chatbot**: Floating chat button, AI assistant for quick help
-- Modern UI with gradient cards and clean design
+### Receipts Page
+- **Admin View**: "All Receipts" - Shows all receipts from all users/operators
+- **Operator View**: "Receipts" - Shows receipts for their services
+- **Customer View**: "Receipts" - Shows only their personal receipts
 
-### Ratings Page (Ratings.jsx) - REVAMPED
-- **Customer View (My Ratings & Reviews)**:
-  - Stats: Total Reviews, Helpful Votes, Average Rating
-  - List of user's reviews with service icons and colors
-  - See operator responses to their reviews
-  - Edit their own reviews
-  - Modern card design with color accent bars
+### Loyalty Page
+- **Admin View**: "Loyalty Program" - Management interface with:
+  - Stats cards (Total Members, Points Issued, Points Redeemed, Active Rewards, Members by Tier)
+  - Tabs: Overview, Rewards, Members
+  - Tier Configuration display
+  - Point Earning Rules configuration
+  - Add/Edit/Delete rewards functionality
+  - Members list with search
+- **Customer View**: "Loyalty Rewards" - Personal loyalty interface with:
+  - Current tier, available points, total earned, redeemed
+  - Referral code section
+  - Available rewards to redeem
+  - Activity history
+  - Redemption history
+- **Operator View**: Access Restricted (no access to loyalty)
 
-- **Operator View (Customer Reviews)**:
-  - Stats: Total Reviews, Avg Rating, Responded, Needs Response
-  - List of customer reviews for their assigned services
-  - Filter by service type and rating
-  - Respond to customer reviews
-  - Status indicators (Needs Response badge)
-  - Modern card design with status bars
+### Ratings Page
+- **Admin View**: "All Ratings" - Platform-wide ratings with:
+  - Stats (Total Reviews, Avg Rating, Responded, Needs Response)
+  - Rating distribution chart
+  - Filters by service and rating
+  - Search by service, customer, operator
+  - View all ratings across the platform
+- **Operator View**: "Customer Reviews" - Service-specific ratings with:
+  - Reviews for their assigned services
+  - Ability to respond to customer reviews
+  - Filters by service and rating
+- **Customer View**: "My Ratings & Reviews" - Personal reviews with:
+  - Their submitted reviews
+  - Ability to edit reviews
+  - View operator responses
 
-### Analytics Page (Analytics.jsx)
-- Consolidated view (merged from DataAnalytics)
-- Extended summary stats
-- Revenue & Bookings trend chart
-- Revenue by service pie chart
-- Service performance grid
-- Daily revenue trend
-- Top performing services table
+### Support Page
+- **Admins**: Use "Customer Service" in Admin Config (backend support management)
+- **Operators/Customers**: Use "Support" (ticket management frontend with AI chatbot)
 
-## Key Technical Implementation
+## Navigation Summary
 
-### Role-Based Navigation (Layout.jsx)
-- `navigationItems` useMemo hook with 3 distinct sections:
-  1. Customer navigation (basic user view)
-  2. Operator navigation (service-specific, limited admin)
-  3. Admin/Super Admin navigation (full access)
-- Service filtering based on `operatorServiceTypes` and `operatorType`
-- Team & Roles: Only shows for operators with `operator_id` AND `owner` or `local_admin` role
-
-### Backend API Endpoints
-
-**Ratings APIs** (/api/ratings):
-- `GET /my` - User's own ratings
-- `GET /operator` - Ratings for operator's assigned services
-- `POST /{rating_id}/respond` - Operator responds to rating
-- `PUT /{rating_id}` - User updates their rating
-
-**Support Tickets APIs** (/api/support-tickets):
-- `GET /my` - User's support tickets
-- `POST /` - Create new ticket
-- `POST /{ticket_id}/reply` - Reply to ticket
-
-## Current Architecture
-
-```
-/app/
-├── backend/
-│   ├── routes/
-│   │   ├── auth.py (registration with enforced customer role)
-│   │   ├── ratings.py (my, operator, respond endpoints)
-│   │   └── support_tickets.py (my endpoint)
-│   └── utils/
-│       └── permissions.py
-└── frontend/
-    └── src/
-        ├── components/
-        │   ├── Layout.jsx (role-based navigation)
-        │   └── ...
-        ├── pages/
-        │   ├── Dashboard.jsx (no Operator Dashboard modal)
-        │   ├── Settings.jsx (role-based sections)
-        │   ├── BrowseServices.jsx (service filtering)
-        │   ├── Support.jsx (ticket management system)
-        │   ├── Ratings.jsx (customer/operator views)
-        │   └── admin/
-        │       └── Analytics.jsx (consolidated analytics)
-        └── contexts/
-            └── AuthContext.jsx
-```
+| Menu Item | Customer | Operator | Admin/Super Admin |
+|-----------|----------|----------|-------------------|
+| Dashboard | ✅ | ✅ (→ Analytics) | ✅ |
+| Services | ✅ All | ✅ Assigned Only | ✅ All |
+| Service Management | ❌ | ✅ Assigned Only | ✅ All |
+| Team & Roles | ❌ | ✅ (owner/admin) | ❌ |
+| My Orders / All Orders | My Orders | My Orders | All Orders |
+| Receipts / All Receipts | Receipts | Receipts | All Receipts |
+| Loyalty / Loyalty Program | Loyalty | ❌ REMOVED | Loyalty Program |
+| My Ratings / All Ratings | My Ratings | My Ratings | All Ratings |
+| Support / Customer Service | Support | Support | Customer Service |
+| Admin Config | ❌ | ✅ Limited | ✅ Full |
+| Settings | ✅ | ✅ | ✅ |
 
 ## Test Credentials
 - **Super Admin**: superadmin@oryno.com / testpassword123
@@ -148,18 +120,23 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Multi-tenant permission system with 4 roles
 - [x] Role-based sidebar navigation
 - [x] Role-based settings page sections
-- [x] Analytics page consolidation (merged DataAnalytics)
+- [x] Analytics page consolidation
 - [x] Secure registration (always assigns customer role)
-- [x] Operator service filtering (Browse Services)
-- [x] Operator landing page redirect to Analytics
+- [x] Operator service filtering
 - [x] Removed Operator Dashboard modal from Dashboard
-- [x] Team & Roles restricted to operators only (owner/local_admin)
+- [x] Team & Roles restricted to operators only
 - [x] Support page with ticket management system
 - [x] Ratings page with customer and operator views
-- [x] Backend APIs for ratings and support tickets
+- [x] Role-based menu labels (All Orders vs My Orders, etc.)
+- [x] Admin Loyalty Program management view
+- [x] Admin All Ratings view
+- [x] Loyalty removed from operator navigation
+- [x] Customer Service replaces Support for admins
 
 ## Backlog / Future Tasks
-- [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines) using shared component pattern
-- [ ] Email-based invitation system for adding team members
-- [ ] Custom role and permission management UI for Admins
+- [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines)
+- [ ] Email-based invitation system for team members
+- [ ] Custom role/permission management UI for Admins
 - [ ] Operator audit log visibility (owner sees team members' logs)
+- [ ] Connect admin loyalty management to backend APIs
+- [ ] Connect admin ratings management to backend APIs
