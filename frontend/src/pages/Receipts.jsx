@@ -45,11 +45,16 @@ const SORT_OPTIONS = [
 ];
 
 export default function Receipts() {
-    const { user } = useAuth();
+    const { user, isOperatorUser } = useAuth();
     const [bills, setBills] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedBill, setSelectedBill] = useState(null);
     const [showInvoice, setShowInvoice] = useState(false);
+    
+    // Determine view mode based on user role
+    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+    const isOperator = user?.role === 'operator' || isOperatorUser;
+    const isAllReceiptsView = isAdmin; // Admin sees all receipts
     
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState('');
@@ -63,7 +68,7 @@ export default function Receipts() {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [isAllReceiptsView, isOperator]);
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -72,14 +77,24 @@ export default function Receipts() {
 
     const loadData = async () => {
         try {
-            const response = await ordersAPI.getMyOrders({ limit: 500 });
+            let response;
+            if (isAllReceiptsView) {
+                // Admin: fetch all orders/receipts
+                response = await ordersAPI.getAll({ limit: 500 });
+            } else if (isOperator) {
+                // Operator: fetch orders for their services
+                response = await ordersAPI.getOperatorOrders({ limit: 500, operator_id: user?.operator_id });
+            } else {
+                // Customer: fetch only their orders
+                response = await ordersAPI.getMyOrders({ limit: 500 });
+            }
             const orders = response.data?.orders || [];
             
             const formattedBills = orders.map(order => ({
                 id: order.id || order._id,
                 bill_number: order.order_number || `ORD-${(order.id || order._id || '').slice(-6)}`,
-                customer_name: user?.full_name || 'Customer',
-                customer_email: user?.email || '',
+                customer_name: order.customer_name || user?.full_name || 'Customer',
+                customer_email: order.customer_email || user?.email || '',
                 amount: order.total_amount || order.final_amount || 0,
                 status: order.payment_status || order.status || 'pending',
                 service_type: order.service_type || order.service_category || 'general',
@@ -87,6 +102,7 @@ export default function Receipts() {
                 due_date: order.due_date,
                 currency: 'FCFA',
                 tags: order.tags || [order.service_type || order.service_category].filter(Boolean),
+                operator_name: order.operator_name || '',
             }));
             
             setBills(formattedBills);
