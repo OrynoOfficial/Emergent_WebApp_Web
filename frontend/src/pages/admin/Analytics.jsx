@@ -224,11 +224,34 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
+      {/* Operator Context Banner */}
+      {isOperator && operatorContext && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-medium text-blue-900">
+              Personalized Analytics for {operatorContext.name || 'Your Organization'}
+            </h3>
+            <p className="text-sm text-blue-700">
+              Showing data filtered by your assigned services: {operatorServiceTypes?.join(', ') || 'All services'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="analytics-title">Analytics Dashboard</h1>
-          <p className="text-slate-600">Comprehensive business intelligence dashboard</p>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="analytics-title">
+            {isOperator ? 'My Analytics Dashboard' : 'Analytics Dashboard'}
+          </h1>
+          <p className="text-slate-600">
+            {isOperator 
+              ? 'Your personalized business performance metrics'
+              : 'Comprehensive business intelligence dashboard'}
+          </p>
         </div>
         <Select value={timeFilter} onValueChange={setTimeFilter}>
           <SelectTrigger className="w-40" data-testid="time-filter-select">
