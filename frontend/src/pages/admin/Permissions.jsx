@@ -1042,10 +1042,14 @@ export default function Permissions() {
                 </CardContent>
                 <CardFooter className="pt-2 border-t">
                   <div className="flex justify-end gap-2 w-full">
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog(role)}>
-                      <Edit className="h-4 w-4 mr-1" /> Edit
-                    </Button>
-                    {!role.isSystem && (
+                    {/* Admin can only edit non-system roles */}
+                    {(isSuperAdmin || !role.isSystem) && (
+                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(role)}>
+                        <Edit className="h-4 w-4 mr-1" /> Edit
+                      </Button>
+                    )}
+                    {/* Only super admin or non-system roles can be deleted */}
+                    {!role.isSystem && (isSuperAdmin || !role.isSystem) && (
                       <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDelete(role.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1056,7 +1060,6 @@ export default function Permissions() {
             ))}
           </div>
         </TabsContent>
-        )}
 
         {/* User Permissions Tab */}
         <TabsContent value="users" className="mt-6">
