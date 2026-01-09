@@ -144,11 +144,31 @@ export default function CarRentalBooking() {
   };
 
   const toggleExtra = (extraId) => {
-    setSelectedExtras(prev => 
-      prev.includes(extraId) 
-        ? prev.filter(id => id !== extraId)
-        : [...prev, extraId]
-    );
+    if (extraId === 'none') {
+      // If selecting "No Extras", clear all other selections and confirm
+      setSelectedExtras(['none']);
+      setExtrasConfirmed(true);
+    } else {
+      // If selecting any other extra, remove 'none' if it was selected
+      setSelectedExtras(prev => {
+        const withoutNone = prev.filter(id => id !== 'none');
+        if (withoutNone.includes(extraId)) {
+          const newExtras = withoutNone.filter(id => id !== extraId);
+          // If no extras selected after removal, don't auto-confirm
+          if (newExtras.length === 0) {
+            setExtrasConfirmed(false);
+          }
+          return newExtras;
+        }
+        return [...withoutNone, extraId];
+      });
+    }
+  };
+
+  const confirmExtras = () => {
+    if (selectedExtras.length > 0 || selectedExtras.includes('none')) {
+      setExtrasConfirmed(true);
+    }
   };
 
   const getDays = () => {
