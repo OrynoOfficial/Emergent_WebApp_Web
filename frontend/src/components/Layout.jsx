@@ -518,7 +518,15 @@ export default function Layout({ children }) {
         submenu: operatorAdminSubmenu
       });
       
-      // My Ratings
+      // My Orders (filtered by operator)
+      items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
+      
+      // Receipts (filtered by operator)
+      items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
+      
+      // NOTE: Loyalty removed for operators as requested
+      
+      // My Ratings (operator views their service ratings)
       items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
       
       // Support
