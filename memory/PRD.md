@@ -112,12 +112,12 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 | Admin Config | ❌ | ✅ Limited | ✅ No Emp/Comm/DB | ✅ Full |
 | Support / CS | Support | Support | Customer Service | Customer Service |
 
-## Admin Config Submenus by Role
+## Admin Config Submenus by Role (Updated Jan 9, 2026)
 
 | Submenu | Operator | Admin | Super Admin |
 |---------|----------|-------|-------------|
-| Analytics | ❌ | ✅ | ❌ (in Dashboard) |
-| Trip Report | ❌ | ✅ | ✅ |
+| Analytics | ❌ | ❌ (Removed) | ❌ (in Dashboard) |
+| Trip Report | ❌ | ❌ (Removed) | ✅ |
 | All Bookings | ❌ | ✅ | ✅ |
 | Dashboard for Admins | ❌ | ❌ | ✅ |
 | User Management | ❌ | ✅ | ✅ |
@@ -126,8 +126,8 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 | Commission | ❌ | ❌ | ✅ |
 | Bills | ❌ | ✅ | ✅ |
 | Sales | ❌ | ✅ | ❌ (top-level) |
-| Audit Logs | ✅ | ✅ | ✅ |
-| Permissions | ❌ | ✅ | ✅ |
+| Audit Logs | ✅ | ✅ (Own+Operators) | ✅ (All) |
+| Permissions | ❌ | ✅ (Users only) | ✅ (Full) |
 | Database | ❌ | ❌ | ✅ |
 | Validation | ❌ | ✅ | ✅ |
 | Team & Roles | ✅ | ❌ | ❌ |
