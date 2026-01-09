@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
+import { Input } from '../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Textarea } from '../components/ui/textarea';
 import { 
   Award, TrendingUp, Gift, Star, Users, Calendar, Crown, Trophy, 
-  Zap, Check, Copy, Sparkles, Coins, Clock, ArrowRight, Loader2
+  Zap, Check, Copy, Sparkles, Coins, Clock, ArrowRight, Loader2,
+  Plus, Edit2, Trash2, Settings, Search, BarChart3, Target, Percent
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import api from '../api/client';
