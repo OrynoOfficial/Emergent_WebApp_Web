@@ -322,9 +322,9 @@ export default function OperatorsManagement() {
               <tr>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Services</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Location</th>
+                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Owner</th>
+                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Date Joined</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Rating</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Revenue</th>
                 <th className="py-4 px-6 text-right text-sm font-semibold text-slate-600">Actions</th>
               </tr>
@@ -354,19 +354,19 @@ export default function OperatorsManagement() {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <div className="flex items-center gap-1 text-slate-600">
-                      <MapPin className="h-4 w-4" />
-                      {operator.city}
+                    <div className="text-sm">
+                      <p className="font-medium text-slate-700">{operator.owner_name || '-'}</p>
+                      <p className="text-slate-500 text-xs">{operator.owner_email || ''}</p>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-1 text-slate-600 text-sm">
+                      <Calendar className="h-4 w-4" />
+                      {operator.created_at ? new Date(operator.created_at).toLocaleDateString() : operator.joined_date || '-'}
                     </div>
                   </td>
                   <td className="py-4 px-6">
                     {getStatusBadge(operator.status)}
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                      <span className="font-medium">{operator.rating || '-'}</span>
-                    </div>
                   </td>
                   <td className="py-4 px-6 font-medium text-slate-900">
                     {formatFCFA(operator.revenue || 0)}
