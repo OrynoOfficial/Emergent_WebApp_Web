@@ -181,6 +181,11 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
             <span className="line-clamp-1">{hotel.address || hotel.city}</span>
           </div>
           
+          {/* Description */}
+          {hotel.description && (
+            <p className="text-xs text-slate-600 line-clamp-2 mb-2">{hotel.description}</p>
+          )}
+          
           {/* Amenities - Compact */}
           <div className="flex flex-wrap gap-1 mb-2">
             {hotel.amenities?.slice(0, 3).map((amenity, idx) => (
