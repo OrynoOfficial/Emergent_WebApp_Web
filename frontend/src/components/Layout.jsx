@@ -577,17 +577,18 @@ export default function Layout({ children }) {
     });
 
     // Service Management - All services (for both Admin and Super Admin, controlled by permissions)
+    // Admins get access by default; Super Admin has full access
     if (canManage || isAdmin) {
       const allManagementItems = [
-        { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel', canManage: isSuperAdmin || canManageHotels },
-        { key: 'travel-mgmt', label: 'Travel', path: '/management/travel', icon: Bus, serviceType: 'travel', canManage: isSuperAdmin || canManageTravel },
-        { key: 'car-mgmt', label: 'Car Rental', path: '/management/car-rental', icon: Car, serviceType: 'car_rental', canManage: isSuperAdmin || canManageCars },
-        { key: 'restaurant-mgmt', label: 'Restaurants', path: '/management/restaurants', icon: Utensils, serviceType: 'restaurant', canManage: isSuperAdmin || canManageRestaurants },
-        { key: 'events-mgmt', label: 'Events', path: '/management/events', icon: Calendar, serviceType: 'events', canManage: isSuperAdmin || canManageEvents },
-        { key: 'laundry-mgmt', label: 'Laundry', path: '/management/laundry', icon: Sparkles, serviceType: 'laundry', canManage: isSuperAdmin || canManagePressing },
-        { key: 'banquet-mgmt', label: 'Banquet', path: '/management/banquet', icon: Gift, serviceType: 'banquet', canManage: isSuperAdmin || canManageBanquets },
-        { key: 'cinema-mgmt', label: 'Cinema', path: '/management/cinema', icon: Film, serviceType: 'cinema', canManage: isSuperAdmin || canManageCinema },
-        { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package', canManage: isSuperAdmin || canManagePackages },
+        { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel', canManage: isAdmin || canManageHotels },
+        { key: 'travel-mgmt', label: 'Travel', path: '/management/travel', icon: Bus, serviceType: 'travel', canManage: isAdmin || canManageTravel },
+        { key: 'car-mgmt', label: 'Car Rental', path: '/management/car-rental', icon: Car, serviceType: 'car_rental', canManage: isAdmin || canManageCars },
+        { key: 'restaurant-mgmt', label: 'Restaurants', path: '/management/restaurants', icon: Utensils, serviceType: 'restaurant', canManage: isAdmin || canManageRestaurants },
+        { key: 'events-mgmt', label: 'Events', path: '/management/events', icon: Calendar, serviceType: 'events', canManage: isAdmin || canManageEvents },
+        { key: 'laundry-mgmt', label: 'Laundry', path: '/management/laundry', icon: Sparkles, serviceType: 'laundry', canManage: isAdmin || canManagePressing },
+        { key: 'banquet-mgmt', label: 'Banquet', path: '/management/banquet', icon: Gift, serviceType: 'banquet', canManage: isAdmin || canManageBanquets },
+        { key: 'cinema-mgmt', label: 'Cinema', path: '/management/cinema', icon: Film, serviceType: 'cinema', canManage: isAdmin || canManageCinema },
+        { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package', canManage: isAdmin || canManagePackages },
       ];
       
       const managementSubmenu = allManagementItems.filter(item => item.canManage);
