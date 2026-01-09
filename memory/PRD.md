@@ -19,11 +19,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Settings
 - **NOT Accessible**: Team & Roles, Admin Config, Service Management, Analytics, Customer Service, Sales
 
-### Operator Role
+### Operator Role (Updated Jan 9, 2026)
 - **Landing Page**: Analytics Dashboard (personalized to their services)
 - **Dashboard Button**: Analytics Dashboard (personalized)
 - **Navigation Items**:
-  - Dashboard (→ Analytics Dashboard)
+  - Dashboard (→ Analytics Dashboard, personalized with operator context banner)
   - **Sales** (NEW - top-level menu, personalized to operator)
   - Services (ONLY assigned service types)
   - Service Management (ONLY assigned service types)
@@ -33,6 +33,7 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - **My Ratings** (customer reviews for operator's services, with respond ability)
   - **Support** (ticket management for operators)
   - Settings
+- **Audit Logs**: Can view own logs. If owner, can view team members' logs. Local permission "team_audit.view" can be assigned to allow team audit viewing.
 - **NOT Accessible**: Loyalty/Loyalty Program, All Bookings, Bills (removed from Admin Config)
 - **Moved to Admin Config**: Team & Roles (for owner/local_admin)
 
