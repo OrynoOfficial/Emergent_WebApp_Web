@@ -441,7 +441,7 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
 
 export default function HotelsResults() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -452,6 +452,13 @@ export default function HotelsResults() {
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  
+  // Editable search state
+  const [isEditingSearch, setIsEditingSearch] = useState(false);
+  const [editDestination, setEditDestination] = useState('');
+  const [editCheckIn, setEditCheckIn] = useState('');
+  const [editCheckOut, setEditCheckOut] = useState('');
+  const [editGuests, setEditGuests] = useState(2);
 
   const destination = searchParams.get('destination') || searchParams.get('city') || '';
   const checkIn = searchParams.get('checkIn') || searchParams.get('check_in');
