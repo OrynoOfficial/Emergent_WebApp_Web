@@ -539,8 +539,20 @@ export default function Layout({ children }) {
     }
     
     // ==================== ADMIN / SUPER ADMIN NAVIGATION ====================
-    // Dashboard
-    items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' });
+    // Check if this is a regular admin (not super admin)
+    const isRegularAdmin = userRole === USER_ROLES.ADMIN && !isSuperAdmin;
+    
+    // Dashboard - Different behavior for Admin vs Super Admin
+    // Super Admin: Dashboard shows Analytics Dashboard
+    // Admin: Dashboard shows Admin Dashboard (new metrics page)
+    if (isSuperAdmin) {
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/analytics' });
+      
+      // Sales - for Super Admin (cumulative for all operators)
+      items.push({ key: 'sales', label: 'Sales', icon: TrendingUp, path: '/admin/sales' });
+    } else if (isRegularAdmin) {
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/admin-dashboard' });
+    }
     
     // Services - All services visible
     const allServices = [
@@ -564,18 +576,18 @@ export default function Layout({ children }) {
       submenu: allServices
     });
 
-    // Service Management - All services
-    if (canManage) {
+    // Service Management - All services (for both Admin and Super Admin, controlled by permissions)
+    if (canManage || isAdmin) {
       const allManagementItems = [
-        { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel', canManage: canManageHotels },
-        { key: 'travel-mgmt', label: 'Travel', path: '/management/travel', icon: Bus, serviceType: 'travel', canManage: canManageTravel },
-        { key: 'car-mgmt', label: 'Car Rental', path: '/management/car-rental', icon: Car, serviceType: 'car_rental', canManage: canManageCars },
-        { key: 'restaurant-mgmt', label: 'Restaurants', path: '/management/restaurants', icon: Utensils, serviceType: 'restaurant', canManage: canManageRestaurants },
-        { key: 'events-mgmt', label: 'Events', path: '/management/events', icon: Calendar, serviceType: 'events', canManage: canManageEvents },
-        { key: 'laundry-mgmt', label: 'Laundry', path: '/management/laundry', icon: Sparkles, serviceType: 'laundry', canManage: canManagePressing },
-        { key: 'banquet-mgmt', label: 'Banquet', path: '/management/banquet', icon: Gift, serviceType: 'banquet', canManage: canManageBanquets },
-        { key: 'cinema-mgmt', label: 'Cinema', path: '/management/cinema', icon: Film, serviceType: 'cinema', canManage: canManageCinema },
-        { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package', canManage: canManagePackages },
+        { key: 'hotel-mgmt', label: 'Hotels', path: '/management/hotels', icon: Hotel, serviceType: 'hotel', canManage: isSuperAdmin || canManageHotels },
+        { key: 'travel-mgmt', label: 'Travel', path: '/management/travel', icon: Bus, serviceType: 'travel', canManage: isSuperAdmin || canManageTravel },
+        { key: 'car-mgmt', label: 'Car Rental', path: '/management/car-rental', icon: Car, serviceType: 'car_rental', canManage: isSuperAdmin || canManageCars },
+        { key: 'restaurant-mgmt', label: 'Restaurants', path: '/management/restaurants', icon: Utensils, serviceType: 'restaurant', canManage: isSuperAdmin || canManageRestaurants },
+        { key: 'events-mgmt', label: 'Events', path: '/management/events', icon: Calendar, serviceType: 'events', canManage: isSuperAdmin || canManageEvents },
+        { key: 'laundry-mgmt', label: 'Laundry', path: '/management/laundry', icon: Sparkles, serviceType: 'laundry', canManage: isSuperAdmin || canManagePressing },
+        { key: 'banquet-mgmt', label: 'Banquet', path: '/management/banquet', icon: Gift, serviceType: 'banquet', canManage: isSuperAdmin || canManageBanquets },
+        { key: 'cinema-mgmt', label: 'Cinema', path: '/management/cinema', icon: Film, serviceType: 'cinema', canManage: isSuperAdmin || canManageCinema },
+        { key: 'package-mgmt', label: 'Packages', path: '/management/packages', icon: Package, serviceType: 'package', canManage: isSuperAdmin || canManagePackages },
       ];
       
       const managementSubmenu = allManagementItems.filter(item => item.canManage);
@@ -591,11 +603,6 @@ export default function Layout({ children }) {
       }
     }
 
-    // Team & Roles - Only show if user is an operator (owner or local_admin)
-    if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
-      items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
-    }
-
     // All Orders (Admin sees all orders from all users/operators)
     items.push({ key: 'orders', label: 'All Orders', icon: Ticket, path: '/orders' });
     
@@ -605,35 +612,49 @@ export default function Layout({ children }) {
     // Loyalty Program (Admin backend for managing loyalty program)
     items.push({ key: 'loyalty', label: 'Loyalty Program', icon: Award, path: '/loyalty' });
 
-    // Admin Config - Full access for admin/super_admin
-    if (canAccessAdminConfig) {
+    // Admin Config - Different for Admin vs Super Admin
+    if (canAccessAdminConfig || isRegularAdmin) {
       const adminSubmenu = [];
       
-      // Analytics section
-      if (canViewAnalytics) {
-        adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
-        adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
-        adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
+      if (isSuperAdmin) {
+        // Super Admin gets full access
+        // Analytics section
+        if (canViewAnalytics) {
+          adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
+          adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
+        }
+        
+        // Dashboard for admins - visible to super admin in Admin Config
+        adminSubmenu.push({ key: 'admin-dashboard', label: 'Dashboard for Admins', path: '/admin/admin-dashboard', icon: LayoutDashboard });
+        
+        // Admin-only items
+        if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
+        if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
+        if (canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employees', path: '/admin/employees', icon: Users });
+        if (canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
+        if (hasPermission('payments.view')) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
+        if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
+        if (canViewPermissions) adminSubmenu.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
+        adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
+        if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
+      } else if (isRegularAdmin) {
+        // Regular Admin gets limited access (no Employees, Commission, Database)
+        if (canViewAnalytics) {
+          adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
+          adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
+          adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
+        }
+        
+        // Admin-only items (excluding Employees, Commission, Database)
+        if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
+        if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
+        // Removed: Employees, Commission, Database
+        if (hasPermission('payments.view')) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
+        if (hasPermission('analytics.view_revenue')) adminSubmenu.push({ key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
+        if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
+        if (canViewPermissions) adminSubmenu.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
+        if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       }
-      
-      // Admin-only items
-      const adminOnlyItems = [];
-      
-      if (canViewUsers) adminOnlyItems.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
-      if (canViewOperators) adminOnlyItems.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
-      if (canViewEmployees) adminOnlyItems.push({ key: 'employees', label: 'Employees', path: '/admin/employees', icon: Users });
-      if (canViewCommission) adminOnlyItems.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
-      if (hasPermission('payments.view')) adminOnlyItems.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
-      if (hasPermission('analytics.view_revenue')) adminOnlyItems.push({ key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
-      if (canViewActivity) adminOnlyItems.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
-      if (canViewPermissions) adminOnlyItems.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
-      if (isSuperAdmin) adminOnlyItems.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
-      if (canViewValidation) adminOnlyItems.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
-      
-      if (adminOnlyItems.length > 0 && adminSubmenu.length > 0) {
-        adminSubmenu.push({ key: 'divider-admin', label: '── Admin ──', path: '', icon: Settings, isDivider: true });
-      }
-      adminSubmenu.push(...adminOnlyItems);
       
       if (adminSubmenu.length > 0) {
         items.push({
@@ -663,7 +684,7 @@ export default function Layout({ children }) {
     canViewAnalytics, canViewUsers, canViewOperators, canViewEmployees,
     canViewCommission, canViewValidation, canViewActivity, canViewPermissions,
     hasAnyPermission, hasPermission,
-    isOperatorUser, operatorServiceTypes, operatorType
+    isOperatorUser, operatorServiceTypes, operatorType, isAdmin
   ]);
 
   // State for flyout menus
