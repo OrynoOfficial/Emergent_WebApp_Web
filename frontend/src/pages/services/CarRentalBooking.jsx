@@ -84,6 +84,15 @@ export default function CarRentalBooking() {
   
   const [isSelf, setIsSelf] = useState(false);
   const [selectedExtras, setSelectedExtras] = useState([]);
+  const [extrasConfirmed, setExtrasConfirmed] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+
+  // Check if driver info is complete
+  const isDriverInfoComplete = formData.name && formData.email && formData.phone && formData.licenseNumber;
+  
+  // Check if all mandatory sections are complete
+  const canSelectPayment = extrasConfirmed && isDriverInfoComplete;
+  const canConfirmBooking = canSelectPayment && selectedPaymentMethod;
 
   useEffect(() => {
     const loadData = () => {
