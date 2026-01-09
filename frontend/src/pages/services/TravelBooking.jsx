@@ -494,7 +494,7 @@ export default function TravelBooking() {
             <div className="lg:col-span-2 space-y-6">
               {/* Traveler Details */}
               <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
                   <div className="flex items-center gap-3 text-white">
                     <div className="p-2 bg-white/20 rounded-xl">
                       <Users className="h-6 w-6" />
@@ -520,7 +520,7 @@ export default function TravelBooking() {
 
               {/* Seat Selection */}
               <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-5">
+                <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
                   <div className="flex items-center justify-between text-white">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-white/20 rounded-xl">
@@ -597,7 +597,7 @@ export default function TravelBooking() {
 
               {/* Baggage & Extras */}
               <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
+                <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
                   <div className="flex items-center gap-3 text-white">
                     <div className="p-2 bg-white/20 rounded-xl">
                       <ShoppingBag className="h-6 w-6" />
