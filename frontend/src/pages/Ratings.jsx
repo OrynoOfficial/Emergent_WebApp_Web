@@ -938,13 +938,6 @@ function AdminRatingsView() {
       byRating
     };
   }, [ratings]);
-      total: ratings.length,
-      average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1),
-      responded: ratings.filter(r => r.operator_response).length,
-      pending: ratings.filter(r => !r.operator_response).length,
-      byRating
-    };
-  }, [ratings]);
 
   if (loading) {
     return (
@@ -960,7 +953,7 @@ function AdminRatingsView() {
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -1009,6 +1002,19 @@ function AdminRatingsView() {
               <div>
                 <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
                 <p className="text-xs text-slate-600">Needs Response</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-0 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-orange-100 rounded-lg">
+                <Flag className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.flagged}</p>
+                <p className="text-xs text-slate-600">{showFlaggedOnly ? 'Showing Flagged' : 'Flagged'}</p>
               </div>
             </div>
           </CardContent>
