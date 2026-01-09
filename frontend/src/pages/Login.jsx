@@ -97,8 +97,8 @@ export default function AuthPage() {
           // Super Admin landing: Analytics Dashboard
           navigate('/admin/analytics');
         } else if (userRole === 'admin') {
-          // Admin landing: All Orders
-          navigate('/orders');
+          // Admin landing: Admin Dashboard
+          navigate('/admin/admin-dashboard');
         } else if (isOperator) {
           // Operator landing: Analytics Dashboard (their personalized view)
           navigate('/admin/analytics');
