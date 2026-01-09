@@ -442,7 +442,6 @@ export default function CarRentalBooking() {
               </div>
               
               <div className="p-6">
-              <div className="p-6">
                 {!extrasConfirmed && (
                   <div className="mb-4 p-3 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600">
                     Please confirm your extras selection first
