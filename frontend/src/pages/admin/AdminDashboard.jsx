@@ -7,15 +7,12 @@ import {
   TrendingUp,
   TrendingDown,
   Users,
-  DollarSign,
   ShoppingBag,
-  Calendar,
   BarChart3,
   Activity,
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
   Ticket,
   Star,
   HeadphonesIcon,
@@ -25,25 +22,25 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import api from '../../api/client';
-import { ordersAPI, analyticsAPI } from '../../api/client';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts';
+import { ordersAPI } from '../../api/client';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 
-const COLORS = ['#4D96FF', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'];
+const COLORS = ['#4D96FF', '#10B981', '#F59E0B', '#EF4444'];
 
-// Legend formatter for charts - defined outside to prevent re-creation
-const legendFormatter = (value) => <span className="text-slate-300">{value}</span>;
+// Legend formatter for charts
+const legendFormatter = (value) => <span className="text-gray-700">{value}</span>;
 
-// StatCard component moved outside to prevent re-creation on each render
+// StatCard component with light-mode styling
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subValue }) => (
-  <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all">
+  <Card className="bg-white border border-gray-200 hover:shadow-md transition-all">
     <CardContent className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-slate-400 text-sm font-medium">{title}</p>
-          <p className="text-2xl font-bold text-white mt-1">{value}</p>
+          <p className="text-gray-500 text-sm font-medium">{title}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
           {subValue && (
-            <p className="text-xs text-slate-500 mt-1">{subValue}</p>
+            <p className="text-xs text-gray-400 mt-1">{subValue}</p>
           )}
         </div>
         <div className={`p-3 rounded-xl ${color}`}>
@@ -53,14 +50,14 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subValue
       {trend && (
         <div className="flex items-center gap-1 mt-3">
           {trend === 'up' ? (
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-400" />
+            <TrendingDown className="h-4 w-4 text-red-500" />
           )}
-          <span className={`text-sm ${trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
+          <span className={`text-sm ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
             {trendValue}
           </span>
-          <span className="text-slate-500 text-sm">vs last period</span>
+          <span className="text-gray-400 text-sm">vs last period</span>
         </div>
       )}
     </CardContent>
@@ -75,7 +72,6 @@ export default function AdminDashboard() {
     pendingOrders: 0,
     completedOrders: 0,
     cancelledOrders: 0,
-    totalRevenue: 0,
     totalUsers: 0,
     activeUsers: 0,
     newUsersThisWeek: 0,
@@ -102,15 +98,12 @@ export default function AdminDashboard() {
       const pendingOrders = orders.filter(o => o.status === 'pending').length;
       const completedOrders = orders.filter(o => o.status === 'completed').length;
       const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
-      const totalRevenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
       
       // Fetch users count
       let totalUsers = 0;
-      let activeUsers = 0;
       try {
         const usersRes = await api.get('/users/', { params: { limit: 1 } });
         totalUsers = usersRes.data?.total || 0;
-        activeUsers = usersRes.data?.total || 0;
       } catch (e) {
         console.log('Users API not available');
       }
@@ -140,9 +133,8 @@ export default function AdminDashboard() {
         pendingOrders,
         completedOrders,
         cancelledOrders,
-        totalRevenue,
         totalUsers,
-        activeUsers,
+        activeUsers: totalUsers,
         newUsersThisWeek: Math.floor(totalUsers * 0.08),
         openTickets,
         avgRating,
@@ -160,14 +152,13 @@ export default function AdminDashboard() {
         { name: 'Processing', value: orders.length - pendingOrders - completedOrders - cancelledOrders, color: '#4D96FF' }
       ].filter(d => d.value > 0));
       
-      // Generate trend data (mock based on real orders)
+      // Generate trend data
       const trendData = [];
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       for (let i = 0; i < 7; i++) {
         trendData.push({
           day: days[i],
-          orders: Math.floor(orders.length / 7) + Math.floor(Math.random() * 10),
-          revenue: Math.floor(totalRevenue / 7) + Math.floor(Math.random() * 50000)
+          orders: Math.floor(orders.length / 7) + Math.floor(Math.random() * 10)
         });
       }
       setOrderTrend(trendData);
@@ -188,18 +179,18 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-slate-400 mt-1">Platform metrics and overview</p>
+          <h1 className="text-2xl font-bold text-[#082c59]">Admin Dashboard</h1>
+          <p className="text-gray-500 mt-1">Platform metrics and overview</p>
         </div>
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
+          <SelectTrigger className="w-[180px] bg-white border-gray-300 text-gray-700">
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             <SelectItem value="7days">Last 7 Days</SelectItem>
             <SelectItem value="30days">Last 30 Days</SelectItem>
             <SelectItem value="90days">Last 90 Days</SelectItem>
@@ -207,24 +198,16 @@ export default function AdminDashboard() {
         </Select>
       </div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Key Metrics Grid - Removed Total Revenue */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="Total Orders"
           value={metrics.totalOrders.toLocaleString()}
           icon={ShoppingBag}
           trend="up"
           trendValue="+12.5%"
-          color="bg-blue-500/20"
+          color="bg-blue-500"
           subValue={`${metrics.pendingOrders} pending`}
-        />
-        <StatCard
-          title="Total Revenue"
-          value={formatFCFA(metrics.totalRevenue)}
-          icon={DollarSign}
-          trend="up"
-          trendValue="+8.2%"
-          color="bg-emerald-500/20"
         />
         <StatCard
           title="Total Users"
@@ -232,62 +215,62 @@ export default function AdminDashboard() {
           icon={Users}
           trend="up"
           trendValue={`+${metrics.newUsersThisWeek} this week`}
-          color="bg-purple-500/20"
+          color="bg-purple-500"
         />
         <StatCard
           title="Open Support Tickets"
           value={metrics.openTickets.toLocaleString()}
           icon={HeadphonesIcon}
-          color="bg-orange-500/20"
+          color="bg-orange-500"
         />
       </div>
 
       {/* Order Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-500/30">
+        <Card className="bg-amber-50 border border-amber-200">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-amber-500/20">
-              <Clock className="h-5 w-5 text-amber-400" />
+            <div className="p-3 rounded-full bg-amber-100">
+              <Clock className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{metrics.pendingOrders}</p>
-              <p className="text-amber-300 text-sm">Pending Orders</p>
+              <p className="text-2xl font-bold text-gray-900">{metrics.pendingOrders}</p>
+              <p className="text-amber-700 text-sm">Pending Orders</p>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 border-emerald-500/30">
+        <Card className="bg-emerald-50 border border-emerald-200">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-emerald-500/20">
-              <CheckCircle className="h-5 w-5 text-emerald-400" />
+            <div className="p-3 rounded-full bg-emerald-100">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{metrics.completedOrders}</p>
-              <p className="text-emerald-300 text-sm">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">{metrics.completedOrders}</p>
+              <p className="text-emerald-700 text-sm">Completed</p>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-red-500/20 to-red-600/10 border-red-500/30">
+        <Card className="bg-red-50 border border-red-200">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-red-500/20">
-              <XCircle className="h-5 w-5 text-red-400" />
+            <div className="p-3 rounded-full bg-red-100">
+              <XCircle className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{metrics.cancelledOrders}</p>
-              <p className="text-red-300 text-sm">Cancelled</p>
+              <p className="text-2xl font-bold text-gray-900">{metrics.cancelledOrders}</p>
+              <p className="text-red-700 text-sm">Cancelled</p>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-yellow-500/30">
+        <Card className="bg-yellow-50 border border-yellow-200">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-yellow-500/20">
-              <Star className="h-5 w-5 text-yellow-400" />
+            <div className="p-3 rounded-full bg-yellow-100">
+              <Star className="h-5 w-5 text-yellow-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{metrics.avgRating.toFixed(1)}</p>
-              <p className="text-yellow-300 text-sm">Avg Rating ({metrics.totalRatings} reviews)</p>
+              <p className="text-2xl font-bold text-gray-900">{metrics.avgRating.toFixed(1)}</p>
+              <p className="text-yellow-700 text-sm">Avg Rating ({metrics.totalRatings} reviews)</p>
             </div>
           </CardContent>
         </Card>
@@ -296,11 +279,11 @@ export default function AdminDashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Order Trend Chart */}
-        <Card className="lg:col-span-2 bg-white/5 border-white/10">
+        <Card className="lg:col-span-2 bg-white border border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-400" />
-              Orders & Revenue Trend
+            <CardTitle className="text-[#082c59] flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-500" />
+              Orders Trend
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -313,15 +296,15 @@ export default function AdminDashboard() {
                       <stop offset="95%" stopColor="#4D96FF" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="day" stroke="#94a3b8" />
-                  <YAxis stroke="#94a3b8" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid #334155',
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
-                      color: '#fff'
+                      color: '#374151'
                     }}
                   />
                   <Area
@@ -338,10 +321,10 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Order Status Distribution */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-white border border-gray-200">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Activity className="h-5 w-5 text-purple-400" />
+            <CardTitle className="text-[#082c59] flex items-center gap-2">
+              <Activity className="h-5 w-5 text-purple-500" />
               Order Status
             </CardTitle>
           </CardHeader>
@@ -364,10 +347,10 @@ export default function AdminDashboard() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid #334155',
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
-                      color: '#fff'
+                      color: '#374151'
                     }}
                   />
                   <Legend formatter={legendFormatter} />
@@ -379,14 +362,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Orders */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-white border border-gray-200">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-white flex items-center gap-2">
-            <Ticket className="h-5 w-5 text-indigo-400" />
+          <CardTitle className="text-[#082c59] flex items-center gap-2">
+            <Ticket className="h-5 w-5 text-indigo-500" />
             Recent Orders
           </CardTitle>
           <Link to="/orders">
-            <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300">
+            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
               View All <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
@@ -394,22 +377,22 @@ export default function AdminDashboard() {
         <CardContent>
           <div className="space-y-3">
             {recentOrders.length === 0 ? (
-              <p className="text-slate-400 text-center py-8">No recent orders</p>
+              <p className="text-gray-500 text-center py-8">No recent orders</p>
             ) : (
               recentOrders.map((order, index) => (
                 <div
                   key={order.id || index}
-                  className="flex items-center justify-between p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-blue-500/20">
-                      <ShoppingBag className="h-4 w-4 text-blue-400" />
+                    <div className="p-2 rounded-lg bg-blue-100">
+                      <ShoppingBag className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">
+                      <p className="text-gray-900 font-medium">
                         {order.service_type?.replace('_', ' ').toUpperCase() || 'Order'}
                       </p>
-                      <p className="text-sm text-slate-400">
+                      <p className="text-sm text-gray-500">
                         {order.customer_name || 'Customer'} • {new Date(order.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -418,15 +401,15 @@ export default function AdminDashboard() {
                     <Badge
                       className={`${
                         order.status === 'completed'
-                          ? 'bg-emerald-500/20 text-emerald-400'
+                          ? 'bg-emerald-100 text-emerald-700'
                           : order.status === 'cancelled'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-amber-500/20 text-amber-400'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
                       }`}
                     >
                       {order.status}
                     </Badge>
-                    <p className="text-white font-semibold">{formatFCFA(order.total_amount || 0)}</p>
+                    <p className="text-gray-900 font-semibold">{formatFCFA(order.total_amount || 0)}</p>
                   </div>
                 </div>
               ))
@@ -438,56 +421,56 @@ export default function AdminDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link to="/admin/users">
-          <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
+          <Card className="bg-white border border-gray-200 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
-                <Users className="h-5 w-5 text-blue-400" />
+              <div className="p-3 rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                <Users className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-white font-medium">Manage Users</p>
-                <p className="text-sm text-slate-400">View all users</p>
+                <p className="text-gray-900 font-medium">Manage Users</p>
+                <p className="text-sm text-gray-500">View all users</p>
               </div>
             </CardContent>
           </Card>
         </Link>
         
         <Link to="/admin/operators">
-          <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
+          <Card className="bg-white border border-gray-200 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-                <BarChart3 className="h-5 w-5 text-purple-400" />
+              <div className="p-3 rounded-xl bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                <BarChart3 className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-white font-medium">Operators</p>
-                <p className="text-sm text-slate-400">View operators</p>
+                <p className="text-gray-900 font-medium">Operators</p>
+                <p className="text-sm text-gray-500">View operators</p>
               </div>
             </CardContent>
           </Card>
         </Link>
         
         <Link to="/management/customer-service">
-          <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
+          <Card className="bg-white border border-gray-200 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/20 group-hover:bg-emerald-500/30 transition-colors">
-                <HeadphonesIcon className="h-5 w-5 text-emerald-400" />
+              <div className="p-3 rounded-xl bg-emerald-100 group-hover:bg-emerald-200 transition-colors">
+                <HeadphonesIcon className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-white font-medium">Support Tickets</p>
-                <p className="text-sm text-slate-400">Handle requests</p>
+                <p className="text-gray-900 font-medium">Support Tickets</p>
+                <p className="text-sm text-gray-500">Handle requests</p>
               </div>
             </CardContent>
           </Card>
         </Link>
         
         <Link to="/loyalty">
-          <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all cursor-pointer group">
+          <Card className="bg-white border border-gray-200 hover:shadow-md transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors">
-                <Award className="h-5 w-5 text-amber-400" />
+              <div className="p-3 rounded-xl bg-amber-100 group-hover:bg-amber-200 transition-colors">
+                <Award className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-white font-medium">Loyalty Program</p>
-                <p className="text-sm text-slate-400">Manage rewards</p>
+                <p className="text-gray-900 font-medium">Loyalty Program</p>
+                <p className="text-sm text-gray-500">Manage rewards</p>
               </div>
             </CardContent>
           </Card>
