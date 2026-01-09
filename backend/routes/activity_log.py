@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from pydantic import BaseModel
 from uuid import uuid4
+from bson import ObjectId
 
 router = APIRouter(prefix="/api/activity", tags=["Activity Log"])
 
