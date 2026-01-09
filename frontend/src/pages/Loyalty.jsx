@@ -608,6 +608,10 @@ function Loyalty() {
 
 // Admin Loyalty Program Management View
 function AdminLoyaltyView() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isReadOnly = user?.role === 'admin'; // Admin has read-only access
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [rewards, setRewards] = useState(DEFAULT_REWARDS);
   const [members, setMembers] = useState([]);
