@@ -106,9 +106,23 @@ async def get_operators(
     operators = await db.operators.find(query).sort("name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.operators.count_documents(query)
     
-    # Transform _id to id for each operator
+    # Calculate revenue for each operator from completed orders
     for op in operators:
-        op["id"] = str(op.pop("_id", ""))
+        op_id = str(op.get("_id", ""))
+        op["id"] = op_id
+        op.pop("_id", None)
+        
+        # Calculate total revenue from orders for this operator
+        try:
+            # Aggregate revenue from orders where operator_id matches
+            revenue_pipeline = [
+                {"$match": {"operator_id": op_id, "status": {"$in": ["completed", "confirmed", "pending"]}}},
+                {"$group": {"_id": None, "total_revenue": {"$sum": "$total_amount"}}}
+            ]
+            revenue_result = await db.orders.aggregate(revenue_pipeline).to_list(1)
+            op["revenue"] = revenue_result[0]["total_revenue"] if revenue_result else 0
+        except Exception:
+            op["revenue"] = op.get("revenue", 0)
     
     return {"operators": operators, "total": total, "skip": skip, "limit": limit}
 
