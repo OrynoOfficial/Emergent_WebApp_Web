@@ -183,11 +183,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 
 ## Backlog / Future Tasks
 - [ ] Email-based invitation system for team members - P1
-- [ ] Custom role/permission management UI for Admins - P2
 - [ ] Add more ratings moderation features (bulk actions, reports) - P3
 - [ ] Link test orders to operators for revenue demonstration - P4
 - [ ] Further refactor CustomerServiceManagement.jsx (~1365 lines) - P4
 - [ ] Refactor Layout.jsx conditional logic into smaller components - P4
+- [ ] Make Daily Sales Trend chart use real data (currently calculated from total) - P4
 
 ## Completed Features (Jan 9, 2026 - Session 2)
 - [x] Admin landing page changed to Admin Dashboard (not /orders)
