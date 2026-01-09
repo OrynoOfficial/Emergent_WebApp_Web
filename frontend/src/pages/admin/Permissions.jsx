@@ -550,7 +550,10 @@ export default function Permissions() {
   const { user } = useAuth();
   const [roles, setRoles] = useState(DEFAULT_ROLES);
   const [users, setUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState('roles');
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isAdmin = user?.role === 'admin' || isSuperAdmin;
+  // Default to 'users' tab for non-super admins since they can't access 'roles'
+  const [activeTab, setActiveTab] = useState(isSuperAdmin ? 'roles' : 'users');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUserPermDialogOpen, setIsUserPermDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
@@ -572,9 +575,6 @@ export default function Permissions() {
   const [userPermissions, setUserPermissions] = useState([]);
   const [selectedUserRole, setSelectedUserRole] = useState('');
   const [selectedUserRoles, setSelectedUserRoles] = useState([]);
-
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isAdmin = user?.role === 'admin' || isSuperAdmin;
 
   // Fetch roles and users from backend
   useEffect(() => {
