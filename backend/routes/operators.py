@@ -91,9 +91,10 @@ async def get_operators(
     
     query = {}
     is_super_admin = current_user["role"] == "super_admin"
+    is_admin = current_user["role"] in ["admin", "super_admin"]
     
     # Non-super-admin users can only see active operators unless they have explicit permission
-    if not is_super_admin:
+    if not is_admin:
         query["status"] = OperatorStatus.ACTIVE.value
     elif op_status:
         query["status"] = op_status
@@ -106,11 +107,25 @@ async def get_operators(
     operators = await db.operators.find(query).sort("name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.operators.count_documents(query)
     
-    # Calculate revenue for each operator from completed orders
+    # Fetch owner info and calculate revenue for each operator
     for op in operators:
         op_id = str(op.get("_id", ""))
         op["id"] = op_id
         op.pop("_id", None)
+        
+        # Get owner user info
+        owner_user_id = op.get("owner_user_id")
+        if owner_user_id:
+            owner = await db.users.find_one({"_id": owner_user_id}, {"_id": 0, "full_name": 1, "email": 1})
+            if owner:
+                op["owner_name"] = owner.get("full_name", "")
+                op["owner_email"] = owner.get("email", "")
+            else:
+                op["owner_name"] = ""
+                op["owner_email"] = ""
+        else:
+            op["owner_name"] = ""
+            op["owner_email"] = ""
         
         # Calculate total revenue from orders for this operator
         try:
