@@ -30,6 +30,29 @@ const SERVICE_ICONS = {
   packages: Package
 };
 
+// StatCard component moved outside to prevent re-creation on each render
+const StatCard = ({ title, value, change, icon: Icon, prefix = '' }) => (
+  <Card>
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500 mb-1">{title}</p>
+          <p className="text-2xl font-bold">{prefix}{typeof value === 'number' && value > 1000 ? value.toLocaleString() : value}</p>
+          {change !== undefined && (
+            <div className={`flex items-center gap-1 mt-2 text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {change >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+              <span>{Math.abs(change)}% vs last period</span>
+            </div>
+          )}
+        </div>
+        <div className="p-3 bg-blue-100 rounded-lg">
+          <Icon className="w-6 h-6 text-[#082c59]" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export default function SalesManagement() {
   const { user, isOperatorUser, operatorContext, operatorServiceTypes } = useAuth();
   const [timeRange, setTimeRange] = useState('30d');
