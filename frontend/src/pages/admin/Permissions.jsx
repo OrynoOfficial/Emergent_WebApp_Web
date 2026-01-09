@@ -923,22 +923,27 @@ export default function Permissions() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
-          <TabsTrigger value="roles" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Roles ({roles.length})
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'} max-w-lg`}>
+          {isSuperAdmin && (
+            <TabsTrigger value="roles" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Roles ({roles.length})
+            </TabsTrigger>
+          )}
           <TabsTrigger value="users" className="gap-2">
             <UserCog className="h-4 w-4" />
             User Permissions
           </TabsTrigger>
-          <TabsTrigger value="permissions" className="gap-2">
-            <Key className="h-4 w-4" />
-            Matrix
-          </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="permissions" className="gap-2">
+              <Key className="h-4 w-4" />
+              Matrix
+            </TabsTrigger>
+          )}
         </TabsList>
 
-        {/* Roles Tab */}
+        {/* Roles Tab - Super Admin Only */}
+        {isSuperAdmin && (
         <TabsContent value="roles" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {roles.map((role) => (
