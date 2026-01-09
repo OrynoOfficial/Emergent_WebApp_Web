@@ -242,55 +242,6 @@ async def get_my_tickets(
     return {"tickets": tickets, "total": total}
 
 
-@router.post("/{ticket_id}/reply")
-async def reply_to_ticket(
-    ticket_id: str,
-    reply_data: TicketReply,
-    current_user: dict = Depends(get_current_active_user)
-):
-    """User replies to their support ticket"""
-    db = get_database()
-    
-    # Find ticket
-    ticket = await db.support_tickets.find_one({"_id": ticket_id})
-    if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
-    
-    # Check if user owns the ticket or is admin
-    if ticket.get("customer_id") != current_user["_id"] and current_user.get("role") not in ["admin", "super_admin", "employee"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    # Add reply message
-    is_agent = current_user.get("role") in ["admin", "super_admin", "employee"]
-    message = {
-        "id": str(uuid.uuid4()),
-        "sender_type": "agent" if is_agent else "customer",
-        "sender_id": current_user["_id"],
-        "sender_name": current_user.get("full_name") or current_user.get("username", "User"),
-        "content": reply_data.message,
-        "is_internal": reply_data.is_internal,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-    
-    # Update ticket
-    update_data = {
-        "$push": {"messages": message},
-        "$set": {
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "last_response_at": datetime.now(timezone.utc).isoformat()
-        },
-        "$inc": {"response_count": 1}
-    }
-    
-    # Set first response time if this is the first agent reply
-    if is_agent and not ticket.get("first_response_at"):
-        update_data["$set"]["first_response_at"] = datetime.now(timezone.utc).isoformat()
-    
-    await db.support_tickets.update_one({"_id": ticket_id}, update_data)
-    
-    return {"message": "Reply sent successfully"}
-
-
 @router.get("/stats")
 async def get_ticket_stats(
     current_user: dict = Depends(get_current_active_user)
