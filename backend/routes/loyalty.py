@@ -289,3 +289,240 @@ async def get_redemptions(
     total = await db.loyalty_redemptions.count_documents(query)
     
     return {"redemptions": redemptions, "total": total}
+
+
+# ==================== ADMIN ENDPOINTS ====================
+
+from pydantic import BaseModel
+from typing import List
+
+class RewardCreate(BaseModel):
+    title: str
+    description: str
+    points_required: int
+    min_tier: str = "bronze"
+    type: str = "discount"
+    discount_value: Optional[float] = None
+
+class RewardUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    points_required: Optional[int] = None
+    min_tier: Optional[str] = None
+    type: Optional[str] = None
+    discount_value: Optional[float] = None
+    is_active: Optional[bool] = None
+
+
+@router.get("/admin/stats")
+async def get_admin_loyalty_stats(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get loyalty program statistics for admin dashboard"""
+    # Check if user is admin
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Get total members
+    total_members = await db.loyalty_programs.count_documents({})
+    
+    # Get total points issued and redeemed
+    pipeline = [
+        {"$group": {
+            "_id": "$transaction_type",
+            "total": {"$sum": {"$abs": "$points"}}
+        }}
+    ]
+    transactions = await db.loyalty_transactions.aggregate(pipeline).to_list(10)
+    
+    total_points_issued = 0
+    total_points_redeemed = 0
+    for t in transactions:
+        if t["_id"] == "earn":
+            total_points_issued = t["total"]
+        elif t["_id"] == "redeem":
+            total_points_redeemed = t["total"]
+    
+    # Get members by tier
+    tier_pipeline = [
+        {"$group": {"_id": "$tier", "count": {"$sum": 1}}}
+    ]
+    tier_counts = await db.loyalty_programs.aggregate(tier_pipeline).to_list(10)
+    members_by_tier = {t["_id"]: t["count"] for t in tier_counts}
+    
+    # Get active rewards count
+    active_rewards = await db.loyalty_rewards.count_documents({"is_active": True})
+    
+    return {
+        "totalMembers": total_members,
+        "totalPointsIssued": total_points_issued,
+        "totalPointsRedeemed": total_points_redeemed,
+        "activeRewards": active_rewards,
+        "membersByTier": {
+            "bronze": members_by_tier.get("bronze", 0),
+            "silver": members_by_tier.get("silver", 0),
+            "gold": members_by_tier.get("gold", 0),
+            "platinum": members_by_tier.get("platinum", 0)
+        }
+    }
+
+
+@router.get("/admin/members")
+async def get_admin_loyalty_members(
+    search: Optional[str] = None,
+    tier: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get all loyalty program members for admin"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Build query
+    query = {}
+    if tier:
+        query["tier"] = tier
+    
+    # Get loyalty programs
+    programs = await db.loyalty_programs.find(query).sort("total_points", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with user info
+    members = []
+    for prog in programs:
+        user = await db.users.find_one({"_id": prog["user_id"]}, {"password_hash": 0})
+        if user:
+            # Apply search filter
+            if search:
+                search_lower = search.lower()
+                if not (search_lower in user.get("full_name", "").lower() or 
+                        search_lower in user.get("email", "").lower()):
+                    continue
+            
+            members.append({
+                "id": prog.get("_id") or prog.get("user_id"),
+                "name": user.get("full_name", "Unknown"),
+                "email": user.get("email", ""),
+                "tier": prog.get("tier", "bronze"),
+                "total_points": prog.get("total_points", 0),
+                "available_points": prog.get("available_points", 0),
+                "total_spent": prog.get("total_spent", 0),
+                "joined_at": prog.get("joined_at")
+            })
+    
+    total = await db.loyalty_programs.count_documents(query)
+    
+    return {"members": members, "total": total}
+
+
+@router.get("/admin/rewards")
+async def get_admin_rewards(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get all rewards for admin management"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    rewards = await db.loyalty_rewards.find({}).to_list(100)
+    
+    # Convert _id to id
+    result = []
+    for r in rewards:
+        r["id"] = str(r.pop("_id", ""))
+        result.append(r)
+    
+    return {"rewards": result}
+
+
+@router.post("/admin/rewards")
+async def create_reward(
+    reward_data: RewardCreate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a new reward"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    reward = {
+        "_id": str(uuid.uuid4()),
+        "title": reward_data.title,
+        "name": reward_data.title,  # For compatibility
+        "description": reward_data.description,
+        "points_required": reward_data.points_required,
+        "min_tier": reward_data.min_tier,
+        "type": reward_data.type,
+        "discount_value": reward_data.discount_value,
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    
+    await db.loyalty_rewards.insert_one(reward)
+    
+    reward["id"] = reward.pop("_id")
+    return {"message": "Reward created successfully", "reward": reward}
+
+
+@router.put("/admin/rewards/{reward_id}")
+async def update_reward(
+    reward_id: str,
+    reward_data: RewardUpdate,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Update an existing reward"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Check if reward exists
+    existing = await db.loyalty_rewards.find_one({"_id": reward_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    
+    # Build update dict
+    update_dict = {"updated_at": datetime.utcnow()}
+    if reward_data.title is not None:
+        update_dict["title"] = reward_data.title
+        update_dict["name"] = reward_data.title
+    if reward_data.description is not None:
+        update_dict["description"] = reward_data.description
+    if reward_data.points_required is not None:
+        update_dict["points_required"] = reward_data.points_required
+    if reward_data.min_tier is not None:
+        update_dict["min_tier"] = reward_data.min_tier
+    if reward_data.type is not None:
+        update_dict["type"] = reward_data.type
+    if reward_data.discount_value is not None:
+        update_dict["discount_value"] = reward_data.discount_value
+    if reward_data.is_active is not None:
+        update_dict["is_active"] = reward_data.is_active
+    
+    await db.loyalty_rewards.update_one({"_id": reward_id}, {"$set": update_dict})
+    
+    return {"message": "Reward updated successfully"}
+
+
+@router.delete("/admin/rewards/{reward_id}")
+async def delete_reward(
+    reward_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Delete a reward"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    result = await db.loyalty_rewards.delete_one({"_id": reward_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    
+    return {"message": "Reward deleted successfully"}
