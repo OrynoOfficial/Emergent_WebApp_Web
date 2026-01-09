@@ -94,6 +94,10 @@ export default function Analytics() {
   const [dataAnalytics, setDataAnalytics] = useState(MOCK_DATA_ANALYTICS);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState('6months');
+  
+  // Get user context to personalize analytics for operators
+  const { user, isOperatorUser, operatorContext, operatorServiceTypes } = useAuth();
+  const isOperator = user?.role === 'operator' || isOperatorUser;
 
   useEffect(() => {
     fetchAnalytics();
@@ -102,18 +106,35 @@ export default function Analytics() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
+      // Build params based on user role
+      const params = { period: timeFilter };
+      
+      // If operator, filter by their services
+      if (isOperator && operatorContext?.id) {
+        params.operator_id = operatorContext.id;
+      }
+      
       // Fetch basic analytics
-      const response = await analyticsAPI.getStats({ period: timeFilter });
+      const response = await analyticsAPI.getStats(params);
       setData(response.data);
       
       // Fetch extended analytics data
-      const extendedRes = await api.get('/analytics/overview', { params: { period: timeFilter } });
+      const extendedRes = await api.get('/analytics/overview', { params });
       if (extendedRes.data && extendedRes.data.summary && extendedRes.data.summary.totalBookings > 0) {
         setDataAnalytics(extendedRes.data);
       } else {
         const mockWithRealUsers = { ...MOCK_DATA_ANALYTICS };
         if (extendedRes.data?.summary?.totalUsers) {
           mockWithRealUsers.summary.totalUsers = extendedRes.data.summary.totalUsers;
+        }
+        // For operators, show service-filtered mock data
+        if (isOperator && operatorServiceTypes?.length > 0) {
+          mockWithRealUsers.revenueByService = mockWithRealUsers.revenueByService.filter(
+            item => operatorServiceTypes.some(st => 
+              item.name.toLowerCase().includes(st.toLowerCase()) ||
+              st.toLowerCase().includes(item.name.toLowerCase().replace(' ', '_'))
+            )
+          );
         }
         setDataAnalytics(mockWithRealUsers);
       }
