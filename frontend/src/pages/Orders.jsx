@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ordersAPI } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -26,7 +27,8 @@ import {
   Hash,
   User,
   SlidersHorizontal,
-  Plus
+  Plus,
+  Building2
 } from 'lucide-react';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import { activityLogger } from '../utils/activityLogger';
