@@ -90,7 +90,6 @@ async def get_operators(
     db = get_database()
     
     query = {}
-    is_super_admin = current_user["role"] == "super_admin"
     is_admin = current_user["role"] in ["admin", "super_admin"]
     
     # Non-super-admin users can only see active operators unless they have explicit permission

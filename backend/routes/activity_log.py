@@ -144,10 +144,6 @@ async def get_activity_logs(
     is_admin = user_role == "admin"
     is_operator = user_role == "operator"
     
-    # Check if user has permission to view all logs
-    from utils.permissions import check_user_permission
-    can_view_all = await check_user_permission(current_user, "activity.view", db)
-    
     # Build query filter
     query = {}
     
