@@ -370,6 +370,7 @@ export default function CarRentalBooking() {
                     return (
                       <div
                         key={extra.id}
+                        data-testid={`extra-${extra.id}`}
                         onClick={() => !extrasConfirmed && toggleExtra(extra.id)}
                         className={`p-4 rounded-xl border-2 transition-all ${extrasConfirmed ? 'cursor-default opacity-80' : 'cursor-pointer'} ${
                           isSelected 
