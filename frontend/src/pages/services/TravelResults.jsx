@@ -637,6 +637,68 @@ export default function TravelResults() {
             </div>
           )}
 
+          {/* Past/Current/Future Trips Tabs */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg overflow-x-auto">
+              {/* Past Trips Button */}
+              {availablePastDates.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-200 rounded text-xs text-slate-600">
+                    <History className="w-3 h-3" />
+                    <span className="hidden sm:inline">Past:</span>
+                  </div>
+                  {availablePastDates.map((pastDate) => (
+                    <Button
+                      key={pastDate.toISOString()}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDateTabChange(pastDate)}
+                      className="text-xs px-2 py-1 h-7 hover:bg-blue-100 hover:text-blue-700"
+                    >
+                      {format(pastDate, 'MMM d')}
+                    </Button>
+                  ))}
+                  <div className="w-px h-5 bg-slate-300 mx-1" />
+                </div>
+              )}
+              
+              {/* Current Date - Highlighted */}
+              <Button
+                variant="default"
+                size="sm"
+                className="text-xs px-3 py-1 h-7 bg-[#082c59] text-white hover:bg-[#0a3a75]"
+              >
+                <Calendar className="w-3 h-3 mr-1" />
+                {format(safeParse(date, 'yyyy-MM-dd', new Date()), 'MMM d')} (Selected)
+              </Button>
+              
+              {/* Future Trips */}
+              {availableFutureDates.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-px h-5 bg-slate-300 mx-1" />
+                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-200 rounded text-xs text-slate-600">
+                    <CalendarDays className="w-3 h-3" />
+                    <span className="hidden sm:inline">Future:</span>
+                  </div>
+                  {availableFutureDates.map((futureDate) => (
+                    <Button
+                      key={futureDate.toISOString()}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDateTabChange(futureDate)}
+                      className="text-xs px-2 py-1 h-7 hover:bg-green-100 hover:text-green-700"
+                    >
+                      {format(futureDate, 'MMM d')}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Click on a date to see available trips for that day
+            </p>
+          </div>
+
           {/* Search and Filters */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
