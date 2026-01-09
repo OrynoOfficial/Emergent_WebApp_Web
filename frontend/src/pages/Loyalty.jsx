@@ -76,7 +76,8 @@ const DEFAULT_REWARDS = [
   { id: '6', title: 'VIP Experience Package', description: 'Premium amenities and priority service', points_required: 7500, min_tier: 'platinum', type: 'gift', discount_value: 0 },
 ];
 
-export default function Loyalty() {
+// Customer Loyalty View
+function Loyalty() {
   const { user } = useAuth();
   const [selectedReward, setSelectedReward] = useState(null);
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
