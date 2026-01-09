@@ -236,6 +236,10 @@ async def get_user_effective_permissions(user_id: str, db) -> set:
             "activity.view",
             "validation.view", "validation.manage",
             "analytics.view_dashboard",
+            # Role management - limited (can create custom roles, not system roles)
+            "access.view_roles", "access.create_roles", "access.edit_roles",
+            "access.assign_roles",  # Can assign roles to users
+            # Service management permissions
             "hotels.view", "hotels.create", "hotels.edit",
             "travel.view", "travel.create", "travel.edit",
             "car_rental.view", "car_rental.create", "car_rental.edit",
