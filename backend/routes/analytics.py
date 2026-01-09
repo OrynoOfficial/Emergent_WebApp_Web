@@ -139,11 +139,12 @@ async def get_data_analytics_overview(
     completed_orders = len([o for o in all_orders if o.get("status") == "completed"])
     conversion_rate = (completed_orders / total_bookings * 100) if total_bookings > 0 else 0
     
-    # Calculate growth rate (compare to previous period)
+    # Calculate growth rate (compare to previous period) - with same operator filter
     prev_start = start_date - timedelta(days=days)
-    prev_orders = await db.orders.find({
-        "created_at": {"$gte": prev_start, "$lt": start_date}
-    }).to_list(10000)
+    prev_query = {"created_at": {"$gte": prev_start, "$lt": start_date}}
+    if effective_operator_id:
+        prev_query["operator_id"] = effective_operator_id
+    prev_orders = await db.orders.find(prev_query).to_list(10000)
     prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders)
     growth_rate = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     
