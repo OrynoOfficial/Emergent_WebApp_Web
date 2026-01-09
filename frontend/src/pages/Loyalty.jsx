@@ -895,10 +895,17 @@ function AdminLoyaltyView() {
         <TabsContent value="rewards" className="mt-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Manage Rewards</CardTitle>
-              <Button onClick={() => { setEditingReward(null); setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' }); setShowRewardDialog(true); }} className="bg-[#082c59] hover:bg-[#0a3a75]">
-                <Plus className="h-4 w-4 mr-2" /> Add Reward
-              </Button>
+              <div>
+                <CardTitle>Manage Rewards</CardTitle>
+                {isReadOnly && (
+                  <p className="text-sm text-amber-600 mt-1">Read-only access. Only Super Admins can modify rewards.</p>
+                )}
+              </div>
+              {isSuperAdmin && (
+                <Button onClick={() => { setEditingReward(null); setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' }); setShowRewardDialog(true); }} className="bg-[#082c59] hover:bg-[#0a3a75]">
+                  <Plus className="h-4 w-4 mr-2" /> Add Reward
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -913,14 +920,16 @@ function AdminLoyaltyView() {
                       <p className="text-sm text-slate-600 mb-2">{reward.description}</p>
                       <p className="text-sm"><strong>{reward.points_required.toLocaleString()}</strong> points required</p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditReward(reward)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteReward(reward.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEditReward(reward)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteReward(reward.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
