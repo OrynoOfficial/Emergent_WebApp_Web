@@ -761,22 +761,31 @@ function OperatorRatingsView() {
   );
 }
 
-// Admin View Component - Shows all ratings across the platform
+// Admin View Component - Shows all ratings across the platform with moderation tools
 function AdminRatingsView() {
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('all');
   const [filterRating, setFilterRating] = useState('all');
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(null);
+  const [showModerateDialog, setShowModerateDialog] = useState(false);
+  const [moderationAction, setModerationAction] = useState('');
+  const [moderationReason, setModerationReason] = useState('');
+  const [submittingModeration, setSubmittingModeration] = useState(false);
 
   useEffect(() => {
     fetchAllRatings();
-  }, []);
+  }, [showFlaggedOnly]);
 
   const fetchAllRatings = async () => {
+    setLoading(true);
     try {
       // Fetch all ratings across the platform
-      const response = await api.get('/ratings/all');
+      const response = await api.get('/ratings/all', {
+        params: { flagged_only: showFlaggedOnly }
+      });
       setRatings(response.data?.ratings || []);
     } catch (error) {
       console.error('Failed to fetch all ratings:', error);
@@ -793,6 +802,8 @@ function AdminRatingsView() {
           comment: 'Amazing hotel! Clean rooms, friendly staff, great location.',
           created_at: '2024-12-20T10:30:00Z',
           helpful_count: 15,
+          is_flagged: false,
+          is_hidden: false,
           operator_response: {
             message: 'Thank you for your wonderful review!',
             responded_at: '2024-12-21T09:00:00Z',
@@ -810,6 +821,8 @@ function AdminRatingsView() {
           comment: 'Great food and ambiance. Service was a bit slow during peak hours.',
           created_at: '2024-12-19T14:15:00Z',
           helpful_count: 8,
+          is_flagged: false,
+          is_hidden: false,
           operator_response: null
         },
         {
@@ -818,6 +831,83 @@ function AdminRatingsView() {
           service_id: 'travel_1',
           service_category: 'travel',
           customer_name: 'Pierre Martin',
+          operator_name: 'Express Travel Co',
+          rating: 5,
+          comment: 'Very comfortable bus, arrived on time. Will definitely use again!',
+          created_at: '2024-12-18T08:20:00Z',
+          helpful_count: 22,
+          is_flagged: true,
+          is_hidden: false,
+          operator_response: null
+        },
+        {
+          id: 'ar4',
+          service_name: 'Premium Car Rental',
+          service_id: 'car_1',
+          service_category: 'car_rental',
+          customer_name: 'Sophie Williams',
+          operator_name: 'AutoRent Cameroon',
+          rating: 3,
+          comment: 'Car was okay but could have been cleaner. Good price though.',
+          created_at: '2024-12-15T11:45:00Z',
+          helpful_count: 5,
+          is_flagged: false,
+          is_hidden: false,
+          operator_response: {
+            message: 'We apologize for the inconvenience. We have addressed this with our cleaning team.',
+            responded_at: '2024-12-16T10:00:00Z',
+            responder_name: 'Operations Manager'
+          }
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModerate = (rating, action) => {
+    setSelectedRating(rating);
+    setModerationAction(action);
+    setModerationReason('');
+    setShowModerateDialog(true);
+  };
+
+  const submitModeration = async () => {
+    if (!selectedRating || !moderationAction) return;
+    
+    setSubmittingModeration(true);
+    try {
+      await api.post(`/ratings/${selectedRating.id}/moderate`, {
+        action: moderationAction,
+        reason: moderationReason
+      });
+      
+      // Update local state
+      if (moderationAction === 'delete') {
+        setRatings(prev => prev.filter(r => r.id !== selectedRating.id));
+        toast.success('Rating deleted successfully');
+      } else {
+        setRatings(prev => prev.map(r => {
+          if (r.id !== selectedRating.id) return r;
+          return {
+            ...r,
+            is_flagged: moderationAction === 'flag' ? true : moderationAction === 'unflag' ? false : r.is_flagged,
+            is_hidden: moderationAction === 'hide' ? true : moderationAction === 'unhide' ? false : r.is_hidden,
+            moderation_notes: moderationReason || r.moderation_notes
+          };
+        }));
+        toast.success(`Rating ${moderationAction}ged successfully`);
+      }
+      
+      setShowModerateDialog(false);
+      setSelectedRating(null);
+    } catch (error) {
+      console.error('Moderation failed:', error);
+      toast.error(error.response?.data?.detail || 'Moderation failed');
+    } finally {
+      setSubmittingModeration(false);
+    }
+  };
           operator_name: 'Express Travel Co',
           rating: 5,
           comment: 'Very comfortable bus, arrived on time. Will definitely use again!',
