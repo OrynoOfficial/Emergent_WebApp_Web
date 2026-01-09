@@ -234,3 +234,167 @@ async def respond_to_rating(
     )
     
     return {"message": "Response submitted successfully"}
+
+
+# ==================== ADMIN MODERATION ENDPOINTS ====================
+
+class RatingModeration(BaseModel):
+    action: str  # 'flag', 'unflag', 'hide', 'unhide', 'delete'
+    reason: Optional[str] = None
+
+@router.get("/all")
+async def get_all_ratings(
+    service_type: Optional[str] = None,
+    rating: Optional[int] = None,
+    flagged_only: bool = False,
+    search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get all ratings across the platform (admin only)"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Build query
+    query = {}
+    if service_type:
+        query["entity_type"] = service_type
+    if rating:
+        query["rating"] = rating
+    if flagged_only:
+        query["is_flagged"] = True
+    
+    ratings = await db.ratings.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.ratings.count_documents(query)
+    
+    # Enrich with user and operator info
+    enriched_ratings = []
+    for r in ratings:
+        # Apply search filter
+        if search:
+            search_lower = search.lower()
+            service_name = r.get("entity_name", "").lower()
+            user_name = r.get("user_name", "").lower()
+            comment = r.get("review", "").lower()
+            if not (search_lower in service_name or search_lower in user_name or search_lower in comment):
+                continue
+        
+        # Get operator info if available
+        operator_name = None
+        if r.get("operator_id"):
+            operator = await db.operators.find_one({"_id": r["operator_id"]}, {"name": 1})
+            operator_name = operator.get("name") if operator else None
+        
+        enriched = {
+            "id": r.get("_id") or r.get("id", str(uuid.uuid4())),
+            "service_name": r.get("entity_name", "Service"),
+            "service_id": r.get("entity_id"),
+            "service_category": r.get("entity_type"),
+            "customer_name": r.get("user_name", "Customer"),
+            "customer_id": r.get("user_id"),
+            "operator_name": operator_name,
+            "operator_id": r.get("operator_id"),
+            "rating": r.get("rating", 0),
+            "comment": r.get("review", ""),
+            "created_at": r.get("created_at"),
+            "helpful_count": r.get("helpful_count", 0),
+            "operator_response": r.get("operator_response"),
+            "is_flagged": r.get("is_flagged", False),
+            "is_hidden": r.get("is_hidden", False),
+            "moderation_notes": r.get("moderation_notes")
+        }
+        enriched_ratings.append(enriched)
+    
+    return {"ratings": enriched_ratings, "total": total}
+
+
+@router.post("/{rating_id}/moderate")
+async def moderate_rating(
+    rating_id: str,
+    moderation: RatingModeration,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Moderate a rating (admin only)"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Find the rating
+    rating = await db.ratings.find_one({"_id": rating_id})
+    if not rating:
+        raise HTTPException(status_code=404, detail="Rating not found")
+    
+    update_data = {"moderated_at": datetime.now(timezone.utc)}
+    
+    if moderation.action == "flag":
+        update_data["is_flagged"] = True
+        update_data["flag_reason"] = moderation.reason
+    elif moderation.action == "unflag":
+        update_data["is_flagged"] = False
+        update_data["flag_reason"] = None
+    elif moderation.action == "hide":
+        update_data["is_hidden"] = True
+        update_data["hide_reason"] = moderation.reason
+    elif moderation.action == "unhide":
+        update_data["is_hidden"] = False
+        update_data["hide_reason"] = None
+    elif moderation.action == "delete":
+        await db.ratings.delete_one({"_id": rating_id})
+        return {"message": "Rating deleted successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid moderation action")
+    
+    if moderation.reason:
+        update_data["moderation_notes"] = moderation.reason
+    
+    await db.ratings.update_one({"_id": rating_id}, {"$set": update_data})
+    
+    return {"message": f"Rating {moderation.action}ged successfully"}
+
+
+@router.get("/stats")
+async def get_ratings_stats(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get ratings statistics (admin only)"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    total = await db.ratings.count_documents({})
+    responded = await db.ratings.count_documents({"operator_response": {"$exists": True, "$ne": None}})
+    flagged = await db.ratings.count_documents({"is_flagged": True})
+    
+    # Rating distribution
+    rating_pipeline = [
+        {"$group": {"_id": "$rating", "count": {"$sum": 1}}}
+    ]
+    rating_counts = await db.ratings.aggregate(rating_pipeline).to_list(10)
+    by_rating = {r["_id"]: r["count"] for r in rating_counts}
+    
+    # Average rating
+    avg_pipeline = [
+        {"$group": {"_id": None, "avg": {"$avg": "$rating"}}}
+    ]
+    avg_result = await db.ratings.aggregate(avg_pipeline).to_list(1)
+    avg_rating = avg_result[0]["avg"] if avg_result else 0
+    
+    return {
+        "total": total,
+        "responded": responded,
+        "pending": total - responded,
+        "flagged": flagged,
+        "average": round(avg_rating, 1) if avg_rating else 0,
+        "byRating": {
+            5: by_rating.get(5, 0),
+            4: by_rating.get(4, 0),
+            3: by_rating.get(3, 0),
+            2: by_rating.get(2, 0),
+            1: by_rating.get(1, 0)
+        }
+    }
