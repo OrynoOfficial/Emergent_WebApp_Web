@@ -321,6 +321,9 @@ export default function TravelResults() {
   const [endDateOffset, setEndDateOffset] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Trip date view tab: 'current', 'past', 'future'
+  const [tripDateView, setTripDateView] = useState('current');
+  
   // Editable search state
   const [isEditingSearch, setIsEditingSearch] = useState(false);
   const [editFrom, setEditFrom] = useState('');
@@ -339,11 +342,39 @@ export default function TravelResults() {
   const passengers = parseInt(searchParams.get('passengers')) || 1;
   const isRoundTrip = !!returnDate;
 
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => startOfDay(new Date()), []);
   const searchBaseDate = useMemo(() => {
     const baseDate = view === 'return' && returnDate ? returnDate : date;
     return safeParse(baseDate, 'yyyy-MM-dd', new Date());
   }, [view, returnDate, date]);
+
+  // Calculate available past and future dates
+  const availablePastDates = useMemo(() => {
+    const dates = [];
+    const searchDate = safeParse(date, 'yyyy-MM-dd', new Date());
+    // Past trips only if the search date itself is not in the actual past
+    if (!isBefore(searchDate, today)) {
+      // Show dates before the search date (but not actual past dates)
+      for (let i = 1; i <= 3; i++) {
+        const pastDate = subDays(searchDate, i);
+        // Only include if the past date is today or in the future
+        if (!isBefore(pastDate, today)) {
+          dates.push(pastDate);
+        }
+      }
+    }
+    return dates.reverse(); // Oldest first
+  }, [date, today]);
+
+  const availableFutureDates = useMemo(() => {
+    const dates = [];
+    const searchDate = safeParse(date, 'yyyy-MM-dd', new Date());
+    // Future trips: up to 3 dates after the given date
+    for (let i = 1; i <= 3; i++) {
+      dates.push(addDays(searchDate, i));
+    }
+    return dates;
+  }, [date]);
 
   // Initialize edit fields
   useEffect(() => {
