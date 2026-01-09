@@ -345,7 +345,7 @@ export default function CarRentalBooking() {
                     </div>
                     <div>
                       <h3 className="font-bold text-lg">Add Extras <span className="text-white/80 text-sm font-normal">(Required)</span></h3>
-                      <p className="text-sm text-white/70">Select extras or choose "No Extras"</p>
+                      <p className="text-sm text-white/70">Select extras or choose &quot;No Extras&quot;</p>
                     </div>
                   </div>
                   {extrasConfirmed && (
@@ -359,7 +359,7 @@ export default function CarRentalBooking() {
               <div className="p-6">
                 {!extrasConfirmed && (
                   <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                    Please select at least one option or "No Extras" to continue
+                    Please select at least one option or &quot;No Extras&quot; to continue
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
