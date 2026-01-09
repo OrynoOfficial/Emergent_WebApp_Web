@@ -132,11 +132,16 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Admin All Ratings view
 - [x] Loyalty removed from operator navigation
 - [x] Customer Service replaces Support for admins
+- [x] Admin "All Orders" page - Shows all 52 orders across platform (Jan 9, 2026)
+- [x] Admin "All Receipts" page - Shows all 52 receipts across platform (Jan 9, 2026)
+- [x] Admin Ratings moderation UI - Flag/Hide/Delete buttons (Jan 9, 2026)
+- [x] Loyalty Program rewards CRUD with backend API integration (Jan 9, 2026)
+- [x] Customer Service "Add Member" dialog filters existing team members (Jan 9, 2026)
+- [x] User Detail Modal Activity Log shows user-specific audit entries (Jan 9, 2026)
 
 ## Backlog / Future Tasks
-- [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines)
-- [ ] Email-based invitation system for team members
-- [ ] Custom role/permission management UI for Admins
-- [ ] Operator audit log visibility (owner sees team members' logs)
-- [ ] Connect admin loyalty management to backend APIs
-- [ ] Connect admin ratings management to backend APIs
+- [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines) - P1
+- [ ] Email-based invitation system for team members - P3
+- [ ] Custom role/permission management UI for Admins - P4
+- [ ] Operator audit log visibility (owner sees team members' logs) - P4
+- [ ] Add more ratings moderation features (bulk actions, reports) - P3
