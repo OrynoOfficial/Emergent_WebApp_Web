@@ -145,6 +145,7 @@ export const ordersAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.put(`/orders/${id}/cancel`),
   updateStatus: (id, status) => api.put(`/orders/${id}/status`, { status }),
+  getPaymentMethods: (params) => api.get('/orders/analytics/payment-methods', { params }),
 };
 
 // Analytics API
