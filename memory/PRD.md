@@ -226,3 +226,41 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Filters by operator_id for operator users
   - Sales Dashboard now displays real percentages (MTN Mobile Money, Orange Money, Card Payment, etc.)
   - Supports time range filtering (today, 7d, 30d, 90d, 1y)
+
+
+## Completed Features (Jan 9, 2026 - Session 5)
+- [x] **Restaurant Results Page Enhancement**
+  - Added orange gradient header (matching Travel Results style)
+  - Implemented editable search criteria (city, date, time, guests)
+  - Edit button toggles inline editing mode
+  - View Menu button correctly navigates to restaurant menu page
+- [x] **Travel Results Page - Past/Future Trips**
+  - Added Past Trips tabs (showing dates before selected date, only if not in actual past)
+  - Added Future Trips tabs (up to 3 dates after selected date)
+  - Clicking a date tab updates the search parameters and reloads results
+  - Fixed Select button to properly store trip data in sessionStorage and navigate to booking page
+- [x] **Car Rental Booking - Mandatory Fields Flow**
+  - Extras section is now mandatory with "No Extras" option
+  - Driver Information section is disabled until extras are confirmed
+  - Payment Method section is disabled until driver info is complete
+  - Confirm Booking button is disabled until payment method is selected
+  - Added progress checklist showing completion status of all mandatory steps
+  - PaymentMethodsSelection component updated to support onMethodSelected callback
+
+## Backlog (Moved from Priority)
+- [ ] **P0: Revenue Bug** - Operator Management page shows "0 FCFA" for all operators
+  - Debug checklist: Check if orders have operator_id, review backend revenue calculation
+- [ ] **P1: Email Invitation System** - Allow inviting new users via email
+- [ ] **P2: Advanced Ratings Moderation** - Bulk actions, reports for ratings
+- [ ] **P3: Refactor CustomerServiceManagement.jsx** - Currently ~1365 lines
+
+## Technical Debt
+- [ ] Break down Permissions.jsx into smaller components
+- [ ] Move hardcoded admin permissions to config/database
+- [ ] Refactor large components (CustomerServiceManagement.jsx, Permissions.jsx)
+
+## Test Credentials
+- **Super Admin**: superadmin@oryno.com / testpassword123
+- **Admin**: admin@test.com / testpassword123
+- **Operator**: operator@test.com / testpassword123
+- **Customer**: customer@test.com / testpassword123
