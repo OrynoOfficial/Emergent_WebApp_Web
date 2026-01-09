@@ -677,21 +677,108 @@ export default function HotelsResults() {
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/services/hotels')} className="hover:bg-slate-100">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Hotels in {destination || 'All Cities'}</h1>
-                <p className="text-sm text-slate-500">
-                  {filteredAndSortedHotels.length} properties found
-                  {checkIn && checkOut && ` • ${format(new Date(checkIn), 'MMM d')} - ${format(new Date(checkOut), 'MMM d')}`}
-                  {nights > 0 && ` • ${nights} night${nights > 1 ? 's' : ''}`}
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/services/hotels')} className="hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
           </div>
+          
+          {/* Highlighted Search Criteria Header - Like TravelResults */}
+          <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a4a8f] text-white mb-4">
+            <CardContent className="p-4">
+              {isEditingSearch ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Destination</label>
+                    <Input 
+                      value={editDestination} 
+                      onChange={(e) => setEditDestination(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      placeholder="Enter city"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Check-in</label>
+                    <Input 
+                      type="date"
+                      value={editCheckIn} 
+                      onChange={(e) => setEditCheckIn(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Check-out</label>
+                    <Input 
+                      type="date"
+                      value={editCheckOut} 
+                      onChange={(e) => setEditCheckOut(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Guests</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={editGuests} 
+                        onChange={(e) => setEditGuests(parseInt(e.target.value) || 1)}
+                        className="bg-white/10 border-white/20 text-white flex-1"
+                      />
+                      <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-[#082c59] hover:bg-white/90">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                        <Hotel className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Hotels in {destination || 'All Cities'}</h2>
+                        <div className="flex items-center gap-2 text-white/80 text-sm mt-0.5">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>{filteredAndSortedHotels.length} properties found</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-4 pl-6 border-l border-white/20">
+                      {checkIn && checkOut && (
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="w-4 h-4 text-white/70" />
+                          <span className="text-sm">{format(new Date(checkIn), 'MMM d')} - {format(new Date(checkOut), 'MMM d')}</span>
+                        </div>
+                      )}
+                      {nights > 0 && (
+                        <Badge className="bg-white/20 text-white border-0">
+                          {nights} night{nights > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{guests} guest{guests > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditingSearch(true)}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <Edit2 className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
