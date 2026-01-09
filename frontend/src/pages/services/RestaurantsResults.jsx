@@ -425,13 +425,101 @@ export default function RestaurantsResults() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/restaurants')} className="gap-2">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-[#082c59]">Restaurants {city && `in ${city}`}</h1>
-              <p className="text-sm text-slate-500">
-                {filteredRestaurants.length} restaurants found • {format(new Date(date), 'EEE, MMM d')} at {time} • {guests} guests
-              </p>
-            </div>
           </div>
+
+          {/* Highlighted Search Criteria Header - Like TravelResults with Orange theme */}
+          <Card className="shadow-sm bg-gradient-to-r from-orange-500 to-orange-600 text-white mb-4">
+            <CardContent className="p-4">
+              {isEditingSearch ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">City</label>
+                    <Input 
+                      value={editCity} 
+                      onChange={(e) => setEditCity(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                      placeholder="Enter city"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Date</label>
+                    <Input 
+                      type="date"
+                      value={editDate} 
+                      onChange={(e) => setEditDate(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Time</label>
+                    <Input 
+                      type="time"
+                      value={editTime} 
+                      onChange={(e) => setEditTime(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-white/70 mb-1 block">Guests</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={editGuests} 
+                        onChange={(e) => setEditGuests(parseInt(e.target.value) || 1)}
+                        className="bg-white/10 border-white/20 text-white flex-1"
+                      />
+                      <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-orange-600 hover:bg-white/90">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
+                        <Utensils className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Restaurants {city && `in ${city}`}</h2>
+                        <div className="flex items-center gap-2 text-white/80 text-sm mt-0.5">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>{filteredRestaurants.length} restaurants found</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-4 pl-6 border-l border-white/20">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{format(new Date(date), 'EEE, MMM d, yyyy')}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{time}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-white/70" />
+                        <span className="text-sm">{guests} guest{guests > 1 ? 's' : ''}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditingSearch(true)}
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <Edit2 className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
