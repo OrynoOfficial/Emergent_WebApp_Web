@@ -31,6 +31,9 @@ import { Link } from 'react-router-dom';
 
 const COLORS = ['#4D96FF', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'];
 
+// Legend formatter for charts - defined outside to prevent re-creation
+const legendFormatter = (value) => <span className="text-slate-300">{value}</span>;
+
 // StatCard component moved outside to prevent re-creation on each render
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subValue }) => (
   <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all">
