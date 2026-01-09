@@ -89,7 +89,23 @@ export default function AuthPage() {
       const result = await login(loginEmail, loginPassword);
       
       if (result.access_token) {
-        navigate('/dashboard');
+        // Redirect based on user role
+        const userRole = result.user?.role;
+        const isOperator = userRole === 'operator' || result.user?.operator_context;
+        
+        if (userRole === 'super_admin') {
+          // Super Admin landing: Analytics Dashboard
+          navigate('/admin/analytics');
+        } else if (userRole === 'admin') {
+          // Admin landing: All Orders
+          navigate('/orders');
+        } else if (isOperator) {
+          // Operator landing: Analytics Dashboard (their personalized view)
+          navigate('/admin/analytics');
+        } else {
+          // Customer landing: Dashboard
+          navigate('/dashboard');
+        }
       } else if (result.requires_2fa) {
         setCurrentView(AUTH_VIEWS.TWO_FA);
       } else {
