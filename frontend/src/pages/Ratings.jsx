@@ -1105,10 +1105,10 @@ function AdminRatingsView() {
             const needsResponse = !review.operator_response;
             
             return (
-              <Card key={review.id} className="overflow-hidden transition-all duration-300 hover:shadow-md">
+              <Card key={review.id} className={`overflow-hidden transition-all duration-300 hover:shadow-md ${review.is_flagged ? 'ring-2 ring-orange-300' : ''} ${review.is_hidden ? 'opacity-60' : ''}`}>
                 <CardContent className="p-0">
                   <div className="flex">
-                    <div className="w-1.5" style={{ backgroundColor: needsResponse ? '#F59E0B' : '#10B981' }}></div>
+                    <div className="w-1.5" style={{ backgroundColor: review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981' }}></div>
                     
                     <div className="flex-1 p-6">
                       {/* Header */}
@@ -1135,7 +1135,17 @@ function AdminRatingsView() {
                               {review.operator_name}
                             </Badge>
                           )}
-                          {needsResponse && (
+                          {review.is_flagged && (
+                            <Badge className="bg-orange-100 text-orange-700 text-xs">
+                              <Flag className="h-3 w-3 mr-1" /> Flagged
+                            </Badge>
+                          )}
+                          {review.is_hidden && (
+                            <Badge className="bg-slate-100 text-slate-700 text-xs">
+                              <EyeOff className="h-3 w-3 mr-1" /> Hidden
+                            </Badge>
+                          )}
+                          {needsResponse && !review.is_flagged && (
                             <Badge className="bg-amber-100 text-amber-700 text-xs">Needs Response</Badge>
                           )}
                         </div>
@@ -1163,12 +1173,35 @@ function AdminRatingsView() {
                         </div>
                       )}
 
-                      {/* Footer */}
+                      {/* Footer with Moderation Tools */}
                       <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                         <span className="flex items-center gap-1.5 text-sm text-slate-500">
                           <ThumbsUp className="h-4 w-4" />
                           {review.helpful_count || 0} helpful votes
                         </span>
+                        <div className="flex items-center gap-2">
+                          {review.is_flagged ? (
+                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'unflag')} className="text-green-600 hover:bg-green-50">
+                              <CheckCircle className="h-4 w-4 mr-1" /> Unflag
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'flag')} className="text-orange-600 hover:bg-orange-50">
+                              <Flag className="h-4 w-4 mr-1" /> Flag
+                            </Button>
+                          )}
+                          {review.is_hidden ? (
+                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'unhide')} className="text-blue-600 hover:bg-blue-50">
+                              <Eye className="h-4 w-4 mr-1" /> Show
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'hide')} className="text-slate-600 hover:bg-slate-50">
+                              <EyeOff className="h-4 w-4 mr-1" /> Hide
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'delete')} className="text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
