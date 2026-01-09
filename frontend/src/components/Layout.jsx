@@ -639,17 +639,13 @@ export default function Layout({ children }) {
         adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
         if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       } else if (isRegularAdmin) {
-        // Regular Admin gets limited access (no Employees, Commission, Database)
-        // Grant default access to analytics items for admin role
-        adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
-        adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
+        // Regular Admin gets limited access
+        // REMOVED: Analytics Dashboard and Trip Report (as per user request)
         adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
         
-        // Admin-only items (excluding Employees, Commission, Database)
-        // Grant default access for admin role
+        // Admin-only items (excluding Employees, Commission, Database, Analytics, Trip Report)
         adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
         adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
-        // Removed: Employees, Commission, Database (as per user request)
         adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
         adminSubmenu.push({ key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
         adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
