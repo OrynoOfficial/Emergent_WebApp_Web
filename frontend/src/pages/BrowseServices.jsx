@@ -110,7 +110,7 @@ const SERVICE_CATEGORIES = [
     icon: Ticket,
     emoji: '🎟️',
     path: '/services/events',
-    managePath: '/manage/events',
+    managePath: '/management/events',
     image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=2069',
     description: 'Discover upcoming events and book tickets instantly with secure checkout',
     color: 'from-amber-500 to-yellow-500',
