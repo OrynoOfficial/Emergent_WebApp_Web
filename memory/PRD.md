@@ -3,10 +3,11 @@
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
 
-## User Roles & Permissions (Updated Jan 2026)
+## User Roles & Permissions (Updated Jan 9, 2026)
 
 ### Customer Role
-- **Landing**: Dashboard (standard customer view)
+- **Landing Page**: Dashboard (standard customer view)
+- **Dashboard Button**: Customer Dashboard
 - **Navigation Items**:
   - Dashboard
   - Services (all sub-menus)
@@ -16,105 +17,126 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - **My Ratings** (customer's reviews)
   - **Support** (ticket management for customers)
   - Settings
-- **NOT Accessible**: Team & Roles, Admin Config, Service Management, Analytics, Customer Service
+- **NOT Accessible**: Team & Roles, Admin Config, Service Management, Analytics, Customer Service, Sales
 
 ### Operator Role
-- **Landing**: Analytics page (redirected from Dashboard)
+- **Landing Page**: Analytics Dashboard (personalized to their services)
+- **Dashboard Button**: Analytics Dashboard (personalized)
 - **Navigation Items**:
-  - Dashboard (shows Analytics)
+  - Dashboard (→ Analytics Dashboard)
+  - **Sales** (NEW - top-level menu, personalized to operator)
   - Services (ONLY assigned service types)
   - Service Management (ONLY assigned service types)
-  - Team & Roles (for owner/local_admin)
-  - Admin Config (LIMITED: All Bookings, Bills, Sales, Audit Log only)
+  - Admin Config (LIMITED: Team & Roles, Audit Log only)
   - **My Orders** (filtered by operator's services)
   - **Receipts** (filtered by operator's services)
   - **My Ratings** (customer reviews for operator's services, with respond ability)
   - **Support** (ticket management for operators)
   - Settings
-- **NOT Accessible**: Loyalty/Loyalty Program (completely removed for operators)
+- **NOT Accessible**: Loyalty/Loyalty Program, All Bookings, Bills (removed from Admin Config)
+- **Moved to Admin Config**: Team & Roles (for owner/local_admin)
 
-### Admin / Super Admin Role
-- **Landing**: Dashboard
+### Admin Role
+- **Landing Page**: All Orders page
+- **Dashboard Button**: Admin Dashboard (new page with admin metrics)
 - **Navigation Items**:
-  - Dashboard
+  - Dashboard (→ Admin Dashboard)
   - Services (all)
   - Service Management (all)
   - **All Orders** (platform-wide view)
   - **All Receipts** (platform-wide view)
-  - **Loyalty Program** (admin management view - create/edit/delete rewards, view members, configure tiers)
-  - Admin Config (full access)
+  - **Loyalty Program** (admin management view)
+  - Admin Config (LIMITED: NO Employees, Commission, Database)
   - **All Ratings** (platform-wide ratings with filters)
-  - **Customer Service** (admin backend for support tickets - replaces Support menu)
+  - **Customer Service** (admin backend for support tickets)
+  - Settings
+- **NOT Accessible in Admin Config**: Employees, Commission, Database
+
+### Super Admin Role
+- **Landing Page**: Analytics Dashboard (platform-wide)
+- **Dashboard Button**: Analytics Dashboard (platform-wide)
+- **Navigation Items**:
+  - Dashboard (→ Analytics Dashboard)
+  - **Sales** (NEW - top-level menu, cumulative for all operators)
+  - Services (all)
+  - Service Management (all)
+  - **All Orders** (platform-wide view)
+  - **All Receipts** (platform-wide view)
+  - **Loyalty Program** (admin management view)
+  - Admin Config (FULL access, includes "Dashboard for Admins")
+  - **All Ratings** (platform-wide ratings with filters)
+  - **Customer Service** (admin backend for support tickets)
   - Settings
 
 ## Key Pages & Features
 
+### New Admin Dashboard Page
+- **Path**: `/admin/admin-dashboard`
+- **Access**: Admin, Super Admin
+- **Features**:
+  - Platform metrics overview
+  - Total Orders, Revenue, Users, Support Tickets
+  - Order status cards (Pending, Completed, Cancelled)
+  - Orders & Revenue Trend chart
+  - Order Status distribution pie chart
+  - Recent Orders list
+  - Quick action links
+
+### Sales Page (Updated)
+- **Path**: `/admin/sales`
+- **Super Admin View**: "Platform Sales Dashboard" - Cumulative sales across all operators
+- **Operator View**: "Sales Dashboard - My Business" - Personalized sales for their services
+- Shows service badge indicating assigned services for operators
+
 ### Orders Page
-- **Admin View**: "All Orders" - Shows all orders from all users/operators across the platform
+- **Admin/Super Admin View**: "All Orders" - Shows all orders from all users/operators
 - **Operator View**: "My Orders" - Shows orders for their assigned services
 - **Customer View**: "My Orders" - Shows only their personal orders
 
 ### Receipts Page
-- **Admin View**: "All Receipts" - Shows all receipts from all users/operators
+- **Admin/Super Admin View**: "All Receipts" - Shows all receipts from all users/operators
 - **Operator View**: "Receipts" - Shows receipts for their services
 - **Customer View**: "Receipts" - Shows only their personal receipts
 
-### Loyalty Page
-- **Admin View**: "Loyalty Program" - Management interface with:
-  - Stats cards (Total Members, Points Issued, Points Redeemed, Active Rewards, Members by Tier)
-  - Tabs: Overview, Rewards, Members
-  - Tier Configuration display
-  - Point Earning Rules configuration
-  - Add/Edit/Delete rewards functionality
-  - Members list with search
-- **Customer View**: "Loyalty Rewards" - Personal loyalty interface with:
-  - Current tier, available points, total earned, redeemed
-  - Referral code section
-  - Available rewards to redeem
-  - Activity history
-  - Redemption history
-- **Operator View**: Access Restricted (no access to loyalty)
-
-### Ratings Page
-- **Admin View**: "All Ratings" - Platform-wide ratings with:
-  - Stats (Total Reviews, Avg Rating, Responded, Needs Response)
-  - Rating distribution chart
-  - Filters by service and rating
-  - Search by service, customer, operator
-  - View all ratings across the platform
-- **Operator View**: "Customer Reviews" - Service-specific ratings with:
-  - Reviews for their assigned services
-  - Ability to respond to customer reviews
-  - Filters by service and rating
-- **Customer View**: "My Ratings & Reviews" - Personal reviews with:
-  - Their submitted reviews
-  - Ability to edit reviews
-  - View operator responses
-
-### Support Page
-- **Admins**: Use "Customer Service" in Admin Config (backend support management)
-- **Operators/Customers**: Use "Support" (ticket management frontend with AI chatbot)
-
 ## Navigation Summary
 
-| Menu Item | Customer | Operator | Admin/Super Admin |
-|-----------|----------|----------|-------------------|
-| Dashboard | ✅ | ✅ (→ Analytics) | ✅ |
-| Services | ✅ All | ✅ Assigned Only | ✅ All |
-| Service Management | ❌ | ✅ Assigned Only | ✅ All |
-| Team & Roles | ❌ | ✅ (owner/admin) | ❌ |
-| My Orders / All Orders | My Orders | My Orders | All Orders |
-| Receipts / All Receipts | Receipts | Receipts | All Receipts |
-| Loyalty / Loyalty Program | Loyalty | ❌ REMOVED | Loyalty Program |
-| My Ratings / All Ratings | My Ratings | My Ratings | All Ratings |
-| Support / Customer Service | Support | Support | Customer Service |
-| Admin Config | ❌ | ✅ Limited | ✅ Full |
-| Settings | ✅ | ✅ | ✅ |
+| Menu Item | Customer | Operator | Admin | Super Admin |
+|-----------|----------|----------|-------|-------------|
+| Dashboard | ✅ Customer | ✅ Analytics | ✅ Admin Dashboard | ✅ Analytics |
+| Sales | ❌ | ✅ Personal | ❌ | ✅ Cumulative |
+| Services | ✅ All | ✅ Assigned | ✅ All | ✅ All |
+| Service Management | ❌ | ✅ Assigned | ✅ All | ✅ All |
+| All Orders / My Orders | My Orders | My Orders | All Orders | All Orders |
+| Receipts | Receipts | Receipts | All Receipts | All Receipts |
+| Loyalty | ✅ | ❌ | ✅ Program | ✅ Program |
+| Admin Config | ❌ | ✅ Limited | ✅ No Emp/Comm/DB | ✅ Full |
+| Support / CS | Support | Support | Customer Service | Customer Service |
+
+## Admin Config Submenus by Role
+
+| Submenu | Operator | Admin | Super Admin |
+|---------|----------|-------|-------------|
+| Analytics | ❌ | ✅ | ❌ (in Dashboard) |
+| Trip Report | ❌ | ✅ | ✅ |
+| All Bookings | ❌ | ✅ | ✅ |
+| Dashboard for Admins | ❌ | ❌ | ✅ |
+| User Management | ❌ | ✅ | ✅ |
+| Operators | ❌ | ✅ | ✅ |
+| Employees | ❌ | ❌ | ✅ |
+| Commission | ❌ | ❌ | ✅ |
+| Bills | ❌ | ✅ | ✅ |
+| Sales | ❌ | ✅ | ❌ (top-level) |
+| Audit Logs | ✅ | ✅ | ✅ |
+| Permissions | ❌ | ✅ | ✅ |
+| Database | ❌ | ❌ | ✅ |
+| Validation | ❌ | ✅ | ✅ |
+| Team & Roles | ✅ | ❌ | ❌ |
 
 ## Test Credentials
 - **Super Admin**: superadmin@oryno.com / testpassword123
+- **Admin**: admin@test.com / testpassword123
 - **Customer**: testcustomer@test.com / testpassword123
-- **Operator**: testoperator@test.com / testpassword123 (check "I'm logging in as a service operator")
+- **Operator**: operator@test.com / testpassword123 (check "I'm logging in as a service operator")
 
 ## Completed Features (Jan 2026)
 - [x] Multi-tenant permission system with 4 roles
@@ -132,16 +154,29 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Admin All Ratings view
 - [x] Loyalty removed from operator navigation
 - [x] Customer Service replaces Support for admins
-- [x] Admin "All Orders" page - Shows all 52 orders across platform (Jan 9, 2026)
-- [x] Admin "All Receipts" page - Shows all 52 receipts across platform (Jan 9, 2026)
+- [x] Admin "All Orders" page - Shows all orders across platform (Jan 9, 2026)
+- [x] Admin "All Receipts" page - Shows all receipts across platform (Jan 9, 2026)
 - [x] Admin Ratings moderation UI - Flag/Hide/Delete buttons (Jan 9, 2026)
 - [x] Loyalty Program rewards CRUD with backend API integration (Jan 9, 2026)
 - [x] Customer Service "Add Member" dialog filters existing team members (Jan 9, 2026)
 - [x] User Detail Modal Activity Log shows user-specific audit entries (Jan 9, 2026)
+- [x] Role-specific landing pages: Super Admin→Analytics, Admin→Orders, Operator→Analytics (Jan 9, 2026)
+- [x] New Admin Dashboard page with platform metrics (Jan 9, 2026)
+- [x] Sales as top-level menu for Operators and Super Admins (Jan 9, 2026)
+- [x] Personalized Sales Dashboard for Operators (Jan 9, 2026)
+- [x] Cumulative Platform Sales Dashboard for Super Admins (Jan 9, 2026)
+- [x] Team & Roles moved to Admin Config for Operators (Jan 9, 2026)
+- [x] Removed Bookings, Bills from Operator Admin Config (Jan 9, 2026)
+- [x] Removed Employees, Commission, Database from Admin Admin Config (Jan 9, 2026)
+- [x] Service Management visible for Admin users (Jan 9, 2026)
+- [x] "Dashboard for Admins" in Super Admin's Admin Config (Jan 9, 2026)
+- [x] Personalized Analytics Dashboard for Operators (Jan 9, 2026)
 
 ## Backlog / Future Tasks
 - [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines) - P1
+- [ ] Test with Admin_Employee Oryno role for permission restrictions - P2
 - [ ] Email-based invitation system for team members - P3
 - [ ] Custom role/permission management UI for Admins - P4
 - [ ] Operator audit log visibility (owner sees team members' logs) - P4
 - [ ] Add more ratings moderation features (bulk actions, reports) - P3
+- [ ] Add revenue metrics to Operators Management page - P3
