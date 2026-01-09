@@ -266,20 +266,28 @@ export default function Orders() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3" data-testid="orders-title">
             <div className="p-2 bg-[#082c59] rounded-lg">
               <ShoppingBag className="h-6 w-6 text-white" />
             </div>
-            My Orders
+            {isAllOrdersView ? 'All Orders' : 'My Orders'}
           </h1>
-          <p className="text-slate-500 mt-1">Track and manage your bookings</p>
+          <p className="text-slate-500 mt-1">
+            {isAllOrdersView 
+              ? 'View and manage all orders across the platform'
+              : isOperator
+              ? 'Track and manage orders for your services'
+              : 'Track and manage your bookings'}
+          </p>
         </div>
-        <Link to="/services">
-          <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
-            <Plus className="h-4 w-4 mr-2" />
-            Book New Service
-          </Button>
-        </Link>
+        {!isAllOrdersView && !isOperator && (
+          <Link to="/services">
+            <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
+              <Plus className="h-4 w-4 mr-2" />
+              Book New Service
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats Cards */}
