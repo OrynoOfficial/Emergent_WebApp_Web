@@ -21,6 +21,7 @@ import api from '../../api/client';
 import { toast } from 'sonner';
 
 const EXTRAS = [
+  { id: 'none', name: 'No Extras', price: 0, icon: Check, description: 'Continue without extras' },
   { id: 'driver', name: 'Professional Driver', price: 25000, icon: User, description: 'Experienced driver included' },
   { id: 'gps', name: 'GPS Navigation', price: 5000, icon: MapPin, description: 'Never get lost' },
   { id: 'child_seat', name: 'Child Seat', price: 3000, icon: Users, description: 'Safety for little ones' },
