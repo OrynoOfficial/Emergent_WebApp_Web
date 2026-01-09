@@ -17,7 +17,8 @@ const PaymentMethodsSelection = ({
   onTrigger,
   orderId, // For Stripe and MoMo Checkout
   onMoMoDialogOpen, // Callback when MoMo dialog opens
-  onProcessingChange // Callback to inform parent about processing state
+  onProcessingChange, // Callback to inform parent about processing state
+  onMethodSelected // Callback when a payment method is selected
 }) => {
   const [selectedMethodInternal, setSelectedMethodInternal] = useState(null);
   const [isProcessingInternal, setIsProcessingInternal] = useState(false);
