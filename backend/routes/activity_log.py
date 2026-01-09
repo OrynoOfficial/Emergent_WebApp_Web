@@ -134,43 +134,93 @@ async def get_activity_logs(
     date_to: Optional[str] = None,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get activity logs with filtering and pagination"""
+    """Get activity logs with filtering and pagination - role-based access"""
     db = get_database()
+    
+    # Get user role and permissions
+    user_role = current_user.get("role")
+    is_super_admin = user_role == "super_admin"
+    is_admin = user_role == "admin"
+    is_operator = user_role == "operator"
     
     # Check if user has permission to view all logs
     from utils.permissions import check_user_permission
     can_view_all = await check_user_permission(current_user, "activity.view", db)
-    is_super_admin = current_user.get("role") == "super_admin"
     
     # Build query filter
     query = {}
     
-    # Permission-based filtering
-    if not (is_super_admin or can_view_all):
-        # Regular users can only see their own logs
+    # Role-based filtering
+    if is_super_admin:
+        # Super Admin: Unrestricted view of all audit logs
+        pass
+    elif is_admin:
+        # Admin: Can view own logs + all operator logs (hide super_admin and customer logs)
+        query["$or"] = [
+            {"actor_id": current_user.get("id")},
+            {"actor_role": {"$in": ["operator"]}}
+        ]
+    elif is_operator:
+        # Operator: View own logs + team logs if owner/has permission
+        operator_id = current_user.get("operator_id")
+        user_id = current_user.get("id")
+        
+        # Check if user is owner or has team audit view permission
+        is_owner = False
+        can_view_team_logs = False
+        
+        if operator_id:
+            # Check if user is owner
+            operator_data = await db.operators.find_one({"_id": ObjectId(operator_id)}, {"owner_user_id": 1})
+            if operator_data and str(operator_data.get("owner_user_id")) == user_id:
+                is_owner = True
+            
+            # Check for team audit view permission (local permission)
+            user_data = await db.users.find_one({"_id": ObjectId(user_id)}, {"local_permissions": 1})
+            local_perms = user_data.get("local_permissions", []) if user_data else []
+            can_view_team_logs = "team_audit.view" in local_perms
+        
+        if is_owner or can_view_team_logs:
+            # Can view team logs - get all team member IDs
+            team_members = await db.users.find(
+                {"operator_id": operator_id}, 
+                {"_id": 1}
+            ).to_list(100)
+            team_ids = [str(m["_id"]) for m in team_members]
+            query["actor_id"] = {"$in": team_ids}
+        else:
+            # Only own logs
+            query["actor_id"] = user_id
+    else:
+        # Regular users: Only see own logs
         query["actor_id"] = current_user.get("id")
     
-    # Apply filters
+    # Apply additional filters
     if action_type:
         query["action"] = {"$regex": f"^{action_type}", "$options": "i"}
     
     if entity_type:
         query["entity_type"] = entity_type
     
-    if actor_id and is_admin:
+    if actor_id and (is_super_admin or is_admin):
         query["actor_id"] = actor_id
     
     if severity:
         query["severity"] = severity
     
     if search:
-        query["$or"] = [
+        search_query = [
             {"action": {"$regex": search, "$options": "i"}},
             {"details": {"$regex": search, "$options": "i"}},
             {"entity_name": {"$regex": search, "$options": "i"}},
             {"actor_name": {"$regex": search, "$options": "i"}},
             {"actor_email": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" in query:
+            # Combine with existing $or
+            query = {"$and": [{"$or": query["$or"]}, {"$or": search_query}]}
+        else:
+            query["$or"] = search_query
     
     if date_from:
         query["timestamp"] = {"$gte": date_from}
