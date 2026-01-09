@@ -448,8 +448,11 @@ export default function Layout({ children }) {
     
     // ==================== OPERATOR NAVIGATION ====================
     if (isOperatorUser && !isAdminOrSuper) {
-      // Dashboard/Analytics - For operators, Dashboard shows Analytics (landing page)
+      // Dashboard - For operators, shows Analytics Dashboard (also landing page)
       items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/analytics' });
+      
+      // Sales - Personalized to current operator (between Dashboard and Services)
+      items.push({ key: 'sales', label: 'Sales', icon: TrendingUp, path: '/admin/sales' });
       
       // Services - Only assigned services visible (no Browse Services for operators)
       const operatorServices = [
@@ -497,18 +500,15 @@ export default function Layout({ children }) {
         });
       }
       
-      // Team & Roles - Only for owner or local_admin
-      if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
-        items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
-      }
+      // Admin Config - Limited for operators: Team & Roles (if owner/local_admin), Audit Log only
+      // Removed: All Bookings, Bills (as requested)
+      const operatorAdminSubmenu = [];
       
-      // Admin Config - Limited for operators: All Bookings, Bills, Sales, Audit Log only
-      const operatorAdminSubmenu = [
-        { key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar },
-        { key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText },
-        { key: 'sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp },
-        { key: 'audit-logs', label: 'Audit Log', path: '/admin/audit-logs', icon: History },
-      ];
+      // Team & Roles - Moved to Admin Config as submenu (only for owner or local_admin)
+      if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
+        operatorAdminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/management/team-roles', icon: Users });
+      }
+      operatorAdminSubmenu.push({ key: 'audit-logs', label: 'Audit Log', path: '/admin/audit-logs', icon: History });
       
       items.push({
         key: 'management',
