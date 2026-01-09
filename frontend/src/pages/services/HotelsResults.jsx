@@ -13,7 +13,7 @@ import { format, differenceInDays } from 'date-fns';
 import {
   ArrowLeft, Star, MapPin, Wifi, Car, Utensils, Droplets, Dumbbell,
   SlidersHorizontal, Search, Loader2, ChevronLeft, ChevronRight, X, CalendarDays,
-  LayoutGrid, List, Heart, Coffee, Sparkles, Check
+  LayoutGrid, List, Heart, Coffee, Sparkles, Check, Users, Edit2, Hotel
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
