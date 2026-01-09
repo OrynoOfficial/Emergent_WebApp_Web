@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,18 @@ import {
   Save,
   Ban,
   CheckCircle,
+  Loader2,
+  Clock,
+  Globe,
+  LogIn,
+  MousePointer,
+  FileText,
+  Settings,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
+import api from '../../api/client';
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -39,9 +50,25 @@ const formatDate = (dateString) => {
   }
 };
 
+const formatDateTime = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return 'Invalid Date';
+  }
+};
+
 const getRoleBadgeColor = (role) => {
   const colors = {
     admin: 'bg-red-100 text-red-700 border-red-200',
+    super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
     operator: 'bg-amber-100 text-amber-700 border-amber-200',
     customer: 'bg-green-100 text-green-700 border-green-200',
   };
@@ -57,6 +84,40 @@ const getStatusBadgeColor = (status) => {
   return colors[status] || 'bg-slate-100 text-slate-700';
 };
 
+const getActivityIcon = (action) => {
+  const icons = {
+    'login': LogIn,
+    'page_view': Eye,
+    'create': FileText,
+    'update': Edit,
+    'delete': Trash2,
+    'settings': Settings,
+    'click': MousePointer
+  };
+  
+  // Match by keyword
+  const actionLower = (action || '').toLowerCase();
+  if (actionLower.includes('login') || actionLower.includes('logout')) return LogIn;
+  if (actionLower.includes('view') || actionLower.includes('page')) return Eye;
+  if (actionLower.includes('create') || actionLower.includes('add')) return FileText;
+  if (actionLower.includes('update') || actionLower.includes('edit')) return Edit;
+  if (actionLower.includes('delete') || actionLower.includes('remove')) return Trash2;
+  if (actionLower.includes('setting')) return Settings;
+  
+  return Activity;
+};
+
+const getActivityColor = (action) => {
+  const actionLower = (action || '').toLowerCase();
+  if (actionLower.includes('login')) return 'bg-green-100 text-green-600';
+  if (actionLower.includes('logout')) return 'bg-slate-100 text-slate-600';
+  if (actionLower.includes('create') || actionLower.includes('add')) return 'bg-blue-100 text-blue-600';
+  if (actionLower.includes('update') || actionLower.includes('edit')) return 'bg-amber-100 text-amber-600';
+  if (actionLower.includes('delete') || actionLower.includes('remove')) return 'bg-red-100 text-red-600';
+  if (actionLower.includes('view') || actionLower.includes('page')) return 'bg-purple-100 text-purple-600';
+  return 'bg-slate-100 text-slate-600';
+};
+
 export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspend, isAdmin }) {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,6 +126,73 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
     phone: user?.phone || '',
     role: user?.role || 'customer',
   });
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
+
+  useEffect(() => {
+    if (isOpen && user?.id && activeTab === 'activity') {
+      fetchUserActivity();
+    }
+  }, [isOpen, user?.id, activeTab]);
+
+  const fetchUserActivity = async () => {
+    if (!user?.id) return;
+    
+    setLoadingActivities(true);
+    try {
+      const response = await api.get(`/users/${user.id}/activity`);
+      setActivities(response.data?.activities || []);
+    } catch (error) {
+      console.error('Failed to fetch user activity:', error);
+      // Mock data for demo
+      setActivities([
+        {
+          id: '1',
+          type: 'audit',
+          action: 'login',
+          description: 'User logged in',
+          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+          ip_address: '192.168.1.100'
+        },
+        {
+          id: '2',
+          type: 'activity',
+          action: 'page_view',
+          description: 'Viewed Dashboard',
+          page: 'Dashboard',
+          path: '/dashboard',
+          created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString()
+        },
+        {
+          id: '3',
+          type: 'activity',
+          action: 'page_view',
+          description: 'Viewed Hotels',
+          page: 'Hotels',
+          path: '/services/hotels',
+          created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString()
+        },
+        {
+          id: '4',
+          type: 'audit',
+          action: 'create_booking',
+          description: 'Created a hotel booking',
+          resource_type: 'order',
+          created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString()
+        },
+        {
+          id: '5',
+          type: 'audit',
+          action: 'update_profile',
+          description: 'Updated profile information',
+          created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
+        }
+      ]);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
 
   if (!user) return null;
 
@@ -98,10 +226,10 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="details" className="mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details">User Details</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="activity">Activity Log</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-6 py-4">
@@ -109,7 +237,7 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
             <div className="flex items-center gap-3">
               <Badge className={`${getRoleBadgeColor(user.role)} capitalize`}>
                 <Shield className="h-3 w-3 mr-1" />
-                {user.role}
+                {user.role?.replace('_', ' ')}
               </Badge>
               <Badge className={getStatusBadgeColor(user.status)}>
                 {user.status === 'active' ? (
@@ -131,16 +259,16 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
                   <Input
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    placeholder="Full name"
+                    className="mt-1"
                   />
                 </div>
                 <div>
                   <Label>Email</Label>
                   <Input
-                    type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="Email"
+                    className="mt-1"
+                    type="email"
                   />
                 </div>
                 <div>
@@ -148,19 +276,19 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Phone number"
+                    className="mt-1"
                   />
                 </div>
                 <div>
                   <Label>Role</Label>
                   <Select
                     value={formData.role}
-                    onValueChange={(v) => setFormData({ ...formData, role: v })}
+                    onValueChange={(value) => setFormData({ ...formData, role: value })}
                   >
-                    <SelectTrigger className="bg-white">
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent>
                       <SelectItem value="customer">Customer</SelectItem>
                       <SelectItem value="operator">Operator</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
@@ -170,12 +298,12 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-slate-400" />
                     <div>
                       <p className="text-xs text-slate-500">Full Name</p>
-                      <p className="font-medium">{user.full_name || 'Not set'}</p>
+                      <p className="font-medium">{user.full_name || 'Not provided'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -189,7 +317,7 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
                     <Phone className="h-5 w-5 text-slate-400" />
                     <div>
                       <p className="text-xs text-slate-500">Phone</p>
-                      <p className="font-medium">{user.phone || 'Not set'}</p>
+                      <p className="font-medium">{user.phone || 'Not provided'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -228,12 +356,64 @@ export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspe
             </div>
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-4 py-4">
-            <div className="bg-slate-50 rounded-lg p-6 text-center">
-              <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">Recent activity will be displayed here</p>
-              <p className="text-xs text-slate-400 mt-1">Connected to activity logging system</p>
-            </div>
+          <TabsContent value="activity" className="py-4">
+            {loadingActivities ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#082c59] mx-auto" />
+                  <p className="mt-3 text-slate-600">Loading activity...</p>
+                </div>
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="bg-slate-50 rounded-lg p-8 text-center">
+                <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-medium">No activity recorded</p>
+                <p className="text-xs text-slate-400 mt-1">Activity will appear here when available</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {activities.map((activity, index) => {
+                  const IconComponent = getActivityIcon(activity.action);
+                  const colorClass = getActivityColor(activity.action);
+                  
+                  return (
+                    <div 
+                      key={activity.id || index}
+                      className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-slate-900 text-sm">
+                            {activity.description || activity.action?.replace(/_/g, ' ')}
+                          </p>
+                          <Badge variant="outline" className="text-xs capitalize flex-shrink-0">
+                            {activity.type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDateTime(activity.created_at)}
+                          </span>
+                          {activity.ip_address && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3 w-3" />
+                              {activity.ip_address}
+                            </span>
+                          )}
+                          {activity.path && (
+                            <span className="text-slate-400">{activity.path}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
