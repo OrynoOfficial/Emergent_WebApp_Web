@@ -470,6 +470,24 @@ export default function HotelsResults() {
     ? differenceInDays(new Date(checkOut), new Date(checkIn)) || 1
     : 1;
 
+  // Initialize edit fields when search params change
+  useEffect(() => {
+    setEditDestination(destination);
+    setEditCheckIn(checkIn || '');
+    setEditCheckOut(checkOut || '');
+    setEditGuests(guests);
+  }, [destination, checkIn, checkOut, guests]);
+
+  const handleUpdateSearch = () => {
+    const newParams = new URLSearchParams();
+    if (editDestination) newParams.set('destination', editDestination);
+    if (editCheckIn) newParams.set('checkIn', editCheckIn);
+    if (editCheckOut) newParams.set('checkOut', editCheckOut);
+    newParams.set('guests', editGuests.toString());
+    setSearchParams(newParams);
+    setIsEditingSearch(false);
+  };
+
   const MOCK_HOTELS = [
     {
       id: '1',
