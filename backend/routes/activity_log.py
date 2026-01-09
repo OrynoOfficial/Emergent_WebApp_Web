@@ -160,22 +160,28 @@ async def get_activity_logs(
     elif is_operator:
         # Operator: View own logs + team logs if owner/has permission
         operator_id = current_user.get("operator_id")
-        user_id = current_user.get("id")
+        user_id = current_user.get("_id") or current_user.get("id")  # Handle both formats
         
         # Check if user is owner or has team audit view permission
         is_owner = False
         can_view_team_logs = False
         
         if operator_id:
-            # Check if user is owner
-            operator_data = await db.operators.find_one({"_id": ObjectId(operator_id)}, {"owner_user_id": 1})
-            if operator_data and str(operator_data.get("owner_user_id")) == user_id:
-                is_owner = True
-            
-            # Check for team audit view permission (local permission)
-            user_data = await db.users.find_one({"_id": ObjectId(user_id)}, {"local_permissions": 1})
-            local_perms = user_data.get("local_permissions", []) if user_data else []
-            can_view_team_logs = "team_audit.view" in local_perms
+            try:
+                # Check if user is owner
+                op_obj_id = ObjectId(operator_id) if not isinstance(operator_id, ObjectId) else operator_id
+                operator_data = await db.operators.find_one({"_id": op_obj_id}, {"owner_user_id": 1})
+                if operator_data and str(operator_data.get("owner_user_id")) == str(user_id):
+                    is_owner = True
+                
+                # Check for team audit view permission (local permission)
+                user_obj_id = ObjectId(user_id) if not isinstance(user_id, ObjectId) else user_id
+                user_data = await db.users.find_one({"_id": user_obj_id}, {"local_permissions": 1})
+                local_perms = user_data.get("local_permissions", []) if user_data else []
+                can_view_team_logs = "team_audit.view" in local_perms
+            except Exception as e:
+                print(f"Error checking operator permissions: {e}")
+                pass
         
         if is_owner or can_view_team_logs:
             # Can view team logs - get all team member IDs
@@ -187,7 +193,7 @@ async def get_activity_logs(
             query["actor_id"] = {"$in": team_ids}
         else:
             # Only own logs
-            query["actor_id"] = user_id
+            query["actor_id"] = str(user_id)
     else:
         # Regular users: Only see own logs
         query["actor_id"] = current_user.get("id")
