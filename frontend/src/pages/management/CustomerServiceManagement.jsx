@@ -13,10 +13,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   HeadphonesIcon, MessageSquare, Clock, CheckCircle, AlertCircle, User, Search, 
-  Filter, Send, Plus, RefreshCw, ChevronLeft, ChevronRight, MoreHorizontal,
+  Filter, Send, Plus, RefreshCw, MoreHorizontal,
   AlertTriangle, Inbox, Users, UserPlus, Calendar, Tag, ArrowUpDown, X,
   SlidersHorizontal, Eye, Trash2, Mail, Phone, Building2, FileText, Check,
-  TrendingUp, TrendingDown, Activity, Zap, BarChart2, PieChart, ExternalLink,
+  Activity, Zap, BarChart2, PieChart, ExternalLink,
   Briefcase, UserCheck, Timer, MessageCircle, Archive, Flag, UserMinus, Shield
 } from 'lucide-react';
 import api from '@/api/client';
@@ -27,83 +27,21 @@ import {
   PieChart as RePieChart, Pie, Cell, Legend
 } from 'recharts';
 
-const TICKET_CATEGORIES = ['booking', 'payment', 'refund', 'technical', 'complaint', 'inquiry', 'operator', 'general'];
-const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
-const TICKET_STATUSES = ['open', 'pending', 'in_progress', 'resolved', 'closed'];
-const USER_TYPES = ['customer', 'operator'];
-const CHART_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F97316', '#10B981', '#06B6D4', '#EAB308', '#EF4444'];
-const ITEMS_PER_PAGE = 10;
-
-// Status badge colors
-const getStatusConfig = (status) => {
-  const configs = {
-    open: { bg: 'bg-blue-100', text: 'text-blue-700', icon: <Inbox className="w-3 h-3" /> },
-    pending: { bg: 'bg-amber-100', text: 'text-amber-700', icon: <Clock className="w-3 h-3" /> },
-    in_progress: { bg: 'bg-purple-100', text: 'text-purple-700', icon: <Activity className="w-3 h-3" /> },
-    resolved: { bg: 'bg-green-100', text: 'text-green-700', icon: <CheckCircle className="w-3 h-3" /> },
-    closed: { bg: 'bg-slate-100', text: 'text-slate-700', icon: <Archive className="w-3 h-3" /> }
-  };
-  return configs[status] || configs.open;
-};
-
-// Priority badge colors
-const getPriorityConfig = (priority) => {
-  const configs = {
-    low: { bg: 'bg-slate-100', text: 'text-slate-700', dot: 'bg-slate-400' },
-    medium: { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
-    high: { bg: 'bg-orange-100', text: 'text-orange-700', dot: 'bg-orange-500' },
-    urgent: { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' }
-  };
-  return configs[priority] || configs.medium;
-};
-
-// Category icons
-const getCategoryIcon = (category) => {
-  const icons = {
-    booking: <Calendar className="w-4 h-4" />,
-    payment: <Briefcase className="w-4 h-4" />,
-    refund: <RefreshCw className="w-4 h-4" />,
-    technical: <Zap className="w-4 h-4" />,
-    complaint: <AlertTriangle className="w-4 h-4" />,
-    inquiry: <MessageCircle className="w-4 h-4" />,
-    operator: <Building2 className="w-4 h-4" />,
-    general: <FileText className="w-4 h-4" />
-  };
-  return icons[category] || icons.general;
-};
-
-// Dashboard Stats Card
-const StatsCard = ({ title, value, subtitle, icon, trend, color = "blue" }) => {
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    purple: "from-purple-500 to-purple-600",
-    amber: "from-amber-500 to-amber-600",
-    green: "from-green-500 to-green-600",
-    red: "from-red-500 to-red-600",
-    slate: "from-slate-500 to-slate-600"
-  };
-
-  return (
-    <Card className={`bg-gradient-to-br ${colorClasses[color]} text-white border-0 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5`}>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-sm font-medium">{title}</p>
-            <p className="text-3xl font-bold mt-1">{value}</p>
-            {subtitle && <p className="text-white/70 text-xs mt-1">{subtitle}</p>}
-            {trend !== undefined && (
-              <div className="flex items-center gap-1 mt-2">
-                {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span className="text-xs">{Math.abs(trend)}% from last week</span>
-              </div>
-            )}
-          </div>
-          <div className="p-3 bg-white/20 rounded-xl">{icon}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+// Import extracted components and constants
+import { 
+  TICKET_CATEGORIES, 
+  TICKET_PRIORITIES, 
+  TICKET_STATUSES, 
+  USER_TYPES, 
+  CHART_COLORS, 
+  ITEMS_PER_PAGE,
+  getStatusConfig,
+  getPriorityConfig,
+  getCategoryIcon,
+  getTimeAgo
+} from '@/components/customer-service/constants';
+import { StatsCard } from '@/components/customer-service/StatsCard';
+import { Pagination } from '@/components/customer-service/Pagination';
 
 // Ticket Card Component with enhanced styling
 const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, teamMembers }) => {
