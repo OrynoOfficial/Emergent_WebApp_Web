@@ -182,8 +182,24 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Added real-time revenue calculation to Operators Management page (Jan 9, 2026)
 
 ## Backlog / Future Tasks
-- [ ] Email-based invitation system for team members - P3
-- [ ] Custom role/permission management UI for Admins - P4
-- [ ] Operator audit log visibility (owner sees team members' logs) - P4
+- [ ] Email-based invitation system for team members - P1
+- [ ] Custom role/permission management UI for Admins - P2
 - [ ] Add more ratings moderation features (bulk actions, reports) - P3
 - [ ] Link test orders to operators for revenue demonstration - P4
+- [ ] Further refactor CustomerServiceManagement.jsx (~1365 lines) - P4
+- [ ] Refactor Layout.jsx conditional logic into smaller components - P4
+
+## Completed Features (Jan 9, 2026 - Session 2)
+- [x] Admin landing page changed to Admin Dashboard (not /orders)
+- [x] Admin menu: Removed Analytics Dashboard and Trip Report
+- [x] Admin menu: Added Operators Management access
+- [x] Admin Loyalty Program: Read-only (no create/edit/delete buttons)
+- [x] Admin Audit Logs: Shows own logs + all operator user logs (hides super admin/customer logs)
+- [x] Admin Permissions page: Only "User Permissions" tab visible (Roles and Matrix tabs hidden)
+- [x] Operators Management: Added Owner and Date Joined columns
+- [x] Operators Management: Enhanced Edit modal with service types checkboxes
+- [x] Operators Management: Revenue calculation from orders collection
+- [x] Operator Analytics Dashboard: Personalized with context banner showing assigned services
+- [x] Operator Audit Logs: Owner can see team members' logs, local permission "team_audit.view" supported
+- [x] Backend: Role-based audit log filtering (/api/activity/logs)
+- [x] Backend: Local permissions management API (/api/activity/local-permissions)
