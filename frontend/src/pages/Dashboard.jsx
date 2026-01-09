@@ -428,37 +428,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Admin/Operator Banner */}
-      {canManage && (
-        <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] rounded-2xl p-6 text-white relative overflow-hidden">
-          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-bold mb-1">
-                {isAdmin ? '🛡️ Admin Dashboard' : '📊 Operator Dashboard'}
-              </h3>
-              <p className="text-blue-200">
-                Manage services, view analytics, and handle bookings
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link to="/admin/analytics">
-                <Button variant="secondary" className="bg-white/10 text-white border-white/20 hover:bg-white/20">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Analytics
-                </Button>
-              </Link>
-              <Link to="/admin/data-analytics">
-                <Button className="bg-white text-[#082c59] hover:bg-blue-50">
-                  View Reports
-                </Button>
-              </Link>
-            </div>
-          </div>
-          {/* Decorative elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-white/5 rounded-full translate-y-1/2"></div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
