@@ -171,12 +171,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Service Management visible for Admin users (Jan 9, 2026)
 - [x] "Dashboard for Admins" in Super Admin's Admin Config (Jan 9, 2026)
 - [x] Personalized Analytics Dashboard for Operators (Jan 9, 2026)
+- [x] Fixed Admin Dashboard font colors for visibility (Jan 9, 2026)
+- [x] Removed Total Revenue component from Admin Dashboard (Jan 9, 2026)
+- [x] Refactored CustomerServiceManagement.jsx - extracted reusable components (Jan 9, 2026)
+- [x] Assigned Admin_Employee_Oryno role to admin user for permission testing (Jan 9, 2026)
+- [x] Added real-time revenue calculation to Operators Management page (Jan 9, 2026)
 
 ## Backlog / Future Tasks
-- [ ] Refactor `CustomerServiceManagement.jsx` (~1470 lines) - P1
-- [ ] Test with Admin_Employee Oryno role for permission restrictions - P2
 - [ ] Email-based invitation system for team members - P3
 - [ ] Custom role/permission management UI for Admins - P4
 - [ ] Operator audit log visibility (owner sees team members' logs) - P4
 - [ ] Add more ratings moderation features (bulk actions, reports) - P3
-- [ ] Add revenue metrics to Operators Management page - P3
+- [ ] Link test orders to operators for revenue demonstration - P4
