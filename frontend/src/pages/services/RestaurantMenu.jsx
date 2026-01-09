@@ -21,6 +21,30 @@ import api from '@/api/client';
 
 const MENU_CATEGORIES = ['all', 'starters', 'mains', 'desserts', 'drinks', 'specials'];
 
+// Helper function to format opening hours
+const formatOpeningHours = (openingHours) => {
+  if (!openingHours) return 'Hours not available';
+  if (typeof openingHours === 'string') return openingHours;
+  
+  // If it's an object with day keys, get today's hours
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const today = days[new Date().getDay()];
+  const todayHours = openingHours[today];
+  
+  if (todayHours && todayHours.open && todayHours.close) {
+    return `${todayHours.open} - ${todayHours.close}`;
+  }
+  
+  // Fallback: show first available hours
+  for (const day of days) {
+    if (openingHours[day]?.open && openingHours[day]?.close) {
+      return `${openingHours[day].open} - ${openingHours[day].close}`;
+    }
+  }
+  
+  return 'Hours vary';
+};
+
 const MOCK_MENU_ITEMS = [
   { id: '1', name: 'Ndolé with Plantains', category: 'mains', price: 5500, description: 'Traditional Cameroonian dish with bitter leaves and peanuts', image: '', available: true, popular: true },
   { id: '2', name: 'Grilled Fish (Braise)', category: 'mains', price: 8000, description: 'Fresh tilapia grilled with spices and plantains', image: '', available: true, popular: true },
