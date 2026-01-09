@@ -1,10 +1,82 @@
-import { useEffect, useState } from 'react';
-import { ratingsAPI } from '../api/client';
-import { Star, MessageSquare, ThumbsUp, Calendar, Package } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import api, { ratingsAPI } from '../api/client';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { 
+  Star, MessageSquare, ThumbsUp, Calendar, Search, Filter,
+  Hotel, Utensils, Bus, Car, Film, Sparkles, Package, Gift,
+  Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
+  MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-export default function Ratings() {
+const SERVICE_ICONS = {
+  hotel: Hotel,
+  restaurant: Utensils,
+  travel: Bus,
+  car_rental: Car,
+  cinema: Film,
+  laundry: Sparkles,
+  package: Package,
+  banquet: Gift,
+  events: Calendar
+};
+
+const SERVICE_COLORS = {
+  hotel: '#EC4899',
+  restaurant: '#F59E0B',
+  travel: '#3B82F6',
+  car_rental: '#10B981',
+  cinema: '#EF4444',
+  laundry: '#06B6D4',
+  package: '#6366F1',
+  banquet: '#8B5CF6',
+  events: '#F97316'
+};
+
+// Render star rating
+const StarRating = ({ rating, size = 'md', interactive = false, onChange }) => {
+  const [hovered, setHovered] = useState(0);
+  const sizeClass = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
+  
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={!interactive}
+          onClick={() => interactive && onChange?.(star)}
+          onMouseEnter={() => interactive && setHovered(star)}
+          onMouseLeave={() => interactive && setHovered(0)}
+          className={interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}
+        >
+          <Star
+            className={`${sizeClass} transition-colors ${
+              star <= (hovered || rating)
+                ? 'text-amber-400 fill-amber-400'
+                : 'text-slate-300'
+            }`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Customer View Component
+function CustomerRatingsView() {
   const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingRating, setEditingRating] = useState(null);
+  const [editComment, setEditComment] = useState('');
 
   useEffect(() => {
     fetchRatings();
@@ -16,25 +88,39 @@ export default function Ratings() {
       setRatings(response.data?.ratings || []);
     } catch (error) {
       console.error('Failed to fetch ratings:', error);
-      // Mock data
+      // Mock data for demo
       setRatings([
         {
           id: '1',
-          service_name: 'Grand Palace Hotel',
+          service_name: 'Hilton Douala',
           service_category: 'hotel',
           rating: 5,
           comment: 'Excellent stay! The room was spacious and the staff was incredibly helpful.',
-          created_at: '2024-06-15',
-          helpful_count: 12
+          created_at: '2024-12-15',
+          helpful_count: 12,
+          operator_response: {
+            message: 'Thank you for your wonderful review! We are delighted you enjoyed your stay.',
+            responded_at: '2024-12-16',
+            responder_name: 'Hotel Manager'
+          }
         },
         {
           id: '2',
-          service_name: 'Tokyo Garden Restaurant',
+          service_name: 'La Belle Époque',
           service_category: 'restaurant',
           rating: 4,
-          comment: 'Great sushi, but the wait time was a bit long.',
-          created_at: '2024-06-10',
+          comment: 'Great food, excellent ambiance. The wait time was a bit long but worth it.',
+          created_at: '2024-12-10',
           helpful_count: 5
+        },
+        {
+          id: '3',
+          service_name: 'Douala → Yaoundé Express',
+          service_category: 'travel',
+          rating: 5,
+          comment: 'Very comfortable bus, arrived on time. Will definitely use again!',
+          created_at: '2024-12-05',
+          helpful_count: 8
         }
       ]);
     } finally {
@@ -42,150 +128,664 @@ export default function Ratings() {
     }
   };
 
-  const getCategoryIcon = (category) => {
-    const icons = {
-      hotel: '🏨',
-      restaurant: '🍽️',
-      travel: '🚌',
-      car_rental: '🚗',
-      event: '🎫',
-    };
-    return icons[category] || '📦';
+  const handleEditRating = (rating) => {
+    setEditingRating(rating);
+    setEditComment(rating.comment);
   };
 
-  const renderStars = (rating) => {
+  const handleSaveEdit = async () => {
+    try {
+      await ratingsAPI.updateRating(editingRating.id, { comment: editComment });
+      setRatings(prev => prev.map(r => r.id === editingRating.id ? { ...r, comment: editComment } : r));
+      setEditingRating(null);
+      toast.success('Review updated successfully!');
+    } catch (error) {
+      toast.error('Failed to update review');
+    }
+  };
+
+  const stats = useMemo(() => {
+    if (!ratings.length) return { total: 0, helpful: 0, average: 0 };
+    return {
+      total: ratings.length,
+      helpful: ratings.reduce((sum, r) => sum + (r.helpful_count || 0), 0),
+      average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
+    };
+  }, [ratings]);
+
+  if (loading) {
     return (
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`h-5 w-5 ${
-              star <= rating
-                ? 'text-amber-400 fill-amber-400'
-                : 'text-slate-300'
-            }`}
-          />
-        ))}
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[#082c59] mx-auto" />
+          <p className="mt-4 text-slate-600">Loading your reviews...</p>
+        </div>
       </div>
     );
-  };
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">My Ratings & Reviews</h1>
-        <p className="text-slate-600">Reviews you've left for services you've used</p>
-      </div>
-
-      {/* Stats */}
+    <div className="space-y-6">
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-100 rounded-xl">
+                <Star className="h-6 w-6 text-amber-600 fill-amber-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-sm text-slate-600">Total Reviews</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">{ratings.length}</p>
-              <p className="text-sm text-slate-500">Total Reviews</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <ThumbsUp className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-slate-900">{stats.helpful}</p>
+                <p className="text-sm text-slate-600">Helpful Votes</p>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ThumbsUp className="h-6 w-6 text-blue-500" />
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Award className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-slate-900">{stats.average}</p>
+                <p className="text-sm text-slate-600">Average Rating</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">
-                {ratings.reduce((sum, r) => sum + (r.helpful_count || 0), 0)}
-              </p>
-              <p className="text-sm text-slate-500">Helpful Votes</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Star className="h-6 w-6 text-green-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900">
-                {ratings.length > 0
-                  ? (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
-                  : '0'}
-              </p>
-              <p className="text-sm text-slate-500">Average Rating</p>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Reviews List */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse">
-              <div className="flex gap-4">
-                <div className="w-12 h-12 bg-slate-200 rounded-xl"></div>
-                <div className="flex-1 space-y-3">
-                  <div className="h-5 bg-slate-200 rounded w-1/3"></div>
-                  <div className="h-4 bg-slate-200 rounded w-full"></div>
-                </div>
-              </div>
+      {ratings.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center mx-auto mb-6">
+              <MessageSquare className="h-10 w-10 text-amber-500" />
             </div>
-          ))}
-        </div>
-      ) : ratings.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-6 animate-float">
-            <MessageSquare className="h-12 w-12 text-amber-500" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">No reviews yet</h3>
-          <p className="text-slate-500 max-w-sm mx-auto mb-6">After using a service, come back here to share your experience and help others!</p>
-        </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">No reviews yet</h3>
+            <p className="text-slate-500 max-w-sm mx-auto">
+              After using a service, come back here to share your experience and help others!
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {ratings.map((review, index) => (
-            <div 
-              key={review.id} 
-              className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 group"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                  {getCategoryIcon(review.service_category)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900">{review.service_name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        {renderStars(review.rating)}
-                        <span className="text-sm text-slate-500">
-                          {new Date(review.created_at).toLocaleDateString()}
-                        </span>
+          {ratings.map((review) => {
+            const IconComponent = SERVICE_ICONS[review.service_category] || Package;
+            const color = SERVICE_COLORS[review.service_category] || '#64748B';
+            
+            return (
+              <Card key={review.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                <CardContent className="p-0">
+                  <div className="flex">
+                    {/* Color accent bar */}
+                    <div className="w-1.5" style={{ backgroundColor: color }}></div>
+                    
+                    <div className="flex-1 p-6">
+                      <div className="flex gap-4">
+                        {/* Service Icon */}
+                        <div 
+                          className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                          style={{ backgroundColor: `${color}15` }}
+                        >
+                          <IconComponent className="h-7 w-7" style={{ color }} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="font-bold text-slate-900 text-lg">{review.service_name}</h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <StarRating rating={review.rating} size="sm" />
+                                <span className="text-sm text-slate-500 flex items-center gap-1">
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {new Date(review.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <Badge 
+                              className="capitalize text-xs"
+                              style={{ backgroundColor: `${color}20`, color }}
+                            >
+                              {review.service_category?.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          
+                          {/* Comment */}
+                          <p className="text-slate-600 mt-4 leading-relaxed">{review.comment}</p>
+                          
+                          {/* Operator Response */}
+                          {review.operator_response && (
+                            <div className="mt-4 p-4 bg-slate-50 rounded-lg border-l-4 border-[#082c59]">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Reply className="h-4 w-4 text-[#082c59]" />
+                                <span className="font-medium text-[#082c59] text-sm">
+                                  Response from {review.operator_response.responder_name}
+                                </span>
+                                <span className="text-xs text-slate-400">
+                                  • {new Date(review.operator_response.responded_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-slate-600 text-sm">{review.operator_response.message}</p>
+                            </div>
+                          )}
+                          
+                          {/* Actions */}
+                          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
+                            <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                              <ThumbsUp className="h-4 w-4" />
+                              {review.helpful_count || 0} found helpful
+                            </span>
+                            <button 
+                              onClick={() => handleEditRating(review)}
+                              className="flex items-center gap-1.5 text-sm text-[#082c59] hover:underline"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                              Edit Review
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <span className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-600 capitalize">
-                      {review.service_category?.replace('_', ' ')}
-                    </span>
                   </div>
-                  <p className="text-slate-600 mt-3">{review.comment}</p>
-                  <div className="flex items-center gap-4 mt-4">
-                    <span className="flex items-center gap-1 text-sm text-slate-500">
-                      <ThumbsUp className="h-4 w-4" />
-                      {review.helpful_count || 0} found this helpful
-                    </span>
-                    <button className="text-sm text-blue-600 hover:underline">
-                      Edit Review
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingRating} onOpenChange={() => setEditingRating(null)}>
+        <DialogContent className="max-w-lg bg-white">
+          <DialogHeader>
+            <DialogTitle>Edit Your Review</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Your Review</label>
+              <Textarea
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                className="mt-2"
+                rows={4}
+                placeholder="Share your experience..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRating(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} className="bg-[#082c59] hover:bg-[#0a3a75]">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Operator View Component
+function OperatorRatingsView() {
+  const { user, operatorServiceTypes, operatorType } = useAuth();
+  const [ratings, setRatings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterService, setFilterService] = useState('all');
+  const [filterRating, setFilterRating] = useState('all');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  // Determine operator's assigned service types
+  const assignedServices = useMemo(() => {
+    if (operatorServiceTypes?.length > 0) return operatorServiceTypes;
+    if (operatorType) return [operatorType];
+    return [];
+  }, [operatorServiceTypes, operatorType]);
+
+  useEffect(() => {
+    fetchOperatorRatings();
+  }, []);
+
+  const fetchOperatorRatings = async () => {
+    try {
+      // Fetch ratings for services assigned to this operator
+      const response = await api.get('/ratings/operator', {
+        params: { operator_id: user?.operator_id }
+      });
+      setRatings(response.data?.ratings || []);
+    } catch (error) {
+      console.error('Failed to fetch operator ratings:', error);
+      // Mock data for demo
+      const mockRatings = [
+        {
+          id: 'r1',
+          service_name: 'Hilton Douala',
+          service_id: 'hotel_1',
+          service_category: 'hotel',
+          customer_name: 'John Doe',
+          customer_avatar: null,
+          rating: 5,
+          comment: 'Amazing hotel! Clean rooms, friendly staff, great location. Highly recommend!',
+          created_at: '2024-12-20T10:30:00Z',
+          helpful_count: 15,
+          operator_response: null
+        },
+        {
+          id: 'r2',
+          service_name: 'Hilton Douala',
+          service_id: 'hotel_1',
+          service_category: 'hotel',
+          customer_name: 'Marie Claire',
+          customer_avatar: null,
+          rating: 4,
+          comment: 'Very good experience overall. The breakfast buffet could have more variety.',
+          created_at: '2024-12-18T14:15:00Z',
+          helpful_count: 8,
+          operator_response: {
+            message: 'Thank you for your feedback! We are working on expanding our breakfast menu.',
+            responded_at: '2024-12-19T09:00:00Z',
+            responder_name: 'Hotel Management'
+          }
+        },
+        {
+          id: 'r3',
+          service_name: 'La Belle Époque',
+          service_id: 'rest_1',
+          service_category: 'restaurant',
+          customer_name: 'Pierre Martin',
+          customer_avatar: null,
+          rating: 5,
+          comment: 'Best restaurant in town! The chef is incredibly talented.',
+          created_at: '2024-12-15T19:45:00Z',
+          helpful_count: 22,
+          operator_response: null
+        },
+        {
+          id: 'r4',
+          service_name: 'Hilton Douala',
+          service_id: 'hotel_1',
+          service_category: 'hotel',
+          customer_name: 'Sophie Williams',
+          customer_avatar: null,
+          rating: 3,
+          comment: 'The room was nice but the AC was too noisy. Front desk was helpful in resolving.',
+          created_at: '2024-12-12T08:20:00Z',
+          helpful_count: 5,
+          operator_response: null
+        }
+      ];
+      // Filter by assigned services
+      const filtered = mockRatings.filter(r => 
+        assignedServices.length === 0 || assignedServices.includes(r.service_category)
+      );
+      setRatings(filtered);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyText.trim() || !replyingTo) return;
+    
+    setSubmittingReply(true);
+    try {
+      await api.post(`/ratings/${replyingTo.id}/respond`, {
+        message: replyText,
+        responder_name: user?.full_name || 'Management'
+      });
+      
+      // Update local state
+      setRatings(prev => prev.map(r => 
+        r.id === replyingTo.id 
+          ? { 
+              ...r, 
+              operator_response: {
+                message: replyText,
+                responded_at: new Date().toISOString(),
+                responder_name: user?.full_name || 'Management'
+              }
+            }
+          : r
+      ));
+      
+      setReplyingTo(null);
+      setReplyText('');
+      toast.success('Response submitted successfully!');
+    } catch (error) {
+      toast.error('Failed to submit response');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  // Filter ratings
+  const filteredRatings = useMemo(() => {
+    return ratings.filter(r => {
+      const matchesSearch = !searchTerm || 
+        r.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.comment.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesService = filterService === 'all' || r.service_category === filterService;
+      const matchesRating = filterRating === 'all' || r.rating === parseInt(filterRating);
+      return matchesSearch && matchesService && matchesRating;
+    });
+  }, [ratings, searchTerm, filterService, filterRating]);
+
+  // Stats
+  const stats = useMemo(() => {
+    if (!ratings.length) return { total: 0, average: 0, responded: 0, pending: 0 };
+    return {
+      total: ratings.length,
+      average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1),
+      responded: ratings.filter(r => r.operator_response).length,
+      pending: ratings.filter(r => !r.operator_response).length
+    };
+  }, [ratings]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[#082c59] mx-auto" />
+          <p className="mt-4 text-slate-600">Loading customer reviews...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-100 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-xs text-slate-600">Total Reviews</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-100 rounded-lg">
+                <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.average}</p>
+                <p className="text-xs text-slate-600">Avg Rating</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.responded}</p>
+                <p className="text-xs text-slate-600">Responded</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-rose-100 rounded-lg">
+                <MessageCircle className="h-5 w-5 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
+                <p className="text-xs text-slate-600">Needs Response</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search reviews..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white"
+              />
+            </div>
+            <Select value={filterService} onValueChange={setFilterService}>
+              <SelectTrigger className="w-40 bg-white">
+                <SelectValue placeholder="Service" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Services</SelectItem>
+                {assignedServices.map(service => (
+                  <SelectItem key={service} value={service} className="capitalize">
+                    {service.replace('_', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterRating} onValueChange={setFilterRating}>
+              <SelectTrigger className="w-36 bg-white">
+                <SelectValue placeholder="Rating" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Ratings</SelectItem>
+                <SelectItem value="5">5 Stars</SelectItem>
+                <SelectItem value="4">4 Stars</SelectItem>
+                <SelectItem value="3">3 Stars</SelectItem>
+                <SelectItem value="2">2 Stars</SelectItem>
+                <SelectItem value="1">1 Star</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reviews List */}
+      {filteredRatings.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <Star className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-700 mb-2">No reviews found</h3>
+            <p className="text-slate-500">
+              {searchTerm || filterService !== 'all' || filterRating !== 'all'
+                ? 'Try adjusting your filters'
+                : 'Customer reviews for your services will appear here'}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredRatings.map((review) => {
+            const IconComponent = SERVICE_ICONS[review.service_category] || Package;
+            const color = SERVICE_COLORS[review.service_category] || '#64748B';
+            const needsResponse = !review.operator_response;
+            
+            return (
+              <Card 
+                key={review.id} 
+                className={`overflow-hidden transition-all duration-300 ${needsResponse ? 'ring-2 ring-amber-200' : ''}`}
+              >
+                <CardContent className="p-0">
+                  <div className="flex">
+                    {/* Status bar */}
+                    <div 
+                      className="w-1.5"
+                      style={{ backgroundColor: needsResponse ? '#F59E0B' : '#10B981' }}
+                    ></div>
+                    
+                    <div className="flex-1 p-6">
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                            <User className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{review.customer_name}</p>
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                              <Clock className="h-3.5 w-3.5" />
+                              {new Date(review.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            className="capitalize text-xs"
+                            style={{ backgroundColor: `${color}20`, color }}
+                          >
+                            <IconComponent className="h-3 w-3 mr-1" />
+                            {review.service_name}
+                          </Badge>
+                          {needsResponse && (
+                            <Badge className="bg-amber-100 text-amber-700 text-xs">
+                              Needs Response
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Rating & Comment */}
+                      <div className="mb-4">
+                        <StarRating rating={review.rating} />
+                        <p className="text-slate-700 mt-3 leading-relaxed">{review.comment}</p>
+                      </div>
+
+                      {/* Existing Response */}
+                      {review.operator_response && (
+                        <div className="mt-4 p-4 bg-emerald-50 rounded-lg border-l-4 border-emerald-500">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                            <span className="font-medium text-emerald-700 text-sm">
+                              Your Response
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              • {new Date(review.operator_response.responded_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 text-sm">{review.operator_response.message}</p>
+                        </div>
+                      )}
+
+                      {/* Reply Section */}
+                      {replyingTo?.id === review.id ? (
+                        <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+                          <Textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write your response to this review..."
+                            className="mb-3"
+                            rows={3}
+                          />
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => { setReplyingTo(null); setReplyText(''); }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button 
+                              size="sm"
+                              onClick={handleSubmitReply}
+                              disabled={!replyText.trim() || submittingReply}
+                              className="bg-[#082c59] hover:bg-[#0a3a75]"
+                            >
+                              {submittingReply ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <Send className="h-4 w-4 mr-2" />
+                              )}
+                              Submit Response
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                            <ThumbsUp className="h-4 w-4" />
+                            {review.helpful_count || 0} helpful votes
+                          </span>
+                          {!review.operator_response && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setReplyingTo(review)}
+                              className="gap-2"
+                            >
+                              <Reply className="h-4 w-4" />
+                              Respond
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Main Ratings Component
+export default function Ratings() {
+  const { user, isOperatorUser } = useAuth();
+  
+  const isOperator = user?.role === 'operator' || isOperatorUser;
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="ratings-title">
+            {isOperator ? 'Customer Reviews' : 'My Ratings & Reviews'}
+          </h1>
+          <p className="text-slate-600">
+            {isOperator 
+              ? 'Manage and respond to customer feedback for your services'
+              : 'Reviews you\'ve left for services you\'ve used'}
+          </p>
+        </div>
+      </div>
+
+      {/* Render appropriate view based on user role */}
+      {isOperator ? <OperatorRatingsView /> : <CustomerRatingsView />}
     </div>
   );
 }
