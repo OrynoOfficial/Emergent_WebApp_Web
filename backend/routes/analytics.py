@@ -91,6 +91,7 @@ async def get_admin_analytics(
 @router.get("/overview")
 async def get_data_analytics_overview(
     period: str = Query("6months", description="Time period"),
+    operator_id: Optional[str] = Query(None, description="Operator ID for filtering"),
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get comprehensive data analytics for DataAnalytics page"""
@@ -103,15 +104,33 @@ async def get_data_analytics_overview(
     days = get_period_days(period)
     start_date = datetime.utcnow() - timedelta(days=days)
     
-    # Get all orders in period
-    all_orders = await db.orders.find({
-        "created_at": {"$gte": start_date}
-    }).to_list(10000)
+    # Build order query - filter by operator if operator user
+    order_query = {"created_at": {"$gte": start_date}}
     
-    # Get all users
-    total_users = await db.users.count_documents({})
-    new_users = await db.users.count_documents({"created_at": {"$gte": start_date}})
-    active_users = await db.users.count_documents({"last_login": {"$gte": start_date}})
+    # For operators, filter data by their operator_id
+    is_operator = current_user["role"] == "operator"
+    effective_operator_id = None
+    
+    if is_operator:
+        # Operator users can only see their own data
+        effective_operator_id = current_user.get("operator_id") or operator_id
+        if effective_operator_id:
+            order_query["operator_id"] = effective_operator_id
+    elif operator_id:
+        # Admin/super admin can filter by specific operator
+        order_query["operator_id"] = operator_id
+    
+    # Get all orders in period
+    all_orders = await db.orders.find(order_query).to_list(10000)
+    
+    # Get users - for operators, only count users in their operator
+    user_query = {}
+    if effective_operator_id:
+        user_query["operator_id"] = effective_operator_id
+    
+    total_users = await db.users.count_documents(user_query)
+    new_users = await db.users.count_documents({**user_query, "created_at": {"$gte": start_date}})
+    active_users = await db.users.count_documents({**user_query, "last_login": {"$gte": start_date}})
     
     # Calculate summary stats
     total_bookings = len(all_orders)
