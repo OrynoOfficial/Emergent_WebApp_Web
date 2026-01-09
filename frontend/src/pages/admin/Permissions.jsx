@@ -955,12 +955,10 @@ export default function Permissions() {
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-3' : 'grid-cols-2'} max-w-lg`}>
-          {isSuperAdmin && (
-            <TabsTrigger value="roles" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Roles ({roles.length})
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="roles" className="gap-2">
+            <Shield className="h-4 w-4" />
+            Roles ({roles.length})
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <UserCog className="h-4 w-4" />
             User Permissions
@@ -973,9 +971,19 @@ export default function Permissions() {
           )}
         </TabsList>
 
-        {/* Roles Tab - Super Admin Only */}
-        {isSuperAdmin && (
+        {/* Roles Tab - Available to both Admin and Super Admin */}
         <TabsContent value="roles" className="mt-6">
+          {/* Admin notice for limited access */}
+          {isRegularAdmin && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-900">Limited Role Management</p>
+                <p className="text-sm text-blue-700">You can create and edit custom roles. System roles cannot be modified.</p>
+              </div>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {roles.map((role) => (
               <Card key={role.id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
