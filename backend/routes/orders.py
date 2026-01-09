@@ -273,5 +273,90 @@ async def cancel_order(
             "updated_at": datetime.utcnow()
         }}
     )
+
+
+@router.get("/analytics/payment-methods")
+async def get_payment_methods_analytics(
+    time_range: str = Query("30d", description="Time range: today, 7d, 30d, 90d, 1y"),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get payment methods breakdown - role-filtered for operators"""
+    db = get_database()
+    
+    # Calculate date range
+    now = datetime.utcnow()
+    days_map = {"today": 1, "7d": 7, "30d": 30, "90d": 90, "1y": 365}
+    days = days_map.get(time_range, 30)
+    start_date = now - timedelta(days=days)
+    
+    # Build query based on user role
+    user_role = current_user.get("role")
+    query = {"created_at": {"$gte": start_date}}
+    
+    # Operators only see their orders
+    if user_role == "operator":
+        operator_id = current_user.get("operator_id")
+        if operator_id:
+            query["operator_id"] = operator_id
+    
+    # Aggregate payment methods
+    pipeline = [
+        {"$match": query},
+        {"$group": {
+            "_id": "$payment_method",
+            "total_amount": {"$sum": "$total_amount"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"total_amount": -1}}
+    ]
+    
+    results = await db.orders.aggregate(pipeline).to_list(20)
+    
+    # Calculate totals
+    grand_total = sum(r.get("total_amount", 0) for r in results)
+    total_orders = sum(r.get("count", 0) for r in results)
+    
+    # Payment method display names and colors
+    method_config = {
+        "mtn_momo": {"name": "MTN Mobile Money", "color": "bg-yellow-500"},
+        "orange_money": {"name": "Orange Money", "color": "bg-orange-500"},
+        "stripe": {"name": "Card Payment", "color": "bg-blue-500"},
+        "bank_transfer": {"name": "Bank Transfer", "color": "bg-gray-500"},
+        "cash": {"name": "Cash", "color": "bg-green-500"},
+        None: {"name": "Not Specified", "color": "bg-slate-400"},
+    }
+    
+    payment_methods = []
+    for r in results:
+        method_key = r.get("_id")
+        config = method_config.get(method_key, {"name": str(method_key or "Unknown").replace("_", " ").title(), "color": "bg-slate-400"})
+        amount = r.get("total_amount", 0)
+        percentage = round((amount / grand_total * 100), 1) if grand_total > 0 else 0
+        
+        payment_methods.append({
+            "method": config["name"],
+            "method_key": method_key,
+            "amount": amount,
+            "count": r.get("count", 0),
+            "percentage": percentage,
+            "color": config["color"]
+        })
+    
+    # If no data, return default structure with zeros
+    if not payment_methods:
+        payment_methods = [
+            {"method": "MTN Mobile Money", "method_key": "mtn_momo", "amount": 0, "count": 0, "percentage": 0, "color": "bg-yellow-500"},
+            {"method": "Orange Money", "method_key": "orange_money", "amount": 0, "count": 0, "percentage": 0, "color": "bg-orange-500"},
+            {"method": "Card Payment", "method_key": "stripe", "amount": 0, "count": 0, "percentage": 0, "color": "bg-blue-500"},
+            {"method": "Bank Transfer", "method_key": "bank_transfer", "amount": 0, "count": 0, "percentage": 0, "color": "bg-gray-500"},
+        ]
+    
+    return {
+        "payment_methods": payment_methods,
+        "total_revenue": grand_total,
+        "total_orders": total_orders,
+        "time_range": time_range
+    }
+
     
     return {"message": "Order cancelled successfully"}
