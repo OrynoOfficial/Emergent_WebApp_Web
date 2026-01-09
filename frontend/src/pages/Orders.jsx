@@ -63,10 +63,16 @@ const SORT_OPTIONS = [
 ];
 
 export default function Orders() {
+  const { user, isOperatorUser } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Determine view mode based on user role
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isOperator = user?.role === 'operator' || isOperatorUser;
+  const isAllOrdersView = isAdmin; // Admin sees all orders
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,8 +86,8 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
-    activityLogger.pageView('My Orders', '/orders');
-  }, []);
+    activityLogger.pageView(isAllOrdersView ? 'All Orders' : 'My Orders', '/orders');
+  }, [isAllOrdersView]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -90,7 +96,17 @@ export default function Orders() {
 
   const fetchOrders = async () => {
     try {
-      const response = await ordersAPI.getMyOrders({ limit: 500 });
+      let response;
+      if (isAllOrdersView) {
+        // Admin: fetch all orders from all users/operators
+        response = await ordersAPI.getAll({ limit: 500 });
+      } else if (isOperator) {
+        // Operator: fetch orders for their assigned services
+        response = await ordersAPI.getOperatorOrders({ limit: 500, operator_id: user?.operator_id });
+      } else {
+        // Customer: fetch only their orders
+        response = await ordersAPI.getMyOrders({ limit: 500 });
+      }
       setOrders(response.data?.orders || []);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
