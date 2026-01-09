@@ -457,15 +457,28 @@ export default function TravelResults() {
       setSelectedOutbound(trip);
       setView('return');
     } else {
+      // Prepare booking data and store in sessionStorage
       const searchData = { from, to, date, passengers };
       if (returnDate) searchData.returnDate = returnDate;
       
       const bookingData = isRoundTrip
-        ? { outbound: selectedOutbound, return: trip, ...searchData }
-        : { trip, ...searchData };
+        ? { outbound: selectedOutbound, return: trip, ...searchData, isRoundTrip: true }
+        : { outbound: trip, ...searchData, isRoundTrip: false };
       
+      // Store in sessionStorage for the booking page
+      sessionStorage.setItem('selectedTrip', JSON.stringify(bookingData));
+      
+      // Navigate to the booking page
       navigate('/services/travel/booking', { state: bookingData });
     }
+  };
+
+  // Handle date tab change for past/future trips
+  const handleDateTabChange = (newDate) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('date', format(newDate, 'yyyy-MM-dd'));
+    setSearchParams(newParams);
+    setTripDateView('current');
   };
 
   const handleImageClick = (imageUrl, title) => {
