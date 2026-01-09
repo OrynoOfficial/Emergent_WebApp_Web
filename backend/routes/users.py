@@ -217,6 +217,85 @@ async def update_user_status(
     action = "suspended" if new_status == "suspended" else "activated"
     return {"message": f"User {action} successfully"}
 
+
+@router.get("/{user_id}/activity")
+async def get_user_activity(
+    user_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get user's activity/audit log"""
+    db = get_database()
+    
+    # Check if user has permission to view activity
+    is_admin = current_user.get("role") in ["admin", "super_admin"]
+    is_own_activity = current_user["_id"] == user_id
+    
+    if not is_admin and not is_own_activity:
+        raise HTTPException(status_code=403, detail="Permission denied")
+    
+    # Verify target user exists
+    target_user = await db.users.find_one({"_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Query audit logs for this user
+    query = {"user_id": user_id}
+    
+    # Get from audit_logs collection
+    audit_logs = await db.audit_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total_audit = await db.audit_logs.count_documents(query)
+    
+    # Also get from activity_logs if it exists
+    activity_logs = await db.activity_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total_activity = await db.activity_logs.count_documents(query)
+    
+    # Combine and format
+    combined_activities = []
+    
+    for log in audit_logs:
+        combined_activities.append({
+            "id": str(log.get("_id", "")),
+            "type": "audit",
+            "action": log.get("action", "unknown"),
+            "description": log.get("description", log.get("action", "")),
+            "details": log.get("details"),
+            "ip_address": log.get("ip_address"),
+            "user_agent": log.get("user_agent"),
+            "created_at": log.get("created_at") or log.get("timestamp"),
+            "resource_type": log.get("resource_type"),
+            "resource_id": log.get("resource_id")
+        })
+    
+    for log in activity_logs:
+        combined_activities.append({
+            "id": str(log.get("_id", "")),
+            "type": "activity",
+            "action": log.get("action", log.get("type", "unknown")),
+            "description": log.get("description", log.get("action", "")),
+            "details": log.get("details") or log.get("metadata"),
+            "ip_address": log.get("ip_address"),
+            "user_agent": log.get("user_agent"),
+            "created_at": log.get("created_at") or log.get("timestamp"),
+            "page": log.get("page"),
+            "path": log.get("path")
+        })
+    
+    # Sort combined by created_at descending
+    combined_activities.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    
+    # Limit to requested size
+    combined_activities = combined_activities[:limit]
+    
+    return {
+        "activities": combined_activities,
+        "total": total_audit + total_activity,
+        "user_id": user_id,
+        "user_name": target_user.get("full_name", "Unknown")
+    }
+
+
 @router.post("/create")
 async def create_user(
     user_data: dict,
