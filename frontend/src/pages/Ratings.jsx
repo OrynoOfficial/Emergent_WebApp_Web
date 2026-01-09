@@ -1211,6 +1211,64 @@ function AdminRatingsView() {
           })}
         </div>
       )}
+
+      {/* Moderation Dialog */}
+      <Dialog open={showModerateDialog} onOpenChange={setShowModerateDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-orange-500" />
+              {moderationAction === 'delete' ? 'Delete Rating' : 
+               moderationAction === 'flag' ? 'Flag Rating' :
+               moderationAction === 'unflag' ? 'Remove Flag' :
+               moderationAction === 'hide' ? 'Hide Rating' : 'Show Rating'}
+            </DialogTitle>
+            <DialogDescription>
+              {moderationAction === 'delete' 
+                ? 'This action cannot be undone. The rating will be permanently removed.'
+                : moderationAction === 'flag'
+                ? 'Flag this rating for review. It will remain visible but marked for attention.'
+                : moderationAction === 'hide'
+                ? 'Hide this rating from public view. It can be restored later.'
+                : 'This will update the rating status.'}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRating && (
+            <div className="py-4">
+              <div className="p-3 bg-slate-50 rounded-lg mb-4">
+                <p className="font-medium text-sm">{selectedRating.service_name}</p>
+                <p className="text-sm text-slate-600">by {selectedRating.customer_name}</p>
+                <StarRating rating={selectedRating.rating} size="sm" />
+              </div>
+              {(moderationAction === 'flag' || moderationAction === 'hide' || moderationAction === 'delete') && (
+                <div>
+                  <label className="text-sm font-medium">Reason (optional)</label>
+                  <Textarea
+                    value={moderationReason}
+                    onChange={(e) => setModerationReason(e.target.value)}
+                    placeholder="Add a note about this moderation action..."
+                    className="mt-2"
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModerateDialog(false)} disabled={submittingModeration}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={submitModeration} 
+              disabled={submittingModeration}
+              className={moderationAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#082c59] hover:bg-[#0a3a75]'}
+            >
+              {submittingModeration && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {moderationAction === 'delete' ? 'Delete' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
