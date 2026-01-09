@@ -181,12 +181,15 @@ export default function SalesManagement() {
   
   const salesByService = salesData?.salesByService || [];
 
-  const paymentMethods = [
-    { method: 'MTN Mobile Money', amount: Math.floor(salesSummary.totalSales * 0.46), percentage: 46, color: 'bg-yellow-500' },
-    { method: 'Orange Money', amount: Math.floor(salesSummary.totalSales * 0.30), percentage: 30, color: 'bg-orange-500' },
-    { method: 'Card Payment', amount: Math.floor(salesSummary.totalSales * 0.18), percentage: 18, color: 'bg-blue-500' },
-    { method: 'Bank Transfer', amount: Math.floor(salesSummary.totalSales * 0.06), percentage: 6, color: 'bg-gray-500' }
-  ];
+  // Use real payment methods data from API, or fallback to calculated mock
+  const paymentMethods = salesData?.paymentMethods?.length > 0
+    ? salesData.paymentMethods
+    : [
+        { method: 'MTN Mobile Money', amount: Math.floor(salesSummary.totalSales * 0.46), percentage: 46, color: 'bg-yellow-500' },
+        { method: 'Orange Money', amount: Math.floor(salesSummary.totalSales * 0.30), percentage: 30, color: 'bg-orange-500' },
+        { method: 'Card Payment', amount: Math.floor(salesSummary.totalSales * 0.18), percentage: 18, color: 'bg-blue-500' },
+        { method: 'Bank Transfer', amount: Math.floor(salesSummary.totalSales * 0.06), percentage: 6, color: 'bg-gray-500' }
+      ];
 
   // Daily sales trend data
   const dailySales = [
