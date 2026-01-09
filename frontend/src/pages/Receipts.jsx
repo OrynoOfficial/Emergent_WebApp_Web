@@ -277,13 +277,19 @@ export default function Receipts() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3" data-testid="receipts-title">
                         <div className="p-2 bg-[#082c59] rounded-lg">
                             <Receipt className="h-6 w-6 text-white" />
                         </div>
-                        Receipts
+                        {isAllReceiptsView ? 'All Receipts' : 'Receipts'}
                     </h1>
-                    <p className="text-slate-500 mt-1">View and download your payment receipts</p>
+                    <p className="text-slate-500 mt-1">
+                        {isAllReceiptsView 
+                            ? 'View and manage all receipts across the platform'
+                            : isOperator
+                            ? 'View receipts for your services'
+                            : 'View and download your payment receipts'}
+                    </p>
                 </div>
             </div>
 
