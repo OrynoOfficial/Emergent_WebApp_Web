@@ -176,38 +176,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const StatCard = ({ title, value, icon: Icon, trend, trendValue, color, subValue }) => (
-    <Card className="bg-white/5 border-white/10 hover:bg-white/10 transition-all">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-slate-400 text-sm font-medium">{title}</p>
-            <p className="text-2xl font-bold text-white mt-1">{value}</p>
-            {subValue && (
-              <p className="text-xs text-slate-500 mt-1">{subValue}</p>
-            )}
-          </div>
-          <div className={`p-3 rounded-xl ${color}`}>
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-        </div>
-        {trend && (
-          <div className="flex items-center gap-1 mt-3">
-            {trend === 'up' ? (
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-400" />
-            )}
-            <span className={`text-sm ${trend === 'up' ? 'text-emerald-400' : 'text-red-400'}`}>
-              {trendValue}
-            </span>
-            <span className="text-slate-500 text-sm">vs last period</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
