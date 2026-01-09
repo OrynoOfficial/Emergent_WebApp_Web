@@ -827,8 +827,11 @@ export default function Permissions() {
     return allPermissions.size;
   };
 
-  // Filter permissions in role dialog based on search
-  const filteredRoleDialogModules = PERMISSION_MODULES.filter(module =>
+  // Get available modules based on user role
+  const availableModules = getAvailablePermissionModules();
+
+  // Filter permissions in role dialog based on search and user role
+  const filteredRoleDialogModules = availableModules.filter(module =>
     roleDialogSearchQuery === '' ||
     module.label.toLowerCase().includes(roleDialogSearchQuery.toLowerCase()) ||
     module.permissions.some(p => 
@@ -869,7 +872,7 @@ export default function Permissions() {
     return `${selected}/${modulePerms.length}`;
   };
 
-  const filteredModules = PERMISSION_MODULES.filter(module => 
+  const filteredModules = availableModules.filter(module => 
     searchQuery === '' || 
     module.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
     module.permissions.some(p => p.label.toLowerCase().includes(searchQuery.toLowerCase()))
