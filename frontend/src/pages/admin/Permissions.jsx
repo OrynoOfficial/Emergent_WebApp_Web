@@ -552,8 +552,9 @@ export default function Permissions() {
   const [users, setUsers] = useState([]);
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'admin' || isSuperAdmin;
-  // Default to 'users' tab for non-super admins since they can't access 'roles'
-  const [activeTab, setActiveTab] = useState(isSuperAdmin ? 'roles' : 'users');
+  const isRegularAdmin = user?.role === 'admin';
+  // Admins can now access roles tab but with limited functionality
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'roles' : 'users');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUserPermDialogOpen, setIsUserPermDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
@@ -575,6 +576,36 @@ export default function Permissions() {
   const [userPermissions, setUserPermissions] = useState([]);
   const [selectedUserRole, setSelectedUserRole] = useState('');
   const [selectedUserRoles, setSelectedUserRoles] = useState([]);
+
+  // Permissions that Admins can assign (limited set)
+  const ADMIN_ASSIGNABLE_PERMISSIONS = [
+    'orders.view', 'orders.manage',
+    'receipts.view',
+    'ratings.view', 'ratings.manage',
+    'support.view', 'support.manage',
+    'validation.view', 'validation.manage',
+    'hotels.view', 'hotels.create', 'hotels.edit',
+    'travel.view', 'travel.create', 'travel.edit',
+    'car_rental.view', 'car_rental.create', 'car_rental.edit',
+    'restaurants.view', 'restaurants.create', 'restaurants.edit',
+    'events.view', 'events.create', 'events.edit',
+    'laundry.view', 'laundry.create', 'laundry.edit',
+    'banquet.view', 'banquet.create', 'banquet.edit',
+    'cinema.view', 'cinema.create', 'cinema.edit',
+    'packages.view', 'packages.create', 'packages.edit',
+  ];
+
+  // Filter permission modules for admins
+  const getAvailablePermissionModules = () => {
+    if (isSuperAdmin) {
+      return PERMISSION_MODULES;
+    }
+    // For regular admins, filter to only show assignable permissions
+    return PERMISSION_MODULES.map(module => ({
+      ...module,
+      permissions: module.permissions.filter(p => ADMIN_ASSIGNABLE_PERMISSIONS.includes(p.key))
+    })).filter(module => module.permissions.length > 0);
+  };
 
   // Fetch roles and users from backend
   useEffect(() => {
