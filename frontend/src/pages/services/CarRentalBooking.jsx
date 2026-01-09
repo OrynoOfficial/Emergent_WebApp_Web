@@ -632,15 +632,40 @@ export default function CarRentalBooking() {
                       </div>
                     </div>
 
+                    {/* Progress checklist */}
+                    <div className="mt-4 p-3 bg-slate-700/50 rounded-lg space-y-2 text-sm">
+                      <div className={`flex items-center gap-2 ${extrasConfirmed ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {extrasConfirmed ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
+                        <span>Extras confirmed</span>
+                      </div>
+                      <div className={`flex items-center gap-2 ${isDriverInfoComplete ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {isDriverInfoComplete ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
+                        <span>Driver information complete</span>
+                      </div>
+                      <div className={`flex items-center gap-2 ${selectedPaymentMethod ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {selectedPaymentMethod ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
+                        <span>Payment method selected</span>
+                      </div>
+                    </div>
+
                     <Button 
                       onClick={handleSubmit}
-                      disabled={paymentInProgress}
-                      className="w-full mt-4 bg-emerald-500 hover:bg-emerald-600 text-white h-12 font-semibold rounded-xl"
+                      disabled={paymentInProgress || !canConfirmBooking}
+                      className={`w-full mt-4 h-12 font-semibold rounded-xl ${
+                        canConfirmBooking 
+                          ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                          : 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                      }`}
                     >
                       {paymentInProgress ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                           Processing...
+                        </>
+                      ) : !canConfirmBooking ? (
+                        <>
+                          <Car className="w-4 h-4 mr-2" />
+                          Complete all steps to book
                         </>
                       ) : (
                         <>
