@@ -7,13 +7,14 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   Star, MessageSquare, ThumbsUp, Calendar, Search, Filter,
   Hotel, Utensils, Bus, Car, Film, Sparkles, Package, Gift,
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
-  MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle
+  MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
+  Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
 
