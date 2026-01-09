@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import {
   ArrowLeft, Star, MapPin, Clock, Users, Utensils, SlidersHorizontal, Search, 
   Loader2, ChevronLeft, ChevronRight, X, DollarSign, Award, Phone, Heart,
-  LayoutGrid, List, Wifi, Car, Music, Wine, Leaf, Coffee
+  LayoutGrid, List, Wifi, Car, Music, Wine, Leaf, Coffee, Calendar, Edit2, Check
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
@@ -300,7 +300,7 @@ const RestaurantCardList = ({ restaurant, onViewDetails }) => {
 
 export default function RestaurantsResults() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
@@ -308,10 +308,35 @@ export default function RestaurantsResults() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState('all');
 
+  // Editable search state
+  const [isEditingSearch, setIsEditingSearch] = useState(false);
+  const [editCity, setEditCity] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editGuests, setEditGuests] = useState(2);
+
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || format(new Date(), 'yyyy-MM-dd');
   const time = searchParams.get('time') || '19:00';
   const guests = parseInt(searchParams.get('guests')) || 2;
+
+  // Initialize edit fields when search params change
+  useEffect(() => {
+    setEditCity(city);
+    setEditDate(date);
+    setEditTime(time);
+    setEditGuests(guests);
+  }, [city, date, time, guests]);
+
+  const handleUpdateSearch = () => {
+    const newParams = new URLSearchParams();
+    if (editCity) newParams.set('city', editCity);
+    newParams.set('date', editDate);
+    newParams.set('time', editTime);
+    newParams.set('guests', editGuests.toString());
+    setSearchParams(newParams);
+    setIsEditingSearch(false);
+  };
 
   useEffect(() => {
     loadRestaurants();
