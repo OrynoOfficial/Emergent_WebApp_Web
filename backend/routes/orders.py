@@ -101,7 +101,6 @@ async def create_direct_order(
     Create an order directly without service lookup.
     Used for booking flows where the frontend has all the details.
     """
-    from datetime import timezone
     db = get_database()
     
     user_id = current_user.get("_id") or current_user.get("id")
