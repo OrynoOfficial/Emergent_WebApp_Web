@@ -23,15 +23,38 @@ async def get_users(
     
     query = {}
     
+    # Role-based filtering: Admin can only see admin, operator, employee, customer (NOT super_admin)
+    current_role = current_user.get("role")
+    if current_role == "admin":
+        # Admin can see: admin, operator, employee, customer (NOT super_admin)
+        query["role"] = {"$in": ["admin", "operator", "employee", "customer"]}
+    # Super Admin can see all users (no filter)
+    
     if search:
-        query["$or"] = [
+        search_query = [
             {"email": {"$regex": search, "$options": "i"}},
             {"full_name": {"$regex": search, "$options": "i"}},
             {"username": {"$regex": search, "$options": "i"}}
         ]
+        if "$or" not in query:
+            query["$or"] = search_query
+        else:
+            # Combine with existing filters
+            query = {"$and": [query, {"$or": search_query}]}
     
     if role and role != "all":
-        query["role"] = role
+        # Apply role filter only if it's within what the current user can see
+        if current_role == "admin" and role == "super_admin":
+            # Admin trying to filter by super_admin - return empty
+            return {"users": [], "total": 0, "skip": skip, "limit": limit}
+        if "role" in query and isinstance(query["role"], dict):
+            # Already have role filter, combine
+            if role in query["role"]["$in"]:
+                query["role"] = role
+            else:
+                return {"users": [], "total": 0, "skip": skip, "limit": limit}
+        else:
+            query["role"] = role
     
     if user_status and user_status != "all":
         query["status"] = user_status
