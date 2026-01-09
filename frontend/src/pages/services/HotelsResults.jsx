@@ -338,6 +338,11 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
               )}
             </div>
             
+            {/* Description */}
+            {hotel.description && (
+              <p className="text-xs text-slate-600 line-clamp-2 mb-2">{hotel.description}</p>
+            )}
+            
             {/* Amenities - Compact */}
             <div className="flex flex-wrap gap-1 mb-2">
               {hotel.amenities?.slice(0, 5).map((amenity, idx) => (
