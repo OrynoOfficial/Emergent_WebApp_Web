@@ -212,3 +212,17 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Fixed Operator Audit Logs - Added operator to requiredRoles in App.jsx route
 - [x] Operator Analytics shows personalized context banner with assigned services
 - [x] Backend analytics endpoint filters by operator_id for operators
+
+## Completed Features (Jan 9, 2026 - Session 4)
+- [x] **P2: Custom Role Management UI for Admins**
+  - Admins can now see and access the Roles tab on Permissions page
+  - "Limited Role Management" banner explains restrictions
+  - Admins can create custom roles with filtered permissions (not all permissions available)
+  - Admins cannot edit or delete system roles (Super Admin, Admin, Operator)
+  - Added access.view_roles, access.create_roles, access.edit_roles, access.assign_roles to admin default permissions
+- [x] **P3: Real Payment Methods Data in Sales Dashboard**
+  - New API endpoint: /api/orders/analytics/payment-methods
+  - Aggregates payment method data from real orders collection
+  - Filters by operator_id for operator users
+  - Sales Dashboard now displays real percentages (MTN Mobile Money, Orange Money, Card Payment, etc.)
+  - Supports time range filtering (today, 7d, 30d, 90d, 1y)
