@@ -7,12 +7,13 @@ import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
   ArrowLeft, Clock, Bus, Star, MapPin, Users, Armchair, Wifi, Coffee, UtensilsCrossed, 
   Loader2, ArrowRight, Calendar, SlidersHorizontal, LayoutGrid, List, Heart, 
-  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image
+  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image, History, CalendarDays
 } from 'lucide-react';
-import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid } from 'date-fns';
+import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
 import { travelApi } from '../../api/services';
 
