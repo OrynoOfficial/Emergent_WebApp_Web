@@ -200,8 +200,9 @@ SUPER_ADMIN_ROLE = "super_admin"
 async def get_user_effective_permissions(user_id: str, db) -> set:
     """
     Get all effective permissions for a user by combining:
-    1. Custom permissions directly assigned to the user
-    2. Permissions from all assigned roles
+    1. Default permissions based on role
+    2. Custom permissions directly assigned to the user
+    3. Permissions from all assigned roles
     
     Returns a set of permission codes
     """
@@ -216,9 +217,36 @@ async def get_user_effective_permissions(user_id: str, db) -> set:
     if not user:
         return permissions
     
-    # ONLY super_admin has all permissions - admin must have assigned permissions
-    if user.get("role") == SUPER_ADMIN_ROLE:
+    user_role = user.get("role")
+    
+    # ONLY super_admin has all permissions
+    if user_role == SUPER_ADMIN_ROLE:
         return {"*"}  # Wildcard means all permissions
+    
+    # Default permissions for admin role
+    if user_role == "admin":
+        admin_default_perms = [
+            "users.view", "users.create", "users.edit",
+            "operators.view", "operators.create", "operators.edit",
+            "orders.view", "orders.manage",
+            "receipts.view",
+            "loyalty.view",  # Read-only for admin
+            "ratings.view", "ratings.manage",
+            "support.view", "support.manage",
+            "activity.view",
+            "validation.view", "validation.manage",
+            "analytics.view_dashboard",
+            "hotels.view", "hotels.create", "hotels.edit",
+            "travel.view", "travel.create", "travel.edit",
+            "car_rental.view", "car_rental.create", "car_rental.edit",
+            "restaurants.view", "restaurants.create", "restaurants.edit",
+            "events.view", "events.create", "events.edit",
+            "laundry.view", "laundry.create", "laundry.edit",
+            "banquet.view", "banquet.create", "banquet.edit",
+            "cinema.view", "cinema.create", "cinema.edit",
+            "packages.view", "packages.create", "packages.edit",
+        ]
+        permissions.update(admin_default_perms)
     
     # Add custom permissions directly assigned to user
     custom_perms = user.get("custom_permissions", [])
