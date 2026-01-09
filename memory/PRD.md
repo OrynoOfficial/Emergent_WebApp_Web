@@ -258,6 +258,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Hotel cards now display description for better informed decisions
 - [x] **Restaurant Results - View Menu Navigation**
   - Verified working: View Menu button navigates to /services/restaurants/menu?id={id}
+- [x] **Restaurant Menu - Fixed Blank Page Bug**
+  - Root cause: `opening_hours` stored as object in DB but rendered as string
+  - Added `formatOpeningHours()` helper to handle both formats
+  - Fixed rating display to use `average_rating` from database
+  - Now works with real restaurant data (e.g., Le Safoutier)
 
 ## Backlog (Moved from Priority)
 - [ ] **P0: Revenue Bug** - Operator Management page shows "0 FCFA" for all operators
