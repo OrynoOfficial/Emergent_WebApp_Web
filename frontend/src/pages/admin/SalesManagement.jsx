@@ -179,8 +179,16 @@ export default function SalesManagement() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Sales Dashboard</h1>
-          <p className="text-gray-600">Monitor sales performance and revenue</p>
+          <h1 className="text-2xl font-bold text-[#082c59]">{pageTitle}</h1>
+          <p className="text-gray-600">{pageSubtitle}</p>
+          {isSuperAdmin && (
+            <Badge className="mt-2 bg-purple-100 text-purple-700">All Operators Combined</Badge>
+          )}
+          {isOperator && operatorServiceTypes?.length > 0 && (
+            <Badge className="mt-2 bg-blue-100 text-blue-700">
+              Services: {operatorServiceTypes.join(', ')}
+            </Badge>
+          )}
         </div>
         <div className="flex gap-4">
           <Select value={timeRange} onValueChange={setTimeRange}>
