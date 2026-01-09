@@ -1101,7 +1101,8 @@ export default function Permissions() {
           </Card>
         </TabsContent>
 
-        {/* Permission Matrix Tab */}
+        {/* Permission Matrix Tab - Super Admin Only */}
+        {isSuperAdmin && (
         <TabsContent value="permissions" className="mt-6">
           <Card>
             <CardHeader>
