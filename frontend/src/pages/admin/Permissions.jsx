@@ -1184,6 +1184,7 @@ export default function Permissions() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
       </Tabs>
 
       {/* Create/Edit Role Dialog */}
