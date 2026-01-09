@@ -36,8 +36,8 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - **NOT Accessible**: Loyalty/Loyalty Program, All Bookings, Bills (removed from Admin Config)
 - **Moved to Admin Config**: Team & Roles (for owner/local_admin)
 
-### Admin Role
-- **Landing Page**: All Orders page
+### Admin Role (Updated Jan 9, 2026)
+- **Landing Page**: Admin Dashboard page
 - **Dashboard Button**: Admin Dashboard (new page with admin metrics)
 - **Navigation Items**:
   - Dashboard (→ Admin Dashboard)
@@ -45,12 +45,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Service Management (all)
   - **All Orders** (platform-wide view)
   - **All Receipts** (platform-wide view)
-  - **Loyalty Program** (admin management view)
-  - Admin Config (LIMITED: NO Employees, Commission, Database)
+  - **Loyalty Program** (READ-ONLY - no create/edit/delete)
+  - Admin Config (LIMITED: NO Employees, Commission, Database, NO Analytics, NO Trip Report)
   - **All Ratings** (platform-wide ratings with filters)
   - **Customer Service** (admin backend for support tickets)
   - Settings
-- **NOT Accessible in Admin Config**: Employees, Commission, Database
+- **Operators Management**: ✅ Full access (view all operators, edit, create)
+- **Audit Logs**: Can view own logs + all operator user logs (NOT super admin or customer logs)
+- **Permissions Page**: Only "User Permissions" tab (NO Roles tab, NO Matrix tab)
+- **NOT Accessible in Admin Config**: Employees, Commission, Database, Analytics Dashboard, Trip Report
 
 ### Super Admin Role
 - **Landing Page**: Analytics Dashboard (platform-wide)
