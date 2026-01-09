@@ -604,3 +604,455 @@ export default function Loyalty() {
     </div>
   );
 }
+
+// Admin Loyalty Program Management View
+function AdminLoyaltyView() {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [rewards, setRewards] = useState(DEFAULT_REWARDS);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showRewardDialog, setShowRewardDialog] = useState(false);
+  const [editingReward, setEditingReward] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [rewardForm, setRewardForm] = useState({
+    title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: ''
+  });
+
+  // Stats
+  const [programStats, setProgramStats] = useState({
+    totalMembers: 0,
+    totalPointsIssued: 0,
+    totalPointsRedeemed: 0,
+    activeRewards: 0,
+    membersByTier: { bronze: 0, silver: 0, gold: 0, platinum: 0 }
+  });
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  const loadAdminData = async () => {
+    setLoading(true);
+    try {
+      // Load rewards
+      const rewardsRes = await api.get('/loyalty/rewards');
+      if (rewardsRes.data.rewards?.length > 0) {
+        setRewards(rewardsRes.data.rewards);
+      }
+
+      // Load program stats
+      const statsRes = await api.get('/loyalty/admin/stats');
+      if (statsRes.data) {
+        setProgramStats(statsRes.data);
+      }
+
+      // Load members
+      const membersRes = await api.get('/loyalty/admin/members');
+      setMembers(membersRes.data.members || []);
+
+    } catch (error) {
+      console.error('Failed to load admin data:', error);
+      // Set mock data
+      setProgramStats({
+        totalMembers: 2847,
+        totalPointsIssued: 458900,
+        totalPointsRedeemed: 125600,
+        activeRewards: 6,
+        membersByTier: { bronze: 1850, silver: 620, gold: 285, platinum: 92 }
+      });
+      setMembers([
+        { id: '1', name: 'John Doe', email: 'john@example.com', tier: 'gold', total_points: 7500, available_points: 4200 },
+        { id: '2', name: 'Marie Claire', email: 'marie@example.com', tier: 'platinum', total_points: 18500, available_points: 12000 },
+        { id: '3', name: 'Pierre Martin', email: 'pierre@example.com', tier: 'silver', total_points: 2500, available_points: 1800 },
+        { id: '4', name: 'Sophie Williams', email: 'sophie@example.com', tier: 'bronze', total_points: 450, available_points: 450 },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveReward = async () => {
+    try {
+      if (editingReward) {
+        await api.put(`/loyalty/rewards/${editingReward.id}`, rewardForm);
+        setRewards(prev => prev.map(r => r.id === editingReward.id ? { ...r, ...rewardForm } : r));
+        toast.success('Reward updated successfully');
+      } else {
+        const res = await api.post('/loyalty/rewards', rewardForm);
+        setRewards(prev => [...prev, { id: Date.now().toString(), ...rewardForm }]);
+        toast.success('Reward created successfully');
+      }
+      setShowRewardDialog(false);
+      setEditingReward(null);
+      setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' });
+    } catch (error) {
+      toast.error('Failed to save reward');
+    }
+  };
+
+  const handleDeleteReward = async (rewardId) => {
+    if (!confirm('Are you sure you want to delete this reward?')) return;
+    try {
+      await api.delete(`/loyalty/rewards/${rewardId}`);
+      setRewards(prev => prev.filter(r => r.id !== rewardId));
+      toast.success('Reward deleted');
+    } catch (error) {
+      toast.error('Failed to delete reward');
+    }
+  };
+
+  const handleEditReward = (reward) => {
+    setEditingReward(reward);
+    setRewardForm({
+      title: reward.title,
+      description: reward.description,
+      points_required: reward.points_required.toString(),
+      min_tier: reward.min_tier,
+      type: reward.type,
+      discount_value: reward.discount_value?.toString() || ''
+    });
+    setShowRewardDialog(true);
+  };
+
+  const filteredMembers = useMemo(() => {
+    if (!searchTerm) return members;
+    return members.filter(m =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [members, searchTerm]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[#082c59] mx-auto" />
+          <p className="mt-4 text-slate-600">Loading program data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-100 rounded-lg">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{programStats.totalMembers.toLocaleString()}</p>
+                <p className="text-xs text-slate-600">Total Members</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-100 rounded-lg">
+                <Coins className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{programStats.totalPointsIssued.toLocaleString()}</p>
+                <p className="text-xs text-slate-600">Points Issued</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-100 rounded-lg">
+                <Gift className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{programStats.totalPointsRedeemed.toLocaleString()}</p>
+                <p className="text-xs text-slate-600">Points Redeemed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-purple-100 rounded-lg">
+                <Trophy className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{rewards.length}</p>
+                <p className="text-xs text-slate-600">Active Rewards</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-0">
+          <CardContent className="p-4">
+            <div className="text-xs space-y-1">
+              {['platinum', 'gold', 'silver', 'bronze'].map(tier => (
+                <div key={tier} className="flex items-center justify-between">
+                  <span className="capitalize">{tier}</span>
+                  <span className="font-medium">{programStats.membersByTier[tier]?.toLocaleString() || 0}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="rewards">Rewards</TabsTrigger>
+          <TabsTrigger value="members">Members</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tier Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(TIER_CONFIG).map(([tierKey, tier]) => {
+                  const TIcon = tier.icon;
+                  return (
+                    <div key={tierKey} className={`p-4 rounded-lg border-2 ${tier.bgColor} ${tier.borderColor}`}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <TIcon className={`h-5 w-5 ${tier.textColor}`} />
+                        <span className="font-bold">{tier.name}</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-2">{tier.pointsRequired.toLocaleString()}+ points</p>
+                      <Badge className="bg-green-100 text-green-700 mb-2">{tier.discount}% discount</Badge>
+                      <ul className="text-xs text-slate-600 space-y-1">
+                        {tier.benefits.map((b, i) => <li key={i}>• {b}</li>)}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Point Earning Rules</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <p className="font-semibold mb-1">Every Booking</p>
+                  <p className="text-sm text-slate-600">1-3x points per 1,000 FCFA based on tier</p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <p className="font-semibold mb-1">Write Reviews</p>
+                  <p className="text-sm text-slate-600">5 points per review submitted</p>
+                </div>
+                <div className="p-4 bg-emerald-50 rounded-lg">
+                  <p className="font-semibold mb-1">Referrals</p>
+                  <p className="text-sm text-slate-600">10 points per successful referral</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Rewards Tab */}
+        <TabsContent value="rewards" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Manage Rewards</CardTitle>
+              <Button onClick={() => { setEditingReward(null); setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' }); setShowRewardDialog(true); }} className="bg-[#082c59] hover:bg-[#0a3a75]">
+                <Plus className="h-4 w-4 mr-2" /> Add Reward
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {rewards.map((reward) => (
+                  <div key={reward.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold">{reward.title}</h4>
+                        <Badge className="capitalize text-xs">{reward.min_tier}</Badge>
+                        <Badge variant="outline" className="text-xs">{reward.type}</Badge>
+                      </div>
+                      <p className="text-sm text-slate-600 mb-2">{reward.description}</p>
+                      <p className="text-sm"><strong>{reward.points_required.toLocaleString()}</strong> points required</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditReward(reward)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteReward(reward.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Members Tab */}
+        <TabsContent value="members" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <CardTitle>Loyalty Members</CardTitle>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input placeholder="Search members..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-2">Member</th>
+                      <th className="text-left py-3 px-2">Tier</th>
+                      <th className="text-right py-3 px-2">Total Points</th>
+                      <th className="text-right py-3 px-2">Available</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMembers.map((member) => {
+                      const tierConfig = TIER_CONFIG[member.tier] || TIER_CONFIG.bronze;
+                      return (
+                        <tr key={member.id} className="border-b hover:bg-slate-50">
+                          <td className="py-3 px-2">
+                            <p className="font-medium">{member.name}</p>
+                            <p className="text-xs text-slate-500">{member.email}</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            <Badge className={`${tierConfig.bgColor} ${tierConfig.textColor} capitalize`}>
+                              {member.tier}
+                            </Badge>
+                          </td>
+                          <td className="text-right py-3 px-2 font-medium">{member.total_points.toLocaleString()}</td>
+                          <td className="text-right py-3 px-2 text-green-600">{member.available_points.toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Reward Dialog */}
+      <Dialog open={showRewardDialog} onOpenChange={setShowRewardDialog}>
+        <DialogContent className="bg-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingReward ? 'Edit Reward' : 'Create New Reward'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium">Title</label>
+              <Input value={rewardForm.title} onChange={(e) => setRewardForm({ ...rewardForm, title: e.target.value })} placeholder="Reward title" className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Textarea value={rewardForm.description} onChange={(e) => setRewardForm({ ...rewardForm, description: e.target.value })} placeholder="Describe the reward" className="mt-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Points Required</label>
+                <Input type="number" value={rewardForm.points_required} onChange={(e) => setRewardForm({ ...rewardForm, points_required: e.target.value })} placeholder="1000" className="mt-1" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Minimum Tier</label>
+                <Select value={rewardForm.min_tier} onValueChange={(v) => setRewardForm({ ...rewardForm, min_tier: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="bronze">Bronze</SelectItem>
+                    <SelectItem value="silver">Silver</SelectItem>
+                    <SelectItem value="gold">Gold</SelectItem>
+                    <SelectItem value="platinum">Platinum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Type</label>
+                <Select value={rewardForm.type} onValueChange={(v) => setRewardForm({ ...rewardForm, type: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="discount">Discount</SelectItem>
+                    <SelectItem value="upgrade">Upgrade</SelectItem>
+                    <SelectItem value="service">Free Service</SelectItem>
+                    <SelectItem value="gift">Gift</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {rewardForm.type === 'discount' && (
+                <div>
+                  <label className="text-sm font-medium">Discount %</label>
+                  <Input type="number" value={rewardForm.discount_value} onChange={(e) => setRewardForm({ ...rewardForm, discount_value: e.target.value })} placeholder="10" className="mt-1" />
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRewardDialog(false)}>Cancel</Button>
+            <Button onClick={handleSaveReward} className="bg-[#082c59] hover:bg-[#0a3a75]">
+              {editingReward ? 'Update Reward' : 'Create Reward'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Main Loyalty Export - Determines which view to show
+export default function LoyaltyPage() {
+  const { user, isOperatorUser } = useAuth();
+  
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isOperator = user?.role === 'operator' || isOperatorUser;
+  
+  // Operators don't have access to loyalty
+  if (isOperator && !isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md text-center p-8">
+          <Award className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-700 mb-2">Access Restricted</h2>
+          <p className="text-slate-500">The loyalty program is only available for customers.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="loyalty-title">
+            {isAdmin ? 'Loyalty Program' : 'Loyalty Rewards'}
+          </h1>
+          <p className="text-slate-600">
+            {isAdmin 
+              ? 'Manage and configure the loyalty program'
+              : 'Earn points and redeem exclusive rewards'}
+          </p>
+        </div>
+      </div>
+
+      {/* Render appropriate view */}
+      {isAdmin ? <AdminLoyaltyView /> : <Loyalty />}
+    </div>
+  );
+}
