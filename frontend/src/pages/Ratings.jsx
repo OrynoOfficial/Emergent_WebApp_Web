@@ -908,35 +908,6 @@ function AdminRatingsView() {
       setSubmittingModeration(false);
     }
   };
-          operator_name: 'Express Travel Co',
-          rating: 5,
-          comment: 'Very comfortable bus, arrived on time. Will definitely use again!',
-          created_at: '2024-12-18T08:20:00Z',
-          helpful_count: 22,
-          operator_response: null
-        },
-        {
-          id: 'ar4',
-          service_name: 'Premium Car Rental',
-          service_id: 'car_1',
-          service_category: 'car_rental',
-          customer_name: 'Sophie Williams',
-          operator_name: 'AutoRent Cameroon',
-          rating: 3,
-          comment: 'Car was okay but could have been cleaner. Good price though.',
-          created_at: '2024-12-15T11:45:00Z',
-          helpful_count: 5,
-          operator_response: {
-            message: 'We apologize for the inconvenience. We have addressed this with our cleaning team.',
-            responded_at: '2024-12-16T10:00:00Z',
-            responder_name: 'Operations Manager'
-          }
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Filter ratings
   const filteredRatings = useMemo(() => {
@@ -954,10 +925,18 @@ function AdminRatingsView() {
 
   // Stats
   const stats = useMemo(() => {
-    if (!ratings.length) return { total: 0, average: 0, responded: 0, pending: 0, byRating: {} };
+    if (!ratings.length) return { total: 0, average: 0, responded: 0, pending: 0, flagged: 0, byRating: {} };
     const byRating = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     ratings.forEach(r => byRating[r.rating] = (byRating[r.rating] || 0) + 1);
     return {
+      total: ratings.length,
+      average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1),
+      responded: ratings.filter(r => r.operator_response).length,
+      pending: ratings.filter(r => !r.operator_response).length,
+      flagged: ratings.filter(r => r.is_flagged).length,
+      byRating
+    };
+  }, [ratings]);
       total: ratings.length,
       average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1),
       responded: ratings.filter(r => r.operator_response).length,
