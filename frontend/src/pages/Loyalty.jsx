@@ -1027,8 +1027,9 @@ function AdminLoyaltyView() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRewardDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveReward} className="bg-[#082c59] hover:bg-[#0a3a75]">
+            <Button variant="outline" onClick={() => setShowRewardDialog(false)} disabled={savingReward}>Cancel</Button>
+            <Button onClick={handleSaveReward} disabled={savingReward} className="bg-[#082c59] hover:bg-[#0a3a75]">
+              {savingReward && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {editingReward ? 'Update Reward' : 'Create Reward'}
             </Button>
           </DialogFooter>
