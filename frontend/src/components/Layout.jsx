@@ -591,14 +591,19 @@ export default function Layout({ children }) {
       }
     }
 
-    // My Orders
-    items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
+    // Team & Roles - Only show if user is an operator (owner or local_admin)
+    if (user?.operator_id && ['owner', 'local_admin'].includes(user?.operator_role)) {
+      items.push({ key: 'team-roles', label: 'Team & Roles', icon: Users, path: '/management/team-roles' });
+    }
+
+    // All Orders (Admin sees all orders from all users/operators)
+    items.push({ key: 'orders', label: 'All Orders', icon: Ticket, path: '/orders' });
     
-    // Receipts
-    items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
+    // All Receipts (Admin sees all receipts from all users/operators)
+    items.push({ key: 'receipts', label: 'All Receipts', icon: Receipt, path: '/receipts' });
     
-    // Loyalty
-    items.push({ key: 'loyalty', label: 'Loyalty', icon: Award, path: '/loyalty' });
+    // Loyalty Program (Admin backend for managing loyalty program)
+    items.push({ key: 'loyalty', label: 'Loyalty Program', icon: Award, path: '/loyalty' });
 
     // Admin Config - Full access for admin/super_admin
     if (canAccessAdminConfig) {
@@ -609,11 +614,6 @@ export default function Layout({ children }) {
         adminSubmenu.push({ key: 'analytics', label: 'Analytics', path: '/admin/analytics', icon: BarChart });
         adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
         adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
-      }
-      
-      // Customer service
-      if (hasAnyPermission(['support.view_tickets', 'support.manage_tickets'])) {
-        adminSubmenu.push({ key: 'customer-service', label: 'Customer Service', path: '/management/customer-service', icon: HeadphonesIcon });
       }
       
       // Admin-only items
@@ -646,11 +646,11 @@ export default function Layout({ children }) {
       }
     }
 
-    // My Ratings
-    items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
+    // All Ratings (Admin sees all ratings from all users)
+    items.push({ key: 'ratings', label: 'All Ratings', icon: Star, path: '/ratings' });
     
-    // Support
-    items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
+    // Customer Service (Admin backend for support - replaces Support menu for admins)
+    items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
     
     // Settings
     items.push({ key: 'settings', label: 'Settings', icon: Settings, path: '/settings' });
