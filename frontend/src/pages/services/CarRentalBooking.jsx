@@ -10,7 +10,7 @@ import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
 import { 
   ArrowLeft, Car, MapPin, Calendar, Users, Fuel, Settings, CreditCard, Check, 
-  Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield
+  Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield, Edit2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
