@@ -127,6 +127,100 @@ export default function AuthPage() {
     }
   }, [loginIdentifier, loginPassword, login, navigate]);
 
+  // Send phone OTP for verification
+  const sendPhoneOTP = useCallback(async (phoneNumber) => {
+    setPhoneOtpSending(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_BACKEND_URL || '';
+      const response = await fetch(`${API_URL}/api/otp/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phoneNumber })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        setPhoneOtpCountdown(300); // 5 minutes countdown
+        return true;
+      } else {
+        setError(data.detail || data.message || 'Failed to send OTP');
+        return false;
+      }
+    } catch (err) {
+      console.error('OTP send error:', err);
+      setError('Failed to send verification code. Please try again.');
+      return false;
+    } finally {
+      setPhoneOtpSending(false);
+    }
+  }, []);
+
+  // Verify phone OTP
+  const verifyPhoneOTP = useCallback(async () => {
+    if (phoneOtpValue.length !== 6) {
+      setError('Please enter the 6-digit code');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const API_URL = process.env.REACT_APP_BACKEND_URL || '';
+      const response = await fetch(`${API_URL}/api/otp/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone_number: pendingRegistration.phone,
+          otp_code: phoneOtpValue 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.status === 'success') {
+        // OTP verified, now complete registration
+        const result = await register(pendingRegistration);
+        
+        if (result.success || result.user_id) {
+          // Auto-login after successful registration
+          try {
+            const loginResult = await login(pendingRegistration.phone, pendingRegistration.password);
+            if (loginResult.access_token) {
+              navigate('/dashboard');
+            } else {
+              setError('Registration successful! Please login with your credentials.');
+              setCurrentView(AUTH_VIEWS.LOGIN);
+            }
+          } catch {
+            setError('Registration successful! Please login with your phone number.');
+            setCurrentView(AUTH_VIEWS.LOGIN);
+          }
+        } else {
+          setError(result.message || 'Registration failed. Please try again.');
+        }
+      } else {
+        setError(data.detail || data.message || 'Invalid verification code');
+      }
+    } catch (err) {
+      console.error('OTP verify error:', err);
+      setError('Verification failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [phoneOtpValue, pendingRegistration, register, login, navigate]);
+
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    if (phoneOtpCountdown > 0) {
+      const timer = setTimeout(() => setPhoneOtpCountdown(phoneOtpCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [phoneOtpCountdown]);
+
   const handleRegister = useCallback(async (e) => {
     e.preventDefault();
     setError('');
@@ -144,25 +238,35 @@ export default function AuthPage() {
     setIsLoading(true);
     
     try {
+      const normalizedPhone = registerPhone ? registerPhone.replace(/[\s\-\(\)]/g, '') : null;
+      
       const userData = {
-        email: contactMethod === 'email' ? registerEmail : `${registerPhone.replace(/\s/g, '')}@phone.local`,
-        username: contactMethod === 'email' ? registerEmail : registerPhone.replace(/\s/g, ''),
+        email: contactMethod === 'email' ? registerEmail : `${normalizedPhone}@phone.local`,
+        username: contactMethod === 'email' ? registerEmail : normalizedPhone,
         password: registerPassword,
         full_name: fullName,
-        phone: registerPhone ? registerPhone.replace(/\s/g, '') : null,
+        phone: normalizedPhone,
         role: selectedRole
       };
       
+      // If phone registration, verify with OTP first
+      if (contactMethod === 'phone' && normalizedPhone) {
+        setPendingRegistration(userData);
+        const otpSent = await sendPhoneOTP(normalizedPhone);
+        if (otpSent) {
+          setCurrentView(AUTH_VIEWS.PHONE_OTP_VERIFY);
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      // Email registration - proceed directly
       const result = await register(userData);
       
       if (result.success || result.user_id) {
-        // For phone registration, login immediately
-        // For email registration, show verification message
-        if (contactMethod === 'phone' || !result.requires_verification) {
+        if (!result.requires_verification) {
           try {
-            // Use phone number for login if registered with phone
-            const loginIdentifier = contactMethod === 'phone' ? registerPhone.replace(/\s/g, '') : registerEmail;
-            const loginResult = await login(loginIdentifier, registerPassword);
+            const loginResult = await login(registerEmail, registerPassword);
             if (loginResult.access_token) {
               navigate('/dashboard');
             } else {
@@ -186,7 +290,7 @@ export default function AuthPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [fullName, registerEmail, registerPhone, registerPassword, confirmPassword, acceptTerms, contactMethod, selectedRole, login, register, navigate]);
+  }, [fullName, registerEmail, registerPhone, registerPassword, confirmPassword, acceptTerms, contactMethod, selectedRole, login, register, navigate, sendPhoneOTP]);
 
   const handle2FAVerify = useCallback(async () => {
     if (otpValue.length !== 6) {
