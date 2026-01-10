@@ -113,12 +113,16 @@ class User(BaseModel):
         }
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: Optional[str] = None  # Optional email - can be null for phone registration
     username: Optional[str] = None
     password: str
     full_name: Optional[str] = None
     phone: Optional[str] = None
     role: UserRole = UserRole.CUSTOMER
+    
+    class Config:
+        # Validate that at least email or phone is provided
+        pass
 
 class UserLogin(BaseModel):
     email: Optional[EmailStr] = None
