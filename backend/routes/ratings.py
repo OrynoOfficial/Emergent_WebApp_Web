@@ -459,3 +459,202 @@ async def get_ratings_stats(
             1: by_rating.get(1, 0)
         }
     }
+
+
+@router.get("/reports/analytics")
+async def get_ratings_analytics(
+    time_range: str = "30d",  # 7d, 30d, 90d, 1y, all
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get advanced ratings analytics for reports (admin only)"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Calculate date range
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    
+    if time_range == "7d":
+        start_date = now - timedelta(days=7)
+    elif time_range == "30d":
+        start_date = now - timedelta(days=30)
+    elif time_range == "90d":
+        start_date = now - timedelta(days=90)
+    elif time_range == "1y":
+        start_date = now - timedelta(days=365)
+    else:
+        start_date = None
+    
+    date_filter = {"created_at": {"$gte": start_date}} if start_date else {}
+    
+    # Get all ratings in time range
+    ratings = await db.ratings.find(date_filter).to_list(10000)
+    
+    # 1. Rating Trends Over Time (daily aggregation)
+    trend_pipeline = [
+        {"$match": date_filter} if date_filter else {"$match": {}},
+        {
+            "$group": {
+                "_id": {
+                    "$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}
+                },
+                "count": {"$sum": 1},
+                "average": {"$avg": "$rating"},
+                "flagged": {"$sum": {"$cond": [{"$eq": ["$is_flagged", True]}, 1, 0]}}
+            }
+        },
+        {"$sort": {"_id": 1}},
+        {"$limit": 90}
+    ]
+    trend_data = await db.ratings.aggregate(trend_pipeline).to_list(100)
+    
+    # 2. Breakdown by Service Category
+    category_pipeline = [
+        {"$match": date_filter} if date_filter else {"$match": {}},
+        {
+            "$group": {
+                "_id": "$service_category",
+                "count": {"$sum": 1},
+                "average": {"$avg": "$rating"},
+                "five_star": {"$sum": {"$cond": [{"$eq": ["$rating", 5]}, 1, 0]}},
+                "four_star": {"$sum": {"$cond": [{"$eq": ["$rating", 4]}, 1, 0]}},
+                "three_star": {"$sum": {"$cond": [{"$eq": ["$rating", 3]}, 1, 0]}},
+                "two_star": {"$sum": {"$cond": [{"$eq": ["$rating", 2]}, 1, 0]}},
+                "one_star": {"$sum": {"$cond": [{"$eq": ["$rating", 1]}, 1, 0]}},
+                "responded": {"$sum": {"$cond": [{"$ne": ["$operator_response", None]}, 1, 0]}},
+                "flagged": {"$sum": {"$cond": [{"$eq": ["$is_flagged", True]}, 1, 0]}}
+            }
+        },
+        {"$sort": {"count": -1}}
+    ]
+    category_data = await db.ratings.aggregate(category_pipeline).to_list(20)
+    
+    # 3. Flagged Reviews Analysis
+    flagged_pipeline = [
+        {"$match": {**date_filter, "is_flagged": True}},
+        {
+            "$group": {
+                "_id": "$service_category",
+                "count": {"$sum": 1},
+                "average_rating": {"$avg": "$rating"}
+            }
+        },
+        {"$sort": {"count": -1}}
+    ]
+    flagged_by_category = await db.ratings.aggregate(flagged_pipeline).to_list(20)
+    
+    # Recent flagged reviews
+    recent_flagged = await db.ratings.find(
+        {**date_filter, "is_flagged": True}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Clean up ObjectIds for JSON serialization
+    for item in recent_flagged:
+        item["id"] = str(item.get("_id", ""))
+        if "_id" in item:
+            del item["_id"]
+        if "created_at" in item:
+            item["created_at"] = item["created_at"].isoformat() if hasattr(item["created_at"], "isoformat") else str(item["created_at"])
+    
+    # 4. Response Rate Metrics
+    total_ratings = len(ratings)
+    responded_count = sum(1 for r in ratings if r.get("operator_response"))
+    response_rate = (responded_count / total_ratings * 100) if total_ratings > 0 else 0
+    
+    # Average time to respond (for ratings with responses)
+    response_times = []
+    for r in ratings:
+        if r.get("operator_response") and r.get("created_at"):
+            resp = r.get("operator_response", {})
+            if isinstance(resp, dict) and resp.get("responded_at"):
+                try:
+                    created = r["created_at"]
+                    responded = resp["responded_at"]
+                    if isinstance(responded, str):
+                        responded = datetime.fromisoformat(responded.replace("Z", "+00:00"))
+                    if isinstance(created, str):
+                        created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    delta = (responded - created).total_seconds() / 3600  # Hours
+                    if delta > 0:
+                        response_times.append(delta)
+                except Exception:
+                    pass
+    
+    avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+    
+    # 5. Top Operators by Response Rate
+    operator_pipeline = [
+        {"$match": date_filter} if date_filter else {"$match": {}},
+        {
+            "$group": {
+                "_id": "$operator_name",
+                "total": {"$sum": 1},
+                "responded": {"$sum": {"$cond": [{"$ne": ["$operator_response", None]}, 1, 0]}},
+                "average_rating": {"$avg": "$rating"}
+            }
+        },
+        {"$match": {"total": {"$gte": 3}}},  # At least 3 ratings
+        {"$addFields": {
+            "response_rate": {"$multiply": [{"$divide": ["$responded", "$total"]}, 100]}
+        }},
+        {"$sort": {"response_rate": -1}},
+        {"$limit": 10}
+    ]
+    top_operators = await db.ratings.aggregate(operator_pipeline).to_list(10)
+    
+    # 6. Summary Stats
+    summary = {
+        "total_ratings": total_ratings,
+        "average_rating": round(sum(r.get("rating", 0) for r in ratings) / total_ratings, 2) if total_ratings > 0 else 0,
+        "response_rate": round(response_rate, 1),
+        "avg_response_time_hours": round(avg_response_time, 1),
+        "flagged_count": sum(1 for r in ratings if r.get("is_flagged")),
+        "hidden_count": sum(1 for r in ratings if r.get("is_hidden")),
+        "five_star_percent": round(sum(1 for r in ratings if r.get("rating") == 5) / total_ratings * 100, 1) if total_ratings > 0 else 0,
+        "negative_percent": round(sum(1 for r in ratings if r.get("rating", 0) <= 2) / total_ratings * 100, 1) if total_ratings > 0 else 0
+    }
+    
+    return {
+        "summary": summary,
+        "trends": [
+            {"date": t["_id"], "count": t["count"], "average": round(t["average"], 2), "flagged": t["flagged"]}
+            for t in trend_data
+        ],
+        "by_category": [
+            {
+                "category": c["_id"] or "unknown",
+                "count": c["count"],
+                "average": round(c["average"], 2) if c["average"] else 0,
+                "distribution": {
+                    5: c["five_star"],
+                    4: c["four_star"],
+                    3: c["three_star"],
+                    2: c["two_star"],
+                    1: c["one_star"]
+                },
+                "responded": c["responded"],
+                "response_rate": round(c["responded"] / c["count"] * 100, 1) if c["count"] > 0 else 0,
+                "flagged": c["flagged"]
+            }
+            for c in category_data
+        ],
+        "flagged_analysis": {
+            "by_category": [
+                {"category": f["_id"] or "unknown", "count": f["count"], "avg_rating": round(f["average_rating"], 2) if f["average_rating"] else 0}
+                for f in flagged_by_category
+            ],
+            "recent": recent_flagged
+        },
+        "top_operators": [
+            {
+                "name": o["_id"] or "Unknown",
+                "total": o["total"],
+                "responded": o["responded"],
+                "response_rate": round(o["response_rate"], 1),
+                "avg_rating": round(o["average_rating"], 2) if o["average_rating"] else 0
+            }
+            for o in top_operators
+        ]
+    }
