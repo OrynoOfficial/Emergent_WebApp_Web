@@ -4,47 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  HeadphonesIcon, MessageSquare, Clock, CheckCircle, AlertCircle, User, Search, 
-  Filter, Send, Plus, RefreshCw, MoreHorizontal,
-  AlertTriangle, Inbox, Users, UserPlus, Calendar, Tag, ArrowUpDown, X,
-  SlidersHorizontal, Eye, Trash2, Mail, Phone, Building2, FileText, Check,
-  Activity, Zap, BarChart2, PieChart, ExternalLink,
-  Briefcase, UserCheck, Timer, MessageCircle, Archive, Flag, UserMinus, Shield
+  MessageSquare, CheckCircle, Search, 
+  RefreshCw, AlertTriangle, Inbox, Users, UserPlus, ArrowUpDown, X,
+  SlidersHorizontal, Activity, BarChart2
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart as RePieChart, Pie, Cell, Legend
-} from 'recharts';
 
 // Import extracted components and constants
 import { 
   TICKET_CATEGORIES, 
   TICKET_PRIORITIES, 
   TICKET_STATUSES, 
-  USER_TYPES, 
-  CHART_COLORS, 
   ITEMS_PER_PAGE,
   getStatusConfig,
-  getPriorityConfig,
-  getCategoryIcon,
-  getTimeAgo
+  getPriorityConfig
 } from '@/components/customer-service/constants';
-import { StatsCard } from '@/components/customer-service/StatsCard';
 import { Pagination } from '@/components/customer-service/Pagination';
 import { TicketCard } from '@/components/customer-service/TicketCard';
-import { FiltersPanel } from '@/components/customer-service/FiltersPanel';
 import { TicketDetailModal } from '@/components/customer-service/TicketDetailModal';
+import { DashboardTab } from '@/components/customer-service/DashboardTab';
+import { TeamTab } from '@/components/customer-service/TeamTab';
+import { AssignModal, BulkAssignModal } from '@/components/customer-service/AssignModal';
+import { AddMemberModal } from '@/components/customer-service/AddMemberModal';
 
 // Main Component
 export default function CustomerServiceManagement() {
