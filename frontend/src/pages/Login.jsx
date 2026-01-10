@@ -73,6 +73,12 @@ export default function AuthPage() {
   
   // 2FA state
   const [otpValue, setOtpValue] = useState('');
+  
+  // Phone OTP verification state
+  const [phoneOtpValue, setPhoneOtpValue] = useState('');
+  const [phoneOtpSending, setPhoneOtpSending] = useState(false);
+  const [phoneOtpCountdown, setPhoneOtpCountdown] = useState(0);
+  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   // Background slideshow
   useEffect(() => {
