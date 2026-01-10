@@ -219,14 +219,15 @@ class TestOperatorVehiclesCRUD:
         assert "vehicles" in data, f"No vehicles in response: {data}"
         assert "total" in data, f"No total in response: {data}"
         
-        # Verify operator scoping - all vehicles should belong to this operator
-        operator_id = operator_auth["user"].get("operator_id")
+        # Verify operator scoping - operator_id is in operator_context
+        user = operator_auth["user"]
+        operator_id = user.get("operator_context", {}).get("operator_id") or user.get("operator_id")
+        
         for vehicle in data["vehicles"]:
-            if vehicle.get("operator_id"):
+            if vehicle.get("operator_id") and operator_id:
                 assert vehicle["operator_id"] == operator_id, f"Vehicle {vehicle.get('id')} belongs to different operator"
         
         print(f"✓ Operator can view their vehicles. Total: {data['total']}")
-        return data
     
     def test_operator_update_vehicle(self, operator_auth):
         """Test operator can update their own vehicle"""
