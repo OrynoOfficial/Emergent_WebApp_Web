@@ -18,6 +18,7 @@ import {
   Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
   PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText
 } from 'lucide-react';
+import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 import { toast } from 'sonner';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
