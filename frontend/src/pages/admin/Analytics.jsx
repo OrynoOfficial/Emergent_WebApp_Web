@@ -245,10 +245,10 @@ export default function Analytics() {
     }
   ] : [];
 
-  const pieData = dataAnalytics.revenueByService.map(s => ({
+  const pieData = dataAnalytics?.revenueByService?.map(s => ({
     name: s.name,
     value: s.value
-  }));
+  })) || [];
 
   if (loading) {
     return (
