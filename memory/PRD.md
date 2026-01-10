@@ -308,6 +308,37 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Sales Dashboard and Analytics Dashboard now show consistent data
 - [x] **Verified Data Scoping**
   - Travel Management: Shows 5 routes, 4 vehicles for Musango Bus Service
+
+## Completed Features (Jan 10, 2026 - Session 10)
+- [x] **Operator Suspend/Reactivate/Delete Cascade**
+  - Updated backend to cascade suspend to ALL users (not just owner), routes, vehicles, hotels, restaurants, etc.
+  - Fixed frontend to call `/reactivate` endpoint instead of `/approve` when reactivating
+  - Added proper notifications to all affected users
+  - Delete now disables users (not deletes) and removes all associated services
+- [x] **Deleted Trip Report Page**
+  - Removed TripReport.jsx and its route from App.jsx
+  - Removed from navigation menu
+- [x] **Moved All Bookings to Main Menu**
+  - Moved from Admin Config submenu to main menu
+  - Now appears between "All Receipts" and "Loyalty Program"
+- [x] **Created Document Templates Page**
+  - New page at /admin/employees/templates
+  - Backend API: /api/document-templates with full CRUD
+  - Categories: Employment Contract, Sick Leave, Termination, Promotion, Warning Letter, etc.
+  - Variables support ({{employee_name}}, {{date}}, etc.)
+  - Added "Document Templates" button to Employees Management page
+- [x] **Fixed Monthly Payroll Calculation**
+  - Now excludes only 'suspended' and 'terminated' employees
+  - Employees on leave, active, or other statuses still count towards payroll
+- [x] **Rebuilt Database Management Page**
+  - Now dynamically pulls real data from MongoDB
+  - Shows all collections with document counts, sizes, indexes, last modified
+  - Full CRUD operations on any collection
+  - Search and filter functionality
+  - Recent operations tab
+- [x] **Fixed Loyalty Program Rewards**
+  - Fixed reward create/update/delete to reload from server after changes
+  - Backend APIs working correctly (/api/loyalty/admin/rewards)
   - Sales Dashboard: Shows 70,000 FCFA total sales, 10 orders
   - Analytics Dashboard: Shows 70,000 FCFA revenue, 10 bookings, Travel 100%
   - All tests passed (15/15 backend tests)
