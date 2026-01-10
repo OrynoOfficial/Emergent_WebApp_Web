@@ -204,7 +204,7 @@ async def verify_otp(request: VerifyOTPRequest):
     # Mark as verified
     await db.otps.update_one(
         {"_id": otp_record["_id"]},
-        {"$set": {"verified": True, "verified_at": datetime.now(timezone.utc)}}
+        {"$set": {"verified": True, "verified_at": datetime.utcnow()}}
     )
     
     return {
