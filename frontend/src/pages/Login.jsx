@@ -876,7 +876,7 @@ export default function AuthPage() {
             </Button>
             
             <div className="flex items-center justify-center gap-2 mt-4">
-              <span className="text-sm text-slate-500">Didn't receive the code?</span>
+              <span className="text-sm text-slate-500">Didn&apos;t receive the code?</span>
               <button
                 onClick={() => sendPhoneOTP(pendingRegistration?.phone)}
                 disabled={phoneOtpSending || phoneOtpCountdown > 240}
