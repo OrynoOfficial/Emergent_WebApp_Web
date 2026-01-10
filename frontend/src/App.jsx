@@ -652,14 +652,6 @@ function App() {
             }
           />
           
-          <Route
-            path="/admin/trip-report"
-            element={
-              <ProtectedRoute requiredRoles={['admin', 'operator']}>
-                <TripReport />
-              </ProtectedRoute>
-            }
-          />
           
           {/* Management Routes */}
           <Route
