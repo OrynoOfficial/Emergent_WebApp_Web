@@ -396,7 +396,7 @@ export default function UserManagement() {
                       </span>
                     </td>
                     <td className="py-4 px-6 text-slate-600">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {formatDate(user.created_at)}
                     </td>
                     <td className="py-4 px-6 text-slate-600">
                       {user.orders_count || 0}
