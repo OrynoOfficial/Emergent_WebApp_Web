@@ -157,8 +157,14 @@ async def verify_otp(request: VerifyOTPRequest):
             detail="No pending OTP found. Please request a new one."
         )
     
-    # Check if OTP has expired
-    if datetime.now(timezone.utc) > otp_record["expires_at"]:
+    # Check if OTP has expired (use naive UTC for comparison with MongoDB)
+    now_utc = datetime.utcnow()
+    expires_at = otp_record["expires_at"]
+    # Handle both timezone-aware and naive datetimes from MongoDB
+    if hasattr(expires_at, 'tzinfo') and expires_at.tzinfo is not None:
+        expires_at = expires_at.replace(tzinfo=None)
+    
+    if now_utc > expires_at:
         await db.otps.delete_one({"_id": otp_record["_id"]})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
