@@ -262,7 +262,7 @@ function CustomerRatingsView() {
                                 <StarRating rating={review.rating} size="sm" />
                                 <span className="text-sm text-slate-500 flex items-center gap-1">
                                   <Calendar className="h-3.5 w-3.5" />
-                                  {new Date(review.created_at).toLocaleDateString()}
+                                  {formatDate(review.created_at)}
                                 </span>
                               </div>
                             </div>
@@ -286,7 +286,7 @@ function CustomerRatingsView() {
                                   Response from {review.operator_response.responder_name}
                                 </span>
                                 <span className="text-xs text-slate-400">
-                                  • {new Date(review.operator_response.responded_at).toLocaleDateString()}
+                                  • {formatDate(review.operator_response.responded_at)}
                                 </span>
                               </div>
                               <p className="text-slate-600 text-sm">{review.operator_response.message}</p>
@@ -663,7 +663,7 @@ function OperatorRatingsView() {
                             <p className="font-semibold text-slate-900">{review.customer_name}</p>
                             <div className="flex items-center gap-2 text-sm text-slate-500">
                               <Clock className="h-3.5 w-3.5" />
-                              {new Date(review.created_at).toLocaleDateString()}
+                              {formatDate(review.created_at)}
                             </div>
                           </div>
                         </div>
@@ -698,7 +698,7 @@ function OperatorRatingsView() {
                               Your Response
                             </span>
                             <span className="text-xs text-slate-500">
-                              • {new Date(review.operator_response.responded_at).toLocaleDateString()}
+                              • {formatDate(review.operator_response.responded_at)}
                             </span>
                           </div>
                           <p className="text-slate-700 text-sm">{review.operator_response.message}</p>
@@ -1286,7 +1286,7 @@ function AdminRatingsView() {
                             <p className="font-semibold text-slate-900">{review.customer_name}</p>
                             <div className="flex items-center gap-2 text-sm text-slate-500">
                               <Clock className="h-3.5 w-3.5" />
-                              {new Date(review.created_at).toLocaleDateString()}
+                              {formatDate(review.created_at)}
                             </div>
                           </div>
                         </div>
@@ -1331,7 +1331,7 @@ function AdminRatingsView() {
                               Response from {review.operator_response.responder_name}
                             </span>
                             <span className="text-xs text-slate-500">
-                              • {new Date(review.operator_response.responded_at).toLocaleDateString()}
+                              • {formatDate(review.operator_response.responded_at)}
                             </span>
                           </div>
                           <p className="text-slate-700 text-sm">{review.operator_response.message}</p>
