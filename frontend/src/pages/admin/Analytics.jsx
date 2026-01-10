@@ -165,32 +165,48 @@ export default function Analytics() {
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
-      // Mock data fallback
-      setData({
-        total_revenue: 125400,
-        total_orders: 1847,
-        total_customers: 892,
-        average_order_value: 68,
-        revenue_growth: 12.5,
-        orders_growth: 8.3,
-        customers_growth: 15.2,
-        category_breakdown: [
-          { name: 'Hotels', value: 45, color: '#EC4899' },
-          { name: 'Restaurants', value: 25, color: '#F59E0B' },
-          { name: 'Travel', value: 15, color: '#3B82F6' },
-          { name: 'Car Rental', value: 10, color: '#10B981' },
-          { name: 'Events', value: 5, color: '#8B5CF6' }
-        ],
-        recent_trends: [
-          { date: 'Mon', revenue: 15000, orders: 45 },
-          { date: 'Tue', revenue: 18000, orders: 52 },
-          { date: 'Wed', revenue: 22000, orders: 65 },
-          { date: 'Thu', revenue: 19000, orders: 55 },
-          { date: 'Fri', revenue: 25000, orders: 72 },
-          { date: 'Sat', revenue: 30000, orders: 88 },
-          { date: 'Sun', revenue: 28000, orders: 81 }
-        ]
-      });
+      // For operators, show empty data. For admins, show mock data.
+      if (isOperator) {
+        setData({
+          total_revenue: 0,
+          total_orders: 0,
+          total_customers: 0,
+          average_order_value: 0,
+          revenue_growth: 0,
+          orders_growth: 0,
+          customers_growth: 0,
+          category_breakdown: [],
+          recent_trends: []
+        });
+        setDataAnalytics(EMPTY_OPERATOR_DATA);
+      } else {
+        setData({
+          total_revenue: 125400,
+          total_orders: 1847,
+          total_customers: 892,
+          average_order_value: 68,
+          revenue_growth: 12.5,
+          orders_growth: 8.3,
+          customers_growth: 15.2,
+          category_breakdown: [
+            { name: 'Hotels', value: 45, color: '#EC4899' },
+            { name: 'Restaurants', value: 25, color: '#F59E0B' },
+            { name: 'Travel', value: 15, color: '#3B82F6' },
+            { name: 'Car Rental', value: 10, color: '#10B981' },
+            { name: 'Events', value: 5, color: '#8B5CF6' }
+          ],
+          recent_trends: [
+            { date: 'Mon', revenue: 15000, orders: 45 },
+            { date: 'Tue', revenue: 18000, orders: 52 },
+            { date: 'Wed', revenue: 22000, orders: 65 },
+            { date: 'Thu', revenue: 19000, orders: 55 },
+            { date: 'Fri', revenue: 25000, orders: 72 },
+            { date: 'Sat', revenue: 30000, orders: 88 },
+            { date: 'Sun', revenue: 28000, orders: 81 }
+          ]
+        });
+        setDataAnalytics(MOCK_DATA_ANALYTICS);
+      }
     } finally {
       setLoading(false);
     }
