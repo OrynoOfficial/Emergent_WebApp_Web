@@ -159,7 +159,7 @@ export default function CommissionManagement() {
                   <Switch checked={config.is_active} onCheckedChange={() => handleToggleActive(config)} />
                 </td>
                 <td className="py-3 px-4 text-sm text-slate-600">
-                  {new Date(config.updated_date).toLocaleDateString()}
+                  {formatDate(config.updated_date)}
                   <br />
                   <span className="text-xs text-slate-400">{config.last_updated_by_name}</span>
                 </td>
