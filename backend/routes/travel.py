@@ -22,17 +22,30 @@ class TravelRouteCreate(BaseModel):
 @router.post("/routes")
 async def create_travel_route(
     route_data: TravelRouteCreate,
-    current_user: dict = Depends(require_permission("travel.create"))
+    current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a new travel route - requires travel.create permission"""
+    """Create a new travel route - operators can create routes for their organization"""
     db = get_database()
+    
+    # For operators, use their operator_id. For admins, allow specifying or use their ID
+    operator_id = current_user.get("operator_id") or current_user["_id"]
+    
+    # Get operator name if available
+    operator_name = current_user.get("operator_name", "")
+    if not operator_name and current_user.get("operator_id"):
+        operator = await db.operators.find_one({"_id": current_user["operator_id"]})
+        if operator:
+            operator_name = operator.get("name", "")
     
     route = {
         "_id": str(uuid.uuid4()),
         **route_data.dict(),
-        "operator_id": current_user["_id"],
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "created_by": current_user["_id"],
         "available_seats": route_data.total_seats,
         "is_active": True,
+        "status": "active",
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
