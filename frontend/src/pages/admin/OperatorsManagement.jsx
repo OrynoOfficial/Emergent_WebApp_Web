@@ -132,13 +132,16 @@ export default function OperatorsManagement() {
   const confirmDelete = async () => {
     if (!selectedOperator) return;
     
+    const operatorId = selectedOperator._id || selectedOperator.id;
+    
     try {
-      await api.delete(`/operators/${selectedOperator.id}`);
-      setOperators(prev => prev.filter(o => o.id !== selectedOperator.id));
+      await api.delete(`/operators/${operatorId}`);
+      // Reload operators to get fresh data from server
+      await loadOperators();
       toast.success('Operator deleted successfully');
     } catch (error) {
       console.error('Failed to delete operator:', error);
-      toast.error('Failed to delete operator');
+      toast.error(error.response?.data?.detail || 'Failed to delete operator');
     }
     setIsDeleteOpen(false);
     setSelectedOperator(null);
