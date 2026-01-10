@@ -264,6 +264,23 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Fixed rating display to use `average_rating` from database
   - Now works with real restaurant data (e.g., Le Safoutier)
 
+## Completed Features (Jan 10, 2026 - Session 7)
+- [x] **P0: Revenue Bug Fixed**
+  - Root cause: Orders had `operator_id` values pointing to non-existent operators
+  - Fix: Linked orders to actual operators in database (West Region Tours, Royal Events Cameroon)
+  - Revenue now displays correctly: 169,325 FCFA and 262,500 FCFA respectively
+- [x] **P2: Advanced Ratings Moderation**
+  - Added bulk selection (checkbox on each rating + select all)
+  - Added bulk actions bar: Flag All, Unflag All, Hide All, Show All, Delete All
+  - Created backend endpoint `/api/ratings/bulk-moderate` for batch operations
+  - Added bulk action confirmation dialog with reason input
+- [x] **P3: Refactored CustomerServiceManagement.jsx**
+  - Extracted `TicketCard.jsx` component (100+ lines)
+  - Extracted `FiltersPanel.jsx` component (100+ lines)
+  - Extracted `TicketDetailModal.jsx` component (200+ lines)
+  - File reduced from 1365 to 1255 lines (~8% reduction)
+  - All components properly exported from index.js
+
 ## Backlog (Moved from Priority)
 - [ ] **P0: Revenue Bug** - Operator Management page shows "0 FCFA" for all operators
   - Debug checklist: Check if orders have operator_id, review backend revenue calculation
