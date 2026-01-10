@@ -143,23 +143,25 @@ export default function Analytics() {
       
       // Fetch extended analytics data
       const extendedRes = await api.get('/analytics/overview', { params });
-      if (extendedRes.data && extendedRes.data.summary && extendedRes.data.summary.totalBookings > 0) {
-        setDataAnalytics(extendedRes.data);
+      
+      // For operators, always use real data (even if empty)
+      if (isOperator) {
+        if (extendedRes.data && extendedRes.data.summary) {
+          setDataAnalytics(extendedRes.data);
+        } else {
+          setDataAnalytics(EMPTY_OPERATOR_DATA);
+        }
       } else {
-        const mockWithRealUsers = { ...MOCK_DATA_ANALYTICS };
-        if (extendedRes.data?.summary?.totalUsers) {
-          mockWithRealUsers.summary.totalUsers = extendedRes.data.summary.totalUsers;
+        // For admins, use real data if available, otherwise mock
+        if (extendedRes.data && extendedRes.data.summary && extendedRes.data.summary.totalBookings > 0) {
+          setDataAnalytics(extendedRes.data);
+        } else {
+          const mockWithRealUsers = { ...MOCK_DATA_ANALYTICS };
+          if (extendedRes.data?.summary?.totalUsers) {
+            mockWithRealUsers.summary.totalUsers = extendedRes.data.summary.totalUsers;
+          }
+          setDataAnalytics(mockWithRealUsers);
         }
-        // For operators, show service-filtered mock data
-        if (isOperator && operatorServiceTypes?.length > 0) {
-          mockWithRealUsers.revenueByService = mockWithRealUsers.revenueByService.filter(
-            item => operatorServiceTypes.some(st => 
-              item.name.toLowerCase().includes(st.toLowerCase()) ||
-              st.toLowerCase().includes(item.name.toLowerCase().replace(' ', '_'))
-            )
-          );
-        }
-        setDataAnalytics(mockWithRealUsers);
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
