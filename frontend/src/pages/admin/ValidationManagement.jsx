@@ -85,27 +85,8 @@ const StatusFlowIndicator = ({ currentStatus, type = 'ticket' }) => {
   );
 };
 
-const safeFormatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString();
-  } catch {
-    return 'Invalid Date';
-  }
-};
-
-const safeFormatDateTime = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return 'Invalid Date';
-  }
-};
+// safeFormatDate is now imported from dateUtils as formatDate
+// safeFormatDateTime is now imported from dateUtils as formatDateTime
 
 // Status History Component - shows the journey of an item
 const StatusHistory = ({ ticket }) => {
