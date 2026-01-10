@@ -100,13 +100,14 @@ export const employeeApi = {
 // Events Management
 export const eventsManagementApi = {
   list: (params = {}) => api.get('/events/', { params }),
+  listForManagement: (params = {}) => api.get('/events/management/my-events', { params }),
   get: (id) => api.get(`/events/${id}`),
   create: (data) => api.post('/events/', data),
   update: (id, data) => api.put(`/events/${id}`, data),
   delete: (id) => api.delete(`/events/${id}`),
   publish: (id) => api.post(`/events/${id}/publish`),
   book: (id, data) => api.post(`/events/${id}/book`, null, { params: data }),
-  operatorEvents: (params = {}) => api.get('/events/operator/events', { params }),
+  operatorEvents: (params = {}) => api.get('/events/management/my-events', { params }),
 };
 
 // Pressing/Laundry
