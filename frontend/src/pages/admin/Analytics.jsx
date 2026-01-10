@@ -90,14 +90,36 @@ const MOCK_DATA_ANALYTICS = {
   }
 };
 
+// Empty data for operators without activity
+const EMPTY_OPERATOR_DATA = {
+  summary: {
+    totalUsers: 0,
+    totalBookings: 0,
+    totalRevenue: 0,
+    avgOrderValue: 0,
+    conversionRate: 0,
+    growthRate: 0
+  },
+  revenueByService: [],
+  monthlyTrend: [],
+  topServices: [],
+  userMetrics: {
+    newUsers: 0,
+    activeUsers: 0,
+    returningRate: 0,
+    avgSessionTime: '0m 0s'
+  }
+};
+
 export default function Analytics() {
   const [data, setData] = useState(null);
-  const [dataAnalytics, setDataAnalytics] = useState(MOCK_DATA_ANALYTICS);
+  const [dataAnalytics, setDataAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState('6months');
   
   // Get user context to personalize analytics for operators
   const { user, isOperatorUser, operatorContext, operatorServiceTypes } = useAuth();
+  const isOperator = isOperatorUser || user?.role === 'operator';
   const isOperator = user?.role === 'operator' || isOperatorUser;
 
   useEffect(() => {
