@@ -254,10 +254,18 @@ export default function EmployeesManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]">Employees Management</h1>
           <p className="text-gray-600">Manage staff and employee records</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#082c59]"><UserPlus className="w-4 h-4 mr-2" /> Add Employee</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/admin/employees/templates'}
+            className="border-[#082c59] text-[#082c59]"
+          >
+            <FileText className="w-4 h-4 mr-2" /> Document Templates
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#082c59]"><UserPlus className="w-4 h-4 mr-2" /> Add Employee</Button>
+            </DialogTrigger>
           <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
