@@ -368,7 +368,7 @@ export default function OperatorsManagement() {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-1 text-slate-600 text-sm">
                       <Calendar className="h-4 w-4" />
-                      {operator.created_at ? new Date(operator.created_at).toLocaleDateString() : operator.joined_date || '-'}
+                      {operator.created_at ? formatDate(operator.created_at) : operator.joined_date || '-'}
                     </div>
                   </td>
                   <td className="py-4 px-6">
