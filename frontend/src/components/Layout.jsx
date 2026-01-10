@@ -610,6 +610,11 @@ export default function Layout({ children }) {
     // All Receipts (Admin sees all receipts from all users/operators)
     items.push({ key: 'receipts', label: 'All Receipts', icon: Receipt, path: '/receipts' });
     
+    // All Bookings (moved from Admin Config)
+    if (canViewAnalytics) {
+      items.push({ key: 'bookings', label: 'All Bookings', icon: Calendar, path: '/admin/bookings' });
+    }
+    
     // Loyalty Program (Admin backend for managing loyalty program)
     items.push({ key: 'loyalty', label: 'Loyalty Program', icon: Award, path: '/loyalty' });
 
@@ -619,12 +624,6 @@ export default function Layout({ children }) {
       
       if (isSuperAdmin) {
         // Super Admin gets full access
-        // Analytics section
-        if (canViewAnalytics) {
-          adminSubmenu.push({ key: 'trip-report', label: 'Trip Report', path: '/admin/trip-report', icon: FileText });
-          adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
-        }
-        
         // Dashboard for admins - visible to super admin in Admin Config
         adminSubmenu.push({ key: 'admin-dashboard', label: 'Dashboard for Admins', path: '/admin/admin-dashboard', icon: LayoutDashboard });
         
@@ -640,10 +639,7 @@ export default function Layout({ children }) {
         if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: QrCode });
       } else if (isRegularAdmin) {
         // Regular Admin gets limited access
-        // REMOVED: Analytics Dashboard and Trip Report (as per user request)
-        adminSubmenu.push({ key: 'bookings', label: 'All Bookings', path: '/admin/bookings', icon: Calendar });
-        
-        // Admin-only items (excluding Employees, Commission, Database, Analytics, Trip Report)
+        // Admin-only items (excluding Employees, Commission, Database)
         adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
         adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
         adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
