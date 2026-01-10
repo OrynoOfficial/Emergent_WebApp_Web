@@ -121,9 +121,18 @@ class UserCreate(BaseModel):
     role: UserRole = UserRole.CUSTOMER
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     password: str
     otp_code: Optional[str] = None
+    
+    class Config:
+        # Ensure at least one of email or phone is provided
+        @classmethod
+        def validate_identifier(cls, values):
+            if not values.get('email') and not values.get('phone'):
+                raise ValueError('Either email or phone must be provided')
+            return values
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
