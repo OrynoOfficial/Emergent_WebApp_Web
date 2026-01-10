@@ -118,7 +118,7 @@ export default function AuthPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [loginEmail, loginPassword, login, navigate]);
+  }, [loginIdentifier, loginPassword, login, navigate]);
 
   const handleRegister = useCallback(async (e) => {
     e.preventDefault();
