@@ -356,6 +356,67 @@ async def moderate_rating(
     return {"message": f"Rating {moderation.action}ged successfully"}
 
 
+class BulkModeration(BaseModel):
+    rating_ids: List[str]
+    action: str  # 'flag', 'unflag', 'hide', 'unhide', 'delete'
+    reason: Optional[str] = None
+
+
+@router.post("/bulk-moderate")
+async def bulk_moderate_ratings(
+    moderation: BulkModeration,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Bulk moderate ratings (admin only)"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not moderation.rating_ids:
+        raise HTTPException(status_code=400, detail="No ratings provided")
+    
+    db = get_database()
+    
+    update_data = {"moderated_at": datetime.now(timezone.utc)}
+    deleted_count = 0
+    updated_count = 0
+    
+    if moderation.action == "delete":
+        # Delete all selected ratings
+        result = await db.ratings.delete_many({"_id": {"$in": moderation.rating_ids}})
+        deleted_count = result.deleted_count
+        return {"message": f"{deleted_count} rating(s) deleted successfully", "count": deleted_count}
+    
+    # Build update based on action
+    if moderation.action == "flag":
+        update_data["is_flagged"] = True
+        if moderation.reason:
+            update_data["flag_reason"] = moderation.reason
+    elif moderation.action == "unflag":
+        update_data["is_flagged"] = False
+        update_data["flag_reason"] = None
+    elif moderation.action == "hide":
+        update_data["is_hidden"] = True
+        if moderation.reason:
+            update_data["hide_reason"] = moderation.reason
+    elif moderation.action == "unhide":
+        update_data["is_hidden"] = False
+        update_data["hide_reason"] = None
+    else:
+        raise HTTPException(status_code=400, detail="Invalid moderation action")
+    
+    if moderation.reason:
+        update_data["moderation_notes"] = moderation.reason
+    
+    # Update all selected ratings
+    result = await db.ratings.update_many(
+        {"_id": {"$in": moderation.rating_ids}},
+        {"$set": update_data}
+    )
+    updated_count = result.modified_count
+    
+    return {"message": f"{updated_count} rating(s) {moderation.action}ged successfully", "count": updated_count}
+
+
 @router.get("/stats")
 async def get_ratings_stats(
     current_user: dict = Depends(get_current_active_user)
