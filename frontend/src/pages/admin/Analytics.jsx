@@ -120,7 +120,6 @@ export default function Analytics() {
   // Get user context to personalize analytics for operators
   const { user, isOperatorUser, operatorContext, operatorServiceTypes } = useAuth();
   const isOperator = isOperatorUser || user?.role === 'operator';
-  const isOperator = user?.role === 'operator' || isOperatorUser;
 
   useEffect(() => {
     fetchAnalytics();
