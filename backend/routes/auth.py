@@ -24,8 +24,24 @@ async def register(user_data: UserCreate, request: Request):
     """Register a new user - Always assigns 'customer' role for self-registration"""
     db = get_database()
     
-    # Check if email already exists (only if email is provided and not a phone placeholder)
-    if user_data.email and not user_data.email.endswith('@phone.local'):
+    # Validate that at least email or phone is provided
+    is_phone_registration = user_data.email and '@phone.local' in user_data.email
+    has_valid_email = user_data.email and '@phone.local' not in user_data.email
+    has_phone = user_data.phone and len(user_data.phone.replace(" ", "").replace("-", "")) >= 9
+    
+    if not has_valid_email and not has_phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either a valid email address or phone number is required"
+        )
+    
+    # Normalize phone number
+    normalized_phone = None
+    if user_data.phone:
+        normalized_phone = user_data.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    
+    # Check if email already exists (only if real email is provided)
+    if has_valid_email:
         existing_email = await db.users.find_one({"email": user_data.email})
         if existing_email:
             raise HTTPException(
@@ -34,10 +50,8 @@ async def register(user_data: UserCreate, request: Request):
             )
     
     # Check if phone number already exists
-    if user_data.phone:
-        # Normalize phone number
-        phone = user_data.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-        existing_phone = await db.users.find_one({"phone": phone})
+    if normalized_phone:
+        existing_phone = await db.users.find_one({"phone": normalized_phone})
         if existing_phone:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
