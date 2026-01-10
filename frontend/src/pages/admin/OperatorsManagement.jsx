@@ -13,6 +13,7 @@ import {
   Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog, Shield
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { formatDate } from '@/utils/dateUtils';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
