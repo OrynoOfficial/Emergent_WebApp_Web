@@ -148,10 +148,7 @@ export default function DatabaseManagement() {
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleString();
-  };
+  // formatDate is now imported from dateUtils as formatDateTime
 
   const truncateValue = (value, maxLen = 50) => {
     if (value === null || value === undefined) return 'null';
