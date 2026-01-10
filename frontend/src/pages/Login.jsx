@@ -285,18 +285,52 @@ export default function AuthPage() {
             )}
             
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Login Method Toggle */}
+              <div className="flex rounded-lg overflow-hidden border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => { setLoginMethod('email'); setLoginIdentifier(''); }}
+                  className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                    loginMethod === 'email' 
+                      ? 'bg-[#082c59] text-white' 
+                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Mail className="h-4 w-4" />
+                  Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLoginMethod('phone'); setLoginIdentifier(''); }}
+                  className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                    loginMethod === 'phone' 
+                      ? 'bg-[#082c59] text-white' 
+                      : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Phone className="h-4 w-4" />
+                  Phone
+                </button>
+              </div>
+              
               <div>
-                <Label htmlFor="login-email" className="text-slate-700 text-sm">Email Address</Label>
+                <Label htmlFor="login-identifier" className="text-slate-700 text-sm">
+                  {loginMethod === 'email' ? 'Email Address' : 'Phone Number'}
+                </Label>
                 <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                  {loginMethod === 'email' ? (
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                  ) : (
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                  )}
                   <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
+                    id="login-identifier"
+                    type={loginMethod === 'email' ? 'email' : 'tel'}
+                    placeholder={loginMethod === 'email' ? 'your@email.com' : '+237 6XX XXX XXX'}
+                    value={loginIdentifier}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
                     className="pl-10 h-11 bg-white border-slate-200 focus:bg-white focus:border-[#082c59] focus:ring-2 focus:ring-[#082c59]/20 transition-all caret-[#082c59]"
-                    autoComplete="email"
+                    autoComplete={loginMethod === 'email' ? 'email' : 'tel'}
                     required
                   />
                 </div>
