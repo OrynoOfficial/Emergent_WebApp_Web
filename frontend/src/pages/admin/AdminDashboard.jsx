@@ -21,6 +21,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
+import { formatDate } from '../../utils/dateUtils';
 import api from '../../api/client';
 import { ordersAPI } from '../../api/client';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, Legend } from 'recharts';
