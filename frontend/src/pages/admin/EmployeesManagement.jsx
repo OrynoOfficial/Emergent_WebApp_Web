@@ -348,6 +348,7 @@ export default function EmployeesManagement() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats */}
