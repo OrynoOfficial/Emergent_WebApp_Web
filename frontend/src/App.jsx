@@ -600,6 +600,15 @@ function App() {
           />
           
           <Route
+            path="/admin/employees/templates"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <DocumentTemplates />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/booking-analytics"
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
