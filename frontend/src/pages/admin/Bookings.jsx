@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ordersAPI } from '../../api/client';
 import { Search, Filter, Calendar, Package, Check, X, Eye, ArrowUpDown } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
+import { formatDate } from '../../utils/dateUtils';
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState([]);
