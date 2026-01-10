@@ -185,7 +185,7 @@ export default function AdminBookings() {
                       <div>
                         <p className="font-medium text-slate-900">{booking.order_number}</p>
                         <p className="text-sm text-slate-500">
-                          {new Date(booking.created_at).toLocaleDateString()}
+                          {formatDate(booking.created_at)}
                         </p>
                       </div>
                     </td>
