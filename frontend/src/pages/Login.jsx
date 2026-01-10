@@ -87,7 +87,7 @@ export default function AuthPage() {
     setIsLoading(true);
     
     try {
-      const result = await login(loginEmail, loginPassword);
+      const result = await login(loginIdentifier, loginPassword);
       
       if (result.access_token) {
         // Redirect based on user role
