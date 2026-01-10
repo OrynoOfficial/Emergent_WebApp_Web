@@ -66,28 +66,20 @@ async def register(user_data: UserCreate, request: Request):
     # Operator accounts can only be created by admins/super_admins
     assigned_role = "customer"
     
-    # Determine if user registered with phone or email
-    is_phone_registration = user_data.email and user_data.email.endswith('@phone.local')
-    
-    # Normalize phone number if provided
-    normalized_phone = None
-    if user_data.phone:
-        normalized_phone = user_data.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-    
     # Create user
     user = {
         "_id": str(uuid.uuid4()),
-        "email": user_data.email if not is_phone_registration else None,
-        "username": user_data.username,
+        "email": user_data.email if has_valid_email else None,
+        "username": user_data.username or (user_data.email if has_valid_email else normalized_phone),
         "password_hash": get_password_hash(user_data.password),
         "full_name": user_data.full_name,
         "phone": normalized_phone,
         "role": assigned_role,  # Always customer for self-registration
-        "status": "active",  # Changed from pending - allow login immediately
-        "email_verified": not is_phone_registration,  # Phone registrations don't need email verification
-        "phone_verified": is_phone_registration,  # Assume phone is valid for phone registrations
-        "registration_method": "phone" if is_phone_registration else "email",
-        "email_verification_token": str(uuid.uuid4()) if not is_phone_registration else None,
+        "status": "active",  # Allow login immediately
+        "email_verified": False if has_valid_email else True,  # Phone registrations don't need email verification
+        "phone_verified": has_phone and not has_valid_email,  # Assume phone is valid for phone-only registrations
+        "registration_method": "email" if has_valid_email else "phone",
+        "email_verification_token": str(uuid.uuid4()) if has_valid_email else None,
         "two_fa_enabled": False,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
