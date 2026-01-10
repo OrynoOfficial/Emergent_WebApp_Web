@@ -365,7 +365,19 @@ async def suspend_operator(
     operator_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Suspend an operator (admin or super_admin only)"""
+    """Suspend an operator (admin or super_admin only)
+    
+    Cascades suspension to:
+    - All users assigned to this operator (status -> suspended)
+    - All travel routes (status -> suspended)
+    - All vehicles (maintenance_status -> suspended)
+    - All hotels (status -> suspended)
+    - All restaurants (status -> suspended)
+    - All car rentals (status -> suspended)
+    - All events (status -> suspended)
+    - All banquets (status -> suspended)
+    - All packages (status -> suspended)
+    """
     db = get_database()
     
     if current_user["role"] not in ["admin", "super_admin"]:
@@ -375,6 +387,8 @@ async def suspend_operator(
     operator = await db.operators.find_one({"_id": operator_id})
     if not operator:
         raise HTTPException(status_code=404, detail="Operator not found")
+    
+    operator_name = operator.get("name", "Unknown")
     
     # Update operator status
     await db.operators.update_one(
@@ -387,58 +401,74 @@ async def suspend_operator(
         }}
     )
     
-    # Cascade suspend to operator's services
-    # Suspend travel routes
-    await db.travel_routes.update_many(
+    # 1. Suspend ALL users assigned to this operator
+    users_result = await db.users.update_many(
+        {"operator_id": operator_id},
+        {"$set": {
+            "status": "suspended",
+            "suspended_reason": f"Operator '{operator_name}' was suspended",
+            "suspended_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # 2. Suspend travel routes
+    routes_result = await db.travel_routes.update_many(
+        {"operator_id": operator_id},
+        {"$set": {"status": "suspended", "is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    # 3. Suspend vehicles
+    vehicles_result = await db.vehicles.update_many(
+        {"operator_id": operator_id},
+        {"$set": {"maintenance_status": "suspended", "updated_at": datetime.utcnow()}}
+    )
+    
+    # 4. Suspend hotels
+    hotels_result = await db.hotels.update_many(
         {"operator_id": operator_id},
         {"$set": {"status": "suspended", "updated_at": datetime.utcnow()}}
     )
     
-    # Suspend hotels
-    await db.hotels.update_many(
+    # 5. Suspend car rentals
+    car_rentals_result = await db.car_rentals.update_many(
         {"operator_id": operator_id},
         {"$set": {"status": "suspended", "updated_at": datetime.utcnow()}}
     )
     
-    # Suspend car rentals
-    await db.car_rentals.update_many(
+    # 6. Suspend restaurants
+    restaurants_result = await db.restaurants.update_many(
         {"operator_id": operator_id},
         {"$set": {"status": "suspended", "updated_at": datetime.utcnow()}}
     )
     
-    # Suspend restaurants
-    await db.restaurants.update_many(
+    # 7. Suspend events
+    events_result = await db.events.update_many(
+        {"operator_id": operator_id},
+        {"$set": {"status": "suspended", "is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    # 8. Suspend banquets
+    banquets_result = await db.banquets.update_many(
         {"operator_id": operator_id},
         {"$set": {"status": "suspended", "updated_at": datetime.utcnow()}}
     )
     
-    # Suspend events
-    await db.events.update_many(
+    # 9. Suspend packages
+    packages_result = await db.packages.update_many(
         {"operator_id": operator_id},
         {"$set": {"status": "suspended", "updated_at": datetime.utcnow()}}
     )
     
-    # Update owner user role back to customer if exists (only for non-admin users)
-    owner_user_id = operator.get("owner_user_id")
-    if owner_user_id:
-        # Check if owner is admin/super_admin - don't change their role
-        owner_user = await db.users.find_one({"_id": owner_user_id})
-        if owner_user and owner_user.get("role") not in ["admin", "super_admin"]:
-            await db.users.update_one(
-                {"_id": owner_user_id},
-                {"$set": {
-                    "role": "customer",
-                    "updated_at": datetime.utcnow()
-                }}
-            )
-        
-        # Send notification
+    # Send notification to all suspended users
+    suspended_users = await db.users.find({"operator_id": operator_id}).to_list(100)
+    for user in suspended_users:
         notification = {
             "_id": str(uuid.uuid4()),
-            "user_id": owner_user_id,
+            "user_id": user["_id"],
             "notification_type": "operator_status",
-            "title": "Operator Account Suspended",
-            "message": f"Your operator account '{operator.get('name')}' has been suspended. Please contact support for more information.",
+            "title": "Account Suspended",
+            "message": f"Your account has been suspended because operator '{operator_name}' was suspended. Please contact support for more information.",
             "data": {"operator_id": operator_id, "status": "suspended"},
             "is_read": False,
             "created_at": datetime.utcnow()
@@ -452,12 +482,37 @@ async def suspend_operator(
         "entity_type": "operator",
         "entity_id": operator_id,
         "action": "operator.suspended",
-        "details": {"operator_name": operator.get("name"), "owner_user_id": owner_user_id},
+        "details": {
+            "operator_name": operator_name,
+            "users_suspended": users_result.modified_count,
+            "routes_suspended": routes_result.modified_count,
+            "vehicles_suspended": vehicles_result.modified_count,
+            "hotels_suspended": hotels_result.modified_count,
+            "restaurants_suspended": restaurants_result.modified_count,
+            "car_rentals_suspended": car_rentals_result.modified_count,
+            "events_suspended": events_result.modified_count,
+            "banquets_suspended": banquets_result.modified_count,
+            "packages_suspended": packages_result.modified_count
+        },
         "created_at": datetime.utcnow()
     }
     await db.activity_logs.insert_one(activity)
     
-    return {"message": "Operator suspended", "operator_id": operator_id}
+    return {
+        "message": "Operator suspended",
+        "operator_id": operator_id,
+        "cascade_summary": {
+            "users_suspended": users_result.modified_count,
+            "routes_suspended": routes_result.modified_count,
+            "vehicles_suspended": vehicles_result.modified_count,
+            "hotels_suspended": hotels_result.modified_count,
+            "restaurants_suspended": restaurants_result.modified_count,
+            "car_rentals_suspended": car_rentals_result.modified_count,
+            "events_suspended": events_result.modified_count,
+            "banquets_suspended": banquets_result.modified_count,
+            "packages_suspended": packages_result.modified_count
+        }
+    }
 
 
 
