@@ -699,14 +699,22 @@ function AdminLoyaltyView() {
 
       if (editingReward) {
         await api.put(`/loyalty/admin/rewards/${editingReward.id}`, payload);
-        setRewards(prev => prev.map(r => r.id === editingReward.id ? { ...r, ...payload } : r));
         toast.success('Reward updated successfully!');
       } else {
-        const res = await api.post('/loyalty/admin/rewards', payload);
-        const newReward = res.data?.reward || { id: Date.now().toString(), ...payload };
-        setRewards(prev => [...prev, newReward]);
+        await api.post('/loyalty/admin/rewards', payload);
         toast.success('Reward created successfully!');
       }
+      
+      // Reload rewards from server to get fresh data
+      try {
+        const rewardsRes = await api.get('/loyalty/admin/rewards');
+        if (rewardsRes.data?.rewards) {
+          setRewards(rewardsRes.data.rewards);
+        }
+      } catch (e) {
+        console.error('Failed to reload rewards:', e);
+      }
+      
       setShowRewardDialog(false);
       setEditingReward(null);
       setRewardForm({ title: '', description: '', points_required: '', min_tier: 'bronze', type: 'discount', discount_value: '' });
