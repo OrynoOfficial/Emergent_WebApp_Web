@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import { toast } from 'sonner';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 const TICKET_CATEGORIES = [
   { value: 'booking', label: 'Booking Issue', icon: Calendar },
