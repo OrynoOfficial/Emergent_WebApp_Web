@@ -100,8 +100,14 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [fetchUser]);
 
-  const login = async (email, password) => {
-    const response = await authAPI.login({ email, password });
+  const login = async (identifier, password) => {
+    // Determine if identifier is email or phone
+    const isEmail = identifier.includes('@');
+    const payload = isEmail 
+      ? { email: identifier, password }
+      : { phone: identifier, password };
+    
+    const response = await authAPI.login(payload);
     const { access_token, refresh_token, user: userData } = response.data;
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
