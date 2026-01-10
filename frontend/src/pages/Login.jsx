@@ -27,7 +27,8 @@ const AUTH_VIEWS = {
   SIGNUP_ROLE: 'signup_role',
   SIGNUP_FORM: 'signup_form',
   OPERATOR_CONTACT: 'operator_contact',
-  TWO_FA: '2fa'
+  TWO_FA: '2fa',
+  PHONE_OTP_VERIFY: 'phone_otp_verify'
 };
 
 // FormModal component extracted outside to prevent re-creation on every render
