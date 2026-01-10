@@ -73,15 +73,37 @@ async def register(user_data: UserCreate, request: Request):
 
 @router.post("/login")
 async def login(credentials: UserLogin, request: Request):
-    """Login user"""
+    """Login user with email or phone number"""
     db = get_database()
     
-    # Find user
-    user = await db.users.find_one({"email": credentials.email})
+    # Validate that at least one identifier is provided
+    if not credentials.email and not credentials.phone:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email or phone number is required"
+        )
+    
+    # Find user by email or phone
+    user = None
+    if credentials.email:
+        user = await db.users.find_one({"email": credentials.email})
+    elif credentials.phone:
+        # Normalize phone number (remove spaces, dashes, etc.)
+        phone = credentials.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        # Try exact match first
+        user = await db.users.find_one({"phone": phone})
+        # If not found, try with regex for partial match (e.g., with or without country code)
+        if not user:
+            # Try matching the last 9 digits (common phone number length)
+            phone_suffix = phone[-9:] if len(phone) >= 9 else phone
+            user = await db.users.find_one({
+                "phone": {"$regex": f".*{phone_suffix}$", "$options": "i"}
+            })
+    
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Incorrect email/phone or password"
         )
     
     # Check if user is active
