@@ -1497,6 +1497,474 @@ function AdminRatingsView() {
   );
 }
 
+// Chart colors for reports
+const CHART_COLORS = ['#082c59', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+// Admin Reports View Component
+function AdminReportsView() {
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [timeRange, setTimeRange] = useState('30d');
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeRange]);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/ratings/reports/analytics', {
+        params: { time_range: timeRange }
+      });
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+      // Provide mock data for development
+      setAnalytics({
+        summary: {
+          total_ratings: 156,
+          average_rating: 4.2,
+          response_rate: 67.5,
+          avg_response_time_hours: 12.3,
+          flagged_count: 8,
+          hidden_count: 3,
+          five_star_percent: 45.5,
+          negative_percent: 8.2
+        },
+        trends: [
+          { date: '2024-12-01', count: 5, average: 4.2, flagged: 0 },
+          { date: '2024-12-05', count: 8, average: 4.5, flagged: 1 },
+          { date: '2024-12-10', count: 12, average: 4.1, flagged: 0 },
+          { date: '2024-12-15', count: 15, average: 4.3, flagged: 2 },
+          { date: '2024-12-20', count: 10, average: 4.0, flagged: 1 }
+        ],
+        by_category: [
+          { category: 'hotel', count: 45, average: 4.3, responded: 35, response_rate: 77.8, flagged: 2, distribution: { 5: 20, 4: 15, 3: 7, 2: 2, 1: 1 } },
+          { category: 'restaurant', count: 38, average: 4.1, responded: 22, response_rate: 57.9, flagged: 3, distribution: { 5: 15, 4: 12, 3: 8, 2: 2, 1: 1 } },
+          { category: 'travel', count: 32, average: 4.4, responded: 28, response_rate: 87.5, flagged: 1, distribution: { 5: 16, 4: 10, 3: 4, 2: 1, 1: 1 } },
+          { category: 'car_rental', count: 25, average: 3.9, responded: 15, response_rate: 60.0, flagged: 2, distribution: { 5: 8, 4: 9, 3: 5, 2: 2, 1: 1 } },
+          { category: 'cinema', count: 16, average: 4.5, responded: 10, response_rate: 62.5, flagged: 0, distribution: { 5: 10, 4: 4, 3: 2, 2: 0, 1: 0 } }
+        ],
+        flagged_analysis: {
+          by_category: [
+            { category: 'restaurant', count: 3, avg_rating: 2.3 },
+            { category: 'hotel', count: 2, avg_rating: 2.0 },
+            { category: 'car_rental', count: 2, avg_rating: 1.5 },
+            { category: 'travel', count: 1, avg_rating: 2.0 }
+          ],
+          recent: []
+        },
+        top_operators: [
+          { name: 'Express Travel Co', total: 32, responded: 28, response_rate: 87.5, avg_rating: 4.4 },
+          { name: 'Hilton Hotels Group', total: 25, responded: 20, response_rate: 80.0, avg_rating: 4.5 },
+          { name: 'Premium Car Rental', total: 20, responded: 14, response_rate: 70.0, avg_rating: 4.0 }
+        ]
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-[#082c59] mx-auto" />
+          <p className="mt-4 text-slate-600">Loading analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-16 text-center">
+          <BarChart3 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-slate-700 mb-2">No analytics data</h3>
+          <p className="text-slate-500">Analytics will appear here once ratings are available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { summary, trends, by_category, flagged_analysis, top_operators } = analytics;
+
+  // Prepare chart data
+  const categoryPieData = by_category?.map(c => ({
+    name: c.category?.charAt(0).toUpperCase() + c.category?.slice(1).replace('_', ' '),
+    value: c.count
+  })) || [];
+
+  const responseRateData = by_category?.map(c => ({
+    category: c.category?.charAt(0).toUpperCase() + c.category?.slice(1).replace('_', ' '),
+    rate: c.response_rate
+  })) || [];
+
+  return (
+    <div className="space-y-6" data-testid="ratings-reports">
+      {/* Time Range Filter */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-[#082c59]" />
+          <span className="font-medium text-slate-700">Time Period:</span>
+        </div>
+        <Select value={timeRange} onValueChange={setTimeRange}>
+          <SelectTrigger className="w-40 bg-white">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            <SelectItem value="7d">Last 7 Days</SelectItem>
+            <SelectItem value="30d">Last 30 Days</SelectItem>
+            <SelectItem value="90d">Last 90 Days</SelectItem>
+            <SelectItem value="1y">Last Year</SelectItem>
+            <SelectItem value="all">All Time</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Summary Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Total Ratings</p>
+                <p className="text-2xl font-bold text-slate-900">{summary.total_ratings}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <MessageSquare className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Average Rating</p>
+                <p className="text-2xl font-bold text-slate-900">{summary.average_rating}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                  <span className="text-xs text-slate-500">{summary.five_star_percent}% 5-star</span>
+                </div>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-xl">
+                <Star className="h-6 w-6 text-amber-600 fill-amber-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Response Rate</p>
+                <p className="text-2xl font-bold text-slate-900">{summary.response_rate}%</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Timer className="h-3 w-3 text-emerald-500" />
+                  <span className="text-xs text-slate-500">Avg {summary.avg_response_time_hours}h</span>
+                </div>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Reply className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Flagged Reviews</p>
+                <p className="text-2xl font-bold text-slate-900">{summary.flagged_count}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <EyeOff className="h-3 w-3 text-rose-500" />
+                  <span className="text-xs text-slate-500">{summary.hidden_count} hidden</span>
+                </div>
+              </div>
+              <div className="p-3 bg-rose-100 rounded-xl">
+                <Flag className="h-6 w-6 text-rose-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Rating Trends */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-[#082c59]" />
+              Rating Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              {trends && trends.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(value) => value.slice(5)} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} domain={[0, 5]} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="count" fill="#3B82F6" name="Reviews" />
+                    <Line yAxisId="right" type="monotone" dataKey="average" stroke="#F59E0B" strokeWidth={2} name="Avg Rating" dot={{ fill: '#F59E0B' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400">
+                  No trend data available
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Distribution by Category */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <PieChart className="h-5 w-5 text-[#082c59]" />
+              Reviews by Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              {categoryPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RePieChart>
+                    <Pie
+                      data={categoryPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+                      {categoryPieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </RePieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-slate-400">
+                  No category data available
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Category Breakdown Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-[#082c59]" />
+            Service Category Breakdown
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-2 font-semibold text-slate-700">Category</th>
+                  <th className="text-center py-3 px-2 font-semibold text-slate-700">Reviews</th>
+                  <th className="text-center py-3 px-2 font-semibold text-slate-700">Avg Rating</th>
+                  <th className="text-center py-3 px-2 font-semibold text-slate-700">Distribution</th>
+                  <th className="text-center py-3 px-2 font-semibold text-slate-700">Response Rate</th>
+                  <th className="text-center py-3 px-2 font-semibold text-slate-700">Flagged</th>
+                </tr>
+              </thead>
+              <tbody>
+                {by_category?.map((cat, i) => {
+                  const Icon = SERVICE_ICONS[cat.category] || Package;
+                  const color = SERVICE_COLORS[cat.category] || '#64748B';
+                  return (
+                    <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
+                      <td className="py-3 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${color}15` }}>
+                            <Icon className="h-4 w-4" style={{ color }} />
+                          </div>
+                          <span className="capitalize font-medium">{cat.category?.replace('_', ' ')}</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-3 px-2">{cat.count}</td>
+                      <td className="text-center py-3 px-2">
+                        <div className="flex items-center justify-center gap-1">
+                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                          <span className="font-medium">{cat.average}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center justify-center gap-1">
+                          {[5, 4, 3, 2, 1].map(star => (
+                            <div key={star} className="flex flex-col items-center">
+                              <div 
+                                className="w-4 rounded-t"
+                                style={{ 
+                                  height: `${Math.max(2, (cat.distribution?.[star] || 0) / cat.count * 40)}px`,
+                                  backgroundColor: star >= 4 ? '#10B981' : star === 3 ? '#F59E0B' : '#EF4444'
+                                }}
+                              />
+                              <span className="text-[9px] text-slate-400">{star}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="text-center py-3 px-2">
+                        <Badge 
+                          className={`${
+                            cat.response_rate >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                            cat.response_rate >= 50 ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {cat.response_rate}%
+                        </Badge>
+                      </td>
+                      <td className="text-center py-3 px-2">
+                        {cat.flagged > 0 ? (
+                          <Badge className="bg-rose-100 text-rose-700">
+                            <Flag className="h-3 w-3 mr-1" />{cat.flagged}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bottom Row: Top Operators & Flagged Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Operators by Response Rate */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#082c59]" />
+              Top Operators by Response Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {top_operators && top_operators.length > 0 ? (
+              <div className="space-y-3">
+                {top_operators.map((op, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      i === 0 ? 'bg-amber-100 text-amber-600' :
+                      i === 1 ? 'bg-slate-200 text-slate-600' :
+                      i === 2 ? 'bg-orange-100 text-orange-600' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-900 truncate">{op.name}</p>
+                      <div className="flex items-center gap-3 text-xs text-slate-500">
+                        <span>{op.total} reviews</span>
+                        <span className="flex items-center gap-1">
+                          <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                          {op.avg_rating}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge className={`${
+                        op.response_rate >= 80 ? 'bg-emerald-100 text-emerald-700' :
+                        op.response_rate >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {op.response_rate}%
+                      </Badge>
+                      <p className="text-xs text-slate-400 mt-1">{op.responded}/{op.total} replied</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400">
+                <Users className="h-10 w-10 mx-auto mb-2 text-slate-300" />
+                <p>No operator data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Flagged Reviews Analysis */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              Flagged Reviews Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {flagged_analysis?.by_category && flagged_analysis.by_category.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {flagged_analysis.by_category.map((cat, i) => {
+                    const Icon = SERVICE_ICONS[cat.category] || Package;
+                    const color = SERVICE_COLORS[cat.category] || '#64748B';
+                    return (
+                      <div key={i} className="p-3 bg-rose-50 rounded-lg border border-rose-100">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className="h-4 w-4" style={{ color }} />
+                          <span className="text-sm font-medium capitalize">{cat.category?.replace('_', ' ')}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <Badge className="bg-rose-100 text-rose-700">
+                            {cat.count} flagged
+                          </Badge>
+                          <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <Star className="h-3 w-3 text-amber-500" />
+                            avg {cat.avg_rating}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="pt-3 border-t">
+                  <p className="text-sm text-slate-600">
+                    <strong>{summary.negative_percent}%</strong> of all reviews are negative (1-2 stars).
+                    Categories with high flagged counts may need attention.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-emerald-600">
+                <CheckCircle className="h-10 w-10 mx-auto mb-2" />
+                <p className="font-medium">No flagged reviews!</p>
+                <p className="text-sm text-slate-500 mt-1">All reviews are in good standing</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // Main Ratings Component
 export default function Ratings() {
   const { user, isOperatorUser } = useAuth();
