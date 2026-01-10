@@ -832,6 +832,73 @@ export default function AuthPage() {
           </FormModal>
         );
         
+      case AUTH_VIEWS.PHONE_OTP_VERIFY:
+        return (
+          <FormModal>
+            <div className="text-center mb-5">
+              <img src="/images/logo.png" alt="Logo" className="h-12 w-auto mx-auto mb-3 object-contain" />
+              <h2 className="text-xl font-bold text-slate-900">Verify Your Phone</h2>
+              <p className="text-slate-600 text-sm mt-1">
+                Enter the 6-digit code sent to<br />
+                <span className="font-medium text-[#082c59]">{pendingRegistration?.phone}</span>
+              </p>
+            </div>
+            
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex justify-center mb-5">
+              <InputOTP value={phoneOtpValue} onChange={setPhoneOtpValue} maxLength={6}>
+                <InputOTPGroup>
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <InputOTPSlot key={index} index={index} className="w-10 h-12 text-lg bg-slate-50" />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            
+            {phoneOtpCountdown > 0 && (
+              <p className="text-center text-sm text-slate-500 mb-4">
+                Code expires in {Math.floor(phoneOtpCountdown / 60)}:{String(phoneOtpCountdown % 60).padStart(2, '0')}
+              </p>
+            )}
+            
+            <Button
+              onClick={verifyPhoneOTP}
+              disabled={isLoading || phoneOtpValue.length !== 6}
+              className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl"
+              data-testid="verify-phone-otp-btn"
+            >
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify & Complete Registration'}
+            </Button>
+            
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <span className="text-sm text-slate-500">Didn't receive the code?</span>
+              <button
+                onClick={() => sendPhoneOTP(pendingRegistration?.phone)}
+                disabled={phoneOtpSending || phoneOtpCountdown > 240}
+                className="text-sm text-[#082c59] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {phoneOtpSending ? 'Sending...' : 'Resend'}
+              </button>
+            </div>
+            
+            <button
+              onClick={() => {
+                setCurrentView(AUTH_VIEWS.SIGNUP_FORM);
+                setPhoneOtpValue('');
+                setError('');
+              }}
+              className="w-full text-center text-[#082c59] hover:underline mt-3 text-sm"
+            >
+              ← Back to Sign Up
+            </button>
+          </FormModal>
+        );
+        
       case AUTH_VIEWS.TWO_FA:
         return (
           <FormModal>
