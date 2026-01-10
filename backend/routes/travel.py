@@ -44,13 +44,36 @@ async def create_travel_route(
         if operator:
             operator_name = operator.get("name", "")
     
+    # Build route data with field normalization
+    route_dict = route_data.dict(exclude_none=True)
+    
+    # Normalize field names (support both old and new format)
+    from_city = route_dict.get("from_city") or route_dict.get("origin", "")
+    to_city = route_dict.get("to_city") or route_dict.get("destination", "")
+    price = route_dict.get("price") or route_dict.get("base_fare", 0)
+    total_seats = route_dict.get("total_seats", 50)
+    
     route = {
         "_id": str(uuid.uuid4()),
-        **route_data.dict(),
+        "from_city": from_city,
+        "to_city": to_city,
+        "origin": from_city,
+        "destination": to_city,
+        "route_name": route_dict.get("route_name") or f"{from_city} - {to_city}",
+        "departure_time": route_dict.get("departure_time"),
+        "arrival_time": route_dict.get("arrival_time"),
+        "duration": route_dict.get("duration", ""),
+        "duration_minutes": route_dict.get("duration_minutes", 0),
+        "price": price,
+        "base_fare": price,
+        "total_seats": total_seats,
+        "available_seats": total_seats,
+        "vehicle_type": route_dict.get("vehicle_type", "bus"),
+        "vehicle_id": route_dict.get("vehicle_id"),
+        "amenities": route_dict.get("amenities", []),
         "operator_id": operator_id,
         "operator_name": operator_name,
         "created_by": current_user["_id"],
-        "available_seats": route_data.total_seats,
         "is_active": True,
         "status": "active",
         "created_at": datetime.utcnow(),
