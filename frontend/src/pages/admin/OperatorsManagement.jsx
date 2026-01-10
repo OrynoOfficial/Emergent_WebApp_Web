@@ -107,21 +107,22 @@ export default function OperatorsManagement() {
   const confirmSuspend = async () => {
     if (!selectedOperator) return;
     
+    const operatorId = selectedOperator._id || selectedOperator.id;
     const newStatus = selectedOperator.status === 'suspended' ? 'active' : 'suspended';
     
     try {
       if (newStatus === 'suspended') {
-        await api.post(`/operators/${selectedOperator.id}/suspend`);
+        await api.post(`/operators/${operatorId}/suspend`);
       } else {
-        await api.post(`/operators/${selectedOperator.id}/approve`);
+        // Use reactivate endpoint for suspended operators
+        await api.post(`/operators/${operatorId}/reactivate`);
       }
-      setOperators(prev => prev.map(o => 
-        o.id === selectedOperator.id ? { ...o, status: newStatus } : o
-      ));
-      toast.success(`Operator ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully`);
+      // Reload operators to get fresh data from server
+      await loadOperators();
+      toast.success(`Operator ${newStatus === 'suspended' ? 'suspended' : 'reactivated'} successfully`);
     } catch (error) {
       console.error('Failed to update operator status:', error);
-      toast.error('Failed to update operator status');
+      toast.error(error.response?.data?.detail || 'Failed to update operator status');
     }
     
     setIsSuspendOpen(false);
