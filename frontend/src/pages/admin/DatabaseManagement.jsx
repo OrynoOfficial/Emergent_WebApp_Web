@@ -288,7 +288,7 @@ export default function DatabaseManagement() {
                           <td className="py-3 px-4 text-gray-600">{collection.size}</td>
                           <td className="py-3 px-4 text-gray-600">{collection.indexes}</td>
                           <td className="py-3 px-4 text-sm text-gray-500">
-                            {formatDate(collection.lastModified)}
+                            {formatDateTime(collection.lastModified)}
                           </td>
                           <td className="py-3 px-4">
                             <Button
