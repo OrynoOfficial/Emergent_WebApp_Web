@@ -105,7 +105,6 @@ import RestaurantMenu from './pages/services/RestaurantMenu';
 import Analytics from './pages/admin/Analytics';
 import AdminBookings from './pages/admin/Bookings';
 import UserManagement from './pages/admin/Users';
-import TripReport from './pages/admin/TripReport';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentCancel from './pages/payment/PaymentCancel';
