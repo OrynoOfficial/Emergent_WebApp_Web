@@ -23,7 +23,8 @@ export const operatorApi = {
 
 // Travel Routes
 export const travelRouteApi = {
-  list: (params = {}) => api.get('/travel/routes', { params }),
+  list: (params = {}) => api.get('/travel/routes/management', { params }),
+  listAll: (params = {}) => api.get('/travel/routes', { params }),
   get: (id) => api.get(`/travel/routes/${id}`),
   create: (data) => api.post('/travel/routes', data),
   update: (id, data) => api.put(`/travel/routes/${id}`, data),
