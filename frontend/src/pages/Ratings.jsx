@@ -15,7 +15,7 @@ import {
   Hotel, Utensils, Bus, Car, Film, Sparkles, Package, Gift,
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
   MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
-  Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert
+  Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
