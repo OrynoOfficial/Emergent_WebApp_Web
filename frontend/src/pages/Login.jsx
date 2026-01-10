@@ -57,7 +57,8 @@ export default function AuthPage() {
   const [contactMethod, setContactMethod] = useState('email');
   
   // Login form
-  const [loginEmail, setLoginEmail] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [loginPassword, setLoginPassword] = useState('');
   const [isOperator, setIsOperator] = useState(false);
   
