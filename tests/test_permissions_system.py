@@ -7,7 +7,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://role-permission.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ui-task-manager.preview.emergentagent.com')
 
 class TestRegistrationRoleAssignment:
     """Test that registration always assigns 'customer' role"""
