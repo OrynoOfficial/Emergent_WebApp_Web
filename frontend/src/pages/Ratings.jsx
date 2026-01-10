@@ -1968,6 +1968,7 @@ function AdminReportsView() {
 // Main Ratings Component
 export default function Ratings() {
   const { user, isOperatorUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('ratings');
   
   const isOperator = user?.role === 'operator' || isOperatorUser;
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
@@ -1982,7 +1983,7 @@ export default function Ratings() {
           </h1>
           <p className="text-slate-600">
             {isAdmin
-              ? 'View and monitor all ratings across the platform'
+              ? 'View, moderate, and analyze ratings across the platform'
               : isOperator 
               ? 'Manage and respond to customer feedback for your services'
               : 'Reviews you\'ve left for services you\'ve used'}
@@ -1990,8 +1991,41 @@ export default function Ratings() {
         </div>
       </div>
 
-      {/* Render appropriate view based on user role */}
-      {isAdmin ? <AdminRatingsView /> : isOperator ? <OperatorRatingsView /> : <CustomerRatingsView />}
+      {/* Admin View with Tabs */}
+      {isAdmin ? (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 max-w-md bg-white shadow-sm">
+            <TabsTrigger 
+              value="ratings" 
+              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
+              data-testid="ratings-tab"
+            >
+              <MessageSquare className="h-4 w-4" />
+              All Ratings
+            </TabsTrigger>
+            <TabsTrigger 
+              value="reports" 
+              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
+              data-testid="reports-tab"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Reports
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="ratings" className="mt-6">
+            <AdminRatingsView />
+          </TabsContent>
+
+          <TabsContent value="reports" className="mt-6">
+            <AdminReportsView />
+          </TabsContent>
+        </Tabs>
+      ) : isOperator ? (
+        <OperatorRatingsView />
+      ) : (
+        <CustomerRatingsView />
+      )}
     </div>
   );
 }
