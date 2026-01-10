@@ -60,6 +60,7 @@ from routes.operator_users import router as operator_users_router
 from routes.system_settings import router as system_settings_router
 from routes.operator_roles import router as operator_roles_router
 from routes.document_templates import router as document_templates_router
+from routes.database_management import router as database_management_router
 
 # Create the main app
 app = FastAPI(
