@@ -1164,6 +1164,77 @@ function AdminRatingsView() {
         </CardContent>
       </Card>
 
+      {/* Bulk Actions Bar */}
+      <Card className={`transition-all ${selectedRatings.size > 0 ? 'bg-[#082c59] text-white' : 'bg-slate-50'}`}>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Checkbox 
+                checked={filteredRatings.length > 0 && selectedRatings.size === filteredRatings.length}
+                onCheckedChange={handleSelectAll}
+                className={selectedRatings.size > 0 ? 'border-white data-[state=checked]:bg-white data-[state=checked]:text-[#082c59]' : ''}
+              />
+              <span className={`text-sm font-medium ${selectedRatings.size > 0 ? 'text-white' : 'text-slate-600'}`}>
+                {selectedRatings.size > 0 
+                  ? `${selectedRatings.size} rating${selectedRatings.size > 1 ? 's' : ''} selected`
+                  : 'Select ratings for bulk actions'}
+              </span>
+            </div>
+            {selectedRatings.size > 0 && (
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={() => openBulkDialog('flag')}
+                  className="bg-orange-500 hover:bg-orange-600 text-white border-0"
+                >
+                  <Flag className="h-4 w-4 mr-1" /> Flag All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={() => openBulkDialog('unflag')}
+                  className="bg-green-500 hover:bg-green-600 text-white border-0"
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" /> Unflag All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={() => openBulkDialog('hide')}
+                  className="bg-slate-500 hover:bg-slate-600 text-white border-0"
+                >
+                  <EyeOff className="h-4 w-4 mr-1" /> Hide All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={() => openBulkDialog('unhide')}
+                  className="bg-blue-500 hover:bg-blue-600 text-white border-0"
+                >
+                  <Eye className="h-4 w-4 mr-1" /> Show All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => openBulkDialog('delete')}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" /> Delete All
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="ghost"
+                  onClick={() => setSelectedRatings(new Set())}
+                  className="text-white hover:bg-white/20"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Ratings List */}
       {filteredRatings.length === 0 ? (
         <Card className="border-dashed">
