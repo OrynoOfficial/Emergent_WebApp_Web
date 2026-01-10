@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import UserDetailModal from '../../components/modals/UserDetailModal';
 import { activityLogger } from '../../utils/activityLogger';
 import { toast } from 'sonner';
+import { formatDate } from '../../utils/dateUtils';
 
 // Role hierarchy for permission checks
 const ROLE_HIERARCHY = {
