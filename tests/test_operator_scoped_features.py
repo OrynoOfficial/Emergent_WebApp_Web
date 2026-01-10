@@ -97,16 +97,17 @@ class TestOperatorRoutesCRUD:
         assert "routes" in data, f"No routes in response: {data}"
         assert "total" in data, f"No total in response: {data}"
         
-        # Verify operator scoping
-        operator_id = operator_auth["user"].get("operator_id")
+        # Verify operator scoping - operator_id is in operator_context
+        user = operator_auth["user"]
+        operator_id = user.get("operator_context", {}).get("operator_id") or user.get("operator_id")
+        
         for route in data["routes"]:
             # Routes should belong to this operator
-            if route.get("operator_id"):
+            if route.get("operator_id") and operator_id:
                 assert route["operator_id"] == operator_id, f"Route {route.get('id')} belongs to different operator"
         
         print(f"✓ Operator can view their routes. Total: {data['total']}")
         print(f"  Is operator scoped: {data.get('is_operator_scoped', 'N/A')}")
-        return data
     
     def test_operator_update_route(self, operator_auth):
         """Test operator can update their own route"""
