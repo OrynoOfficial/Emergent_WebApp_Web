@@ -307,45 +307,47 @@ export default function Analytics() {
       </div>
 
       {/* Extended Summary Stats (from Data Analytics) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" data-testid="summary-stats">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Total Users</div>
-            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.summary.totalUsers.toLocaleString()}</p>
-            <p className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +{dataAnalytics.summary.growthRate}%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><ShoppingBag className="h-4 w-4" /> Bookings</div>
-            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.summary.totalBookings.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><DollarSign className="h-4 w-4" /> Revenue</div>
-            <p className="text-xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary.totalRevenue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><BarChart3 className="h-4 w-4" /> Avg Order</div>
-            <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary.avgOrderValue)}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><Activity className="h-4 w-4" /> Conversion</div>
-            <p className="text-2xl font-bold text-green-600">{dataAnalytics.summary.conversionRate}%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Returning</div>
-            <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.userMetrics.returningRate}%</p>
-          </CardContent>
-        </Card>
-      </div>
+      {dataAnalytics && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" data-testid="summary-stats">
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Total Users</div>
+              <p className="text-2xl font-bold text-[#082c59]">{(dataAnalytics.summary?.totalUsers || 0).toLocaleString()}</p>
+              <p className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +{dataAnalytics.summary?.growthRate || 0}%</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><ShoppingBag className="h-4 w-4" /> Bookings</div>
+              <p className="text-2xl font-bold text-[#082c59]">{(dataAnalytics.summary?.totalBookings || 0).toLocaleString()}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><DollarSign className="h-4 w-4" /> Revenue</div>
+              <p className="text-xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary?.totalRevenue || 0)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><BarChart3 className="h-4 w-4" /> Avg Order</div>
+              <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(dataAnalytics.summary?.avgOrderValue || 0)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><Activity className="h-4 w-4" /> Conversion</div>
+              <p className="text-2xl font-bold text-green-600">{dataAnalytics.summary?.conversionRate || 0}%</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2 text-slate-500 text-sm"><Users className="h-4 w-4" /> Returning</div>
+              <p className="text-2xl font-bold text-[#082c59]">{dataAnalytics.userMetrics?.returningRate || 0}%</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Extended Charts Row (from Data Analytics) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
