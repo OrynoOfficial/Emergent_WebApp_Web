@@ -277,6 +277,7 @@ app.include_router(system_settings_router)  # System settings (session timeout, 
 app.include_router(operator_roles_router)  # Operator roles and permissions management
 app.include_router(document_templates_router)  # HR Document templates
 app.include_router(database_management_router)  # Database management GUI
+app.include_router(otp_router)  # OTP verification (SMS & Email via Infobip)
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
