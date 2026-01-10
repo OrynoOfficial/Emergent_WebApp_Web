@@ -1261,8 +1261,16 @@ function AdminRatingsView() {
                   <div className="flex">
                     <div className="w-1.5" style={{ backgroundColor: review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981' }}></div>
                     
-                    <div className="flex-1 p-6">
-                      {/* Header */}
+                    {/* Checkbox column */}
+                    <div className="flex items-start p-4">
+                      <Checkbox 
+                        checked={selectedRatings.has(review.id)}
+                        onCheckedChange={(checked) => handleSelectRating(review.id, checked)}
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 p-6 pl-0">{/* Header */}
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
