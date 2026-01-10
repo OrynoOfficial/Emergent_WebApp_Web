@@ -1428,6 +1428,66 @@ function AdminRatingsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Action Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-orange-500" />
+              Bulk {bulkAction === 'delete' ? 'Delete' : 
+                    bulkAction === 'flag' ? 'Flag' :
+                    bulkAction === 'unflag' ? 'Unflag' :
+                    bulkAction === 'hide' ? 'Hide' : 'Show'} Ratings
+            </DialogTitle>
+            <DialogDescription>
+              {bulkAction === 'delete' 
+                ? `This will permanently delete ${selectedRatings.size} rating(s). This action cannot be undone.`
+                : bulkAction === 'flag'
+                ? `This will flag ${selectedRatings.size} rating(s) for review.`
+                : bulkAction === 'hide'
+                ? `This will hide ${selectedRatings.size} rating(s) from public view.`
+                : `This will update ${selectedRatings.size} rating(s).`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-3 bg-slate-50 rounded-lg mb-4">
+              <p className="font-medium text-sm">{selectedRatings.size} rating(s) selected</p>
+              <p className="text-sm text-slate-600">
+                {bulkAction === 'delete' ? 'These ratings will be permanently removed' : 
+                 bulkAction === 'flag' ? 'These ratings will be flagged for review' :
+                 bulkAction === 'hide' ? 'These ratings will be hidden from public view' :
+                 'These ratings will be updated'}
+              </p>
+            </div>
+            {(bulkAction === 'flag' || bulkAction === 'hide' || bulkAction === 'delete') && (
+              <div>
+                <label className="text-sm font-medium">Reason (optional)</label>
+                <Textarea
+                  value={bulkReason}
+                  onChange={(e) => setBulkReason(e.target.value)}
+                  placeholder="Add a note about this bulk action..."
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)} disabled={submittingBulk}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={submitBulkAction} 
+              disabled={submittingBulk}
+              className={bulkAction === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#082c59] hover:bg-[#0a3a75]'}
+            >
+              {submittingBulk && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              {bulkAction === 'delete' ? `Delete ${selectedRatings.size}` : `Confirm ${selectedRatings.size}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
