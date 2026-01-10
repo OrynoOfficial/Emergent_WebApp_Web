@@ -917,6 +917,78 @@ function AdminRatingsView() {
     }
   };
 
+  // Bulk selection handlers
+  const handleSelectRating = (ratingId, checked) => {
+    setSelectedRatings(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(ratingId);
+      } else {
+        newSet.delete(ratingId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedRatings(new Set(filteredRatings.map(r => r.id)));
+    } else {
+      setSelectedRatings(new Set());
+    }
+  };
+
+  const openBulkDialog = (action) => {
+    if (selectedRatings.size === 0) {
+      toast.error('Please select at least one rating');
+      return;
+    }
+    setBulkAction(action);
+    setBulkReason('');
+    setShowBulkDialog(true);
+  };
+
+  const submitBulkAction = async () => {
+    if (selectedRatings.size === 0) return;
+    
+    setSubmittingBulk(true);
+    try {
+      const ratingIds = Array.from(selectedRatings);
+      
+      // Call API for bulk moderation
+      await api.post('/ratings/bulk-moderate', {
+        rating_ids: ratingIds,
+        action: bulkAction,
+        reason: bulkReason
+      });
+      
+      // Update local state based on action
+      if (bulkAction === 'delete') {
+        setRatings(prev => prev.filter(r => !selectedRatings.has(r.id)));
+        toast.success(`${selectedRatings.size} rating(s) deleted successfully`);
+      } else {
+        setRatings(prev => prev.map(r => {
+          if (!selectedRatings.has(r.id)) return r;
+          return {
+            ...r,
+            is_flagged: bulkAction === 'flag' ? true : bulkAction === 'unflag' ? false : r.is_flagged,
+            is_hidden: bulkAction === 'hide' ? true : bulkAction === 'unhide' ? false : r.is_hidden,
+            moderation_notes: bulkReason || r.moderation_notes
+          };
+        }));
+        toast.success(`${selectedRatings.size} rating(s) ${bulkAction}ged successfully`);
+      }
+      
+      setSelectedRatings(new Set());
+      setShowBulkDialog(false);
+    } catch (error) {
+      console.error('Bulk moderation failed:', error);
+      toast.error(error.response?.data?.detail || 'Bulk moderation failed');
+    } finally {
+      setSubmittingBulk(false);
+    }
+  };
+
   // Filter ratings
   const filteredRatings = useMemo(() => {
     return ratings.filter(r => {
