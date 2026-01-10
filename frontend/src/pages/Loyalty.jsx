@@ -185,13 +185,7 @@ function Loyalty() {
     toast.success('Referral code copied to clipboard!');
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
+  // formatDate is now imported from dateUtils
 
   if (loading) {
     return (
