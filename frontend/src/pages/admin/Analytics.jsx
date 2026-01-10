@@ -136,31 +136,66 @@ export default function Analytics() {
         params.operator_id = operatorContext.id;
       }
       
-      // Fetch basic analytics
-      const response = await analyticsAPI.getStats(params);
-      setData(response.data);
-      
-      // Fetch extended analytics data
+      // Fetch analytics overview (single call)
       const extendedRes = await api.get('/analytics/overview', { params });
       
-      // For operators, always use real data (even if empty)
-      if (isOperator) {
-        if (extendedRes.data && extendedRes.data.summary) {
-          setDataAnalytics(extendedRes.data);
-        } else {
-          setDataAnalytics(EMPTY_OPERATOR_DATA);
-        }
+      // Set data from the overview response
+      if (extendedRes.data && extendedRes.data.summary) {
+        // Convert overview data to the format expected by the stats cards
+        setData({
+          total_revenue: extendedRes.data.summary.totalRevenue || 0,
+          total_orders: extendedRes.data.summary.totalBookings || 0,
+          total_customers: extendedRes.data.summary.totalUsers || 0,
+          average_order_value: extendedRes.data.summary.avgOrderValue || 0,
+          revenue_growth: extendedRes.data.summary.growthRate || 0,
+          orders_growth: 0,
+          customers_growth: 0,
+          category_breakdown: extendedRes.data.revenueByService?.map(s => ({
+            name: s.name,
+            value: s.value,
+            color: SERVICE_COLORS[s.name?.toLowerCase()] || '#64748b'
+          })) || [],
+          recent_trends: extendedRes.data.monthlyTrend?.map(t => ({
+            date: t.month,
+            revenue: t.revenue,
+            orders: t.bookings
+          })) || []
+        });
+        setDataAnalytics(extendedRes.data);
+      } else if (isOperator) {
+        // For operators with no data, show empty state
+        setData({
+          total_revenue: 0,
+          total_orders: 0,
+          total_customers: 0,
+          average_order_value: 0,
+          revenue_growth: 0,
+          orders_growth: 0,
+          customers_growth: 0,
+          category_breakdown: [],
+          recent_trends: []
+        });
+        setDataAnalytics(EMPTY_OPERATOR_DATA);
       } else {
-        // For admins, use real data if available, otherwise mock
-        if (extendedRes.data && extendedRes.data.summary && extendedRes.data.summary.totalBookings > 0) {
-          setDataAnalytics(extendedRes.data);
-        } else {
-          const mockWithRealUsers = { ...MOCK_DATA_ANALYTICS };
-          if (extendedRes.data?.summary?.totalUsers) {
-            mockWithRealUsers.summary.totalUsers = extendedRes.data.summary.totalUsers;
-          }
-          setDataAnalytics(mockWithRealUsers);
-        }
+        // For admins with no data, use mock
+        setData({
+          total_revenue: 125400,
+          total_orders: 1847,
+          total_customers: 892,
+          average_order_value: 68,
+          revenue_growth: 12.5,
+          orders_growth: 8.3,
+          customers_growth: 15.2,
+          category_breakdown: [
+            { name: 'Hotels', value: 45, color: '#EC4899' },
+            { name: 'Restaurants', value: 25, color: '#F59E0B' },
+            { name: 'Travel', value: 15, color: '#3B82F6' },
+            { name: 'Car Rental', value: 10, color: '#10B981' },
+            { name: 'Events', value: 5, color: '#8B5CF6' }
+          ],
+          recent_trends: []
+        });
+        setDataAnalytics(MOCK_DATA_ANALYTICS);
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
