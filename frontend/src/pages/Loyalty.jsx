@@ -730,7 +730,18 @@ function AdminLoyaltyView() {
     if (!confirm('Are you sure you want to delete this reward?')) return;
     try {
       await api.delete(`/loyalty/admin/rewards/${rewardId}`);
-      setRewards(prev => prev.filter(r => r.id !== rewardId));
+      
+      // Reload rewards from server
+      try {
+        const rewardsRes = await api.get('/loyalty/admin/rewards');
+        if (rewardsRes.data?.rewards) {
+          setRewards(rewardsRes.data.rewards);
+        }
+      } catch (e) {
+        // Fallback to local state update
+        setRewards(prev => prev.filter(r => r.id !== rewardId));
+      }
+      
       toast.success('Reward deleted successfully!');
     } catch (error) {
       console.error('Failed to delete reward:', error);
