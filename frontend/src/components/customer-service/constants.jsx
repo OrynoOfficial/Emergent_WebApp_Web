@@ -1,4 +1,5 @@
 import { Calendar, Briefcase, RefreshCw, Zap, AlertTriangle, MessageCircle, Building2, FileText, Inbox, Clock, Activity, CheckCircle, Archive } from 'lucide-react';
+import { formatDate } from '../../utils/dateUtils';
 
 export const TICKET_CATEGORIES = ['booking', 'payment', 'refund', 'technical', 'complaint', 'inquiry', 'operator', 'general'];
 export const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
