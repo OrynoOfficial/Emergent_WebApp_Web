@@ -85,8 +85,8 @@ const StatusFlowIndicator = ({ currentStatus, type = 'ticket' }) => {
   );
 };
 
-// safeFormatDate is now imported from dateUtils as formatDate
-// safeFormatDateTime is now imported from dateUtils as formatDateTime
+// formatDate is now imported from dateUtils as formatDate
+// formatDateTime is now imported from dateUtils as formatDateTime
 
 // Status History Component - shows the journey of an item
 const StatusHistory = ({ ticket }) => {
@@ -140,7 +140,7 @@ const StatusHistory = ({ ticket }) => {
           <div key={idx} className="flex items-center gap-2 text-xs">
             <StatusTag status={item.status} size="small" />
             <span className="text-slate-500">by {item.actor}</span>
-            <span className="text-slate-400">• {safeFormatDateTime(item.date)}</span>
+            <span className="text-slate-400">• {formatDateTime(item.date)}</span>
           </div>
         ))}
       </div>
@@ -214,7 +214,7 @@ const TicketApprovalCard = ({ ticket, onApprove, onReject, isProcessing }) => {
               <span className="font-medium">Order:</span>
               <span className="font-mono">{ticket.order_number}</span>
               <span>•</span>
-              <span>{safeFormatDateTime(ticket.booking_date || ticket.created_at)}</span>
+              <span>{formatDateTime(ticket.booking_date || ticket.created_at)}</span>
             </div>
           </div>
           <StatusTag status={ticket.status} />
@@ -239,7 +239,7 @@ const TicketApprovalCard = ({ ticket, onApprove, onReject, isProcessing }) => {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-slate-500" />
             <div>
-              <div className="font-medium">{safeFormatDate(ticket.service_date || ticket.booking_date)}</div>
+              <div className="font-medium">{formatDate(ticket.service_date || ticket.booking_date)}</div>
               <div className="text-xs text-slate-500">Service Date</div>
             </div>
           </div>
@@ -461,7 +461,7 @@ const ServiceApprovalCard = ({ service, serviceType, onApprove, onReject, isProc
 
         {/* Created date */}
         <div className="text-xs text-slate-500">
-          Submitted: {safeFormatDateTime(service.created_at || service.created_date)}
+          Submitted: {formatDateTime(service.created_at || service.created_date)}
         </div>
       </CardContent>
 
@@ -566,7 +566,7 @@ const OperatorApprovalCard = ({ operator, onApprove, onReject, isProcessing }) =
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-slate-500" />
-            <span>{safeFormatDate(operator.created_at)}</span>
+            <span>{formatDate(operator.created_at)}</span>
           </div>
         </div>
         
