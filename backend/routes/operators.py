@@ -184,16 +184,105 @@ async def delete_operator(
     operator_id: str,
     current_user: dict = Depends(require_permission("operators.delete"))
 ):
-    """Delete an operator - requires operators.delete permission"""
+    """Delete an operator - requires operators.delete permission
+    
+    Cascades deletion to:
+    - All users assigned to this operator (disabled, not deleted)
+    - All travel routes
+    - All vehicles
+    - All hotels
+    - All restaurants
+    - All car rentals
+    - All events
+    - All banquets
+    - All packages
+    """
     db = get_database()
     
     operator = await db.operators.find_one({"_id": operator_id})
     if not operator:
         raise HTTPException(status_code=404, detail="Operator not found")
     
+    operator_name = operator.get("name", "Unknown")
+    
+    # 1. Disable all users assigned to this operator (don't delete - just disable)
+    users_result = await db.users.update_many(
+        {"operator_id": operator_id},
+        {"$set": {
+            "status": "disabled",
+            "role": "customer",  # Demote to customer
+            "operator_id": None,
+            "operator_name": None,
+            "disabled_reason": f"Operator '{operator_name}' was deleted",
+            "disabled_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # 2. Delete all travel routes
+    routes_result = await db.travel_routes.delete_many({"operator_id": operator_id})
+    
+    # 3. Delete all vehicles
+    vehicles_result = await db.vehicles.delete_many({"operator_id": operator_id})
+    
+    # 4. Delete all hotels
+    hotels_result = await db.hotels.delete_many({"operator_id": operator_id})
+    
+    # 5. Delete all restaurants
+    restaurants_result = await db.restaurants.delete_many({"operator_id": operator_id})
+    
+    # 6. Delete all car rentals
+    car_rentals_result = await db.car_rentals.delete_many({"operator_id": operator_id})
+    
+    # 7. Delete all events
+    events_result = await db.events.delete_many({"operator_id": operator_id})
+    
+    # 8. Delete all banquets
+    banquets_result = await db.banquets.delete_many({"operator_id": operator_id})
+    
+    # 9. Delete all packages
+    packages_result = await db.packages.delete_many({"operator_id": operator_id})
+    
+    # 10. Delete the operator
     await db.operators.delete_one({"_id": operator_id})
     
-    return {"message": "Operator deleted"}
+    # Log activity
+    activity = {
+        "_id": str(uuid.uuid4()),
+        "user_id": current_user["_id"],
+        "entity_type": "operator",
+        "entity_id": operator_id,
+        "action": "operator.deleted",
+        "details": {
+            "operator_name": operator_name,
+            "users_disabled": users_result.modified_count,
+            "routes_deleted": routes_result.deleted_count,
+            "vehicles_deleted": vehicles_result.deleted_count,
+            "hotels_deleted": hotels_result.deleted_count,
+            "restaurants_deleted": restaurants_result.deleted_count,
+            "car_rentals_deleted": car_rentals_result.deleted_count,
+            "events_deleted": events_result.deleted_count,
+            "banquets_deleted": banquets_result.deleted_count,
+            "packages_deleted": packages_result.deleted_count
+        },
+        "created_at": datetime.utcnow()
+    }
+    await db.activity_logs.insert_one(activity)
+    
+    return {
+        "message": "Operator deleted",
+        "cascade_summary": {
+            "users_disabled": users_result.modified_count,
+            "routes_deleted": routes_result.deleted_count,
+            "vehicles_deleted": vehicles_result.deleted_count,
+            "hotels_deleted": hotels_result.deleted_count,
+            "restaurants_deleted": restaurants_result.deleted_count,
+            "car_rentals_deleted": car_rentals_result.deleted_count,
+            "events_deleted": events_result.deleted_count,
+            "banquets_deleted": banquets_result.deleted_count,
+            "packages_deleted": packages_result.deleted_count
+        }
+    }
 
 @router.post("/{operator_id}/approve")
 async def approve_operator(
