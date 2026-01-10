@@ -281,6 +281,19 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - File reduced from 1365 to 1255 lines (~8% reduction)
   - All components properly exported from index.js
 
+## Completed Features (Jan 10, 2026 - Session 8)
+- [x] **Operator-Scoped Management Pages**
+  - Created test data for Musango Bus Service (routes, vehicles, orders)
+  - Updated operator user to link to Musango Bus operator_id
+  - Analytics Dashboard: Shows operator-specific data, zeros when no activity
+  - Travel Management: Filtered by operator_id, shows only assigned routes/vehicles
+  - Sales Dashboard: Shows operator-specific sales (70,000 FCFA from 10 orders)
+  - All mock data removed for operators - shows real data only
+- [x] **Backend Route Filtering**
+  - Added `/api/travel/routes/management` endpoint with operator filtering
+  - Operators can only see routes they created or are assigned to
+  - All stats reset to real values (no more fake numbers)
+
 ## Backlog (Moved from Priority)
 - [ ] **P0: Revenue Bug** - Operator Management page shows "0 FCFA" for all operators
   - Debug checklist: Check if orders have operator_id, review backend revenue calculation
