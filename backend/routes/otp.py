@@ -101,13 +101,13 @@ async def send_otp(request: SendOTPRequest):
             detail=result.get("message", "Failed to send OTP")
         )
     
-    # Store OTP in database with TTL
+    # Store OTP in database with TTL (use naive UTC for MongoDB compatibility)
     otp_record = {
         "identifier": identifier,
         "otp_code": otp_code,
         "channel": channel,
-        "created_at": datetime.now(timezone.utc),
-        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "created_at": datetime.utcnow(),
+        "expires_at": datetime.utcnow() + timedelta(minutes=5),
         "attempts_left": 5,
         "verified": False
     }
