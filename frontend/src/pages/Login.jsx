@@ -134,25 +134,18 @@ export default function AuthPage() {
     setError('');
     
     try {
-      const API_URL = process.env.REACT_APP_BACKEND_URL || '';
-      const response = await fetch(`${API_URL}/api/otp/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: phoneNumber })
-      });
+      const response = await api.post('/otp/send', { phone_number: phoneNumber });
       
-      const data = await response.json();
-      
-      if (response.ok && data.status === 'success') {
+      if (response.data.status === 'success') {
         setPhoneOtpCountdown(300); // 5 minutes countdown
         return true;
       } else {
-        setError(data.detail || data.message || 'Failed to send OTP');
+        setError(response.data.message || 'Failed to send OTP');
         return false;
       }
     } catch (err) {
       console.error('OTP send error:', err);
-      setError('Failed to send verification code. Please try again.');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Failed to send verification code. Please try again.');
       return false;
     } finally {
       setPhoneOtpSending(false);
@@ -170,19 +163,12 @@ export default function AuthPage() {
     setError('');
     
     try {
-      const API_URL = process.env.REACT_APP_BACKEND_URL || '';
-      const response = await fetch(`${API_URL}/api/otp/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          phone_number: pendingRegistration.phone,
-          otp_code: phoneOtpValue 
-        })
+      const response = await api.post('/otp/verify', { 
+        phone_number: pendingRegistration.phone,
+        otp_code: phoneOtpValue 
       });
       
-      const data = await response.json();
-      
-      if (response.ok && data.status === 'success') {
+      if (response.data.status === 'success') {
         // OTP verified, now complete registration
         const result = await register(pendingRegistration);
         
@@ -204,11 +190,11 @@ export default function AuthPage() {
           setError(result.message || 'Registration failed. Please try again.');
         }
       } else {
-        setError(data.detail || data.message || 'Invalid verification code');
+        setError(response.data.message || 'Invalid verification code');
       }
     } catch (err) {
       console.error('OTP verify error:', err);
-      setError('Verification failed. Please try again.');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Verification failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
