@@ -138,27 +138,36 @@ export default function AuthPage() {
     
     try {
       const userData = {
-        email: contactMethod === 'email' ? registerEmail : `${registerPhone}@phone.local`,
-        username: registerEmail || registerPhone,
+        email: contactMethod === 'email' ? registerEmail : `${registerPhone.replace(/\s/g, '')}@phone.local`,
+        username: contactMethod === 'email' ? registerEmail : registerPhone.replace(/\s/g, ''),
         password: registerPassword,
         full_name: fullName,
-        phone: registerPhone,
+        phone: registerPhone ? registerPhone.replace(/\s/g, '') : null,
         role: selectedRole
       };
       
       const result = await register(userData);
       
       if (result.success || result.user_id) {
-        try {
-          const loginResult = await login(userData.email, userData.password);
-          if (loginResult.access_token) {
-            navigate('/dashboard');
-          } else {
+        // For phone registration, login immediately
+        // For email registration, show verification message
+        if (contactMethod === 'phone' || !result.requires_verification) {
+          try {
+            // Use phone number for login if registered with phone
+            const loginIdentifier = contactMethod === 'phone' ? registerPhone.replace(/\s/g, '') : registerEmail;
+            const loginResult = await login(loginIdentifier, registerPassword);
+            if (loginResult.access_token) {
+              navigate('/dashboard');
+            } else {
+              setError('Registration successful! Please login with your credentials.');
+              setCurrentView(AUTH_VIEWS.LOGIN);
+            }
+          } catch {
             setError('Registration successful! Please login with your credentials.');
             setCurrentView(AUTH_VIEWS.LOGIN);
           }
-        } catch {
-          setError('Registration successful! Please login with your credentials.');
+        } else {
+          setError('Registration successful! Please check your email to verify your account, then login.');
           setCurrentView(AUTH_VIEWS.LOGIN);
         }
       } else {
