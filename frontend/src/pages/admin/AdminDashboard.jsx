@@ -394,7 +394,7 @@ export default function AdminDashboard() {
                         {order.service_type?.replace('_', ' ').toUpperCase() || 'Order'}
                       </p>
                       <p className="text-sm text-gray-500">
-                        {order.customer_name || 'Customer'} • {new Date(order.created_at).toLocaleDateString()}
+                        {order.customer_name || 'Customer'} • {formatDate(order.created_at)}
                       </p>
                     </div>
                   </div>
