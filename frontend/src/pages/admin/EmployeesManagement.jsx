@@ -242,7 +242,9 @@ export default function EmployeesManagement() {
     total: employees.length,
     active: employees.filter(e => e.status === 'active').length,
     onLeave: employees.filter(e => e.status === 'on_leave').length,
-    totalSalary: employees.filter(e => e.status === 'active').reduce((sum, e) => sum + (e.salary || 0), 0)
+    // Monthly payroll should include all employees EXCEPT suspended and terminated
+    // active, on_leave, and other statuses still count towards payroll
+    totalSalary: employees.filter(e => !['suspended', 'terminated'].includes(e.status)).reduce((sum, e) => sum + (e.salary || 0), 0)
   };
 
   return (
