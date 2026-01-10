@@ -42,7 +42,7 @@ class TravelRouteCreate(BaseModel):
     to_city: str
     departure_time: str
     arrival_time: str
-    duration: str
+    duration: Optional[str] = None
     price: float
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
