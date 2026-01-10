@@ -345,18 +345,47 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 
 ## Backlog (Updated)
 - [ ] **P1: Email Invitation System** - Allow inviting new users via email
-- [ ] **P2: Advanced Ratings Moderation Reports** - Beyond bulk actions, add detailed reports
-- [ ] **P3: Refactor CustomerServiceManagement.jsx** - Currently ~1255 lines
 - [ ] **P4: Mobile App (Customer Only)** - Capacitor + React for iOS/Android
   - Reuse 90%+ of existing React code
   - Native features: Push notifications, Camera, GPS, Offline mode
   - App Store & Play Store distribution
-  - Timeline estimate: 6-8 weeks when prioritized
+
+## Completed Features (Jan 10, 2026 - Session 11)
+- [x] **P2: Advanced Ratings Reports**
+  - New Reports tab on Ratings page for Admin/Super Admin users
+  - Summary stats: Total ratings, Average rating, Response rate, Flagged count
+  - Rating Trends chart (line + bar) showing daily trends
+  - Reviews by Category pie chart
+  - Service Category Breakdown table with distribution bars, response rates
+  - Top Operators by Response Rate list
+  - Flagged Reviews Analysis by category
+  - Time range filter (7d, 30d, 90d, 1y, all)
+  - New backend endpoint: GET /api/ratings/reports/analytics
+- [x] **P3: CustomerServiceManagement.jsx Refactoring**
+  - Reduced from 1255 lines to 776 lines (38% reduction)
+  - Extracted components:
+    - DashboardTab.jsx - Dashboard stats and charts
+    - TeamTab.jsx - Team member management UI
+    - AssignModal.jsx & BulkAssignModal.jsx - Ticket assignment modals
+    - AddMemberModal.jsx - Add team member dialog
+  - All tabs (Dashboard, Tickets, Team) still functional
+- [x] **P0: SMS OTP Verification for Phone Signups**
+  - Integrated Infobip SMS API for OTP delivery
+  - New backend service: /app/backend/services/infobip_service.py
+  - New OTP routes: /api/otp/send, /api/otp/verify, /api/otp/resend
+  - Phone signup now requires OTP verification before registration
+  - Frontend OTP verification screen with:
+    - 6-digit OTP input
+    - 5-minute countdown timer
+    - Resend button (rate limited)
+    - Back to signup link
+  - Rate limiting: 3 OTP requests per 5 minutes per phone number
+  - OTP stored in MongoDB with TTL index (auto-expires)
+- [x] **All Tests Passed**: 15/15 backend tests, 100% frontend
 
 ## Technical Debt
 - [ ] Break down Permissions.jsx into smaller components
 - [ ] Move hardcoded admin permissions to config/database
-- [ ] Refactor large components (CustomerServiceManagement.jsx, Permissions.jsx)
 
 ## Test Credentials
 - **Super Admin**: superadmin@oryno.com / testpassword123
