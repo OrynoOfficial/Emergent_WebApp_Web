@@ -12,6 +12,7 @@ import {
   ArrowLeft, Home, Building2, Globe, ChevronDown, FileText
 } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '../components/ui/input-otp';
+import api from '../api/client';
 
 const backgroundImages = [
   'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070',
