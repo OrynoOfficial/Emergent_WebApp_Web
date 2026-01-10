@@ -23,7 +23,7 @@ export const operatorApi = {
 
 // Travel Routes
 export const travelRouteApi = {
-  list: (params = {}) => api.get('/travel/routes/management', { params }),
+  list: (params = {}) => api.get('/travel/management/my-routes', { params }),
   listAll: (params = {}) => api.get('/travel/routes', { params }),
   get: (id) => api.get(`/travel/routes/${id}`),
   create: (data) => api.post('/travel/routes', data),
@@ -31,7 +31,7 @@ export const travelRouteApi = {
   delete: (id) => api.delete(`/travel/routes/${id}`),
   approve: (id) => api.post(`/travel/routes/${id}/approve`),
   suspend: (id) => api.post(`/travel/routes/${id}/suspend`),
-  operatorRoutes: (params = {}) => api.get('/travel/operator/routes', { params }),
+  operatorRoutes: (params = {}) => api.get('/travel/management/my-routes', { params }),
   operatorStats: () => api.get('/travel/operator/stats'),
 };
 
