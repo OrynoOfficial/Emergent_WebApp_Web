@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatFCFA } from '@/utils/currency';
 import { activityLogger } from '@/utils/activityLogger';
+import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
 // Status Tag System - matching original validation workflow
 const STATUS_TAGS = {
