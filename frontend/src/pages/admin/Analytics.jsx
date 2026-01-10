@@ -350,72 +350,76 @@ export default function Analytics() {
       )}
 
       {/* Extended Charts Row (from Data Analytics) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue & Bookings Trend</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={dataAnalytics.monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" tickFormatter={(v) => `${(v/1000000).toFixed(0)}M`} />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(value, name) => [name === 'revenue' ? formatFCFA(value) : value, name]} />
-                <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#082c59" fill="#082c59" fillOpacity={0.2} name="Revenue" />
-                <Line yAxisId="right" type="monotone" dataKey="bookings" stroke="#10b981" strokeWidth={2} name="Bookings" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {dataAnalytics && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue & Bookings Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={dataAnalytics.monthlyTrend || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis yAxisId="left" tickFormatter={(v) => `${(v/1000000).toFixed(0)}M`} />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip formatter={(value, name) => [name === 'revenue' ? formatFCFA(value) : value, name]} />
+                  <Legend />
+                  <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#082c59" fill="#082c59" fillOpacity={0.2} name="Revenue" />
+                  <Line yAxisId="right" type="monotone" dataKey="bookings" stroke="#10b981" strokeWidth={2} name="Bookings" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue by Service</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={Object.values(SERVICE_COLORS)[index % Object.values(SERVICE_COLORS).length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatFCFA(value)} />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue by Service</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={Object.values(SERVICE_COLORS)[index % Object.values(SERVICE_COLORS).length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatFCFA(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Service Performance (from Data Analytics) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Service Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {dataAnalytics.revenueByService.map((service, i) => {
-              const IconComponent = SERVICE_ICONS[service.name.toLowerCase().replace(' ', '_')] || Package;
-              const color = Object.values(SERVICE_COLORS)[i % Object.values(SERVICE_COLORS).length];
-              return (
-                <div key={service.name} className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}20` }}>
-                      <IconComponent className="h-5 w-5" style={{ color }} />
+      {dataAnalytics && dataAnalytics.revenueByService?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Service Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {dataAnalytics.revenueByService.map((service, i) => {
+                const IconComponent = SERVICE_ICONS[service.name.toLowerCase().replace(' ', '_')] || Package;
+                const color = Object.values(SERVICE_COLORS)[i % Object.values(SERVICE_COLORS).length];
+                return (
+                  <div key={service.name} className="p-4 border rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}20` }}>
+                        <IconComponent className="h-5 w-5" style={{ color }} />
+                      </div>
+                      <span className="font-medium">{service.name}</span>
                     </div>
-                    <span className="font-medium">{service.name}</span>
+                    <p className="text-xl font-bold text-[#082c59]">{formatFCFA(service.value)}</p>
+                    <p className="text-sm text-slate-500">{service.bookings?.toLocaleString() || 0} bookings</p>
                   </div>
-                  <p className="text-xl font-bold text-[#082c59]">{formatFCFA(service.value)}</p>
-                  <p className="text-sm text-slate-500">{service.bookings.toLocaleString()} bookings</p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Revenue Trend (Original Analytics) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
