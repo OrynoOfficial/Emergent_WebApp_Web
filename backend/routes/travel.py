@@ -40,6 +40,50 @@ async def create_travel_route(
     await db.travel_routes.insert_one(route)
     return {"message": "Route created", "route_id": route["_id"]}
 
+@router.get("/routes/management")
+async def get_travel_routes_management(
+    current_user: dict = Depends(get_current_active_user),
+    skip: int = 0,
+    limit: int = 100
+):
+    """Get travel routes for management - filtered by operator for operator users"""
+    db = get_database()
+    
+    # Build query based on user role
+    query = {}
+    
+    # Operators can only see routes they created or are assigned to
+    if current_user["role"] == "operator":
+        operator_id = current_user.get("operator_id")
+        if operator_id:
+            query["$or"] = [
+                {"operator_id": operator_id},
+                {"created_by": current_user["_id"]}
+            ]
+        else:
+            # If no operator_id, only show routes they created
+            query["created_by"] = current_user["_id"]
+    
+    routes = await db.travel_routes.find(query).skip(skip).limit(limit).to_list(limit)
+    total = await db.travel_routes.count_documents(query)
+    
+    # Enrich routes with vehicle info
+    for route in routes:
+        route["id"] = str(route.pop("_id", route.get("id", "")))
+        # Get vehicle info if vehicle_id exists
+        if route.get("vehicle_id"):
+            vehicle = await db.vehicles.find_one({"_id": route["vehicle_id"]})
+            if vehicle:
+                route["vehicle_images"] = vehicle.get("images", [])
+                route["vehicle_name"] = vehicle.get("vehicle_name", vehicle.get("name", ""))
+    
+    return {
+        "routes": routes, 
+        "total": total,
+        "is_operator_scoped": current_user["role"] == "operator"
+    }
+
+
 @router.get("/routes")
 async def get_travel_routes(
     origin: Optional[str] = None,
