@@ -392,3 +392,10 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - **Admin**: admin@test.com / testpassword123
 - **Operator**: operator@test.com / testpassword123
 - **Customer**: customer@test.com / testpassword123
+- **Phone Login**: +237677111222 / testpassword123
+
+## Infobip Integration
+- **Base URL**: m9p9r6.api.infobip.com
+- **SMS Sender**: Oryno
+- **Email From**: oryno@selfserve.worlds-connected.co
+- **Services**: SMS OTP verification, Email delivery
