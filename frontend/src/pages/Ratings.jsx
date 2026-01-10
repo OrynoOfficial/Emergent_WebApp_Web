@@ -15,9 +15,14 @@ import {
   Hotel, Utensils, Bus, Car, Film, Sparkles, Package, Gift,
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
   MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
-  Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X
+  Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
+  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend
+} from 'recharts';
 
 const SERVICE_ICONS = {
   hotel: Hotel,
