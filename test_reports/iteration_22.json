@@ -1,0 +1,98 @@
+{
+  "summary": "Tested operator-scoped data display and CRUD operations. All P0 and P1 features working correctly. Operator can create/view/edit/delete routes and vehicles. Analytics and Sales dashboards show operator-scoped data (70,000 FCFA revenue, 10 bookings).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/test_operator_scoped_features.py",
+    "/app/test_reports/pytest/pytest_results_iteration22.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/tests/test_operator_scoped_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "operator": "operator@test.com / testpassword123 (check 'I'm logging in as a service operator')",
+    "super_admin": "superadmin@oryno.com / testpassword123"
+  },
+  "seed_data_creation": "Created test routes and vehicles during testing (cleaned up after tests)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All operator-scoped features verified and working. Operator (Musango Bus Service) can: 1) Create/edit/delete travel routes via POST/PUT/DELETE /api/travel/routes, 2) Create/edit/delete vehicles via POST/PUT/DELETE /api/vehicles/, 3) View their routes via GET /api/travel/management/my-routes (returns 5 routes), 4) View their vehicles via GET /api/vehicles/ (returns 4 vehicles), 5) See operator-scoped analytics via GET /api/analytics/overview (70,000 FCFA revenue, 10 bookings). Travel Management page at /management/travel shows Dashboard, Management, and Communications tabs. Sales Dashboard at /admin/sales shows operator-specific sales data.",
+  "test_results": {
+    "P0_operator_create_routes": {
+      "test": "POST /api/travel/routes works for operator",
+      "status": "PASS",
+      "details": "Operator can create routes with from_city, to_city, departure_time, arrival_time, price"
+    },
+    "P0_operator_create_vehicles": {
+      "test": "POST /api/vehicles/ works for operator",
+      "status": "PASS",
+      "details": "Operator can create vehicles with vehicle_name, vehicle_type, plate_number, total_seats"
+    },
+    "P0_operator_view_routes": {
+      "test": "GET /api/travel/management/my-routes returns operator's routes only",
+      "status": "PASS",
+      "details": "Returns 5 routes, all belonging to Musango Bus Service (operator_id: 30c487d8-f8ef-4e80-8b14-1a68866071c8)"
+    },
+    "P0_operator_view_vehicles": {
+      "test": "GET /api/vehicles/ returns operator's vehicles only",
+      "status": "PASS",
+      "details": "Returns 4 vehicles, all belonging to Musango Bus Service"
+    },
+    "P1_analytics_dashboard": {
+      "test": "GET /api/analytics/overview returns operator-scoped data",
+      "status": "PASS",
+      "details": {
+        "totalUsers": 2,
+        "totalBookings": 10,
+        "totalRevenue": "70,000 FCFA",
+        "avgOrderValue": "7,000 FCFA",
+        "conversionRate": "30%"
+      }
+    },
+    "P1_sales_dashboard": {
+      "test": "Sales Dashboard shows operator-scoped data",
+      "status": "PASS",
+      "details": {
+        "totalSales": "70,000 FCFA",
+        "totalOrders": 10,
+        "avgOrderValue": "7,000 FCFA",
+        "serviceCategory": "Travel (100%)"
+      }
+    },
+    "travel_management_page": {
+      "test": "Travel Management page loads with operator's routes and vehicles",
+      "status": "PASS",
+      "details": {
+        "routes_count": 5,
+        "vehicles_count": 4,
+        "add_route_button": "visible",
+        "add_vehicle_button": "visible"
+      }
+    },
+    "data_isolation": {
+      "test": "Operator data is properly isolated from other operators",
+      "status": "PASS",
+      "details": "All routes and vehicles returned belong to the operator's organization"
+    }
+  },
+  "screenshots": {
+    "operator_dashboard": ".screenshots/operator_after_login.png",
+    "travel_management": ".screenshots/travel_management.png",
+    "travel_routes": ".screenshots/travel_management_routes.png",
+    "travel_vehicles": ".screenshots/travel_vehicles.png",
+    "sales_dashboard": ".screenshots/sales_dashboard.png"
+  }
+}
