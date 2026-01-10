@@ -37,10 +37,11 @@ async def create_vehicle(
     }
     
     await db.vehicles.insert_one(vehicle)
-    vehicle.pop("_id")
-    vehicle["id"] = vehicle_data.operator_id
+    vehicle_id = vehicle["_id"]
+    vehicle["id"] = vehicle_id
+    del vehicle["_id"]
     
-    return {"message": "Vehicle created", "vehicle_id": vehicle["_id"] if "_id" in vehicle else vehicle_data.operator_id, "vehicle": vehicle}
+    return {"message": "Vehicle created", "vehicle_id": vehicle_id, "vehicle": vehicle}
 
 @router.get("/")
 async def get_vehicles(
