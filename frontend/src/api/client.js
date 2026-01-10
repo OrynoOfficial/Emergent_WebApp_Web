@@ -151,7 +151,8 @@ export const ordersAPI = {
 // Analytics API
 export const analyticsAPI = {
   getDashboard: () => api.get('/analytics/dashboard'),
-  getStats: (params) => api.get('/analytics/stats', { params }),
+  getStats: (params) => api.get('/analytics/overview', { params }),
+  getOverview: (params) => api.get('/analytics/overview', { params }),
 };
 
 // Hotels API
