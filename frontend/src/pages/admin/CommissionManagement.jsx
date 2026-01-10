@@ -12,6 +12,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { 
   Percent, Plus, Edit, Trash2, TrendingUp, Building, ShoppingBag, Globe, Loader2, Save
 } from 'lucide-react';
+import { formatDate } from '../../utils/dateUtils';
 
 const SERVICE_CATEGORIES = [
   { value: 'travel', label: 'Travel Services' },
