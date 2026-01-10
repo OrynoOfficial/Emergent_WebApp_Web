@@ -91,7 +91,7 @@ async def register(user_data: UserCreate, request: Request):
     await db.users.insert_one(user)
     
     # Send verification email only for email registrations
-    if not is_phone_registration and user_data.email:
+    if has_valid_email:
         verification_link = f"http://localhost:3000/verify-email?token={user['email_verification_token']}"
         await send_verification_email(user["email"], verification_link)
         return {
@@ -100,9 +100,9 @@ async def register(user_data: UserCreate, request: Request):
             "requires_verification": True
         }
     
-    # For phone registrations, user can login immediately
+    # For phone-only registrations, user can login immediately
     return {
-        "message": "User registered successfully. You can now login.",
+        "message": "User registered successfully. You can now login with your phone number.",
         "user_id": user["_id"],
         "requires_verification": False
     }
