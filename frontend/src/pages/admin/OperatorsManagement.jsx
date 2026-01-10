@@ -150,15 +150,16 @@ export default function OperatorsManagement() {
   const handleSaveEdit = async () => {
     if (!selectedOperator) return;
     
+    const operatorId = selectedOperator._id || selectedOperator.id;
+    
     try {
-      await api.put(`/operators/${selectedOperator.id}`, editForm);
-      setOperators(prev => prev.map(o => 
-        o.id === selectedOperator.id ? { ...o, ...editForm } : o
-      ));
+      await api.put(`/operators/${operatorId}`, editForm);
+      // Reload operators to get fresh data from server
+      await loadOperators();
       toast.success('Operator updated successfully');
     } catch (error) {
       console.error('Failed to update operator:', error);
-      toast.error('Failed to update operator');
+      toast.error(error.response?.data?.detail || 'Failed to update operator');
     }
     setIsEditOpen(false);
     setSelectedOperator(null);
