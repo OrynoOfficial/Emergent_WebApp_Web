@@ -775,6 +775,13 @@ function AdminRatingsView() {
   const [moderationAction, setModerationAction] = useState('');
   const [moderationReason, setModerationReason] = useState('');
   const [submittingModeration, setSubmittingModeration] = useState(false);
+  
+  // Bulk selection state
+  const [selectedRatings, setSelectedRatings] = useState(new Set());
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
+  const [bulkReason, setBulkReason] = useState('');
+  const [submittingBulk, setSubmittingBulk] = useState(false);
 
   useEffect(() => {
     fetchAllRatings();
