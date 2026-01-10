@@ -5,3 +5,7 @@ export { Pagination } from './Pagination';
 export { TicketCard } from './TicketCard';
 export { FiltersPanel } from './FiltersPanel';
 export { TicketDetailModal } from './TicketDetailModal';
+export { DashboardTab } from './DashboardTab';
+export { TeamTab } from './TeamTab';
+export { AssignModal, BulkAssignModal } from './AssignModal';
+export { AddMemberModal } from './AddMemberModal';
