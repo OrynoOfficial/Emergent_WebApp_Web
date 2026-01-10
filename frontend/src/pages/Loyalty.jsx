@@ -15,6 +15,7 @@ import {
   Plus, Edit2, Trash2, Settings, Search, BarChart3, Target, Percent
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
+import { formatDate, formatDateShort } from '../utils/dateUtils';
 import api from '../api/client';
 import toast from 'react-hot-toast';
 
