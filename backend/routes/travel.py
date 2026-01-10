@@ -10,14 +10,21 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/api/travel", tags=["Travel"])
 
 class TravelRouteCreate(BaseModel):
-    route_name: str
-    origin: str
-    destination: str
-    base_fare: float
+    route_name: Optional[str] = None
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    from_city: Optional[str] = None
+    to_city: Optional[str] = None
+    base_fare: Optional[float] = None
+    price: Optional[float] = None
     departure_time: str
     arrival_time: str
-    duration_minutes: int
-    total_seats: int
+    duration_minutes: Optional[int] = None
+    duration: Optional[str] = None
+    total_seats: Optional[int] = 50
+    vehicle_type: Optional[str] = "bus"
+    vehicle_id: Optional[str] = None
+    amenities: Optional[list] = []
 
 @router.post("/routes")
 async def create_travel_route(
