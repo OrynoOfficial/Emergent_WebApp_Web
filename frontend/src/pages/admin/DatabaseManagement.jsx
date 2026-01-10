@@ -439,7 +439,7 @@ export default function DatabaseManagement() {
                         </div>
                         <div>
                           <p className="font-medium">{op.type} on {op.collection}</p>
-                          <p className="text-sm text-gray-500">{formatDate(op.timestamp)}</p>
+                          <p className="text-sm text-gray-500">{formatDateTime(op.timestamp)}</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="bg-green-50 text-green-700">
