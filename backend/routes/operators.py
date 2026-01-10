@@ -521,7 +521,14 @@ async def reactivate_operator(
     operator_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Reactivate a suspended operator (admin or super_admin only)"""
+    """Reactivate a suspended operator (admin or super_admin only)
+    
+    Cascades reactivation to:
+    - All suspended users assigned to this operator (status -> active)
+    - All suspended travel routes (status -> active)
+    - All suspended vehicles (maintenance_status -> active)
+    - All suspended hotels, restaurants, car rentals, events, banquets, packages
+    """
     db = get_database()
     
     if current_user["role"] not in ["admin", "super_admin"]:
@@ -531,6 +538,8 @@ async def reactivate_operator(
     operator = await db.operators.find_one({"_id": operator_id, "status": OperatorStatus.SUSPENDED})
     if not operator:
         raise HTTPException(status_code=404, detail="Operator not found or not suspended")
+    
+    operator_name = operator.get("name", "Unknown")
     
     # Update operator status
     await db.operators.update_one(
@@ -543,46 +552,75 @@ async def reactivate_operator(
         }}
     )
     
-    # Reactivate operator's services
-    await db.travel_routes.update_many(
+    # 1. Reactivate ALL suspended users assigned to this operator
+    users_result = await db.users.update_many(
         {"operator_id": operator_id, "status": "suspended"},
-        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+        {"$set": {
+            "status": "active",
+            "suspended_reason": None,
+            "suspended_at": None,
+            "reactivated_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
     )
-    await db.hotels.update_many(
+    
+    # 2. Reactivate travel routes
+    routes_result = await db.travel_routes.update_many(
         {"operator_id": operator_id, "status": "suspended"},
-        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+        {"$set": {"status": "active", "is_active": True, "updated_at": datetime.utcnow()}}
     )
-    await db.car_rentals.update_many(
-        {"operator_id": operator_id, "status": "suspended"},
-        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    
+    # 3. Reactivate vehicles
+    vehicles_result = await db.vehicles.update_many(
+        {"operator_id": operator_id, "maintenance_status": "suspended"},
+        {"$set": {"maintenance_status": "active", "updated_at": datetime.utcnow()}}
     )
-    await db.restaurants.update_many(
-        {"operator_id": operator_id, "status": "suspended"},
-        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
-    )
-    await db.events.update_many(
+    
+    # 4. Reactivate hotels
+    hotels_result = await db.hotels.update_many(
         {"operator_id": operator_id, "status": "suspended"},
         {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
     )
     
-    # Update owner user role back to operator
-    owner_user_id = operator.get("owner_user_id")
-    if owner_user_id:
-        await db.users.update_one(
-            {"_id": owner_user_id},
-            {"$set": {
-                "role": "operator",
-                "updated_at": datetime.utcnow()
-            }}
-        )
-        
-        # Send notification
+    # 5. Reactivate car rentals
+    car_rentals_result = await db.car_rentals.update_many(
+        {"operator_id": operator_id, "status": "suspended"},
+        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    )
+    
+    # 6. Reactivate restaurants
+    restaurants_result = await db.restaurants.update_many(
+        {"operator_id": operator_id, "status": "suspended"},
+        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    )
+    
+    # 7. Reactivate events
+    events_result = await db.events.update_many(
+        {"operator_id": operator_id, "status": "suspended"},
+        {"$set": {"status": "active", "is_active": True, "updated_at": datetime.utcnow()}}
+    )
+    
+    # 8. Reactivate banquets
+    banquets_result = await db.banquets.update_many(
+        {"operator_id": operator_id, "status": "suspended"},
+        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    )
+    
+    # 9. Reactivate packages
+    packages_result = await db.packages.update_many(
+        {"operator_id": operator_id, "status": "suspended"},
+        {"$set": {"status": "active", "updated_at": datetime.utcnow()}}
+    )
+    
+    # Send notification to all reactivated users
+    reactivated_users = await db.users.find({"operator_id": operator_id}).to_list(100)
+    for user in reactivated_users:
         notification = {
             "_id": str(uuid.uuid4()),
-            "user_id": owner_user_id,
+            "user_id": user["_id"],
             "notification_type": "operator_status",
-            "title": "Operator Account Reactivated",
-            "message": f"Your operator account '{operator.get('name')}' has been reactivated. You can now manage your services.",
+            "title": "Account Reactivated",
+            "message": f"Your account has been reactivated. Operator '{operator_name}' is now active. You can resume your work.",
             "data": {"operator_id": operator_id, "status": "active"},
             "is_read": False,
             "created_at": datetime.utcnow()
@@ -596,12 +634,37 @@ async def reactivate_operator(
         "entity_type": "operator",
         "entity_id": operator_id,
         "action": "operator.reactivated",
-        "details": {"operator_name": operator.get("name"), "owner_user_id": owner_user_id},
+        "details": {
+            "operator_name": operator_name,
+            "users_reactivated": users_result.modified_count,
+            "routes_reactivated": routes_result.modified_count,
+            "vehicles_reactivated": vehicles_result.modified_count,
+            "hotels_reactivated": hotels_result.modified_count,
+            "restaurants_reactivated": restaurants_result.modified_count,
+            "car_rentals_reactivated": car_rentals_result.modified_count,
+            "events_reactivated": events_result.modified_count,
+            "banquets_reactivated": banquets_result.modified_count,
+            "packages_reactivated": packages_result.modified_count
+        },
         "created_at": datetime.utcnow()
     }
     await db.activity_logs.insert_one(activity)
     
-    return {"message": "Operator reactivated", "operator_id": operator_id}
+    return {
+        "message": "Operator reactivated",
+        "operator_id": operator_id,
+        "cascade_summary": {
+            "users_reactivated": users_result.modified_count,
+            "routes_reactivated": routes_result.modified_count,
+            "vehicles_reactivated": vehicles_result.modified_count,
+            "hotels_reactivated": hotels_result.modified_count,
+            "restaurants_reactivated": restaurants_result.modified_count,
+            "car_rentals_reactivated": car_rentals_result.modified_count,
+            "events_reactivated": events_result.modified_count,
+            "banquets_reactivated": banquets_result.modified_count,
+            "packages_reactivated": packages_result.modified_count
+        }
+    }
 
 
 # ==================== DOCUMENT VERIFICATION WORKFLOW ====================
