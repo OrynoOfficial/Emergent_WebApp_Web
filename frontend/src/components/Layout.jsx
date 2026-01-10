@@ -630,7 +630,18 @@ export default function Layout({ children }) {
         // Admin-only items
         if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
         if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Briefcase });
-        if (canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employees', path: '/admin/employees', icon: Users });
+        if (canViewEmployees) {
+          adminSubmenu.push({ 
+            key: 'employees', 
+            label: 'Employees', 
+            icon: Users,
+            isDropdown: true,
+            submenu: [
+              { key: 'employees-management', label: 'Management', path: '/admin/employees', icon: Users },
+              { key: 'employees-templates', label: 'Templates', path: '/admin/employees/templates', icon: FileText }
+            ]
+          });
+        }
         if (canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
         if (hasPermission('payments.view')) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
         if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
