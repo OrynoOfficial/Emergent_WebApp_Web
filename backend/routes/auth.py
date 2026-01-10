@@ -24,13 +24,25 @@ async def register(user_data: UserCreate, request: Request):
     """Register a new user - Always assigns 'customer' role for self-registration"""
     db = get_database()
     
-    # Check if user already exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+    # Check if email already exists (only if email is provided and not a phone placeholder)
+    if user_data.email and not user_data.email.endswith('@phone.local'):
+        existing_email = await db.users.find_one({"email": user_data.email})
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+    
+    # Check if phone number already exists
+    if user_data.phone:
+        # Normalize phone number
+        phone = user_data.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+        existing_phone = await db.users.find_one({"phone": phone})
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
     
     # Get IP and location data
     client_ip = request.client.host
@@ -40,18 +52,28 @@ async def register(user_data: UserCreate, request: Request):
     # Operator accounts can only be created by admins/super_admins
     assigned_role = "customer"
     
+    # Determine if user registered with phone or email
+    is_phone_registration = user_data.email and user_data.email.endswith('@phone.local')
+    
+    # Normalize phone number if provided
+    normalized_phone = None
+    if user_data.phone:
+        normalized_phone = user_data.phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+    
     # Create user
     user = {
         "_id": str(uuid.uuid4()),
-        "email": user_data.email,
+        "email": user_data.email if not is_phone_registration else None,
         "username": user_data.username,
         "password_hash": get_password_hash(user_data.password),
         "full_name": user_data.full_name,
-        "phone": user_data.phone,
+        "phone": normalized_phone,
         "role": assigned_role,  # Always customer for self-registration
-        "status": "pending",
-        "email_verified": False,
-        "email_verification_token": str(uuid.uuid4()),
+        "status": "active",  # Changed from pending - allow login immediately
+        "email_verified": not is_phone_registration,  # Phone registrations don't need email verification
+        "phone_verified": is_phone_registration,  # Assume phone is valid for phone registrations
+        "registration_method": "phone" if is_phone_registration else "email",
+        "email_verification_token": str(uuid.uuid4()) if not is_phone_registration else None,
         "two_fa_enabled": False,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
@@ -62,13 +84,21 @@ async def register(user_data: UserCreate, request: Request):
     
     await db.users.insert_one(user)
     
-    # Send verification email
-    verification_link = f"http://localhost:3000/verify-email?token={user['email_verification_token']}"
-    await send_verification_email(user["email"], verification_link)
+    # Send verification email only for email registrations
+    if not is_phone_registration and user_data.email:
+        verification_link = f"http://localhost:3000/verify-email?token={user['email_verification_token']}"
+        await send_verification_email(user["email"], verification_link)
+        return {
+            "message": "User registered successfully. Please check your email to verify your account.",
+            "user_id": user["_id"],
+            "requires_verification": True
+        }
     
+    # For phone registrations, user can login immediately
     return {
-        "message": "User registered successfully. Please check your email to verify your account.",
-        "user_id": user["_id"]
+        "message": "User registered successfully. You can now login.",
+        "user_id": user["_id"],
+        "requires_verification": False
     }
 
 @router.post("/login")
