@@ -348,7 +348,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply }) {
           <div>
             <h3 className="font-semibold text-lg text-slate-900">{ticket.subject}</h3>
             <p className="text-sm text-slate-500 mt-1">
-              Created {new Date(ticket.created_at).toLocaleString()}
+              Created {formatDateTime(ticket.created_at)}
             </p>
           </div>
 
@@ -376,7 +376,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply }) {
                       {msg.sender_type === 'agent' ? 'Support Agent' : 'You'}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {new Date(msg.timestamp).toLocaleString()}
+                      {formatDateTime(msg.timestamp)}
                     </span>
                   </div>
                   <p className="text-slate-700 text-sm">{msg.content}</p>
@@ -816,7 +816,7 @@ export default function Support() {
                                 {ticket.subject}
                               </h3>
                               <p className="text-sm text-slate-500 mt-0.5">
-                                {ticket.ticket_number} • {new Date(ticket.created_at).toLocaleDateString()}
+                                {ticket.ticket_number} • {formatDate(ticket.created_at)}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
