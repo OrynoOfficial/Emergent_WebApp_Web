@@ -294,7 +294,25 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Operators can only see routes they created or are assigned to
   - All stats reset to real values (no more fake numbers)
 
-## Backlog (Moved from Priority)
+## Completed Features (Jan 10, 2026 - Session 9)
+- [x] **P0: Fixed Operator CRUD Operations**
+  - Made `duration` field optional in `TravelRouteCreate` model (backend/models/travel_route.py)
+  - Fixed vehicle_id return bug in create vehicle endpoint (backend/routes/vehicles.py)
+  - Updated frontend API to use correct `/travel/management/my-routes` endpoint (frontend/src/api/management.js)
+  - Operators can now create, edit, delete routes and vehicles for their services
+  - All CRUD operations properly scope to operator_id
+- [x] **P1: Fixed Analytics Dashboard Data Display**
+  - Fixed Analytics.jsx to properly use `/analytics/overview` response data
+  - Removed duplicate API call that was failing (getStats called non-existent endpoint)
+  - Analytics now shows correct operator-scoped data (70,000 FCFA revenue, 10 bookings)
+  - Sales Dashboard and Analytics Dashboard now show consistent data
+- [x] **Verified Data Scoping**
+  - Travel Management: Shows 5 routes, 4 vehicles for Musango Bus Service
+  - Sales Dashboard: Shows 70,000 FCFA total sales, 10 orders
+  - Analytics Dashboard: Shows 70,000 FCFA revenue, 10 bookings, Travel 100%
+  - All tests passed (15/15 backend tests)
+
+## Backlog (Updated)
 - [ ] **P0: Revenue Bug** - Operator Management page shows "0 FCFA" for all operators
   - Debug checklist: Check if orders have operator_id, review backend revenue calculation
 - [ ] **P1: Email Invitation System** - Allow inviting new users via email
