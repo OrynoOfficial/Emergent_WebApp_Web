@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatDate, formatDateTime, formatDateLong } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { eventsAPI } from '../../api/client';
 import { Search, MapPin, Calendar, Clock, Users, ArrowRight, Ticket, Filter } from 'lucide-react';
