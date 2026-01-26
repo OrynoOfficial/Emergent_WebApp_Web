@@ -381,6 +381,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
     - Back to signup link
   - Rate limiting: 3 OTP requests per 5 minutes per phone number
   - OTP stored in MongoDB with TTL index (auto-expires)
+- [x] **Date Format & Timezone Update**
+  - Changed date format from American (MM/DD/YYYY) to European (DD.MM.YYYY)
+  - Set timezone to Africa/Douala (Cameroon, UTC+1)
+  - Created centralized date utility: /app/frontend/src/utils/dateUtils.js
+  - Updated all date formatting across the application
 - [x] **All Tests Passed**: 15/15 backend tests, 100% frontend
 
 ## Technical Debt
