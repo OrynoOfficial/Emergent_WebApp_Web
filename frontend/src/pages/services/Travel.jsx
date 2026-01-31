@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { travelAPI } from '../../api/client';
 import { formatCurrency } from '../../utils/currency';
-import { Search, MapPin, Clock, Users, ArrowRight, Calendar, Bus } from 'lucide-react';
+import { isPast, formatDate } from '../../utils/dateUtils';
+import { Search, MapPin, Clock, Users, ArrowRight, Calendar, Bus, AlertCircle } from 'lucide-react';
 
 export default function Travel() {
   const [routes, setRoutes] = useState([]);
