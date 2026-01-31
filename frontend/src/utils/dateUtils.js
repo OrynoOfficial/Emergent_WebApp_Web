@@ -9,6 +9,71 @@ export const TIMEZONE = 'Africa/Douala';
 export const LOCALE = 'fr-CM'; // French Cameroon locale for DD.MM.YYYY format
 
 /**
+ * Check if a datetime has passed (is in the past)
+ * @param {string|Date} dateInput - Date string or Date object
+ * @param {string} timeStr - Optional time string (HH:mm or HH:mm AM/PM)
+ * @returns {boolean} True if the datetime is in the past
+ */
+export const isPast = (dateInput, timeStr = null) => {
+  if (!dateInput) return false;
+  try {
+    let dateTime;
+    
+    if (timeStr) {
+      // Parse time string
+      let hours = 0, minutes = 0;
+      const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (timeMatch) {
+        hours = parseInt(timeMatch[1], 10);
+        minutes = parseInt(timeMatch[2], 10);
+        const period = timeMatch[3];
+        if (period) {
+          if (period.toUpperCase() === 'PM' && hours !== 12) hours += 12;
+          if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
+      }
+      
+      const date = new Date(dateInput);
+      date.setHours(hours, minutes, 0, 0);
+      dateTime = date;
+    } else {
+      dateTime = new Date(dateInput);
+    }
+    
+    if (isNaN(dateTime.getTime())) return false;
+    return dateTime < new Date();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check if a date is today
+ * @param {string|Date} dateInput - Date string or Date object
+ * @returns {boolean} True if the date is today
+ */
+export const isToday = (dateInput) => {
+  if (!dateInput) return false;
+  try {
+    const date = new Date(dateInput);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Check if a showtime/departure has passed today
+ * @param {string} dateStr - Date string (YYYY-MM-DD)
+ * @param {string} timeStr - Time string (HH:mm or HH:mm AM/PM)
+ * @returns {boolean} True if the showtime has passed
+ */
+export const isShowtimePast = (dateStr, timeStr) => {
+  return isPast(dateStr, timeStr);
+};
+
+/**
  * Format date to DD.MM.YYYY
  * @param {string|Date} dateInput - Date string or Date object
  * @returns {string} Formatted date string
