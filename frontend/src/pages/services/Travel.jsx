@@ -166,57 +166,88 @@ export default function Travel() {
         </div>
       ) : (
         <div className="space-y-4">
-          {routes.map((route) => (
-            <div
-              key={route.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-all cursor-pointer"
-              onClick={() => navigate(`/services/travel/${route.id}`)}
-            >
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Route Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-slate-900">{route.departure_time}</p>
-                      <p className="text-sm text-slate-500">{route.from_city}</p>
-                    </div>
-                    <div className="flex-1 flex items-center gap-2">
-                      <div className="flex-1 border-t-2 border-dashed border-slate-300"></div>
-                      <div className="px-3 py-1 bg-slate-100 rounded-full">
-                        <span className="text-xs font-medium text-slate-600">{route.duration}</span>
+          {routes.map((route) => {
+            // Check if this route's departure has passed
+            const routeDate = filters.date || new Date().toISOString().split('T')[0];
+            const isRoutePast = isPast(routeDate, route.departure_time);
+            
+            return (
+              <div
+                key={route.id}
+                className={`bg-white rounded-2xl border border-slate-200 p-6 transition-all ${
+                  isRoutePast 
+                    ? 'opacity-60 grayscale cursor-not-allowed' 
+                    : 'hover:shadow-lg cursor-pointer'
+                }`}
+                onClick={() => !isRoutePast && navigate(`/services/travel/${route.id}`)}
+              >
+                {/* Past Route Indicator */}
+                {isRoutePast && (
+                  <div className="flex items-center gap-2 mb-3 text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Departed</span>
+                  </div>
+                )}
+                
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  {/* Route Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className={`text-2xl font-bold ${isRoutePast ? 'text-slate-400' : 'text-slate-900'}`}>{route.departure_time}</p>
+                        <p className="text-sm text-slate-500">{route.from_city}</p>
                       </div>
-                      <div className="flex-1 border-t-2 border-dashed border-slate-300"></div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className={`flex-1 border-t-2 border-dashed ${isRoutePast ? 'border-slate-200' : 'border-slate-300'}`}></div>
+                        <div className={`px-3 py-1 rounded-full ${isRoutePast ? 'bg-slate-100' : 'bg-slate-100'}`}>
+                          <span className={`text-xs font-medium ${isRoutePast ? 'text-slate-400' : 'text-slate-600'}`}>{route.duration}</span>
+                        </div>
+                        <div className={`flex-1 border-t-2 border-dashed ${isRoutePast ? 'border-slate-200' : 'border-slate-300'}`}></div>
+                      </div>
+                      <div className="text-center">
+                        <p className={`text-2xl font-bold ${isRoutePast ? 'text-slate-400' : 'text-slate-900'}`}>{route.arrival_time}</p>
+                        <p className="text-sm text-slate-500">{route.to_city}</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-slate-900">{route.arrival_time}</p>
-                      <p className="text-sm text-slate-500">{route.to_city}</p>
+                    <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-slate-600">
+                      <span className="flex items-center gap-1">
+                        <Bus className="h-4 w-4" />
+                        {route.operator}
+                      </span>
+                      <span className="px-2 py-0.5 bg-slate-100 rounded">{route.bus_type}</span>
+                      {!isRoutePast && (
+                        <span className={`px-2 py-0.5 rounded ${
+                          route.available_seats < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                        }`}>
+                          {route.available_seats} seats left
+                        </span>
+                      )}
+                      {isRoutePast && (
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-400">
+                          No longer available
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-slate-600">
-                    <span className="flex items-center gap-1">
-                      <Bus className="h-4 w-4" />
-                      {route.operator}
-                    </span>
-                    <span className="px-2 py-0.5 bg-slate-100 rounded">{route.bus_type}</span>
-                    <span className={`px-2 py-0.5 rounded ${
-                      route.available_seats < 10 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {route.available_seats} seats left
-                    </span>
-                  </div>
-                </div>
 
-                {/* Price & Action */}
-                <div className="lg:text-right lg:border-l lg:border-slate-200 lg:pl-6">
-                  <p className="text-3xl font-bold text-slate-900">{formatCurrency(route.price)}</p>
-                  <p className="text-sm text-slate-500">per person</p>
-                  <button className="btn btn-primary mt-3 w-full lg:w-auto">
-                    Select <ArrowRight className="h-4 w-4 ml-1" />
-                  </button>
+                  {/* Price & Action */}
+                  <div className="lg:text-right lg:border-l lg:border-slate-200 lg:pl-6">
+                    <p className={`text-3xl font-bold ${isRoutePast ? 'text-slate-400' : 'text-slate-900'}`}>{formatCurrency(route.price)}</p>
+                    <p className="text-sm text-slate-500">per person</p>
+                    {isRoutePast ? (
+                      <button className="btn bg-slate-200 text-slate-400 cursor-not-allowed mt-3 w-full lg:w-auto" disabled>
+                        Unavailable
+                      </button>
+                    ) : (
+                      <button className="btn btn-primary mt-3 w-full lg:w-auto">
+                        Select <ArrowRight className="h-4 w-4 ml-1" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
