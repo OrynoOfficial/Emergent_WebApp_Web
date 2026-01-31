@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { formatDate, formatDateTime, formatDateLong } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { eventsAPI } from '../../api/client';
-import { Search, MapPin, Calendar, Clock, Users, ArrowRight, Ticket, Filter } from 'lucide-react';
+import { isPast } from '../../utils/dateUtils';
+import { Search, MapPin, Calendar, Clock, Users, ArrowRight, Ticket, Filter, AlertCircle } from 'lucide-react';
 
 const EVENT_CATEGORIES = ['All', 'Concerts', 'Sports', 'Theater', 'Comedy', 'Festivals', 'Conferences'];
 
