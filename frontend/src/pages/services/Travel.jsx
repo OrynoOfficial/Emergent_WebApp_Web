@@ -167,16 +167,17 @@ export default function Travel() {
       ) : (
         <div className="space-y-4">
           {routes.map((route) => {
-            // Check if this route's departure has passed
-            const routeDate = filters.date || new Date().toISOString().split('T')[0];
-            const isRoutePast = isPast(routeDate, route.departure_time);
+            // Check if this route's departure has passed for the selected/today's date
+            const searchDate = filters.date || new Date().toISOString().split('T')[0];
+            const isRoutePast = isPast(searchDate, route.departure_time);
             
             return (
               <div
                 key={route.id}
+                style={isRoutePast ? { opacity: 0.5, filter: 'grayscale(100%)' } : {}}
                 className={`bg-white rounded-2xl border border-slate-200 p-6 transition-all ${
                   isRoutePast 
-                    ? 'opacity-60 grayscale cursor-not-allowed' 
+                    ? 'cursor-not-allowed pointer-events-none' 
                     : 'hover:shadow-lg cursor-pointer'
                 }`}
                 onClick={() => !isRoutePast && navigate(`/services/travel/${route.id}`)}
@@ -185,7 +186,7 @@ export default function Travel() {
                 {isRoutePast && (
                   <div className="flex items-center gap-2 mb-3 text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg w-fit">
                     <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">Departed</span>
+                    <span className="text-sm font-medium">Departed - No longer available for {searchDate}</span>
                   </div>
                 )}
                 
