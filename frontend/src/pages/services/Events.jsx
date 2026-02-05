@@ -175,9 +175,10 @@ export default function Events() {
             return (
               <div
                 key={event.id}
+                style={isEventPast ? { opacity: 0.5, filter: 'grayscale(100%)' } : {}}
                 className={`bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all group ${
                   isEventPast 
-                    ? 'opacity-60 grayscale cursor-not-allowed' 
+                    ? 'cursor-not-allowed pointer-events-none' 
                     : 'hover:shadow-xl cursor-pointer'
                 }`}
                 onClick={() => !isEventPast && navigate(`/services/events/${event.id}`)}
