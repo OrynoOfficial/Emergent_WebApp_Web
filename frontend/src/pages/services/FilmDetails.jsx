@@ -178,9 +178,10 @@ export default function FilmDetails() {
                             key={st.id} 
                             variant="outline" 
                             disabled={isShowPast}
+                            style={isShowPast ? { opacity: 0.4, filter: 'grayscale(100%)' } : {}}
                             className={`flex-col h-auto py-3 px-4 ${
                               isShowPast 
-                                ? 'bg-gray-800 border-gray-700 text-gray-500 opacity-50 cursor-not-allowed grayscale' 
+                                ? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed' 
                                 : 'bg-gray-700 border-gray-600 text-white hover:bg-[#082c59] hover:border-[#082c59]'
                             }`} 
                             onClick={() => !isShowPast && navigate(`/services/cinema/booking/${st.id}?film=${film.id}&date=${selectedDate}`)}
