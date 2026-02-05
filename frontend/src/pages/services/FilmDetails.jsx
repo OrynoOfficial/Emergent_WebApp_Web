@@ -170,14 +170,35 @@ export default function FilmDetails() {
                       <span className="text-gray-500 text-sm">({times[0]?.city})</span>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      {times.map(st => (
-                        <Button key={st.id} variant="outline" className="bg-gray-700 border-gray-600 text-white hover:bg-[#082c59] hover:border-[#082c59] flex-col h-auto py-3 px-4" onClick={() => navigate(`/services/cinema/booking/${st.id}?film=${film.id}&date=${selectedDate}`)}>
-                          <span className="font-bold text-lg">{st.show_time}</span>
-                          <Badge className="mt-1 uppercase text-xs" variant={st.screen_type === 'imax' ? 'default' : 'secondary'}>{st.screen_type}</Badge>
-                          <span className="text-sm mt-1">{formatFCFA(st.price)}</span>
-                          <span className="text-xs text-gray-400 mt-1"><Users className="w-3 h-3 inline mr-1" />{st.available_seats} seats</span>
-                        </Button>
-                      ))}
+                      {times.map(st => {
+                        const isShowPast = isPast(selectedDate, st.show_time);
+                        
+                        return (
+                          <Button 
+                            key={st.id} 
+                            variant="outline" 
+                            disabled={isShowPast}
+                            className={`flex-col h-auto py-3 px-4 ${
+                              isShowPast 
+                                ? 'bg-gray-800 border-gray-700 text-gray-500 opacity-50 cursor-not-allowed grayscale' 
+                                : 'bg-gray-700 border-gray-600 text-white hover:bg-[#082c59] hover:border-[#082c59]'
+                            }`} 
+                            onClick={() => !isShowPast && navigate(`/services/cinema/booking/${st.id}?film=${film.id}&date=${selectedDate}`)}
+                          >
+                            {isShowPast && (
+                              <span className="text-[10px] text-gray-400 mb-1 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" /> Passed
+                              </span>
+                            )}
+                            <span className={`font-bold text-lg ${isShowPast ? 'text-gray-500' : ''}`}>{st.show_time}</span>
+                            <Badge className={`mt-1 uppercase text-xs ${isShowPast ? 'bg-gray-600' : ''}`} variant={st.screen_type === 'imax' ? 'default' : 'secondary'}>{st.screen_type}</Badge>
+                            <span className={`text-sm mt-1 ${isShowPast ? 'text-gray-500' : ''}`}>{formatFCFA(st.price)}</span>
+                            {!isShowPast && (
+                              <span className="text-xs text-gray-400 mt-1"><Users className="w-3 h-3 inline mr-1" />{st.available_seats} seats</span>
+                            )}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
