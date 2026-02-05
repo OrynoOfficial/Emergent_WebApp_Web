@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Film, Clock, Star, Calendar, MapPin, ArrowLeft, Play, Users } from 'lucide-react';
+import { Film, Clock, Star, Calendar, MapPin, ArrowLeft, Play, Users, AlertCircle } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { formatFCFA } from '@/utils/currency';
+import { isPast, isToday } from '@/utils/dateUtils';
 import { format, addDays } from 'date-fns';
 
 export default function FilmDetails() {
