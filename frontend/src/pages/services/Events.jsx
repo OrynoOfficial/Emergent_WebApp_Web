@@ -169,62 +169,92 @@ export default function Events() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <div
-              key={event.id}
-              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all cursor-pointer group"
-              onClick={() => navigate(`/services/events/${event.id}`)}
-            >
-              <div className="h-48 relative overflow-hidden">
-                <img
-                  src={event.image}
-                  alt={event.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                <div className="absolute top-3 left-3">
-                  <span className="px-3 py-1 bg-purple-500 text-white text-xs font-medium rounded-full">
-                    {event.category}
-                  </span>
-                </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2 flex items-center gap-3">
-                    <div className="text-center px-2 border-r border-slate-200">
-                      <p className="text-lg font-bold text-purple-600">
-                        {new Date(event.date).getDate()}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-900">{event.time}</p>
-                      <p className="text-xs text-slate-500">{event.venue}</p>
+          {events.map((event) => {
+            const isEventPast = isPast(event.date, event.time);
+            
+            return (
+              <div
+                key={event.id}
+                className={`bg-white rounded-2xl border border-slate-200 overflow-hidden transition-all group ${
+                  isEventPast 
+                    ? 'opacity-60 grayscale cursor-not-allowed' 
+                    : 'hover:shadow-xl cursor-pointer'
+                }`}
+                onClick={() => !isEventPast && navigate(`/services/events/${event.id}`)}
+              >
+                <div className="h-48 relative overflow-hidden">
+                  <img
+                    src={event.image}
+                    alt={event.name}
+                    className={`w-full h-full object-cover transition-transform duration-500 ${!isEventPast && 'group-hover:scale-110'}`}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                  
+                  {/* Category Badge */}
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className={`px-3 py-1 text-white text-xs font-medium rounded-full ${
+                      isEventPast ? 'bg-slate-500' : 'bg-purple-500'
+                    }`}>
+                      {event.category}
+                    </span>
+                    {isEventPast && (
+                      <span className="px-3 py-1 bg-slate-700 text-white text-xs font-medium rounded-full flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" /> Past Event
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <div className={`backdrop-blur-sm rounded-lg p-2 flex items-center gap-3 ${
+                      isEventPast ? 'bg-slate-200/90' : 'bg-white/90'
+                    }`}>
+                      <div className="text-center px-2 border-r border-slate-200">
+                        <p className={`text-lg font-bold ${isEventPast ? 'text-slate-400' : 'text-purple-600'}`}>
+                          {new Date(event.date).getDate()}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${isEventPast ? 'text-slate-400' : 'text-slate-900'}`}>{event.time}</p>
+                        <p className="text-xs text-slate-500">{event.venue}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-lg text-slate-900 group-hover:text-purple-600 transition-colors">
-                  {event.name}
-                </h3>
-                <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
-                  <MapPin className="h-4 w-4" />
-                  {event.city}
-                </div>
+                <div className="p-4">
+                  <h3 className={`font-bold text-lg transition-colors ${
+                    isEventPast ? 'text-slate-400' : 'text-slate-900 group-hover:text-purple-600'
+                  }`}>
+                    {event.name}
+                  </h3>
+                  <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
+                    <MapPin className="h-4 w-4" />
+                    {event.city}
+                  </div>
 
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-                  <div>
-                    <span className="text-sm text-slate-500">From</span>
-                    <span className="text-xl font-bold text-slate-900 ml-1">${event.price_from}</span>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                    <div>
+                      <span className="text-sm text-slate-500">From</span>
+                      <span className={`text-xl font-bold ml-1 ${isEventPast ? 'text-slate-400' : 'text-slate-900'}`}>
+                        ${event.price_from}
+                      </span>
+                    </div>
+                    {isEventPast ? (
+                      <button className="btn btn-sm bg-slate-200 text-slate-400 cursor-not-allowed" disabled>
+                        Ended
+                      </button>
+                    ) : (
+                      <button className="btn btn-primary btn-sm flex items-center gap-1">
+                        Get Tickets <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                  <button className="btn btn-primary btn-sm flex items-center gap-1">
-                    Get Tickets <ArrowRight className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
