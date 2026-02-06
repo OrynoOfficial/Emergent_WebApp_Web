@@ -7,7 +7,7 @@ from datetime import datetime
 import uuid
 
 class CRUDPermissionsAPITester:
-    def __init__(self, base_url="https://ui-task-manager.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://booking-revamp-9.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
         self.tests_run = 0

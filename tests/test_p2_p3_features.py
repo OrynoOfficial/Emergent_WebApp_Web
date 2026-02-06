@@ -5,7 +5,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ui-task-manager.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://booking-revamp-9.preview.emergentagent.com')
 
 class TestPaymentMethodsAPI:
     """P3: Test payment methods analytics endpoint - real data from orders"""

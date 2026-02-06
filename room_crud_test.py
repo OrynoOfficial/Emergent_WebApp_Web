@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 class RoomCRUDTester:
-    def __init__(self, base_url="https://ui-task-manager.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://booking-revamp-9.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.auth_token = None
         self.tests_run = 0
