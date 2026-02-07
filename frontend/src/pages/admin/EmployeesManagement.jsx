@@ -254,13 +254,13 @@ export default function EmployeesManagement() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Employees Management</h1>
-          <p className="text-gray-600">Manage staff and employee records</p>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="employee-management-title">Employee Management</h1>
+          <p className="text-gray-600">Manage staff, pods, and access scopes</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => window.location.href = '/admin/employees/templates'}
+            onClick={() => navigate('/admin/employees/templates')}
             className="border-[#082c59] text-[#082c59]"
           >
             <FileText className="w-4 h-4 mr-2" /> Document Templates
