@@ -38,6 +38,7 @@ import {
   Database,
   FileText,
   QrCode,
+  MapPin,
   Search,
   Clock,
   ArrowRight,
