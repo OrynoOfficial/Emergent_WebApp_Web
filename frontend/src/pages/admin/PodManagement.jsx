@@ -51,8 +51,8 @@ export default function PodManagement() {
     try {
       const [podsRes, usersRes, operatorsRes] = await Promise.all([
         api.get('/pods'),
-        api.get('/users?role=admin'),
-        api.get('/operators')
+        api.get('/users/', { params: { role: 'admin' } }),
+        api.get('/operators/')
       ]);
       setPods(podsRes.data.pods || []);
       setUsers(usersRes.data.users || []);
