@@ -1,0 +1,98 @@
+{
+  "summary": "CRITICAL: Grey Out Past Services feature NOT implemented in active components. The grey-out code exists in Events.jsx and Travel.jsx but these components are NOT used - the app routes to EventsSearch/EventsResults and TravelSearch/TravelResults instead, which lack the grey-out feature entirely.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "critical": [
+      {
+        "component": "EventsResults.jsx",
+        "issue": "Grey-out feature NOT implemented. Past events (dates: 2026-01-29, 2026-02-04, 2026-02-06) display with full colors and 'Get Tickets' buttons instead of greyed styling and 'Ended' buttons",
+        "expected": "Past events should have opacity: 0.5, grayscale filter, 'Past Event' badge, and 'Ended' button",
+        "actual": "All events display identically with 'Get Tickets' buttons regardless of date",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "TravelResults.jsx",
+        "issue": "Grey-out feature NOT implemented. Past departure times display with full colors and 'Select' buttons instead of greyed styling and 'Unavailable' buttons",
+        "expected": "Past routes should have opacity: 0.5, grayscale filter, 'Departed' message, and 'Unavailable' button",
+        "actual": "All routes display identically with 'Select' buttons regardless of departure time",
+        "priority": "CRITICAL"
+      }
+    ],
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Events grey-out",
+        "issue": "Events.jsx has grey-out code but is NOT used - app routes to EventsSearch.jsx and EventsResults.jsx instead",
+        "affected_selectors": ["/services/events routes to EventsSearch, /services/events/results routes to EventsResults"]
+      },
+      {
+        "flow": "Travel grey-out",
+        "issue": "Travel.jsx has grey-out code but is NOT used - app routes to TravelSearch.jsx and TravelResults.jsx instead",
+        "affected_selectors": ["/services/travel routes to TravelSearch, /services/travel/results routes to TravelResults"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/frontend/src/pages/services/EventsResults.jsx",
+    "/app/frontend/src/pages/services/TravelResults.jsx",
+    "/app/frontend/src/pages/services/Events.jsx (unused - has grey-out code)",
+    "/app/frontend/src/pages/services/Travel.jsx (unused - has grey-out code)"
+  ],
+  "action_items": [
+    "CRITICAL: Add isPast() check and grey-out styling to EventsResults.jsx EventCardGrid and EventCardList components",
+    "CRITICAL: Add isPast() check and grey-out styling to TravelResults.jsx TripCardGrid and TripCardList components",
+    "Import isPast from '@/utils/dateUtils' in both results components",
+    "Add 'Past Event' badge, 'Ended' button, opacity: 0.5, grayscale filter for past events in EventsResults.jsx",
+    "Add 'Departed' message, 'Unavailable' button, opacity: 0.5, grayscale filter for past routes in TravelResults.jsx",
+    "Block click navigation for past items (pointer-events-none or onClick check)"
+  ],
+  "critical_code_review_comments": [
+    "Events.jsx and Travel.jsx have correct grey-out implementation but are NOT being used by the app routing",
+    "EventsResults.jsx uses MOCK_EVENTS with 2025 dates which are all past relative to server time (Feb 2026)",
+    "TravelResults.jsx getMockTrips() doesn't include date information for past checking",
+    "The isPast() utility function in dateUtils.js is correctly implemented but not imported in the results components"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - frontend only testing",
+    "frontend": "0% - Grey-out feature completely missing from active components"
+  },
+  "test_credentials": {
+    "customer_account": "customer@test.com / testpassword123"
+  },
+  "seed_data_creation": "None - used existing events data",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Grey-out feature code exists in Events.jsx (lines 172-259) and Travel.jsx (lines 169-253) but these components are NOT used. The app routes /services/events to EventsSearch.jsx and /services/events/results to EventsResults.jsx. Similarly /services/travel routes to TravelSearch.jsx and /services/travel/results to TravelResults.jsx. The results components (EventsResults.jsx and TravelResults.jsx) need to be updated to include the isPast() check and grey-out styling. Database has 5 events: 3 past (2026-01-29, 2026-02-04, 2026-02-06) and 2 future (2026-02-08, 2026-02-09). Current server time is 2026-02-07.",
+  "test_results": {
+    "events_page_grey_out": {
+      "test": "Past events should be greyed out with 'Past Event' badge and 'Ended' button",
+      "status": "FAIL",
+      "details": "EventsResults.jsx does not implement grey-out feature. All 5 events show 'Get Tickets' buttons"
+    },
+    "events_click_blocking": {
+      "test": "Clicking past events should NOT navigate to booking",
+      "status": "FAIL",
+      "details": "No click blocking implemented - all events are clickable"
+    },
+    "travel_page_grey_out": {
+      "test": "Past departure routes should be greyed out with 'Unavailable' button",
+      "status": "FAIL",
+      "details": "TravelResults.jsx does not implement grey-out feature. All routes show 'Select' buttons"
+    },
+    "travel_click_blocking": {
+      "test": "Clicking past routes should NOT navigate to booking",
+      "status": "FAIL",
+      "details": "No click blocking implemented - all routes are clickable"
+    }
+  },
+  "screenshots": {
+    "events_results_page": ".screenshots/events_results_page.png",
+    "travel_page": ".screenshots/travel_page.png"
+  },
+  "rca_of_the_issue": "Root Cause: The grey-out feature was implemented in Events.jsx and Travel.jsx components, but the app routing was changed to use EventsSearch/EventsResults and TravelSearch/TravelResults components instead. The new results components were not updated to include the grey-out feature. Reproduction: 1) Login as customer@test.com, 2) Navigate to /services/events, 3) Select city 'Yaoundé' and click 'Search Events', 4) Observe all events show 'Get Tickets' buttons including past events. Mitigation: Copy the isPast() check and grey-out styling from Events.jsx to EventsResults.jsx, and from Travel.jsx to TravelResults.jsx."
+}
