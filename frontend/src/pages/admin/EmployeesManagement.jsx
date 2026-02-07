@@ -52,9 +52,12 @@ export default function EmployeesManagement() {
     system_role: 'employee'
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [podMemberships, setPodMemberships] = useState([]);
+  const [pods, setPods] = useState([]);
 
   useEffect(() => {
     loadEmployees();
+    loadPodData();
   }, []);
 
   const loadEmployees = async () => {
@@ -69,6 +72,35 @@ export default function EmployeesManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPodData = async () => {
+    try {
+      const res = await api.get('/pods');
+      const podsData = res.data.pods || [];
+      setPods(podsData);
+      // Build a lookup of user_id → pod membership from the pods member_ids
+      const memberships = [];
+      for (const pod of podsData) {
+        // Fetch full pod details to get members
+        try {
+          const detailRes = await api.get(`/pods/${pod.id}`);
+          const members = detailRes.data.members || [];
+          for (const m of members) {
+            memberships.push({ ...m, pod_name: pod.name, team_lead_name: pod.team_lead_name });
+          }
+        } catch { /* skip */ }
+      }
+      setPodMemberships(memberships);
+    } catch { /* pod data is optional */ }
+  };
+
+  const getEmployeePod = (emp) => {
+    // Match by user_id or email
+    return podMemberships.find(m =>
+      m.user_id === emp.user_id || m.user_id === emp.id ||
+      (emp.email && m.user_email === emp.email)
+    );
   };
 
   const mockEmployees = [
