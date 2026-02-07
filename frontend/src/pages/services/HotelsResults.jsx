@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const AMENITIES = [
   { key: 'wifi', label: 'WiFi', icon: Wifi },

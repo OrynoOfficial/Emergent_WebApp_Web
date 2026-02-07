@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const CUISINE_TYPES = ['African', 'French', 'Italian', 'Chinese', 'Lebanese', 'Seafood', 'Fast Food', 'Fusion'];
 
