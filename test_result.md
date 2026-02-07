@@ -118,7 +118,7 @@
 #### Complete Management Centers Testing ✅ FULLY WORKING
 **Test Date:** 2026-01-07 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - All operator display and backend integration features working correctly
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Credentials:** superadmin@oryno.com / testpassword123
 
 **Authentication:**
@@ -269,7 +269,7 @@
 #### Complete Hotel Management Page Testing ✅ ALL WORKING
 **Test Date:** 2026-01-07 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - All functionality working correctly
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com/management/hotels
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com/management/hotels
 **Test Credentials:** superadmin@oryno.com / testpassword123
 
 **Authentication:**
@@ -535,7 +535,7 @@
 #### Booking Page UI Revamps Testing ❌ LIMITED ACCESS DUE TO SESSION REQUIREMENTS
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ❌ PARTIALLY ACCESSIBLE - Session data required for booking pages
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Credentials:** superadmin@oryno.com / testpassword123
 
 **Authentication:**
@@ -661,7 +661,7 @@ Based on examination of the booking page components:
 #### Complete Restaurant Menu API Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (7/7 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -747,7 +747,7 @@ Based on examination of the booking page components:
 #### Complete Operator Roles API Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (8/8 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -828,7 +828,7 @@ Based on examination of the booking page components:
 #### Complete Restaurant API CRUD Operations Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (8/8 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -928,7 +928,7 @@ Based on examination of the booking page components:
 #### Complete Multi-Tenant Permission System Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (28/28 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1030,7 +1030,7 @@ Based on examination of the booking page components:
 #### Complete Session Timeout Configuration Feature Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (18/18 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1113,7 +1113,7 @@ Based on examination of the booking page components:
 #### Complete Operator Users Management System Testing ✅ ALL WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (10/10 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1221,7 +1221,7 @@ Based on examination of the booking page components:
 ### SERVICE MANAGEMENT DASHBOARD & COMMUNICATIONS REVAMP TESTING ✅ COMPLETED
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ FULLY WORKING - All 8 service management pages updated successfully
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Credentials:** superadmin@oryno.com / testpassword123
 
 #### Code Analysis Results ✅ ALL COMPONENTS IMPLEMENTED:
@@ -1333,7 +1333,7 @@ Based on examination of the booking page components:
 #### Complete MTN MoMo Payment Integration Testing ✅ ALL WORKING
 **Test Date:** 2026-01-04 (Latest - Current Review Request)
 **Status:** ✅ 78.6% SUCCESS RATE (11/14 tests passed - 3 expected failures due to order reuse)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -1432,7 +1432,7 @@ Based on examination of the booking page components:
 #### Complete Comprehensive Permissions Enforcement System Testing ✅ MOSTLY WORKING
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 88.6% SUCCESS RATE (39/44 tests passed, 5 minor issues)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -2039,7 +2039,7 @@ Previous authentication session issues with service routes have been resolved - 
 ### OPERATOR-SCOPED MANAGEMENT ENDPOINTS TESTING - ✅ 100% SUCCESS RATE - FULLY WORKING
 **Test Date:** 2026-01-06 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE (20/20 tests passed) - ALL OPERATOR-SCOPED MANAGEMENT ENDPOINTS WORKING CORRECTLY
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -2235,7 +2235,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### CUSTOMER SERVICE CENTER REVAMP TESTING - ✅ 100% SUCCESS RATE - FULLY WORKING
 **Test Date:** 2026-01-05 (Previous - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - ALL FEATURES WORKING CORRECTLY
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com/management/customer-service
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com/management/customer-service
 **Test Results:**
 
 **Authentication:**
@@ -2387,7 +2387,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete Hotel Booking Page Fixes Testing ✅ 100% SUCCESS RATE
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All 5 fixes verified and working)
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Results:**
 
 **Authentication:**
@@ -2471,7 +2471,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete Travel Round-Trip Backend API Testing ✅ ALL BACKEND FUNCTIONALITY WORKING
 **Test Date:** 2026-01-04 (Latest - Current Review Request)
 **Status:** ✅ 100% SUCCESS RATE - ALL BACKEND APIS FOR ROUND-TRIP BOOKING WORKING CORRECTLY
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -2567,7 +2567,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Previous Frontend Testing Results (Authentication Session Issues)
 **Test Date:** 2026-01-04 (Previous Session)
 **Status:** ✅ ROUND-TRIP FUNCTIONALITY VERIFIED + ❌ AUTHENTICATION SESSION PERSISTENCE ISSUE CONFIRMED
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Results:**
 
 **Authentication Session Persistence Fix Verification:**
@@ -2650,7 +2650,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete MTN MoMo Payment Flow Testing ❌ AUTHENTICATION BLOCKING ISSUE + TOKEN KEY FIX APPLIED
 **Test Date:** 2025-01-04 (Latest - Current Review Request)
 **Status:** ❌ CANNOT COMPLETE FULL UI TESTING DUE TO AUTHENTICATION SESSION PERSISTENCE ISSUE + ✅ TOKEN KEY INCONSISTENCY FIXED
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Results:**
 
 **Authentication:**
@@ -2758,7 +2758,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete PermissionGate Feature Testing ✅ 95% SUCCESS RATE
 **Test Date:** 2025-01-04 (Latest)
 **Status:** ✅ 95% SUCCESS RATE (19/20 tests passed, 1 minor issue)
-**Frontend URL:** https://booking-revamp-9.preview.emergentagent.com
+**Frontend URL:** https://pod-based-access.preview.emergentagent.com
 **Test Results:**
 
 **Test Credentials Verified:**
@@ -2904,7 +2904,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete Room CRUD Operations Testing ✅ ALL WORKING
 **Test Date:** 2025-01-03 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All 7 tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -2969,7 +2969,7 @@ The Service Management Dashboard and Communications revamp backend APIs are full
 ### Complete Stripe Checkout Integration Testing ✅ FULLY WORKING
 **Test Date:** 2025-01-03 (Latest)
 **Status:** ✅ 100% SUCCESS RATE (All Stripe tests passed)
-**API Base URL:** https://booking-revamp-9.preview.emergentagent.com/api
+**API Base URL:** https://pod-based-access.preview.emergentagent.com/api
 **Test Results:**
 
 **Authentication:**
@@ -3147,7 +3147,7 @@ Re-verified all endpoints after testing agent reported car rental issue:
 
 **Authentication & Navigation:**
 - ✅ Super Admin login: WORKING (superadmin@oryno.com / testpassword123)
-- ✅ Hotel Management page access: WORKING (https://booking-revamp-9.preview.emergentagent.com/management/hotels)
+- ✅ Hotel Management page access: WORKING (https://pod-based-access.preview.emergentagent.com/management/hotels)
 
 **Backend API Verification:**
 - ✅ Hotels API: WORKING (6 hotels with operator data)
