@@ -4,6 +4,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import api from '../api/client';
 import LocationSelectionModal, { useUserLocation } from './LocationSelectionModal';
+import useSidebarMenu, { ICON_COLORS } from '../hooks/useSidebarMenu';
 import {
   LayoutDashboard,
   ShoppingBag,
