@@ -530,7 +530,7 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 7, 2026 - Session 13d)
+## Backlog (Updated Feb 7, 2026 - Session 13e)
 - [ ] **P3: Email Invitation System** - Invite new users via email (moved to backlog)
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
