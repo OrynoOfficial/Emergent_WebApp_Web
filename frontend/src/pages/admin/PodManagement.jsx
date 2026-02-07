@@ -44,6 +44,12 @@ export default function PodManagement() {
   const [podForm, setPodForm] = useState({ name: '', description: '' });
   const [memberForm, setMemberForm] = useState({ user_id: '', pod_role: 'csm' });
   const [selectedOperatorIds, setSelectedOperatorIds] = useState([]);
+  
+  // Operator modal filter states
+  const [opSearch, setOpSearch] = useState('');
+  const [opStatusFilter, setOpStatusFilter] = useState('all');
+  const [opTypeFilter, setOpTypeFilter] = useState('all');
+  const [opCountryFilter, setOpCountryFilter] = useState('all');
 
   useEffect(() => {
     fetchData();
