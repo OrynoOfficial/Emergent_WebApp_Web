@@ -513,3 +513,182 @@ async def get_my_pod_membership(
     pod = await db.pods.find_one({"id": membership["pod_id"]}, {"_id": 0})
     
     return {"membership": membership, "pod": pod}
+
+
+# ============== Team Lead Self-Management ==============
+
+async def _get_team_lead_pod(user_id: str, db) -> dict:
+    """Verify user is a team lead and return their pod."""
+    membership = await db.pod_memberships.find_one({
+        "user_id": user_id, "is_active": True, "pod_role": "team_lead"
+    })
+    if not membership:
+        raise HTTPException(status_code=403, detail="Only team leads can manage their pod members")
+    pod = await db.pods.find_one({"id": membership["pod_id"]})
+    if not pod:
+        raise HTTPException(status_code=404, detail="Pod not found")
+    return pod
+
+
+@router.get("/my/team")
+async def get_my_team(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get members of the current user's pod (team lead view)."""
+    db = get_database()
+    user_id = str(current_user.get("_id") or current_user.get("id"))
+
+    # Any pod member can see their team
+    membership = await db.pod_memberships.find_one({
+        "user_id": user_id, "is_active": True
+    })
+    if not membership:
+        return {"members": [], "pod": None, "is_team_lead": False}
+
+    pod = await db.pods.find_one({"id": membership["pod_id"]}, {"_id": 0})
+    members = await db.pod_memberships.find(
+        {"pod_id": membership["pod_id"], "is_active": True}, {"_id": 0}
+    ).to_list(100)
+
+    # Get assigned operators for the pod
+    assigned_operators = []
+    if pod and pod.get("assigned_operator_ids"):
+        ops = await db.operators.find(
+            {"_id": {"$in": pod["assigned_operator_ids"]}},
+            {"_id": 1, "name": 1, "status": 1, "operator_type": 1, "country": 1}
+        ).to_list(1000)
+        assigned_operators = [{"id": o["_id"], **{k: o[k] for k in o if k != "_id"}} for o in ops]
+
+    return {
+        "pod": pod,
+        "members": members,
+        "assigned_operators": assigned_operators,
+        "is_team_lead": membership.get("pod_role") == "team_lead",
+        "my_role": membership.get("pod_role")
+    }
+
+
+@router.post("/my/team/members")
+async def team_lead_add_member(
+    data: PodMemberAdd,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Team lead can add members to their own pod without needing pods.manage_members permission."""
+    db = get_database()
+    user_id = str(current_user.get("_id") or current_user.get("id"))
+    pod = await _get_team_lead_pod(user_id, db)
+
+    # Team leads cannot appoint another team lead
+    if data.pod_role == PodRole.TEAM_LEAD:
+        raise HTTPException(status_code=400, detail="Team leads cannot assign another team lead")
+
+    # Verify target user exists and is a platform employee
+    user = await db.users.find_one({"_id": data.user_id})
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+    if user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=400, detail="Only platform employees can be added to pods")
+
+    # One employee = one pod rule
+    existing = await db.pod_memberships.find_one({
+        "user_id": data.user_id, "is_active": True
+    })
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User is already in pod '{existing['pod_name']}'"
+        )
+
+    membership = {
+        "id": str(uuid.uuid4()),
+        "pod_id": pod["id"],
+        "pod_name": pod["name"],
+        "user_id": data.user_id,
+        "user_name": user.get("full_name") or user.get("email"),
+        "user_email": user.get("email", ""),
+        "pod_role": data.pod_role.value,
+        "is_active": True,
+        "assigned_by": user_id,
+        "assigned_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.pod_memberships.insert_one(membership)
+    await db.pods.update_one(
+        {"id": pod["id"]},
+        {
+            "$push": {"member_ids": data.user_id},
+            "$inc": {"total_members": 1},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+
+    return {"message": "Member added", "membership": {k: v for k, v in membership.items() if k != "_id"}}
+
+
+@router.delete("/my/team/members/{target_user_id}")
+async def team_lead_remove_member(
+    target_user_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Team lead can remove members from their own pod."""
+    db = get_database()
+    user_id = str(current_user.get("_id") or current_user.get("id"))
+    pod = await _get_team_lead_pod(user_id, db)
+
+    # Cannot remove self
+    if target_user_id == user_id:
+        raise HTTPException(status_code=400, detail="Cannot remove yourself from the pod")
+
+    membership = await db.pod_memberships.find_one({
+        "pod_id": pod["id"], "user_id": target_user_id, "is_active": True
+    })
+    if not membership:
+        raise HTTPException(status_code=404, detail="Member not found in your pod")
+
+    await db.pod_memberships.update_one(
+        {"id": membership["id"]},
+        {"$set": {
+            "is_active": False,
+            "removed_at": datetime.now(timezone.utc).isoformat(),
+            "removed_by": user_id
+        }}
+    )
+    await db.pods.update_one(
+        {"id": pod["id"]},
+        {
+            "$pull": {"member_ids": target_user_id},
+            "$inc": {"total_members": -1},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+
+    return {"message": "Member removed from pod"}
+
+
+@router.put("/my/team/members/{target_user_id}/role")
+async def team_lead_change_member_role(
+    target_user_id: str,
+    new_role: PodRole,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Team lead can change a member's role within the pod."""
+    db = get_database()
+    user_id = str(current_user.get("_id") or current_user.get("id"))
+    pod = await _get_team_lead_pod(user_id, db)
+
+    if new_role == PodRole.TEAM_LEAD:
+        raise HTTPException(status_code=400, detail="Cannot assign team lead role")
+
+    membership = await db.pod_memberships.find_one({
+        "pod_id": pod["id"], "user_id": target_user_id, "is_active": True
+    })
+    if not membership:
+        raise HTTPException(status_code=404, detail="Member not found in your pod")
+    if membership.get("pod_role") == "team_lead":
+        raise HTTPException(status_code=400, detail="Cannot change team lead's role")
+
+    await db.pod_memberships.update_one(
+        {"id": membership["id"]},
+        {"$set": {"pod_role": new_role.value, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+
+    return {"message": f"Role updated to {new_role.value}"}
