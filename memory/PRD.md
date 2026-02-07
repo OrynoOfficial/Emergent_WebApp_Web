@@ -530,11 +530,26 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 7, 2026 - Session 13c)
+## Backlog (Updated Feb 7, 2026 - Session 13d)
 - [ ] **P3: Email Invitation System** - Invite new users via email (moved to backlog)
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
 - [ ] **MINOR: Fix mixed content warning** - Notifications API endpoint HTTP vs HTTPS
+
+## Completed Features (Feb 7, 2026 - Session 13d)
+- [x] **Employee Cards show Pod & Team Lead**
+  - Employee cards on `/admin/employees` now display pod name, role badge, and team lead name
+  - Fetches pod memberships on page load and merges client-side by user_id/email
+  - Conditional rendering: only shows when employee is assigned to a pod
+  - **Testing**: 100% (iteration_31)
+
+- [x] **Assign Operators Modal - Search & Filters**
+  - Added search input to filter operators by name in real-time
+  - Added status filter (All / Active / Pending / Suspended)
+  - Added service type filter (dynamic from operator data)
+  - Added country filter (dynamic from operator data)
+  - Filters reset when modal closes
+  - **Testing**: 100% (iteration_31)
 
 ## Completed Features (Feb 7, 2026 - Session 13c)
 - [x] **Rename: Employees → Employee Management**
