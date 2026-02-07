@@ -25,14 +25,14 @@ export const hotelsApi = {
 
 // Restaurants API
 export const restaurantsApi = {
-  search: (params = {}) => api.get('/restaurants/', { params }),
+  search: (params = {}) => api.get('/restaurants/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/restaurants/${id}`),
   book: (id, data) => api.post(`/restaurants/${id}/book`, data),
 };
 
 // Travel API
 export const travelApi = {
-  searchRoutes: (params = {}) => api.get('/travel/routes', { params }),
+  searchRoutes: (params = {}) => api.get('/travel/routes', { params: { ...getLocationParam(), ...params } }),
   getRoute: (id) => api.get(`/travel/routes/${id}`),
   getSeatAvailability: (routeId, travelDate) => 
     api.get('/seat-bookings/availability', { params: { route_id: routeId, travel_date: travelDate } }),
@@ -42,28 +42,29 @@ export const travelApi = {
 
 // Car Rental API  
 export const carRentalApi = {
-  search: (params = {}) => api.get('/vehicles/', { params }),
+  search: (params = {}) => api.get('/vehicles/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/vehicles/${id}`),
   book: (data) => api.post('/car-rental/book', data),
 };
 
 // Events API
 export const eventsApi = {
-  search: (params = {}) => api.get('/events/', { params }),
+  search: (params = {}) => api.get('/events/', { params: { ...getLocationParam(), ...params } }),
+  list: (params = {}) => api.get('/events/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/events/${id}`),
   book: (id, data) => api.post(`/events/${id}/book`, null, { params: data }),
 };
 
 // Packages API
 export const packagesApi = {
-  search: (params = {}) => api.get('/packages/', { params }),
+  search: (params = {}) => api.get('/packages/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/packages/${id}`),
   book: (id, data) => api.post(`/packages/${id}/book`, null, { params: data }),
 };
 
 // Banquet API
 export const banquetApi = {
-  search: (params = {}) => api.get('/banquets/', { params }),
+  search: (params = {}) => api.get('/banquets/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/banquets/${id}`),
   checkAvailability: (id, date) => api.get(`/banquets/${id}/availability`, { params: { date } }),
   book: (id, data) => api.post(`/banquets/${id}/book`, null, { params: data }),
@@ -71,7 +72,7 @@ export const banquetApi = {
 
 // Cinema API
 export const cinemaApi = {
-  getCinemas: (params = {}) => api.get('/cinema/', { params }),
+  getCinemas: (params = {}) => api.get('/cinema/', { params: { ...getLocationParam(), ...params } }),
   getCinema: (id) => api.get(`/cinema/${id}`),
   getFilms: (params = {}) => api.get('/cinema/films', { params }),
   getFilm: (id) => api.get(`/cinema/films/${id}`),
@@ -81,7 +82,7 @@ export const cinemaApi = {
 
 // Laundry/Pressing API
 export const laundryApi = {
-  search: (params = {}) => api.get('/pressing/', { params }),
+  search: (params = {}) => api.get('/pressing/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/pressing/${id}`),
   createOrder: (id, data) => api.post(`/pressing/${id}/orders`, data),
 };
