@@ -281,6 +281,9 @@ app.include_router(operator_roles_router)  # Operator roles and permissions mana
 app.include_router(document_templates_router)  # HR Document templates
 app.include_router(database_management_router)  # Database management GUI
 app.include_router(otp_router)  # OTP verification (SMS & Email via Infobip)
+app.include_router(geography_router)  # Geography (countries, regions) management
+app.include_router(pods_router)  # Pod-based team structure management
+app.include_router(employee_scopes_router)  # Employee access scopes management
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
