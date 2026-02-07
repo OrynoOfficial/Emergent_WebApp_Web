@@ -346,12 +346,23 @@ export default function PodManagement() {
                     <h4 className="font-semibold flex items-center gap-2"><Crown className="w-4 h-4 text-yellow-600" /> Team Lead</h4>
                   </div>
                   {selectedPod.team_lead_id ? (
-                    <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-xl">
-                      <Avatar><AvatarFallback>{selectedPod.team_lead_name?.charAt(0) || 'T'}</AvatarFallback></Avatar>
-                      <div>
-                        <p className="font-medium">{selectedPod.team_lead_name}</p>
-                        <Badge className="bg-yellow-100 text-yellow-700">Team Lead</Badge>
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <Avatar><AvatarFallback>{selectedPod.team_lead_name?.charAt(0) || 'T'}</AvatarFallback></Avatar>
+                        <div>
+                          <p className="font-medium">{selectedPod.team_lead_name}</p>
+                          <Badge className="bg-yellow-100 text-yellow-700">Team Lead</Badge>
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleRemoveMember(selectedPod.team_lead_id)}
+                        data-testid="remove-team-lead-btn"
+                      >
+                        <UserMinus className="w-4 h-4 mr-1" /> Remove
+                      </Button>
                     </div>
                   ) : (
                     <p className="text-slate-500 text-sm">No team lead assigned</p>
