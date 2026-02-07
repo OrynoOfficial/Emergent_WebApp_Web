@@ -208,17 +208,13 @@ export default function PodManagement() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Get employees not already in a pod (only those with linked user accounts can be added)
+  // Get employees/users not already in a pod (only those with linked user accounts)
   const availableUsers = users.filter(u => {
-    const uid = u._linked_user_id || u.user_id || u.id || u._id;
-    const isInPod = pods.some(p => p.member_ids?.includes(uid));
-    return !isInPod;
+    if (!u._linked_user_id) return false;
+    return !pods.some(p => p.member_ids?.includes(u._linked_user_id));
   });
 
-  const getEmployeeLabel = (emp) => {
-    if (emp.first_name || emp.last_name) return `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
-    return emp.full_name || emp.email || 'Unknown';
-  };
+  const getEmployeeLabel = (emp) => emp._display_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.email || 'Unknown';
 
   return (
     <div className="p-6 space-y-6">
