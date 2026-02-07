@@ -86,8 +86,7 @@ async def get_hotels(
                 conditions.append({"operator_id": {"$in": op_ids}})
             if conditions:
                 query["$or"] = conditions
-        else:
-            query["country"] = {"$regex": country, "$options": "i"}
+        # Non-African country: show all (global view) - no filter applied
     if min_rating:
         query["average_rating"] = {"$gte": min_rating}
     
