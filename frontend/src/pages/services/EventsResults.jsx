@@ -294,6 +294,10 @@ export default function EventsResults() {
   }, [events, sortBy, searchQuery, typeFilter]);
 
   const handleBook = (event) => {
+    // Prevent booking past events
+    if (isPast(event.date, event.time)) {
+      return;
+    }
     sessionStorage.setItem('selectedEvent', JSON.stringify(event));
     navigate(`/services/events/booking`);
   };
