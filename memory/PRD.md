@@ -436,3 +436,43 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Updated MOCK_EVENTS to have realistic mix of past (Jan-Feb 2026) and future (Mar-Apr 2026) dates
   - Testing agent verified: All 5 tests PASS (100% frontend success rate)
 
+- [x] **Advanced Access Control System Implementation**
+  - **Geography Management (Countries & Regions)**
+    - Backend: `/app/backend/routes/geography.py` - CRUD for countries and regions
+    - Frontend: `/app/frontend/src/pages/admin/GeographyManagement.jsx`
+    - Initialized: 6 countries (CM, NG, GA, GQ, TD, CF), 10 Cameroon regions
+    - Route: `/admin/geography`
+  
+  - **Pod-Based Team Structure**
+    - Backend: `/app/backend/routes/pods.py` - Pod CRUD, member management, operator assignment
+    - Models: `/app/backend/models/pod.py` - Pod, PodMembership, PodRole (team_lead, bdr, csm, technician, support_agent)
+    - Frontend: `/app/frontend/src/pages/admin/PodManagement.jsx`
+    - Features: Create pods, add members, assign operators, enforce one-employee-one-pod rule
+    - Route: `/admin/pods`
+  
+  - **Employee Access Scopes (Attribute-Based Scoping)**
+    - Backend: `/app/backend/routes/employee_scopes.py` - Scope CRUD, user assignment
+    - Models: `/app/backend/models/employee_scope.py` - EmployeeAccessScope, EmployeeScopeAssignment
+    - Frontend: `/app/frontend/src/pages/admin/EmployeeScopeManagement.jsx`
+    - Default scopes: Cameroon SME Manager, Enterprise Manager, Travel Services, Hotel Services, Douala Region, Yaoundé Region, Global Access
+    - Route: `/admin/employee-scopes`
+  
+  - **Customer Location Filtering**
+    - Backend: `/app/backend/routes/customer_location.py` - Location resolution, visibility filtering
+    - Utility: `/app/backend/utils/geolocation.py` - CustomerLocationContext, priority-based resolution
+    - Priority: GPS > IP geolocation > SIM country > Profile country > Manual override
+    - Rule: In Africa = country-filtered, Outside Africa = global
+  
+  - **Authorization Service**
+    - Backend: `/app/backend/services/authorization_service.py` - AuthorizationContext builder
+    - Enhanced middleware: `/app/backend/middleware/auth.py` - Builds authorization context for employees
+  
+  - **Operator Model Enhanced**
+    - Added: country (ISO code), region (region code), market_segment (sme/enterprise/strategic)
+    - Added: assigned_pod_id, assigned_pod_name
+  
+  - **Navigation Updated**
+    - Added to Admin Config (Super Admin only): Pod Management, Access Scopes, Geography
+  
+  - **Testing**: 100% backend (20 passed), 100% frontend (3 pages working)
+
