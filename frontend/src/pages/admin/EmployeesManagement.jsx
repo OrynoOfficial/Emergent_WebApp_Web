@@ -354,6 +354,46 @@ export default function EmployeesManagement() {
         </div>
       </div>
 
+      {/* Sub-page Navigation */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="employee-management-tabs">
+        <button
+          onClick={() => navigate('/admin/employees')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            location.pathname === '/admin/employees'
+              ? 'bg-[#082c59] text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          data-testid="tab-employees"
+        >
+          <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+          Employees
+        </button>
+        <button
+          onClick={() => navigate('/admin/employees/pods')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            location.pathname === '/admin/employees/pods'
+              ? 'bg-[#082c59] text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          data-testid="tab-pod-management"
+        >
+          <Network className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+          Pod Management
+        </button>
+        <button
+          onClick={() => navigate('/admin/employees/access-scopes')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
+            location.pathname === '/admin/employees/access-scopes'
+              ? 'bg-[#082c59] text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+          data-testid="tab-access-scopes"
+        >
+          <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+          Access Scopes
+        </button>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card><CardContent className="p-4 flex items-center gap-4">
