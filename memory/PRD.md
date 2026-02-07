@@ -390,7 +390,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Time-sensitive services (Travel, Events, Cinema showtimes) now show past items greyed out
   - Past items are visible but non-bookable with "Departed", "Past Event", "Passed" indicators
   - Added `isPast()`, `isToday()`, `isShowtimePast()` utility functions
-  - Updated: Travel.jsx, Events.jsx, FilmDetails.jsx
+  - **Session 12 Fix**: Original implementation was in Events.jsx/Travel.jsx but app routes to EventsResults.jsx/TravelResults.jsx
+  - Fixed: Added grey-out styling to EventsResults.jsx (EventCardGrid, EventCardList)
+  - Fixed: Added grey-out styling to TravelResults.jsx (TripCardGrid, TripCardList)
+  - Both Grid and List views now properly grey out past items
+  - Click blocking added to handleBook() and handleTripSelect() functions
 - [x] **All Tests Passed**: 15/15 backend tests, 100% frontend
 
 ## Technical Debt
