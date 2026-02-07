@@ -40,6 +40,9 @@ import BillsManagement from './pages/admin/BillsManagement';
 import SalesManagement from './pages/admin/SalesManagement';
 import DatabaseManagement from './pages/admin/DatabaseManagement';
 import ValidationManagement from './pages/admin/ValidationManagement';
+import GeographyManagement from './pages/admin/GeographyManagement';
+import PodManagement from './pages/admin/PodManagement';
+import EmployeeScopeManagement from './pages/admin/EmployeeScopeManagement';
 
 // Utility Pages
 import Scanner from './pages/utility/Scanner';
