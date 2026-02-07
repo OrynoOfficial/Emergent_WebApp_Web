@@ -684,7 +684,25 @@ function App() {
           />
           
           <Route
+            path="/admin/employees/pods"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <PodManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/employee-scopes"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <EmployeeScopeManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/admin/employees/access-scopes"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
                 <EmployeeScopeManagement />
