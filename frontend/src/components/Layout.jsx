@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import api from '../api/client';
+import LocationSelectionModal, { useUserLocation } from './LocationSelectionModal';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -45,7 +46,8 @@ import {
   Building2,
   User,
   PartyPopper,
-  Loader2
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
