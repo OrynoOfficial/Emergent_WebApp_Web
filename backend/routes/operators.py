@@ -10,6 +10,108 @@ import uuid
 
 router = APIRouter(prefix="/api/operators", tags=["Operators"])
 
+
+async def get_operator_access_filter(current_user: dict, db) -> dict:
+    """
+    Build MongoDB filter based on user's authorization context.
+    - Super Admin: No filter (sees all)
+    - Admin with global access: No filter
+    - Admin with scopes: Filter by scope attributes
+    - Admin in pod: Filter by pod's assigned operators
+    - Operator: Filter by own operator_id
+    """
+    user_role = current_user.get("role")
+    
+    # Super admin sees all
+    if user_role == "super_admin":
+        return {}
+    
+    # Operator users see only their own operator
+    if user_role == "operator":
+        operator_id = current_user.get("operator_id")
+        if operator_id:
+            return {"_id": operator_id}
+        return {"_id": "__no_access__"}
+    
+    # Platform employees (admins) - check authorization context
+    auth_context = current_user.get("_authorization_context", {})
+    
+    # If has global access, no filter
+    if auth_context.get("has_global_access"):
+        return {}
+    
+    accessible_operator_ids = set()
+    
+    # Add operators from pod assignment
+    pod_membership = auth_context.get("pod_membership")
+    if pod_membership:
+        pod_id = pod_membership.get("pod_id")
+        if pod_id:
+            pod = await db.pods.find_one({"id": pod_id})
+            if pod and pod.get("assigned_operator_ids"):
+                accessible_operator_ids.update(pod["assigned_operator_ids"])
+    
+    # Add operators from access scopes
+    user_id = str(current_user.get("_id") or current_user.get("id"))
+    scope_assignments = await db.employee_scope_assignments.find({
+        "user_id": user_id,
+        "is_active": True
+    }).to_list(100)
+    
+    if scope_assignments:
+        scope_ids = [a["scope_id"] for a in scope_assignments]
+        scopes = await db.employee_access_scopes.find({
+            "id": {"$in": scope_ids},
+            "is_active": True
+        }).to_list(100)
+        
+        for scope in scopes:
+            # Check for wildcard scope (global access)
+            if not scope.get("countries") and not scope.get("regions") and \
+               not scope.get("market_segments") and not scope.get("service_types") and \
+               not scope.get("specific_operator_ids"):
+                return {}  # Global access
+            
+            # Specific operator IDs override
+            if scope.get("specific_operator_ids"):
+                accessible_operator_ids.update(scope["specific_operator_ids"])
+                continue
+            
+            # Build attribute-based query
+            scope_query = {"status": "active"}
+            
+            if scope.get("countries"):
+                scope_query["country"] = {"$in": [c.upper() for c in scope["countries"]]}
+            
+            if scope.get("regions"):
+                scope_query["region"] = {"$in": scope["regions"]}
+            
+            if scope.get("market_segments"):
+                scope_query["market_segment"] = {"$in": scope["market_segments"]}
+            
+            if scope.get("service_types"):
+                scope_query["$or"] = [
+                    {"operator_type": {"$in": scope["service_types"]}},
+                    {"service_types": {"$in": scope["service_types"]}}
+                ]
+            
+            # Query matching operators
+            matching_ops = await db.operators.find(scope_query, {"_id": 1}).to_list(10000)
+            for op in matching_ops:
+                accessible_operator_ids.add(op["_id"])
+    
+    # If we have accessible operators, filter by them
+    if accessible_operator_ids:
+        return {"_id": {"$in": list(accessible_operator_ids)}}
+    
+    # If no scopes and no pod, check if admin role has default access
+    # For backwards compatibility, admins without specific scopes see all
+    if user_role == "admin" and not scope_assignments and not pod_membership:
+        return {}  # Legacy admin behavior - sees all
+    
+    # No access
+    return {"_id": "__no_access__"}
+
 @router.post("/")
 async def create_operator(
     operator_data: OperatorCreate,
