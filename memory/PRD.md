@@ -530,10 +530,27 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 7, 2026 - Session 13b)
+## Backlog (Updated Feb 7, 2026 - Session 13c)
 - [ ] **P3: Email Invitation System** - Invite new users via email (moved to backlog)
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
+- [ ] **MINOR: Fix mixed content warning** - Notifications API endpoint HTTP vs HTTPS
+
+## Completed Features (Feb 7, 2026 - Session 13c)
+- [x] **Rename: Employees → Employee Management**
+  - Updated sidebar label in `useSidebarMenu.js`
+  - Updated page title in `EmployeesManagement.jsx`
+  - Updated search items in `Layout.jsx`
+- [x] **Rename: Operators → Operator Management**
+  - Updated sidebar label in `useSidebarMenu.js`
+  - Updated page title in `OperatorsManagement.jsx`
+  - Updated reference in `TeamRolesManagement.jsx`
+- [x] **Moved Pod Management & Access Scopes under Employee Management**
+  - Removed from sidebar Admin Config submenu
+  - Added as sub-pages with tab navigation: `/admin/employees/pods`, `/admin/employees/access-scopes`
+  - All 3 pages (Employees, Pod Management, Access Scopes) share consistent tab navigation
+  - Old routes (`/admin/pods`, `/admin/employee-scopes`) kept for backwards compatibility
+  - **Testing**: 100% (11/11 frontend tests passed, iteration_30)
 
 ## Completed Features (Feb 7, 2026 - Session 13b)
 - [x] **P1: Data Migration**
