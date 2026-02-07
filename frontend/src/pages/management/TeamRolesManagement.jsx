@@ -67,7 +67,7 @@ export default function TeamRolesManagement() {
               {isPlatformAdmin ? (
                 <>
                   As a platform administrator, you can manage operator teams through the 
-                  <a href="/admin/operators" className="text-blue-600 hover:underline mx-1">Operators Management</a>
+                  <a href="/admin/operators" className="text-blue-600 hover:underline mx-1">Operator Management</a>
                   page. Click on any operator and navigate to the Team or Roles tab.
                 </>
               ) : (
