@@ -11,11 +11,12 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
   ArrowLeft, Clock, Bus, Star, MapPin, Users, Armchair, Wifi, Coffee, UtensilsCrossed, 
   Loader2, ArrowRight, Calendar, SlidersHorizontal, LayoutGrid, List, Heart, 
-  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image, History, CalendarDays
+  ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image, History, CalendarDays, AlertCircle
 } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
 import { travelApi } from '../../api/services';
+import { isPast } from '../../utils/dateUtils';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
