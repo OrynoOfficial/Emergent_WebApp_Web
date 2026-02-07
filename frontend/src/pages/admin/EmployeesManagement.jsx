@@ -516,6 +516,26 @@ export default function EmployeesManagement() {
                     <MapPin className="w-4 h-4" /><span>{emp.city}</span>
                   </div>
                 </div>
+                {/* Pod & Team Lead Info */}
+                {(() => {
+                  const podInfo = getEmployeePod(emp);
+                  if (!podInfo) return null;
+                  return (
+                    <div className="mt-3 p-2.5 bg-blue-50 rounded-lg" data-testid={`pod-info-${emp.id}`}>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Network className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="font-medium text-blue-800">{podInfo.pod_name}</span>
+                        <Badge className="text-[10px] px-1.5 py-0 bg-blue-100 text-blue-700">{podInfo.pod_role?.replace('_', ' ')}</Badge>
+                      </div>
+                      {podInfo.team_lead_name && (
+                        <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600">
+                          <Crown className="w-3 h-3" />
+                          <span>Lead: {podInfo.team_lead_name}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex justify-between items-center mt-4 pt-4 border-t">
                   <span className="font-semibold text-[#082c59]">{formatFCFA(emp.salary)}/mo</span>
                   <div className="flex gap-1">
