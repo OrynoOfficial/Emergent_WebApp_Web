@@ -163,12 +163,17 @@ export default function PodManagement() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Get users not already in a pod
+  // Get employees not already in a pod
   const availableUsers = users.filter(u => {
-    // Check if user is already in any pod
-    const isInPod = pods.some(p => p.member_ids?.includes(u.id || u._id));
+    const uid = u.user_id || u.id || u._id;
+    const isInPod = pods.some(p => p.member_ids?.includes(uid));
     return !isInPod;
   });
+
+  const getEmployeeLabel = (emp) => {
+    if (emp.first_name || emp.last_name) return `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
+    return emp.full_name || emp.email || 'Unknown';
+  };
 
   return (
     <div className="p-6 space-y-6">
