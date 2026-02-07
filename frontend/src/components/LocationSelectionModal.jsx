@@ -24,7 +24,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
 
   const fetchCountries = async () => {
     try {
-      const res = await api.get('/api/geography/countries');
+      const res = await api.get('/geography/countries');
       setCountries(res.data.countries || []);
     } catch (error) {
       console.error('Failed to fetch countries:', error);
@@ -35,7 +35,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
     setDetecting(true);
     try {
       // Try to get IP-based location
-      const res = await api.get('/api/customer-location/ip-info');
+      const res = await api.get('/customer-location/ip-info');
       if (res.data.location?.country_code) {
         setDetectedLocation({
           country_code: res.data.location.country_code,
