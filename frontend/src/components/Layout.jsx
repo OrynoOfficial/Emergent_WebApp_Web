@@ -98,41 +98,6 @@ export default function Layout({ children }) {
     return iconMap[iconName] || Search;
   };
 
-  // User role checks - moved before searchableItems that depends on them
-  const userRole = user?.role || USER_ROLES.CUSTOMER;
-  const isSuperAdmin = userRole === USER_ROLES.SUPER_ADMIN || isSuperAdminPerm;
-  const isAdmin = userRole === USER_ROLES.ADMIN || isSuperAdmin;
-  const isOperator = userRole === USER_ROLES.OPERATOR;
-  
-  // Permission-based access checks
-  const canManageHotels = hasAnyPermission(['hotels.view', 'hotels.create', 'hotels.edit', 'hotels.manage_rooms']);
-  const canManageTravel = hasAnyPermission(['travel.view', 'travel.create', 'travel.edit', 'travel.manage_routes']);
-  const canManageCars = hasAnyPermission(['car_rental.view', 'car_rental.create', 'car_rental.edit']);
-  const canManageEvents = hasAnyPermission(['events.view', 'events.create', 'events.edit']);
-  const canManageRestaurants = hasAnyPermission(['restaurants.view', 'restaurants.create', 'restaurants.edit']);
-  const canManageBanquets = hasAnyPermission(['banquets.view', 'banquets.create', 'banquets.edit']);
-  const canManageCinema = hasAnyPermission(['cinema.view', 'cinema.create', 'cinema.edit']);
-  const canManagePressing = hasAnyPermission(['pressing.view', 'pressing.create', 'pressing.edit']);
-  const canManagePackages = hasAnyPermission(['packages.view', 'packages.create', 'packages.edit']);
-  
-  const canViewAnalytics = hasAnyPermission(['analytics.view', 'analytics.view_dashboard']);
-  const canViewUsers = hasPermission('users.view');
-  const canViewOperators = hasPermission('operators.view');
-  const canViewEmployees = hasPermission('employees.view');
-  const canViewCommission = hasPermission('commission.view');
-  const canViewValidation = hasPermission('validation.view');
-  const canViewActivity = hasPermission('activity.view');
-  const canViewPermissions = hasPermission('access.view_roles');
-  
-  // Check if user has any management permissions
-  const canManage = isSuperAdmin || canManageHotels || canManageTravel || canManageCars || 
-                    canManageEvents || canManageRestaurants || canManageBanquets || 
-                    canManageCinema || canManagePressing || canManagePackages;
-  
-  // Check if user has any admin config permissions
-  const canAccessAdminConfig = isSuperAdmin || canViewAnalytics || canViewUsers || canViewOperators || 
-                               canViewEmployees || canViewCommission || canViewValidation || 
-                               canViewActivity || canViewPermissions;
 
   // Static searchable items for navigation (fallback)
   const staticSearchItems = useMemo(() => [
