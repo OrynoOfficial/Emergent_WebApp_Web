@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,12 +11,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Shield, Plus, Edit2, Trash2, Search, RefreshCw, UserPlus, UserMinus,
-  Globe, MapPin, Building2, Briefcase, Loader2, Eye, Check, X
+  Globe, MapPin, Building2, Briefcase, Loader2, Eye, Check, X, Users, Network, ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
 
 export default function EmployeeScopeManagement() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [scopes, setScopes] = useState([]);
   const [users, setUsers] = useState([]);
   const [countries, setCountries] = useState([]);
