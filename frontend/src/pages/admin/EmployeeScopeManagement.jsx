@@ -65,10 +65,10 @@ export default function EmployeeScopeManagement() {
     setLoading(true);
     try {
       const [scopesRes, usersRes, countriesRes, regionsRes] = await Promise.all([
-        api.get('/api/employee-scopes'),
-        api.get('/api/users?role=admin'),
-        api.get('/api/geography/countries'),
-        api.get('/api/geography/regions')
+        api.get('/employee-scopes'),
+        api.get('/users?role=admin'),
+        api.get('/geography/countries'),
+        api.get('/geography/regions')
       ]);
       setScopes(scopesRes.data.scopes || []);
       setUsers(usersRes.data.users || []);
@@ -83,7 +83,7 @@ export default function EmployeeScopeManagement() {
 
   const initializeDefaults = async () => {
     try {
-      const res = await api.post('/api/employee-scopes/create-defaults');
+      const res = await api.post('/employee-scopes/create-defaults');
       toast.success(res.data.message);
       fetchData();
     } catch (error) {
@@ -97,7 +97,7 @@ export default function EmployeeScopeManagement() {
         await api.put(`/api/employee-scopes/${editingScope.id}`, scopeForm);
         toast.success('Scope updated');
       } else {
-        await api.post('/api/employee-scopes', scopeForm);
+        await api.post('/employee-scopes', scopeForm);
         toast.success('Scope created');
       }
       setShowScopeModal(false);

@@ -50,9 +50,9 @@ export default function PodManagement() {
     setLoading(true);
     try {
       const [podsRes, usersRes, operatorsRes] = await Promise.all([
-        api.get('/api/pods'),
-        api.get('/api/users?role=admin'),
-        api.get('/api/operators')
+        api.get('/pods'),
+        api.get('/users?role=admin'),
+        api.get('/operators')
       ]);
       setPods(podsRes.data.pods || []);
       setUsers(usersRes.data.users || []);
@@ -70,7 +70,7 @@ export default function PodManagement() {
         await api.put(`/api/pods/${editingPod.id}`, podForm);
         toast.success('Pod updated');
       } else {
-        await api.post('/api/pods', podForm);
+        await api.post('/pods', podForm);
         toast.success('Pod created');
       }
       setShowPodModal(false);
