@@ -46,7 +46,6 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
         });
         setSelectedCountry(res.data.location.country_code);
       }
-      }
     } catch (error) {
       console.error('Failed to detect location:', error);
     } finally {
