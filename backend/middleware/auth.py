@@ -55,6 +55,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "operator_type": operator.get("operator_type"),
                 "service_types": operator.get("service_types", []),
                 "status": operator.get("status"),
+                "country": operator.get("country"),
+                "region": operator.get("region"),
+                "market_segment": operator.get("market_segment"),
             }
         
         # Calculate effective permissions
@@ -62,6 +65,79 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     else:
         user["_operator_context"] = None
         user["_effective_permissions"] = await calculate_effective_permissions(user, db)
+    
+    # Build authorization context for platform employees
+    if user.get("role") == "admin":
+        user["_authorization_context"] = await build_employee_authorization_context(user, db)
+    
+    return user
+
+
+async def build_employee_authorization_context(user: dict, db) -> dict:
+    """
+    Build authorization context for platform employees (admins).
+    Includes pod membership and access scopes.
+    """
+    user_id = str(user.get("_id") or user.get("id"))
+    context = {
+        "user_type": "platform_employee",
+        "pod_membership": None,
+        "access_scopes": [],
+        "accessible_operator_ids": [],
+        "has_global_access": False
+    }
+    
+    # Check pod membership
+    pod_membership = await db.pod_memberships.find_one({
+        "user_id": user_id,
+        "is_active": True
+    })
+    
+    if pod_membership:
+        context["pod_membership"] = {
+            "pod_id": pod_membership.get("pod_id"),
+            "pod_name": pod_membership.get("pod_name"),
+            "pod_role": pod_membership.get("pod_role")
+        }
+        
+        # Get pod's assigned operators
+        pod = await db.pods.find_one({"id": pod_membership["pod_id"]})
+        if pod and pod.get("assigned_operator_ids"):
+            context["accessible_operator_ids"].extend(pod["assigned_operator_ids"])
+    
+    # Get access scopes
+    scope_assignments = await db.employee_scope_assignments.find({
+        "user_id": user_id,
+        "is_active": True
+    }).to_list(100)
+    
+    if scope_assignments:
+        scope_ids = [a["scope_id"] for a in scope_assignments]
+        scopes = await db.employee_access_scopes.find({
+            "id": {"$in": scope_ids},
+            "is_active": True
+        }).to_list(100)
+        
+        context["access_scopes"] = [
+            {"id": s["id"], "name": s["name"]} for s in scopes
+        ]
+        
+        # Check for global access (empty scope = wildcard)
+        for scope in scopes:
+            if not scope.get("countries") and not scope.get("regions") and \
+               not scope.get("market_segments") and not scope.get("service_types") and \
+               not scope.get("specific_operator_ids"):
+                context["has_global_access"] = True
+                break
+            
+            # Add specific operator IDs from scopes
+            if scope.get("specific_operator_ids"):
+                context["accessible_operator_ids"].extend(scope["specific_operator_ids"])
+    
+    # Remove duplicates
+    context["accessible_operator_ids"] = list(set(context["accessible_operator_ids"]))
+    
+    return context
     
     return user
 
