@@ -413,3 +413,26 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - **SMS Sender**: Oryno
 - **Email From**: oryno@selfserve.worlds-connected.co
 - **Services**: SMS OTP verification, Email delivery
+
+## Completed Features (Feb 7, 2026 - Session 12)
+- [x] **Access Control Diagram Created**
+  - Created comprehensive textual diagram at /app/memory/ACCESS_CONTROL_DIAGRAM.md
+  - Documents: Role hierarchy, Data scope, Permission enforcement flow
+  - Navigation access control by role, API permission mapping
+  - Database collections related to access control
+- [x] **P0 Fix: Grey Out Past Services in Results Pages**
+  - Root cause identified: Original grey-out code was in Events.jsx/Travel.jsx but app routes to EventsResults.jsx/TravelResults.jsx
+  - Fixed EventsResults.jsx: Added isPast() import, updated EventCardGrid and EventCardList with:
+    - Grayscale filter and opacity styling
+    - "Past Event" badge
+    - "Ended" button (disabled)
+    - Click blocking via cursor-not-allowed style
+  - Fixed TravelResults.jsx: Added isPast() import, updated TripCardGrid and TripCardList with:
+    - Grayscale filter and opacity styling  
+    - "Departed" badge
+    - "Unavailable" button (disabled)
+    - "No longer available" text
+  - Added isPast() guards to handleBook() and handleTripSelect() functions
+  - Updated MOCK_EVENTS to have realistic mix of past (Jan-Feb 2026) and future (Mar-Apr 2026) dates
+  - Testing agent verified: All 5 tests PASS (100% frontend success rate)
+
