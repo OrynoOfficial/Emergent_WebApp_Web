@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Users, Plus, Search, Edit, Trash2, Eye, UserPlus,
   Phone, Mail, MapPin, Calendar, Briefcase, Clock,
-  CheckCircle, XCircle, MoreHorizontal, FileText
+  CheckCircle, XCircle, MoreHorizontal, FileText, ShieldCheck, Network
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
