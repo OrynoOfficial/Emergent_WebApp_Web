@@ -341,6 +341,7 @@ async def get_me(current_user: dict = Depends(get_current_active_user)):
     # Include operator context and permissions
     user_data["operator_context"] = user_data.pop("_operator_context", None)
     user_data["effective_permissions"] = user_data.pop("_effective_permissions", [])
+    user_data["authorization_context"] = user_data.pop("_authorization_context", None)
     
     return user_data
 
