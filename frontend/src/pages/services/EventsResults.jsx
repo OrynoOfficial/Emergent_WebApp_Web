@@ -12,11 +12,13 @@ import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
 
 const MOCK_EVENTS = [
-  { id: '1', name: 'Afrobeats Music Festival 2025', type: 'Concert', venue: 'Stade Omnisports', city: 'Yaoundé', date: '2025-02-15', time: '18:00', priceFrom: 15000, ticketsLeft: 500, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800', rating: 4.8, description: 'The biggest Afrobeats festival featuring top African artists.' },
-  { id: '2', name: 'Cameroon vs Nigeria Football Match', type: 'Sports', venue: 'Stade Ahmadou Ahidjo', city: 'Yaoundé', date: '2025-02-20', time: '16:00', priceFrom: 5000, ticketsLeft: 2000, image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800', rating: 4.9, description: 'AFCON qualifier match between rival nations.' },
-  { id: '3', name: 'Comedy Night with Top Comedians', type: 'Comedy', venue: 'Palais des Congrès', city: 'Douala', date: '2025-02-22', time: '20:00', priceFrom: 10000, ticketsLeft: 150, image: 'https://images.unsplash.com/photo-1527224538127-2104bb71c51b?w=800', rating: 4.6, description: 'An evening of laughter with the best comedians in Africa.' },
-  { id: '4', name: 'Tech Conference Cameroon 2025', type: 'Conference', venue: 'Hotel Hilton', city: 'Yaoundé', date: '2025-03-10', time: '09:00', priceFrom: 25000, ticketsLeft: 200, image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800', rating: 4.7, description: 'Annual tech conference featuring industry leaders.' },
-  { id: '5', name: 'Makossa Dance Party', type: 'Party', venue: 'Club Premium', city: 'Douala', date: '2025-02-28', time: '22:00', priceFrom: 8000, ticketsLeft: 300, image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800', rating: 4.5, description: 'All-night party celebrating Makossa music culture.' }
+  // Past events (for grey-out demonstration)
+  { id: '1', name: 'Afrobeats Music Festival 2025', type: 'Concert', venue: 'Stade Omnisports', city: 'Yaoundé', date: '2026-01-15', time: '18:00', priceFrom: 15000, ticketsLeft: 0, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800', rating: 4.8, description: 'The biggest Afrobeats festival featuring top African artists.' },
+  { id: '2', name: 'Cameroon vs Nigeria Football Match', type: 'Sports', venue: 'Stade Ahmadou Ahidjo', city: 'Yaoundé', date: '2026-02-01', time: '16:00', priceFrom: 5000, ticketsLeft: 0, image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800', rating: 4.9, description: 'AFCON qualifier match between rival nations.' },
+  // Future events (bookable)
+  { id: '3', name: 'Comedy Night with Top Comedians', type: 'Comedy', venue: 'Palais des Congrès', city: 'Douala', date: '2026-03-15', time: '20:00', priceFrom: 10000, ticketsLeft: 150, image: 'https://images.unsplash.com/photo-1527224538127-2104bb71c51b?w=800', rating: 4.6, description: 'An evening of laughter with the best comedians in Africa.' },
+  { id: '4', name: 'Tech Conference Cameroon 2026', type: 'Conference', venue: 'Hotel Hilton', city: 'Yaoundé', date: '2026-04-10', time: '09:00', priceFrom: 25000, ticketsLeft: 200, image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800', rating: 4.7, description: 'Annual tech conference featuring industry leaders.' },
+  { id: '5', name: 'Makossa Dance Party', type: 'Party', venue: 'Club Premium', city: 'Douala', date: '2026-03-28', time: '22:00', priceFrom: 8000, ticketsLeft: 300, image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800', rating: 4.5, description: 'All-night party celebrating Makossa music culture.' }
 ];
 
 const EVENT_TYPE_COLORS = {
