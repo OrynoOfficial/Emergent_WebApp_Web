@@ -25,6 +25,8 @@ const SYSTEM_ROLES = ['employee', 'admin'];
 const DEFAULT_PASSWORD = 'Oryno@2024';
 
 export default function EmployeesManagement() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
