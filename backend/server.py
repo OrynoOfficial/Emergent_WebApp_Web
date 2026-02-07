@@ -62,6 +62,9 @@ from routes.operator_roles import router as operator_roles_router
 from routes.document_templates import router as document_templates_router
 from routes.database_management import router as database_management_router
 from routes.otp import router as otp_router
+from routes.geography import router as geography_router
+from routes.pods import router as pods_router
+from routes.employee_scopes import router as employee_scopes_router
 
 # Create the main app
 app = FastAPI(
