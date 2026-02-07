@@ -66,7 +66,7 @@ export default function EmployeeScopeManagement() {
     try {
       const [scopesRes, usersRes, countriesRes, regionsRes] = await Promise.all([
         api.get('/employee-scopes'),
-        api.get('/users?role=admin'),
+        api.get('/users/', { params: { role: 'admin' } }),
         api.get('/geography/countries'),
         api.get('/geography/regions')
       ]);
