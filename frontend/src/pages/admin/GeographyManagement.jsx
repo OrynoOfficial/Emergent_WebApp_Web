@@ -71,10 +71,10 @@ export default function GeographyManagement() {
   const handleSaveCountry = async () => {
     try {
       if (editingCountry) {
-        await api.put(`/api/geography/countries/${editingCountry.id}`, countryForm);
+        await api.put(`/geography/countries/${editingCountry.id}`, countryForm);
         toast.success('Country updated');
       } else {
-        await api.post('/api/geography/countries', countryForm);
+        await api.post('/geography/countries', countryForm);
         toast.success('Country created');
       }
       setShowCountryModal(false);
@@ -89,7 +89,7 @@ export default function GeographyManagement() {
   const handleDeleteCountry = async (id) => {
     if (!confirm('Deactivate this country?')) return;
     try {
-      await api.delete(`/api/geography/countries/${id}`);
+      await api.delete(`/geography/countries/${id}`);
       toast.success('Country deactivated');
       fetchData();
     } catch (error) {
@@ -101,10 +101,10 @@ export default function GeographyManagement() {
   const handleSaveRegion = async () => {
     try {
       if (editingRegion) {
-        await api.put(`/api/geography/regions/${editingRegion.id}`, regionForm);
+        await api.put(`/geography/regions/${editingRegion.id}`, regionForm);
         toast.success('Region updated');
       } else {
-        await api.post('/api/geography/regions', regionForm);
+        await api.post('/geography/regions', regionForm);
         toast.success('Region created');
       }
       setShowRegionModal(false);
@@ -119,7 +119,7 @@ export default function GeographyManagement() {
   const handleDeleteRegion = async (id) => {
     if (!confirm('Deactivate this region?')) return;
     try {
-      await api.delete(`/api/geography/regions/${id}`);
+      await api.delete(`/geography/regions/${id}`);
       toast.success('Region deactivated');
       fetchData();
     } catch (error) {
