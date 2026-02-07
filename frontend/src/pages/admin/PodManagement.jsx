@@ -476,13 +476,18 @@ export default function PodManagement() {
             <div>
               <Label>Select Employee</Label>
               <Select value={memberForm.user_id} onValueChange={(v) => setMemberForm({...memberForm, user_id: v})}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="select-employee-trigger">
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableUsers.map(u => (
-                    <SelectItem key={u.id || u._id} value={u.id || u._id}>{u.full_name || u.email}</SelectItem>
-                  ))}
+                  {availableUsers.map(u => {
+                    const uid = u.user_id || u.id || u._id;
+                    return (
+                      <SelectItem key={uid} value={uid}>
+                        {getEmployeeLabel(u)} {u.department ? `(${u.department.replace('_', ' ')})` : ''} {u.city ? `- ${u.city}` : ''}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {availableUsers.length === 0 && <p className="text-sm text-slate-500 mt-1">All employees are already assigned to pods</p>}
