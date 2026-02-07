@@ -665,6 +665,33 @@ function App() {
             }
           />
           
+          <Route
+            path="/admin/geography"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <GeographyManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/admin/pods"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <PodManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/admin/employee-scopes"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <EmployeeScopeManagement />
+              </ProtectedRoute>
+            }
+          />
+          
           
           {/* Management Routes */}
           <Route
