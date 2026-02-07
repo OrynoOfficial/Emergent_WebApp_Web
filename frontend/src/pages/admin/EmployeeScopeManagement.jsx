@@ -94,7 +94,7 @@ export default function EmployeeScopeManagement() {
   const handleSaveScope = async () => {
     try {
       if (editingScope) {
-        await api.put(`/api/employee-scopes/${editingScope.id}`, scopeForm);
+        await api.put(`/employee-scopes/${editingScope.id}`, scopeForm);
         toast.success('Scope updated');
       } else {
         await api.post('/employee-scopes', scopeForm);
@@ -112,7 +112,7 @@ export default function EmployeeScopeManagement() {
   const handleDeleteScope = async (id) => {
     if (!confirm('Deactivate this scope?')) return;
     try {
-      await api.delete(`/api/employee-scopes/${id}`);
+      await api.delete(`/employee-scopes/${id}`);
       toast.success('Scope deactivated');
       if (selectedScope?.id === id) setSelectedScope(null);
       fetchData();
@@ -124,7 +124,7 @@ export default function EmployeeScopeManagement() {
   const handleAssignScope = async () => {
     if (!selectedScope || !selectedUserId) return;
     try {
-      await api.post(`/api/employee-scopes/${selectedScope.id}/assign`, { user_id: selectedUserId });
+      await api.post(`/employee-scopes/${selectedScope.id}/assign`, { user_id: selectedUserId });
       toast.success('Scope assigned to user');
       setShowAssignModal(false);
       setSelectedUserId('');
@@ -137,7 +137,7 @@ export default function EmployeeScopeManagement() {
   const handleRemoveUser = async (userId) => {
     if (!selectedScope || !confirm('Remove this user from scope?')) return;
     try {
-      await api.delete(`/api/employee-scopes/${selectedScope.id}/users/${userId}`);
+      await api.delete(`/employee-scopes/${selectedScope.id}/users/${userId}`);
       toast.success('User removed from scope');
       fetchScopeDetails(selectedScope.id);
     } catch (error) {
@@ -147,7 +147,7 @@ export default function EmployeeScopeManagement() {
 
   const fetchScopeDetails = async (scopeId) => {
     try {
-      const res = await api.get(`/api/employee-scopes/${scopeId}`);
+      const res = await api.get(`/employee-scopes/${scopeId}`);
       setSelectedScope(res.data);
     } catch (error) {
       toast.error('Failed to fetch scope details');

@@ -67,7 +67,7 @@ export default function PodManagement() {
   const handleSavePod = async () => {
     try {
       if (editingPod) {
-        await api.put(`/api/pods/${editingPod.id}`, podForm);
+        await api.put(`/pods/${editingPod.id}`, podForm);
         toast.success('Pod updated');
       } else {
         await api.post('/pods', podForm);
@@ -85,7 +85,7 @@ export default function PodManagement() {
   const handleDeletePod = async (id) => {
     if (!confirm('Deactivate this pod?')) return;
     try {
-      await api.delete(`/api/pods/${id}`);
+      await api.delete(`/pods/${id}`);
       toast.success('Pod deactivated');
       fetchData();
     } catch (error) {
@@ -96,7 +96,7 @@ export default function PodManagement() {
   const handleAddMember = async () => {
     if (!selectedPod) return;
     try {
-      await api.post(`/api/pods/${selectedPod.id}/members`, memberForm);
+      await api.post(`/pods/${selectedPod.id}/members`, memberForm);
       toast.success('Member added');
       setShowMemberModal(false);
       setMemberForm({ user_id: '', pod_role: 'csm' });
@@ -109,7 +109,7 @@ export default function PodManagement() {
   const handleRemoveMember = async (userId) => {
     if (!selectedPod || !confirm('Remove this member?')) return;
     try {
-      await api.delete(`/api/pods/${selectedPod.id}/members/${userId}`);
+      await api.delete(`/pods/${selectedPod.id}/members/${userId}`);
       toast.success('Member removed');
       fetchPodDetails(selectedPod.id);
     } catch (error) {
@@ -120,7 +120,7 @@ export default function PodManagement() {
   const handleAssignOperators = async () => {
     if (!selectedPod) return;
     try {
-      await api.post(`/api/pods/${selectedPod.id}/operators`, { operator_ids: selectedOperatorIds });
+      await api.post(`/pods/${selectedPod.id}/operators`, { operator_ids: selectedOperatorIds });
       toast.success('Operators assigned');
       setShowOperatorModal(false);
       setSelectedOperatorIds([]);
@@ -133,7 +133,7 @@ export default function PodManagement() {
   const handleRemoveOperator = async (operatorId) => {
     if (!selectedPod || !confirm('Remove this operator?')) return;
     try {
-      await api.delete(`/api/pods/${selectedPod.id}/operators/${operatorId}`);
+      await api.delete(`/pods/${selectedPod.id}/operators/${operatorId}`);
       toast.success('Operator removed');
       fetchPodDetails(selectedPod.id);
     } catch (error) {
@@ -143,7 +143,7 @@ export default function PodManagement() {
 
   const fetchPodDetails = async (podId) => {
     try {
-      const res = await api.get(`/api/pods/${podId}`);
+      const res = await api.get(`/pods/${podId}`);
       setSelectedPod(res.data);
     } catch (error) {
       toast.error('Failed to fetch pod details');
