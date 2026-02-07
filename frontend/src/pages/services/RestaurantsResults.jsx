@@ -345,7 +345,7 @@ export default function RestaurantsResults() {
   const loadRestaurants = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/restaurants/', { params: { city } });
+      const res = await api.get('/restaurants/', { params: { city, ...getLocationParam() } });
       if (res.data.restaurants?.length > 0) {
         setRestaurants(res.data.restaurants);
       } else {

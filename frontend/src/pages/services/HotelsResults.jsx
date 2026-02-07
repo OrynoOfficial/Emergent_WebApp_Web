@@ -575,7 +575,7 @@ export default function HotelsResults() {
     const fetchHotels = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get('/hotels/', { params: { city: destination } });
+        const response = await api.get('/hotels/', { params: { city: destination, ...getLocationParam() } });
         const data = response.data;
         if (data?.hotels && data.hotels.length > 0) {
           setHotels(data.hotels);

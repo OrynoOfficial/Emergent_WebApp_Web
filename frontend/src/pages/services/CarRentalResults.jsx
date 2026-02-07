@@ -255,7 +255,7 @@ export default function CarRentalResults() {
   const loadVehicles = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/car-rental/', { params: { city: pickupLocation } });
+      const res = await api.get('/car-rental/', { params: { city: pickupLocation, ...getLocationParam() } });
       if (res.data.cars?.length > 0) {
         setVehicles(res.data.cars.map(car => ({
           ...car,
