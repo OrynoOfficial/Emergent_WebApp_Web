@@ -133,10 +133,11 @@ async def get_travel_routes(
     destination: Optional[str] = None,
     from_city: Optional[str] = None,
     to_city: Optional[str] = None,
+    country: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get travel routes with vehicle images"""
+    """Get travel routes with vehicle images - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"is_active": True}
@@ -158,6 +159,16 @@ async def get_travel_routes(
             query = {"$and": [query, dest_query]}
         else:
             query.update(dest_query)
+    
+    # Apply country filter via operator lookup (travel_routes has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        if op_filter:
+            if "$and" in query:
+                query["$and"].append(op_filter)
+            else:
+                query.update(op_filter)
     
     routes = await db.travel_routes.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.travel_routes.count_documents(query)
