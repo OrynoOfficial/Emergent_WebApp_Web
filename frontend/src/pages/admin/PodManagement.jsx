@@ -166,10 +166,27 @@ export default function PodManagement() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Sub-page Navigation */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#082c59] mb-1" data-testid="employee-management-title">Employee Management</h1>
+        <p className="text-gray-600 mb-4">Manage staff, pods, and access scopes</p>
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="employee-management-tabs">
+          <button onClick={() => navigate('/admin/employees')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-employees">
+            <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Employees
+          </button>
+          <button onClick={() => navigate('/admin/employees/pods')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/pods') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-pod-management">
+            <Network className="w-4 h-4 inline mr-1.5 -mt-0.5" />Pod Management
+          </button>
+          <button onClick={() => navigate('/admin/employees/access-scopes')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/access-scopes') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-access-scopes">
+            <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Access Scopes
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Pod Management</h1>
+          <h2 className="text-lg font-bold text-slate-900">Pod Management</h2>
           <p className="text-slate-600">Manage internal team pods and operator assignments</p>
         </div>
         <div className="flex gap-2">
