@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Users, Plus, Edit2, Trash2, Search, RefreshCw, UserPlus, UserMinus,
-  Building2, Crown, Briefcase, Headphones, Wrench, Loader2, ChevronRight
+  Building2, Crown, Briefcase, Headphones, Wrench, Loader2, ChevronRight, Network, ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
