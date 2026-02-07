@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, Heart, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
-import { eventsAPI } from '@/api/client';
+import { eventsApi } from '@/api/services';
 import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
 
