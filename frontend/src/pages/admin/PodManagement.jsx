@@ -25,6 +25,8 @@ const POD_ROLE_CONFIG = {
 };
 
 export default function PodManagement() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [pods, setPods] = useState([]);
   const [users, setUsers] = useState([]);
   const [operators, setOperators] = useState([]);
