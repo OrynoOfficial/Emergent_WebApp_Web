@@ -499,6 +499,11 @@ export default function TravelResults() {
   }, [trips, searchQuery, sortBy]);
 
   const handleTripSelect = (trip) => {
+    // Prevent booking past trips
+    if (isPast(trip.tripDate, trip.departure_time)) {
+      return;
+    }
+    
     if (isRoundTrip && view === 'outbound') {
       setSelectedOutbound(trip);
       setView('return');
