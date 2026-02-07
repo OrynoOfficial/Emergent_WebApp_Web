@@ -49,6 +49,27 @@ GLOBAL_PERMISSIONS = {
     "services.banquet.manage_all": "Manage all banquet halls",
     "services.cinema.manage_all": "Manage all cinemas",
     "services.packages.manage_all": "Manage all packages",
+    
+    # Geography Management (Countries, Regions)
+    "geography.view": "View countries and regions",
+    "geography.create": "Create countries and regions",
+    "geography.edit": "Edit countries and regions",
+    "geography.delete": "Delete countries and regions",
+    
+    # Pod Management (Internal Team Structure)
+    "pods.view": "View all pods",
+    "pods.create": "Create new pods",
+    "pods.edit": "Edit pod details",
+    "pods.delete": "Delete pods",
+    "pods.manage_members": "Add/remove pod members",
+    "pods.manage_operators": "Assign/unassign operators to pods",
+    
+    # Employee Access Scopes
+    "employee_scopes.view": "View access scopes",
+    "employee_scopes.create": "Create access scopes",
+    "employee_scopes.edit": "Edit access scopes",
+    "employee_scopes.delete": "Delete access scopes",
+    "employee_scopes.assign": "Assign scopes to employees",
 }
 
 # ==================== OPERATOR PERMISSIONS ====================
