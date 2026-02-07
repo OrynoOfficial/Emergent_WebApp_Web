@@ -158,7 +158,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Choose your country" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[100]" position="popper" sideOffset={5}>
                 {/* Priority: African countries first */}
                 <div className="px-2 py-1 text-xs text-slate-500 font-semibold">Africa</div>
                 {countries.filter(c => isAfricanCountry(c.code)).map(country => (
