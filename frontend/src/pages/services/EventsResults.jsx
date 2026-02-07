@@ -144,30 +144,43 @@ const EventCardGrid = ({ event, onBook }) => {
 // List View Event Card
 const EventCardList = ({ event, onBook }) => {
   const EventIcon = getEventIcon(event.type);
+  const isEventPast = isPast(event.date, event.time);
   
   return (
-    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
+    <Card 
+      className={`overflow-hidden bg-white rounded-2xl border-0 shadow-md transition-all ${
+        isEventPast ? 'cursor-not-allowed' : 'hover:shadow-xl'
+      }`}
+      style={isEventPast ? { opacity: 0.5, filter: 'grayscale(100%)' } : {}}
+    >
       <div className="flex flex-col md:flex-row">
         {/* Image */}
         <div className="md:w-1/3 h-48 md:h-auto relative">
           <img src={event.image} alt={event.name} className="w-full h-full object-cover" />
-          <Badge className={`absolute top-3 left-3 ${EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
-            <EventIcon className="w-3 h-3 mr-1" />
-            {event.type}
-          </Badge>
+          <div className="absolute top-3 left-3 flex items-center gap-2">
+            <Badge className={`${isEventPast ? 'bg-slate-500' : EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
+              <EventIcon className="w-3 h-3 mr-1" />
+              {event.type}
+            </Badge>
+            {isEventPast && (
+              <Badge className="bg-slate-700 text-white">
+                <AlertCircle className="w-3 h-3 mr-1" /> Past Event
+              </Badge>
+            )}
+          </div>
         </div>
         
         {/* Details */}
         <div className="md:w-2/3 p-6">
           <div className="flex justify-between items-start mb-3">
             <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1">{event.name}</h3>
+              <h3 className={`text-xl font-bold mb-1 ${isEventPast ? 'text-slate-400' : 'text-gray-900'}`}>{event.name}</h3>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <MapPin className="w-4 h-4" /> {event.venue}, {event.city}
-                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 ml-2" /> {event.rating}
+                <Star className={`w-4 h-4 ml-2 ${isEventPast ? 'text-slate-300' : 'text-yellow-400 fill-yellow-400'}`} /> {event.rating}
               </div>
             </div>
-            {event.ticketsLeft < 200 && (
+            {!isEventPast && event.ticketsLeft < 200 && (
               <Badge variant="destructive" className="animate-pulse">Only {event.ticketsLeft} left!</Badge>
             )}
           </div>
@@ -176,24 +189,24 @@ const EventCardList = ({ event, onBook }) => {
           
           <div className="grid grid-cols-3 gap-4 my-4">
             <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-pink-500" />
+              <Calendar className={`w-5 h-5 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
               <div>
                 <p className="text-xs text-gray-500">Date</p>
                 <p className="font-medium">{format(new Date(event.date), 'MMM dd, yyyy')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-pink-500" />
+              <Clock className={`w-5 h-5 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
               <div>
                 <p className="text-xs text-gray-500">Time</p>
                 <p className="font-medium">{event.time}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Ticket className="w-5 h-5 text-pink-500" />
+              <Ticket className={`w-5 h-5 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
               <div>
                 <p className="text-xs text-gray-500">Available</p>
-                <p className="font-medium">{event.ticketsLeft} tickets</p>
+                <p className="font-medium">{isEventPast ? 'Ended' : `${event.ticketsLeft} tickets`}</p>
               </div>
             </div>
           </div>
@@ -201,11 +214,17 @@ const EventCardList = ({ event, onBook }) => {
           <div className="flex items-center justify-between pt-4 border-t">
             <div>
               <span className="text-sm text-gray-500">From</span>
-              <span className="text-2xl font-bold text-pink-600 ml-2">{formatFCFA(event.priceFrom)}</span>
+              <span className={`text-2xl font-bold ml-2 ${isEventPast ? 'text-slate-400' : 'text-pink-600'}`}>{formatFCFA(event.priceFrom)}</span>
             </div>
-            <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl">
-              <Ticket className="w-4 h-4 mr-2" /> Get Tickets
-            </Button>
+            {isEventPast ? (
+              <Button disabled className="bg-slate-200 text-slate-400 cursor-not-allowed rounded-xl">
+                <AlertCircle className="w-4 h-4 mr-2" /> Ended
+              </Button>
+            ) : (
+              <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl">
+                <Ticket className="w-4 h-4 mr-2" /> Get Tickets
+              </Button>
+            )}
           </div>
         </div>
       </div>
