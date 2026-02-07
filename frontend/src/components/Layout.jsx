@@ -105,6 +105,7 @@ export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { hasPermission, hasAnyPermission, canAccessModule, isSuperAdmin: isSuperAdminPerm, loading: permissionsLoading } = usePermissions();
+  const { navigationItems, userRole, isSuperAdmin, isAdmin, isOperator } = useSidebarMenu();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState({});
   const [notificationsOpen, setNotificationsOpen] = useState(false);
