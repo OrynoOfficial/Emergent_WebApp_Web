@@ -21,6 +21,12 @@ class OperatorType(str, Enum):
     PHARMACY = "pharmacy"
     MULTI = "multi"  # Multiple service types
 
+class MarketSegment(str, Enum):
+    """Market segment classification for operators"""
+    SME = "sme"              # Small and Medium Enterprises
+    ENTERPRISE = "enterprise"  # Large enterprises
+    STRATEGIC = "strategic"    # High-value strategic partners
+
 class Operator(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
     name: str
@@ -31,7 +37,14 @@ class Operator(BaseModel):
     phone: str
     address: Optional[str] = None
     city: Optional[str] = None
-    country: str = "Cameroon"
+    
+    # Geographic attributes (for attribute-based access control)
+    country: str = "CM"  # ISO 3166-1 alpha-2 code, default Cameroon
+    region: Optional[str] = None  # Region code (e.g., "CM-LT" for Littoral)
+    
+    # Market classification
+    market_segment: MarketSegment = MarketSegment.SME  # Default to SME
+    
     logo_url: Optional[str] = None
     description: Optional[str] = None
     status: OperatorStatus = OperatorStatus.PENDING
@@ -41,6 +54,11 @@ class Operator(BaseModel):
     tax_id: Optional[str] = None
     documents: List[Dict[str, Any]] = []  # [{name, url, type}]
     owner_user_id: Optional[str] = None  # Link to user account
+    
+    # Pod assignment (for internal team management)
+    assigned_pod_id: Optional[str] = None
+    assigned_pod_name: Optional[str] = None  # Denormalized
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -56,7 +74,9 @@ class OperatorCreate(BaseModel):
     phone: str
     address: Optional[str] = None
     city: Optional[str] = None
-    country: str = "Cameroon"
+    country: str = "CM"
+    region: Optional[str] = None
+    market_segment: MarketSegment = MarketSegment.SME
     logo_url: Optional[str] = None
     description: Optional[str] = None
     commission_rate: float = 5.0
@@ -72,6 +92,9 @@ class OperatorUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    country: Optional[str] = None
+    region: Optional[str] = None
+    market_segment: Optional[MarketSegment] = None
     logo_url: Optional[str] = None
     description: Optional[str] = None
     status: Optional[OperatorStatus] = None
