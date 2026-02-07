@@ -45,8 +45,8 @@ export default function GeographyManagement() {
     setLoading(true);
     try {
       const [countriesRes, regionsRes] = await Promise.all([
-        api.get('/api/geography/countries'),
-        api.get('/api/geography/regions')
+        api.get('/geography/countries'),
+        api.get('/geography/regions')
       ]);
       setCountries(countriesRes.data.countries || []);
       setRegions(regionsRes.data.regions || []);
@@ -59,7 +59,7 @@ export default function GeographyManagement() {
 
   const initializeDefaults = async () => {
     try {
-      const res = await api.post('/api/geography/initialize-defaults');
+      const res = await api.post('/geography/initialize-defaults');
       toast.success(res.data.message);
       fetchData();
     } catch (error) {
