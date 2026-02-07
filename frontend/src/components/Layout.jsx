@@ -642,6 +642,12 @@ export default function Layout({ children }) {
             ]
           });
         }
+        
+        // Access Control Section - Pod Management, Employee Scopes, Geography
+        adminSubmenu.push({ key: 'pods', label: 'Pod Management', path: '/admin/pods', icon: Users });
+        adminSubmenu.push({ key: 'employee-scopes', label: 'Access Scopes', path: '/admin/employee-scopes', icon: ShieldCheck });
+        adminSubmenu.push({ key: 'geography', label: 'Geography', path: '/admin/geography', icon: MapPin });
+        
         if (canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
         if (hasPermission('payments.view')) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: FileText });
         if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-logs', icon: History });
