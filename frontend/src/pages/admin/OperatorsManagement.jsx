@@ -204,7 +204,7 @@ export default function OperatorsManagement() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Building className="h-6 w-6 text-[#082c59]" />
-            Operators Management
+            Operator Management
           </h1>
           <p className="text-slate-500 mt-1">Manage service providers and operators</p>
         </div>
