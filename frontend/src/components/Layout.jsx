@@ -115,6 +115,20 @@ export default function Layout({ children }) {
   const searchInputRef = useRef(null);
   const searchDropdownRef = useRef(null);
   const searchDebounceRef = useRef(null);
+  
+  // Customer location state
+  const { location: userLocation, showModal: showLocationModal, setShowModal: setShowLocationModal, updateLocation } = useUserLocation();
+  
+  // Show location modal for customers on first visit
+  useEffect(() => {
+    if (user?.role === 'customer' && !userLocation) {
+      // Delay to avoid showing immediately on login
+      const timer = setTimeout(() => {
+        setShowLocationModal(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, userLocation, setShowLocationModal]);
 
   // Icon mapping for dynamic icons from API
   const iconMap = {
