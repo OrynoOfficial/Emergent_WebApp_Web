@@ -184,14 +184,29 @@ async def get_operators(
     op_status: Optional[str] = None,
     operator_type: Optional[str] = None,
     city: Optional[str] = None,
+    country: Optional[str] = None,
+    region: Optional[str] = None,
+    market_segment: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(require_permission("operators.view"))
 ):
-    """Get operators list - requires operators.view permission"""
+    """
+    Get operators list - requires operators.view permission.
+    Results are filtered based on user's authorization context:
+    - Super Admin: Sees all operators
+    - Admin with scopes: Sees operators matching their assigned scopes
+    - Admin in pod: Sees operators assigned to their pod
+    - Operator: Sees only their own operator
+    """
     db = get_database()
     
-    query = {}
+    # Get authorization-based filter
+    access_filter = await get_operator_access_filter(current_user, db)
+    
+    # Start with access filter
+    query = {**access_filter}
+    
     is_admin = current_user["role"] in ["admin", "super_admin"]
     
     # Non-super-admin users can only see active operators unless they have explicit permission
@@ -200,10 +215,17 @@ async def get_operators(
     elif op_status:
         query["status"] = op_status
     
+    # Additional filters
     if operator_type:
         query["operator_type"] = operator_type
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
+    if country:
+        query["country"] = country.upper()
+    if region:
+        query["region"] = region
+    if market_segment:
+        query["market_segment"] = market_segment
     
     operators = await db.operators.find(query).sort("name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.operators.count_documents(query)
@@ -240,7 +262,20 @@ async def get_operators(
         except Exception:
             op["revenue"] = op.get("revenue", 0)
     
-    return {"operators": operators, "total": total, "skip": skip, "limit": limit}
+    # Include access context info in response for debugging/UI
+    auth_context = current_user.get("_authorization_context", {})
+    
+    return {
+        "operators": operators, 
+        "total": total, 
+        "skip": skip, 
+        "limit": limit,
+        "access_info": {
+            "has_global_access": auth_context.get("has_global_access", current_user["role"] == "super_admin"),
+            "pod_name": auth_context.get("pod_membership", {}).get("pod_name") if auth_context.get("pod_membership") else None,
+            "scope_count": len(auth_context.get("access_scopes", []))
+        }
+    }
 
 @router.get("/{operator_id}")
 async def get_operator(operator_id: str):
