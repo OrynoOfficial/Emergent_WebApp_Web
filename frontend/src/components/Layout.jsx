@@ -132,10 +132,10 @@ export default function Layout({ children }) {
 
   // Icon mapping for dynamic icons from API
   const iconMap = {
-    MapPin, Bus, Hotel, Car, Utensils, Calendar, Package, Film, Gift, PartyPopper,
+    Bus, Hotel, Car, Utensils, Calendar, Package, Film, Gift, PartyPopper,
     Building2, User, Users, Receipt, LayoutDashboard, Ticket, Award, Star, 
     HelpCircle, Settings, Bell, BarChart, Briefcase, Percent, History, QrCode,
-    HeadphonesIcon, Sparkles, Database, FileText
+    HeadphonesIcon, Sparkles, Database, FileText, MapPin, Globe
   };
 
   const getIconComponent = (iconName) => {
