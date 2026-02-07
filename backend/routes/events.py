@@ -77,7 +77,7 @@ async def get_events(
     # Apply country filter (events have a direct country field)
     if country:
         from utils.location_filter import get_country_filter
-        query.update(get_country_filter(country))
+        query.update(await get_country_filter(db, country))
     
     events = await db.events.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.events.count_documents(query)

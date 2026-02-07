@@ -103,7 +103,7 @@ async def get_restaurants(
     # Apply country filter (restaurants have a direct country field)
     if country:
         from utils.location_filter import get_country_filter
-        query.update(get_country_filter(country))
+        query.update(await get_country_filter(db, country))
     
     restaurants = await db.restaurants.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.restaurants.count_documents(query)
