@@ -74,20 +74,23 @@ async def get_events(
     if event_type:
         query["event_type"] = event_type
     
-    # Apply country filter - try direct country field OR operator-based lookup
+    # Apply country filter - use both direct and operator-based lookup
     if country:
-        from utils.location_filter import get_country_filter, get_operator_country_filter
-        direct_filter = await get_country_filter(db, country)
-        op_filter = await get_operator_country_filter(db, country)
-        if direct_filter and op_filter and op_filter.get("operator_id") != "__no_match__":
-            query["$or"] = [
-                direct_filter,
-                op_filter
-            ]
-        elif direct_filter:
-            query.update(direct_filter)
-        elif op_filter:
-            query.update(op_filter)
+        from utils.location_filter import get_country_filter, get_operator_ids_for_country
+        from utils.geolocation import is_african_country
+        if is_african_country(country):
+            direct = await get_country_filter(db, country)
+            op_ids = await get_operator_ids_for_country(db, country)
+            conditions = []
+            if direct:
+                conditions.append(direct)
+            if op_ids:
+                conditions.append({"operator_id": {"$in": op_ids}})
+            if conditions:
+                if "$or" not in query:
+                    query["$or"] = conditions
+                else:
+                    query = {"$and": [query, {"$or": conditions}]}
     
     events = await db.events.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.events.count_documents(query)
