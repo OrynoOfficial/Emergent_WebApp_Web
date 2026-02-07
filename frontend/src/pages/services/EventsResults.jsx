@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, Heart, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, Heart, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
 import { eventsAPI } from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
+import { isPast } from '@/utils/dateUtils';
 
 const MOCK_EVENTS = [
   { id: '1', name: 'Afrobeats Music Festival 2025', type: 'Concert', venue: 'Stade Omnisports', city: 'Yaoundé', date: '2025-02-15', time: '18:00', priceFrom: 15000, ticketsLeft: 500, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800', rating: 4.8, description: 'The biggest Afrobeats festival featuring top African artists.' },
