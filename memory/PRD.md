@@ -503,3 +503,39 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - `/api/customer-location/resolve` - Priority-based resolution
   - `/api/customer-location/services` - Location-filtered operators
 
+
+## Completed Features (Feb 7, 2026 - Session 13)
+- [x] **P0: Location-Based Service Filtering for Customers**
+  - Created reusable backend utility `/app/backend/utils/location_filter.py`
+  - Two filtering strategies:
+    - Direct `country` field match for hotels, events, restaurants
+    - Operator-based lookup for car_rental, cinema, pressing, banquets, packages, travel
+  - Added `country` query parameter to ALL 9 service GET endpoints:
+    - `/api/hotels/`, `/api/events/`, `/api/restaurants/`, `/api/car-rental/`
+    - `/api/travel/routes`, `/api/cinema/`, `/api/pressing/`, `/api/banquets/`, `/api/packages/`
+  - Visibility rules:
+    - African country code → filter to that country only
+    - Non-African country code → show all (global view)
+    - No country param → show all (no filtering)
+  - Frontend `getLocationParam()` helper reads `oryno_user_location` from localStorage
+  - Updated `api/services.js` to automatically include country param in all service searches
+  - Updated direct API calls in HotelsResults, RestaurantsResults, CarRentalResults pages
+  - Fixed EventsResults.jsx: was calling undefined `eventsAPI.list()`, now uses `eventsApi.search()` from services.js
+  - Data migration: Fixed orphaned operator references in events, cinemas, pressings collections
+  - **Testing**: 100% backend (16/16), 100% frontend - All location features verified
+
+- [x] **LocationSelectionModal Verification**
+  - Custom dropdown working correctly inside Dialog modal
+  - Shows African countries (CM, CF, TD, GQ, GA, NG) grouped under "Africa" header
+  - Saves selection to localStorage as `oryno_user_location`
+  - Header shows country name + "Local" badge after selection
+
+## Backlog (Updated Feb 7, 2026)
+- [ ] **P1: Data Migration** - Migrate all existing operators/users to new scoped access control model
+- [ ] **P2: Frontend Scope Filtering** - Update management pages to respect employee authorization context (pods/scopes)
+- [ ] **P3: Email Invitation System** - Invite new users via email
+- [ ] **P3: Pod Management Hierarchical Logic** - Team Leads manage team members' access (moved from P4)
+- [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
+- [ ] **P5: Default Document Templates**
+- [ ] **P4: Layout.jsx refactoring** - Break down into smaller components/hooks
+
