@@ -42,7 +42,6 @@ import {
   Search,
   Clock,
   ArrowRight,
-  MapPin,
   Building2,
   User,
   PartyPopper,
