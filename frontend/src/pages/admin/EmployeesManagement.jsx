@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Users, Plus, Search, Edit, Trash2, Eye, UserPlus,
   Phone, Mail, MapPin, Calendar, Briefcase, Clock,
-  CheckCircle, XCircle, MoreHorizontal, FileText, ShieldCheck, Network
+  CheckCircle, XCircle, MoreHorizontal, FileText, ShieldCheck, Network, Crown
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
