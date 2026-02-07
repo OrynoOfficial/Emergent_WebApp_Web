@@ -278,13 +278,39 @@ async def get_operators(
     }
 
 @router.get("/{operator_id}")
-async def get_operator(operator_id: str):
-    """Get operator details"""
+async def get_operator(
+    operator_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get operator details - checks authorization context"""
     db = get_database()
-    operator = await db.operators.find_one({"_id": operator_id}, {"_id": 0})
+    
+    operator = await db.operators.find_one({"_id": operator_id})
     if not operator:
         raise HTTPException(status_code=404, detail="Operator not found")
+    
+    # Check access authorization
+    user_role = current_user.get("role")
+    
+    # Super admin can see all
+    if user_role != "super_admin":
+        # Operator users can only see their own
+        if user_role == "operator":
+            if current_user.get("operator_id") != operator_id:
+                raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Admins - check if operator is in their accessible set
+        elif user_role == "admin":
+            access_filter = await get_operator_access_filter(current_user, db)
+            if access_filter and "_id" in access_filter:
+                if access_filter["_id"] == "__no_access__":
+                    raise HTTPException(status_code=403, detail="Access denied")
+                if "$in" in access_filter["_id"]:
+                    if operator_id not in access_filter["_id"]["$in"]:
+                        raise HTTPException(status_code=403, detail="Access denied - operator not in your scope")
+    
     operator["id"] = operator_id
+    operator.pop("_id", None)
     return operator
 
 @router.put("/{operator_id}")
