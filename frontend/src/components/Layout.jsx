@@ -1198,6 +1198,34 @@ export default function Layout({ children }) {
                 )}
                 <span className="text-sm font-medium text-slate-700">{user?.full_name}</span>
               </div>
+              
+              {/* Location Indicator for Customers */}
+              {user?.role === 'customer' && (
+                <button
+                  onClick={() => setShowLocationModal(true)}
+                  className="hidden md:flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all"
+                  title="Change location"
+                >
+                  {userLocation ? (
+                    <>
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700">
+                        {userLocation.country_name || userLocation.country_code}
+                      </span>
+                      {userLocation.is_in_africa ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Local</span>
+                      ) : (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Global</span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-4 h-4 text-slate-500" />
+                      <span className="text-sm text-slate-600">Set Location</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </header>
