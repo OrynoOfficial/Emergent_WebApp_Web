@@ -305,3 +305,16 @@ export function getStoredLocation() {
     return null;
   }
 }
+
+// Helper to get location params for API calls
+export function getLocationParam() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return {};
+    const loc = JSON.parse(stored);
+    if (loc.is_in_africa && loc.country_code) {
+      return { country: loc.country_code };
+    }
+  } catch { /* ignore */ }
+  return {};
+}
