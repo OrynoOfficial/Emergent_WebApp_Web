@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Globe, Loader2, Navigation, RefreshCw } from 'lucide-react';
+import { MapPin, Globe, Loader2, Navigation, ChevronDown, Check } from 'lucide-react';
 import api from '@/api/client';
 
 const STORAGE_KEY = 'oryno_user_location';
@@ -14,6 +13,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
   const [detectedLocation, setDetectedLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detecting, setDetecting] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -25,9 +25,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
   const fetchCountries = async () => {
     try {
       const res = await api.get('/geography/countries');
-      console.log('Countries API response:', res.data);
       const countriesList = res.data.countries || [];
-      console.log('Countries list:', countriesList.length, countriesList);
       setCountries(countriesList);
     } catch (error) {
       console.error('Failed to fetch countries:', error);
@@ -47,6 +45,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
           is_in_africa: res.data.is_in_africa
         });
         setSelectedCountry(res.data.location.country_code);
+      }
       }
     } catch (error) {
       console.error('Failed to detect location:', error);
