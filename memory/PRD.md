@@ -551,6 +551,19 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Filters reset when modal closes
   - **Testing**: 100% (iteration_31)
 
+- [x] **Add Member Dropdown - Pulls from Employee List**
+  - Dropdown now combines employees from `/api/employees/` and admin users from `/api/users/`
+  - Employees with linked user accounts appear directly; admin users show with "(platform)" suffix
+  - Employee department and city shown for context
+  - **Testing**: 100% (iteration_32)
+
+- [x] **Team Lead Removable/Changeable**
+  - Team Lead section now shows "Remove" button (`data-testid='remove-team-lead-btn'`)
+  - Members list shows remove button for ALL members including team leads
+  - Backend already handled team lead removal (clears `team_lead_id`/`team_lead_name`)
+  - After removal, user becomes available for reassignment to same or different pod
+  - **Testing**: 100% (iteration_32)
+
 ## Completed Features (Feb 7, 2026 - Session 13c)
 - [x] **Rename: Employees → Employee Management**
   - Updated sidebar label in `useSidebarMenu.js`
