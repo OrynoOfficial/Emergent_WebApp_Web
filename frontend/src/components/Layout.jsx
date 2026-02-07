@@ -1209,6 +1209,13 @@ export default function Layout({ children }) {
           </div>
         </main>
       </div>
+      
+      {/* Location Selection Modal for Customers */}
+      <LocationSelectionModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onLocationSet={updateLocation}
+      />
     </div>
   );
 }
