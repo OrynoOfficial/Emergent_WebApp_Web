@@ -180,9 +180,9 @@ export default function PodManagement() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Get employees not already in a pod
+  // Get employees not already in a pod (only those with linked user accounts can be added)
   const availableUsers = users.filter(u => {
-    const uid = u.user_id || u.id || u._id;
+    const uid = u._linked_user_id || u.user_id || u.id || u._id;
     const isInPod = pods.some(p => p.member_ids?.includes(uid));
     return !isInPod;
   });
