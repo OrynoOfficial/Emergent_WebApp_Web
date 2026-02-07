@@ -504,41 +504,99 @@ export default function PodManagement() {
       </Dialog>
 
       {/* Assign Operators Modal */}
-      <Dialog open={showOperatorModal} onOpenChange={setShowOperatorModal}>
+      <Dialog open={showOperatorModal} onOpenChange={(open) => { setShowOperatorModal(open); if (!open) { setOpSearch(''); setOpStatusFilter('all'); setOpTypeFilter('all'); setOpCountryFilter('all'); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Assign Operators to {selectedPod?.name}</DialogTitle>
           </DialogHeader>
-          <div className="max-h-96 overflow-y-auto space-y-2">
-            {operators.filter(op => !selectedPod?.assigned_operator_ids?.includes(op.id || op._id)).map(op => (
-              <label key={op.id || op._id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100">
-                <input
-                  type="checkbox"
-                  checked={selectedOperatorIds.includes(op.id || op._id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedOperatorIds([...selectedOperatorIds, op.id || op._id]);
-                    } else {
-                      setSelectedOperatorIds(selectedOperatorIds.filter(id => id !== (op.id || op._id)));
-                    }
-                  }}
-                  className="w-4 h-4"
-                />
-                <div>
-                  <p className="font-medium">{op.name}</p>
-                  <div className="flex gap-2 mt-1">
-                    <Badge variant="outline">{op.operator_type}</Badge>
-                    <Badge className="bg-slate-100">{op.country || 'CM'}</Badge>
+
+          {/* Search & Filters */}
+          <div className="space-y-3" data-testid="operator-assign-filters">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search operators by name..."
+                value={opSearch}
+                onChange={(e) => setOpSearch(e.target.value)}
+                className="pl-9"
+                data-testid="operator-search-input"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Select value={opStatusFilter} onValueChange={setOpStatusFilter}>
+                <SelectTrigger className="w-[130px]" data-testid="operator-status-filter">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={opTypeFilter} onValueChange={setOpTypeFilter}>
+                <SelectTrigger className="w-[140px]" data-testid="operator-type-filter">
+                  <SelectValue placeholder="Service Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {[...new Set(operators.map(o => o.operator_type).filter(Boolean))].sort().map(t => (
+                    <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={opCountryFilter} onValueChange={setOpCountryFilter}>
+                <SelectTrigger className="w-[140px]" data-testid="operator-country-filter">
+                  <SelectValue placeholder="Country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {[...new Set(operators.map(o => o.country).filter(Boolean))].sort().map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Operator List */}
+          <div className="max-h-72 overflow-y-auto space-y-2">
+            {(() => {
+              const available = operators
+                .filter(op => !selectedPod?.assigned_operator_ids?.includes(op.id || op._id))
+                .filter(op => opSearch === '' || (op.name || '').toLowerCase().includes(opSearch.toLowerCase()))
+                .filter(op => opStatusFilter === 'all' || op.status === opStatusFilter)
+                .filter(op => opTypeFilter === 'all' || op.operator_type === opTypeFilter)
+                .filter(op => opCountryFilter === 'all' || op.country === opCountryFilter);
+              if (available.length === 0) {
+                return <p className="text-center py-8 text-slate-500">{opSearch || opStatusFilter !== 'all' || opTypeFilter !== 'all' || opCountryFilter !== 'all' ? 'No operators match filters' : 'All operators are already assigned'}</p>;
+              }
+              return available.map(op => (
+                <label key={op.id || op._id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100" data-testid={`operator-option-${op.id || op._id}`}>
+                  <input
+                    type="checkbox"
+                    checked={selectedOperatorIds.includes(op.id || op._id)}
+                    onChange={(e) => {
+                      const id = op.id || op._id;
+                      if (e.target.checked) setSelectedOperatorIds(prev => [...prev, id]);
+                      else setSelectedOperatorIds(prev => prev.filter(i => i !== id));
+                    }}
+                    className="w-4 h-4 rounded border-slate-300"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{op.name}</p>
+                    <div className="flex gap-2 mt-1 flex-wrap">
+                      <Badge variant="outline" className="text-xs">{op.operator_type}</Badge>
+                      <Badge className="bg-slate-100 text-xs">{op.country || 'CM'}</Badge>
+                      <Badge className={`text-xs ${op.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{op.status}</Badge>
+                    </div>
                   </div>
-                </div>
-              </label>
-            ))}
-            {operators.filter(op => !selectedPod?.assigned_operator_ids?.includes(op.id || op._id)).length === 0 && (
-              <p className="text-center py-8 text-slate-500">All operators are already assigned</p>
-            )}
+                </label>
+              ));
+            })()}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowOperatorModal(false); setSelectedOperatorIds([]); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setShowOperatorModal(false); setSelectedOperatorIds([]); setOpSearch(''); setOpStatusFilter('all'); setOpTypeFilter('all'); setOpCountryFilter('all'); }}>Cancel</Button>
             <Button onClick={handleAssignOperators} disabled={selectedOperatorIds.length === 0}>
               Assign {selectedOperatorIds.length} Operator{selectedOperatorIds.length !== 1 ? 's' : ''}
             </Button>
