@@ -58,14 +58,31 @@ export default function PodManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [podsRes, employeesRes, operatorsRes] = await Promise.all([
+      const [podsRes, employeesRes, usersRes, operatorsRes] = await Promise.all([
         api.get('/pods'),
         api.get('/employees/'),
+        api.get('/users/'),
         api.get('/operators/')
       ]);
       setPods(podsRes.data.pods || []);
-      setUsers(employeesRes.data.employees || employeesRes.data || []);
       setOperators(operatorsRes.data.operators || []);
+
+      // Merge employees with their user accounts (matched by email)
+      const employees = employeesRes.data.employees || employeesRes.data || [];
+      const allUsers = usersRes.data.users || [];
+      const usersByEmail = {};
+      for (const u of allUsers) {
+        if (u.email) usersByEmail[u.email.toLowerCase()] = u;
+      }
+      const merged = employees.map(emp => {
+        const matchedUser = emp.email ? usersByEmail[emp.email.toLowerCase()] : null;
+        return {
+          ...emp,
+          _linked_user_id: matchedUser ? (matchedUser.id || matchedUser._id) : null,
+          _linked_user_role: matchedUser?.role || null,
+        };
+      });
+      setUsers(merged);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
