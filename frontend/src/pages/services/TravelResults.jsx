@@ -90,21 +90,39 @@ const VehicleImageThumbnails = ({ images, vehicleName, onImageClick }) => {
 const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const tripAmenities = trip.amenities?.length > 0 ? trip.amenities : getDefaultAmenities(trip.vehicle_type);
+  const isTripPast = isPast(tripDate, trip.departure_time);
 
   return (
-    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+    <Card 
+      className={`group overflow-hidden bg-white rounded-2xl border-0 shadow-md transition-all duration-300 ${
+        isTripPast 
+          ? 'cursor-not-allowed' 
+          : 'hover:shadow-2xl transform hover:-translate-y-1'
+      }`}
+      style={isTripPast ? { opacity: 0.5, filter: 'grayscale(100%)' } : {}}
+    >
       {/* Header with gradient */}
-      <div className="relative h-32 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] p-4">
-        <div className="absolute top-3 right-3">
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
-            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
-          >
-            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-          </button>
-        </div>
+      <div className={`relative h-32 p-4 ${isTripPast ? 'bg-gradient-to-br from-slate-500 via-slate-600 to-slate-700' : 'bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f]'}`}>
+        {/* Past Trip Indicator */}
+        {isTripPast && (
+          <div className="absolute top-3 right-3">
+            <Badge className="bg-slate-700 text-white">
+              <AlertCircle className="w-3 h-3 mr-1" /> Departed
+            </Badge>
+          </div>
+        )}
+        {!isTripPast && (
+          <div className="absolute top-3 right-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
+            >
+              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+            </button>
+          </div>
+        )}
         <div className="absolute top-3 left-3">
-          <Badge className={`${getVehicleTypeStyle(trip.vehicle_type)} shadow-lg`}>
+          <Badge className={`${isTripPast ? 'bg-slate-600' : getVehicleTypeStyle(trip.vehicle_type)} shadow-lg`}>
             <Star className="w-3 h-3 mr-1" />
             {trip.vehicle_type}
           </Badge>
@@ -121,43 +139,45 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
         {/* Route & Time */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-[#082c59]">{trip.departure_time}</p>
+            <p className={`text-2xl font-bold ${isTripPast ? 'text-slate-400' : 'text-[#082c59]'}`}>{trip.departure_time}</p>
             <p className="text-sm text-slate-500">{trip.from_city}</p>
           </div>
           <div className="flex-1 px-4 flex flex-col items-center">
             <div className="text-xs text-slate-400 mb-1">{trip.duration || '~3h 30m'}</div>
             <div className="w-full h-[2px] bg-slate-200 relative">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#082c59]" />
-              <ArrowRight className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-[#082c59]" />
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500" />
+              <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${isTripPast ? 'bg-slate-400' : 'bg-[#082c59]'}`} />
+              <ArrowRight className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 ${isTripPast ? 'text-slate-400' : 'text-[#082c59]'}`} />
+              <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${isTripPast ? 'bg-slate-400' : 'bg-emerald-500'}`} />
             </div>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-600">{trip.arrival_time}</p>
+            <p className={`text-2xl font-bold ${isTripPast ? 'text-slate-400' : 'text-emerald-600'}`}>{trip.arrival_time}</p>
             <p className="text-sm text-slate-500">{trip.to_city}</p>
           </div>
         </div>
 
         {/* Quick Info */}
-        <div className="flex items-center justify-between text-sm bg-slate-50 rounded-xl p-3 mb-3">
-          <div className="flex items-center gap-1.5 text-orange-600">
+        <div className={`flex items-center justify-between text-sm rounded-xl p-3 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-slate-50'}`}>
+          <div className={`flex items-center gap-1.5 ${isTripPast ? 'text-slate-400' : 'text-orange-600'}`}>
             <Armchair className="w-4 h-4" />
-            <span className="font-medium">{trip.available_seats || 40} seats</span>
+            <span className="font-medium">{isTripPast ? 'No longer available' : `${trip.available_seats || 40} seats`}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-emerald-600">
-            <Shield className="w-4 h-4" />
-            <span className="font-medium">Insured</span>
-          </div>
+          {!isTripPast && (
+            <div className="flex items-center gap-1.5 text-emerald-600">
+              <Shield className="w-4 h-4" />
+              <span className="font-medium">Insured</span>
+            </div>
+          )}
         </div>
 
         {/* Vehicle Name & Images */}
         {trip.vehicle_name && (
-          <div className="bg-blue-50 rounded-lg p-2.5 mb-3">
+          <div className={`rounded-lg p-2.5 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-blue-50'}`}>
             <div className="flex items-center gap-2">
-              <Bus className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">{trip.vehicle_name}</span>
+              <Bus className={`w-4 h-4 ${isTripPast ? 'text-slate-400' : 'text-blue-600'}`} />
+              <span className={`text-sm font-medium ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name}</span>
             </div>
-            {trip.vehicle_images?.length > 0 && (
+            {!isTripPast && trip.vehicle_images?.length > 0 && (
               <VehicleImageThumbnails 
                 images={trip.vehicle_images} 
                 vehicleName={trip.vehicle_name}
@@ -172,9 +192,9 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
           {tripAmenities.slice(0, 3).map((amenity, idx) => {
             const Icon = getAmenityIcon(amenity);
             return (
-              <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
-                <Icon className="h-3 w-3 text-slate-600" />
-                <span className="text-xs text-slate-600">{amenity}</span>
+              <div key={idx} className={`flex items-center gap-1 px-2 py-1 rounded-full ${isTripPast ? 'bg-slate-100' : 'bg-slate-100'}`}>
+                <Icon className={`h-3 w-3 ${isTripPast ? 'text-slate-400' : 'text-slate-600'}`} />
+                <span className={`text-xs ${isTripPast ? 'text-slate-400' : 'text-slate-600'}`}>{amenity}</span>
               </div>
             );
           })}
@@ -189,15 +209,21 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
         <div className="flex items-end justify-between pt-3 border-t border-slate-100">
           <div>
             <div className="text-xs text-slate-500">From</div>
-            <div className="text-2xl font-bold text-[#082c59]">{formatCurrency(trip.price)}</div>
+            <div className={`text-2xl font-bold ${isTripPast ? 'text-slate-400' : 'text-[#082c59]'}`}>{formatCurrency(trip.price)}</div>
             <div className="text-xs text-slate-500">per person</div>
           </div>
-          <Button
-            onClick={() => onSelect({ ...trip, tripDate })}
-            className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl px-5"
-          >
-            Select
-          </Button>
+          {isTripPast ? (
+            <Button disabled className="bg-slate-200 text-slate-400 cursor-not-allowed rounded-xl px-5">
+              Unavailable
+            </Button>
+          ) : (
+            <Button
+              onClick={() => onSelect({ ...trip, tripDate })}
+              className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl px-5"
+            >
+              Select
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
