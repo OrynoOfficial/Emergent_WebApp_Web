@@ -234,7 +234,7 @@ class TestPodManagementOperatorAssignment:
     
     def test_list_pods(self, super_admin_headers):
         """Test listing pods"""
-        response = requests.get(f"{BASE_URL}/api/pods/", headers=super_admin_headers)
+        response = requests.get(f"{BASE_URL}/api/pods", headers=super_admin_headers)
         assert response.status_code == 200
         
         data = response.json()
@@ -243,7 +243,7 @@ class TestPodManagementOperatorAssignment:
         
     def test_pod_has_assigned_operators_field(self, super_admin_headers):
         """Test that pods have assigned_operator_ids field"""
-        response = requests.get(f"{BASE_URL}/api/pods/", headers=super_admin_headers)
+        response = requests.get(f"{BASE_URL}/api/pods", headers=super_admin_headers)
         assert response.status_code == 200
         
         pods = response.json().get("pods", [])
@@ -269,7 +269,7 @@ class TestEmployeeScopeManagement:
     
     def test_list_employee_scopes(self, super_admin_headers):
         """Test listing employee scopes"""
-        response = requests.get(f"{BASE_URL}/api/employee-scopes/", headers=super_admin_headers)
+        response = requests.get(f"{BASE_URL}/api/employee-scopes", headers=super_admin_headers)
         assert response.status_code == 200
         
         data = response.json()
@@ -278,7 +278,7 @@ class TestEmployeeScopeManagement:
         
     def test_scope_has_filter_attributes(self, super_admin_headers):
         """Test that scopes have filter attributes (countries, regions, etc.)"""
-        response = requests.get(f"{BASE_URL}/api/employee-scopes/", headers=super_admin_headers)
+        response = requests.get(f"{BASE_URL}/api/employee-scopes", headers=super_admin_headers)
         assert response.status_code == 200
         
         scopes = response.json().get("scopes", [])
