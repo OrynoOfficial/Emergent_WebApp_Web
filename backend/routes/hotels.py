@@ -74,10 +74,18 @@ async def get_hotels(
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if country:
-        from utils.location_filter import get_country_filter
-        country_filter = await get_country_filter(db, country)
-        if country_filter:
-            query.update(country_filter)
+        from utils.location_filter import get_country_filter, get_operator_ids_for_country
+        from utils.geolocation import is_african_country
+        if is_african_country(country):
+            direct = await get_country_filter(db, country)
+            op_ids = await get_operator_ids_for_country(db, country)
+            conditions = []
+            if direct:
+                conditions.append(direct)
+            if op_ids:
+                conditions.append({"operator_id": {"$in": op_ids}})
+            if conditions:
+                query["$or"] = conditions
         else:
             query["country"] = {"$regex": country, "$options": "i"}
     if min_rating:
