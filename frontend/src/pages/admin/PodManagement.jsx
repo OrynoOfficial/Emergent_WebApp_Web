@@ -395,11 +395,9 @@ export default function PodManagement() {
                               <Badge className={roleConfig.color}>
                                 <RoleIcon className="w-3 h-3 mr-1" /> {roleConfig.label}
                               </Badge>
-                              {member.pod_role !== 'team_lead' && (
-                                <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.user_id)}>
-                                  <UserMinus className="w-4 h-4 text-red-500" />
-                                </Button>
-                              )}
+                              <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.user_id)} data-testid={`remove-member-${member.user_id}`}>
+                                <UserMinus className="w-4 h-4 text-red-500" />
+                              </Button>
                             </div>
                           </div>
                         );
