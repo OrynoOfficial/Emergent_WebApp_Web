@@ -254,7 +254,7 @@ export default function EventsResults() {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const res = await eventsAPI.list({ city, date });
+      const res = await eventsApi.search({ city, date });
       if (res.data.events?.length > 0) {
         setEvents(res.data.events);
       } else {
