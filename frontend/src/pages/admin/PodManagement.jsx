@@ -58,13 +58,13 @@ export default function PodManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [podsRes, usersRes, operatorsRes] = await Promise.all([
+      const [podsRes, employeesRes, operatorsRes] = await Promise.all([
         api.get('/pods'),
-        api.get('/users/', { params: { role: 'admin' } }),
+        api.get('/employees/'),
         api.get('/operators/')
       ]);
       setPods(podsRes.data.pods || []);
-      setUsers(usersRes.data.users || []);
+      setUsers(employeesRes.data.employees || employeesRes.data || []);
       setOperators(operatorsRes.data.operators || []);
     } catch (error) {
       toast.error('Failed to fetch data');
