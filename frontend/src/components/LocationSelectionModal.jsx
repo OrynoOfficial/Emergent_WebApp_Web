@@ -25,7 +25,10 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
   const fetchCountries = async () => {
     try {
       const res = await api.get('/geography/countries');
-      setCountries(res.data.countries || []);
+      console.log('Countries API response:', res.data);
+      const countriesList = res.data.countries || [];
+      console.log('Countries list:', countriesList.length, countriesList);
+      setCountries(countriesList);
     } catch (error) {
       console.error('Failed to fetch countries:', error);
     }
