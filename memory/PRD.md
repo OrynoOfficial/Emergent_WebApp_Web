@@ -476,3 +476,30 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   
   - **Testing**: 100% backend (20 passed), 100% frontend (3 pages working)
 
+## P2 Implementation (Feb 7, 2026 - Session 12 continued)
+- [x] **Authorization Context Wired to Operators API**
+  - Updated `/app/backend/routes/operators.py` with `get_operator_access_filter()` function
+  - Operators listing now respects user's authorization context:
+    - Super Admin: Sees all operators (has_global_access: true)
+    - Admin with scopes: Filtered by scope attributes (country, region, segment, service)
+    - Admin in pod: Filtered by pod's assigned operators
+    - Legacy admins (no scopes/pods): Default to seeing all (backwards compatible)
+  - Response includes `access_info` object with filtering metadata
+  - Updated `get_operator()` to check authorization before returning
+
+- [x] **Customer Location Selection Modal**
+  - Created `/app/frontend/src/components/LocationSelectionModal.jsx`
+  - Custom dropdown (not Radix Select) to work inside Dialog modal
+  - Features:
+    - Auto-detects location via IP geolocation
+    - Lists African countries first (local mode)
+    - Saves to localStorage for persistence
+    - Shows visibility scope explanation
+  - Integrated into Layout.jsx - appears 2 seconds after customer login
+  - Location indicator added to header for customers
+
+- [x] **Customer Location API**
+  - `/api/customer-location/ip-info` - Get IP-based location
+  - `/api/customer-location/resolve` - Priority-based resolution
+  - `/api/customer-location/services` - Location-filtered operators
+
