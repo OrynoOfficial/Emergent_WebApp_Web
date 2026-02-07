@@ -143,7 +143,16 @@ class TestLocationFilteringBackend:
     # ====== Geography API Tests ======
     def test_geography_countries_api(self):
         """Geography countries API should return African countries for dropdown"""
-        response = requests.get(f"{BASE_URL}/api/geography/countries")
+        # Login first
+        login_response = requests.post(
+            f"{BASE_URL}/api/auth/login",
+            json={"email": "customer@test.com", "password": "testpassword123"}
+        )
+        assert login_response.status_code == 200, f"Login failed: {login_response.text}"
+        token = login_response.json().get("access_token")
+        
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(f"{BASE_URL}/api/geography/countries", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "countries" in data
