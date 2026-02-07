@@ -530,12 +530,41 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 7, 2026)
-- [ ] **P1: Data Migration** - Migrate all existing operators/users to new scoped access control model
-- [ ] **P2: Frontend Scope Filtering** - Update management pages to respect employee authorization context (pods/scopes)
-- [ ] **P3: Email Invitation System** - Invite new users via email
-- [ ] **P3: Pod Management Hierarchical Logic** - Team Leads manage team members' access (moved from P4)
+## Backlog (Updated Feb 7, 2026 - Session 13b)
+- [ ] **P3: Email Invitation System** - Invite new users via email (moved to backlog)
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
-- [ ] **P4: Layout.jsx refactoring** - Break down into smaller components/hooks
+
+## Completed Features (Feb 7, 2026 - Session 13b)
+- [x] **P1: Data Migration**
+  - Created migration script `/app/backend/scripts/migrate_access_control.py`
+  - All 6 operators: added `region` (CM-SW, CM-CE, CM-OU, CM-LT) and `market_segment` (sme)
+  - All 9 users: added `country` field (Cameroon)
+  - All service collections (car_rentals, cinemas, pressings, banquets, packages, travel_routes): added `country` from operator
+  - Cleaned up test data (removed TEST_Tanzania country)
+  - Ensured all 10 CM regions exist in regions collection
+  - **Testing**: 100% verified via iteration_29
+
+- [x] **P2: Frontend Scope Filtering**
+  - Exposed `authorization_context` in `/api/auth/me` response for admin users
+  - Context includes: `user_type`, `pod_membership`, `access_scopes`, `accessible_operator_ids`, `has_global_access`
+  - Operators listing already filtered by backend based on auth context
+  - Frontend management pages implicitly respect scoped access
+  - **Testing**: 100% verified
+
+- [x] **P3: Pod Management Hierarchical Logic**
+  - Added `GET /api/pods/my/team` - Any pod member can see their team + assigned operators
+  - Added `POST /api/pods/my/team/members` - Team lead can add members without `pods.manage_members` permission
+  - Added `DELETE /api/pods/my/team/members/{user_id}` - Team lead can remove members
+  - Added `PUT /api/pods/my/team/members/{user_id}/role` - Team lead can change member roles
+  - Enforced rules: team leads cannot assign team_lead role, cannot remove themselves
+  - Non-team-leads get 403 on management endpoints
+  - **Testing**: 100% verified
+
+- [x] **P4: Layout.jsx Refactoring**
+  - Extracted navigation menu config into `useSidebarMenu.js` hook (229 lines)
+  - Extracted `ICON_COLORS` and `USER_ROLES` constants
+  - Layout.jsx reduced from **1249 → 842 lines** (33% reduction)
+  - All sidebar navigation, flyout menus, role-based filtering preserved
+  - **Testing**: 100% - all navigation items render and click correctly
 
