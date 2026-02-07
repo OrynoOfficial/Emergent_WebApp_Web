@@ -42,6 +42,7 @@ async def create_package(
 @router.get("/")
 async def get_packages(
     destination: Optional[str] = None,
+    country: Optional[str] = None,
     package_type: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -50,7 +51,7 @@ async def get_packages(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get travel packages"""
+    """Get travel packages - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"status": PackageStatus.ACTIVE}
@@ -67,6 +68,12 @@ async def get_packages(
         query["duration_days"] = duration_days
     if featured is not None:
         query["featured"] = featured
+    
+    # Apply country filter via operator lookup (packages has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        query.update(op_filter)
     
     packages = await db.packages.find(query).sort("rating", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.packages.count_documents(query)

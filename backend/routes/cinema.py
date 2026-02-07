@@ -42,15 +42,22 @@ async def create_cinema(
 @router.get("/")
 async def get_cinemas(
     city: Optional[str] = None,
+    country: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get cinemas"""
+    """Get cinemas - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"status": CinemaStatus.ACTIVE}
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
+    
+    # Apply country filter via operator lookup (cinemas has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        query.update(op_filter)
     
     cinemas = await db.cinemas.find(query).sort("name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.cinemas.count_documents(query)

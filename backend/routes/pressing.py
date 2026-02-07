@@ -41,12 +41,13 @@ async def create_pressing(
 @router.get("/")
 async def get_pressings(
     city: Optional[str] = None,
+    country: Optional[str] = None,
     delivery_available: Optional[bool] = None,
     express_available: Optional[bool] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get pressing services"""
+    """Get pressing services - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"status": LaundryStatus.ACTIVE}
@@ -57,6 +58,12 @@ async def get_pressings(
         query["delivery_available"] = delivery_available
     if express_available is not None:
         query["express_available"] = express_available
+    
+    # Apply country filter via operator lookup (pressings has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        query.update(op_filter)
     
     pressings = await db.pressings.find(query).sort("rating", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.pressings.count_documents(query)

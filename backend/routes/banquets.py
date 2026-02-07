@@ -41,13 +41,14 @@ async def create_banquet(
 @router.get("/")
 async def get_banquets(
     city: Optional[str] = None,
+    country: Optional[str] = None,
     venue_type: Optional[str] = None,
     capacity_min: Optional[int] = None,
     capacity_max: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get banquet venues"""
+    """Get banquet venues - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"status": BanquetStatus.ACTIVE}
@@ -60,6 +61,12 @@ async def get_banquets(
         query["capacity_max"] = {"$gte": capacity_min}
     if capacity_max:
         query["capacity_min"] = {"$lte": capacity_max}
+    
+    # Apply country filter via operator lookup (banquets has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        query.update(op_filter)
     
     banquets = await db.banquets.find(query).sort("rating", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.banquets.count_documents(query)

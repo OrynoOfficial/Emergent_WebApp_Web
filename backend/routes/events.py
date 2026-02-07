@@ -60,11 +60,12 @@ async def create_event(
 @router.get("/")
 async def get_events(
     city: Optional[str] = None,
+    country: Optional[str] = None,
     event_type: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get events"""
+    """Get events - optionally filtered by country for location-based visibility"""
     db = get_database()
     
     query = {"is_active": True}
@@ -72,6 +73,11 @@ async def get_events(
         query["city"] = {"$regex": city, "$options": "i"}
     if event_type:
         query["event_type"] = event_type
+    
+    # Apply country filter (events have a direct country field)
+    if country:
+        from utils.location_filter import get_country_filter
+        query.update(get_country_filter(country))
     
     events = await db.events.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.events.count_documents(query)

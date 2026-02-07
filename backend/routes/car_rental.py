@@ -63,10 +63,11 @@ async def create_car(
 async def get_cars(
     vehicle_type: Optional[str] = None,
     transmission: Optional[str] = None,
+    country: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get available cars"""
+    """Get available cars - optionally filtered by country via operator"""
     db = get_database()
     
     query = {"is_available": True}
@@ -74,6 +75,12 @@ async def get_cars(
         query["vehicle_type"] = vehicle_type
     if transmission:
         query["transmission"] = transmission
+    
+    # Apply country filter via operator lookup (car_rentals has no country field)
+    if country:
+        from utils.location_filter import get_operator_country_filter
+        op_filter = await get_operator_country_filter(db, country)
+        query.update(op_filter)
     
     cars = await db.car_rentals.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.car_rentals.count_documents(query)

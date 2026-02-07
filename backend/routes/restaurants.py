@@ -86,11 +86,12 @@ async def create_restaurant(
 @router.get("/")
 async def get_restaurants(
     city: Optional[str] = None,
+    country: Optional[str] = None,
     cuisine: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get all restaurants"""
+    """Get all restaurants - optionally filtered by country"""
     db = get_database()
     
     query = {"is_active": True}
@@ -98,6 +99,11 @@ async def get_restaurants(
         query["city"] = {"$regex": city, "$options": "i"}
     if cuisine:
         query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
+    
+    # Apply country filter (restaurants have a direct country field)
+    if country:
+        from utils.location_filter import get_country_filter
+        query.update(get_country_filter(country))
     
     restaurants = await db.restaurants.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.restaurants.count_documents(query)
