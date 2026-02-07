@@ -1,9 +1,22 @@
 // Service-specific API clients for user-facing pages
 import api from './client';
 
+// Location filter helper - reads stored customer location
+function getLocationParam() {
+  try {
+    const stored = localStorage.getItem('oryno_user_location');
+    if (!stored) return {};
+    const loc = JSON.parse(stored);
+    if (loc.is_in_africa && loc.country_code) {
+      return { country: loc.country_code };
+    }
+  } catch { /* ignore */ }
+  return {};
+}
+
 // Hotels API
 export const hotelsApi = {
-  search: (params = {}) => api.get('/hotels/', { params }),
+  search: (params = {}) => api.get('/hotels/', { params: { ...getLocationParam(), ...params } }),
   getById: (id) => api.get(`/hotels/${id}`),
   getRooms: (hotelId, params = {}) => api.get('/rooms/', { params: { hotel_id: hotelId, ...params } }),
   checkAvailability: (params) => api.get('/rooms/availability', { params }),
