@@ -131,8 +131,8 @@ export default function Layout({ children }) {
     
     ...(isAdmin ? [
       { type: 'admin', label: 'User Management', description: 'Manage users', path: '/admin/users', icon: 'Users', color: '#757575', keywords: ['customers', 'accounts'] },
-      { type: 'admin', label: 'Operators', description: 'Manage operators', path: '/admin/operators', icon: 'Briefcase', color: '#64748b', keywords: ['partners', 'vendors'] },
-      { type: 'admin', label: 'Employees', description: 'Manage employees', path: '/admin/employees', icon: 'Users', color: '#757575', keywords: ['staff', 'team'] },
+      { type: 'admin', label: 'Operator Management', description: 'Manage operators', path: '/admin/operators', icon: 'Briefcase', color: '#64748b', keywords: ['partners', 'vendors'] },
+      { type: 'admin', label: 'Employee Management', description: 'Manage employees', path: '/admin/employees', icon: 'Users', color: '#757575', keywords: ['staff', 'team'] },
       { type: 'admin', label: 'Commission', description: 'Commission settings', path: '/admin/commission', icon: 'Percent', color: '#22C55E', keywords: ['fees', 'percentage'] },
       { type: 'admin', label: 'Audit Logs', description: 'System audit logs', path: '/admin/audit-logs', icon: 'History', color: '#F59E0B', keywords: ['logs', 'activity', 'history'] },
       { type: 'admin', label: 'Validation', description: 'Service validation center', path: '/admin/validation', icon: 'QrCode', color: '#F59E0B', keywords: ['verify', 'check', 'qr'] },

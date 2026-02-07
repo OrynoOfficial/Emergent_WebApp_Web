@@ -173,8 +173,8 @@ export default function useSidebarMenu() {
       adminSubmenu.push({ key: 'admin-dashboard', label: 'Dashboard for Admins', path: '/admin/admin-dashboard', icon: LayoutDashboard });
     }
     if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
-    if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operators', path: '/admin/operators', icon: Building2 });
-    if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employees', path: '/admin/employees', icon: Users });
+    if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operator Management', path: '/admin/operators', icon: Building2 });
+    if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
     if (isSuperAdmin && canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
     if (isAdmin || isSuperAdmin) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: Receipt });
     if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
@@ -189,10 +189,8 @@ export default function useSidebarMenu() {
       if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     }
 
-    // Access Control items (Super Admin only)
+    // Access Control items (Super Admin only) - nested under Employee Management
     if (isSuperAdmin) {
-      adminSubmenu.push({ key: 'pods', label: 'Pod Management', path: '/admin/pods', icon: Users });
-      adminSubmenu.push({ key: 'access-scopes', label: 'Access Scopes', path: '/admin/employee-scopes', icon: ShieldCheck });
       adminSubmenu.push({ key: 'geography', label: 'Geography', path: '/admin/geography', icon: Globe });
     }
 
