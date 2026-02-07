@@ -530,24 +530,15 @@ export default function PodManagement() {
                   <SelectValue placeholder="Select an employee" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableUsers.filter(u => u._linked_user_id).map(u => (
+                  {availableUsers.map(u => (
                     <SelectItem key={u._linked_user_id} value={u._linked_user_id}>
-                      {getEmployeeLabel(u)} {u.department ? `(${u.department.replace('_', ' ')})` : ''} {u.city ? `- ${u.city}` : ''}
+                      {getEmployeeLabel(u)}{u.department ? ` (${u.department.replace('_', ' ')})` : ''}{u.city ? ` - ${u.city}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {availableUsers.filter(u => u._linked_user_id).length === 0 && (
-                <p className="text-sm text-slate-500 mt-1">
-                  {availableUsers.length > 0
-                    ? 'Employees shown need user accounts to be added to pods. Create accounts in Employee Management.'
-                    : 'All employees are already assigned to pods'}
-                </p>
-              )}
-              {availableUsers.filter(u => !u._linked_user_id).length > 0 && availableUsers.filter(u => u._linked_user_id).length > 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  {availableUsers.filter(u => !u._linked_user_id).length} employee(s) without user accounts are hidden
-                </p>
+              {availableUsers.length === 0 && (
+                <p className="text-sm text-slate-500 mt-1">No available employees to add</p>
               )}
             </div>
             <div>
