@@ -67,22 +67,50 @@ export default function PodManagement() {
       setPods(podsRes.data.pods || []);
       setOperators(operatorsRes.data.operators || []);
 
-      // Merge employees with their user accounts (matched by email)
+      // Build combined employee list from both employees collection and admin users
       const employees = employeesRes.data.employees || employeesRes.data || [];
       const allUsers = usersRes.data.users || [];
+      
+      // Map employees, linking to user accounts by email
+      const usedEmails = new Set();
       const usersByEmail = {};
       for (const u of allUsers) {
         if (u.email) usersByEmail[u.email.toLowerCase()] = u;
       }
-      const merged = employees.map(emp => {
+      
+      const combined = [];
+      
+      // First: employees from the employees collection
+      for (const emp of employees) {
         const matchedUser = emp.email ? usersByEmail[emp.email.toLowerCase()] : null;
-        return {
+        combined.push({
           ...emp,
+          _source: 'employee',
           _linked_user_id: matchedUser ? (matchedUser.id || matchedUser._id) : null,
-          _linked_user_role: matchedUser?.role || null,
-        };
-      });
-      setUsers(merged);
+          _display_name: `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.email,
+        });
+        if (emp.email) usedEmails.add(emp.email.toLowerCase());
+      }
+      
+      // Second: admin/super_admin users not already in the employees list
+      for (const u of allUsers) {
+        if (u.role === 'admin' || u.role === 'super_admin') {
+          if (!u.email || !usedEmails.has(u.email.toLowerCase())) {
+            combined.push({
+              id: u.id || u._id,
+              email: u.email,
+              first_name: u.full_name?.split(' ')[0] || '',
+              last_name: u.full_name?.split(' ').slice(1).join(' ') || '',
+              department: 'platform',
+              _source: 'user',
+              _linked_user_id: u.id || u._id,
+              _display_name: u.full_name || u.email || 'Unknown',
+            });
+          }
+        }
+      }
+      
+      setUsers(combined);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
