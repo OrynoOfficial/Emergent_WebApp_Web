@@ -74,7 +74,12 @@ async def get_hotels(
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if country:
-        query["country"] = {"$regex": country, "$options": "i"}
+        from utils.location_filter import get_country_filter
+        country_filter = await get_country_filter(db, country)
+        if country_filter:
+            query.update(country_filter)
+        else:
+            query["country"] = {"$regex": country, "$options": "i"}
     if min_rating:
         query["average_rating"] = {"$gte": min_rating}
     
