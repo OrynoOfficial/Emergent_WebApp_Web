@@ -227,5 +227,3 @@ export default function useSidebarMenu() {
 
   return { navigationItems, userRole, isSuperAdmin, isAdmin, isOperator, canManage };
 }
-
-export { USER_ROLES };
