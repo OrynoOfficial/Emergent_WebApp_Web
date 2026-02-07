@@ -52,53 +52,7 @@ import {
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
-const USER_ROLES = {
-  SUPER_ADMIN: 'super_admin',
-  ADMIN: 'admin',
-  OPERATOR: 'operator',
-  CUSTOMER: 'customer'
-};
 
-// Icon color mapping for sidebar
-const ICON_COLORS = {
-  dashboard: '#4D96FF',
-  services: '#00C853',
-  browse: '#00C853',
-  hotels: '#EC4899',
-  restaurants: '#F59E0B',
-  travel: '#3B82F6',
-  'car-rental': '#10B981',
-  events: '#F97316',
-  packages: '#EF4444',
-  laundry: '#A855F7',
-  cinema: '#06B6D4',
-  banquet: '#14B8A6',
-  orders: '#9575CD',
-  receipts: '#2962FF',
-  loyalty: '#AB47BC',
-  management: '#7E57C2',
-  analytics: '#4D96FF',
-  bookings: '#FF7043',
-  users: '#757575',
-  operators: '#64748b',
-  employees: '#757575',
-  commission: '#22C55E',
-  'audit-logs': '#F59E0B',
-  permissions: '#EF4444',
-  'access-groups': '#7E57C2',
-  ratings: '#FBBF24',
-  support: '#22C55E',
-  settings: '#64748b',
-  'customer-service': '#06B6D4',
-  'booking-analytics': '#EC4899',
-  reporting: '#3B82F6',
-  'trip-report': '#FF7043',
-  'data-analytics': '#7E57C2',
-  database: '#10B981',
-  validation: '#F59E0B',
-  bills: '#2962FF',
-  sales: '#22C55E'
-};
 
 export default function Layout({ children }) {
   const { user, logout, operatorContext, isOperatorUser, operatorServiceTypes, operatorType } = useAuth();
