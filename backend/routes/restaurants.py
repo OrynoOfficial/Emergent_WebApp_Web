@@ -100,10 +100,20 @@ async def get_restaurants(
     if cuisine:
         query["cuisine_type"] = {"$regex": cuisine, "$options": "i"}
     
-    # Apply country filter (restaurants have a direct country field)
+    # Apply country filter (restaurants have a direct country field + operator fallback)
     if country:
-        from utils.location_filter import get_country_filter
-        query.update(await get_country_filter(db, country))
+        from utils.location_filter import get_country_filter, get_operator_ids_for_country
+        from utils.geolocation import is_african_country
+        if is_african_country(country):
+            direct = await get_country_filter(db, country)
+            op_ids = await get_operator_ids_for_country(db, country)
+            conditions = []
+            if direct:
+                conditions.append(direct)
+            if op_ids:
+                conditions.append({"operator_id": {"$in": op_ids}})
+            if conditions:
+                query["$or"] = conditions
     
     restaurants = await db.restaurants.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.restaurants.count_documents(query)
