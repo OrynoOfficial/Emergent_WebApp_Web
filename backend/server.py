@@ -285,6 +285,7 @@ app.include_router(otp_router)  # OTP verification (SMS & Email via Infobip)
 app.include_router(geography_router)  # Geography (countries, regions) management
 app.include_router(pods_router)  # Pod-based team structure management
 app.include_router(employee_scopes_router)  # Employee access scopes management
+app.include_router(customer_location_router)  # Customer location-aware filtering
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
