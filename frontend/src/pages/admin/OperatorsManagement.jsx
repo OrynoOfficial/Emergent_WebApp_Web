@@ -735,6 +735,45 @@ export default function OperatorsManagement() {
                 placeholder="Douala"
               />
             </div>
+            
+            {/* Geography & Segment */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Country</Label>
+                <Select value={createForm.country} onValueChange={v => { setCreateForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'create'); }}>
+                  <SelectTrigger data-testid="create-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {countries.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Region</Label>
+                <Select value={createForm.region} onValueChange={v => setCreateForm(p => ({ ...p, region: v }))}>
+                  <SelectTrigger data-testid="create-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {regions.map(r => (
+                      <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
+                    ))}
+                    {regions.length === 0 && <SelectItem value="" disabled>No regions</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Market Segment</Label>
+                <Select value={createForm.market_segment} onValueChange={v => setCreateForm(p => ({ ...p, market_segment: v }))}>
+                  <SelectTrigger data-testid="create-segment-select"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="sme">SME</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="strategic">Strategic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div>
               <Label>Primary Service Type</Label>
               <Select 
