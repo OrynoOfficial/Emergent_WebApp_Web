@@ -530,11 +530,26 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 7, 2026 - Session 13e)
-- [ ] **P3: Email Invitation System** - Invite new users via email (moved to backlog)
+## Backlog (Updated Feb 8, 2026)
+- [ ] **P3: Email Invitation System** - Invite new users via email
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
 - [ ] **MINOR: Fix mixed content warning** - Notifications API endpoint HTTP vs HTTPS
+
+## Completed Features (Feb 8, 2026 - Session 14)
+- [x] **Geography Integration in Operator Forms**
+  - Added Country, Region, Market Segment dropdowns to Create Operator dialog
+  - Added Country, Region, Market Segment dropdowns to Edit Operator dialog
+  - Country dropdown pulls from `/api/geography/countries` (6 countries)
+  - Region dropdown dynamically filters based on selected country
+  - Market Segment: SME / Enterprise / Strategic
+  - Operator table now shows "Location" column (country, region, segment badge)
+  - Detail view shows country, region, segment info
+  - Create defaults: Country=CM, Segment=SME
+  - Edit form pre-fills with operator's current values
+  - Fixed Edit dialog crash: country name→code normalization, SelectItem value fix
+  - Data migration: normalized all operator countries from full names to ISO codes (Cameroon→CM)
+  - **Testing**: 100% backend + frontend (iteration_33)
 
 ## Completed Features (Feb 7, 2026 - Session 13d)
 - [x] **Employee Cards show Pod & Team Lead**
