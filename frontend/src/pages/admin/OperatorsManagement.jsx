@@ -58,6 +58,7 @@ export default function OperatorsManagement() {
 
   useEffect(() => {
     loadOperators();
+    loadGeography();
   }, []);
 
   const loadOperators = async () => {
@@ -72,6 +73,34 @@ export default function OperatorsManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadGeography = async () => {
+    try {
+      const res = await api.get('/geography/countries');
+      setCountries(res.data.countries || []);
+      // Load default regions for CM
+      const regRes = await api.get('/geography/regions', { params: { country_code: 'CM' } });
+      setRegions(regRes.data.regions || []);
+    } catch { /* geography is optional */ }
+  };
+
+  const loadRegionsForCountry = async (countryCode, target = 'create') => {
+    try {
+      const res = await api.get('/geography/regions', { params: { country_code: countryCode } });
+      const data = res.data.regions || [];
+      if (target === 'edit') setEditRegions(data);
+      else setRegions(data);
+    } catch {
+      if (target === 'edit') setEditRegions([]);
+      else setRegions([]);
+    }
+  };
+
+  const getCountryName = (code) => countries.find(c => c.code === code)?.name || code || '-';
+  const getRegionName = (code) => {
+    const all = [...regions, ...editRegions];
+    return all.find(r => r.code === code)?.name || code || '-';
   };
 
   const filteredOperators = operators.filter(op => {
