@@ -223,7 +223,7 @@ export default function OperatorsManagement() {
       toast.error('Failed to create operator');
     }
     setIsCreateOpen(false);
-    setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'] });
+    setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'], country: 'CM', region: '', market_segment: 'sme' });
   };
 
   // Stats
