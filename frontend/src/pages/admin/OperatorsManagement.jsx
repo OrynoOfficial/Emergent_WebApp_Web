@@ -399,6 +399,13 @@ export default function OperatorsManagement() {
                   </td>
                   <td className="py-4 px-6">
                     <div className="text-sm">
+                      <p className="font-medium text-slate-700">{getCountryName(operator.country)}</p>
+                      {operator.region && <p className="text-xs text-slate-500">{getRegionName(operator.region)}</p>}
+                      {operator.market_segment && <Badge variant="outline" className="text-[10px] mt-1 capitalize">{operator.market_segment}</Badge>}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="text-sm">
                       <p className="font-medium text-slate-700">{operator.owner_name || '-'}</p>
                       <p className="text-slate-500 text-xs">{operator.owner_email || ''}</p>
                     </div>
