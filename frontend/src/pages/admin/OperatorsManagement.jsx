@@ -128,8 +128,10 @@ export default function OperatorsManagement() {
 
   const handleEdit = (operator) => {
     setSelectedOperator(operator);
-    setEditForm({ ...operator });
-    if (operator.country) loadRegionsForCountry(operator.country, 'edit');
+    // Normalize country to code (operators may have full name "Cameroon" instead of "CM")
+    const normalizedCountry = countries.find(c => c.code === operator.country || c.name === operator.country)?.code || operator.country || 'CM';
+    setEditForm({ ...operator, country: normalizedCountry });
+    if (normalizedCountry) loadRegionsForCountry(normalizedCountry, 'edit');
     setIsEditOpen(true);
   };
 
