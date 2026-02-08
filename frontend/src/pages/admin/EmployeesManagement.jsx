@@ -56,33 +56,26 @@ export default function EmployeesManagement() {
   const [pods, setPods] = useState([]);
 
   useEffect(() => {
-    loadEmployees();
-    loadPodData();
+    loadAllData();
   }, []);
 
-  const loadEmployees = async () => {
+  const loadAllData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/employees/');
-      const data = res.data.employees || res.data || [];
-      setEmployees(data.length > 0 ? data : mockEmployees);
-    } catch (error) {
-      console.error('Failed to load employees:', error);
-      setEmployees(mockEmployees);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const [empRes, podsRes, usersRes] = await Promise.all([
+        api.get('/employees/'),
+        api.get('/pods'),
+        api.get('/users/')
+      ]);
 
-  const loadPodData = async () => {
-    try {
-      const res = await api.get('/pods');
-      const podsData = res.data.pods || [];
+      const rawEmployees = empRes.data.employees || empRes.data || [];
+      const podsData = podsRes.data.pods || [];
+      const allUsers = usersRes.data.users || [];
       setPods(podsData);
-      // Build a lookup of user_id → pod membership from the pods member_ids
+
+      // Build pod memberships from pod details
       const memberships = [];
       for (const pod of podsData) {
-        // Fetch full pod details to get members
         try {
           const detailRes = await api.get(`/pods/${pod.id}`);
           const members = detailRes.data.members || [];
@@ -92,16 +85,67 @@ export default function EmployeesManagement() {
         } catch { /* skip */ }
       }
       setPodMemberships(memberships);
-    } catch { /* pod data is optional */ }
+
+      // Build user lookup by ID
+      const usersById = {};
+      for (const u of allUsers) {
+        const uid = u.id || u._id;
+        if (uid) usersById[uid] = u;
+      }
+
+      // Build email set from employees
+      const empEmails = new Set(rawEmployees.map(e => e.email?.toLowerCase()).filter(Boolean));
+
+      // Merge: start with employees, then add pod members not in the list
+      const merged = rawEmployees.map(emp => {
+        // Try to find pod membership for this employee
+        const podInfo = memberships.find(m =>
+          m.user_id === emp.user_id || m.user_id === emp.id ||
+          (emp.email && m.user_email?.toLowerCase() === emp.email.toLowerCase())
+        );
+        return { ...emp, _pod_info: podInfo || null };
+      });
+
+      // Add pod members who are NOT already in the employees list
+      for (const m of memberships) {
+        const alreadyInList = merged.some(emp =>
+          emp.user_id === m.user_id || emp.id === m.user_id ||
+          (emp.email && m.user_email && emp.email.toLowerCase() === m.user_email.toLowerCase())
+        );
+        if (!alreadyInList) {
+          // Look up the user record for this pod member
+          const user = usersById[m.user_id];
+          if (user) {
+            const nameParts = (user.full_name || '').split(' ');
+            merged.push({
+              id: m.user_id,
+              user_id: m.user_id,
+              first_name: nameParts[0] || '',
+              last_name: nameParts.slice(1).join(' ') || '',
+              email: user.email || m.user_email,
+              phone: user.phone || '',
+              department: 'platform',
+              role: user.role || 'admin',
+              status: user.status || 'active',
+              city: '',
+              salary: 0,
+              _pod_info: m,
+              _from_user: true,
+            });
+          }
+        }
+      }
+
+      setEmployees(merged.length > 0 ? merged : mockEmployees);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      setEmployees(mockEmployees);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getEmployeePod = (emp) => {
-    // Match by user_id or email
-    return podMemberships.find(m =>
-      m.user_id === emp.user_id || m.user_id === emp.id ||
-      (emp.email && m.user_email === emp.email)
-    );
-  };
+  const getEmployeePod = (emp) => emp._pod_info || null;
 
   const mockEmployees = [
     { id: '1', first_name: 'Jean', last_name: 'Mbarga', email: 'jean.mbarga@oryno.cm', phone: '+237 699 111 222', department: 'operations', role: 'manager', status: 'active', hire_date: '2023-01-15', salary: 450000, city: 'Yaounde' },
