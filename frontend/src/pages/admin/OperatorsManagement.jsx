@@ -629,7 +629,7 @@ export default function OperatorsManagement() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Country</Label>
-                <Select value={editForm.country || ''} onValueChange={v => { setEditForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'edit'); }}>
+                <Select value={editForm.country || undefined} onValueChange={v => { setEditForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'edit'); }}>
                   <SelectTrigger data-testid="edit-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
                   <SelectContent className="bg-white">
                     {countries.map(c => (
