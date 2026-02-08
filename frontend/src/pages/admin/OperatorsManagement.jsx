@@ -129,8 +129,26 @@ export default function OperatorsManagement() {
   const handleEdit = (operator) => {
     setSelectedOperator(operator);
     // Normalize country to code (operators may have full name "Cameroon" instead of "CM")
-    const normalizedCountry = countries.find(c => c.code === operator.country || c.name === operator.country)?.code || operator.country || 'CM';
-    setEditForm({ ...operator, country: normalizedCountry });
+    // Map common country names to codes
+    const countryNameToCode = {
+      'Cameroon': 'CM',
+      'Nigeria': 'NG',
+      'Gabon': 'GA',
+      'Chad': 'TD',
+      'Central African Republic': 'CF',
+      'Equatorial Guinea': 'GQ'
+    };
+    let normalizedCountry = operator.country;
+    // If it's a full name, convert to code
+    if (countryNameToCode[operator.country]) {
+      normalizedCountry = countryNameToCode[operator.country];
+    }
+    // If still no match but countries loaded, try to find it
+    if (countries.length > 0) {
+      const found = countries.find(c => c.code === operator.country || c.name === operator.country);
+      if (found) normalizedCountry = found.code;
+    }
+    setEditForm({ ...operator, country: normalizedCountry || 'CM' });
     if (normalizedCountry) loadRegionsForCountry(normalizedCountry, 'edit');
     setIsEditOpen(true);
   };
