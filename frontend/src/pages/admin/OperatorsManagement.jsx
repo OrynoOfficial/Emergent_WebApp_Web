@@ -772,13 +772,13 @@ export default function OperatorsManagement() {
               </div>
               <div>
                 <Label>Region</Label>
-                <Select value={createForm.region} onValueChange={v => setCreateForm(p => ({ ...p, region: v }))}>
+                <Select value={createForm.region || undefined} onValueChange={v => setCreateForm(p => ({ ...p, region: v }))}>
                   <SelectTrigger data-testid="create-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
                   <SelectContent className="bg-white">
                     {regions.map(r => (
                       <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
                     ))}
-                    {regions.length === 0 && <SelectItem value="" disabled>No regions</SelectItem>}
+                    {regions.length === 0 && <SelectItem value="__none__" disabled>No regions</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
