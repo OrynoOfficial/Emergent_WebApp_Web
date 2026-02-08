@@ -365,6 +365,7 @@ export default function OperatorsManagement() {
               <tr>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Services</th>
+                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Location</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Owner</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Date Joined</th>
                 <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
