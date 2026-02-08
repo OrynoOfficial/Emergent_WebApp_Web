@@ -129,6 +129,7 @@ export default function OperatorsManagement() {
   const handleEdit = (operator) => {
     setSelectedOperator(operator);
     setEditForm({ ...operator });
+    if (operator.country) loadRegionsForCountry(operator.country, 'edit');
     setIsEditOpen(true);
   };
 
