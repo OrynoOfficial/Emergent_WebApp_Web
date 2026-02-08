@@ -42,8 +42,16 @@ export default function OperatorsManagement() {
     phone: '',
     city: '',
     operator_type: 'travel',
-    service_types: ['travel']
+    service_types: ['travel'],
+    country: 'CM',
+    region: '',
+    market_segment: 'sme'
   });
+  
+  // Geography data
+  const [countries, setCountries] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [editRegions, setEditRegions] = useState([]);
 
   const currentUserRole = currentUser?.role || 'customer';
   const canManageOperators = ['admin', 'super_admin'].includes(currentUserRole);
