@@ -604,6 +604,44 @@ export default function OperatorsManagement() {
               </div>
             </div>
             
+            {/* Geography & Segment */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Country</Label>
+                <Select value={editForm.country || ''} onValueChange={v => { setEditForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'edit'); }}>
+                  <SelectTrigger data-testid="edit-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {countries.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Region</Label>
+                <Select value={editForm.region || ''} onValueChange={v => setEditForm(p => ({ ...p, region: v }))}>
+                  <SelectTrigger data-testid="edit-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {editRegions.map(r => (
+                      <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
+                    ))}
+                    {editRegions.length === 0 && <SelectItem value="" disabled>No regions</SelectItem>}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Market Segment</Label>
+                <Select value={editForm.market_segment || 'sme'} onValueChange={v => setEditForm(p => ({ ...p, market_segment: v }))}>
+                  <SelectTrigger data-testid="edit-segment-select"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="sme">SME</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="strategic">Strategic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
             {/* Service Types Assignment */}
             <div>
               <Label className="text-sm font-medium">Assigned Services</Label>
