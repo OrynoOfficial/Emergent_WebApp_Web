@@ -522,8 +522,14 @@ export default function OperatorsManagement() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400" /><span>{selectedOperator.email}</span></div>
                     <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /><span>{selectedOperator.phone}</span></div>
-                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span>{selectedOperator.city}</span></div>
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span>{selectedOperator.city}{selectedOperator.country ? `, ${getCountryName(selectedOperator.country)}` : ''}</span></div>
                     <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" /><span>Joined {selectedOperator.joined_date}</span></div>
+                    {selectedOperator.region && (
+                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400" /><span>Region: {getRegionName(selectedOperator.region)}</span></div>
+                    )}
+                    {selectedOperator.market_segment && (
+                      <div className="flex items-center gap-2"><TrendingUp className="w-4 h-4 text-gray-400" /><span className="capitalize">Segment: {selectedOperator.market_segment}</span></div>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                     <div className="text-center p-4 bg-slate-50 rounded-lg">
