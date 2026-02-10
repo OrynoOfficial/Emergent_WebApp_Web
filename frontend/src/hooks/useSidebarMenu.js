@@ -179,7 +179,6 @@ export default function useSidebarMenu() {
     if (isAdmin || isSuperAdmin) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: Receipt });
     if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
     if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
-    if (canViewPermissions) adminSubmenu.push({ key: 'permissions', label: 'Permissions', path: '/admin/permissions', icon: ShieldCheck });
     if (isSuperAdmin) adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
     if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: FileText });
 
@@ -189,9 +188,9 @@ export default function useSidebarMenu() {
       if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     }
 
-    // Access Control items (Super Admin only) - nested under Employee Management
+    // Access Control items (Super Admin only) - Geography moved under Operator Management
     if (isSuperAdmin) {
-      adminSubmenu.push({ key: 'geography', label: 'Geography', path: '/admin/geography', icon: Globe });
+      adminSubmenu.push({ key: 'market-segments', label: 'Market Segments', path: '/admin/market-segments', icon: TrendingUp });
     }
 
     if (adminSubmenu.length > 0) {
