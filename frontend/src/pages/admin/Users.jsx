@@ -31,6 +31,8 @@ const canManageRole = (managerRole, targetRole) => {
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
