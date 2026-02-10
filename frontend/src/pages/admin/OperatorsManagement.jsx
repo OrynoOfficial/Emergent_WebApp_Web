@@ -447,7 +447,7 @@ export default function OperatorsManagement() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filteredOperators.map((operator) => (
+              {paginatedOperators.map((operator) => (
                 <tr key={operator.id} className="hover:bg-slate-50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
