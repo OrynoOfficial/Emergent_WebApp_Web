@@ -510,9 +510,12 @@ export default function PodManagement() {
 
       {/* Create/Edit Pod Modal */}
       <Dialog open={showPodModal} onOpenChange={setShowPodModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingPod ? 'Edit Pod' : 'Create Pod'}</DialogTitle>
+        <DialogContent className="bg-white">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 rounded-lg"><Network className="w-4 h-4 text-blue-600" /></div>
+              {editingPod ? 'Edit Pod' : 'Create New Pod'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
