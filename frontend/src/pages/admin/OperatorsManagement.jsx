@@ -734,9 +734,14 @@ export default function OperatorsManagement() {
                 <Select value={editForm.market_segment || 'sme'} onValueChange={v => setEditForm(p => ({ ...p, market_segment: v }))}>
                   <SelectTrigger data-testid="edit-segment-select"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="sme">SME</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                    <SelectItem value="strategic">Strategic</SelectItem>
+                    {marketSegments.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                    {marketSegments.length === 0 && <>
+                      <SelectItem value="sme">SME</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      <SelectItem value="strategic">Strategic</SelectItem>
+                    </>}
                   </SelectContent>
                 </Select>
               </div>
