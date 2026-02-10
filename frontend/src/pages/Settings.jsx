@@ -14,7 +14,7 @@ import {
   User, Mail, Phone, Lock, Bell, Globe, Shield, Save, Camera,
   Settings as SettingsIcon, HelpCircle, CreditCard, FileText, Info,
   Languages, MessageSquare, ChevronRight, Check, Palette, Smartphone,
-  Database, Key, AlertTriangle, Eye, EyeOff, Loader2, Edit, LogOut
+  Database, Key, AlertTriangle, Eye, EyeOff, Loader2, Edit, LogOut, MapPin
 } from 'lucide-react';
 import api from '../api/client';
 import { toast } from 'sonner';
