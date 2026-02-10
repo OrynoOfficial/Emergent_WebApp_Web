@@ -254,54 +254,54 @@ export default function PodManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-blue-500 rounded-xl shadow-sm">
+                <Users className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pods.length}</p>
-                <p className="text-slate-600">Total Pods</p>
+                <p className="text-2xl font-bold text-blue-900">{pods.length}</p>
+                <p className="text-blue-700 text-sm">Total Pods</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-100/50 border-amber-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <Crown className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-amber-500 rounded-xl shadow-sm">
+                <Crown className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pods.filter(p => p.team_lead_id).length}</p>
-                <p className="text-slate-600">With Team Leads</p>
+                <p className="text-2xl font-bold text-amber-900">{pods.filter(p => p.team_lead_id).length}</p>
+                <p className="text-amber-700 text-sm">With Team Leads</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-violet-50 to-purple-100/50 border-violet-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <Building2 className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-violet-500 rounded-xl shadow-sm">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pods.reduce((sum, p) => sum + (p.total_operators || 0), 0)}</p>
-                <p className="text-slate-600">Assigned Operators</p>
+                <p className="text-2xl font-bold text-violet-900">{pods.reduce((sum, p) => sum + (p.total_operators || 0), 0)}</p>
+                <p className="text-violet-700 text-sm">Assigned Operators</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-green-100/50 border-emerald-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Briefcase className="w-6 h-6 text-orange-600" />
+              <div className="p-3 bg-emerald-500 rounded-xl shadow-sm">
+                <Briefcase className="w-6 h-6 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pods.reduce((sum, p) => sum + (p.total_members || 0), 0)}</p>
-                <p className="text-slate-600">Total Members</p>
+                <p className="text-2xl font-bold text-emerald-900">{pods.reduce((sum, p) => sum + (p.total_members || 0), 0)}</p>
+                <p className="text-emerald-700 text-sm">Total Members</p>
               </div>
             </div>
           </CardContent>
