@@ -577,6 +577,15 @@ function App() {
           />
           
           <Route
+            path="/admin/audit-log"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+                <AuditLogs />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/permissions"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
