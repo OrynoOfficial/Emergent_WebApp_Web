@@ -32,7 +32,7 @@ class TestMarketSegmentsAPI:
         if login_response.status_code != 200:
             pytest.skip(f"Login failed: {login_response.status_code}")
         
-        token = login_response.json().get("token")
+        token = login_response.json().get("access_token") or login_response.json().get("token")
         if not token:
             pytest.skip("No token in login response")
         
