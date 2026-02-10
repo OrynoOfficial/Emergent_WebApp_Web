@@ -112,7 +112,7 @@ export default function useSidebarMenu() {
 
     // Sales (Operator + Super Admin)
     if (isSuperAdmin || isOperator) {
-      items.push({ key: 'sales', label: 'Sales', icon: TrendingUp, path: '/admin/sales' });
+      items.push({ key: 'revenue', label: 'Revenue', icon: TrendingUp, path: '/admin/sales' });
     }
 
     // Services
@@ -177,7 +177,7 @@ export default function useSidebarMenu() {
     if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
     if (isSuperAdmin && canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
     if (isAdmin || isSuperAdmin) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: Receipt });
-    if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-sales', label: 'Sales', path: '/admin/sales', icon: TrendingUp });
+    if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-revenue', label: 'Revenue', path: '/admin/sales', icon: TrendingUp });
     if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     if (isSuperAdmin) adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
     if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: FileText });
