@@ -103,11 +103,14 @@ export default function OperatorsManagement() {
 
   const loadGeography = async () => {
     try {
-      const res = await api.get('/geography/countries');
-      setCountries(res.data.countries || []);
-      // Load default regions for CM
-      const regRes = await api.get('/geography/regions', { params: { country_code: 'CM' } });
+      const [countryRes, regRes, segRes] = await Promise.all([
+        api.get('/geography/countries'),
+        api.get('/geography/regions', { params: { country_code: 'CM' } }),
+        api.get('/geography/market-segments')
+      ]);
+      setCountries(countryRes.data.countries || []);
       setRegions(regRes.data.regions || []);
+      setMarketSegments(segRes.data.market_segments || []);
     } catch { /* geography is optional */ }
   };
 
