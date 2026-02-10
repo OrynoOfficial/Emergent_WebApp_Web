@@ -702,6 +702,15 @@ function App() {
             }
           />
 
+          <Route
+            path="/admin/operators/market-segments"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MarketSegmentManagement />
+              </ProtectedRoute>
+            }
+          />
+
           
           <Route
             path="/admin/pods"
