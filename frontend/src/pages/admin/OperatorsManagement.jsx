@@ -46,11 +46,14 @@ const ITEMS_PER_PAGE = 10;
 
 export default function OperatorsManagement() {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
