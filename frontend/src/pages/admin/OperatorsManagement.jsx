@@ -77,6 +77,7 @@ export default function OperatorsManagement() {
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [editRegions, setEditRegions] = useState([]);
+  const [marketSegments, setMarketSegments] = useState([]);
 
   const currentUserRole = currentUser?.role || 'customer';
   const canManageOperators = ['admin', 'super_admin'].includes(currentUserRole);
