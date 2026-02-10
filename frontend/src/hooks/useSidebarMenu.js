@@ -188,10 +188,6 @@ export default function useSidebarMenu() {
       if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     }
 
-    // Access Control items (Super Admin only) - Geography moved under Operator Management
-    if (isSuperAdmin) {
-      adminSubmenu.push({ key: 'market-segments', label: 'Market Segments', path: '/admin/market-segments', icon: TrendingUp });
-    }
 
     if (adminSubmenu.length > 0) {
       items.push({ key: 'admin-config', label: 'Admin Config', icon: Settings, isDropdown: true, submenu: adminSubmenu });
