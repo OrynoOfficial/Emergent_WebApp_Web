@@ -437,3 +437,40 @@ async def create_default_scopes(
         created += 1
     
     return {"message": f"Created {created} default scopes", "created": created}
+
+
+@router.get("/{scope_id}/matching-operators")
+async def get_operators_matching_scope(
+    scope_id: str,
+    current_user: dict = Depends(require_permission("employee_scopes.view"))
+):
+    """Get operators that match a scope's criteria. Used to filter the Pod operator assignment list."""
+    db = get_database()
+    
+    scope = await db.employee_access_scopes.find_one({"id": scope_id, "is_active": True})
+    if not scope:
+        raise HTTPException(status_code=404, detail="Scope not found")
+    
+    # Build query from scope attributes (AND logic within scope)
+    query = {"status": "active"}
+    
+    if scope.get("countries"):
+        query["country"] = {"$in": [c.upper() for c in scope["countries"]]}
+    if scope.get("regions"):
+        query["region"] = {"$in": scope["regions"]}
+    if scope.get("market_segments"):
+        query["market_segment"] = {"$in": scope["market_segments"]}
+    if scope.get("service_types"):
+        query["$or"] = [
+            {"operator_type": {"$in": scope["service_types"]}},
+            {"service_types": {"$elemMatch": {"$in": scope["service_types"]}}}
+        ]
+    if scope.get("specific_operator_ids"):
+        query["_id"] = {"$in": scope["specific_operator_ids"]}
+    
+    operators = await db.operators.find(query, {"password_hash": 0}).to_list(1000)
+    for op in operators:
+        op["id"] = op.pop("_id")
+    
+    return {"operators": operators, "total": len(operators), "scope_name": scope["name"]}
+
