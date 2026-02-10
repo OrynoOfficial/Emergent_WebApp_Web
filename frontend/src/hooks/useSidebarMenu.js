@@ -152,11 +152,16 @@ export default function useSidebarMenu() {
       }
     }
 
-    // Orders/Receipts/Bookings
+    // Transactions (Admin/Super Admin: All Orders, All Receipts, All Bookings as submenu)
     if (isSuperAdmin || isAdmin) {
-      items.push({ key: 'orders', label: 'All Orders', icon: Ticket, path: '/orders' });
-      items.push({ key: 'receipts', label: 'All Receipts', icon: Receipt, path: '/receipts' });
-      items.push({ key: 'bookings', label: 'All Bookings', icon: QrCode, path: '/admin/bookings' });
+      items.push({
+        key: 'transactions', label: 'Transactions', icon: Receipt, isDropdown: true,
+        submenu: [
+          { key: 'all-orders', label: 'All Orders', path: '/orders', icon: Ticket },
+          { key: 'all-receipts', label: 'All Receipts', path: '/receipts', icon: Receipt },
+          { key: 'all-bookings', label: 'All Bookings', path: '/admin/bookings', icon: QrCode },
+        ]
+      });
     } else if (isOperator) {
       items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
       items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
