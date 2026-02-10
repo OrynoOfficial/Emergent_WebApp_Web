@@ -530,6 +530,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
+## Completed Features (Feb 10, 2026 - Session 15c)
+- [x] **Market Segment assignment fix** — Backend `OperatorUpdate` model changed from hardcoded enum to `str`, allowing dynamic segments (e.g., "micro") to be assigned to operators
+- [x] **Service tags expandable** — Operators with >2 services show hover dropdown revealing all services
+- [x] **Audit Log route fix** — Added `/admin/audit-log` route (sidebar was linking to singular, route was plural)
+- [x] **Customer location first-visit-only** — Modal only appears on first-ever visit (`oryno_location_prompted` flag). Subsequent visits auto-detect IP silently. Manual overrides respected.
+- [x] **Location in Settings** — Customer Settings page has "Location" section showing current country, mode (Local/Global), and "Change Location" button
+- [x] **Settings role detection fix** — Customer with stale `operator_id` was getting Operator settings; now uses `role` field only
+- **Testing**: 100% backend (6/6), 95% frontend (iteration_37)
+
 ## Backlog (Updated Feb 10, 2026)
 - [ ] **P3: Email Invitation System** - Invite new users via email
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
