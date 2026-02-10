@@ -108,6 +108,7 @@ async def create_access_scope(
         "market_segments": data.market_segments or [],
         "service_types": data.service_types or [],
         "specific_operator_ids": data.specific_operator_ids or [],
+        "assigned_pod_ids": data.assigned_pod_ids or [],
         "is_active": True,
         "created_by": user_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
