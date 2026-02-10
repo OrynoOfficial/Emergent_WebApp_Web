@@ -14,6 +14,8 @@ import api from '@/api/client';
 const DEFAULT_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#EC4899', '#06B6D4', '#F97316'];
 
 export default function MarketSegmentManagement() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
