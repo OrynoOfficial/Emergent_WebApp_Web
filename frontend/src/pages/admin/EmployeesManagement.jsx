@@ -472,22 +472,30 @@ export default function EmployeesManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-lg"><Users className="w-6 h-6 text-blue-600" /></div>
-          <div><p className="text-sm text-gray-500">Total Employees</p><p className="text-2xl font-bold">{stats.total}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-green-100 rounded-lg"><CheckCircle className="w-6 h-6 text-green-600" /></div>
-          <div><p className="text-sm text-gray-500">Active</p><p className="text-2xl font-bold">{stats.active}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-yellow-100 rounded-lg"><Clock className="w-6 h-6 text-yellow-600" /></div>
-          <div><p className="text-sm text-gray-500">On Leave</p><p className="text-2xl font-bold">{stats.onLeave}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-purple-100 rounded-lg"><Briefcase className="w-6 h-6 text-purple-600" /></div>
-          <div><p className="text-sm text-gray-500">Monthly Payroll</p><p className="text-2xl font-bold">{formatFCFA(stats.totalSalary)}</p></div>
-        </CardContent></Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-blue-500 rounded-xl shadow-sm"><Users className="w-6 h-6 text-white" /></div>
+            <div><p className="text-sm text-blue-700">Total Employees</p><p className="text-2xl font-bold text-blue-900">{stats.total}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-green-100/50 border-emerald-200">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-emerald-500 rounded-xl shadow-sm"><CheckCircle className="w-6 h-6 text-white" /></div>
+            <div><p className="text-sm text-emerald-700">Active</p><p className="text-2xl font-bold text-emerald-900">{stats.active}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-yellow-100/50 border-amber-200">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-amber-500 rounded-xl shadow-sm"><Clock className="w-6 h-6 text-white" /></div>
+            <div><p className="text-sm text-amber-700">On Leave</p><p className="text-2xl font-bold text-amber-900">{stats.onLeave}</p></div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-violet-50 to-purple-100/50 border-violet-200">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 bg-violet-500 rounded-xl shadow-sm"><Briefcase className="w-6 h-6 text-white" /></div>
+            <div><p className="text-sm text-violet-700">Monthly Payroll</p><p className="text-2xl font-bold text-violet-900">{formatFCFA(stats.totalSalary)}</p></div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
