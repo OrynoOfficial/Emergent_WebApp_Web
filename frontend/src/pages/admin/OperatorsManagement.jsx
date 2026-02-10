@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building, Plus, Search, Edit, Trash2, Eye, Ban, CheckCircle,
-  Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog, Shield
+  Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog, Shield,
+  ChevronLeft, ChevronRight, Globe
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate } from '@/utils/dateUtils';
@@ -21,6 +23,26 @@ import OperatorRolesManagement from '@/components/management/OperatorRolesManage
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotels', 'travel', 'car_rental', 'restaurants', 'events', 'cinema', 'laundry', 'banquet'];
+
+const SERVICE_COLORS = {
+  hotels: { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-200' },
+  travel: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
+  car_rental: { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
+  restaurants: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
+  events: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' },
+  cinema: { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-200' },
+  laundry: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
+  banquet: { bg: 'bg-teal-100', text: 'text-teal-700', border: 'border-teal-200' },
+  package: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
+};
+
+const SEGMENT_COLORS = {
+  sme: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  enterprise: { bg: 'bg-violet-100', text: 'text-violet-700' },
+  strategic: { bg: 'bg-amber-100', text: 'text-amber-700' },
+};
+
+const ITEMS_PER_PAGE = 10;
 
 export default function OperatorsManagement() {
   const { user: currentUser } = useAuth();
