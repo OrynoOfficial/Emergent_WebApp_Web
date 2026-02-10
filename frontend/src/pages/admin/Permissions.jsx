@@ -883,13 +883,27 @@ export default function Permissions() {
 
   return (
     <div className="space-y-6">
+      {/* Parent nav */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#082c59] mb-1">User Management</h1>
+        <p className="text-slate-500 mb-4">Manage system users, roles, and permissions</p>
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+          <button onClick={() => navigate('/admin/users')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-users">
+            <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Users
+          </button>
+          <button onClick={() => navigate('/admin/users/permissions')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-permissions">
+            <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Permissions
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            <ShieldCheck className="h-7 w-7 text-[#082c59]" />
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-[#082c59]" />
             Permissions & Access Control
-          </h1>
+          </h2>
           <p className="text-slate-600 mt-1">Manage roles and permissions for your organization</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="gap-2 bg-[#082c59] hover:bg-[#0a3a75]">
