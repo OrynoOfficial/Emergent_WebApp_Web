@@ -684,6 +684,15 @@ function App() {
           />
           
           <Route
+            path="/admin/operators/geography"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <GeographyManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/pods"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
