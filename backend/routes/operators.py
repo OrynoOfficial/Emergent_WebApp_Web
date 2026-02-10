@@ -236,19 +236,24 @@ async def get_operators(
         op["id"] = op_id
         op.pop("_id", None)
         
-        # Get owner user info
-        owner_user_id = op.get("owner_user_id")
+        # Get owner user info - try owner_user_id first, then created_by, then match operator users
+        owner_user_id = op.get("owner_user_id") or op.get("created_by")
+        op["owner_name"] = ""
+        op["owner_email"] = ""
         if owner_user_id:
             owner = await db.users.find_one({"_id": owner_user_id}, {"_id": 0, "full_name": 1, "email": 1})
             if owner:
                 op["owner_name"] = owner.get("full_name", "")
                 op["owner_email"] = owner.get("email", "")
-            else:
-                op["owner_name"] = ""
-                op["owner_email"] = ""
-        else:
-            op["owner_name"] = ""
-            op["owner_email"] = ""
+        # If still empty, try finding a user linked to this operator with role=owner
+        if not op["owner_name"]:
+            op_user = await db.users.find_one(
+                {"operator_id": op_id, "operator_role": "owner"},
+                {"_id": 0, "full_name": 1, "email": 1}
+            )
+            if op_user:
+                op["owner_name"] = op_user.get("full_name", "")
+                op["owner_email"] = op_user.get("email", "")
         
         # Calculate total revenue from orders for this operator
         try:
