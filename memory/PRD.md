@@ -539,6 +539,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Settings role detection fix** — Customer with stale `operator_id` was getting Operator settings; now uses `role` field only
 - **Testing**: 100% backend (6/6), 95% frontend (iteration_37)
 
+## Completed Features (Feb 10, 2026 - Session 15d)
+- [x] **Scope-Pod Integration** — Access Scopes can now assign pods. Pod operator assignment filters by scope criteria.
+  - Added `assigned_pod_ids` to scope model and create/edit forms
+  - Assign Operators modal shows scope info banner and filters operators when pod has a scope
+  - New endpoint: `GET /api/employee-scopes/{id}/matching-operators`
+- [x] **Dynamic market segment colors** — Operator table badges use colors from `/api/geography/market-segments` API
+- [x] **Operator owner fallback** — Owner column now resolves via `owner_user_id → created_by → operator_role=owner` chain
+- **Testing**: 100% backend (9/9) + frontend (iteration_38)
+
 ## Backlog (Updated Feb 10, 2026)
 - [ ] **P3: Email Invitation System** - Invite new users via email
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
