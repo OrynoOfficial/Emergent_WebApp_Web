@@ -39,10 +39,12 @@ export default function EmployeeScopeManagement() {
     countries: [],
     regions: [],
     market_segments: [],
-    service_types: []
+    service_types: [],
+    assigned_pod_ids: []
   });
   const [selectedUserId, setSelectedUserId] = useState('');
   const [marketSegments, setMarketSegments] = useState([]);
+  const [pods, setPods] = useState([]);
 
   const SERVICE_TYPES = [
     { value: 'travel', label: 'Travel' },
