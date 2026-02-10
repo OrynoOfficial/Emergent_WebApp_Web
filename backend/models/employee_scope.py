@@ -38,6 +38,9 @@ class EmployeeAccessScope(BaseModel):
     # Specific operator override (if set, ONLY these operators are accessible)
     specific_operator_ids: List[str] = []
     
+    # Pods assigned to this scope
+    assigned_pod_ids: List[str] = []
+    
     # Status
     is_active: bool = True
     
