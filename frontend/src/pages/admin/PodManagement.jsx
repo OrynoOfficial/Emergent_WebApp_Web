@@ -58,14 +58,17 @@ export default function PodManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [podsRes, employeesRes, usersRes, operatorsRes] = await Promise.all([
+      const [podsRes, employeesRes, usersRes, operatorsRes, scopesRes] = await Promise.all([
         api.get('/pods'),
         api.get('/employees/'),
         api.get('/users/'),
-        api.get('/operators/')
+        api.get('/operators/'),
+        api.get('/employee-scopes')
       ]);
       setPods(podsRes.data.pods || []);
       setOperators(operatorsRes.data.operators || []);
+      // Store scopes for filtering operators by pod's assigned scope
+      setScopeData(scopesRes.data.scopes || []);
 
       // Build combined employee list from both employees collection and admin users
       const employees = employeesRes.data.employees || employeesRes.data || [];
