@@ -156,8 +156,15 @@ export default function OperatorsManagement() {
   };
 
   const getSegmentBadge = (segment) => {
-    const colors = SEGMENT_COLORS[segment] || { bg: 'bg-slate-100', text: 'text-slate-700' };
-    return <Badge className={`${colors.bg} ${colors.text} text-[10px] capitalize`}>{segment}</Badge>;
+    const dynSeg = marketSegments.find(s => s.id === segment);
+    if (dynSeg?.color) {
+      return <Badge className="text-[10px] capitalize border" style={{ backgroundColor: dynSeg.color + '20', color: dynSeg.color, borderColor: dynSeg.color + '40' }}>{dynSeg.name || segment}</Badge>;
+    }
+    const fb = SEGMENT_COLORS_FALLBACK[segment];
+    if (fb) {
+      return <Badge className="text-[10px] capitalize border" style={{ backgroundColor: fb.bg, color: fb.text, borderColor: fb.text + '40' }}>{segment}</Badge>;
+    }
+    return <Badge className="bg-slate-100 text-slate-700 text-[10px] capitalize">{segment}</Badge>;
   };
 
   const getStatusBadge = (status) => {
