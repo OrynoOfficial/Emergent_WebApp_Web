@@ -338,19 +338,28 @@ export default function PodManagement() {
                     <div
                       key={pod.id}
                       onClick={() => fetchPodDetails(pod.id)}
-                      className={`p-4 rounded-xl cursor-pointer transition-all ${
-                        selectedPod?.id === pod.id ? 'bg-blue-50 border-2 border-blue-200' : 'bg-slate-50 hover:bg-slate-100'
+                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 border ${
+                        selectedPod?.id === pod.id 
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-300 shadow-md ring-1 ring-blue-200' 
+                          : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-semibold">{pod.name}</h3>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
-                            <Users className="w-3 h-3" /> {pod.total_members || 0}
-                            <Building2 className="w-3 h-3 ml-2" /> {pod.total_operators || 0}
+                          <h3 className="font-semibold text-slate-900">{pod.name}</h3>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                              <Users className="w-3 h-3" /> {pod.total_members || 0} members
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                              <Building2 className="w-3 h-3" /> {pod.total_operators || 0} operators
+                            </span>
                           </div>
+                          {pod.team_lead_name && (
+                            <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1"><Crown className="w-3 h-3" /> {pod.team_lead_name}</p>
+                          )}
                         </div>
-                        <ChevronRight className="w-5 h-5 text-slate-400" />
+                        <ChevronRight className={`w-5 h-5 transition-colors ${selectedPod?.id === pod.id ? 'text-blue-500' : 'text-slate-300'}`} />
                       </div>
                     </div>
                   ))}
