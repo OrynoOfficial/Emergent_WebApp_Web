@@ -615,6 +615,58 @@ export default function Settings() {
           </div>
         );
 
+      case 'location':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-bold text-slate-900 mb-2">Your Location</h3>
+              <p className="text-sm text-slate-500 mb-4">Controls which services are shown to you. In Africa = local services only; outside Africa = global view.</p>
+            </div>
+            {(() => {
+              const stored = JSON.parse(localStorage.getItem('oryno_user_location') || 'null');
+              return (
+                <div className="space-y-4">
+                  <Card className={stored ? 'border-blue-200 bg-blue-50/50' : 'border-slate-200'}>
+                    <CardContent className="p-4">
+                      {stored ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg"><MapPin className="w-5 h-5 text-blue-600" /></div>
+                            <div>
+                              <p className="font-semibold text-slate-900">{stored.country_name || stored.country_code}</p>
+                              <p className="text-xs text-slate-500">
+                                {stored.manual_override ? 'Manually set' : stored.auto_updated ? 'Auto-detected from IP' : 'Set on first visit'}
+                                {stored.is_in_africa ? ' — Local mode' : ' — Global mode'}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className={stored.is_in_africa ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}>
+                            {stored.is_in_africa ? 'Local' : 'Global'}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">No location set yet</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Button variant="outline" onClick={() => {
+                    // Import from Layout's hook — open the modal
+                    // Clear the stored location so the modal appears fresh
+                    localStorage.removeItem('oryno_user_location');
+                    localStorage.removeItem('oryno_location_prompted');
+                    window.location.reload();
+                  }}>
+                    <MapPin className="w-4 h-4 mr-2" /> Change Location
+                  </Button>
+                  <p className="text-xs text-slate-400">
+                    Your location is auto-detected from your IP address. Manual selections override automatic detection.
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
+        );
+
       case 'security':
         return (
           <div className="space-y-6">
