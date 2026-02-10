@@ -61,13 +61,13 @@ export default function LocationSelectionModal({ isOpen, onClose, onLocationSet 
         country_code: selectedCountry,
         country_name: country?.name || selectedCountry,
         is_in_africa: isAfricanCountry(selectedCountry),
+        manual_override: true,
         set_at: new Date().toISOString()
       };
       
-      // Save to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(locationData));
+      localStorage.setItem('oryno_location_prompted', 'true');
       
-      // Callback
       if (onLocationSet) {
         onLocationSet(locationData);
       }
