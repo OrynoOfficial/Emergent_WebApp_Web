@@ -27,6 +27,8 @@ export const ICON_COLORS = {
   laundry: '#A855F7', cinema: '#06B6D4', banquet: '#14B8A6',
   orders: '#9575CD', receipts: '#2962FF', loyalty: '#AB47BC',
   management: '#7E57C2', analytics: '#4D96FF', bookings: '#FF7043',
+  transactions: '#7C3AED', 'all-orders': '#9575CD', 'all-receipts': '#2962FF', 'all-bookings': '#FF7043',
+  revenue: '#22C55E',
   users: '#757575', operators: '#64748b', employees: '#757575',
   commission: '#22C55E', 'audit-logs': '#F59E0B', permissions: '#EF4444',
   'access-groups': '#7E57C2', ratings: '#FBBF24', support: '#22C55E',
