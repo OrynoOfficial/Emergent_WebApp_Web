@@ -65,16 +65,16 @@ export default function SalesManagement() {
   
   // Page title based on user role
   const pageTitle = isSuperAdmin 
-    ? 'Platform Sales Dashboard' 
+    ? 'Platform Revenue Dashboard' 
     : isOperator 
-      ? `Sales Dashboard - ${operatorContext?.name || 'My Business'}`
-      : 'Sales Dashboard';
+      ? `Revenue Dashboard - ${operatorContext?.name || 'My Business'}`
+      : 'Revenue Dashboard';
   
   const pageSubtitle = isSuperAdmin
-    ? 'Cumulative sales data across all operators and services'
+    ? 'Cumulative revenue data across all operators and services'
     : isOperator
-      ? 'Sales performance for your services'
-      : 'Monitor sales performance and revenue';
+      ? 'Revenue performance for your services'
+      : 'Monitor revenue performance';
 
   useEffect(() => {
     fetchSalesData();
