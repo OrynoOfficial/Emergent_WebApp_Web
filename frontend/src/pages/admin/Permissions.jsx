@@ -549,6 +549,8 @@ const DEFAULT_ROLES = [
 
 export default function Permissions() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [roles, setRoles] = useState(DEFAULT_ROLES);
   const [users, setUsers] = useState([]);
   const isSuperAdmin = user?.role === 'super_admin';
