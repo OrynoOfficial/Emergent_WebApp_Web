@@ -42,8 +42,8 @@ class Operator(BaseModel):
     country: str = "CM"  # ISO 3166-1 alpha-2 code, default Cameroon
     region: Optional[str] = None  # Region code (e.g., "CM-LT" for Littoral)
     
-    # Market classification
-    market_segment: MarketSegment = MarketSegment.SME  # Default to SME
+    # Market classification (dynamic - stored as string, not enum)
+    market_segment: str = "sme"
     
     logo_url: Optional[str] = None
     description: Optional[str] = None
@@ -76,7 +76,7 @@ class OperatorCreate(BaseModel):
     city: Optional[str] = None
     country: str = "CM"
     region: Optional[str] = None
-    market_segment: MarketSegment = MarketSegment.SME
+    market_segment: str = "sme"
     logo_url: Optional[str] = None
     description: Optional[str] = None
     commission_rate: float = 5.0
@@ -94,7 +94,7 @@ class OperatorUpdate(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     region: Optional[str] = None
-    market_segment: Optional[MarketSegment] = None
+    market_segment: Optional[str] = None
     logo_url: Optional[str] = None
     description: Optional[str] = None
     status: Optional[OperatorStatus] = None
