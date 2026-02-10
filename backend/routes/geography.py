@@ -250,14 +250,80 @@ async def delete_region(
 
 @router.get("/market-segments")
 async def list_market_segments(current_user: dict = Depends(get_current_active_user)):
-    """List all market segment options"""
-    return {
-        "market_segments": [
-            {"value": "sme", "label": "SME", "description": "Small and Medium Enterprises"},
-            {"value": "enterprise", "label": "Enterprise", "description": "Large enterprises"},
-            {"value": "strategic", "label": "Strategic", "description": "High-value strategic partners"}
+    """List all market segments"""
+    db = get_database()
+    segments = await db.market_segments.find({"is_active": True}, {"_id": 0}).sort("name", 1).to_list(100)
+    if not segments:
+        # Seed defaults if empty
+        defaults = [
+            {"id": "sme", "name": "SME", "description": "Small and Medium Enterprises", "color": "#3B82F6", "is_active": True},
+            {"id": "enterprise", "name": "Enterprise", "description": "Large enterprises", "color": "#8B5CF6", "is_active": True},
+            {"id": "strategic", "name": "Strategic", "description": "High-value strategic partners", "color": "#F59E0B", "is_active": True},
         ]
+        await db.market_segments.insert_many(defaults)
+        segments = defaults
+    return {"market_segments": segments}
+
+
+@router.post("/market-segments")
+async def create_market_segment(
+    request: Request,
+    current_user: dict = Depends(require_permission("geography.create"))
+):
+    """Create a new market segment"""
+    db = get_database()
+    body = await request.json()
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Name is required")
+    seg_id = name.lower().replace(" ", "_")
+    existing = await db.market_segments.find_one({"id": seg_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Market segment already exists")
+    segment = {
+        "id": seg_id,
+        "name": name,
+        "description": body.get("description", ""),
+        "color": body.get("color", "#6B7280"),
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
+    await db.market_segments.insert_one(segment)
+    return {"message": "Market segment created", "segment": {k: v for k, v in segment.items() if k != "_id"}}
+
+
+@router.put("/market-segments/{segment_id}")
+async def update_market_segment(
+    segment_id: str,
+    request: Request,
+    current_user: dict = Depends(require_permission("geography.edit"))
+):
+    """Update a market segment"""
+    db = get_database()
+    body = await request.json()
+    existing = await db.market_segments.find_one({"id": segment_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Market segment not found")
+    updates = {}
+    if "name" in body: updates["name"] = body["name"]
+    if "description" in body: updates["description"] = body["description"]
+    if "color" in body: updates["color"] = body["color"]
+    if updates:
+        await db.market_segments.update_one({"id": segment_id}, {"$set": updates})
+    return {"message": "Market segment updated"}
+
+
+@router.delete("/market-segments/{segment_id}")
+async def delete_market_segment(
+    segment_id: str,
+    current_user: dict = Depends(require_permission("geography.delete"))
+):
+    """Soft-delete a market segment"""
+    db = get_database()
+    result = await db.market_segments.update_one({"id": segment_id}, {"$set": {"is_active": False}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Market segment not found")
+    return {"message": "Market segment deactivated"}
 
 
 # ============== Initialization ==============
