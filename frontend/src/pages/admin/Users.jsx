@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/client';
 import { Search, Users, Shield, User, Mail, Edit, Ban, Eye, Crown, Plus, ShieldCheck, UserCog, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
