@@ -43,6 +43,7 @@ import ValidationManagement from './pages/admin/ValidationManagement';
 import GeographyManagement from './pages/admin/GeographyManagement';
 import PodManagement from './pages/admin/PodManagement';
 import EmployeeScopeManagement from './pages/admin/EmployeeScopeManagement';
+import MarketSegmentManagement from './pages/admin/MarketSegmentManagement';
 
 // Utility Pages
 import Scanner from './pages/utility/Scanner';
