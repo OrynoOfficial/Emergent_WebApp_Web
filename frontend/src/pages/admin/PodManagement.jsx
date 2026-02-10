@@ -384,15 +384,19 @@ export default function PodManagement() {
                 {/* Team Lead */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold flex items-center gap-2"><Crown className="w-4 h-4 text-yellow-600" /> Team Lead</h4>
+                    <h4 className="font-semibold flex items-center gap-2"><Crown className="w-4 h-4 text-amber-500" /> Team Lead</h4>
                   </div>
                   {selectedPod.team_lead_id ? (
-                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-xl">
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 shadow-sm">
                       <div className="flex items-center gap-3">
-                        <Avatar><AvatarFallback>{selectedPod.team_lead_name?.charAt(0) || 'T'}</AvatarFallback></Avatar>
+                        <Avatar className="border-2 border-amber-400 w-11 h-11">
+                          <AvatarFallback className="bg-amber-500 text-white font-bold">{selectedPod.team_lead_name?.charAt(0) || 'T'}</AvatarFallback>
+                        </Avatar>
                         <div>
-                          <p className="font-medium">{selectedPod.team_lead_name}</p>
-                          <Badge className="bg-yellow-100 text-yellow-700">Team Lead</Badge>
+                          <p className="font-semibold text-slate-900">{selectedPod.team_lead_name}</p>
+                          <Badge className="bg-amber-100 text-amber-700 border border-amber-300 mt-0.5">
+                            <Crown className="w-3 h-3 mr-1" /> Team Lead
+                          </Badge>
                         </div>
                       </div>
                       <Button
