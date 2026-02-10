@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Globe, MapPin, Plus, Edit2, Trash2, Search, RefreshCw, Flag,
-  ChevronRight, Building2, Loader2, Building
+  ChevronRight, Building2, Loader2, Building, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
