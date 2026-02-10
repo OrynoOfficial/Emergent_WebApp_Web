@@ -81,6 +81,7 @@ class EmployeeAccessScopeCreate(BaseModel):
     market_segments: List[str] = []
     service_types: List[str] = []
     specific_operator_ids: List[str] = []
+    assigned_pod_ids: List[str] = []
 
 
 class EmployeeAccessScopeUpdate(BaseModel):
@@ -91,6 +92,7 @@ class EmployeeAccessScopeUpdate(BaseModel):
     market_segments: Optional[List[str]] = None
     service_types: Optional[List[str]] = None
     specific_operator_ids: Optional[List[str]] = None
+    assigned_pod_ids: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
 
