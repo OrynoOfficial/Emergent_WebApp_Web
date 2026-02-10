@@ -536,6 +536,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [ ] **P5: Default Document Templates**
 - [ ] **MINOR: Fix mixed content warning** - Notifications API endpoint HTTP vs HTTPS
 
+## Completed Features (Feb 10, 2026 - Session 15b)
+- [x] **Sales renamed to Revenue** - Sidebar label, page titles updated
+- [x] **Transactions dropdown** - All Orders, All Receipts, All Bookings grouped under "Transactions" submenu for Admin/Super Admin
+- [x] **Market Segments moved under Operator Management** - Sub-tab at `/admin/operators/market-segments`
+
 ## Completed Features (Feb 10, 2026 - Session 15)
 - [x] **Permissions moved under User Management** - Sub-tab at `/admin/users/permissions`
 - [x] **Geography moved under Operator Management** - Sub-tab at `/admin/operators/geography`
