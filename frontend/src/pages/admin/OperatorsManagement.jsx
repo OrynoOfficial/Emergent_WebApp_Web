@@ -468,10 +468,15 @@ export default function OperatorsManagement() {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 max-w-[180px]">
                       {operator.service_types?.slice(0, 2).map(s => getServiceBadge(s))}
                       {operator.service_types?.length > 2 && (
-                        <Badge variant="outline" className="text-xs">+{operator.service_types.length - 2}</Badge>
+                        <div className="relative group">
+                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">+{operator.service_types.length - 2}</Badge>
+                          <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover:flex flex-wrap gap-1 p-2 bg-white border rounded-lg shadow-lg min-w-[160px]">
+                            {operator.service_types.slice(2).map(s => getServiceBadge(s))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </td>
