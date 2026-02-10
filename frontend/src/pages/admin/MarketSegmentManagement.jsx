@@ -69,9 +69,26 @@ export default function MarketSegmentManagement() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Parent nav */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#082c59] mb-1">Operator Management</h1>
+        <p className="text-slate-500 mb-4">Manage service providers and operators</p>
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+          <button onClick={() => navigate('/admin/operators')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-operators">
+            <Building className="w-4 h-4 inline mr-1.5 -mt-0.5" />Operators
+          </button>
+          <button onClick={() => navigate('/admin/operators/geography')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-geography">
+            <Globe className="w-4 h-4 inline mr-1.5 -mt-0.5" />Geography
+          </button>
+          <button onClick={() => navigate('/admin/operators/market-segments')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/market-segments') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-market-segments">
+            <TrendingUp className="w-4 h-4 inline mr-1.5 -mt-0.5" />Market Segments
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="market-segments-title">Market Segments</h1>
+          <h2 className="text-lg font-bold text-[#082c59]" data-testid="market-segments-title">Market Segments</h2>
           <p className="text-slate-600">Manage operator classification categories</p>
         </div>
         <Button onClick={() => { setEditing(null); setForm({ name: '', description: '', color: '#3B82F6' }); setShowModal(true); }} data-testid="add-segment-btn">
