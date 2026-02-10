@@ -676,10 +676,25 @@ export default function PodManagement() {
             </div>
           </div>
 
+          {/* Scope info banner */}
+          {(() => {
+            const podScopes = scopeData.filter(s => s.assigned_pod_ids?.includes(selectedPod?.id));
+            if (podScopes.length > 0) {
+              return (
+                <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+                  <p className="text-indigo-700 font-medium">Filtered by scope: {podScopes.map(s => s.name).join(', ')}</p>
+                  <p className="text-indigo-500 text-xs">Only operators matching the assigned scope criteria are shown.</p>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {/* Operator List */}
           <div className="max-h-72 overflow-y-auto space-y-2">
             {(() => {
-              const available = operators
+              const scopeFiltered = getScopeFilteredOperators();
+              const available = scopeFiltered
                 .filter(op => !selectedPod?.assigned_operator_ids?.includes(op.id || op._id))
                 .filter(op => opSearch === '' || (op.name || '').toLowerCase().includes(opSearch.toLowerCase()))
                 .filter(op => opStatusFilter === 'all' || op.status === opStatusFilter)
