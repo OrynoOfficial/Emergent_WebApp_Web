@@ -30,6 +30,7 @@ export default function PodManagement() {
   const [pods, setPods] = useState([]);
   const [users, setUsers] = useState([]);
   const [operators, setOperators] = useState([]);
+  const [scopeData, setScopeData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
