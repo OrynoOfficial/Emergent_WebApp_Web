@@ -159,7 +159,7 @@ export default function EmployeeScopeManagement() {
   };
 
   const resetScopeForm = () => {
-    setScopeForm({ name: '', description: '', countries: [], regions: [], market_segments: [], service_types: [] });
+    setScopeForm({ name: '', description: '', countries: [], regions: [], market_segments: [], service_types: [], assigned_pod_ids: [] });
   };
 
   const toggleArrayItem = (array, item) => {
