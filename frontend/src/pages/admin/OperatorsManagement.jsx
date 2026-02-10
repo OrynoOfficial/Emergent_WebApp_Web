@@ -305,10 +305,7 @@ export default function OperatorsManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Building className="h-6 w-6 text-[#082c59]" />
-            Operator Management
-          </h1>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="operator-management-title">Operator Management</h1>
           <p className="text-slate-500 mt-1">Manage service providers and operators</p>
         </div>
         {canManageOperators && (
@@ -317,6 +314,16 @@ export default function OperatorsManagement() {
             Add Operator
           </Button>
         )}
+      </div>
+
+      {/* Sub-page tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="operator-management-tabs">
+        <button onClick={() => navigate('/admin/operators')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname === '/admin/operators' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-operators">
+          <Building className="w-4 h-4 inline mr-1.5 -mt-0.5" />Operators
+        </button>
+        <button onClick={() => navigate('/admin/operators/geography')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-geography">
+          <Globe className="w-4 h-4 inline mr-1.5 -mt-0.5" />Geography
+        </button>
       </div>
 
       {/* Stats Cards */}
