@@ -17,11 +17,11 @@ import { toast } from 'sonner';
 import api from '@/api/client';
 
 const POD_ROLE_CONFIG = {
-  team_lead: { label: 'Team Lead', icon: Crown, color: 'bg-yellow-100 text-yellow-700' },
-  bdr: { label: 'BDR', icon: Briefcase, color: 'bg-blue-100 text-blue-700' },
-  csm: { label: 'CSM', icon: Users, color: 'bg-green-100 text-green-700' },
-  technician: { label: 'Technician', icon: Wrench, color: 'bg-purple-100 text-purple-700' },
-  support_agent: { label: 'Support Agent', icon: Headphones, color: 'bg-orange-100 text-orange-700' }
+  team_lead: { label: 'Team Lead', icon: Crown, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', accent: '#D97706' },
+  bdr: { label: 'BDR', icon: Briefcase, bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', accent: '#2563EB' },
+  csm: { label: 'CSM', icon: Users, bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', accent: '#059669' },
+  technician: { label: 'Technician', icon: Wrench, bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', accent: '#7C3AED' },
+  support_agent: { label: 'Support Agent', icon: Headphones, bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', accent: '#E11D48' }
 };
 
 export default function PodManagement() {
