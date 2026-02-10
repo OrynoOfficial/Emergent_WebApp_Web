@@ -349,7 +349,8 @@ export default function EmployeeScopeManagement() {
                         countries: selectedScope.countries || [],
                         regions: selectedScope.regions || [],
                         market_segments: selectedScope.market_segments || [],
-                        service_types: selectedScope.service_types || []
+                        service_types: selectedScope.service_types || [],
+                        assigned_pod_ids: selectedScope.assigned_pod_ids || []
                       }); 
                       setShowScopeModal(true); 
                     }}>
