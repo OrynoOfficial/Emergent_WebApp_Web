@@ -129,12 +129,32 @@ export default function OperatorsManagement() {
   };
 
   const filteredOperators = operators.filter(op => {
-    const matchesSearch = op.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      op.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = op.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      op.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || op.status === statusFilter;
     const matchesService = serviceFilter === 'all' || op.service_types?.includes(serviceFilter);
     return matchesSearch && matchesStatus && matchesService;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOperators.length / ITEMS_PER_PAGE);
+  const paginatedOperators = filteredOperators.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, serviceFilter]);
+
+  const getServiceBadge = (service) => {
+    const colors = SERVICE_COLORS[service] || { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
+    return <Badge key={service} className={`${colors.bg} ${colors.text} ${colors.border} border text-xs capitalize`}>{service.replace('_', ' ')}</Badge>;
+  };
+
+  const getSegmentBadge = (segment) => {
+    const colors = SEGMENT_COLORS[segment] || { bg: 'bg-slate-100', text: 'text-slate-700' };
+    return <Badge className={`${colors.bg} ${colors.text} text-[10px] capitalize`}>{segment}</Badge>;
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
