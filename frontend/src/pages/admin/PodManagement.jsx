@@ -220,6 +220,30 @@ export default function PodManagement() {
 
   const getEmployeeLabel = (emp) => emp._display_name || `${emp.first_name || ''} ${emp.last_name || ''}`.trim() || emp.email || 'Unknown';
 
+  // Get operators filtered by scope(s) assigned to the selected pod
+  const getScopeFilteredOperators = () => {
+    if (!selectedPod) return operators;
+    // Find scopes that have this pod assigned
+    const podScopes = scopeData.filter(s => s.assigned_pod_ids?.includes(selectedPod.id));
+    if (podScopes.length === 0) return operators; // No scope restriction → show all
+    
+    return operators.filter(op => {
+      // Operator must match at least ONE scope (OR logic across scopes)
+      return podScopes.some(scope => {
+        // AND logic within a single scope
+        if (scope.countries?.length > 0 && !scope.countries.includes(op.country?.toUpperCase())) return false;
+        if (scope.regions?.length > 0 && !scope.regions.includes(op.region)) return false;
+        if (scope.market_segments?.length > 0 && !scope.market_segments.includes(op.market_segment)) return false;
+        if (scope.service_types?.length > 0) {
+          const opServices = op.service_types || [op.operator_type];
+          if (!scope.service_types.some(st => opServices.includes(st))) return false;
+        }
+        if (scope.specific_operator_ids?.length > 0 && !scope.specific_operator_ids.includes(op.id)) return false;
+        return true;
+      });
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Sub-page Navigation */}
