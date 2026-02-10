@@ -462,9 +462,7 @@ export default function OperatorsManagement() {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex flex-wrap gap-1">
-                      {operator.service_types?.slice(0, 2).map(s => (
-                        <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
-                      ))}
+                      {operator.service_types?.slice(0, 2).map(s => getServiceBadge(s))}
                       {operator.service_types?.length > 2 && (
                         <Badge variant="outline" className="text-xs">+{operator.service_types.length - 2}</Badge>
                       )}
@@ -474,7 +472,7 @@ export default function OperatorsManagement() {
                     <div className="text-sm">
                       <p className="font-medium text-slate-700">{getCountryName(operator.country)}</p>
                       {operator.region && <p className="text-xs text-slate-500">{getRegionName(operator.region)}</p>}
-                      {operator.market_segment && <Badge variant="outline" className="text-[10px] mt-1 capitalize">{operator.market_segment}</Badge>}
+                      {operator.market_segment && getSegmentBadge(operator.market_segment)}
                     </div>
                   </td>
                   <td className="py-4 px-6">
