@@ -42,12 +42,7 @@ export default function EmployeeScopeManagement() {
     service_types: []
   });
   const [selectedUserId, setSelectedUserId] = useState('');
-
-  const MARKET_SEGMENTS = [
-    { value: 'sme', label: 'SME' },
-    { value: 'enterprise', label: 'Enterprise' },
-    { value: 'strategic', label: 'Strategic' }
-  ];
+  const [marketSegments, setMarketSegments] = useState([]);
 
   const SERVICE_TYPES = [
     { value: 'travel', label: 'Travel' },
@@ -67,16 +62,18 @@ export default function EmployeeScopeManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [scopesRes, usersRes, countriesRes, regionsRes] = await Promise.all([
+      const [scopesRes, usersRes, countriesRes, regionsRes, segRes] = await Promise.all([
         api.get('/employee-scopes'),
         api.get('/users/', { params: { role: 'admin' } }),
         api.get('/geography/countries'),
-        api.get('/geography/regions')
+        api.get('/geography/regions'),
+        api.get('/geography/market-segments')
       ]);
       setScopes(scopesRes.data.scopes || []);
       setUsers(usersRes.data.users || []);
       setCountries(countriesRes.data.countries || []);
       setRegions(regionsRes.data.regions || []);
+      setMarketSegments(segRes.data.market_segments || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
