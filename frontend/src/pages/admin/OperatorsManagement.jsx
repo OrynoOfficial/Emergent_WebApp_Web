@@ -36,10 +36,10 @@ const SERVICE_COLORS = {
   package: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200' },
 };
 
-const SEGMENT_COLORS = {
-  sme: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  enterprise: { bg: 'bg-violet-100', text: 'text-violet-700' },
-  strategic: { bg: 'bg-amber-100', text: 'text-amber-700' },
+const SEGMENT_COLORS_FALLBACK = {
+  sme: { bg: '#3B82F620', text: '#2563EB' },
+  enterprise: { bg: '#8B5CF620', text: '#7C3AED' },
+  strategic: { bg: '#F59E0B20', text: '#D97706' },
 };
 
 const ITEMS_PER_PAGE = 10;
