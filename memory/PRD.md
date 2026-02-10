@@ -530,11 +530,27 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Saves selection to localStorage as `oryno_user_location`
   - Header shows country name + "Local" badge after selection
 
-## Backlog (Updated Feb 8, 2026)
+## Backlog (Updated Feb 10, 2026)
 - [ ] **P3: Email Invitation System** - Invite new users via email
 - [ ] **P4: Capacitor Mobile App** - Customer-facing mobile app
 - [ ] **P5: Default Document Templates**
 - [ ] **MINOR: Fix mixed content warning** - Notifications API endpoint HTTP vs HTTPS
+
+## Completed Features (Feb 10, 2026 - Session 15)
+- [x] **Permissions moved under User Management** - Sub-tab at `/admin/users/permissions`
+- [x] **Geography moved under Operator Management** - Sub-tab at `/admin/operators/geography`
+- [x] **Operator table visual improvements**
+  - Colored service type badges (pink=hotels, blue=travel, amber=restaurants, etc.)
+  - Colored market segment badges (blue=SME, violet=Enterprise, amber=Strategic)
+  - Pagination (10 items/page, controls appear when >10 operators)
+- [x] **Market Segments CRUD** - New page at `/admin/market-segments`
+  - Full CRUD API: GET/POST/PUT/DELETE on `/api/geography/market-segments`
+  - Dynamic segments stored in MongoDB `market_segments` collection
+  - Custom colors with color picker and preset palette
+  - Auto-seeded defaults (SME, Enterprise, Strategic) on first access
+- [x] Sidebar reorganized: Permissions/Geography removed as separate items, Market Segments added
+- [x] Backwards compatible: old routes (`/admin/permissions`, `/admin/geography`) still work
+- **Testing**: 100% backend (7/7) + frontend (iteration_35)
 
 ## Completed Features (Feb 8, 2026 - Session 14)
 - [x] **Geography Integration in Operator Forms**
