@@ -424,19 +424,21 @@ export default function PodManagement() {
                         const roleConfig = POD_ROLE_CONFIG[member.pod_role] || POD_ROLE_CONFIG.csm;
                         const RoleIcon = roleConfig.icon;
                         return (
-                          <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                          <div key={member.id} className={`flex items-center justify-between p-3.5 rounded-xl border ${roleConfig.border} ${roleConfig.bg}`}>
                             <div className="flex items-center gap-3">
-                              <Avatar><AvatarFallback>{member.user_name?.charAt(0) || 'U'}</AvatarFallback></Avatar>
+                              <Avatar className="border-2" style={{ borderColor: roleConfig.accent }}>
+                                <AvatarFallback className="text-white text-sm font-bold" style={{ backgroundColor: roleConfig.accent }}>{member.user_name?.charAt(0) || 'U'}</AvatarFallback>
+                              </Avatar>
                               <div>
-                                <p className="font-medium">{member.user_name}</p>
-                                <p className="text-sm text-slate-500">{member.user_email}</p>
+                                <p className="font-semibold text-slate-900">{member.user_name}</p>
+                                <p className="text-xs text-slate-500">{member.user_email}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Badge className={roleConfig.color}>
+                              <Badge className={`${roleConfig.bg} ${roleConfig.text} border ${roleConfig.border}`}>
                                 <RoleIcon className="w-3 h-3 mr-1" /> {roleConfig.label}
                               </Badge>
-                              <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.user_id)} data-testid={`remove-member-${member.user_id}`}>
+                              <Button variant="ghost" size="icon" className="hover:bg-red-50" onClick={() => handleRemoveMember(member.user_id)} data-testid={`remove-member-${member.user_id}`}>
                                 <UserMinus className="w-4 h-4 text-red-500" />
                               </Button>
                             </div>
