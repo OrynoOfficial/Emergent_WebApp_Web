@@ -477,13 +477,13 @@ export default function EmployeeScopeManagement() {
             <div>
               <Label className="mb-2 block">Market Segments (empty = all)</Label>
               <div className="flex flex-wrap gap-2">
-                {MARKET_SEGMENTS.map(s => (
-                  <label key={s.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.market_segments.includes(s.value) ? 'bg-green-100 border-green-300' : 'bg-slate-100 hover:bg-slate-200'} border`}>
+                {marketSegments.map(s => (
+                  <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.market_segments.includes(s.id) ? 'border-2' : 'bg-slate-100 hover:bg-slate-200 border'}`} style={scopeForm.market_segments.includes(s.id) ? { backgroundColor: s.color + '20', borderColor: s.color } : {}}>
                     <Checkbox 
-                      checked={scopeForm.market_segments.includes(s.value)} 
-                      onCheckedChange={() => setScopeForm({...scopeForm, market_segments: toggleArrayItem(scopeForm.market_segments, s.value)})}
+                      checked={scopeForm.market_segments.includes(s.id)} 
+                      onCheckedChange={() => setScopeForm({...scopeForm, market_segments: toggleArrayItem(scopeForm.market_segments, s.id)})}
                     />
-                    <span className="text-sm">{s.label}</span>
+                    <span className="text-sm font-medium" style={scopeForm.market_segments.includes(s.id) ? { color: s.color } : {}}>{s.name}</span>
                   </label>
                 ))}
               </div>
