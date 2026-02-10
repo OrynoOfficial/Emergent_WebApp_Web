@@ -64,18 +64,20 @@ export default function EmployeeScopeManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [scopesRes, usersRes, countriesRes, regionsRes, segRes] = await Promise.all([
+      const [scopesRes, usersRes, countriesRes, regionsRes, segRes, podsRes] = await Promise.all([
         api.get('/employee-scopes'),
         api.get('/users/', { params: { role: 'admin' } }),
         api.get('/geography/countries'),
         api.get('/geography/regions'),
-        api.get('/geography/market-segments')
+        api.get('/geography/market-segments'),
+        api.get('/pods')
       ]);
       setScopes(scopesRes.data.scopes || []);
       setUsers(usersRes.data.users || []);
       setCountries(countriesRes.data.countries || []);
       setRegions(regionsRes.data.regions || []);
       setMarketSegments(segRes.data.market_segments || []);
+      setPods(podsRes.data.pods || []);
     } catch (error) {
       toast.error('Failed to fetch data');
     } finally {
