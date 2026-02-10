@@ -536,18 +536,21 @@ export default function PodManagement() {
 
       {/* Add Member Modal */}
       <Dialog open={showMemberModal} onOpenChange={setShowMemberModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Member to {selectedPod?.name}</DialogTitle>
+        <DialogContent className="bg-white">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 rounded-lg"><UserPlus className="w-4 h-4 text-emerald-600" /></div>
+              Add Member to {selectedPod?.name}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5 pt-2">
             <div>
-              <Label>Select Employee</Label>
+              <Label className="text-sm font-medium">Select Employee</Label>
               <Select value={memberForm.user_id} onValueChange={(v) => setMemberForm({...memberForm, user_id: v})}>
-                <SelectTrigger data-testid="select-employee-trigger">
-                  <SelectValue placeholder="Select an employee" />
+                <SelectTrigger data-testid="select-employee-trigger" className="mt-1.5">
+                  <SelectValue placeholder="Choose an employee..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {availableUsers.map(u => (
                     <SelectItem key={u._linked_user_id} value={u._linked_user_id}>
                       {getEmployeeLabel(u)}{u.department ? ` (${u.department.replace('_', ' ')})` : ''}{u.city ? ` - ${u.city}` : ''}
@@ -556,21 +559,30 @@ export default function PodManagement() {
                 </SelectContent>
               </Select>
               {availableUsers.length === 0 && (
-                <p className="text-sm text-slate-500 mt-1">No available employees to add</p>
+                <p className="text-sm text-amber-600 mt-1.5 bg-amber-50 p-2 rounded">No available employees to add</p>
               )}
             </div>
             <div>
-              <Label>Role</Label>
-              <Select value={memberForm.pod_role} onValueChange={(v) => setMemberForm({...memberForm, pod_role: v})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(POD_ROLE_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium">Role</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                {Object.entries(POD_ROLE_CONFIG).map(([key, config]) => {
+                  const RoleIcon = config.icon;
+                  const isSelected = memberForm.pod_role === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setMemberForm({...memberForm, pod_role: key})}
+                      className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        isSelected ? `${config.bg} ${config.border} shadow-sm` : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <RoleIcon className="w-4 h-4" style={{ color: isSelected ? config.accent : '#94a3b8' }} />
+                      <span className={`text-sm font-medium ${isSelected ? config.text : 'text-slate-600'}`}>{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <DialogFooter>
