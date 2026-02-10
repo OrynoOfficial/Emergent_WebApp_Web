@@ -265,10 +265,7 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="h-6 w-6 text-[#082c59]" />
-            User Management
-          </h1>
+          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="user-management-title">User Management</h1>
           <p className="text-slate-500 mt-1">Manage system users, roles, and permissions</p>
         </div>
         <Button 
@@ -278,6 +275,16 @@ export default function UserManagement() {
           <Plus className="h-4 w-4 mr-2" />
           Add User
         </Button>
+      </div>
+
+      {/* Sub-page tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="user-management-tabs">
+        <button onClick={() => navigate('/admin/users')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname === '/admin/users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-users">
+          <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Users
+        </button>
+        <button onClick={() => navigate('/admin/users/permissions')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-permissions">
+          <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Permissions
+        </button>
       </div>
 
       {/* Role Permission Info */}
