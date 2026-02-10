@@ -694,6 +694,16 @@ function App() {
           />
           
           <Route
+            path="/admin/market-segments"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <MarketSegmentManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          
+          <Route
             path="/admin/pods"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
