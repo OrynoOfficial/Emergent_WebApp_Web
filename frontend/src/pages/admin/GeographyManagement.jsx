@@ -155,6 +155,9 @@ export default function GeographyManagement() {
           <button onClick={() => navigate('/admin/operators/geography')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-geography">
             <Globe className="w-4 h-4 inline mr-1.5 -mt-0.5" />Geography
           </button>
+          <button onClick={() => navigate('/admin/operators/market-segments')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/market-segments') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-market-segments">
+            <TrendingUp className="w-4 h-4 inline mr-1.5 -mt-0.5" />Market Segments
+          </button>
         </div>
       </div>
 
