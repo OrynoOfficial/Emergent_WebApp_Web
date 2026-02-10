@@ -585,6 +585,15 @@ function App() {
           />
           
           <Route
+            path="/admin/users/permissions"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <Permissions />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/operators"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
