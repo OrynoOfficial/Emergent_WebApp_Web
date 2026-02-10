@@ -75,16 +75,41 @@ export default function Layout({ children }) {
   // Customer location state
   const { location: userLocation, showModal: showLocationModal, setShowModal: setShowLocationModal, updateLocation } = useUserLocation();
   
-  // Show location modal for customers on first visit
+  // Show location modal only on first-ever customer visit, then auto-detect silently
   useEffect(() => {
-    if (user?.role === 'customer' && !userLocation) {
-      // Delay to avoid showing immediately on login
-      const timer = setTimeout(() => {
-        setShowLocationModal(true);
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (user?.role === 'customer') {
+      const hasBeenPrompted = localStorage.getItem('oryno_location_prompted');
+      if (!hasBeenPrompted && !userLocation) {
+        // First time ever — show the modal
+        const timer = setTimeout(() => {
+          setShowLocationModal(true);
+          localStorage.setItem('oryno_location_prompted', 'true');
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+      // For returning customers, silently update from IP in background
+      if (userLocation) {
+        api.get('/customer-location/ip-info').then(res => {
+          const ipCountry = res.data?.location?.country_code;
+          if (ipCountry && ipCountry !== userLocation.country_code) {
+            // IP changed — update silently but don't override manual choice
+            // Only update if the stored location wasn't manually set
+            const stored = JSON.parse(localStorage.getItem('oryno_user_location') || '{}');
+            if (!stored.manual_override) {
+              const isAfrican = res.data?.is_in_africa;
+              updateLocation({
+                ...stored,
+                country_code: ipCountry,
+                country_name: res.data?.location?.country || ipCountry,
+                is_in_africa: isAfrican,
+                auto_updated: true,
+              });
+            }
+          }
+        }).catch(() => {});
+      }
     }
-  }, [user, userLocation, setShowLocationModal]);
+  }, [user?.role]);
 
   // Icon mapping for dynamic icons from API
   const iconMap = {
