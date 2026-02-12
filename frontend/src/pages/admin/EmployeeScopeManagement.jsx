@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Shield, Plus, Edit2, Trash2, Search, RefreshCw, UserPlus, UserMinus,
-  Globe, MapPin, Building2, Briefcase, Loader2, Eye, Check, X, Users, Network, ShieldCheck
+  Globe, MapPin, Building2, Briefcase, Loader2, Eye, Check, X, Users, Network, ShieldCheck, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
