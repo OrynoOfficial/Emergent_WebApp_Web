@@ -695,3 +695,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 ### Known Issues (Pre-existing)
 - Mixed content warning on notifications websocket (ws:// vs wss://) - cosmetic, non-blocking
 
+### Session: Feb 12, 2026 (Part 2) - Search/Filter Enhancements
+
+- [x] **Pod Management - Add Member Modal**: Replaced Select dropdown with searchable radio list + department filter
+- [x] **Access Scopes - Assign Employee Modal**: Added search input, now shows employees with `role: "employee"` in addition to admin/super_admin
+- [x] **Access Scopes - Create/Edit Scope Modal**: Added search to Countries and Market Segments sections
+- [x] **Access Scopes - Backend Fix**: `POST /api/employee-scopes/{scope_id}/assign` now accepts `role: "employee"` users
+- [x] **Employees Page**: Added grid/list view toggle (table view with Employee, Contact, Department, Pod, Status, Salary, Actions columns)
+- **Testing**: 100% verified via iteration_40
