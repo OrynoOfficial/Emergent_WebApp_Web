@@ -939,3 +939,24 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - `summary`: total_bookings, total_revenue, active_routes, active_vehicles from DB
   - Frontend `TravelAnalyticsSection` fetches from API (replaced hardcoded mock data)
 - **Testing**: 100% verified via iteration_55 (26/26 backend tests passed). Testing agent also fixed datetime comparison bug in communications recent feed.
+
+
+### Session: Feb 12, 2026 (Part 20) - Phase A: Favourites System
+
+- [x] **Backend Favourites API**: New `/api/favourites/` CRUD endpoints:
+  - `POST /` — Add item to favourites (service_type, item_id, item_name, image, location, price, rating, extra metadata)
+  - `GET /` — Get user's favourites (with service_type filter, pagination)
+  - `DELETE /{service_type}/{item_id}` — Remove favourite
+  - `GET /ids?service_type=X` — Bulk get favourite IDs (for results pages)
+  - `GET /check?service_type=X&item_id=Y` — Check single favourite status
+  - Duplicate-safe, user-scoped, supports all 9 service types
+- [x] **Reusable Frontend Hook**: `useFavourites(serviceType)` hook at `/hooks/useFavourites.js`
+  - Loads favourite IDs on mount, provides `isFav(id)` and `toggleFav(item)` functions
+  - Optimistic UI updates with rollback on error
+  - Integrated across ALL results pages: Hotels, Travel, CarRental, Restaurants, Events, Cinema, Laundry, Banquet, Packages
+- [x] **Settings → Favourites Page**: New "Favourites" section in customer Settings with:
+  - Service type filter dropdown
+  - Cards showing image, name, service type badge, location, rating, price
+  - Remove button per item
+  - Empty state with helpful prompt
+- **Testing**: 100% verified via iteration_56 (27/27 backend tests passed)
