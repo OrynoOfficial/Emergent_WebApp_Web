@@ -10,7 +10,7 @@ import { Switch } from '../../components/ui/switch';
 import { Textarea } from '../../components/ui/textarea';
 import { 
   ArrowLeft, Utensils, MapPin, Clock, Users, Star, CreditCard, CheckCircle2, 
-  User, Calendar, Phone, Mail, MessageSquare, Loader2, ShoppingBag, DollarSign
+  User, Calendar, Phone, Mail, MessageSquare, Loader2, ShoppingBag, DollarSign, ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
