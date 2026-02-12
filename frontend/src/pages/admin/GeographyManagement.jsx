@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Globe, MapPin, Plus, Edit2, Trash2, Search, RefreshCw, Flag,
-  ChevronRight, Building2, Loader2, Building, TrendingUp
+  ChevronDown, ChevronRight, Building, Loader2, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
@@ -19,19 +17,19 @@ import api from '@/api/client';
 export default function GeographyManagement() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('countries');
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [expandedCountries, setExpandedCountries] = useState(new Set());
+
   // Modal states
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [showRegionModal, setShowRegionModal] = useState(false);
   const [editingCountry, setEditingCountry] = useState(null);
   const [editingRegion, setEditingRegion] = useState(null);
-  const [selectedCountryFilter, setSelectedCountryFilter] = useState('all');
-  
+  const [regionParentCountry, setRegionParentCountry] = useState(null);
+
   // Form states
   const [countryForm, setCountryForm] = useState({
     code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala'
@@ -40,9 +38,7 @@ export default function GeographyManagement() {
     country_id: '', code: '', name: '', capital_city: ''
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -53,7 +49,7 @@ export default function GeographyManagement() {
       ]);
       setCountries(countriesRes.data.countries || []);
       setRegions(regionsRes.data.regions || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch geography data');
     } finally {
       setLoading(false);
@@ -69,6 +65,18 @@ export default function GeographyManagement() {
       toast.error(error.response?.data?.detail || 'Failed to initialize');
     }
   };
+
+  const toggleCountry = (countryId) => {
+    setExpandedCountries(prev => {
+      const next = new Set(prev);
+      if (next.has(countryId)) next.delete(countryId);
+      else next.add(countryId);
+      return next;
+    });
+  };
+
+  const getRegionsForCountry = (countryId) =>
+    regions.filter(r => r.country_id === countryId);
 
   // Country CRUD
   const handleSaveCountry = async () => {
@@ -101,6 +109,20 @@ export default function GeographyManagement() {
   };
 
   // Region CRUD
+  const openAddRegion = (country) => {
+    setRegionParentCountry(country);
+    setEditingRegion(null);
+    setRegionForm({ country_id: country.id, code: '', name: '', capital_city: '' });
+    setShowRegionModal(true);
+  };
+
+  const openEditRegion = (region) => {
+    setEditingRegion(region);
+    setRegionParentCountry(countries.find(c => c.id === region.country_id) || null);
+    setRegionForm({ country_id: region.country_id, code: region.code, name: region.name, capital_city: region.capital_city || '' });
+    setShowRegionModal(true);
+  };
+
   const handleSaveRegion = async () => {
     try {
       if (editingRegion) {
@@ -130,17 +152,13 @@ export default function GeographyManagement() {
     }
   };
 
-  const filteredCountries = countries.filter(c => 
+  const filteredCountries = countries.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
+    c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getRegionsForCountry(c.id).some(r =>
+      r.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
-
-  const filteredRegions = regions.filter(r => {
-    const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCountry = selectedCountryFilter === 'all' || r.country_code === selectedCountryFilter;
-    return matchesSearch && matchesCountry;
-  });
 
   return (
     <div className="p-6 space-y-6">
@@ -164,20 +182,23 @@ export default function GeographyManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-slate-900">Geography Management</h2>
-          <p className="text-slate-600">Manage countries and regions for operator classification</p>
+          <h2 className="text-lg font-bold text-slate-900" data-testid="geography-title">Geography Management</h2>
+          <p className="text-slate-600">Manage countries and their regions</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData} disabled={loading}>
+          <Button variant="outline" onClick={fetchData} disabled={loading} data-testid="refresh-btn">
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           {countries.length === 0 && (
-            <Button onClick={initializeDefaults}>
+            <Button onClick={initializeDefaults} data-testid="init-defaults-btn">
               <Flag className="w-4 h-4 mr-2" />
               Initialize Defaults
             </Button>
           )}
+          <Button onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }} data-testid="add-country-btn">
+            <Plus className="w-4 h-4 mr-2" /> Add Country
+          </Button>
         </div>
       </div>
 
@@ -204,7 +225,7 @@ export default function GeographyManagement() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{regions.length}</p>
-                <p className="text-slate-600">Regions</p>
+                <p className="text-slate-600">Total Regions</p>
               </div>
             </div>
           </CardContent>
@@ -212,137 +233,137 @@ export default function GeographyManagement() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <Building2 className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-amber-100 rounded-xl">
+                <Flag className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">Africa</p>
-                <p className="text-slate-600">Primary Continent</p>
+                <p className="text-2xl font-bold">{countries.filter(c => getRegionsForCountry(c.id).length > 0).length}</p>
+                <p className="text-slate-600">Countries with Regions</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="countries">Countries</TabsTrigger>
-            <TabsTrigger value="regions">Regions</TabsTrigger>
-          </TabsList>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-64"
-              />
-            </div>
-            {activeTab === 'countries' && (
-              <Button onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Add Country
-              </Button>
-            )}
-            {activeTab === 'regions' && (
-              <>
-                <Select value={selectedCountryFilter} onValueChange={setSelectedCountryFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filter by country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Countries</SelectItem>
-                    {countries.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={() => { setEditingRegion(null); setRegionForm({ country_id: '', code: '', name: '', capital_city: '' }); setShowRegionModal(true); }}>
-                  <Plus className="w-4 h-4 mr-2" /> Add Region
-                </Button>
-              </>
-            )}
-          </div>
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <Input
+          placeholder="Search countries or regions..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+          data-testid="geography-search"
+        />
+      </div>
+
+      {/* Countries with nested Regions */}
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+      ) : filteredCountries.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-slate-500">
+            <Globe className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <p className="font-medium">No countries found</p>
+            <p className="text-sm mt-1">Add a country or initialize defaults to get started</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3" data-testid="countries-list">
+          {filteredCountries.map(country => {
+            const countryRegions = getRegionsForCountry(country.id);
+            const isExpanded = expandedCountries.has(country.id);
+
+            return (
+              <Card key={country.id} className="overflow-hidden border-slate-200 hover:border-slate-300 transition-colors" data-testid={`country-card-${country.code}`}>
+                {/* Country Header */}
+                <div
+                  className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50/80 transition-colors"
+                  onClick={() => toggleCountry(country.id)}
+                  data-testid={`country-toggle-${country.code}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <button className="p-1 rounded transition-transform" style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
+                      <ChevronDown className="w-5 h-5 text-slate-500" />
+                    </button>
+                    <div className="w-11 h-11 bg-blue-100 rounded-lg flex items-center justify-center text-sm font-bold text-blue-700">
+                      {country.code}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{country.name}</h3>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                        <span>{country.phone_code}</span>
+                        <span className="text-slate-300">|</span>
+                        <span>{country.currency_code}</span>
+                        <span className="text-slate-300">|</span>
+                        <span>{country.timezone}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="text-xs">{country.continent}</Badge>
+                    <Badge className="bg-green-50 text-green-700 border border-green-200">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {countryRegions.length} region{countryRegions.length !== 1 ? 's' : ''}
+                    </Badge>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingCountry(country); setCountryForm(country); setShowCountryModal(true); }} data-testid={`edit-country-${country.code}`}>
+                        <Edit2 className="w-4 h-4 text-slate-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteCountry(country.id)} data-testid={`delete-country-${country.code}`}>
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regions (Expanded) */}
+                {isExpanded && (
+                  <div className="border-t border-slate-100 bg-slate-50/50">
+                    <div className="px-5 py-3 flex items-center justify-between">
+                      <p className="text-sm font-medium text-slate-600">Regions in {country.name}</p>
+                      <Button size="sm" variant="outline" onClick={() => openAddRegion(country)} data-testid={`add-region-${country.code}`}>
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Add Region
+                      </Button>
+                    </div>
+                    {countryRegions.length === 0 ? (
+                      <div className="px-5 pb-4 text-sm text-slate-400 italic">No regions added yet</div>
+                    ) : (
+                      <div className="px-5 pb-4 space-y-2">
+                        {countryRegions.map(region => (
+                          <div
+                            key={region.id}
+                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200 hover:border-green-200 transition-colors"
+                            data-testid={`region-row-${region.code}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-green-50 rounded-md flex items-center justify-center">
+                                <MapPin className="w-4 h-4 text-green-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-slate-800 text-sm">{region.name}</p>
+                                <p className="text-xs text-slate-400">{region.code}{region.capital_city ? ` \u00B7 Capital: ${region.capital_city}` : ''}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRegion(region)} data-testid={`edit-region-${region.code}`}>
+                                <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteRegion(region.id)} data-testid={`delete-region-${region.code}`}>
+                                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
-
-        <TabsContent value="countries" className="mt-4">
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCountries.map(country => (
-                <Card key={country.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg font-bold text-blue-600">
-                          {country.code}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{country.name}</h3>
-                          <p className="text-sm text-slate-500">{country.phone_code} · {country.currency_code}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingCountry(country); setCountryForm(country); setShowCountryModal(true); }}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteCountry(country.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <Badge variant="outline">{country.continent}</Badge>
-                      <span className="text-slate-500">{country.timezone}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="regions" className="mt-4">
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRegions.map(region => (
-                <Card key={region.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                          <MapPin className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{region.name}</h3>
-                          <p className="text-sm text-slate-500">{region.code}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingRegion(region); setRegionForm(region); setShowRegionModal(true); }}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRegion(region.id)}>
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <Badge>{region.country_code}</Badge>
-                      {region.capital_city && <span className="text-slate-500">Capital: {region.capital_city}</span>}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      )}
 
       {/* Country Modal */}
       <Dialog open={showCountryModal} onOpenChange={setShowCountryModal}>
@@ -354,11 +375,11 @@ export default function GeographyManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Country Code (ISO 3166-1)</Label>
-                <Input value={countryForm.code} onChange={(e) => setCountryForm({...countryForm, code: e.target.value.toUpperCase()})} placeholder="CM" maxLength={2} />
+                <Input value={countryForm.code} onChange={(e) => setCountryForm({...countryForm, code: e.target.value.toUpperCase()})} placeholder="CM" maxLength={2} data-testid="country-code-input" />
               </div>
               <div>
                 <Label>Country Name</Label>
-                <Input value={countryForm.name} onChange={(e) => setCountryForm({...countryForm, name: e.target.value})} placeholder="Cameroon" />
+                <Input value={countryForm.name} onChange={(e) => setCountryForm({...countryForm, name: e.target.value})} placeholder="Cameroon" data-testid="country-name-input" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -378,7 +399,7 @@ export default function GeographyManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCountryModal(false)}>Cancel</Button>
-            <Button onClick={handleSaveCountry}>Save</Button>
+            <Button onClick={handleSaveCountry} data-testid="save-country-btn">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -387,40 +408,44 @@ export default function GeographyManagement() {
       <Dialog open={showRegionModal} onOpenChange={setShowRegionModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingRegion ? 'Edit Region' : 'Add Region'}</DialogTitle>
+            <DialogTitle>
+              {editingRegion ? 'Edit Region' : `Add Region to ${regionParentCountry?.name || 'Country'}`}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Country</Label>
-              <Select value={regionForm.country_id} onValueChange={(v) => setRegionForm({...regionForm, country_id: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!regionParentCountry && (
+              <div>
+                <Label>Country</Label>
+                <Select value={regionForm.country_id} onValueChange={(v) => setRegionForm({...regionForm, country_id: v})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Region Code</Label>
-                <Input value={regionForm.code} onChange={(e) => setRegionForm({...regionForm, code: e.target.value})} placeholder="CM-LT" />
+                <Input value={regionForm.code} onChange={(e) => setRegionForm({...regionForm, code: e.target.value})} placeholder="CM-LT" data-testid="region-code-input" />
               </div>
               <div>
                 <Label>Region Name</Label>
-                <Input value={regionForm.name} onChange={(e) => setRegionForm({...regionForm, name: e.target.value})} placeholder="Littoral" />
+                <Input value={regionForm.name} onChange={(e) => setRegionForm({...regionForm, name: e.target.value})} placeholder="Littoral" data-testid="region-name-input" />
               </div>
             </div>
             <div>
               <Label>Capital City (Optional)</Label>
-              <Input value={regionForm.capital_city} onChange={(e) => setRegionForm({...regionForm, capital_city: e.target.value})} placeholder="Douala" />
+              <Input value={regionForm.capital_city} onChange={(e) => setRegionForm({...regionForm, capital_city: e.target.value})} placeholder="Douala" data-testid="region-capital-input" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRegionModal(false)}>Cancel</Button>
-            <Button onClick={handleSaveRegion}>Save</Button>
+            <Button onClick={handleSaveRegion} data-testid="save-region-btn">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
