@@ -402,6 +402,7 @@ export default function TravelBooking() {
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
+    setTravelCurrentStep(3);
 
     try {
       // Create order if not already created
