@@ -215,9 +215,7 @@ function Loyalty() {
 }
 
 // Admin Loyalty Program Management View
-    setLoading(true);
-    try {
-      const [programRes, txRes, rewardsRes, redemptionsRes, referralRes] = await Promise.all([
+function AdminLoyaltyView() {
         api.get('/loyalty/program'),
         api.get('/loyalty/transactions'),
         api.get('/loyalty/rewards'),
