@@ -102,10 +102,17 @@ class TestOperatorOwnerCreation(TestAuth):
         assert "access_token" in data, "Login should return access_token"
         user = data.get("user", {})
         assert user.get("role") == "operator", f"User role should be 'operator', got {user.get('role')}"
-        assert user.get("operator_role") == "owner", f"operator_role should be 'owner', got {user.get('operator_role')}"
-        assert user.get("operator_id") == TestOperatorOwnerCreation.test_operator_id, "operator_id mismatch"
         
-        print(f"Owner login successful - role: {user.get('role')}, operator_role: {user.get('operator_role')}")
+        # operator_role may be in operator_context or directly in user
+        operator_context = user.get("operator_context", {})
+        operator_role = user.get("operator_role") or operator_context.get("operator_role")
+        assert operator_role == "owner", f"operator_role should be 'owner', got {operator_role}"
+        
+        # operator_id may be in operator_context or directly in user
+        operator_id = user.get("operator_id") or operator_context.get("operator_id")
+        assert operator_id == TestOperatorOwnerCreation.test_operator_id, f"operator_id mismatch: {operator_id} != {TestOperatorOwnerCreation.test_operator_id}"
+        
+        print(f"Owner login successful - role: {user.get('role')}, operator_role: {operator_role}")
     
     def test_create_operator_without_owner_account(self, super_admin_token):
         """POST /api/operators/ without create_owner_account should work (backwards compatible)"""
@@ -116,8 +123,8 @@ class TestOperatorOwnerCreation(TestAuth):
             "email": f"TEST_noowner_{unique_id}@testco.com",
             "phone": "+237600000003",
             "city": "Yaounde",
-            "operator_type": "hotels",
-            "service_types": ["hotels"],
+            "operator_type": "hotel",  # 'hotel' not 'hotels' - singular per enum
+            "service_types": ["hotel"],
             "country": "CM",
             "market_segment": "enterprise"
             # No owner account fields
