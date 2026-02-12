@@ -790,3 +790,30 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Settings.jsx Role Detection Fix**: Standardized isCustomer logic — removed redundant duplicate definition in renderSectionContent (was `user?.role === 'customer' || !user?.role`, now uses single consistent `!isAdmin && !isOperator`)
 - [x] **Mixed Content WebSocket Investigation**: Confirmed no WebSocket usage in frontend (NotificationContext uses HTTP polling). Backend WebSocket endpoints exist for live chat but frontend doesn't connect to them. Non-issue.
 - **Testing**: 100% verified via iteration_47 (9/9 backend, all frontend features)
+
+
+### Session: Feb 12, 2026 (Part 11) - Permissions & Access Control Audit
+
+- [x] **Permission Enforcement Audit**: Replaced manual role checks (`if role not in [...]`) with `require_permission()`/`require_any_permission()` dependency injection across 14 route files:
+  - `restaurants.py` — CRUD + menu management (restaurants.create/edit/delete/manage_menu)
+  - `cinema.py` — CRUD + films + showtimes (cinema.create/edit/delete/manage_screenings)
+  - `banquets.py` — CRUD (banquets.create/edit/delete)
+  - `pressing.py` — CRUD (pressing.create/edit/delete)
+  - `packages.py` — CRUD (packages.create/edit/delete)
+  - `travel.py` — CRUD (travel.create/edit/delete)
+  - `events.py` — CRUD (events.create/edit/delete)
+  - `rooms.py` — Update/Delete (hotels.manage_rooms)
+  - `users.py` — Full CRUD + role/activity (users.create/edit/delete/manage_roles/view_activity)
+  - `employees.py` — Full CRUD (employees.view/create/edit/delete)
+  - `loyalty.py` — Admin endpoints (loyalty.view/manage_rewards/manage_programs)
+  - `promo_codes.py` — Full CRUD (promo.view/create/edit/delete)
+  - `activity_log.py` — View + Export (activity.view/export)
+  - `orders.py` — Edit + Process (orders.edit/process)
+- [x] **New Endpoints Created**:
+  - `PUT /api/events/{id}` — Update event (requires events.edit)
+  - `DELETE /api/events/{id}` — Delete event (requires events.delete)
+  - `PUT /api/orders/{id}` — Update order (requires orders.edit)
+  - `PUT /api/orders/{id}/process` — Process pending order (requires orders.process)
+  - `GET /api/activity/export` — Export activity logs (requires activity.export)
+- [x] **Admin Default Permissions Expanded**: Added 40+ permissions for admin role including all service CRUD, employee/pod/scope management, geography management, validation, orders, promo codes
+- **Testing**: 100% verified via iteration_48 (41/42 passed, 1 skipped)
