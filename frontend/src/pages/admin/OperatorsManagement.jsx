@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building, Plus, Search, Edit, Trash2, Eye, Ban, CheckCircle,
   Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog, Shield,
-  ChevronLeft, ChevronRight, Globe
+  ChevronLeft, ChevronRight, Globe, Filter, X as XIcon
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate } from '@/utils/dateUtils';
