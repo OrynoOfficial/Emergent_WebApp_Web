@@ -196,6 +196,7 @@ export default function RestaurantBooking() {
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
+    setRestaurantCurrentStep(3);
 
     try {
       const p = calculatePricing();
