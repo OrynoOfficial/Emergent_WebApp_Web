@@ -68,6 +68,7 @@ from routes.employee_scopes import router as employee_scopes_router
 from routes.customer_location import router as customer_location_router
 from routes.communications import router as communications_router
 from routes.favourites import router as favourites_router
+from routes.seat_ws import router as seat_ws_router
 
 # Create the main app
 app = FastAPI(
