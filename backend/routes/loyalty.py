@@ -255,7 +255,7 @@ async def redeem_reward(
         "user_id": current_user["_id"],
         "loyalty_program_id": program["_id"],
         "reward_id": reward_id,
-        "reward_name": reward["name"],
+        "reward_name": reward.get("name") or reward.get("title", "Reward"),
         "points_used": reward["points_required"],
         "status": "pending",
         "code": code,
