@@ -531,6 +531,9 @@ export default function TravelBooking() {
       </div>
       
       <div className="max-w-6xl mx-auto px-4 py-8">
+          {/* Step Indicator */}
+          <TravelStepIndicator currentStep={travelCurrentStep} />
+
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Left Column - Forms */}
             <div className="lg:col-span-2 space-y-6">
