@@ -226,29 +226,40 @@ async def get_user_effective_permissions(user_id: str, db) -> set:
     # Default permissions for admin role
     if user_role == "admin":
         admin_default_perms = [
-            "users.view", "users.create", "users.edit",
+            "users.view", "users.create", "users.edit", "users.delete",
+            "users.manage_roles", "users.view_activity",
             "operators.view", "operators.create", "operators.edit",
-            "orders.view", "orders.manage",
+            "orders.view", "orders.view_all", "orders.edit", "orders.cancel", "orders.process",
             "receipts.view",
             "loyalty.view",  # Read-only for admin
             "ratings.view", "ratings.manage",
-            "support.view", "support.manage",
+            "support.view_tickets", "support.manage_tickets",
             "activity.view",
-            "validation.view", "validation.manage",
+            "validation.view", "validation.approve", "validation.reject",
             "analytics.view_dashboard",
+            "employees.view", "employees.create", "employees.edit", "employees.delete",
+            "promo.view", "promo.create", "promo.edit",
             # Role management - limited (can create custom roles, not system roles)
             "access.view_roles", "access.create_roles", "access.edit_roles",
-            "access.assign_roles",  # Can assign roles to users
+            "access.assign_roles",
             # Service management permissions
-            "hotels.view", "hotels.create", "hotels.edit",
-            "travel.view", "travel.create", "travel.edit",
-            "car_rental.view", "car_rental.create", "car_rental.edit",
-            "restaurants.view", "restaurants.create", "restaurants.edit",
-            "events.view", "events.create", "events.edit",
-            "laundry.view", "laundry.create", "laundry.edit",
-            "banquet.view", "banquet.create", "banquet.edit",
-            "cinema.view", "cinema.create", "cinema.edit",
-            "packages.view", "packages.create", "packages.edit",
+            "hotels.view", "hotels.create", "hotels.edit", "hotels.delete", "hotels.manage_rooms",
+            "travel.view", "travel.create", "travel.edit", "travel.delete",
+            "car_rental.view", "car_rental.create", "car_rental.edit", "car_rental.delete",
+            "restaurants.view", "restaurants.create", "restaurants.edit", "restaurants.delete",
+            "restaurants.manage_menu", "restaurants.manage_reservations",
+            "events.view", "events.create", "events.edit", "events.delete",
+            "pressing.view", "pressing.create", "pressing.edit", "pressing.delete",
+            "banquets.view", "banquets.create", "banquets.edit", "banquets.delete",
+            "cinema.view", "cinema.create", "cinema.edit", "cinema.delete",
+            "cinema.manage_screenings",
+            "packages.view", "packages.create", "packages.edit", "packages.delete",
+            # Pod and scope management
+            "pods.view", "pods.create", "pods.edit", "pods.delete",
+            "pods.manage_members", "pods.manage_operators",
+            "employee_scopes.view", "employee_scopes.create", "employee_scopes.edit",
+            "employee_scopes.delete", "employee_scopes.assign",
+            "geography.view", "geography.create", "geography.edit", "geography.delete",
         ]
         permissions.update(admin_default_perms)
     
