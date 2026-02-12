@@ -47,6 +47,8 @@ export default function UserManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [activeView, setActiveView] = useState('users'); // 'users' or 'invitations'
   const [createForm, setCreateForm] = useState({
     email: '',
     full_name: '',
