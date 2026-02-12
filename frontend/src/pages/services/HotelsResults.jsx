@@ -952,6 +952,8 @@ export default function HotelsResults() {
                 hotel={hotel}
                 nights={nights}
                 onViewDetails={handleViewDetails}
+                isFav={isFav}
+                toggleFav={toggleFav}
               />
             ))}
           </div>
