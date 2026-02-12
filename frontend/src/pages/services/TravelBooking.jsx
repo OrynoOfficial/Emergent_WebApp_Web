@@ -662,8 +662,9 @@ export default function TravelBooking() {
 
             {/* Right Column - Summary */}
             <div className="lg:col-span-1">
-              <div className="sticky top-24">
-                <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
+              <div className="sticky top-24 space-y-5">
+                {/* Trip Summary Card */}
+                <div className="rounded-2xl shadow-lg bg-white overflow-hidden border border-slate-100">
                   <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
                     <div className="flex items-center gap-3 text-white">
                       <div className="p-2 bg-white/20 rounded-xl">
@@ -671,92 +672,105 @@ export default function TravelBooking() {
                       </div>
                       <div>
                         <h3 className="font-bold text-lg">Trip Summary</h3>
-                        <p className="text-sm text-white/70">{passengers.length} passenger{passengers.length > 1 ? 's' : ''}</p>
+                        <p className="text-sm text-white/70">{passengers.length} passenger{passengers.length > 1 ? 's' : ''}{isRoundTrip ? ' · Round Trip' : ''}</p>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="p-5">
+                  <div className="p-5 space-y-4">
                     {/* Outbound Trip */}
-                    <div className="space-y-3 mb-4">
-                      <h4 className="font-semibold text-slate-800">Outbound Trip</h4>
+                    <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <h4 className="font-semibold text-slate-800 text-sm">Outbound</h4>
+                      </div>
                       <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Bus className="w-4 h-4 text-blue-500" />
-                          <span>{outbound.operator_name}</span>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Bus className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span className="font-medium text-slate-800">{outbound.operator_name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <MapPin className="w-4 h-4 text-blue-500" />
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           <span>{outbound.from_city} → {outbound.to_city}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Calendar className="w-4 h-4 text-blue-500" />
-                          <span>{format(outboundDate, 'MMM d, yyyy')}</span>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span>{format(outboundDate, 'EEE, MMM d, yyyy')}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Clock className="w-4 h-4 text-blue-500" />
-                          <span>{outbound.departure_time} - {outbound.arrival_time}</span>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span>{outbound.departure_time} – {outbound.arrival_time}</span>
                         </div>
                         {showSeatSelection && selectedSeats.length > 0 && (
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Armchair className="w-4 h-4 text-blue-500" />
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Armchair className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                             <span className="font-medium">Seats: {selectedSeats.join(', ')}</span>
                           </div>
                         )}
-                        <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.outboundPrice)}</p>
+                        <div className="pt-1">
+                          <span className="text-[#082c59] font-bold">{formatCurrency(pricing.outboundPrice)}</span>
+                        </div>
                       </div>
                     </div>
 
                     {/* Return Trip */}
                     {isRoundTrip && returnTrip && (
-                      <div className="space-y-3 mb-4 pt-4 border-t border-slate-200">
-                        <h4 className="font-semibold text-slate-800">Return Trip</h4>
+                      <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <h4 className="font-semibold text-slate-800 text-sm">Return</h4>
+                        </div>
                         <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Bus className="w-4 h-4 text-blue-500" />
-                            <span>{returnTrip.operator_name}</span>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Bus className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span className="font-medium text-slate-800">{returnTrip.operator_name}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <MapPin className="w-4 h-4 text-blue-500" />
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                             <span>{returnTrip.from_city} → {returnTrip.to_city}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Calendar className="w-4 h-4 text-blue-500" />
-                            <span>{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'MMM d, yyyy') : 'Date TBD'}</span>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span>{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'EEE, MMM d, yyyy') : 'Date TBD'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Clock className="w-4 h-4 text-blue-500" />
-                            <span>{returnTrip.departure_time} - {returnTrip.arrival_time}</span>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span>{returnTrip.departure_time} – {returnTrip.arrival_time}</span>
                           </div>
                           {showSeatSelection && returnSelectedSeats.length > 0 && (
-                            <div className="flex items-center gap-2 text-slate-700">
-                              <Armchair className="w-4 h-4 text-blue-500" />
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Armchair className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                               <span className="font-medium">Seats: {returnSelectedSeats.join(', ')}</span>
                             </div>
                           )}
-                          <p className="text-emerald-600 font-semibold">{formatCurrency(pricing.returnPrice)}</p>
+                          <div className="pt-1">
+                            <span className="text-emerald-700 font-bold">{formatCurrency(pricing.returnPrice)}</span>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {/* Extras */}
                     {extraLuggage > 0 && (
-                      <div className="pt-4 border-t border-slate-200 mb-4">
-                        <div className="flex justify-between text-sm text-slate-700">
-                          <span>Extra Luggage × {extraLuggage}</span>
-                          <span className="text-emerald-600">{formatCurrency(pricing.extras)}</span>
-                        </div>
+                      <div className="flex justify-between items-center text-sm px-1">
+                        <span className="text-slate-600">Extra Luggage x {extraLuggage}</span>
+                        <span className="font-medium text-slate-800">{formatCurrency(pricing.extras)}</span>
                       </div>
                     )}
                   </div>
+                </div>
 
-                  {/* Pricing Summary */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 -mx-5 p-5 rounded-b-xl">
-                    <h4 className="font-semibold text-white mb-3">Payment Summary</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-slate-300">
+                {/* Price Breakdown Card */}
+                <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
+                  <div className="bg-white p-5">
+                    <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-600" />
+                      Price Breakdown
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between text-slate-600">
                         <span>Subtotal</span>
-                        <span>{formatCurrency(pricing.subtotal)}</span>
+                        <span className="font-medium text-slate-800">{formatCurrency(pricing.subtotal)}</span>
                       </div>
                       
                       <CommissionBreakdown
@@ -768,95 +782,102 @@ export default function TravelBooking() {
                       />
 
                       {/* Promo Code */}
-                      <div className="space-y-2 pt-2">
+                      <div className="pt-2">
                         {!appliedPromo ? (
                           <div className="flex gap-2">
                             <Input
                               placeholder="Promo code"
                               value={promoCode}
                               onChange={(e) => setPromoCode(e.target.value)}
-                              className="flex-1 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                              className="flex-1 bg-slate-50 border-slate-200 text-sm"
+                              data-testid="promo-code-input"
                             />
                             <Button
                               onClick={validatePromoCode}
                               variant="outline"
-                              className="bg-slate-700 hover:bg-slate-600 text-white border-slate-600"
+                              size="sm"
+                              className="shrink-0"
                             >
                               Apply
                             </Button>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-between p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                          <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg">
                             <div className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-green-400" />
-                              <span className="text-sm text-green-400 font-medium">{appliedPromo.code}</span>
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span className="text-sm text-emerald-700 font-medium">{appliedPromo.code}</span>
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => { setAppliedPromo(null); setPromoCode(''); }}
-                              className="text-red-400 hover:text-red-300 h-7 px-2"
+                              className="text-red-500 hover:text-red-600 h-7 px-2"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         )}
-                        {promoError && <p className="text-red-400 text-sm">{promoError}</p>}
+                        {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
                       </div>
 
                       {pricing.discount > 0 && appliedPromo && (
-                        <div className="flex justify-between text-green-400">
+                        <div className="flex justify-between text-emerald-600">
                           <span>Discount ({appliedPromo.code})</span>
                           <span>-{formatCurrency(pricing.discount)}</span>
                         </div>
                       )}
 
-                      <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-700">
-                        <span className="text-white font-semibold">Total</span>
-                        <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
+                      <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
+                        <span className="font-bold text-slate-900">Total</span>
+                        <span className="text-2xl font-bold text-[#082c59]">{formatCurrency(pricing.total)}</span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Payment */}
-                    <div className="pt-4 mt-4 border-t border-slate-700">
-                      <PaymentMethodsSelection
-                        amount={pricing.total}
-                        customerPhone={passengers[0]?.phoneNumber}
-                        customerEmail={user?.email}
-                        serviceDetails={{
-                          service_category: 'travel',
-                          service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
-                          operator_id: outbound.operator_id,
-                          operator_name: outbound.operator_name,
-                          booking_details: {
-                            outbound,
-                            return: returnTrip,
-                            passengers,
-                            extraLuggage,
-                            selectedSeats: showSeatSelection ? selectedSeats : [],
-                            returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
-                            seat_booking_ids: showSeatSelection ? seatBookingIds : [],
-                            return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
-                          }
-                        }}
-                        onPaymentInitiated={handlePaymentInitiated}
-                        disabled={!isFormValid || paymentInProgress}
-                        triggerPayment={triggerPayment}
-                        onTrigger={() => setPaymentInProgress(true)}
-                        orderId={orderId}
-                        onMoMoDialogOpen={handleMoMoDialogOpen}
-                        onProcessingChange={handleProcessingChange}
-                      />
-                      
-                      <Button
-                        onClick={handlePayButtonClick}
-                        disabled={!isFormValid || paymentInProgress}
-                        className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white mt-4 rounded-xl shadow-lg font-semibold"
-                      >
-                        {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bus className="mr-2 h-4 w-4" />}
-                        {paymentInProgress ? 'Processing...' : `Book Trip • ${formatCurrency(pricing.total)}`}
-                      </Button>
-                    </div>
+                  {/* Payment Section */}
+                  <div className="bg-slate-50 border-t border-slate-200 p-5">
+                    <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-blue-600" />
+                      Select Payment Method
+                    </h4>
+                    <PaymentMethodsSelection
+                      amount={pricing.total}
+                      customerPhone={passengers[0]?.phoneNumber}
+                      customerEmail={user?.email}
+                      serviceDetails={{
+                        service_category: 'travel',
+                        service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
+                        operator_id: outbound.operator_id,
+                        operator_name: outbound.operator_name,
+                        booking_details: {
+                          outbound,
+                          return: returnTrip,
+                          passengers,
+                          extraLuggage,
+                          selectedSeats: showSeatSelection ? selectedSeats : [],
+                          returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
+                          seat_booking_ids: showSeatSelection ? seatBookingIds : [],
+                          return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
+                        }
+                      }}
+                      onPaymentInitiated={handlePaymentInitiated}
+                      disabled={!isFormValid || paymentInProgress}
+                      triggerPayment={triggerPayment}
+                      onTrigger={() => setPaymentInProgress(true)}
+                      orderId={orderId}
+                      onMoMoDialogOpen={handleMoMoDialogOpen}
+                      onProcessingChange={handleProcessingChange}
+                    />
+                    
+                    <Button
+                      onClick={handlePayButtonClick}
+                      disabled={!isFormValid || paymentInProgress}
+                      className="w-full h-12 text-base bg-[#082c59] hover:bg-[#0a3a75] text-white mt-4 rounded-xl shadow-lg font-semibold"
+                      data-testid="book-trip-btn"
+                    >
+                      {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bus className="mr-2 h-4 w-4" />}
+                      {paymentInProgress ? 'Processing...' : `Book Trip · ${formatCurrency(pricing.total)}`}
+                    </Button>
                   </div>
                 </div>
               </div>
