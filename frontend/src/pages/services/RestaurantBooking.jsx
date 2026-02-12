@@ -63,6 +63,7 @@ export default function RestaurantBooking() {
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [restaurantCurrentStep, setRestaurantCurrentStep] = useState(1);
   
   const [formData, setFormData] = useState({
     name: '',
