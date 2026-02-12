@@ -1206,6 +1206,143 @@ export default function Permissions() {
           </Card>
         </TabsContent>
         )}
+
+        {/* Audit Trail Tab */}
+        {isSuperAdmin && (
+        <TabsContent value="audit-trail" className="mt-6 space-y-6">
+          {/* Stats Cards */}
+          {auditStats && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-gradient-to-br from-red-50 to-red-100/50 border-red-200">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-red-100 rounded-xl"><ShieldAlert className="h-5 w-5 text-red-600" /></div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-700">{auditStats.total_denials?.toLocaleString()}</p>
+                      <p className="text-xs text-red-600 font-medium">Total Denials</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardContent className="p-5">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Top Blocked Users</p>
+                  <div className="space-y-2">
+                    {(auditStats.top_denied_users || []).slice(0, 3).map((u, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm text-slate-700 truncate max-w-[180px]">{u.email}</span>
+                        <Badge variant="outline" className="text-xs text-red-600 border-red-200">{u.count}</Badge>
+                      </div>
+                    ))}
+                    {(!auditStats.top_denied_users || auditStats.top_denied_users.length === 0) && (
+                      <p className="text-xs text-slate-400">No data yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-slate-200">
+                <CardContent className="p-5">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Most Blocked Permissions</p>
+                  <div className="space-y-2">
+                    {(auditStats.top_denied_permissions || []).slice(0, 3).map((p, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <code className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[180px]">{p.permission}</code>
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">{p.count}</Badge>
+                      </div>
+                    ))}
+                    {(!auditStats.top_denied_permissions || auditStats.top_denied_permissions.length === 0) && (
+                      <p className="text-xs text-slate-400">No data yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Audit Log Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-red-500" /> Permission Denial Log</CardTitle>
+                <div className="flex items-center gap-2">
+                  <div className="relative w-56">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Filter by permission..."
+                      value={auditFilter}
+                      onChange={(e) => setAuditFilter(e.target.value)}
+                      className="pl-10 bg-white text-sm"
+                      data-testid="audit-filter-input"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => loadAuditTrail(1)} data-testid="audit-refresh-btn">
+                    <Search className="h-4 w-4 mr-1" /> Search
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {auditLoading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
+              ) : auditTrail.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShieldCheck className="h-12 w-12 text-emerald-300 mx-auto mb-3" />
+                  <p className="text-slate-500 font-medium">No permission denials recorded</p>
+                  <p className="text-xs text-slate-400 mt-1">All access attempts have been authorized</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" data-testid="audit-trail-table">
+                      <thead>
+                        <tr className="border-b bg-slate-50">
+                          <th className="text-left py-3 px-3 text-xs font-semibold text-slate-600 uppercase">Time</th>
+                          <th className="text-left py-3 px-3 text-xs font-semibold text-slate-600 uppercase">User</th>
+                          <th className="text-left py-3 px-3 text-xs font-semibold text-slate-600 uppercase">Role</th>
+                          <th className="text-left py-3 px-3 text-xs font-semibold text-slate-600 uppercase">Required Permissions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditTrail.map((log, i) => (
+                          <tr key={i} className="border-b hover:bg-red-50/30 transition-colors">
+                            <td className="py-3 px-3 text-xs text-slate-500 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-3 w-3 text-slate-400" />
+                                {log.timestamp ? new Date(log.timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
+                              <p className="font-medium text-slate-900 text-sm">{log.user_email}</p>
+                            </td>
+                            <td className="py-3 px-3">
+                              <Badge variant="outline" className="text-xs capitalize">{log.user_role}</Badge>
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="flex flex-wrap gap-1">
+                                {(log.required_permissions || []).map((p, j) => (
+                                  <code key={j} className="text-xs bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">{p}</code>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                    <p className="text-sm text-slate-500">{auditTotal} total denials</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" disabled={auditPage <= 1} onClick={() => loadAuditTrail(auditPage - 1)}>Previous</Button>
+                      <Button variant="outline" size="sm" disabled={auditPage * 30 >= auditTotal} onClick={() => loadAuditTrail(auditPage + 1)}>Next</Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
       </Tabs>
 
       {/* Create/Edit Role Dialog */}
