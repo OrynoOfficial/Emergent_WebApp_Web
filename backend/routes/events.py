@@ -107,6 +107,71 @@ async def get_event(event_id: str):
     return event
 
 
+class EventUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    event_type: Optional[str] = None
+    venue: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    event_date: Optional[datetime] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    ticket_price: Optional[float] = None
+    total_seats: Optional[int] = None
+    images: Optional[list] = None
+
+
+@router.put("/{event_id}")
+async def update_event(
+    event_id: str,
+    event_data: EventUpdate,
+    current_user: dict = Depends(require_any_permission(["events.edit", "operator.services.edit"]))
+):
+    """Update an event - requires events.edit permission"""
+    db = get_database()
+
+    event = await db.events.find_one({"_id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    # Operator ownership check
+    if current_user["role"] == "operator":
+        operator_id = current_user.get("operator_id") or current_user.get("_id")
+        if event.get("operator_id") != operator_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this event")
+
+    update_dict = {k: v for k, v in event_data.dict().items() if v is not None}
+    update_dict["updated_at"] = datetime.utcnow()
+
+    await db.events.update_one({"_id": event_id}, {"$set": update_dict})
+
+    return {"message": "Event updated successfully"}
+
+
+@router.delete("/{event_id}")
+async def delete_event(
+    event_id: str,
+    current_user: dict = Depends(require_any_permission(["events.delete", "operator.services.delete"]))
+):
+    """Delete an event - requires events.delete permission"""
+    db = get_database()
+
+    event = await db.events.find_one({"_id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    # Operator ownership check
+    if current_user["role"] == "operator":
+        operator_id = current_user.get("operator_id") or current_user.get("_id")
+        if event.get("operator_id") != operator_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this event")
+
+    await db.events.delete_one({"_id": event_id})
+
+    return {"message": "Event deleted successfully"}
+
+
 class EventBookingCreate(BaseModel):
     event_id: str
     event_name: str
