@@ -327,6 +327,9 @@ export default function AdminLoyaltyView() {
                       </div>
                       {isSuperAdmin && (
                         <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-violet-600" title="Generate Promo Code" onClick={() => handleGeneratePromo(reward)} disabled={generatingPromo === reward.id} data-testid={`gen-promo-${reward.id}`}>
+                            {generatingPromo === reward.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Tag className="h-4 w-4" />}
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditReward(reward)}><Edit2 className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => handleDeleteReward(reward.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
