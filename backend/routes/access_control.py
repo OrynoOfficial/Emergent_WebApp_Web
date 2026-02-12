@@ -510,7 +510,6 @@ async def get_available_permissions(
     current_user: dict = Depends(require_permission("access.view_permissions"))
 ):
     """Get all available permission codes grouped by module - requires access.view_permissions"""
-    from utils.permissions import get_all_permissions
     
     permissions_by_module = get_all_permissions()
     
