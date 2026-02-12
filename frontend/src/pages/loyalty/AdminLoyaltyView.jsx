@@ -354,9 +354,9 @@ export default function AdminLoyaltyView() {
                     <tr className="border-b bg-slate-50">
                       <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Code</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Reward</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Source</th>
                       <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Discount</th>
                       <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Used / Limit</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Valid Until</th>
                       <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Status</th>
                       <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Copy</th>
                     </tr>
