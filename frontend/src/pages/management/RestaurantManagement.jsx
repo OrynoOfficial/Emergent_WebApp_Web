@@ -537,14 +537,14 @@ export default function RestaurantManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-white border shadow-sm p-1 rounded-xl mb-6">
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
-            <TabsTrigger value="management" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+            <TabsTrigger value="management">
               <Utensils className="h-4 w-4 mr-2" /> Management
             </TabsTrigger>
-            <TabsTrigger value="communications" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-lg px-4 py-2">
+            <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
             </TabsTrigger>
           </TabsList>
