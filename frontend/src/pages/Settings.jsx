@@ -51,6 +51,96 @@ const ADMIN_SETTINGS_SECTIONS = [
   { key: 'api_keys', label: 'API Keys', icon: Key, description: 'Manage API integrations' },
 ];
 
+const SERVICE_ICONS = {
+  hotels: Hotel, travel: Bus, car_rental: Car, restaurants: Utensils,
+  events: Calendar, cinema: Film, laundry: Sparkles, banquets: Gift, packages: Package
+};
+
+function FavouritesSection() {
+  const [favourites, setFavourites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const params = filter !== 'all' ? `?service_type=${filter}` : '';
+        const res = await api.get(`/favourites/${params}`);
+        setFavourites(res.data.favourites || []);
+      } catch { setFavourites([]); }
+      finally { setLoading(false); }
+    };
+    load();
+  }, [filter]);
+
+  const removeFav = async (svc, itemId) => {
+    try {
+      await api.delete(`/favourites/${svc}/${itemId}`);
+      setFavourites(prev => prev.filter(f => !(f.service_type === svc && f.item_id === itemId)));
+      toast.success('Removed from favourites');
+    } catch { toast.error('Failed to remove'); }
+  };
+
+  const serviceTypes = [...new Set(favourites.map(f => f.service_type))];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-bold text-slate-900 mb-1">Your Favourites</h3>
+          <p className="text-sm text-slate-500">{favourites.length} saved item{favourites.length !== 1 ? 's' : ''}</p>
+        </div>
+        {serviceTypes.length > 1 && (
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="text-sm border rounded-lg px-3 py-1.5 bg-white">
+            <option value="all">All Services</option>
+            {serviceTypes.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+          </select>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+      ) : favourites.length === 0 ? (
+        <div className="text-center py-12 bg-slate-50 rounded-xl">
+          <Heart className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium">No favourites yet</p>
+          <p className="text-sm text-slate-400 mt-1">Tap the heart icon on any service to save it here</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {favourites.map((fav, i) => {
+            const Icon = SERVICE_ICONS[fav.service_type] || Heart;
+            return (
+              <div key={i} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow" data-testid={`fav-item-${fav.item_id}`}>
+                {fav.item_image ? (
+                  <img src={fav.item_image} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center"><Icon className="h-6 w-6 text-slate-400" /></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-900 truncate">{fav.item_name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-slate-500 capitalize bg-slate-100 px-2 py-0.5 rounded">{fav.service_type.replace('_', ' ')}</span>
+                    {fav.item_location && <span className="text-xs text-slate-500">{fav.item_location}</span>}
+                    {fav.item_rating > 0 && <span className="text-xs text-amber-600 flex items-center gap-0.5"><Star className="h-3 w-3" />{fav.item_rating}</span>}
+                  </div>
+                  {fav.item_price > 0 && <p className="text-sm font-bold text-[#082c59] mt-1">{fav.item_price.toLocaleString()} FCFA</p>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => removeFav(fav.service_type, fav.item_id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user, logout, reAuthenticate } = useAuth();
   const navigate = useNavigate();
