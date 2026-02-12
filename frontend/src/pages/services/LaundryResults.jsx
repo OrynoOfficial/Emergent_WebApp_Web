@@ -180,6 +180,8 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
 };
 
 export default function LaundryResults() {
+
+  const { isFav, toggleFav } = useFavourites('laundry');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [services, setServices] = useState([]);
@@ -343,13 +345,13 @@ export default function LaundryResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredServices.map((service) => (
-              <ServiceCardGrid key={service.id} service={service} onBook={handleBook} />
+              <ServiceCardGrid key={service.id} service={service} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredServices.map((service) => (
-              <ServiceCardList key={service.id} service={service} onBook={handleBook} />
+              <ServiceCardList key={service.id} service={service} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}

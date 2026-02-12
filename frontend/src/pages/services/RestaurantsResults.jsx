@@ -301,6 +301,7 @@ const RestaurantCardList = ({ restaurant, onViewDetails, isFav, toggleFav }) => 
 };
 
 export default function RestaurantsResults() {
+  const { isFav, toggleFav } = useFavourites('restaurants');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [restaurants, setRestaurants] = useState([]);
@@ -605,6 +606,8 @@ export default function RestaurantsResults() {
           <div className="space-y-4">
             {filteredRestaurants.map((restaurant) => (
               <RestaurantCardList
+                isFav={isFav}
+                toggleFav={toggleFav}
                 key={restaurant.id}
                 restaurant={restaurant}
                 onViewDetails={handleViewDetails}

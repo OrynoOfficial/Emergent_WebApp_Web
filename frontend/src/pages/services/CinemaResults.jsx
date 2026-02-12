@@ -179,6 +179,8 @@ const FilmCardList = ({ film, onViewDetails, isFav, toggleFav }) => {
 };
 
 export default function CinemaResults() {
+
+  const { isFav, toggleFav } = useFavourites('cinema');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [films, setFilms] = useState([]);
@@ -340,13 +342,13 @@ export default function CinemaResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFilms.map((film) => (
-              <FilmCardGrid key={film.id} film={film} onViewDetails={handleViewDetails} />
+              <FilmCardGrid key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredFilms.map((film) => (
-              <FilmCardList key={film.id} film={film} onViewDetails={handleViewDetails} />
+              <FilmCardList key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}

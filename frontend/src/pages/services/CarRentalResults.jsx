@@ -231,6 +231,8 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
 };
 
 export default function CarRentalResults() {
+
+  const { isFav, toggleFav } = useFavourites('car_rental');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);

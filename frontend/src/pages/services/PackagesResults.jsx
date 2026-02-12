@@ -200,6 +200,8 @@ const ServiceCardList = ({ service, packageSize, onSelect, isFav, toggleFav }) =
 };
 
 export default function PackagesResults() {
+
+  const { isFav, toggleFav } = useFavourites('packages');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [services, setServices] = useState([]);
@@ -377,13 +379,13 @@ export default function PackagesResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredServices.map((service) => (
-              <ServiceCardGrid key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} />
+              <ServiceCardGrid key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredServices.map((service) => (
-              <ServiceCardList key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} />
+              <ServiceCardList key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}
