@@ -168,12 +168,17 @@ async def get_recent_communications(
     # Combine and sort by date
     combined = announcements + alerts + notifications
     
-    # Helper to get sortable datetime from item
+    # Helper to get sortable datetime from item (normalize to UTC for comparison)
     def get_sort_date(item):
         created = item.get("created_at")
         if isinstance(created, datetime):
-            return created
-        return datetime.min.replace(tzinfo=timezone.utc)
+            # Convert to UTC timestamp for consistent comparison
+            if created.tzinfo is None:
+                # Naive datetime - assume UTC
+                return created.timestamp()
+            else:
+                return created.timestamp()
+        return 0  # Put items without valid date at the end
     
     combined.sort(key=get_sort_date, reverse=True)
 
