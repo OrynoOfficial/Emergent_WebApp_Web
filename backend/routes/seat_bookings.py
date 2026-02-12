@@ -193,6 +193,9 @@ async def reserve_seats(
     }
     
     await db.orders.insert_one(order)
+
+    # Broadcast real-time update to all connected WebSocket clients
+    await _notify_seat_change(reservation.route_id, reservation.travel_date)
     
     return {
         "message": "Seats reserved",
