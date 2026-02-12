@@ -560,9 +560,9 @@ export default function CarRentalBooking() {
 
           {/* Right Column - Summary */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                {/* Vehicle Preview */}
+            <div className="sticky top-24 space-y-5">
+              {/* Vehicle Summary Card */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
                 <div className="relative h-48 bg-gradient-to-br from-emerald-400 to-emerald-600">
                   {car.image || car.images?.[0] ? (
                     <img src={car.image || car.images?.[0]} alt={car.name} className="w-full h-full object-cover" />
@@ -572,72 +572,93 @@ export default function CarRentalBooking() {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <Badge className="absolute top-4 left-4 bg-emerald-500 capitalize">{car.type}</Badge>
+                  <Badge className="absolute top-4 left-4 bg-emerald-500 capitalize">{car.type || car.vehicle_type || 'Car'}</Badge>
                   <div className="absolute bottom-4 left-4 right-4">
-                    <h3 className="text-white font-bold text-lg">{car.name}</h3>
+                    <h3 className="text-white font-bold text-lg">{car.name || car.vehicle_name || 'Vehicle'}</h3>
                     <div className="flex items-center gap-3 text-white/80 text-sm mt-1">
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {car.seats || 5}</span>
-                      <span className="flex items-center gap-1"><Settings className="w-3 h-3" /> {car.transmission}</span>
-                      <span className="flex items-center gap-1"><Fuel className="w-3 h-3" /> {car.fuel || car.fuel_type}</span>
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {car.seats || car.capacity || 5} seats</span>
+                      <span className="flex items-center gap-1"><Settings className="w-3 h-3" /> {car.transmission || 'Automatic'}</span>
+                      <span className="flex items-center gap-1"><Fuel className="w-3 h-3" /> {car.fuel || car.fuel_type || 'Petrol'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-5">
                   {/* Rental Details */}
-                  <div className="mb-4 pb-4 border-b border-slate-100">
-                    <h4 className="font-semibold text-slate-800 mb-3">Rental Details</h4>
+                  <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <h4 className="font-semibold text-slate-800 text-sm">Rental Details</h4>
+                    </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 text-slate-600">
-                        <MapPin className="w-4 h-4 text-emerald-500" />
-                        <span>{car.pickupLocation}</span>
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>{car.pickupLocation || car.pickup_location || 'Selected Location'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-slate-600">
-                        <Calendar className="w-4 h-4 text-emerald-500" />
+                        <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>
-                          {car.pickupDate ? format(new Date(car.pickupDate), 'MMM d') : 'Start'} 
+                          {car.pickupDate ? format(new Date(car.pickupDate), 'EEE, MMM d') : 'Pickup'} 
                           {' → '}
-                          {car.returnDate ? format(new Date(car.returnDate), 'MMM d, yyyy') : 'End'}
+                          {car.returnDate ? format(new Date(car.returnDate), 'EEE, MMM d, yyyy') : 'Return'}
                         </span>
                       </div>
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700">
-                        {pricing.days} day{pricing.days > 1 ? 's' : ''}
-                      </Badge>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 text-xs">
+                          {pricing.days} day{pricing.days > 1 ? 's' : ''}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Pricing Summary */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 -mx-5 -mb-5 p-5 rounded-b-2xl">
-                    <h4 className="font-semibold text-white mb-3">Price Breakdown</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-slate-300">
-                        <span>{formatCurrency(pricing.dailyRate)} × {pricing.days} days</span>
-                        <span>{formatCurrency(pricing.base)}</span>
-                      </div>
-                      {pricing.extras > 0 && (
-                        <div className="flex justify-between text-slate-300">
-                          <span>Extras</span>
-                          <span>+{formatCurrency(pricing.extras)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-slate-300">
-                        <span>Service Fee</span>
-                        <span>+{formatCurrency(pricing.commission)}</span>
-                      </div>
-                      <div className="pt-3 mt-3 border-t border-slate-700">
-                        <div className="flex justify-between items-center">
-                          <span className="text-white font-semibold">Total</span>
-                          <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
-                        </div>
-                      </div>
+                  {/* Selected Extras */}
+                  {selectedExtras.length > 0 && selectedExtras[0] !== 'none' && (
+                    <div className="mb-4 text-sm">
+                      <p className="text-slate-500 mb-1">Selected Extras:</p>
+                      {selectedExtras.filter(e => e !== 'none').map(eId => {
+                        const ext = EXTRAS.find(e => e.id === eId);
+                        return ext ? <div key={eId} className="flex justify-between"><span className="text-slate-600">{ext.name}</span><span className="font-medium">{formatCurrency(ext.price)}</span></div> : null;
+                      })}
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Progress checklist */}
-                    <div className="mt-4 p-3 bg-slate-700/50 rounded-lg space-y-2 text-sm">
-                      <div className={`flex items-center gap-2 ${extrasConfirmed ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {extrasConfirmed ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
-                        <span>Extras confirmed</span>
+              {/* Price Breakdown Card */}
+              <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
+                <div className="bg-white p-5">
+                  <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    Price Breakdown
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between text-slate-600">
+                      <span>{formatCurrency(pricing.dailyRate)} x {pricing.days} days</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(pricing.base)}</span>
+                    </div>
+                    {pricing.extras > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Extras</span>
+                        <span className="font-medium text-slate-800">+{formatCurrency(pricing.extras)}</span>
                       </div>
+                    )}
+                    <div className="flex justify-between text-slate-600">
+                      <span>Service Fee</span>
+                      <span className="font-medium text-slate-800">+{formatCurrency(pricing.commission)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
+                      <span className="font-bold text-slate-900">Total</span>
+                      <span className="text-2xl font-bold text-[#082c59]">{formatCurrency(pricing.total)}</span>
+                    </div>
+                  </div>
+
+                  {/* Progress checklist */}
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg space-y-2 text-sm">
+                    <div className={`flex items-center gap-2 ${extrasConfirmed ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {extrasConfirmed ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-300 rounded-full" />}
+                      <span>Extras confirmed</span>
+                    </div>
                       <div className={`flex items-center gap-2 ${isDriverInfoComplete ? 'text-emerald-400' : 'text-slate-400'}`}>
                         {isDriverInfoComplete ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
                         <span>Driver information complete</span>
