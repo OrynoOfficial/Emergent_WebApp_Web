@@ -80,7 +80,7 @@ export default function Layout({ children }) {
   
   useEffect(() => {
     if (user?.role === 'customer') {
-      api.get('/loyalty/').then(res => {
+      api.get('/loyalty/program').then(res => {
         setLoyaltyTier(res.data?.tier || null);
       }).catch(() => {});
     }
