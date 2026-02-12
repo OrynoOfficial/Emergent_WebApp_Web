@@ -86,9 +86,9 @@ async def get_pressing(pressing_id: str):
 async def update_pressing(
     pressing_id: str,
     pressing_data: PressingUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["pressing.edit", "operator.services.edit"]))
 ):
-    """Update a pressing service"""
+    """Update a pressing service - requires pressing.edit permission"""
     db = get_database()
     
     pressing = await db.pressings.find_one({"_id": pressing_id})
@@ -108,9 +108,9 @@ async def update_pressing(
 @router.delete("/{pressing_id}")
 async def delete_pressing(
     pressing_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["pressing.delete", "operator.services.delete"]))
 ):
-    """Delete a pressing service"""
+    """Delete a pressing service - requires pressing.delete permission"""
     db = get_database()
     
     pressing = await db.pressings.find_one({"_id": pressing_id})
