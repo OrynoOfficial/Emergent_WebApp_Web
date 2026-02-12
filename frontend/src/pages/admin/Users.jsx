@@ -490,6 +490,8 @@ export default function UserManagement() {
           </table>
         </div>
       )}
+      </>
+      )}
 
       {/* User Detail Modal */}
       <UserDetailModal
