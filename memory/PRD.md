@@ -749,3 +749,13 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Backend**: Extended RewardCreate/RewardUpdate models with new fields. New endpoints: `GET /loyalty/admin/members/{user_id}` (member detail with transactions/redemptions), `GET /loyalty/admin/stats/tier-history` (tier distribution data)
 - [x] **Bug Fix**: Member list was returning loyalty program ID instead of user ID — fixed for proper detail modal
 - **Testing**: 100% verified via iteration_44
+
+### Session: Feb 12, 2026 (Part 7) - Phase 3: Customer Loyalty & Referral System
+
+- [x] **Customer Loyalty Redesign**: 3-tab layout — "My Rewards" (tier roadmap with 4 circles + connecting progress, redeemed rewards), "Activity" (point transactions with earn/redeem styling), "Rewards" (redeemable cards with tier badges and progress)
+- [x] **Tier Roadmap**: Visual road with 4 tier circles (🥉→🥈→🥇→💎), connecting progress line, current tier highlighted, next tier progress bar
+- [x] **Tier Card**: Gradient header matching tier color, member since date, available points, stats grid
+- [x] **Referral System Backend**: `GET /loyalty/referral` (get/create referral code + stats), `POST /loyalty/referral/claim?referral_code=X` (claim a referral, award points to referrer). Collections: `referrals`, `referral_claims`
+- [x] **UI Color Refinement**: Referral card changed from bright green gradient to subtle blue/slate palette (bg-blue-50, border-blue-200)
+- [x] **Tier Auto-Recalculation**: GET /loyalty/program now auto-upgrades tier if total_points exceed threshold (fixed stale tier bug)
+- **Testing**: 100% verified via iteration_45
