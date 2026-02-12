@@ -121,77 +121,59 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   );
 };
 
-// List View Vehicle Card
+// List View Vehicle Card - Compact
 const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   const totalPrice = vehicle.price_per_day * days;
   const defaultImage = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800';
   const image = vehicle.images?.[0] || vehicle.image || defaultImage;
 
   return (
-    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
-      <div className="flex flex-col lg:flex-row">
-        {/* Image Section */}
-        <div className="lg:w-2/5 relative h-64 lg:h-auto min-h-[250px]">
+    <Card className="overflow-hidden bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+      <div className="flex flex-col md:flex-row">
+        {/* Image */}
+        <div className="md:w-56 relative h-44 md:h-auto md:min-h-[160px] flex-shrink-0">
           <img src={image} alt={vehicle.name} className="w-full h-full object-cover" />
-          <Badge className={`absolute top-3 left-3 capitalize shadow-md ${getVehicleTypeColor(vehicle.type)}`}>
+          <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 ${getVehicleTypeColor(vehicle.type)}`}>
             {vehicle.type}
           </Badge>
           {vehicle.rating && (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              {vehicle.rating} ({vehicle.trips} trips)
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">
+              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {vehicle.rating} ({vehicle.trips} trips)
             </div>
           )}
         </div>
         
-        {/* Content Section */}
-        <div className="lg:w-3/5 p-6 flex flex-col justify-between">
+        {/* Content */}
+        <div className="flex-1 p-4 flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-xl text-slate-900 mb-1">{vehicle.name}</h3>
-            <p className="text-slate-500 mb-4">{vehicle.year} • {vehicle.brand} {vehicle.model}</p>
+            <h3 className="font-bold text-base text-slate-900 mb-0.5">{vehicle.name}</h3>
+            <p className="text-xs text-slate-500 mb-3">{vehicle.year} · {vehicle.brand} {vehicle.model}</p>
             
-            {/* Specs */}
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#082c59]" />
-                <span className="text-slate-600">{vehicle.seats} seats</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-[#082c59]" />
-                <span className="text-slate-600 capitalize">{vehicle.transmission}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Fuel className="w-5 h-5 text-[#082c59]" />
-                <span className="text-slate-600 capitalize">{vehicle.fuel_type}</span>
-              </div>
+            <div className="flex flex-wrap gap-3 mb-2 text-xs text-slate-600">
+              <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.seats} seats</span>
+              <span className="flex items-center gap-1 capitalize"><Settings className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.transmission}</span>
+              <span className="flex items-center gap-1 capitalize"><Fuel className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.fuel_type}</span>
             </div>
             
-            {/* Features */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {vehicle.features?.map((feature, idx) => {
                 const Icon = getFeatureIcon(feature);
                 return (
-                  <Badge key={idx} variant="outline" className="bg-slate-50">
-                    <Icon className="w-3 h-3 mr-1" />
-                    {feature}
-                  </Badge>
+                  <span key={idx} className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 rounded text-[10px] text-slate-600 capitalize border border-slate-100">
+                    <Icon className="w-2.5 h-2.5" /> {feature}
+                  </span>
                 );
               })}
             </div>
           </div>
           
           {/* Price & CTA */}
-          <div className="flex items-center justify-between pt-4 border-t mt-4">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-3">
             <div>
-              <div className="text-sm text-slate-500">Per day</div>
-              <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
-              {days > 1 && (
-                <div className="bg-emerald-50 text-emerald-700 text-sm px-3 py-1 rounded-full inline-block mt-1">
-                  {days} days total: {formatFCFA(totalPrice)}
-                </div>
-              )}
+              <div className="text-lg font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
+              <div className="text-[10px] text-slate-500">per day{days > 1 ? ` · Total: ${formatFCFA(totalPrice)}` : ''}</div>
             </div>
-            <Button onClick={() => onSelect(vehicle)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl">
+            <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-9 px-4 text-xs">
               Select Vehicle
             </Button>
           </div>
