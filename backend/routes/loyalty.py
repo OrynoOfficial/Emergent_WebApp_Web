@@ -223,7 +223,7 @@ async def redeem_reward(
     reward_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Redeem a reward"""
+    """Redeem a reward — deducts points, generates a code usable as promo in bookings"""
     db = get_database()
     
     # Get reward - support both _id and id fields
@@ -249,21 +249,55 @@ async def redeem_reward(
     
     # Generate redemption code
     code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+    expires_at = datetime.utcnow() + timedelta(days=30)
     
-    # Create redemption
+    # Create redemption record
+    redemption_id = str(uuid.uuid4())
     redemption = {
-        "_id": str(uuid.uuid4()),
+        "_id": redemption_id,
         "user_id": current_user["_id"],
         "loyalty_program_id": program["_id"],
         "reward_id": reward_id,
         "reward_name": reward.get("name") or reward.get("title", "Reward"),
+        "reward_title": reward.get("title") or reward.get("name", "Reward"),
         "points_used": reward["points_required"],
-        "status": "pending",
+        "status": "active",
         "code": code,
-        "expires_at": datetime.utcnow() + timedelta(days=30),
+        "expires_at": expires_at,
         "created_at": datetime.utcnow()
     }
     await db.loyalty_redemptions.insert_one(redemption)
+    
+    # ALSO create a promo_codes entry so this code works in booking pages
+    discount_type = "percentage" if reward.get("type") == "discount" else "fixed"
+    discount_value = reward.get("discount_value", 0) or 0
+    
+    promo_entry = {
+        "_id": str(uuid.uuid4()),
+        "code": code,
+        "name": reward.get("title") or reward.get("name", "Loyalty Reward"),
+        "description": reward.get("description", ""),
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "min_order_amount": None,
+        "max_discount_amount": None,
+        "service_types": reward.get("service_types", []),
+        "usage_limit": 1,
+        "per_user_limit": 1,
+        "times_used": 0,
+        "valid_from": datetime.utcnow().isoformat(),
+        "valid_to": expires_at.isoformat(),
+        "is_active": True,
+        "first_order_only": False,
+        "source": "loyalty_redemption",
+        "redemption_id": redemption_id,
+        "reward_id": reward_id,
+        "redeemed_by": current_user["_id"],
+        "created_by": current_user["_id"],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+    await db.promo_codes.insert_one(promo_entry)
     
     # Deduct points
     await db.loyalty_programs.update_one(
@@ -278,7 +312,7 @@ async def redeem_reward(
         "loyalty_program_id": program["_id"],
         "transaction_type": "redeem",
         "points": -reward["points_required"],
-        "description": f"Redeemed: {reward['name']}",
+        "description": f"Redeemed: {reward.get('title', reward.get('name', 'Reward'))}",
         "created_at": datetime.utcnow()
     }
     await db.loyalty_transactions.insert_one(transaction)
@@ -286,7 +320,7 @@ async def redeem_reward(
     return {
         "message": "Reward redeemed",
         "redemption_code": code,
-        "expires_at": redemption["expires_at"].isoformat(),
+        "expires_at": expires_at.isoformat(),
         "points_used": reward["points_required"]
     }
 
