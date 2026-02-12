@@ -151,6 +151,10 @@ export default function AuthPage() {
     }
   }, []);
 
+  // OTP verification states
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpVerifyMessage, setOtpVerifyMessage] = useState('');
+
   // Verify phone OTP
   const verifyPhoneOTP = useCallback(async () => {
     if (phoneOtpValue.length !== 6) {
@@ -168,36 +172,37 @@ export default function AuthPage() {
       });
       
       if (response.data.status === 'success') {
-        // OTP verified, now complete registration
+        // OTP verified — show success feedback
+        setOtpVerified(true);
+        setOtpVerifyMessage('Code accepted! Creating your account...');
+        
+        // Now complete registration
         const result = await register(pendingRegistration);
         
         if (result.success || result.user_id) {
-          // Auto-login after successful registration
-          try {
-            const loginResult = await login(pendingRegistration.phone, pendingRegistration.password);
-            if (loginResult.access_token) {
-              navigate('/dashboard');
-            } else {
-              setError('Registration successful! Please login with your credentials.');
-              setCurrentView(AUTH_VIEWS.LOGIN);
-            }
-          } catch {
-            setError('Registration successful! Please login with your phone number.');
+          setOtpVerifyMessage('Your account has been activated!');
+          // Wait 2 seconds to show feedback, then redirect to login
+          setTimeout(() => {
+            setOtpVerified(false);
+            setOtpVerifyMessage('');
+            setPhoneOtpValue('');
+            setPendingRegistration(null);
             setCurrentView(AUTH_VIEWS.LOGIN);
-          }
+          }, 2500);
         } else {
+          setOtpVerified(false);
           setError(result.message || 'Registration failed. Please try again.');
         }
       } else {
-        setError(response.data.message || 'Invalid verification code');
+        setError(response.data.message || 'Invalid verification code. Please try again or resend the code.');
       }
     } catch (err) {
       console.error('OTP verify error:', err);
-      setError(err.response?.data?.detail || err.response?.data?.message || 'Verification failed. Please try again.');
+      setError(err.response?.data?.detail || err.response?.data?.message || 'Verification failed. Please try again or resend the code.');
     } finally {
       setIsLoading(false);
     }
-  }, [phoneOtpValue, pendingRegistration, register, login, navigate]);
+  }, [phoneOtpValue, pendingRegistration, register]);
 
   // Countdown timer for OTP resend
   useEffect(() => {
