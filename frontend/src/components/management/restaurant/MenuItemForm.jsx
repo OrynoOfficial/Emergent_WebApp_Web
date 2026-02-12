@@ -72,12 +72,10 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
       </div>
       
       <div>
-        <Label>Image URL</Label>
-        <Input
-          value={form.image || ''}
-          onChange={(e) => updateForm('image', e.target.value)}
-          placeholder="https://example.com/dish.jpg"
-          className="mt-1"
+        <Label>Image</Label>
+        <MenuImageUploader
+          image={form.image || ''}
+          onChange={(url) => updateForm('image', url)}
         />
       </div>
       
