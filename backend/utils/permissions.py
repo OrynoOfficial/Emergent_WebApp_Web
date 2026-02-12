@@ -402,6 +402,7 @@ def require_permission(permission_code: str):
                 f"Permission denied: User {current_user.get('email')} (role: {current_user.get('role')}) "
                 f"attempted action requiring '{permission_code}'"
             )
+            await _log_permission_denial(db, current_user, permission_code)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied. Required permission: {permission_code}"
@@ -425,6 +426,7 @@ def require_any_permission(permission_codes: List[str]):
                 f"Permission denied: User {current_user.get('email')} (role: {current_user.get('role')}) "
                 f"attempted action requiring one of: {permission_codes}"
             )
+            await _log_permission_denial(db, current_user, permission_codes)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied. Required one of: {', '.join(permission_codes)}"
