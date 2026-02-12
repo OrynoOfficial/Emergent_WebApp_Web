@@ -667,3 +667,31 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - All sidebar navigation, flyout menus, role-based filtering preserved
   - **Testing**: 100% - all navigation items render and click correctly
 
+
+## Session: Feb 12, 2026 - Bug Fixes & UI Improvements
+
+### Completed Tasks
+
+- [x] **Login Page: Removed Operator Checkbox**
+  - Removed the "I'm logging in as a service operator" checkbox from the login form
+  - Cleaned up `isOperator` state variable and `FileText` import from Login.jsx
+  - **Testing**: 100% verified via iteration_39
+
+- [x] **Pod Member Assignment Fix: Employee Role Users**
+  - Root cause: `routes/pods.py` only allowed `admin`/`super_admin` roles to be added to pods
+  - Employees created with `system_role: "employee"` got `role: "employee"` in the users collection, which was rejected
+  - Fix: Updated role validation in both `add_pod_member` and `team_lead_add_member` endpoints to accept `["admin", "super_admin", "employee"]`
+  - Also updated `PodManagement.jsx` to include `employee`-role users in the available members list
+  - **Testing**: 100% verified via iteration_39
+
+- [x] **Geography Page: Country→Region Parent-Child View**
+  - Redesigned GeographyManagement.jsx to show countries as expandable rows with nested regions (like hotels→rooms)
+  - Removed the old separate "Countries" and "Regions" tabs
+  - Each country row shows region count badge, click to expand/collapse
+  - "Add Region" button available inside each country's expansion area
+  - Search filters both countries and their regions
+  - **Testing**: 100% verified via iteration_39
+
+### Known Issues (Pre-existing)
+- Mixed content warning on notifications websocket (ws:// vs wss://) - cosmetic, non-blocking
+
