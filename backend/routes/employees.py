@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
-from utils.permissions import require_permission
+from utils.permissions import require_permission, require_any_permission
 from models.employee import EmployeeCreate, EmployeeUpdate, EmployeeStatus
 from utils.auth import get_password_hash
 from typing import Optional
@@ -100,9 +100,9 @@ async def get_employees(
     department: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["employees.view", "operator.team.view"]))
 ):
-    """Get employees"""
+    """Get employees - requires employees.view permission"""
     db = get_database()
     
     query = {}
@@ -126,9 +126,9 @@ async def get_employees(
 @router.get("/{employee_id}")
 async def get_employee(
     employee_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["employees.view", "operator.team.view"]))
 ):
-    """Get employee details"""
+    """Get employee details - requires employees.view permission"""
     db = get_database()
     
     # Support both 'id' and '_id' fields
@@ -148,9 +148,9 @@ async def get_employee(
 async def update_employee(
     employee_id: str,
     employee_data: EmployeeUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["employees.edit", "operator.team.edit"]))
 ):
-    """Update an employee"""
+    """Update an employee - requires employees.edit permission"""
     db = get_database()
     
     # Support both 'id' and '_id' fields
@@ -179,9 +179,9 @@ async def update_employee(
 @router.delete("/{employee_id}")
 async def delete_employee(
     employee_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["employees.delete", "operator.team.remove"]))
 ):
-    """Delete an employee and cascade cleanup"""
+    """Delete an employee - requires employees.delete permission"""
     db = get_database()
     
     # Support both 'id' and '_id' fields
