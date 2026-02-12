@@ -179,7 +179,7 @@ export default function ServiceCommunicationsHub({
   // Resolve alert
   const resolveAlert = async (alertId) => {
     try {
-      await api.put(`/hotels/alerts/${alertId}/resolve`);
+      await api.put(`/communications/alerts/${alertId}/resolve`);
       toast.success('Alert resolved');
       loadCommunications();
     } catch (error) {
