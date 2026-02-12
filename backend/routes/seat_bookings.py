@@ -206,7 +206,7 @@ async def confirm_booking(
     
     # Update reservations to booked status
     for passenger in booking.passengers:
-        result = await db.seat_bookings.update_one(
+        await db.seat_bookings.update_one(
             {
                 "route_id": booking.route_id,
                 "travel_date": booking.travel_date,
