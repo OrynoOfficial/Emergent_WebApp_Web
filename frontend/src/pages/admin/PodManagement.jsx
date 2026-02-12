@@ -566,14 +566,19 @@ export default function PodManagement() {
       </Dialog>
 
       {/* Add Member Modal */}
-      <Dialog open={showMemberModal} onOpenChange={(open) => { setShowMemberModal(open); if (!open) { setMemberSearch(''); setMemberDeptFilter('all'); } }}>
-        <DialogContent className="bg-white max-w-lg">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <div className="p-2 bg-emerald-100 rounded-lg"><UserPlus className="w-4 h-4 text-emerald-600" /></div>
-              Add Member to {selectedPod?.name}
-            </DialogTitle>
-          </DialogHeader>
+      <AdminModal
+        open={showMemberModal}
+        onOpenChange={(open) => { setShowMemberModal(open); if (!open) { setMemberSearch(''); setMemberDeptFilter('all'); } }}
+        title={`Add Member to ${selectedPod?.name || 'Pod'}`}
+        subtitle="Select an employee and assign a role"
+        icon={<UserPlus className="w-5 h-5 text-white" />}
+        accentColor="emerald"
+        size="md"
+        footer={<>
+          <Button variant="outline" onClick={() => setShowMemberModal(false)}>Cancel</Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleAddMember} disabled={!memberForm.user_id}>Add Member</Button>
+        </>}
+      >
           <div className="space-y-4 pt-2">
             {/* Search & Filter */}
             <div className="flex gap-2">
