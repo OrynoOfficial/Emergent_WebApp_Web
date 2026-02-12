@@ -8,7 +8,7 @@ import uuid
 
 router = APIRouter(prefix="/api/seat-bookings", tags=["Seat Bookings"])
 
-RESERVATION_TIMEOUT_MINUTES = 10  # Seats are held for 10 minutes
+RESERVATION_TIMEOUT_MINUTES = 3  # Seats are held for 3 minutes
 
 
 async def _notify_seat_change(route_id: str, travel_date: str):
