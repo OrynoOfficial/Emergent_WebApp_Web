@@ -234,7 +234,7 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
 };
 
 // Modern Trip Card for List View with Vehicle Info
-const TripCardList = ({ trip, onSelect, tripDate, onImageClick }) => {
+const TripCardList = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav }) => {
   const tripAmenities = trip.amenities?.length > 0 ? trip.amenities : getDefaultAmenities(trip.vehicle_type);
   const isTripPast = isPast(tripDate, trip.departure_time);
 
