@@ -699,7 +699,6 @@ export default function CarRentalBooking() {
                         </>
                       )}
                     </Button>
-                  </div>
                 </div>
               </div>
             </div>
