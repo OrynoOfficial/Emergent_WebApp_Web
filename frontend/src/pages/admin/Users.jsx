@@ -303,13 +303,22 @@ export default function UserManagement() {
 
       {/* Sub-page tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="user-management-tabs">
-        <button onClick={() => navigate('/admin/users')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname === '/admin/users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-users">
+        <button onClick={() => { navigate('/admin/users'); setActiveView('users'); }} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname === '/admin/users' && activeView === 'users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-users">
           <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Users
         </button>
         <button onClick={() => navigate('/admin/users/permissions')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-permissions">
           <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Permissions
         </button>
+        <button onClick={() => setActiveView('invitations')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeView === 'invitations' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-invitations">
+          <Send className="w-4 h-4 inline mr-1.5 -mt-0.5" />Invitations
+        </button>
       </div>
+
+      {/* Show Invitations view or Users list */}
+      {activeView === 'invitations' ? (
+        <InvitationsManagement />
+      ) : (
+      <>
 
       {/* Role Permission Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
