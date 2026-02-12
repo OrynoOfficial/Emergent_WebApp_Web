@@ -615,6 +615,9 @@ export default function Settings() {
           </div>
         );
 
+      case 'favourites':
+        return <FavouritesSection />;
+
       case 'location':
         return (
           <div className="space-y-6">
