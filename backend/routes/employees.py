@@ -168,14 +168,20 @@ async def update_employee(
     
     await db.employees.update_one({"$or": [{"id": employee_id}, {"_id": employee_id}]}, {"$set": update_data})
     
-    return {"message": "Employee updated successfully"}
+    # Sync status to linked user account if status changed
+    user_status_synced = False
+    if "status" in update_data and employee.get("user_id"):
+        from utils.cascade import sync_user_status
+        user_status_synced = await sync_user_status(db, employee["user_id"], update_data["status"])
+    
+    return {"message": "Employee updated successfully", "user_status_synced": user_status_synced}
 
 @router.delete("/{employee_id}")
 async def delete_employee(
     employee_id: str,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Delete an employee"""
+    """Delete an employee and cascade cleanup"""
     db = get_database()
     
     # Support both 'id' and '_id' fields
@@ -188,13 +194,24 @@ async def delete_employee(
         if employee.get("operator_id") != current_user.get("operator_id"):
             raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Delete using both possible id fields
+    # Cascade: if employee has a linked user account, clean up pods and scopes
+    cascade_result = None
+    if employee.get("user_id"):
+        from utils.cascade import cascade_delete_user
+        remover_id = str(current_user.get("_id") or current_user.get("id"))
+        cascade_result = await cascade_delete_user(db, employee["user_id"], remover_id)
+    
+    # Delete the employee record
     result = await db.employees.delete_one({"$or": [{"id": employee_id}, {"_id": employee_id}]})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Employee not found or already deleted")
     
-    return {"message": "Employee deleted successfully", "deleted_employee_id": employee_id}
+    return {
+        "message": "Employee deleted successfully",
+        "deleted_employee_id": employee_id,
+        "cascade": cascade_result
+    }
 
 @router.post("/{employee_id}/documents")
 async def add_employee_document(
