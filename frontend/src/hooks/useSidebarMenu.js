@@ -162,6 +162,7 @@ export default function useSidebarMenu() {
           { key: 'all-orders', label: 'All Orders', path: '/orders', icon: Ticket },
           { key: 'all-receipts', label: 'All Receipts', path: '/receipts', icon: Receipt },
           { key: 'all-bookings', label: 'All Bookings', path: '/admin/bookings', icon: QrCode },
+          { key: 'all-bills', label: 'All Bills', path: '/admin/bills', icon: CreditCard },
         ]
       });
     } else if (isOperator) {
