@@ -289,23 +289,18 @@ export default function OperatorsManagement() {
   const handleCreate = async () => {
     try {
       const res = await api.post('/operators/', createForm);
-      const newOperator = {
-        id: res.data?.operator_id || String(Date.now()),
-        ...createForm,
-        status: 'pending',
-        rating: 0,
-        total_bookings: 0,
-        revenue: 0,
-        joined_date: new Date().toISOString().split('T')[0]
-      };
-      setOperators(prev => [newOperator, ...prev]);
-      toast.success('Operator created successfully');
+      await loadOperators();
+      let msg = 'Operator created successfully';
+      if (res.data?.owner_account_created) {
+        msg += `. Owner account created: ${res.data.owner_email} (password: ${res.data.default_password})`;
+      }
+      toast.success(msg);
     } catch (error) {
       console.error('Failed to create operator:', error);
-      toast.error('Failed to create operator');
+      toast.error(error.response?.data?.detail || 'Failed to create operator');
     }
     setIsCreateOpen(false);
-    setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'], country: 'CM', region: '', market_segment: 'sme' });
+    setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'], country: 'CM', region: '', market_segment: 'sme', create_owner_account: false, owner_full_name: '', owner_email: '', owner_phone: '', owner_password: '' });
   };
 
   // Stats
