@@ -59,12 +59,14 @@ async def create_room(
 @router.get("/")
 async def get_rooms(
     hotel_id: str,
+    check_in: Optional[str] = None,
+    check_out: Optional[str] = None,
     room_type: Optional[str] = None,
     room_status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get rooms for a hotel"""
+    """Get rooms for a hotel with dynamic availability"""
     db = get_database()
     
     query = {"hotel_id": hotel_id}
@@ -76,9 +78,24 @@ async def get_rooms(
     rooms = await db.rooms.find(query).sort("room_name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.rooms.count_documents(query)
     
-    # Transform _id to id for each room
+    # Calculate dynamic availability by subtracting active bookings
     for room in rooms:
         room["id"] = str(room.pop("_id", ""))
+        total_rooms = room.get("total_rooms", room.get("available_rooms", 1))
+        
+        # Count active bookings for this room (reserved or confirmed, overlapping with date range)
+        booking_query = {
+            "room_id": room["id"],
+            "status": {"$in": [RoomBookingStatus.RESERVED, RoomBookingStatus.CONFIRMED]}
+        }
+        if check_in and check_out:
+            booking_query["$or"] = [
+                {"check_in_date": {"$lt": check_out}, "check_out_date": {"$gt": check_in}},
+            ]
+        
+        active_bookings = await db.room_bookings.count_documents(booking_query)
+        room["available_rooms"] = max(0, total_rooms - active_bookings)
+        room["total_rooms"] = total_rooms
     
     return {"rooms": rooms, "total": total}
 
