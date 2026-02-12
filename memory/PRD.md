@@ -827,3 +827,9 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Permission Audit Trail (Frontend)**: New "Audit Trail" tab on Permissions page (super_admin only). Features: 3 stats cards (Total Denials, Top Blocked Users, Most Blocked Permissions), denial log table (Time, User, Role, Required Permissions), filter by permission, pagination.
 - [x] **ADMIN_ASSIGNABLE_PERMISSIONS Updated**: Expanded to match all new backend-enforced permissions across all service modules.
 - **Testing**: 100% verified via iteration_49 (15/15 backend, all frontend features)
+
+
+### Session: Feb 12, 2026 (Part 13) - Bills Page Move
+
+- [x] **Bills moved to Transactions**: Moved "Bills" from Admin Config submenu to the Transactions dropdown in the main sidebar. Renamed to "All Bills" to match the "All Orders", "All Receipts", "All Bookings" naming convention. Transactions dropdown now has 4 items: All Orders, All Receipts, All Bookings, All Bills.
+- [x] **Page title updated**: BillsManagement.jsx heading changed from "Bills & Invoices" to "All Bills"
