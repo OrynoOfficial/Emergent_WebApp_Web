@@ -303,6 +303,11 @@ class RewardCreate(BaseModel):
     min_tier: str = "bronze"
     type: str = "discount"
     discount_value: Optional[float] = None
+    service_types: List[str] = []
+    valid_from: Optional[str] = None
+    valid_to: Optional[str] = None
+    max_redemptions: Optional[int] = None
+    total_available: Optional[int] = None
 
 class RewardUpdate(BaseModel):
     title: Optional[str] = None
@@ -312,6 +317,11 @@ class RewardUpdate(BaseModel):
     type: Optional[str] = None
     discount_value: Optional[float] = None
     is_active: Optional[bool] = None
+    service_types: Optional[List[str]] = None
+    valid_from: Optional[str] = None
+    valid_to: Optional[str] = None
+    max_redemptions: Optional[int] = None
+    total_available: Optional[int] = None
 
 
 @router.get("/admin/stats")
