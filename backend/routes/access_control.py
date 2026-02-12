@@ -533,3 +533,59 @@ async def get_available_permissions(
         })
     
     return {"permission_groups": formatted}
+
+
+@router.get("/audit-trail")
+async def get_permission_audit_trail(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    user_email: Optional[str] = None,
+    permission: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(require_permission("access.view_permissions"))
+):
+    """Get permission denial audit trail - requires access.view_permissions"""
+    db = get_database()
+
+    query = {}
+    if user_email:
+        query["user_email"] = {"$regex": user_email, "$options": "i"}
+    if permission:
+        query["required_permissions"] = {"$regex": permission, "$options": "i"}
+    if date_from:
+        query.setdefault("timestamp", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("timestamp", {})["$lte"] = date_to
+
+    skip = (page - 1) * limit
+    total = await db.permission_audit_trail.count_documents(query)
+    logs = await db.permission_audit_trail.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+
+    # Get summary stats
+    pipeline = [
+        {"$group": {"_id": "$user_email", "count": {"$sum": 1}, "last_denial": {"$max": "$timestamp"}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    top_denied_users = await db.permission_audit_trail.aggregate(pipeline).to_list(10)
+
+    perm_pipeline = [
+        {"$unwind": "$required_permissions"},
+        {"$group": {"_id": "$required_permissions", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    top_denied_permissions = await db.permission_audit_trail.aggregate(perm_pipeline).to_list(10)
+
+    return {
+        "logs": logs,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "stats": {
+            "total_denials": await db.permission_audit_trail.count_documents({}),
+            "top_denied_users": [{"email": u["_id"], "count": u["count"], "last_denial": u["last_denial"]} for u in top_denied_users],
+            "top_denied_permissions": [{"permission": p["_id"], "count": p["count"]} for p in top_denied_permissions]
+        }
+    }
