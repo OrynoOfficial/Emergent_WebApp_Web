@@ -870,7 +870,7 @@ export default function HotelBooking() {
                 <Button
                   onClick={handlePayButtonClick}
                   disabled={!isBookingDataComplete || paymentInProgress}
-                  className="w-full bg-gradient-to-r from-[#082c59] to-[#0a4a8f] hover:from-[#0a3a75] hover:to-[#0a5aa5] text-white h-14 text-base rounded-xl shadow-lg shadow-[#082c59]/20 mt-4"
+                  className="w-full bg-[#082c59] hover:bg-[#0a3a75] text-white h-12 text-base rounded-xl shadow-lg mt-4"
                 >
                   {paymentInProgress ? (
                     <>
