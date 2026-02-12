@@ -96,9 +96,9 @@ async def get_room(room_id: str):
 async def update_room(
     room_id: str,
     room_data: RoomUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("hotels.manage_rooms"))
 ):
-    """Update a room"""
+    """Update a room - requires hotels.manage_rooms permission"""
     db = get_database()
     
     room = await db.rooms.find_one({"_id": room_id})
@@ -120,9 +120,9 @@ async def update_room(
 @router.delete("/{room_id}")
 async def delete_room(
     room_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("hotels.manage_rooms"))
 ):
-    """Delete a room"""
+    """Delete a room - requires hotels.manage_rooms permission"""
     db = get_database()
     
     room = await db.rooms.find_one({"_id": room_id})
