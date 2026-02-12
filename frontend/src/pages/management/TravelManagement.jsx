@@ -114,34 +114,45 @@ const useTravelDashboardData = (routes, vehicles) => {
 
 // Analytics Section Component for Dashboard
 const TravelAnalyticsSection = ({ routes, vehicles }) => {
-  const analyticsData = useMemo(() => {
-    const routesByCity = {};
-    routes.forEach(r => {
-      const city = r.from_city || 'Unknown';
-      routesByCity[city] = (routesByCity[city] || 0) + 1;
-    });
+  const [analyticsData, setAnalyticsData] = useState({
+    routeDistribution: [], vehicleUtilization: [], monthlyTrend: []
+  });
 
-    const routeDistribution = Object.entries(routesByCity).map(([city, count], i) => ({
-      name: city,
-      value: count,
-      color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'][i % 5]
-    }));
-
-    const vehicleUtilization = vehicles.slice(0, 6).map((v, i) => ({
-      name: v.vehicle_name?.substring(0, 10) || 'Vehicle',
-      utilization: 65 + (i * 5)
-    }));
-
-    const monthlyTrend = [
-      { month: 'Jan', bookings: 145, revenue: 890000 },
-      { month: 'Feb', bookings: 168, revenue: 1020000 },
-      { month: 'Mar', bookings: 192, revenue: 1180000 },
-      { month: 'Apr', bookings: 156, revenue: 960000 },
-      { month: 'May', bookings: 210, revenue: 1350000 },
-      { month: 'Jun', bookings: 235, revenue: 1520000 }
-    ];
-
-    return { routeDistribution, vehicleUtilization, monthlyTrend };
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        const res = await api.get('/travel/analytics/dashboard');
+        const data = res.data;
+        setAnalyticsData({
+          monthlyTrend: data.monthly_trend || [],
+          vehicleUtilization: data.vehicle_utilization || [],
+          routeDistribution: (data.route_popularity || []).map((r, i) => ({
+            name: r.route,
+            value: r.bookings,
+            color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'][i % 6]
+          }))
+        });
+      } catch {
+        // Fallback to computed data from routes/vehicles
+        const routesByCity = {};
+        routes.forEach(r => {
+          const city = r.from_city || 'Unknown';
+          routesByCity[city] = (routesByCity[city] || 0) + 1;
+        });
+        setAnalyticsData({
+          monthlyTrend: [],
+          vehicleUtilization: vehicles.slice(0, 6).map((v, i) => ({
+            name: v.vehicle_name?.substring(0, 10) || 'Vehicle',
+            utilization: 0
+          })),
+          routeDistribution: Object.entries(routesByCity).map(([city, count], i) => ({
+            name: city, value: count,
+            color: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'][i % 5]
+          }))
+        });
+      }
+    };
+    loadAnalytics();
   }, [routes, vehicles]);
 
   return (
