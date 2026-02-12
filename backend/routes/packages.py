@@ -14,11 +14,8 @@ async def create_package(
     package_data: PackageServiceCreate,
     current_user: dict = Depends(require_any_permission(["packages.create", "operator.services.create"]))
 ):
-    """Create a new travel package"""
+    """Create a new travel package - requires packages.create permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     operator_id = package_data.operator_id or current_user.get("operator_id")
     operator_name = package_data.operator_name or current_user.get("operator_name", "")
