@@ -541,29 +541,28 @@ export default function PodManagement() {
       </div>
 
       {/* Create/Edit Pod Modal */}
-      <Dialog open={showPodModal} onOpenChange={setShowPodModal}>
-        <DialogContent className="bg-white">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="flex items-center gap-2">
-              <div className="p-2 bg-blue-100 rounded-lg"><Network className="w-4 h-4 text-blue-600" /></div>
-              {editingPod ? 'Edit Pod' : 'Create New Pod'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Pod Name</Label>
-              <Input value={podForm.name} onChange={(e) => setPodForm({...podForm, name: e.target.value})} placeholder="Alpha Team" />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea value={podForm.description} onChange={(e) => setPodForm({...podForm, description: e.target.value})} placeholder="Handles Cameroon operations..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPodModal(false)}>Cancel</Button>
-            <Button onClick={handleSavePod}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
+      <AdminModal
+        open={showPodModal}
+        onOpenChange={setShowPodModal}
+        title={editingPod ? 'Edit Pod' : 'Create New Pod'}
+        subtitle={editingPod ? 'Update pod details' : 'Set up a new team pod'}
+        icon={<Network className="w-5 h-5 text-white" />}
+        accentColor="blue"
+        size="md"
+        footer={<>
+          <Button variant="outline" onClick={() => setShowPodModal(false)}>Cancel</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSavePod}>Save</Button>
+        </>}
+      >
+        <div className="space-y-4">
+          <FormField label="Pod Name" required>
+            <StyledInput value={podForm.name} onChange={(e) => setPodForm({...podForm, name: e.target.value})} placeholder="Alpha Team" />
+          </FormField>
+          <FormField label="Description">
+            <Textarea value={podForm.description} onChange={(e) => setPodForm({...podForm, description: e.target.value})} placeholder="Handles Cameroon operations..." className="bg-slate-50/80 border-slate-200 focus:bg-white" />
+          </FormField>
+        </div>
+      </AdminModal>
       </Dialog>
 
       {/* Add Member Modal */}
