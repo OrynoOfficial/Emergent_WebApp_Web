@@ -251,7 +251,7 @@ async def release_seats(
 
 @router.get("/my-bookings")
 async def get_my_bookings(
-    status: Optional[str] = None,
+    booking_status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user)
@@ -260,8 +260,8 @@ async def get_my_bookings(
     db = get_database()
     
     query = {"user_id": current_user["_id"]}
-    if status:
-        query["status"] = status
+    if booking_status:
+        query["status"] = booking_status
     
     bookings = await db.seat_bookings.find(query, {"_id": 0}).sort("travel_date", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.seat_bookings.count_documents(query)
