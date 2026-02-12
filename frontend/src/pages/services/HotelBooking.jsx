@@ -783,7 +783,7 @@ export default function HotelBooking() {
                     <span className="font-medium">{formatCurrency(pricing.baseAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Taxes & Fees (10%)</span>
+                    <span className="text-slate-500">Taxes & Fees</span>
                     <span className="font-medium">{formatCurrency(pricing.taxes)}</span>
                   </div>
 
