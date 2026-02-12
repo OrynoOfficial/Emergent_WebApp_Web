@@ -83,6 +83,12 @@ class OperatorCreate(BaseModel):
     bank_name: Optional[str] = None
     bank_account: Optional[str] = None
     tax_id: Optional[str] = None
+    # Owner account creation (optional)
+    create_owner_account: bool = False
+    owner_full_name: Optional[str] = None
+    owner_email: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_password: Optional[str] = None
 
 class OperatorUpdate(BaseModel):
     name: Optional[str] = None
