@@ -178,10 +178,10 @@ const RoomCard = ({ room, nights, checkIn, checkOut, onReserve, compact = false 
   return (
     <>
       <div className="bg-white rounded-xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all duration-300 group">
-        <div className="flex flex-col lg:flex-row">
-          {/* Image Section - Compact */}
-          <div className="lg:w-1/3 relative">
-            <div className="relative h-48 lg:h-full min-h-[180px]">
+        <div className={compact ? 'flex flex-col' : 'flex flex-col lg:flex-row'}>
+          {/* Image Section */}
+          <div className={compact ? 'relative h-40' : 'lg:w-1/3 relative'}>
+            <div className={compact ? 'relative h-full' : 'relative h-48 lg:h-full min-h-[180px]'}>
               <img
                 src={images[0]}
                 alt={roomName}
