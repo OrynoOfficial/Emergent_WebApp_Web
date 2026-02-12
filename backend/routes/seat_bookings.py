@@ -97,6 +97,31 @@ async def reserve_seats(
             detail=f"Seats already taken: {', '.join(taken_seats)}"
         )
     
+    # Validate total seat availability — prevent over-reservation
+    total_seats = route.get("total_seats", 45)
+    all_booked_count = await db.seat_bookings.count_documents({
+        "route_id": reservation.route_id,
+        "travel_date": reservation.travel_date,
+        "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
+    })
+    available_count = total_seats - all_booked_count
+    requested_count = len(reservation.seat_numbers)
+    
+    if requested_count > available_count:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only {available_count} seat(s) available, but {requested_count} requested"
+        )
+    
+    # Validate seat numbers are within range
+    for seat_num in reservation.seat_numbers:
+        seat_n = int(seat_num) if seat_num.isdigit() else 0
+        if seat_n < 1 or seat_n > total_seats:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Seat {seat_num} is out of range (1-{total_seats})"
+            )
+    
     # Create reservations
     reservation_id = str(uuid.uuid4())
     order_id = str(uuid.uuid4())
