@@ -852,3 +852,17 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Existing Status and Service type filters preserved
   - Active filter count badge + Clear All button
 - **Testing**: 100% verified via iteration_50 (6/6 backend, all frontend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 15) - Phase 1: Travel Booking Critical Fixes
+
+- [x] **P0: Fix Payment Verification Bug**: `PaymentSuccess.jsx` was using raw `fetch()` with `localStorage.getItem('token')` but the app stores auth as `access_token`. This caused 401 errors on `/checkout/status/` → 5 retries → "Verification Error". Fixed by replacing with `api.get()` from the Axios client which correctly reads `access_token`. Also increased max attempts to 8 and poll interval to 2.5s.
+- [x] **P0: Fix Live Seat Selection Over-Reservation**: Added three validation layers to `POST /api/seat-bookings/reserve`:
+  1. Total availability check: rejects if `requested_count > available_count` (prevents over-reservation)
+  2. Duplicate check: rejects already reserved/booked seats (existing)
+  3. Seat range validation: rejects seat numbers outside 1 to total_seats
+- [x] **P0: Dynamic Seat Count on Travel Results**: 
+  - New endpoint: `GET /api/seat-bookings/available-counts?route_ids=X,Y&travel_date=YYYY-MM-DD` — returns real-time available counts per route (total - booked/reserved)
+  - Frontend `TravelResults.jsx` now fetches dynamic seat counts after loading routes and updates `available_seats` field
+  - Shows "Sold Out" when `available_seats === 0`
+- **Testing**: 100% verified via iteration_51 (16/16 backend tests passed)
