@@ -809,9 +809,36 @@ export default function HotelDetails() {
               <h2 className="text-3xl font-bold text-slate-900">Choose your room</h2>
               <p className="text-slate-500 mt-1">Select from our premium accommodations</p>
             </div>
-            <Badge variant="outline" className="text-sm px-4 py-2">
-              {rooms.length} room{rooms.length !== 1 ? ' types' : ' type'} available
-            </Badge>
+            <div className="flex items-center gap-3">
+              {/* Room View Toggle */}
+              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                <button
+                  onClick={() => setRoomViewMode('list')}
+                  className={`px-3 py-2 flex items-center gap-1.5 text-sm transition-colors ${
+                    roomViewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  data-testid="room-view-list"
+                >
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+                <button
+                  onClick={() => setRoomViewMode('grid')}
+                  className={`px-3 py-2 flex items-center gap-1.5 text-sm transition-colors ${
+                    roomViewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  data-testid="room-view-grid"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="hidden sm:inline">Grid</span>
+                </button>
+              </div>
+              {/* Highlighted Room Count */}
+              <div className="bg-[#082c59] text-white px-4 py-2.5 rounded-lg shadow-md" data-testid="room-types-count">
+                <span className="text-lg font-bold">{rooms.length}</span>
+                <span className="text-sm ml-1.5">room type{rooms.length !== 1 ? 's' : ''} available</span>
+              </div>
+            </div>
           </div>
           
           {/* Booking Controls */}
