@@ -267,8 +267,8 @@ async def add_pod_member(
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
     
-    if user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=400, detail="Only platform employees (admin users) can be added to pods")
+    if user.get("role") not in ["admin", "super_admin", "employee"]:
+        raise HTTPException(status_code=400, detail="Only platform employees can be added to pods")
     
     # Check one employee = one pod rule
     existing_membership = await db.pod_memberships.find_one({

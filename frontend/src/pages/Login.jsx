@@ -467,20 +467,6 @@ export default function AuthPage() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg">
-                <Checkbox
-                  id="isOperator"
-                  checked={isOperator}
-                  onCheckedChange={(checked) => setIsOperator(checked)}
-                />
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-slate-500" />
-                  <Label htmlFor="isOperator" className="text-sm text-slate-700 cursor-pointer">
-                    I&apos;m logging in as a service operator
-                  </Label>
-                </div>
-              </div>
-              
               <Button
                 type="submit"
                 disabled={isLoading}
