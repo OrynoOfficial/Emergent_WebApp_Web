@@ -703,3 +703,14 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Access Scopes - Backend Fix**: `POST /api/employee-scopes/{scope_id}/assign` now accepts `role: "employee"` users
 - [x] **Employees Page**: Added grid/list view toggle (table view with Employee, Contact, Department, Pod, Status, Salary, Actions columns)
 - **Testing**: 100% verified via iteration_40
+
+
+### Session: Feb 12, 2026 (Part 3) - Cascade & Status Sync
+
+- [x] **Employee Status → User Account Sync**: Changing employee status cascades to linked user account (active→active, on_leave→active, suspended→suspended, terminated→suspended, inactive→suspended)
+- [x] **Employee Delete → Cascade Cleanup**: Deleting an employee removes their linked user from all pods (deactivates memberships) and scopes
+- [x] **User Delete → Cascade Cleanup**: Deleting a user account removes them from all pods and scopes automatically
+- [x] **EmployeeStatus Enum**: Added `SUSPENDED` to backend model
+- [x] **New utility**: `/app/backend/utils/cascade.py` — shared cascade functions
+- [x] **Default list view**: Employees page defaults to list view
+- **Testing**: 100% verified via iteration_41
