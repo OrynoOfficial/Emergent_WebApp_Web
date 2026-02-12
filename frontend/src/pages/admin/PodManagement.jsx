@@ -52,6 +52,9 @@ export default function PodManagement() {
   const [opTypeFilter, setOpTypeFilter] = useState('all');
   const [opCountryFilter, setOpCountryFilter] = useState('all');
 
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberDeptFilter, setMemberDeptFilter] = useState('all');
+
   useEffect(() => {
     fetchData();
   }, []);
