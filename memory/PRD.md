@@ -1122,3 +1122,18 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Both use consistent pill-shaped design matching Hotel booking's step indicator
   - Steps advance to 3 when payment is initiated
 - **Testing**: 100% verified via iteration_61 (10/10 frontend tests passed)
+
+### Session: Feb 12, 2026 (Part 29) - Navigation Restructuring & Seat Fixes
+
+- [x] **Audit Logs → Permissions Page**: Moved Audit Logs page into Permissions as 5th tab (after Audit Trail). Super admins see 5 tabs: Roles, User Permissions, Matrix, Audit Trail, Audit Logs. AuditLogs component embedded via import. TabsList expanded to `grid-cols-5 max-w-3xl`.
+- [x] **Invitations → Users Page**: 
+  - Replaced "Add User" button with Popover dropdown: "Standard Add" (opens Create User modal) + "Invite User" (switches to invitations view)
+  - Added "Invitations" as 3rd tab in Users sub-page tabs (after Users, Permissions)
+  - InvitationsManagement component embedded inline when active
+  - Removed standalone "Invitations" sidebar item from Admin Config
+- [x] **Seat Reservation Timeout → 3 minutes**: 
+  - Backend `RESERVATION_TIMEOUT_MINUTES` changed from 10 to 3
+  - Frontend TravelBooking text changed from "15 minutes" to "3 minutes"
+  - All fallback timeouts in LiveSeatMap changed from `10 * 60 * 1000` to `3 * 60 * 1000`
+- [x] **Seat Selection Swap**: LiveSeatMap already had correct swap logic (release oldest → reserve new), verified working with API calls
+- **Testing**: 100% verified via iteration_65 (all 9 features passed)
