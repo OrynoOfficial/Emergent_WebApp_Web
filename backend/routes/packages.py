@@ -96,9 +96,9 @@ async def get_package(package_id: str):
 async def update_package(
     package_id: str,
     package_data: PackageServiceUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["packages.edit", "operator.services.edit"]))
 ):
-    """Update a package"""
+    """Update a package - requires packages.edit permission"""
     db = get_database()
     
     package = await db.packages.find_one({"_id": package_id})
@@ -118,9 +118,9 @@ async def update_package(
 @router.delete("/{package_id}")
 async def delete_package(
     package_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["packages.delete", "operator.services.delete"]))
 ):
-    """Delete a package"""
+    """Delete a package - requires packages.delete permission"""
     db = get_database()
     
     package = await db.packages.find_one({"_id": package_id})
