@@ -714,3 +714,14 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **New utility**: `/app/backend/utils/cascade.py` — shared cascade functions
 - [x] **Default list view**: Employees page defaults to list view
 - **Testing**: 100% verified via iteration_41
+
+### Session: Feb 12, 2026 (Part 4) - Modal UI Revamp
+
+- [x] **Shared AdminModal Component**: Created `/app/frontend/src/components/shared/AdminModal.jsx` with gradient headers, accent colors (blue/emerald/violet/amber/slate), sections, FormField, StyledInput exports
+- [x] **View Operator Modal**: Enlarged to `max-w-4xl`, market segment displayed with correct color, info grid with colored icons, gradient stats cards, Team tab with emerald intro, Roles tab with violet intro
+- [x] **Edit Operator Modal**: Amber gradient header, sectioned layout (Basic Info, Geography, Services) with colored backgrounds
+- [x] **Create Operator Modal**: Emerald gradient header, structured sections with visual hierarchy
+- [x] **Pod Management Modals**: Create Pod (blue header), Add Member (emerald header) — all using AdminModal
+- [x] **Access Scopes Modals**: Create/Edit Scope (violet header with colored sections), Assign Employee (emerald header) — all using AdminModal
+- **Testing**: 100% verified via iteration_42
+
