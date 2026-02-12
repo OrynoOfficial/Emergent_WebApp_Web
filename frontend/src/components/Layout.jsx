@@ -75,6 +75,17 @@ export default function Layout({ children }) {
   // Customer location state
   const { location: userLocation, showModal: showLocationModal, setShowModal: setShowLocationModal, updateLocation } = useUserLocation();
   
+  // Loyalty tier state
+  const [loyaltyTier, setLoyaltyTier] = useState(null);
+  
+  useEffect(() => {
+    if (user?.role === 'customer') {
+      api.get('/loyalty/').then(res => {
+        setLoyaltyTier(res.data?.tier || null);
+      }).catch(() => {});
+    }
+  }, [user?.role]);
+  
   // Show location modal only on first-ever customer visit, then auto-detect silently
   useEffect(() => {
     if (user?.role === 'customer') {
