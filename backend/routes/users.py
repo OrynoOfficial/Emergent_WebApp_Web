@@ -109,7 +109,7 @@ async def update_user(
     update_data: dict,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Update user profile"""
+    """Update user profile - self-update or requires users.edit permission"""
     db = get_database()
     
     # Get target user
@@ -117,10 +117,12 @@ async def update_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Users can update their own profile, admins can update others (with hierarchy check)
+    # Users can update their own profile, others need users.edit permission
     if current_user["_id"] != user_id:
-        if current_user["role"] not in ["admin", "super_admin"]:
-            raise HTTPException(status_code=403, detail="Not authorized")
+        from utils.permissions import check_user_permission
+        has_perm = await check_user_permission(current_user, "users.edit", db)
+        if not has_perm:
+            raise HTTPException(status_code=403, detail="Permission denied. Required: users.edit")
         # Check role hierarchy for admins
         if not can_manage_role(current_user["role"], target_user["role"]):
             raise HTTPException(status_code=403, detail="Cannot modify user with equal or higher role")
@@ -155,9 +157,9 @@ async def update_user(
 async def update_user_role(
     user_id: str,
     role_data: dict,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("users.manage_roles"))
 ):
-    """Update user role (admin/super_admin only with hierarchy check)"""
+    """Update user role - requires users.manage_roles permission"""
     db = get_database()
     
     new_role = role_data.get("role")
@@ -248,15 +250,17 @@ async def get_user_activity(
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get user's activity/audit log"""
+    """Get user's activity/audit log - own activity or requires users.view_activity permission"""
     db = get_database()
     
     # Check if user has permission to view activity
-    is_admin = current_user.get("role") in ["admin", "super_admin"]
     is_own_activity = current_user["_id"] == user_id
     
-    if not is_admin and not is_own_activity:
-        raise HTTPException(status_code=403, detail="Permission denied")
+    if not is_own_activity:
+        from utils.permissions import check_user_permission
+        has_perm = await check_user_permission(current_user, "users.view_activity", db)
+        if not has_perm:
+            raise HTTPException(status_code=403, detail="Permission denied. Required: users.view_activity")
     
     # Verify target user exists
     target_user = await db.users.find_one({"_id": user_id})
@@ -330,9 +334,9 @@ async def get_user_activity(
 @router.post("/create")
 async def create_user(
     user_data: dict,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("users.create"))
 ):
-    """Create a new user (admin/super_admin only)"""
+    """Create a new user - requires users.create permission"""
     from utils.auth import get_password_hash
     
     db = get_database()
@@ -389,9 +393,9 @@ async def check_permissions(
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("users.delete"))
 ):
-    """Delete a user (admin/super_admin only with hierarchy check)"""
+    """Delete a user - requires users.delete permission"""
     db = get_database()
     
     # Permission check - only admin and super_admin can delete users
