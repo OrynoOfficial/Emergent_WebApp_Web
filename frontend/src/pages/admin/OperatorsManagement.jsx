@@ -19,6 +19,8 @@ import { formatDate } from '@/utils/dateUtils';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/shared/AdminModal';
+import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
+import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotels', 'travel', 'car_rental', 'restaurants', 'events', 'cinema', 'laundry', 'banquet'];
