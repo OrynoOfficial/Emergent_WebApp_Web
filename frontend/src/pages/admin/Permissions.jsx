@@ -1353,6 +1353,13 @@ export default function Permissions() {
           </Card>
         </TabsContent>
         )}
+
+        {/* Audit Logs Tab - Embedded Component */}
+        {isSuperAdmin && (
+        <TabsContent value="audit-logs" className="mt-6">
+          <AuditLogs />
+        </TabsContent>
+        )}
       </Tabs>
 
       {/* Create/Edit Role Dialog */}
