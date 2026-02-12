@@ -272,13 +272,33 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]" data-testid="user-management-title">User Management</h1>
           <p className="text-slate-500 mt-1">Manage system users, roles, and permissions</p>
         </div>
-        <Button 
-          className="bg-[#082c59] hover:bg-[#0a3a75]"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
+        <Popover open={addUserOpen} onOpenChange={setAddUserOpen}>
+          <PopoverTrigger asChild>
+            <Button className="bg-[#082c59] hover:bg-[#0a3a75]" data-testid="add-user-dropdown">
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+              <ChevronDown className="h-4 w-4 ml-1" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-1 bg-white" align="end">
+            <button
+              onClick={() => { setIsCreateModalOpen(true); setAddUserOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-slate-100 transition-colors text-left"
+              data-testid="standard-add-btn"
+            >
+              <UserCog className="h-4 w-4 text-[#082c59]" />
+              Standard Add
+            </button>
+            <button
+              onClick={() => { setActiveView('invitations'); setAddUserOpen(false); }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:bg-slate-100 transition-colors text-left"
+              data-testid="invite-user-btn"
+            >
+              <Send className="h-4 w-4 text-[#082c59]" />
+              Invite User
+            </button>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Sub-page tabs */}
