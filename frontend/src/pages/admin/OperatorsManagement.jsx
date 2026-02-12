@@ -725,134 +725,109 @@ export default function OperatorsManagement() {
       </AdminModal>
 
       {/* Edit Operator Dialog */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Operator</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Company Name</Label>
-              <Input value={editForm.name || ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input type="email" value={editForm.email || ''} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>City</Label>
-                <Input value={editForm.city || ''} onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))} />
+      <AdminModal
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        title="Edit Operator"
+        subtitle="Update operator details and configuration"
+        icon={<Edit className="w-5 h-5 text-white" />}
+        accentColor="amber"
+        size="lg"
+        footer={<>
+          <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+          <Button className="bg-amber-600 hover:bg-amber-700 text-white" onClick={handleSaveEdit}>Save Changes</Button>
+        </>}
+      >
+        <div className="space-y-5">
+          <AdminModal.Section title="Basic Information" icon={<Building className="w-4 h-4" />}>
+            <div className="space-y-4 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
+              <FormField label="Company Name" required>
+                <StyledInput value={editForm.name || ''} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Email">
+                  <StyledInput type="email" value={editForm.email || ''} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+                </FormField>
+                <FormField label="Phone">
+                  <StyledInput value={editForm.phone || ''} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+                </FormField>
               </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {OPERATOR_STATUS.filter(s => s !== 'all').map(s => (
-                      <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="City">
+                  <StyledInput value={editForm.city || ''} onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))} />
+                </FormField>
+                <FormField label="Status">
+                  <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: v }))}>
+                    <SelectTrigger className="bg-slate-50/80 border-slate-200"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {OPERATOR_STATUS.filter(s => s !== 'all').map(s => (
+                        <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
               </div>
             </div>
+          </AdminModal.Section>
             
-            {/* Geography & Segment */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Country</Label>
+          <AdminModal.Section title="Geography & Segment" icon={<Globe className="w-4 h-4" />}>
+            <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50/40 rounded-xl border border-blue-100">
+              <FormField label="Country">
                 <Select value={editForm.country || undefined} onValueChange={v => { setEditForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'edit'); }}>
-                  <SelectTrigger data-testid="edit-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {countries.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="edit-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent className="bg-white">{countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label>Region</Label>
+              </FormField>
+              <FormField label="Region">
                 <Select value={editForm.region || undefined} onValueChange={v => setEditForm(p => ({ ...p, region: v }))}>
-                  <SelectTrigger data-testid="edit-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="edit-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
                   <SelectContent className="bg-white">
-                    {editRegions.map(r => (
-                      <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
-                    ))}
+                    {editRegions.map(r => <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>)}
                     {editRegions.length === 0 && <SelectItem value="__none__" disabled>No regions</SelectItem>}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label>Market Segment</Label>
+              </FormField>
+              <FormField label="Market Segment">
                 <Select value={editForm.market_segment || 'sme'} onValueChange={v => setEditForm(p => ({ ...p, market_segment: v }))}>
-                  <SelectTrigger data-testid="edit-segment-select"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="edit-segment-select"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white">
-                    {marketSegments.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                    {marketSegments.length === 0 && <>
-                      <SelectItem value="sme">SME</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                      <SelectItem value="strategic">Strategic</SelectItem>
-                    </>}
+                    {marketSegments.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {marketSegments.length === 0 && <><SelectItem value="sme">SME</SelectItem><SelectItem value="enterprise">Enterprise</SelectItem><SelectItem value="strategic">Strategic</SelectItem></>}
                   </SelectContent>
                 </Select>
+              </FormField>
+            </div>
+          </AdminModal.Section>
+
+          <AdminModal.Section title="Services" icon={<Star className="w-4 h-4" />}>
+            <div className="p-4 bg-emerald-50/40 rounded-xl border border-emerald-100">
+              <p className="text-xs text-slate-500 mb-3">Select which services this operator can provide</p>
+              <div className="grid grid-cols-2 gap-2">
+                {SERVICE_TYPES.filter(s => s !== 'all').map(service => {
+                  const colors = SERVICE_COLORS[service] || {};
+                  const checked = editForm.service_types?.includes(service) || false;
+                  return (
+                    <label key={service} className={`flex items-center gap-2 cursor-pointer p-2.5 rounded-lg transition-all border ${checked ? `${colors.bg || 'bg-blue-50'} ${colors.border || 'border-blue-200'}` : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                      <input type="checkbox" checked={checked}
+                        onChange={(e) => setEditForm(p => ({ ...p, service_types: e.target.checked ? [...(p.service_types || []), service] : (p.service_types || []).filter(s => s !== service) }))}
+                        className="rounded text-[#082c59] focus:ring-[#082c59]" />
+                      <span className={`text-sm capitalize font-medium ${checked ? (colors.text || 'text-blue-700') : 'text-slate-600'}`}>{service.replace('_', ' ')}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="mt-4">
+                <FormField label="Primary Service Type">
+                  <Select value={editForm.operator_type || ''} onValueChange={v => setEditForm(p => ({ ...p, operator_type: v }))}>
+                    <SelectTrigger className="bg-white border-emerald-200"><SelectValue placeholder="Select primary type" /></SelectTrigger>
+                    <SelectContent className="bg-white">{(editForm.service_types || []).map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}</SelectContent>
+                  </Select>
+                </FormField>
               </div>
             </div>
-            
-            {/* Service Types Assignment */}
-            <div>
-              <Label className="text-sm font-medium">Assigned Services</Label>
-              <p className="text-xs text-slate-500 mb-2">Select which services this operator can provide</p>
-              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg">
-                {SERVICE_TYPES.filter(s => s !== 'all').map(service => (
-                  <label key={service} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={editForm.service_types?.includes(service) || false}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setEditForm(p => ({
-                          ...p,
-                          service_types: checked
-                            ? [...(p.service_types || []), service]
-                            : (p.service_types || []).filter(s => s !== service)
-                        }));
-                      }}
-                      className="rounded text-[#082c59] focus:ring-[#082c59]"
-                    />
-                    <span className="text-sm capitalize">{service.replace('_', ' ')}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            
-            {/* Primary Service Type */}
-            <div>
-              <Label>Primary Service Type</Label>
-              <Select 
-                value={editForm.operator_type || ''} 
-                onValueChange={v => setEditForm(p => ({ ...p, operator_type: v }))}
-              >
-                <SelectTrigger><SelectValue placeholder="Select primary type" /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  {(editForm.service_types || []).map(s => (
-                    <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-            <Button className="bg-[#082c59]" onClick={handleSaveEdit}>Save Changes</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AdminModal.Section>
+        </div>
+      </AdminModal>
 
       {/* Create Operator Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
