@@ -133,7 +133,6 @@ async def create_direct_order(
         return_details["leg"] = "return"
         
         # Calculate per-leg amounts from booking_details if possible
-        passengers_count = len(booking_details.get("passengers", [{}]))
         outbound_price = booking_details.get("outbound_price", order_data.total_amount / 2)
         return_price = order_data.total_amount - outbound_price
         
