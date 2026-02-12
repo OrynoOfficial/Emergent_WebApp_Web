@@ -16,6 +16,44 @@ const MENU_CATEGORIES = [
   { value: 'sides', label: 'Sides' }
 ];
 
+function MenuImageUploader({ image, onChange }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'menu-items');
+      const res = await api.post('/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data?.file_url) onChange(res.data.file_url);
+    } catch { /* skip */ }
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const getUrl = (img) => img?.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img;
+
+  return (
+    <div className="mt-1">
+      {image ? (
+        <div className="relative w-32 h-24 rounded-lg overflow-hidden border group">
+          <img src={getUrl(image)} alt="" className="w-full h-full object-cover" />
+          <button onClick={() => onChange('')} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+        </div>
+      ) : (
+        <label className="inline-flex items-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Upload className="w-4 h-4 text-slate-400" />}
+          <span className="text-sm text-slate-500">{uploading ? 'Uploading...' : 'Upload image'}</span>
+          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export function MenuItemForm({ form, onChange, isEditing = false }) {
   const updateForm = (field, value) => {
     onChange({ ...form, [field]: value });
