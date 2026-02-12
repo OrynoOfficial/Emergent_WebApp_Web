@@ -659,24 +659,28 @@ export default function CarRentalBooking() {
                       {extrasConfirmed ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-300 rounded-full" />}
                       <span>Extras confirmed</span>
                     </div>
-                      <div className={`flex items-center gap-2 ${isDriverInfoComplete ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {isDriverInfoComplete ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
+                      <div className={`flex items-center gap-2 ${isDriverInfoComplete ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {isDriverInfoComplete ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-300 rounded-full" />}
                         <span>Driver information complete</span>
                       </div>
-                      <div className={`flex items-center gap-2 ${selectedPaymentMethod ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {selectedPaymentMethod ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-400 rounded-full" />}
+                      <div className={`flex items-center gap-2 ${selectedPaymentMethod ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {selectedPaymentMethod ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 border border-slate-300 rounded-full" />}
                         <span>Payment method selected</span>
                       </div>
                     </div>
+                </div>
 
+                {/* Payment Section */}
+                <div className="bg-slate-50 border-t border-slate-200 p-5">
                     <Button 
                       onClick={handleSubmit}
                       disabled={paymentInProgress || !canConfirmBooking}
-                      className={`w-full mt-4 h-12 font-semibold rounded-xl ${
+                      className={`w-full h-12 font-semibold rounded-xl ${
                         canConfirmBooking 
-                          ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
-                          : 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                          ? 'bg-[#082c59] hover:bg-[#0a3a75] text-white' 
+                          : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                       }`}
+                      data-testid="confirm-booking-btn"
                     >
                       {paymentInProgress ? (
                         <>
