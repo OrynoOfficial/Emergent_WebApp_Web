@@ -387,6 +387,7 @@ export default function TravelBooking() {
             travel_date: bookingData.departureDate || bookingData.travelDate,
             return_date: bookingData.returnDate,
             is_round_trip: bookingData.isRoundTrip,
+            outbound_price: pricing.outboundPrice + (pricing.extras / (bookingData.isRoundTrip ? 2 : 1)) + (pricing.commission / (bookingData.isRoundTrip ? 2 : 1)),
             passengers: passengers.map(p => ({
               first_name: p.firstName,
               last_name: p.lastName,
