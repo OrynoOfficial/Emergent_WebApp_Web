@@ -215,16 +215,20 @@ export default function EmployeesManagement() {
 
   const handleSaveEdit = async () => {
     try {
-      await api.put(`/employees/${selectedEmployee.id}`, editForm);
+      const res = await api.put(`/employees/${selectedEmployee.id}`, editForm);
       setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? { ...e, ...editForm } : e));
       setIsEditOpen(false);
+      
+      // Notify about user account status sync
+      if (editForm.status && editForm.status !== selectedEmployee.status && res.data?.user_status_synced) {
+        toast.success(`Employee updated. User account status synced to "${editForm.status === 'suspended' || editForm.status === 'terminated' ? 'suspended' : 'active'}".`);
+      } else {
+        toast.success('Employee updated successfully');
+      }
       setSelectedEmployee(null);
     } catch (error) {
       console.error('Failed to update employee:', error);
-      // Still update UI for demo
-      setEmployees(prev => prev.map(e => e.id === selectedEmployee.id ? { ...e, ...editForm } : e));
-      setIsEditOpen(false);
-      setSelectedEmployee(null);
+      toast.error(error.response?.data?.detail || 'Failed to update employee');
     }
   };
 
