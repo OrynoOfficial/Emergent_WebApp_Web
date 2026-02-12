@@ -205,7 +205,11 @@ async def get_available_rewards(
     rewards = await db.loyalty_rewards.find({
         "is_active": True,
         "min_tier": {"$in": available_tiers}
-    }, {"_id": 0}).to_list(100)
+    }).to_list(100)
+    
+    # Convert _id to id
+    for r in rewards:
+        r["id"] = str(r.pop("_id", ""))
     
     return {
         "rewards": rewards,
