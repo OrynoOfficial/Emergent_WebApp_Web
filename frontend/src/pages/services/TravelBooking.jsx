@@ -554,6 +554,7 @@ export default function TravelBooking() {
                     />
                   </div>
                 </div>
+                <div className="px-6 pb-6">
                   {showSeatSelection ? (
                     <div className="space-y-6">
                       <p className="text-sm text-slate-600">
