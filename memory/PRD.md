@@ -918,3 +918,24 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Customer View**: Redemptions page shows "used" status with blue badge after code is consumed. Active codes in "Redeemable Codes" section. Used codes in "All Redeemed" section.
 - [x] **Reuse Prevention**: Used code returns 404 on validation (deactivated after single use).
 - **Testing**: 100% verified via iteration_54 (21/21 backend E2E tests passed)
+
+
+### Session: Feb 12, 2026 (Part 19) - Phase 3: Communications & Travel Analytics
+
+- [x] **Generic Communications API**: New `backend/routes/communications.py` replaces hardcoded hotel-specific endpoints. Works for ALL service management pages.
+  - `POST /api/communications/announcements` — Create service announcement (title, message, service_type)
+  - `GET /api/communications/announcements?service_type=X` — Get filtered announcements
+  - `POST /api/communications/alerts` — Create alert (title, message, service_type, severity)
+  - `GET /api/communications/alerts?service_type=X&status=active` — Get active alerts
+  - `PUT /api/communications/alerts/{id}/resolve` — Resolve alert
+  - `GET /api/communications/recent?service_type=X` — Combined feed (notifications + announcements + alerts) with `comm_type` labels
+  - Data stored in `service_announcements` and `service_alerts` MongoDB collections
+  - All endpoints support operator_id filtering for multi-tenant access
+- [x] **Frontend Communications Fixed**: `ServiceCommunicationsHub.jsx` updated to use `/api/communications/` endpoints instead of `/hotels/` endpoints. Quick Actions (send announcement, create alert, submit support ticket, schedule meeting) now work for all services.
+- [x] **Travel Analytics Dashboard with Real Data**: New `GET /api/travel/analytics/dashboard` endpoint:
+  - `monthly_trend`: Last 6 months of real bookings + revenue from orders collection
+  - `route_popularity`: Top routes ranked by booking count
+  - `vehicle_utilization`: Real utilization percentages from seat_bookings data
+  - `summary`: total_bookings, total_revenue, active_routes, active_vehicles from DB
+  - Frontend `TravelAnalyticsSection` fetches from API (replaced hardcoded mock data)
+- **Testing**: 100% verified via iteration_55 (26/26 backend tests passed). Testing agent also fixed datetime comparison bug in communications recent feed.
