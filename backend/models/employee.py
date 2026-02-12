@@ -7,6 +7,7 @@ class EmployeeStatus(str, Enum):
     ACTIVE = "active"
     INACTIVE = "inactive"
     ON_LEAVE = "on_leave"
+    SUSPENDED = "suspended"
     TERMINATED = "terminated"
 
 class Employee(BaseModel):
