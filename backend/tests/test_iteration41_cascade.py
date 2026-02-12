@@ -220,10 +220,10 @@ class TestCascadeBehaviors:
         assert user_id, f"User ID not returned: {response.json()}"
         print(f"✓ Created test user {user_id}")
         
-        # Step 2: Try to add user to pod (may fail if user already in another pod)
+        # Step 2: Try to add user to pod (using valid pod role: csm)
         add_member_response = requests.post(
             f"{BASE_URL}/api/pods/{TEST_POD_ID}/members",
-            json={"user_id": user_id, "pod_role": "member"},
+            json={"user_id": user_id, "pod_role": "csm"},
             headers=auth_headers
         )
         
