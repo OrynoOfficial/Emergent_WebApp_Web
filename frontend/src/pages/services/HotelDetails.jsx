@@ -324,13 +324,13 @@ const RoomCard = ({ room, nights, checkIn, checkOut, onReserve }) => {
                 <>
                   <button
                     onClick={goToPrevious}
-                    className="absolute left-2 z-10 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 transition-colors"
+                    className="absolute left-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2.5 transition-colors"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button
                     onClick={goToNext}
-                    className="absolute right-2 z-10 bg-white/20 hover:bg-white/40 text-white rounded-full p-2 transition-colors"
+                    className="absolute right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2.5 transition-colors"
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>
