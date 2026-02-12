@@ -10,7 +10,7 @@ import {
   BarChart, Star, HelpCircle, Bus, Hotel, Car, Utensils, Package, Gift,
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
   Percent, HeadphonesIcon, Film, Briefcase, Database, FileText,
-  QrCode, MapPin, Globe, Building2, PartyPopper
+  QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard
 } from 'lucide-react';
 
 const USER_ROLES = {
