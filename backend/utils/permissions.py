@@ -450,6 +450,7 @@ def require_all_permissions(permission_codes: List[str]):
                 f"Permission denied: User {current_user.get('email')} (role: {current_user.get('role')}) "
                 f"attempted action requiring all of: {permission_codes}"
             )
+            await _log_permission_denial(db, current_user, permission_codes)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission denied. Required all of: {', '.join(permission_codes)}"
