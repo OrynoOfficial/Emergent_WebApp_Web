@@ -268,7 +268,7 @@ export default function RestaurantMenu() {
               <div className="p-4">
                 {cartCount === 0 ? (
                   <div className="text-center py-8">
-                    <div className="w-14 h-14 bg-[#f5f0e8] rounded-full flex items-center justify-center mx-auto mb-3">
+                    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                       <ShoppingCart className="w-6 h-6 text-slate-400" />
                     </div>
                     <p className="text-sm text-slate-500">Your cart is empty</p>

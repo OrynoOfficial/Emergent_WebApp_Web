@@ -269,7 +269,7 @@ export default function CarRentalDetails() {
                 <span className="text-white/70 text-sm">per day</span>
               </div>
 
-              <div className="p-5 space-y-4 bg-gradient-to-b from-[#faf7f2] to-white">
+              <div className="p-5 space-y-4 bg-gradient-to-b from-slate-50 to-white">
                 {/* Pickup Date */}
                 <div>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pickup Date</label>
