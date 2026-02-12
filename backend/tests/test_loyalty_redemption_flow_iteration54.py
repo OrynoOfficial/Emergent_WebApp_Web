@@ -329,7 +329,7 @@ class TestUsedCodeRejection:
     """E2E: Used code fails validation"""
     
     def test_10_used_code_validation_fails(self, customer_headers):
-        """Validate used code fails (per_user_limit reached)"""
+        """Validate used code fails (code deactivated after single use or per_user_limit reached)"""
         code = TestCustomerRedemptionFlow.redemption_code
         
         validation_data = {
@@ -344,15 +344,17 @@ class TestUsedCodeRejection:
             json=validation_data
         )
         
-        # Should fail - either due to per_user_limit or usage_limit reached
-        assert response.status_code == 400, f"Expected 400 for used code, got {response.status_code}"
+        # Should fail - code is deactivated (is_active=false) after usage_limit reached
+        # Returns 404 "Invalid promo code" because query filters is_active=True
+        # OR returns 400 "already used" if per_user_limit check hits first
+        assert response.status_code in [400, 404], f"Expected 400/404 for used code, got {response.status_code}"
         data = response.json()
         error_detail = data.get("detail", "").lower()
         
-        # Should mention either "already used" or "limit"
-        assert "already used" in error_detail or "limit" in error_detail, f"Expected usage/limit error, got: {data}"
+        # Should mention either "invalid", "already used", or "limit"
+        assert "invalid" in error_detail or "already used" in error_detail or "limit" in error_detail, f"Expected rejection error, got: {data}"
         
-        print(f"PASS: Used redemption code rejected with message: {data.get('detail')}")
+        print(f"PASS: Used redemption code rejected with status {response.status_code}, message: {data.get('detail')}")
 
 
 class TestAdminSeesAllSources:
