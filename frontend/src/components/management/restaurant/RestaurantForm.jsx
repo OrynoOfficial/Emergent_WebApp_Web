@@ -9,6 +9,59 @@ import { Button } from '@/components/ui/button';
 import { Upload, X, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 
+// Reusable Image Uploader component
+function ImageUploader({ images, onChange, maxImages = 6 }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (images.length + files.length > maxImages) {
+      return alert(`Maximum ${maxImages} images allowed`);
+    }
+
+    setUploading(true);
+    const newUrls = [];
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'restaurants');
+        const res = await api.post('/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (res.data?.file_url) newUrls.push(res.data.file_url);
+      } catch { /* skip failed uploads */ }
+    }
+    onChange([...images, ...newUrls]);
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const removeImage = (idx) => onChange(images.filter((_, i) => i !== idx));
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        {images.map((img, i) => (
+          <div key={i} className="relative aspect-video rounded-lg overflow-hidden border bg-slate-50 group">
+            <img src={img.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img} alt="" className="w-full h-full object-cover" />
+            <button onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+        {images.length < maxImages && (
+          <label className="aspect-video rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
+            {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : <Upload className="w-5 h-5 text-slate-400" />}
+            <span className="text-[10px] text-slate-400 mt-1">{uploading ? 'Uploading...' : 'Upload'}</span>
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} disabled={uploading} />
+          </label>
+        )}
+      </div>
+      <p className="text-[10px] text-slate-400">{images.length}/{maxImages} images</p>
+    </div>
+  );
+}
+
 const CUISINE_TYPES = [
   { value: 'african', label: 'African' },
   { value: 'french', label: 'French' },
