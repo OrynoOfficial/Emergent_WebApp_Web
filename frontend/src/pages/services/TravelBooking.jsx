@@ -243,14 +243,14 @@ export default function TravelBooking() {
     const returnPrice = bookingData.return ? bookingData.return.price * (bookingData.passengers || 1) : 0;
     const base = outboundPrice + returnPrice;
     const extras = extraLuggage * EXTRA_LUGGAGE_PRICE;
-    const subtotal = base + extras;
     const commissionRate = 5;
-    const commission = subtotal * (commissionRate / 100);
+    // Commission only on trip price, NOT on luggage
+    const commission = base * (commissionRate / 100);
     
     let discount = 0;
     if (appliedPromo) {
       if (appliedPromo.discount_percent) {
-        discount = (subtotal + commission) * (appliedPromo.discount_percent / 100);
+        discount = (base + commission) * (appliedPromo.discount_percent / 100);
       } else if (appliedPromo.fixed_discount) {
         discount = appliedPromo.fixed_discount;
       } else if (appliedPromo.discount_amount) {
@@ -263,11 +263,11 @@ export default function TravelBooking() {
       outboundPrice,
       returnPrice,
       extras,
-      subtotal,
+      subtotal: base + extras,
       commissionRate,
       commission,
       discount,
-      total: subtotal + commission - discount
+      total: base + extras + commission - discount
     };
   };
 
