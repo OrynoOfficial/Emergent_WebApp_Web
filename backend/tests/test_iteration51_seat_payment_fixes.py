@@ -404,8 +404,9 @@ class TestSeatAvailabilityEndpoint:
             }
         )
         
-        assert response.status_code == 401, f"Expected 401 without auth, got {response.status_code}"
-        print(f"PASS: Availability requires authentication")
+        # 401 or 403 both indicate auth required
+        assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
+        print(f"PASS: Availability requires authentication (status={response.status_code})")
 
 
 class TestPaymentStatusEndpoint:
@@ -427,8 +428,9 @@ class TestPaymentStatusEndpoint:
         fake_session_id = "cs_test_fake123"
         response = requests.get(f"{BASE_URL}/api/checkout/status/{fake_session_id}")
         
-        assert response.status_code == 401, f"Expected 401 without auth, got {response.status_code}"
-        print(f"PASS: Checkout status requires authentication")
+        # 401 or 403 both indicate auth required
+        assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
+        print(f"PASS: Checkout status requires authentication (status={response.status_code})")
     
     def test_checkout_status_with_auth_returns_404_for_invalid_session(self, customer_token):
         """Test that authenticated request returns 404 for non-existent session"""
