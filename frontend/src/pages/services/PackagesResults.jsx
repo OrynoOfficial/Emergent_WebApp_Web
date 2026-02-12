@@ -12,6 +12,8 @@ import {
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import { packageApi } from '@/api/management';
+import { useFavourites } from '@/hooks/useFavourites';
+import api from '@/api/client';
 
 const PACKAGE_SIZES = {
   S: { dimensions: '30×20×10 cm', maxWeight: '2 kg' },
@@ -54,7 +56,7 @@ const getServiceIcon = (type) => {
 
 // Grid View Service Card
 const ServiceCardGrid = ({ service, packageSize, onSelect }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Favourites handled by parent via isFav/toggleFav props
   const price = service.prices_by_size?.[packageSize] || 0;
   const ServiceIcon = getServiceIcon(service.service_type);
   
@@ -63,10 +65,10 @@ const ServiceCardGrid = ({ service, packageSize, onSelect }) => {
       {/* Header */}
       <div className="relative h-32 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] p-4">
         <button
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
           className="absolute top-3 right-3 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
         >
-          <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-4 w-4 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         <Badge className={`absolute top-3 left-3 ${SERVICE_TYPE_COLORS[service.service_type]}`}>

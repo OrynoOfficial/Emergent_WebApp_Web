@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import { useFavourites } from '@/hooks/useFavourites';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 import { differenceInDays, format } from 'date-fns';
 
@@ -51,7 +52,7 @@ const getVehicleTypeColor = (type) => {
 
 // Grid View Vehicle Card
 const VehicleCardGrid = ({ vehicle, days, onSelect }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Favourites handled by parent via isFav/toggleFav props
   const totalPrice = vehicle.price_per_day * days;
   
   const defaultImage = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800';
@@ -69,10 +70,10 @@ const VehicleCardGrid = ({ vehicle, days, onSelect }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white shadow-md transition-all"
         >
-          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
         </button>
         
         {/* Badges */}

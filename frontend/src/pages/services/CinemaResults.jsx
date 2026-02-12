@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Film, Clock, Star, Calendar, Play, Ticket, Loader2, MapPin, Search, LayoutGrid, List, SlidersHorizontal, Heart } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
+import { useFavourites } from '@/hooks/useFavourites';
+import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { format } from 'date-fns';
 
@@ -32,7 +34,7 @@ const GENRE_COLORS = {
 
 // Grid View Film Card
 const FilmCardGrid = ({ film, onViewDetails }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Favourites handled by parent via isFav/toggleFav props
   const isComingSoon = film.status === 'coming_soon';
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400';
   
@@ -49,10 +51,10 @@ const FilmCardGrid = ({ film, onViewDetails }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
         >
-          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         {/* Status Badge */}

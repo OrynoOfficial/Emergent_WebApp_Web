@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2, Search, LayoutGrid, List, SlidersHorizontal, Heart, Droplets, Wind, Scissors } from 'lucide-react';
 import { pressingApi } from '@/api/management';
+import { useFavourites } from '@/hooks/useFavourites';
+import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
 const MOCK_SERVICES = [
@@ -28,7 +30,7 @@ const getServiceIcon = (service) => {
 
 // Grid View Service Card
 const ServiceCardGrid = ({ service, onBook }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+  // Favourites handled by parent via isFav/toggleFav props
   const ServiceIcon = getServiceIcon(service.services?.[0]);
   
   return (
@@ -44,10 +46,10 @@ const ServiceCardGrid = ({ service, onBook }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
         >
-          <Heart className={`h-5 w-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         {/* Badges */}
