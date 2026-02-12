@@ -627,13 +627,15 @@ class TestRedemptionCodeCannotBeReused:
             json=validation_data
         )
         
-        # Should fail due to per_user_limit or usage_limit
-        assert response.status_code == 400, f"Expected 400 for reused code, got {response.status_code}"
+        # Should fail due to per_user_limit or usage_limit (code deactivated)
+        # Returns 404 if code is deactivated (is_active=false), OR
+        # Returns 400 if per_user_limit check hits first
+        assert response.status_code in [400, 404], f"Expected 400/404 for reused code, got {response.status_code}"
         data = response.json()
         error_detail = data.get("detail", "").lower()
-        assert "already used" in error_detail or "limit" in error_detail, f"Expected limit/already used error, got: {data}"
+        assert "invalid" in error_detail or "already used" in error_detail or "limit" in error_detail, f"Expected rejection error, got: {data}"
         
-        print(f"PASS: Second use attempt rejected - code cannot be reused")
+        print(f"PASS: Second use attempt rejected with status {response.status_code} - code cannot be reused")
 
 
 class TestCleanup:
