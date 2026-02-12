@@ -341,10 +341,6 @@ async def create_user(
     
     db = get_database()
     
-    # Permission check
-    if current_user["role"] not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
     # Check if email already exists
     existing = await db.users.find_one({"email": user_data.get("email")})
     if existing:
