@@ -971,9 +971,12 @@ export default function HotelDetails() {
           </div>
           
           {/* Room Cards */}
-          <div className="space-y-4">
+          <div className={roomViewMode === 'grid' 
+            ? 'grid grid-cols-1 md:grid-cols-2 gap-4' 
+            : 'space-y-4'
+          }>
             {rooms.length === 0 ? (
-              <Card>
+              <Card className={roomViewMode === 'grid' ? 'md:col-span-2' : ''}>
                 <CardContent className="p-8 text-center text-slate-500">
                   No rooms available for the selected dates.
                 </CardContent>
@@ -987,6 +990,7 @@ export default function HotelDetails() {
                   checkIn={bookingParams.checkIn}
                   checkOut={bookingParams.checkOut}
                   onReserve={handleReserve}
+                  compact={roomViewMode === 'grid'}
                 />
               ))
             )}
