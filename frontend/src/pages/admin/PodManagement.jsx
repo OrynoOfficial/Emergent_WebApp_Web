@@ -672,12 +672,7 @@ export default function PodManagement() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowMemberModal(false)}>Cancel</Button>
-            <Button onClick={handleAddMember} disabled={!memberForm.user_id}>Add Member</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AdminModal>
 
       {/* Assign Operators Modal */}
       <Dialog open={showOperatorModal} onOpenChange={(open) => { setShowOperatorModal(open); if (!open) { setOpSearch(''); setOpStatusFilter('all'); setOpTypeFilter('all'); setOpCountryFilter('all'); } }}>
