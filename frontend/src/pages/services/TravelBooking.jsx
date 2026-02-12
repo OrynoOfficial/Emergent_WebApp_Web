@@ -170,6 +170,7 @@ export default function TravelBooking() {
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [travelCurrentStep, setTravelCurrentStep] = useState(1);
   
   // Passengers
   const [passengers, setPassengers] = useState([]);
