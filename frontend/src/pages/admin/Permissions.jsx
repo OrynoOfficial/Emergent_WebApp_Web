@@ -1177,9 +1177,12 @@ export default function Permissions() {
                                 {module.permissions.map((perm) => (
                                   <tr key={perm.key} className="border-b last:border-0">
                                     <td className="p-2">
-                                      <div>
-                                        <p className="font-medium text-slate-900">{perm.label}</p>
-                                        <p className="text-xs text-slate-500">{perm.description}</p>
+                                      <div className="flex items-center gap-2">
+                                        <div>
+                                          <p className="font-medium text-slate-900">{perm.label}</p>
+                                          <p className="text-xs text-slate-500">{perm.description}</p>
+                                        </div>
+                                        {perm.enforced && <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1.5 py-0 h-4 shrink-0">API</Badge>}
                                       </div>
                                     </td>
                                     {roles.slice(0, 5).map(role => (
