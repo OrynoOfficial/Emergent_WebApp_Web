@@ -147,7 +147,11 @@ export default function OperatorsManagement() {
       op.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || op.status === statusFilter;
     const matchesService = serviceFilter === 'all' || op.service_types?.includes(serviceFilter);
-    return matchesSearch && matchesStatus && matchesService;
+    const matchesOwner = !ownerFilter || op.owner_name?.toLowerCase().includes(ownerFilter.toLowerCase()) || op.owner_email?.toLowerCase().includes(ownerFilter.toLowerCase());
+    const opDate = op.created_at || op.joined_date || '';
+    const matchesDateFrom = !dateFrom || opDate >= dateFrom;
+    const matchesDateTo = !dateTo || opDate.slice(0, 10) <= dateTo;
+    return matchesSearch && matchesStatus && matchesService && matchesOwner && matchesDateFrom && matchesDateTo;
   });
 
   // Pagination
