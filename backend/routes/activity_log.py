@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_permission, require_any_permission
 from datetime import datetime, timezone
 from typing import Optional, List
 from pydantic import BaseModel
