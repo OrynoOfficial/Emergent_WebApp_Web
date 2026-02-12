@@ -1,0 +1,78 @@
+{
+  "summary": "Iteration 51 - Backend testing of Phase 1 Travel Booking Fixes. All 16 tests PASSED. Features verified: 1) PaymentSuccess.jsx bug fix - uses api client with correct access_token instead of raw fetch with wrong localStorage key. 2) Seat reservation validation: rejects over-reservation, validates duplicate seats, validates seat range (1 to total_seats). 3) New GET /api/seat-bookings/available-counts public endpoint working. 4) GET /api/seat-bookings/availability returns correct structure.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "auth_tests": {
+      "test_customer_login": "PASS",
+      "test_admin_login": "PASS"
+    },
+    "available_counts_tests": {
+      "test_available_counts_endpoint_exists": "PASS - Returns counts with total, taken, available per route",
+      "test_available_counts_returns_correct_structure": "PASS - Structure validated",
+      "test_available_counts_requires_route_ids": "PASS - Returns 422 for missing param",
+      "test_available_counts_requires_travel_date": "PASS - Returns 422 for missing param"
+    },
+    "seat_reservation_validation_tests": {
+      "test_reserve_validates_total_availability": "PASS - Rejects when requested > available seats",
+      "test_reserve_validates_seat_range": "PASS - Rejects seat 0 and seats > total_seats",
+      "test_reserve_validates_duplicate_seats": "PASS - Rejects already reserved seats",
+      "test_reserve_success_with_valid_seats": "PASS - Valid reservation succeeds"
+    },
+    "availability_endpoint_tests": {
+      "test_availability_returns_correct_structure": "PASS - Returns total_seats, available_count, booked_seats",
+      "test_availability_requires_auth": "PASS - Returns 403 without auth"
+    },
+    "payment_status_tests": {
+      "test_checkout_status_requires_auth": "PASS - Returns 403 without auth",
+      "test_checkout_status_with_auth_returns_404_for_invalid_session": "PASS",
+      "test_checkout_status_endpoint_exists": "PASS"
+    },
+    "cleanup": {
+      "test_cleanup_seat_bookings": "PASS - Test data cleaned up"
+    }
+  },
+  "features_verified": {
+    "payment_success_bug_fix": "VERIFIED - PaymentSuccess.jsx uses api.get() which correctly reads access_token from localStorage (api/client.js line 45)",
+    "seat_over_reservation_validation": "VERIFIED - POST /api/seat-bookings/reserve rejects if requested_count > available_count (seat_bookings.py lines 100-114)",
+    "seat_duplicate_validation": "VERIFIED - POST /api/seat-bookings/reserve rejects already reserved/booked seats (seat_bookings.py lines 84-98)",
+    "seat_range_validation": "VERIFIED - POST /api/seat-bookings/reserve validates seat numbers 1 to total_seats (seat_bookings.py lines 116-123)",
+    "available_counts_api": "VERIFIED - GET /api/seat-bookings/available-counts returns dynamic counts per route (public endpoint)",
+    "availability_api": "VERIFIED - GET /api/seat-bookings/availability returns total_seats, available_count, booked_seats",
+    "travel_results_dynamic_counts": "VERIFIED - TravelResults.jsx fetches from /available-counts and updates available_seats (lines 461-472)",
+    "sold_out_display": "VERIFIED - TravelResults shows 'Sold Out' when available_seats === 0 (lines 164, 267)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration51_seat_payment_fixes.py",
+    "/app/test_reports/pytest/pytest_results_iteration51.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PaymentSuccess.jsx correctly imports and uses api from client.js which handles auth tokens properly",
+    "Seat reservation has proper order of validation: duplicate check → availability check → range check",
+    "available-counts endpoint is correctly implemented as public (no auth required) for search results",
+    "TravelResults correctly maps available_seats from API response to trip display"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration51_seat_payment_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": {
+    "customer": "customer@test.com / testpassword123",
+    "super_admin": "superadmin@oryno.com / testpassword123"
+  },
+  "seed_data_creation": "Test seat bookings created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 51 verified Phase 1 travel booking fixes. All seat reservation validations working (over-reservation, duplicates, range). PaymentSuccess uses correct api client. GET /api/seat-bookings/available-counts returns dynamic seat counts for TravelResults page. All 16 backend tests passed."
+}
