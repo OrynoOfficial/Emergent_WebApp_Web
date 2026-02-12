@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.cinema import CinemaCreate, CinemaUpdate, CinemaStatus, FilmStatus
 from typing import Optional, List
 from datetime import datetime
@@ -12,13 +13,10 @@ router = APIRouter(prefix="/api/cinema", tags=["Cinema"])
 @router.post("/")
 async def create_cinema(
     cinema_data: CinemaCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["cinema.create", "operator.services.create"]))
 ):
-    """Create a new cinema"""
+    """Create a new cinema - requires cinema.create permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     operator_id = cinema_data.operator_id or current_user.get("operator_id")
     operator_name = cinema_data.operator_name or current_user.get("operator_name", "")
