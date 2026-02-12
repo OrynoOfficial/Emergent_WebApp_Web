@@ -759,3 +759,14 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **UI Color Refinement**: Referral card changed from bright green gradient to subtle blue/slate palette (bg-blue-50, border-blue-200)
 - [x] **Tier Auto-Recalculation**: GET /loyalty/program now auto-upgrades tier if total_points exceed threshold (fixed stale tier bug)
 - **Testing**: 100% verified via iteration_45
+
+
+### Session: Feb 12, 2026 (Part 8) - Loyalty Redeem Flow & Redeemable Codes
+
+- [x] **Redeem Flow Fix**: Backend reward ID was missing (`_id: 0` projection stripped it). Fixed `/loyalty/rewards` to convert `_id` → `id`. Redeem endpoint now supports both `_id` and `id` lookups.
+- [x] **Redeem Success State**: After clicking "Confirm Redemption", shows green checkmark + generated code + expiry date + Copy Code button + direction to Redeemable Codes section
+- [x] **Redeemable Codes Section**: Replaced "Refer Friends & Earn" with "Redeemable Codes" — shows referral code as first row ("Refer a Friend") + all active redemption codes with expiry status (Xd left / Expired) and copy buttons
+- [x] **Rewards Tab**: Now only shows rewards NOT already redeemed by user. Shows expiry date when `valid_to` is set.
+- [x] **Activity Tab**: Shows point transactions from bookings with earn/redeem styling and service type labels
+- [x] **Expiry Info**: All codes show days-left countdown (color-coded: green for OK, amber for ≤7 days, red for expired) + formatted expiry date
+- **Testing**: Verified via screenshots — full redeem flow working end-to-end
