@@ -117,7 +117,7 @@ async def create_operator(
     operator_data: OperatorCreate,
     current_user: dict = Depends(require_permission("operators.create"))
 ):
-    """Create a new operator - requires operators.create permission"""
+    """Create a new operator - requires operators.create permission. Optionally creates an owner user account."""
     db = get_database()
     
     # Check if email already exists
@@ -125,11 +125,49 @@ async def create_operator(
     if existing:
         raise HTTPException(status_code=400, detail="Operator with this email already exists")
     
+    operator_id = str(uuid.uuid4())
+    owner_user_id = current_user["_id"]
+    owner_account_created = False
+    
+    # Create owner user account if requested
+    if operator_data.create_owner_account and operator_data.owner_email:
+        # Check if owner email already exists
+        existing_user = await db.users.find_one({"email": operator_data.owner_email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail=f"User with email {operator_data.owner_email} already exists")
+        
+        from utils.auth import get_password_hash
+        owner_user_id = str(uuid.uuid4())
+        password = operator_data.owner_password or "Oryno@2024"
+        
+        owner_user = {
+            "_id": owner_user_id,
+            "id": owner_user_id,
+            "email": operator_data.owner_email,
+            "full_name": operator_data.owner_full_name or operator_data.name,
+            "phone": operator_data.owner_phone or operator_data.phone,
+            "password_hash": get_password_hash(password),
+            "role": "operator",
+            "operator_id": operator_id,
+            "operator_name": operator_data.name,
+            "operator_role": "owner",
+            "status": "active",
+            "email_verified": True,
+            "country": operator_data.country,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        await db.users.insert_one(owner_user)
+        owner_account_created = True
+    
+    # Exclude owner fields from operator dict
+    op_dict = operator_data.dict(exclude={"create_owner_account", "owner_full_name", "owner_email", "owner_phone", "owner_password"})
+    
     operator = {
-        "_id": str(uuid.uuid4()),
-        **operator_data.dict(),
+        "_id": operator_id,
+        **op_dict,
         "status": OperatorStatus.ACTIVE.value if current_user["role"] == "super_admin" else OperatorStatus.PENDING.value,
-        "owner_user_id": current_user["_id"],
+        "owner_user_id": owner_user_id,
         "created_by": current_user["_id"],
         "created_by_role": current_user["role"],
         "documents": [],
@@ -177,7 +215,17 @@ async def create_operator(
             }
             await db.notifications.insert_one(notification)
     
-    return {"message": "Operator created" + (" - pending super admin approval" if current_user["role"] == "admin" else ""), "operator_id": operator["_id"]}
+    result = {
+        "message": "Operator created" + (" - pending super admin approval" if current_user["role"] == "admin" else ""),
+        "operator_id": operator["_id"],
+        "owner_account_created": owner_account_created,
+    }
+    if owner_account_created:
+        result["owner_user_id"] = owner_user_id
+        result["owner_email"] = operator_data.owner_email
+        result["default_password"] = operator_data.owner_password or "Oryno@2024"
+    
+    return result
 
 @router.get("/")
 async def get_operators(
