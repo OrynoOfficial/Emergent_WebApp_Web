@@ -422,7 +422,7 @@ export default function HotelDetails() {
       
       const [hotelRes, roomsRes] = await Promise.all([
         api.get(`/hotels/${id}`),
-        api.get(`/rooms/?hotel_id=${id}`)
+        api.get(`/rooms/?hotel_id=${id}&check_in=${bookingParams.checkIn.toISOString().split('T')[0]}&check_out=${bookingParams.checkOut.toISOString().split('T')[0]}`)
       ]);
       
       setHotel(hotelRes.data);
