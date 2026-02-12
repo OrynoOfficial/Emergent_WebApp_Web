@@ -149,10 +149,10 @@ class TestCascadeBehaviors:
         assert employee_id and user_id, f"Employee or user ID missing: {result}"
         print(f"✓ Created employee {employee_id} with user {user_id}")
         
-        # Step 2: Add user to Test Pod
+        # Step 2: Add user to Test Pod (using valid pod role: bdr)
         add_member_response = requests.post(
             f"{BASE_URL}/api/pods/{TEST_POD_ID}/members",
-            json={"user_id": user_id, "pod_role": "member"},
+            json={"user_id": user_id, "pod_role": "bdr"},
             headers=auth_headers
         )
         
