@@ -263,15 +263,18 @@ async def get_user_activity(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Query audit logs for this user
-    query = {"user_id": user_id}
+    # Query activity_logs for this user (field is actor_id)
+    query = {"actor_id": user_id}
+    
+    # Also try user_id field for audit_logs
+    audit_query = {"$or": [{"user_id": user_id}, {"actor_id": user_id}]}
     
     # Get from audit_logs collection
-    audit_logs = await db.audit_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
-    total_audit = await db.audit_logs.count_documents(query)
+    audit_logs = await db.audit_logs.find(audit_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total_audit = await db.audit_logs.count_documents(audit_query)
     
-    # Also get from activity_logs if it exists
-    activity_logs = await db.activity_logs.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    # Get from activity_logs collection
+    activity_logs = await db.activity_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
     total_activity = await db.activity_logs.count_documents(query)
     
     # Combine and format
