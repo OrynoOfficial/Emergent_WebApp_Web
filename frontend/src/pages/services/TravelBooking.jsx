@@ -604,7 +604,7 @@ export default function TravelBooking() {
                   {showSeatSelection ? (
                     <div className="space-y-6">
                       <p className="text-sm text-slate-600">
-                        Select your preferred seats. Reserved seats are held for 15 minutes.
+                        Select your preferred seats. Reserved seats are held for 3 minutes.
                       </p>
                       
                       {/* Outbound Seat Map */}
