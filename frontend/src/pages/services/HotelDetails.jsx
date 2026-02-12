@@ -10,7 +10,8 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { 
   ArrowLeft, Star, MapPin, Wifi, Car, Utensils, Droplets, Dumbbell,
   CheckCircle, Clock, Users, CalendarIcon, Bed, Maximize, Plane,
-  Landmark, ChevronLeft, ChevronRight, X, Eye, Coffee, Sparkles
+  Landmark, ChevronLeft, ChevronRight, X, Eye, Coffee, Sparkles,
+  ChevronDown, ChevronUp, LayoutGrid, List, Navigation, ShoppingBag, Film, Music
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
