@@ -452,11 +452,24 @@ export default function TravelResults() {
         to_city: tripTo,
         date: tripDate
       });
-      const fetchedTrips = response.data?.routes || response.data || [];
+      let fetchedTrips = response.data?.routes || response.data || [];
       
       if (fetchedTrips.length === 0) {
         setTrips(getMockTrips(tripFrom, tripTo));
       } else {
+        // Fetch dynamic seat availability for all routes
+        try {
+          const routeIds = fetchedTrips.map(t => t._id || t.id).filter(Boolean).join(',');
+          if (routeIds && tripDate) {
+            const seatRes = await api.get(`/seat-bookings/available-counts?route_ids=${routeIds}&travel_date=${tripDate}`);
+            const counts = seatRes.data?.counts || {};
+            fetchedTrips = fetchedTrips.map(t => {
+              const rid = t._id || t.id;
+              const sc = counts[rid];
+              return sc ? { ...t, available_seats: sc.available, total_seats: sc.total } : t;
+            });
+          }
+        } catch { /* seat counts are optional enhancement */ }
         setTrips(fetchedTrips);
       }
     } catch (error) {
