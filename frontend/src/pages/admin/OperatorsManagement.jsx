@@ -105,7 +105,7 @@ export default function OperatorsManagement() {
     try {
       const [countryRes, regRes, segRes] = await Promise.all([
         api.get('/geography/countries'),
-        api.get('/geography/regions', { params: { country_code: 'CM' } }),
+        api.get('/geography/regions', { params: { country_id: 'CM' } }),
         api.get('/geography/market-segments')
       ]);
       setCountries(countryRes.data.countries || []);
@@ -116,7 +116,7 @@ export default function OperatorsManagement() {
 
   const loadRegionsForCountry = async (countryCode, target = 'create') => {
     try {
-      const res = await api.get('/geography/regions', { params: { country_code: countryCode } });
+      const res = await api.get('/geography/regions', { params: { country_id: countryCode } });
       const data = res.data.regions || [];
       if (target === 'edit') setEditRegions(data);
       else setRegions(data);
