@@ -449,6 +449,7 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
 export default function HotelsResults() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isFav, toggleFav } = useFavourites('hotels');
   
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
