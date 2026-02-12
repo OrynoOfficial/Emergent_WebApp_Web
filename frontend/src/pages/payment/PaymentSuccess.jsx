@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { CheckCircle, Loader2, AlertCircle, Home, Receipt, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import api from '../../api/client';
 
 /**
  * PaymentSuccess - Handles successful Stripe checkout return
@@ -25,8 +26,8 @@ const PaymentSuccess = () => {
     }
 
     const checkPaymentStatus = async (attempts = 0) => {
-      const maxAttempts = 5;
-      const pollInterval = 2000; // 2 seconds
+      const maxAttempts = 8;
+      const pollInterval = 2500;
 
       if (attempts >= maxAttempts) {
         setStatus('error');
@@ -35,25 +36,12 @@ const PaymentSuccess = () => {
       }
 
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/checkout/status/${sessionId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to check payment status');
-        }
-
-        const data = await response.json();
+        const response = await api.get(`/checkout/status/${sessionId}`);
+        const data = response.data;
         setPaymentInfo(data);
 
         if (data.payment_status === 'paid') {
           setStatus('success');
-          // Clear stored session info
           sessionStorage.removeItem('stripe_session_id');
           sessionStorage.removeItem('stripe_order_id');
           return;
