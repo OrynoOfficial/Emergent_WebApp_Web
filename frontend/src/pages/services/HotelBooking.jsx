@@ -778,6 +778,13 @@ export default function HotelBooking() {
 
                 {/* Pricing Breakdown */}
                 <div className="space-y-3">
+                  {/* Highlighted Room Type in Summary */}
+                  {hotel.room_type && (
+                    <div className="flex items-center gap-2 p-2.5 bg-[#082c59]/5 rounded-lg border border-[#082c59]/10 mb-1">
+                      <Bed className="h-4 w-4 text-[#082c59]" />
+                      <span className="text-sm font-semibold text-[#082c59]">{hotel.room_type}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Room ({nights} nights)</span>
                     <span className="font-medium">{formatCurrency(pricing.baseAmount)}</span>
