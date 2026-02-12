@@ -559,6 +559,89 @@ async def delete_reward(
     return {"message": "Reward deleted successfully"}
 
 
+@router.post("/admin/rewards/{reward_id}/generate-promo")
+async def generate_promo_from_reward(
+    reward_id: str,
+    current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
+):
+    """Generate a promo code from a loyalty reward. The promo code can be used in booking pages."""
+    db = get_database()
+
+    # Find the reward
+    reward = await db.loyalty_rewards.find_one({"_id": reward_id})
+    if not reward:
+        raise HTTPException(status_code=404, detail="Reward not found")
+
+    # Generate unique code
+    code = f"LYL-{secrets.token_hex(3).upper()}"
+    while await db.promo_codes.find_one({"code": code}):
+        code = f"LYL-{secrets.token_hex(3).upper()}"
+
+    # Map reward type to promo discount
+    discount_type = "percentage" if reward.get("type") == "discount" else "fixed"
+    discount_value = reward.get("discount_value", 0) or 0
+
+    # Determine validity
+    now = datetime.utcnow()
+    valid_from = reward.get("valid_from") or now.isoformat()
+    valid_to = reward.get("valid_to") or (now + timedelta(days=90)).isoformat()
+
+    promo = {
+        "_id": str(uuid.uuid4()),
+        "code": code,
+        "name": reward.get("title", "Loyalty Reward"),
+        "description": reward.get("description", ""),
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "min_order_amount": None,
+        "max_discount_amount": None,
+        "service_types": reward.get("service_types", []),
+        "usage_limit": reward.get("max_redemptions") or reward.get("total_available") or 50,
+        "per_user_limit": 1,
+        "times_used": 0,
+        "valid_from": valid_from,
+        "valid_to": valid_to,
+        "is_active": True,
+        "first_order_only": False,
+        "source": "loyalty_reward",
+        "reward_id": reward_id,
+        "reward_title": reward.get("title"),
+        "created_by": current_user.get("_id"),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
+
+    await db.promo_codes.insert_one(promo)
+
+    # Link promo code back to the reward
+    await db.loyalty_rewards.update_one(
+        {"_id": reward_id},
+        {"$push": {"generated_promo_codes": {"code": code, "promo_id": promo["_id"], "created_at": now.isoformat()}},
+         "$set": {"updated_at": now}}
+    )
+
+    return {
+        "message": "Promo code generated from reward",
+        "code": code,
+        "promo_id": promo["_id"],
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "valid_from": valid_from,
+        "valid_to": valid_to,
+        "usage_limit": promo["usage_limit"]
+    }
+
+
+@router.get("/admin/promo-codes")
+async def get_loyalty_promo_codes(
+    current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
+):
+    """Get all promo codes generated from loyalty rewards"""
+    db = get_database()
+    promos = await db.promo_codes.find({"source": "loyalty_reward"}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"promo_codes": promos, "total": len(promos)}
+
+
 @router.get("/admin/members/{user_id}")
 async def get_member_detail(
     user_id: str,
