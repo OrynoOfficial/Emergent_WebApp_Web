@@ -447,22 +447,8 @@ const PaymentMethodsSelection = ({
 
         {isProcessingInternal && selectedMethodInternal !== 'mtn_momo' && (
           <div className="mt-3 text-sm text-slate-600 text-center">
-            {selectedMethodInternal === 'stripe' 
-              ? 'Redirecting to secure checkout...' 
-              : 'Processing your payment...'}
+            Processing your payment...
           </div>
-        )}
-
-        {selectedMethodInternal === 'stripe' && !isProcessingInternal && (
-          <p className="mt-3 text-xs text-center text-slate-500">
-            You will be redirected to Stripe secure checkout
-          </p>
-        )}
-
-        {selectedMethodInternal === 'mtn_momo' && !isProcessingInternal && (
-          <p className="mt-3 text-xs text-center text-slate-500">
-            Pay securely with your MTN Mobile Money account
-          </p>
         )}
       </div>
 
