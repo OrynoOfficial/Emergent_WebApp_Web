@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.package import PackageServiceCreate, PackageServiceUpdate, PackageStatus
 from typing import Optional, List
 from datetime import datetime
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/packages", tags=["Packages"])
 @router.post("/")
 async def create_package(
     package_data: PackageServiceCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["packages.create", "operator.services.create"]))
 ):
     """Create a new travel package"""
     db = get_database()
