@@ -518,47 +518,6 @@ export default function CarRentalBooking() {
                 </div>
               </div>
             </div>
-
-            {/* Payment Section */}
-            <div className={`bg-white rounded-2xl shadow-lg overflow-hidden ${!canSelectPayment ? 'opacity-60' : selectedPaymentMethod ? 'ring-2 ring-emerald-500' : ''}`}>
-              <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-white">
-                    <div className="p-2 bg-white/20 rounded-xl">
-                      <CreditCard className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg">Payment Method</h3>
-                      <p className="text-sm text-white/70">Secure payment options</p>
-                    </div>
-                  </div>
-                  {selectedPaymentMethod && (
-                    <Badge className="bg-white/20 text-white border-0">
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Selected
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              
-              <div className="p-6">
-                {!canSelectPayment && (
-                  <div className="mb-4 p-3 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600">
-                    Please complete extras and driver information first
-                  </div>
-                )}
-                <div className={!canSelectPayment ? 'opacity-50 pointer-events-none' : ''}>
-                  <PaymentMethodsSelection
-                    amount={pricing.total}
-                    orderId={orderId}
-                    serviceName={car?.name || 'Car Rental'}
-                    onPaymentInitiated={handlePaymentInitiated}
-                    onPaymentError={handlePaymentError}
-                    triggerPayment={triggerPayment}
-                    onMethodSelected={(method) => setSelectedPaymentMethod(method)}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right Column - Summary */}
