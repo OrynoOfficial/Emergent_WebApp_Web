@@ -89,9 +89,9 @@ async def get_banquet(banquet_id: str):
 async def update_banquet(
     banquet_id: str,
     banquet_data: BanquetUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["banquets.edit", "operator.services.edit"]))
 ):
-    """Update a banquet venue"""
+    """Update a banquet venue - requires banquets.edit permission"""
     db = get_database()
     
     banquet = await db.banquets.find_one({"_id": banquet_id})
@@ -111,9 +111,9 @@ async def update_banquet(
 @router.delete("/{banquet_id}")
 async def delete_banquet(
     banquet_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["banquets.delete", "operator.services.delete"]))
 ):
-    """Delete a banquet venue"""
+    """Delete a banquet venue - requires banquets.delete permission"""
     db = get_database()
     
     banquet = await db.banquets.find_one({"_id": banquet_id})
