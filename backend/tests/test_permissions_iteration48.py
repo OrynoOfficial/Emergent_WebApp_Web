@@ -190,6 +190,8 @@ class TestBanquetPermissions:
                 "name": "TEST_Banquet_Admin",
                 "city": "Yaoundé",
                 "address": "Banquet Hall",
+                "venue_type": "hall",
+                "base_price": 50000,
                 "capacity_min": 50,
                 "capacity_max": 500
             }
@@ -272,7 +274,9 @@ class TestPackagesPermissions:
                 "name": "TEST_Package_Admin",
                 "destination": "Beach Resort",
                 "base_price": 100000,
-                "duration_days": 3
+                "duration_days": 3,
+                "duration_nights": 2,
+                "package_type": "tour"
             }
         )
         assert response.status_code in [200, 201], f"Admin should create package: {response.text}"
@@ -301,18 +305,18 @@ class TestPackagesPermissions:
 class TestEventsNewEndpoints:
     """Test NEW events.edit and events.delete endpoints"""
     
-    @pytest.fixture(scope="class")
-    def test_event(self, api_client, auth_tokens):
-        """Create a test event for edit/delete tests"""
+    def test_admin_can_create_and_update_event(self, api_client, auth_tokens):
+        """Admin should be able to create and update an event - NEW endpoint"""
         if not auth_tokens.get("admin"):
-            return None
+            pytest.skip("Admin token not available")
         
-        response = api_client.post(
+        # First create an event
+        create_response = api_client.post(
             f"{BASE_URL}/api/events/",
             headers=get_auth_header(auth_tokens["admin"]),
             json={
-                "name": "TEST_Event_ForEditDelete",
-                "description": "Test event for edit/delete",
+                "name": "TEST_Event_ForUpdate",
+                "description": "Test event for update",
                 "event_type": "concert",
                 "venue": "Test Venue",
                 "city": "Yaoundé",
@@ -324,30 +328,48 @@ class TestEventsNewEndpoints:
                 "total_seats": 100
             }
         )
-        if response.status_code in [200, 201]:
-            return response.json().get("event_id")
-        return None
-    
-    def test_admin_can_update_event(self, api_client, auth_tokens, test_event):
-        """Admin should be able to update an event - NEW endpoint"""
-        if not auth_tokens.get("admin") or not test_event:
-            pytest.skip("Admin token or test event not available")
+        assert create_response.status_code in [200, 201], f"Failed to create event: {create_response.text}"
+        event_id = create_response.json().get("event_id")
         
+        # Now update it
         response = api_client.put(
-            f"{BASE_URL}/api/events/{test_event}",
+            f"{BASE_URL}/api/events/{event_id}",
             headers=get_auth_header(auth_tokens["admin"]),
             json={"name": "TEST_Event_Updated"}
         )
         assert response.status_code == 200, f"Admin should update event: {response.text}"
         print(f"Admin update event: {response.status_code}")
     
-    def test_customer_cannot_update_event(self, api_client, auth_tokens, test_event):
+    def test_customer_cannot_update_event(self, api_client, auth_tokens):
         """Customer should get 403 trying to update an event"""
-        if not auth_tokens.get("customer") or not test_event:
-            pytest.skip("Customer token or test event not available")
+        if not auth_tokens.get("customer") or not auth_tokens.get("admin"):
+            pytest.skip("Required tokens not available")
+        
+        # Create event as admin first
+        create_response = api_client.post(
+            f"{BASE_URL}/api/events/",
+            headers=get_auth_header(auth_tokens["admin"]),
+            json={
+                "name": "TEST_Event_CustomerCantUpdate",
+                "description": "Test event",
+                "event_type": "concert",
+                "venue": "Test Venue",
+                "city": "Yaoundé",
+                "country": "Cameroon",
+                "event_date": "2026-12-02T18:00:00",
+                "start_time": "18:00",
+                "end_time": "22:00",
+                "ticket_price": 5000,
+                "total_seats": 100
+            }
+        )
+        if create_response.status_code not in [200, 201]:
+            pytest.skip("Could not create test event")
+        
+        event_id = create_response.json().get("event_id")
         
         response = api_client.put(
-            f"{BASE_URL}/api/events/{test_event}",
+            f"{BASE_URL}/api/events/{event_id}",
             headers=get_auth_header(auth_tokens["customer"]),
             json={"name": "TEST_Event_ShouldFail"}
         )
@@ -389,13 +411,36 @@ class TestEventsNewEndpoints:
         assert response.status_code == 200, f"Admin should delete event: {response.text}"
         print(f"Admin delete event: {response.status_code}")
     
-    def test_customer_cannot_delete_event(self, api_client, auth_tokens, test_event):
+    def test_customer_cannot_delete_event(self, api_client, auth_tokens):
         """Customer should get 403 trying to delete an event"""
-        if not auth_tokens.get("customer") or not test_event:
-            pytest.skip("Customer token or test event not available")
+        if not auth_tokens.get("customer") or not auth_tokens.get("admin"):
+            pytest.skip("Required tokens not available")
+        
+        # Create event as admin first
+        create_response = api_client.post(
+            f"{BASE_URL}/api/events/",
+            headers=get_auth_header(auth_tokens["admin"]),
+            json={
+                "name": "TEST_Event_CustomerCantDelete",
+                "description": "Test event",
+                "event_type": "concert",
+                "venue": "Test Venue",
+                "city": "Yaoundé",
+                "country": "Cameroon",
+                "event_date": "2026-12-16T18:00:00",
+                "start_time": "18:00",
+                "end_time": "22:00",
+                "ticket_price": 5000,
+                "total_seats": 100
+            }
+        )
+        if create_response.status_code not in [200, 201]:
+            pytest.skip("Could not create test event")
+        
+        event_id = create_response.json().get("event_id")
         
         response = api_client.delete(
-            f"{BASE_URL}/api/events/{test_event}",
+            f"{BASE_URL}/api/events/{event_id}",
             headers=get_auth_header(auth_tokens["customer"])
         )
         assert response.status_code == 403, f"Customer should get 403: {response.status_code}"
