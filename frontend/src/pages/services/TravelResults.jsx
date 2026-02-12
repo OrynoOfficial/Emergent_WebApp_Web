@@ -839,6 +839,8 @@ export default function TravelResults() {
                 onSelect={handleTripSelect}
                 tripDate={tripDate}
                 onImageClick={handleImageClick}
+                isFav={isFav}
+                toggleFav={toggleFav}
               />
             ))}
           </div>
