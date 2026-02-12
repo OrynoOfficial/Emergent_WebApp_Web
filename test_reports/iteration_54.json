@@ -1,0 +1,90 @@
+{
+  "summary": "Iteration 54 - Backend E2E testing of Loyalty Redemption & Promo Codes Coexistence. All 21 tests PASSED. Verified: 1) Customer redeems reward → gets redemption_code → code exists in promo_codes with source='loyalty_redemption'. 2) Redemption code validates correctly via POST /api/promo-codes/validate. 3) After POST /api/promo-codes/use → loyalty_redemptions.status='used' AND promo_codes.is_active=false. 4) Used code cannot be validated again (returns 404 as code deactivated). 5) Admin GET /api/loyalty/admin/promo-codes returns BOTH source='loyalty_reward' AND source='loyalty_redemption' entries. 6) Admin-generated promos work independently. 7) Customer GET /api/loyalty/redemptions shows status='used' with used_in_order. 8) Backwards compatible: Direct POST /api/promo-codes/ still works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "setup_tests": {
+      "test_01_check_customer_loyalty_program": "PASS - Customer loyalty program retrieved",
+      "test_02_create_low_points_test_reward": "PASS - Created test reward with 10% discount, points_required=10",
+      "test_03_ensure_customer_has_points": "PASS - Customer has sufficient points"
+    },
+    "customer_redemption_flow_tests": {
+      "test_04_customer_redeems_reward": "PASS - Customer redeemed reward, got redemption_code",
+      "test_05_verify_code_in_promo_codes_collection": "PASS - Code found with source='loyalty_redemption', redemption_id linked, is_active=true, times_used=0"
+    },
+    "validation_tests": {
+      "test_06_validate_redemption_code": "PASS - Validates correctly with discount_type=percentage, discount_value=10.0, discount_amount=1000 (10% of 10000)"
+    },
+    "use_and_status_update_tests": {
+      "test_07_use_redemption_code": "PASS - POST /api/promo-codes/use succeeded",
+      "test_08_verify_loyalty_redemption_status_updated": "PASS - status='used', used_in_order set correctly",
+      "test_09_verify_promo_code_deactivated": "PASS - is_active=false, times_used=1 after single use"
+    },
+    "used_code_rejection_tests": {
+      "test_10_used_code_validation_fails": "PASS - Validation returns 404 (code deactivated after usage_limit reached)"
+    },
+    "admin_sees_all_sources_tests": {
+      "test_11_create_admin_reward_for_promo_generation": "PASS - Created admin reward",
+      "test_12_generate_admin_promo_code": "PASS - Generated LYL- prefixed code (source='loyalty_reward')",
+      "test_13_admin_sees_both_sources": "PASS - Admin endpoint returns both loyalty_reward and loyalty_redemption codes",
+      "test_14_admin_generated_promo_works_independently": "PASS - Admin promo validates with correct discount"
+    },
+    "backwards_compatibility_tests": {
+      "test_15_create_direct_promo_code": "PASS - Created promo directly via POST /api/promo-codes/",
+      "test_16_validate_direct_promo_code": "PASS - Direct promo validates correctly (fixed discount)",
+      "test_17_use_direct_promo_code": "PASS - Direct promo used successfully"
+    },
+    "code_reuse_prevention_tests": {
+      "test_18_customer_redeems_another_reward": "PASS - Got second redemption code",
+      "test_19_use_second_redemption_code": "PASS - Used second redemption code",
+      "test_20_second_use_of_same_code_fails": "PASS - Second use attempt rejected (404 - code deactivated)"
+    },
+    "cleanup": {
+      "test_99_cleanup_test_data": "PASS - Test rewards and promo codes cleaned up"
+    }
+  },
+  "features_verified": {
+    "customer_redemption_creates_promo_code": "VERIFIED - POST /api/loyalty/redeem/{id} creates entry in BOTH loyalty_redemptions AND promo_codes collections",
+    "redemption_code_has_correct_source": "VERIFIED - promo_codes entry has source='loyalty_redemption', redemption_id linked, redeemed_by set",
+    "redemption_code_validation": "VERIFIED - POST /api/promo-codes/validate returns discount_type, discount_value, discount_amount",
+    "use_updates_redemption_status": "VERIFIED - POST /api/promo-codes/use updates loyalty_redemptions.status='used' and promo_codes.is_active=false",
+    "used_code_rejected": "VERIFIED - Used code returns 404 (deactivated) on validation attempt",
+    "admin_sees_both_sources": "VERIFIED - GET /api/loyalty/admin/promo-codes returns both source='loyalty_reward' and source='loyalty_redemption'",
+    "admin_generated_promos_work": "VERIFIED - POST /api/loyalty/admin/rewards/{id}/generate-promo still works independently",
+    "customer_redemptions_show_status": "VERIFIED - GET /api/loyalty/redemptions shows status='used' with used_in_order after code use",
+    "backwards_compatibility": "VERIFIED - POST /api/promo-codes/ directly still validates and works"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_loyalty_redemption_flow_iteration54.py",
+    "/app/test_reports/pytest/pytest_results_iteration54.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Redemption flow correctly creates dual entries (loyalty_redemptions + promo_codes) with proper linking via redemption_id",
+    "Use endpoint correctly updates both collections: increments times_used on promo_codes, sets status='used' on loyalty_redemptions",
+    "Admin promo-codes endpoint correctly filters for both sources using $in operator",
+    "Note: Used codes return 404 'Invalid promo code' rather than 400 with specific message - this is acceptable as is_active=false makes them effectively invalid"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_loyalty_redemption_flow_iteration54.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": {
+    "super_admin": "superadmin@oryno.com / testpassword123",
+    "customer": "customer@test.com / testpassword123"
+  },
+  "seed_data_creation": "Test rewards and promo codes created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 54 verified full loyalty redemption & promo code coexistence. Key flows: 1) Customer POST /api/loyalty/redeem/{id} → creates entries in BOTH loyalty_redemptions AND promo_codes (source='loyalty_redemption'). 2) Customer validates code via POST /api/promo-codes/validate. 3) After POST /api/promo-codes/use, the /use endpoint updates loyalty_redemptions.status='used' and promo_codes.is_active=false. 4) Admin GET /api/loyalty/admin/promo-codes shows both admin-generated (source='loyalty_reward') and customer-redeemed (source='loyalty_redemption') codes. 5) Direct promo codes via POST /api/promo-codes/ still work (backwards compatibility). All E2E flows verified working correctly."
+}
