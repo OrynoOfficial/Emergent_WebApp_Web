@@ -637,3 +637,116 @@ async def get_tier_distribution_history(
         "total_redemptions": total_redemptions
     }
 
+
+
+# ============== Referral System ==============
+
+@router.get("/referral")
+async def get_referral_info(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get user's referral code and stats"""
+    db = get_database()
+    user_id = current_user["_id"]
+    
+    # Find or create referral record
+    referral = await db.referrals.find_one({"user_id": user_id}, {"_id": 0})
+    
+    if not referral:
+        # Generate unique referral code
+        code = "ORYNO" + user_id[-6:].upper()
+        # Ensure uniqueness
+        existing = await db.referrals.find_one({"code": code})
+        if existing:
+            code = "ORYNO" + secrets.token_hex(3).upper()
+        
+        referral = {
+            "user_id": user_id,
+            "code": code,
+            "total_referrals": 0,
+            "successful_referrals": 0,
+            "points_earned": 0,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        await db.referrals.insert_one({**referral, "_id": str(uuid.uuid4())})
+    
+    # Get referral history
+    history = await db.referral_claims.find(
+        {"referrer_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    return {
+        "code": referral["code"],
+        "total_referrals": referral.get("total_referrals", 0),
+        "successful_referrals": referral.get("successful_referrals", 0),
+        "points_earned": referral.get("points_earned", 0),
+        "history": history
+    }
+
+
+@router.post("/referral/claim")
+async def claim_referral(
+    referral_code: str = Query(..., description="Referral code to claim"),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Claim a referral code (new user uses someone's referral)"""
+    db = get_database()
+    user_id = current_user["_id"]
+    
+    # Can't refer yourself
+    own_referral = await db.referrals.find_one({"user_id": user_id, "code": referral_code.upper()})
+    if own_referral:
+        raise HTTPException(status_code=400, detail="Cannot use your own referral code")
+    
+    # Check if user already claimed a referral
+    existing_claim = await db.referral_claims.find_one({"claimer_id": user_id})
+    if existing_claim:
+        raise HTTPException(status_code=400, detail="You have already used a referral code")
+    
+    # Find the referrer
+    referral = await db.referrals.find_one({"code": referral_code.upper()})
+    if not referral:
+        raise HTTPException(status_code=404, detail="Invalid referral code")
+    
+    referrer_id = referral["user_id"]
+    REFERRAL_POINTS = 10
+    
+    # Create claim record
+    claim = {
+        "_id": str(uuid.uuid4()),
+        "referrer_id": referrer_id,
+        "claimer_id": user_id,
+        "claimer_email": current_user.get("email", ""),
+        "claimer_name": current_user.get("full_name", ""),
+        "code": referral_code.upper(),
+        "points_awarded": REFERRAL_POINTS,
+        "status": "completed",
+        "created_at": datetime.utcnow().isoformat()
+    }
+    await db.referral_claims.insert_one(claim)
+    
+    # Award points to referrer
+    await db.referrals.update_one(
+        {"user_id": referrer_id},
+        {"$inc": {"total_referrals": 1, "successful_referrals": 1, "points_earned": REFERRAL_POINTS}}
+    )
+    
+    # Add points to referrer's loyalty program
+    referrer_program = await db.loyalty_programs.find_one({"user_id": referrer_id})
+    if referrer_program:
+        await db.loyalty_programs.update_one(
+            {"user_id": referrer_id},
+            {"$inc": {"total_points": REFERRAL_POINTS, "available_points": REFERRAL_POINTS}}
+        )
+        # Log transaction
+        await db.loyalty_transactions.insert_one({
+            "_id": str(uuid.uuid4()),
+            "user_id": referrer_id,
+            "transaction_type": "earn",
+            "points": REFERRAL_POINTS,
+            "description": f"Referral bonus from {current_user.get('full_name', 'a friend')}",
+            "created_at": datetime.utcnow()
+        })
+    
+    return {"message": f"Referral code applied! {referral.get('user_id', 'Your friend')} earned {REFERRAL_POINTS} points.", "points_awarded_to_referrer": REFERRAL_POINTS}
+
