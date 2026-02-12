@@ -238,25 +238,23 @@ export default function TravelBooking() {
     if (!promoCode.trim()) return;
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/promo-codes/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({ code: promoCode.toUpperCase() })
+      const response = await api.post('/promo-codes/validate', {
+        code: promoCode.toUpperCase(),
+        service_type: 'travel',
+        order_amount: pricing.subtotal + pricing.commission
       });
       
-      if (response.ok) {
-        const promo = await response.json();
-        setAppliedPromo(promo);
-        setPromoError('');
-      } else {
-        setPromoError('Invalid promo code');
-        setAppliedPromo(null);
-      }
+      const promo = response.data;
+      // Normalize the promo response for pricing calculation
+      setAppliedPromo({
+        ...promo,
+        discount_percent: promo.discount_type === 'percentage' ? promo.discount_value : null,
+        fixed_discount: promo.discount_type === 'fixed' ? promo.discount_value : null,
+      });
+      setPromoError('');
+      toast.success(`Promo code applied: ${promo.discount_type === 'percentage' ? promo.discount_value + '%' : formatCurrency(promo.discount_value)} off`);
     } catch (error) {
-      setPromoError('Error validating promo code');
+      setPromoError(error.response?.data?.detail || 'Invalid promo code');
       setAppliedPromo(null);
     }
   };
