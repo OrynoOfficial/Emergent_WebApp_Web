@@ -98,4 +98,4 @@ class EmployeeAccessScopeUpdate(BaseModel):
 
 class EmployeeScopeAssignmentCreate(BaseModel):
     user_id: str
-    scope_id: str
+    # scope_id is passed via URL path, not body
