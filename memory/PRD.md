@@ -1078,6 +1078,44 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Section headers use `from-[#082c59]/5 to-slate-100` for subtle navy tint
 - [x] **Car Rental Booking - Payment Moved to Right**: Removed payment section from left column, placed it in right column alongside Vehicle Summary and Price Breakdown, matching the layout pattern of all other booking pages.
 - **Testing**: 100% verified via iteration_63 (all brownish colors confirmed removed, payment position confirmed right column)
+
+### Session: Feb 12, 2026 (Part 28) - P2: WebSocket Seat Selection & P3: Email Invitations
+
+**P2: Airline-Style Live Seat Selection via WebSockets**
+- [x] **Backend WebSocket**: New `/api/ws/seats/{route_id}/{travel_date}` endpoint in `seat_ws.py`
+  - `SeatConnectionManager` manages connected clients grouped by route+date
+  - Sends full seat snapshot on connect
+  - Responds to `ping` and `refresh` client messages
+  - `broadcast_seat_change()` sends updates to all connected clients
+- [x] **Backend Integration**: `seat_bookings.py` now calls `_notify_seat_change()` after reserve, release, and confirm operations, triggering real-time broadcasts to all viewers
+- [x] **Frontend LiveSeatMap**: Rewritten to connect via WebSocket with HTTP polling fallback
+  - Shows real-time "Live" badge when WebSocket connected, "Polling" when falling back
+  - WebSocket auto-reconnects on disconnect (3-second delay)
+  - HTTP polling only runs when WebSocket is disconnected
+  - All seat reservation/release still via HTTP API (WebSocket is read-only broadcast)
+
+**P3: Email Invitation System**
+- [x] **Backend API**: New `/api/invitations/` routes in `invitations.py`
+  - `POST /send` - Admin/operator sends invitation with email, role, optional message
+  - `GET /validate/{token}` - Public endpoint to validate invite link
+  - `POST /accept` - Creates user account from invitation (with username, status, email_verified fields)
+  - `GET /` - Lists invitations (filtered by sender for non-admins)
+  - `DELETE /{token}` - Revokes pending invitation
+  - Sends styled HTML email via existing email utility (mock mode)
+  - 7-day token expiry, duplicate prevention
+- [x] **Frontend Admin Page**: `InvitationsManagement.jsx` at `/admin/invitations`
+  - Send invitation dialog with email, role, personal message
+  - List view with status badges (pending/used/expired/revoked)
+  - Copy invite link, revoke pending invitations
+  - Stats dashboard showing counts per status
+- [x] **Frontend Registration**: `Register.jsx` updated to handle `?invite={token}` URL parameter
+  - Validates token on mount and shows inviter name, role, message
+  - Pre-fills email (disabled), creates account via `/invitations/accept`
+- [x] **Sidebar**: Added "Invitations" link under Admin Config for admins/operators
+- [x] **Bug Fixes** (found by testing agent):
+  - Added missing `status`, `email_verified`, `username` fields to invited user creation
+  - Fixed datetime comparison for pending invitation check (ISO string vs datetime object)
+- **Testing**: 100% verified via iteration_64 (18/18 backend tests, all frontend UI verified)
 - [x] **Step Indicators - Travel & Restaurant Booking**:
   - Added `TravelStepIndicator`: "Traveler Details > Seats & Extras > Payment"
   - Added `RestaurantStepIndicator`: "Guest Details > Review Order > Payment"
