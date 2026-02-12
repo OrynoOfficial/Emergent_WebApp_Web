@@ -528,6 +528,14 @@ export default function EmployeesManagement() {
                 {STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s.replace('_', ' ')}</SelectItem>)}
               </SelectContent>
             </Select>
+            <div className="flex border rounded-lg overflow-hidden" data-testid="view-mode-toggle">
+              <button onClick={() => setViewMode('grid')} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="grid-view-btn">
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button onClick={() => setViewMode('list')} className={`p-2.5 transition-colors ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="list-view-btn">
+                <List className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
