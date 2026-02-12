@@ -8,7 +8,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
-import { ArrowLeft, Bus, MapPin, Clock, Users, CreditCard, Armchair, Plus, Minus, CheckCircle2, X, Loader2, Calendar, DollarSign, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Bus, MapPin, Clock, Users, CreditCard, Armchair, Plus, Minus, CheckCircle2, X, Loader2, Calendar, DollarSign, ShoppingBag, ChevronRight, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
