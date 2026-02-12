@@ -216,10 +216,9 @@ function Loyalty() {
 
 // Admin Loyalty Program Management View
 function AdminLoyaltyView() {
-        api.get('/loyalty/program'),
-        api.get('/loyalty/transactions'),
-        api.get('/loyalty/rewards'),
-        api.get('/loyalty/redemptions'),
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isReadOnly = user?.role === 'admin';
         api.get('/loyalty/referral').catch(() => ({ data: null }))
       ]);
       
