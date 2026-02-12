@@ -419,36 +419,64 @@ export default function OperatorsManagement() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search operators..."
-            className="pl-10 bg-white"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search operators..."
+              className="pl-10 bg-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="operator-search"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40 bg-white" data-testid="status-filter">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {OPERATOR_STATUS.map(s => (
+                <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={serviceFilter} onValueChange={setServiceFilter}>
+            <SelectTrigger className="w-40 bg-white" data-testid="service-filter">
+              <SelectValue placeholder="Service" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {SERVICE_TYPES.map(s => (
+                <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Services' : s.replace('_', ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant={showFilters ? 'default' : 'outline'} size="sm" className={`gap-1.5 ${showFilters ? 'bg-[#082c59]' : ''}`} onClick={() => setShowFilters(p => !p)} data-testid="more-filters-btn">
+            <Filter className="h-4 w-4" /> Filters
+            {(ownerFilter || dateFrom || dateTo) && <Badge className="bg-white/20 text-xs ml-1 h-5 w-5 flex items-center justify-center rounded-full p-0">{[ownerFilter, dateFrom, dateTo].filter(Boolean).length}</Badge>}
+          </Button>
+          {(ownerFilter || dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" className="text-slate-500 gap-1" onClick={() => { setOwnerFilter(''); setDateFrom(''); setDateTo(''); }} data-testid="clear-filters-btn">
+              <XIcon className="h-3.5 w-3.5" /> Clear
+            </Button>
+          )}
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 bg-white">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {OPERATOR_STATUS.map(s => (
-              <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={serviceFilter} onValueChange={setServiceFilter}>
-          <SelectTrigger className="w-40 bg-white">
-            <SelectValue placeholder="Service" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {SERVICE_TYPES.map(s => (
-              <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Services' : s.replace('_', ' ')}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {showFilters && (
+          <div className="flex flex-wrap gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="expanded-filters">
+            <div className="min-w-[180px]">
+              <Label className="text-xs text-slate-500 mb-1 block">Owner</Label>
+              <Input placeholder="Filter by owner..." value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} className="bg-white h-9 text-sm" data-testid="owner-filter" />
+            </div>
+            <div className="min-w-[150px]">
+              <Label className="text-xs text-slate-500 mb-1 block">Joined From</Label>
+              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-white h-9 text-sm" data-testid="date-from-filter" />
+            </div>
+            <div className="min-w-[150px]">
+              <Label className="text-xs text-slate-500 mb-1 block">Joined To</Label>
+              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-white h-9 text-sm" data-testid="date-to-filter" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Operators Table */}
