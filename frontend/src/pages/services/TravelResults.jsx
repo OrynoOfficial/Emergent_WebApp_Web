@@ -17,6 +17,7 @@ import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid,
 import { formatCurrency } from '../../utils/currency';
 import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
+import api from '../../api/client';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
