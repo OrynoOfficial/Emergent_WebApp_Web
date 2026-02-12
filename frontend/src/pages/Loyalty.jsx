@@ -216,7 +216,7 @@ function Loyalty() {
               <div className="bg-slate-50 rounded-xl p-5 mb-4">
                 <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Your Redemption Code</p>
                 <div className="flex items-center justify-center gap-2 mb-2"><span className="text-2xl font-mono font-bold text-[#082c59] tracking-widest bg-white px-4 py-2 rounded-lg border-2 border-dashed border-blue-200">{redeemSuccess.code}</span></div>
-                <Button variant="outline" onClick={() => copyCode(redeemSuccess.code)} className="gap-2" data-testid="copy-redeemed-code"><Copy className="h-4 w-4" /> Copy Code</Button>
+                <Button variant="outline" onClick={() => copyCode(redeemSuccess.code)} className="gap-2" data-testid="copy-redeemed-code">{copiedCode === redeemSuccess.code ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copiedCode === redeemSuccess.code ? 'Copied!' : 'Copy Code'}</Button>
               </div>
               <div className="flex items-center justify-between text-sm p-3 bg-amber-50 rounded-lg border border-amber-100"><span className="text-amber-700">Expires:</span><span className="font-medium text-amber-800">{redeemSuccess.expires_at ? formatDateShort(redeemSuccess.expires_at) : '30 days'}</span></div>
               <p className="text-xs text-slate-400 mt-3">Find this code in your Redeemable Codes section.</p>
