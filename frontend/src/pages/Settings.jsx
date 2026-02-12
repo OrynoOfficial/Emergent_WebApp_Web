@@ -135,7 +135,7 @@ export default function Settings() {
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
-  const isCustomer = user?.role === 'customer' || (!isAdmin && !isOperator);
+  const isCustomer = !isAdmin && !isOperator;
 
   // Determine which settings sections to show based on role
   const getSettingsSections = () => {
