@@ -365,6 +365,23 @@ async def check_user_permissions(user: dict, required_permissions: List[str], db
         return False
 
 
+async def _log_permission_denial(db, user: dict, required_permissions, request_path: str = ""):
+    """Log a permission denial to the permission_audit_trail collection"""
+    from datetime import datetime, timezone
+    try:
+        await db.permission_audit_trail.insert_one({
+            "user_id": user.get("_id") or user.get("id"),
+            "user_email": user.get("email"),
+            "user_role": user.get("role"),
+            "required_permissions": required_permissions if isinstance(required_permissions, list) else [required_permissions],
+            "action": "denied",
+            "request_path": request_path,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass  # Don't let audit logging break the request flow
+
+
 def require_permission(permission_code: str):
     """
     Dependency factory to check if user has a specific permission
