@@ -14,11 +14,8 @@ async def create_pressing(
     pressing_data: PressingCreate,
     current_user: dict = Depends(require_any_permission(["pressing.create", "operator.services.create"]))
 ):
-    """Create a new pressing/laundry service"""
+    """Create a new pressing/laundry service - requires pressing.create permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     operator_id = pressing_data.operator_id or current_user.get("operator_id")
     operator_name = pressing_data.operator_name or current_user.get("operator_name", "")
