@@ -161,7 +161,7 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
         <div className={`flex items-center justify-between text-sm rounded-xl p-3 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-slate-50'}`}>
           <div className={`flex items-center gap-1.5 ${isTripPast ? 'text-slate-400' : 'text-orange-600'}`}>
             <Armchair className="w-4 h-4" />
-            <span className="font-medium">{isTripPast ? 'No longer available' : `${trip.available_seats || 40} seats`}</span>
+            <span className="font-medium">{isTripPast ? 'No longer available' : trip.available_seats === 0 ? 'Sold Out' : `${trip.available_seats ?? trip.total_seats ?? 40} seats`}</span>
           </div>
           {!isTripPast && (
             <div className="flex items-center gap-1.5 text-emerald-600">
