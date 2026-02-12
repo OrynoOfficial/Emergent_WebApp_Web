@@ -34,17 +34,16 @@ export default function EmployeeScopeManagement() {
   
   // Form states
   const [scopeForm, setScopeForm] = useState({
-    name: '',
-    description: '',
-    countries: [],
-    regions: [],
-    market_segments: [],
-    service_types: [],
-    assigned_pod_ids: []
+    name: '', description: '', countries: [], regions: [], market_segments: [], service_types: [], assigned_pod_ids: []
   });
   const [selectedUserId, setSelectedUserId] = useState('');
   const [marketSegments, setMarketSegments] = useState([]);
   const [pods, setPods] = useState([]);
+
+  // Search states for modals
+  const [assignSearch, setAssignSearch] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [segmentSearch, setSegmentSearch] = useState('');
 
   const SERVICE_TYPES = [
     { value: 'travel', label: 'Travel' },
@@ -57,23 +56,41 @@ export default function EmployeeScopeManagement() {
     { value: 'banquet', label: 'Banquet' }
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [scopesRes, usersRes, countriesRes, regionsRes, segRes, podsRes] = await Promise.all([
+      const [scopesRes, usersRes, employeesRes, countriesRes, regionsRes, segRes, podsRes] = await Promise.all([
         api.get('/employee-scopes'),
-        api.get('/users/', { params: { role: 'admin' } }),
+        api.get('/users/'),
+        api.get('/employees/'),
         api.get('/geography/countries'),
         api.get('/geography/regions'),
         api.get('/geography/market-segments'),
         api.get('/pods')
       ]);
       setScopes(scopesRes.data.scopes || []);
-      setUsers(usersRes.data.users || []);
+      
+      // Build combined user list: admin/super_admin/employee users + employee records with user accounts
+      const allUsers = usersRes.data.users || [];
+      const employees = employeesRes.data.employees || [];
+      
+      const platformUsers = allUsers.filter(u => ['admin', 'super_admin', 'employee'].includes(u.role));
+      const usedIds = new Set(platformUsers.map(u => u.id || u._id));
+      
+      // Add employee-linked users that might not be in the platform user list
+      for (const emp of employees) {
+        if (emp.user_id && !usedIds.has(emp.user_id)) {
+          const linkedUser = allUsers.find(u => (u.id || u._id) === emp.user_id);
+          if (linkedUser) {
+            platformUsers.push(linkedUser);
+            usedIds.add(emp.user_id);
+          }
+        }
+      }
+      
+      setUsers(platformUsers);
       setCountries(countriesRes.data.countries || []);
       setRegions(regionsRes.data.regions || []);
       setMarketSegments(segRes.data.market_segments || []);
@@ -132,6 +149,7 @@ export default function EmployeeScopeManagement() {
       toast.success('Scope assigned to user');
       setShowAssignModal(false);
       setSelectedUserId('');
+      setAssignSearch('');
       fetchScopeDetails(selectedScope.id);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to assign scope');
@@ -162,18 +180,13 @@ export default function EmployeeScopeManagement() {
     setScopeForm({ name: '', description: '', countries: [], regions: [], market_segments: [], service_types: [], assigned_pod_ids: [] });
   };
 
-  const toggleArrayItem = (array, item) => {
-    return array.includes(item) ? array.filter(i => i !== item) : [...array, item];
-  };
+  const toggleArrayItem = (array, item) =>
+    array.includes(item) ? array.filter(i => i !== item) : [...array, item];
 
-  const isGlobalScope = (scope) => {
-    return !scope.countries?.length && !scope.regions?.length && 
-           !scope.market_segments?.length && !scope.service_types?.length;
-  };
+  const isGlobalScope = (scope) =>
+    !scope.countries?.length && !scope.regions?.length && !scope.market_segments?.length && !scope.service_types?.length;
 
-  const filteredScopes = scopes.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredScopes = scopes.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="p-6 space-y-6">
@@ -202,13 +215,10 @@ export default function EmployeeScopeManagement() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh
           </Button>
           {scopes.length === 0 && (
-            <Button variant="outline" onClick={initializeDefaults}>
-              Initialize Defaults
-            </Button>
+            <Button variant="outline" onClick={initializeDefaults}>Initialize Defaults</Button>
           )}
           <Button onClick={() => { setEditingScope(null); resetScopeForm(); setShowScopeModal(true); }}>
             <Plus className="w-4 h-4 mr-2" /> Create Scope
@@ -218,58 +228,10 @@ export default function EmployeeScopeManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Shield className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{scopes.length}</p>
-                <p className="text-slate-600">Total Scopes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <Globe className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{scopes.filter(isGlobalScope).length}</p>
-                <p className="text-slate-600">Global Scopes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <MapPin className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{scopes.filter(s => s.countries?.length).length}</p>
-                <p className="text-slate-600">Country Scopes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Briefcase className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{scopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</p>
-                <p className="text-slate-600">Assignments</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-blue-100 rounded-xl"><Shield className="w-6 h-6 text-blue-600" /></div><div><p className="text-2xl font-bold">{scopes.length}</p><p className="text-slate-600">Total Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-green-100 rounded-xl"><Globe className="w-6 h-6 text-green-600" /></div><div><p className="text-2xl font-bold">{scopes.filter(isGlobalScope).length}</p><p className="text-slate-600">Global Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-purple-100 rounded-xl"><MapPin className="w-6 h-6 text-purple-600" /></div><div><p className="text-2xl font-bold">{scopes.filter(s => s.countries?.length).length}</p><p className="text-slate-600">Country Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-orange-100 rounded-xl"><Briefcase className="w-6 h-6 text-orange-600" /></div><div><p className="text-2xl font-bold">{scopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</p><p className="text-slate-600">Assignments</p></div></div></CardContent></Card>
       </div>
 
       {/* Content */}
@@ -282,12 +244,7 @@ export default function EmployeeScopeManagement() {
                 <CardTitle>Scopes</CardTitle>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-40"
-                  />
+                  <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 w-40" />
                 </div>
               </div>
             </CardHeader>
@@ -299,13 +256,8 @@ export default function EmployeeScopeManagement() {
               ) : (
                 <div className="space-y-2">
                   {filteredScopes.map(scope => (
-                    <div
-                      key={scope.id}
-                      onClick={() => fetchScopeDetails(scope.id)}
-                      className={`p-4 rounded-xl cursor-pointer transition-all ${
-                        selectedScope?.id === scope.id ? 'bg-blue-50 border-2 border-blue-200' : 'bg-slate-50 hover:bg-slate-100'
-                      }`}
-                    >
+                    <div key={scope.id} onClick={() => fetchScopeDetails(scope.id)}
+                      className={`p-4 rounded-xl cursor-pointer transition-all ${selectedScope?.id === scope.id ? 'bg-blue-50 border-2 border-blue-200' : 'bg-slate-50 hover:bg-slate-100'}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-semibold">{scope.name}</h3>
@@ -344,12 +296,9 @@ export default function EmployeeScopeManagement() {
                     <Button variant="outline" size="sm" onClick={() => { 
                       setEditingScope(selectedScope); 
                       setScopeForm({
-                        name: selectedScope.name,
-                        description: selectedScope.description || '',
-                        countries: selectedScope.countries || [],
-                        regions: selectedScope.regions || [],
-                        market_segments: selectedScope.market_segments || [],
-                        service_types: selectedScope.service_types || [],
+                        name: selectedScope.name, description: selectedScope.description || '',
+                        countries: selectedScope.countries || [], regions: selectedScope.regions || [],
+                        market_segments: selectedScope.market_segments || [], service_types: selectedScope.service_types || [],
                         assigned_pod_ids: selectedScope.assigned_pod_ids || []
                       }); 
                       setShowScopeModal(true); 
@@ -368,31 +317,16 @@ export default function EmployeeScopeManagement() {
                   {isGlobalScope(selectedScope) ? (
                     <div className="flex items-center gap-3">
                       <Globe className="w-8 h-8 text-green-600" />
-                      <div>
-                        <p className="font-semibold text-green-700">Global Access</p>
-                        <p className="text-sm text-slate-600">Access to all operators worldwide</p>
-                      </div>
+                      <div><p className="font-semibold text-green-700">Global Access</p><p className="text-sm text-slate-600">Access to all operators worldwide</p></div>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <p className="font-semibold">Access Filters (AND logic)</p>
                       <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-slate-500">Countries</p>
-                          <p className="font-medium">{selectedScope.countries?.length ? selectedScope.countries.join(', ') : 'All'}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-500">Regions</p>
-                          <p className="font-medium">{selectedScope.regions?.length ? selectedScope.regions.join(', ') : 'All'}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-500">Market Segments</p>
-                          <p className="font-medium">{selectedScope.market_segments?.length ? selectedScope.market_segments.join(', ') : 'All'}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-500">Service Types</p>
-                          <p className="font-medium">{selectedScope.service_types?.length ? selectedScope.service_types.join(', ') : 'All'}</p>
-                        </div>
+                        <div><p className="text-slate-500">Countries</p><p className="font-medium">{selectedScope.countries?.length ? selectedScope.countries.join(', ') : 'All'}</p></div>
+                        <div><p className="text-slate-500">Regions</p><p className="font-medium">{selectedScope.regions?.length ? selectedScope.regions.join(', ') : 'All'}</p></div>
+                        <div><p className="text-slate-500">Market Segments</p><p className="font-medium">{selectedScope.market_segments?.length ? selectedScope.market_segments.join(', ') : 'All'}</p></div>
+                        <div><p className="text-slate-500">Service Types</p><p className="font-medium">{selectedScope.service_types?.length ? selectedScope.service_types.join(', ') : 'All'}</p></div>
                       </div>
                     </div>
                   )}
@@ -401,9 +335,9 @@ export default function EmployeeScopeManagement() {
                 {/* Assigned Users */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold">Assigned Users ({selectedScope.assignments?.length || 0})</h4>
-                    <Button size="sm" onClick={() => setShowAssignModal(true)}>
-                      <UserPlus className="w-4 h-4 mr-1" /> Assign User
+                    <h4 className="font-semibold">Assigned Employees ({selectedScope.assignments?.length || 0})</h4>
+                    <Button size="sm" onClick={() => { setShowAssignModal(true); setAssignSearch(''); setSelectedUserId(''); }}>
+                      <UserPlus className="w-4 h-4 mr-1" /> Assign Employee
                     </Button>
                   </div>
                   {selectedScope.assignments?.length > 0 ? (
@@ -424,7 +358,7 @@ export default function EmployeeScopeManagement() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-slate-500 text-sm">No users assigned to this scope</p>
+                    <p className="text-slate-500 text-sm">No employees assigned to this scope</p>
                   )}
                 </div>
               </CardContent>
@@ -443,7 +377,7 @@ export default function EmployeeScopeManagement() {
       </div>
 
       {/* Create/Edit Scope Modal */}
-      <Dialog open={showScopeModal} onOpenChange={setShowScopeModal}>
+      <Dialog open={showScopeModal} onOpenChange={(open) => { setShowScopeModal(open); if (!open) { setCountrySearch(''); setSegmentSearch(''); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingScope ? 'Edit Scope' : 'Create Access Scope'}</DialogTitle>
@@ -451,7 +385,7 @@ export default function EmployeeScopeManagement() {
           <div className="space-y-6">
             <div>
               <Label>Scope Name</Label>
-              <Input value={scopeForm.name} onChange={(e) => setScopeForm({...scopeForm, name: e.target.value})} placeholder="Cameroon SME Manager" />
+              <Input value={scopeForm.name} onChange={(e) => setScopeForm({...scopeForm, name: e.target.value})} placeholder="Cameroon SME Manager" data-testid="scope-name-input" />
             </div>
             <div>
               <Label>Description</Label>
@@ -459,35 +393,40 @@ export default function EmployeeScopeManagement() {
             </div>
 
             <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-sm text-slate-600 mb-4">Leave all filters empty for global access. Multiple selections within a category = OR logic. Across categories = AND logic.</p>
+              <p className="text-sm text-slate-600">Leave all filters empty for global access. Multiple selections within a category = OR logic. Across categories = AND logic.</p>
             </div>
 
-            {/* Countries */}
+            {/* Countries with Search */}
             <div>
               <Label className="mb-2 block">Countries (empty = all)</Label>
-              <div className="flex flex-wrap gap-2">
-                {countries.map(c => (
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input placeholder="Search countries..." value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)} className="pl-9" data-testid="scope-country-search" />
+              </div>
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                {countries.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase())).map(c => (
                   <label key={c.code} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.countries.includes(c.code) ? 'bg-blue-100 border-blue-300' : 'bg-slate-100 hover:bg-slate-200'} border`}>
-                    <Checkbox 
-                      checked={scopeForm.countries.includes(c.code)} 
-                      onCheckedChange={() => setScopeForm({...scopeForm, countries: toggleArrayItem(scopeForm.countries, c.code)})}
-                    />
+                    <Checkbox checked={scopeForm.countries.includes(c.code)} onCheckedChange={() => setScopeForm({...scopeForm, countries: toggleArrayItem(scopeForm.countries, c.code)})} />
                     <span className="text-sm">{c.name} ({c.code})</span>
                   </label>
                 ))}
+                {countries.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase())).length === 0 && (
+                  <p className="text-sm text-slate-400 py-2">No countries match</p>
+                )}
               </div>
             </div>
 
-            {/* Market Segments */}
+            {/* Market Segments with Search */}
             <div>
               <Label className="mb-2 block">Market Segments (empty = all)</Label>
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input placeholder="Search segments..." value={segmentSearch} onChange={(e) => setSegmentSearch(e.target.value)} className="pl-9" data-testid="scope-segment-search" />
+              </div>
               <div className="flex flex-wrap gap-2">
-                {marketSegments.map(s => (
+                {marketSegments.filter(s => !segmentSearch || s.name.toLowerCase().includes(segmentSearch.toLowerCase())).map(s => (
                   <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.market_segments.includes(s.id) ? 'border-2' : 'bg-slate-100 hover:bg-slate-200 border'}`} style={scopeForm.market_segments.includes(s.id) ? { backgroundColor: s.color + '20', borderColor: s.color } : {}}>
-                    <Checkbox 
-                      checked={scopeForm.market_segments.includes(s.id)} 
-                      onCheckedChange={() => setScopeForm({...scopeForm, market_segments: toggleArrayItem(scopeForm.market_segments, s.id)})}
-                    />
+                    <Checkbox checked={scopeForm.market_segments.includes(s.id)} onCheckedChange={() => setScopeForm({...scopeForm, market_segments: toggleArrayItem(scopeForm.market_segments, s.id)})} />
                     <span className="text-sm font-medium" style={scopeForm.market_segments.includes(s.id) ? { color: s.color } : {}}>{s.name}</span>
                   </label>
                 ))}
@@ -500,10 +439,7 @@ export default function EmployeeScopeManagement() {
               <div className="flex flex-wrap gap-2">
                 {SERVICE_TYPES.map(s => (
                   <label key={s.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.service_types.includes(s.value) ? 'bg-purple-100 border-purple-300' : 'bg-slate-100 hover:bg-slate-200'} border`}>
-                    <Checkbox 
-                      checked={scopeForm.service_types.includes(s.value)} 
-                      onCheckedChange={() => setScopeForm({...scopeForm, service_types: toggleArrayItem(scopeForm.service_types, s.value)})}
-                    />
+                    <Checkbox checked={scopeForm.service_types.includes(s.value)} onCheckedChange={() => setScopeForm({...scopeForm, service_types: toggleArrayItem(scopeForm.service_types, s.value)})} />
                     <span className="text-sm">{s.label}</span>
                   </label>
                 ))}
@@ -517,14 +453,9 @@ export default function EmployeeScopeManagement() {
               <div className="flex flex-wrap gap-2">
                 {pods.map(p => (
                   <label key={p.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all border ${
-                    (scopeForm.assigned_pod_ids || []).includes(p.id)
-                      ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
-                      : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
+                    (scopeForm.assigned_pod_ids || []).includes(p.id) ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
                   }`}>
-                    <Checkbox
-                      checked={(scopeForm.assigned_pod_ids || []).includes(p.id)}
-                      onCheckedChange={() => setScopeForm({...scopeForm, assigned_pod_ids: toggleArrayItem(scopeForm.assigned_pod_ids || [], p.id)})}
-                    />
+                    <Checkbox checked={(scopeForm.assigned_pod_ids || []).includes(p.id)} onCheckedChange={() => setScopeForm({...scopeForm, assigned_pod_ids: toggleArrayItem(scopeForm.assigned_pod_ids || [], p.id)})} />
                     <span className="text-sm font-medium">{p.name}</span>
                     <span className="text-xs text-slate-400">({p.total_members || 0} members)</span>
                   </label>
@@ -535,55 +466,57 @@ export default function EmployeeScopeManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowScopeModal(false)}>Cancel</Button>
-            <Button onClick={handleSaveScope}>Save</Button>
+            <Button onClick={handleSaveScope} data-testid="save-scope-btn">Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Assign User Modal */}
-      <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
-        <DialogContent>
+      {/* Assign Employee Modal */}
+      <Dialog open={showAssignModal} onOpenChange={(open) => { setShowAssignModal(open); if (!open) { setAssignSearch(''); setSelectedUserId(''); } }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Assign User to "{selectedScope?.name}"</DialogTitle>
+            <DialogTitle>Assign Employee to "{selectedScope?.name}"</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Select Employee</Label>
-              <div className="mt-2 max-h-64 overflow-y-auto space-y-2">
-                {users.map(u => {
-                  const isAssigned = selectedScope?.assignments?.some(a => a.user_id === (u.id || u._id));
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input placeholder="Search by name or email..." value={assignSearch} onChange={(e) => setAssignSearch(e.target.value)} className="pl-9" data-testid="assign-search-input" />
+            </div>
+
+            {/* Employee List */}
+            <div className="max-h-64 overflow-y-auto space-y-1.5 border rounded-lg p-2" data-testid="assign-employee-list">
+              {(() => {
+                const filtered = users.filter(u => {
+                  const name = (u.full_name || '').toLowerCase();
+                  const email = (u.email || '').toLowerCase();
+                  return !assignSearch || name.includes(assignSearch.toLowerCase()) || email.includes(assignSearch.toLowerCase());
+                });
+                if (filtered.length === 0) return <p className="text-sm text-slate-400 text-center py-4">No matching employees</p>;
+                return filtered.map(u => {
+                  const uid = u.id || u._id;
+                  const isAssigned = selectedScope?.assignments?.some(a => a.user_id === uid);
+                  const isSelected = selectedUserId === uid;
                   return (
-                    <label 
-                      key={u.id || u._id} 
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
-                        isAssigned ? 'bg-slate-100 opacity-50 cursor-not-allowed' : 
-                        selectedUserId === (u.id || u._id) ? 'bg-blue-100 border-blue-300 border' : 'bg-slate-50 hover:bg-slate-100'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="user"
-                        value={u.id || u._id}
-                        checked={selectedUserId === (u.id || u._id)}
-                        onChange={() => !isAssigned && setSelectedUserId(u.id || u._id)}
-                        disabled={isAssigned}
-                        className="w-4 h-4"
-                      />
-                      <Avatar><AvatarFallback>{(u.full_name || u.email)?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                      <div>
-                        <p className="font-medium">{u.full_name || 'No name'}</p>
-                        <p className="text-sm text-slate-500">{u.email}</p>
+                    <label key={uid} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                      isAssigned ? 'bg-slate-50 opacity-50 cursor-not-allowed' : isSelected ? 'bg-blue-50 border border-blue-300' : 'hover:bg-slate-50 border border-transparent'
+                    }`}>
+                      <input type="radio" name="assign_user" value={uid} checked={isSelected} onChange={() => !isAssigned && setSelectedUserId(uid)} disabled={isAssigned} className="w-4 h-4 accent-blue-600" />
+                      <Avatar className="w-8 h-8"><AvatarFallback className="text-xs">{(u.full_name || u.email)?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{u.full_name || 'No name'}</p>
+                        <p className="text-xs text-slate-500 truncate">{u.email}{u.role ? ` · ${u.role}` : ''}</p>
                       </div>
-                      {isAssigned && <Badge className="ml-auto bg-green-100 text-green-700">Assigned</Badge>}
+                      {isAssigned && <Badge className="ml-auto bg-green-100 text-green-700 text-xs shrink-0">Assigned</Badge>}
                     </label>
                   );
-                })}
-              </div>
+                });
+              })()}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAssignModal(false); setSelectedUserId(''); }}>Cancel</Button>
-            <Button onClick={handleAssignScope} disabled={!selectedUserId}>Assign</Button>
+            <Button onClick={handleAssignScope} disabled={!selectedUserId} data-testid="assign-btn">Assign</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
