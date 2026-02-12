@@ -1068,6 +1068,16 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Features/policies/owner tabs with warm styling
   - "Book Now" changed to "Final Step" with "You will not be charged yet" message
 - **Testing**: 100% verified via iteration_62 (6/6 frontend tests passed)
+
+### Session: Feb 12, 2026 (Part 27) - Color Scheme Fix & Car Rental Payment Layout
+
+- [x] **Color Scheme Overhaul**: Replaced all brownish/warm colors (#f0ebe3, #faf7f2, #e0d5c7, etc.) with modern slate/navy palette across:
+  - `RestaurantMenu.jsx` → `bg-gradient-to-br from-slate-50 via-white to-blue-50`, `bg-slate-50`, `border-slate-200`
+  - `CarRentalDetails.jsx` → same slate palette, gallery placeholders now `from-slate-200 to-slate-300`
+  - `TravelBooking.jsx` → trip summary gradient now `from-slate-50 to-white`
+  - Section headers use `from-[#082c59]/5 to-slate-100` for subtle navy tint
+- [x] **Car Rental Booking - Payment Moved to Right**: Removed payment section from left column, placed it in right column alongside Vehicle Summary and Price Breakdown, matching the layout pattern of all other booking pages.
+- **Testing**: 100% verified via iteration_63 (all brownish colors confirmed removed, payment position confirmed right column)
 - [x] **Step Indicators - Travel & Restaurant Booking**:
   - Added `TravelStepIndicator`: "Traveler Details > Seats & Extras > Payment"
   - Added `RestaurantStepIndicator`: "Guest Details > Review Order > Payment"
