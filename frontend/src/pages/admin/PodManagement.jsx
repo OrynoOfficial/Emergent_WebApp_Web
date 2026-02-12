@@ -563,7 +563,6 @@ export default function PodManagement() {
           </FormField>
         </div>
       </AdminModal>
-      </Dialog>
 
       {/* Add Member Modal */}
       <AdminModal
