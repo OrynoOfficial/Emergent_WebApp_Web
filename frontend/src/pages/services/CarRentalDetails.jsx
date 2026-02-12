@@ -129,9 +129,9 @@ export default function CarRentalDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#f0ebe3]">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b border-[#e0d5c7]">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Results
@@ -141,16 +141,16 @@ export default function CarRentalDetails() {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Image Gallery */}
-        <div className="grid grid-cols-3 gap-2 mb-6 h-72 rounded-xl overflow-hidden">
-          <div className="col-span-2 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-            <Car className="w-32 h-32 text-slate-400" />
+        <div className="grid grid-cols-3 gap-2 mb-6 h-64 rounded-xl overflow-hidden">
+          <div className="col-span-2 bg-gradient-to-br from-[#e8e0d4] to-[#d9cfc1] flex items-center justify-center">
+            <Car className="w-28 h-28 text-[#b8a88a]" />
           </div>
           <div className="space-y-2">
-            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center rounded-tr-xl">
-              <Car className="w-12 h-12 text-slate-300" />
+            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-[#e8e0d4] to-[#d9cfc1] flex items-center justify-center rounded-tr-xl">
+              <Car className="w-10 h-10 text-[#b8a88a]" />
             </div>
-            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center rounded-br-xl">
-              <Car className="w-12 h-12 text-slate-300" />
+            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-[#e8e0d4] to-[#d9cfc1] flex items-center justify-center rounded-br-xl">
+              <Car className="w-10 h-10 text-[#b8a88a]" />
             </div>
           </div>
         </div>
@@ -159,204 +159,197 @@ export default function CarRentalDetails() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Vehicle Info */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
+            <div className="bg-white rounded-2xl border border-[#e0d5c7] overflow-hidden">
+              <div className="bg-gradient-to-r from-[#f7f2eb] to-[#ede5d8] p-5 border-b border-[#e0d5c7]">
+                <div className="flex justify-between items-start">
                   <div>
-                    <Badge className="capitalize mb-2">{vehicle.type}</Badge>
-                    <h1 className="text-3xl font-bold text-[#082c59]">{vehicle.name}</h1>
-                    <p className="text-gray-600">{vehicle.brand} {vehicle.model} • {vehicle.year}</p>
+                    <Badge className="capitalize mb-2 bg-[#082c59]">{vehicle.type}</Badge>
+                    <h1 className="text-2xl font-bold text-[#082c59]">{vehicle.name}</h1>
+                    <p className="text-slate-600 text-sm">{vehicle.brand} {vehicle.model} · {vehicle.year}</p>
                   </div>
-                  <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
-                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                    <span className="text-xl font-bold">{vehicle.rating}</span>
-                    <span className="text-sm text-gray-500">({vehicle.reviews_count} reviews)</span>
-                  </div>
-                </div>
-
-                <p className="text-gray-600 mb-4">{vehicle.description}</p>
-
-                {/* Quick Specs */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
-                  <div className="text-center">
-                    <Users className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                    <div className="font-semibold">{vehicle.seats}</div>
-                    <div className="text-xs text-gray-500">Seats</div>
-                  </div>
-                  <div className="text-center">
-                    <Settings className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                    <div className="font-semibold capitalize">{vehicle.transmission}</div>
-                    <div className="text-xs text-gray-500">Transmission</div>
-                  </div>
-                  <div className="text-center">
-                    <Fuel className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                    <div className="font-semibold capitalize">{vehicle.fuel_type}</div>
-                    <div className="text-xs text-gray-500">{vehicle.fuel_consumption}</div>
-                  </div>
-                  <div className="text-center">
-                    <Car className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                    <div className="font-semibold">{vehicle.doors}</div>
-                    <div className="text-xs text-gray-500">Doors</div>
+                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-[#e0d5c7] shadow-sm">
+                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    <span className="text-lg font-bold">{vehicle.rating}</span>
+                    <span className="text-xs text-slate-500">({vehicle.reviews_count})</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="p-5">
+                <p className="text-slate-600 text-sm mb-4">{vehicle.description}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-[#faf7f2] rounded-xl border border-[#e0d5c7]">
+                    <Users className="w-5 h-5 mx-auto text-[#082c59] mb-1" />
+                    <div className="font-bold text-sm">{vehicle.seats}</div>
+                    <div className="text-[10px] text-slate-500">Seats</div>
+                  </div>
+                  <div className="text-center p-3 bg-[#faf7f2] rounded-xl border border-[#e0d5c7]">
+                    <Settings className="w-5 h-5 mx-auto text-[#082c59] mb-1" />
+                    <div className="font-bold text-sm capitalize">{vehicle.transmission}</div>
+                    <div className="text-[10px] text-slate-500">Transmission</div>
+                  </div>
+                  <div className="text-center p-3 bg-[#faf7f2] rounded-xl border border-[#e0d5c7]">
+                    <Fuel className="w-5 h-5 mx-auto text-[#082c59] mb-1" />
+                    <div className="font-bold text-sm capitalize">{vehicle.fuel_type}</div>
+                    <div className="text-[10px] text-slate-500">{vehicle.fuel_consumption}</div>
+                  </div>
+                  <div className="text-center p-3 bg-[#faf7f2] rounded-xl border border-[#e0d5c7]">
+                    <Car className="w-5 h-5 mx-auto text-[#082c59] mb-1" />
+                    <div className="font-bold text-sm">{vehicle.doors}</div>
+                    <div className="text-[10px] text-slate-500">Doors</div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Tabs */}
             <Tabs defaultValue="features" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="features">Features</TabsTrigger>
-                <TabsTrigger value="policies">Policies</TabsTrigger>
-                <TabsTrigger value="owner">Owner</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 bg-[#f7f2eb] border border-[#e0d5c7] rounded-xl">
+                <TabsTrigger value="features" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Features</TabsTrigger>
+                <TabsTrigger value="policies" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Policies</TabsTrigger>
+                <TabsTrigger value="owner" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Owner</TabsTrigger>
               </TabsList>
               
               <TabsContent value="features" className="mt-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {vehicle.features?.map(feature => (
-                        <div key={feature} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                          <span>{FEATURE_LABELS[feature] || feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-white rounded-2xl border border-[#e0d5c7] p-5">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {vehicle.features?.map(feature => (
+                      <div key={feature} className="flex items-center gap-3 p-3 bg-[#faf7f2] rounded-xl border border-[#e0d5c7]">
+                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="text-sm">{FEATURE_LABELS[feature] || feature}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="policies" className="mt-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
-                      {vehicle.policies?.map((policy, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <Info className="w-5 h-5 text-blue-500 mt-0.5" />
-                          <span>{policy}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-white rounded-2xl border border-[#e0d5c7] p-5">
+                  <div className="space-y-3">
+                    {vehicle.policies?.map((policy, i) => (
+                      <div key={i} className="flex items-start gap-3 p-2.5 bg-[#faf7f2] rounded-lg">
+                        <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                        <span className="text-sm">{policy}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </TabsContent>
               
               <TabsContent value="owner" className="mt-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
-                        <Car className="w-8 h-8 text-slate-400" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{vehicle.owner?.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span>{vehicle.owner?.rating} rating</span>
-                          <span>•</span>
-                          <span>Responds {vehicle.owner?.response_time}</span>
-                        </div>
-                        {vehicle.owner?.phone && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
-                            <Phone className="w-4 h-4" />
-                            {vehicle.owner.phone}
-                          </div>
-                        )}
-                      </div>
+                <div className="bg-white rounded-2xl border border-[#e0d5c7] p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 bg-[#f7f2eb] rounded-full flex items-center justify-center border border-[#e0d5c7]">
+                      <Car className="w-7 h-7 text-[#082c59]" />
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base">{vehicle.owner?.name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
+                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span>{vehicle.owner?.rating} rating</span>
+                        <span>·</span>
+                        <span>Responds {vehicle.owner?.response_time}</span>
+                      </div>
+                      {vehicle.owner?.phone && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600 mt-2">
+                          <Phone className="w-3.5 h-3.5" /> {vehicle.owner.phone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
 
           {/* Sidebar - Booking Widget */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-20">
-              <CardContent className="p-6">
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
-                  <span className="text-gray-500">per day</span>
-                </div>
+            <div className="sticky top-20 bg-white rounded-2xl border border-[#e0d5c7] overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5 text-center">
+                <div className="text-3xl font-bold text-white">{formatFCFA(vehicle.price_per_day)}</div>
+                <span className="text-white/70 text-sm">per day</span>
+              </div>
 
-                <div className="space-y-4">
-                  {/* Pickup Date */}
-                  <div>
-                    <label className="text-sm font-medium">Pickup Date</label>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start mt-1"
-                      onClick={() => setIsPickupDateOpen(true)}
-                    >
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                      {format(selectedDates.pickup, 'PPP')}
-                    </Button>
-                    <DatePickerModal
-                      isOpen={isPickupDateOpen}
-                      onClose={() => setIsPickupDateOpen(false)}
-                      onSelect={(d) => setSelectedDates(p => ({ ...p, pickup: d }))}
-                      selectedDate={selectedDates.pickup}
-                      title="Select Pickup Date"
-                      minDate={new Date()}
-                    />
-                  </div>
-
-                  {/* Return Date */}
-                  <div>
-                    <label className="text-sm font-medium">Return Date</label>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start mt-1"
-                      onClick={() => setIsReturnDateOpen(true)}
-                    >
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                      {format(selectedDates.return, 'PPP')}
-                    </Button>
-                    <DatePickerModal
-                      isOpen={isReturnDateOpen}
-                      onClose={() => setIsReturnDateOpen(false)}
-                      onSelect={(d) => setSelectedDates(p => ({ ...p, return: d }))}
-                      selectedDate={selectedDates.return}
-                      title="Select Return Date"
-                      minDate={selectedDates.pickup}
-                    />
-                  </div>
-
-                  {/* Pickup Location */}
-                  <div>
-                    <label className="text-sm font-medium">Pickup Location</label>
-                    <select className="w-full border rounded-md p-2 mt-1">
-                      {vehicle.pickup_locations?.map(loc => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="border-t pt-4 space-y-2">
-                    <div className="flex justify-between">
-                      <span>{formatFCFA(vehicle.price_per_day)} x {days} day{days > 1 ? 's' : ''}</span>
-                      <span>{formatFCFA(totalPrice)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>Insurance</span>
-                      <span className="text-green-600">Included</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                      <span>Total</span>
-                      <span className="text-[#082c59]">{formatFCFA(totalPrice)}</span>
-                    </div>
-                  </div>
-
-                  <Button className="w-full bg-[#082c59] h-12" onClick={handleBook}>
-                    Book Now
+              <div className="p-5 space-y-4 bg-gradient-to-b from-[#faf7f2] to-white">
+                {/* Pickup Date */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pickup Date</label>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start mt-1.5 bg-white border-[#e0d5c7] rounded-xl hover:bg-[#f7f2eb]"
+                    onClick={() => setIsPickupDateOpen(true)}
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-2 text-[#082c59]" />
+                    {format(selectedDates.pickup, 'PPP')}
                   </Button>
+                  <DatePickerModal
+                    isOpen={isPickupDateOpen}
+                    onClose={() => setIsPickupDateOpen(false)}
+                    onSelect={(d) => setSelectedDates(p => ({ ...p, pickup: d }))}
+                    selectedDate={selectedDates.pickup}
+                    title="Select Pickup Date"
+                    minDate={new Date()}
+                  />
+                </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-500 justify-center">
-                    <Shield className="w-4 h-4" />
-                    <span>Free cancellation up to 24h before</span>
+                {/* Return Date */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Return Date</label>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start mt-1.5 bg-white border-[#e0d5c7] rounded-xl hover:bg-[#f7f2eb]"
+                    onClick={() => setIsReturnDateOpen(true)}
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-2 text-[#082c59]" />
+                    {format(selectedDates.return, 'PPP')}
+                  </Button>
+                  <DatePickerModal
+                    isOpen={isReturnDateOpen}
+                    onClose={() => setIsReturnDateOpen(false)}
+                    onSelect={(d) => setSelectedDates(p => ({ ...p, return: d }))}
+                    selectedDate={selectedDates.return}
+                    title="Select Return Date"
+                    minDate={selectedDates.pickup}
+                  />
+                </div>
+
+                {/* Pickup Location */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pickup Location</label>
+                  <select className="w-full border border-[#e0d5c7] rounded-xl p-2.5 mt-1.5 bg-white text-sm">
+                    {vehicle.pickup_locations?.map(loc => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="border-t border-[#e0d5c7] pt-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">{formatFCFA(vehicle.price_per_day)} x {days} day{days > 1 ? 's' : ''}</span>
+                    <span className="font-medium">{formatFCFA(totalPrice)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Insurance</span>
+                    <span className="text-emerald-600 font-medium">Included</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-base pt-2 border-t border-[#e0d5c7]">
+                    <span>Total</span>
+                    <span className="text-[#082c59]">{formatFCFA(totalPrice)}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="space-y-2">
+                  <Button className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 rounded-xl font-bold text-base" onClick={handleBook}>
+                    Final Step
+                  </Button>
+                  <p className="text-center text-xs text-slate-500">You will not be charged yet</p>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-500 justify-center pt-2">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Free cancellation up to 24h before</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
