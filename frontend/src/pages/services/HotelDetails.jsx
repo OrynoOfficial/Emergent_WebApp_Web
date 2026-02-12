@@ -615,24 +615,62 @@ export default function HotelDetails() {
                 )}
               </div>
 
-              {/* About Section */}
-              <div id="about">
-                <h2 className="text-2xl font-bold mb-4">About this property</h2>
-                <p className="text-slate-600 leading-relaxed mb-4 whitespace-pre-line">
-                  {truncateDescription(hotel.description, 3)}
-                </p>
-                {isDescriptionLong && (
-                  <Button variant="link" className="p-0 text-[#082c59]" onClick={() => setIsAboutDialogOpen(true)}>
-                    See all about this property &gt;
-                  </Button>
-                )}
+              {/* About Section - Modern Revamp */}
+              <div id="about" className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-4 text-slate-900">About this property</h2>
+                  <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                    {truncateDescription(hotel.description, 3)}
+                  </p>
+                  {isDescriptionLong && (
+                    <Button variant="link" className="p-0 text-[#082c59] mt-2" onClick={() => setIsAboutDialogOpen(true)}>
+                      Read full description &gt;
+                    </Button>
+                  )}
+                </div>
                 
-                {/* Amenities Grid */}
+                {/* Expandable Amenities */}
                 {hotel.amenities && hotel.amenities.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                    {hotel.amenities.map((amenity, index) => (
-                      <AmenityIcon key={index} amenity={amenity} />
-                    ))}
+                  <div className="border-t border-slate-100">
+                    <button
+                      onClick={() => setAmenitiesExpanded(!amenitiesExpanded)}
+                      className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
+                      data-testid="amenities-toggle"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
+                          <Sparkles className="h-5 w-5 text-[#082c59]" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className="font-semibold text-slate-900">Amenities</h3>
+                          <p className="text-xs text-slate-500">{hotel.amenities.length} amenities available</p>
+                        </div>
+                      </div>
+                      {amenitiesExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-slate-400" />
+                      )}
+                    </button>
+                    
+                    {/* Preview - always visible */}
+                    <div className="px-5 pb-4">
+                      <div className="flex flex-wrap gap-2">
+                        {hotel.amenities.slice(0, amenitiesExpanded ? hotel.amenities.length : 4).map((amenity, index) => (
+                          <div key={index} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                            <AmenityIcon amenity={amenity} />
+                          </div>
+                        ))}
+                      </div>
+                      {!amenitiesExpanded && hotel.amenities.length > 4 && (
+                        <button
+                          onClick={() => setAmenitiesExpanded(true)}
+                          className="mt-3 text-sm text-[#082c59] font-medium hover:underline"
+                        >
+                          +{hotel.amenities.length - 4} more amenities
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
