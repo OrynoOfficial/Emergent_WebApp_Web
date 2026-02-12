@@ -162,7 +162,7 @@ export default function OperatorsManagement() {
   );
 
   // Reset page when filters change
-  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, serviceFilter]);
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, serviceFilter, ownerFilter, dateFrom, dateTo]);
 
   const getServiceBadge = (service) => {
     const colors = SERVICE_COLORS[service] || { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
