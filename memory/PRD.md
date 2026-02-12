@@ -725,3 +725,18 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Access Scopes Modals**: Create/Edit Scope (violet header with colored sections), Assign Employee (emerald header) — all using AdminModal
 - **Testing**: 100% verified via iteration_42
 
+### Session: Feb 12, 2026 (Part 5) - Phase 1: OTP Flow, Activity Logs, Tier Badge
+
+- [x] **OTP Flow Enhancement**: After OTP verification, shows green checkmark success animation + "Account activated!" message, then redirects to login (no auto-login). On error, shows "Resend Code" and "Edit Info" action buttons
+- [x] **Email Registration**: No longer auto-logs in — redirects to login with success message
+- [x] **User Activity Log Fix**: Backend was querying by `user_id` but activity_logs use `actor_email`. Fixed to query by `actor_id` OR `actor_email`, confirmed filtering (superadmin=728, admin=95)
+- [x] **Loyalty Tier Badge in Header**: Customer users see their tier badge (🥉 Bronze, 🥈 Silver, 🥇 Gold, 💎 Platinum) next to their name in the top-right header. Not shown for admin/operator.
+- **Testing**: 100% verified via iteration_43
+
+### Upcoming (Phase 2 & 3) — Loyalty Program Overhaul
+- Loyalty Admin Overview with visual charts/stats
+- Loyalty Rewards CRUD with enhanced modals and backend APIs
+- Loyalty Members: clickable with activity modal, tier badges, filters
+- Customer Loyalty Frontend: 3-tab redesign (Rewards/Activity/My Rewards)
+- Referral System with codes and tracking
+- UI color refinements (subtle palette)
