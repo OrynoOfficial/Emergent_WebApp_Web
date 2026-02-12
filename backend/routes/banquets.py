@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.banquet import BanquetCreate, BanquetUpdate, BanquetStatus
 from typing import Optional, List
 from datetime import datetime, timedelta
@@ -11,8 +12,9 @@ router = APIRouter(prefix="/api/banquets", tags=["Banquets"])
 @router.post("/")
 async def create_banquet(
     banquet_data: BanquetCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["banquets.create", "operator.services.create"]))
 ):
+    """Create a new banquet venue - requires banquets.create permission"""
     """Create a new banquet venue"""
     db = get_database()
     
