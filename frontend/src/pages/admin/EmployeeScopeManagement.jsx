@@ -378,35 +378,45 @@ export default function EmployeeScopeManagement() {
       </div>
 
       {/* Create/Edit Scope Modal */}
-      <Dialog open={showScopeModal} onOpenChange={(open) => { setShowScopeModal(open); if (!open) { setCountrySearch(''); setSegmentSearch(''); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingScope ? 'Edit Scope' : 'Create Access Scope'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <div>
-              <Label>Scope Name</Label>
-              <Input value={scopeForm.name} onChange={(e) => setScopeForm({...scopeForm, name: e.target.value})} placeholder="Cameroon SME Manager" data-testid="scope-name-input" />
+      <AdminModal
+        open={showScopeModal}
+        onOpenChange={(open) => { setShowScopeModal(open); if (!open) { setCountrySearch(''); setSegmentSearch(''); } }}
+        title={editingScope ? 'Edit Scope' : 'Create Access Scope'}
+        subtitle={editingScope ? 'Update scope filters and assignments' : 'Define attribute-based access rules'}
+        icon={<Shield className="w-5 h-5 text-white" />}
+        accentColor="violet"
+        size="lg"
+        footer={<>
+          <Button variant="outline" onClick={() => setShowScopeModal(false)}>Cancel</Button>
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={handleSaveScope} data-testid="save-scope-btn">Save</Button>
+        </>}
+      >
+        <div className="space-y-5">
+          <AdminModal.Section title="Scope Identity" icon={<Shield className="w-4 h-4" />}>
+            <div className="space-y-4 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
+              <FormField label="Scope Name" required>
+                <StyledInput value={scopeForm.name} onChange={(e) => setScopeForm({...scopeForm, name: e.target.value})} placeholder="Cameroon SME Manager" data-testid="scope-name-input" />
+              </FormField>
+              <FormField label="Description">
+                <Textarea value={scopeForm.description} onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})} placeholder="Access to SME operators in Cameroon" className="bg-slate-50/80 border-slate-200 focus:bg-white" />
+              </FormField>
             </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea value={scopeForm.description} onChange={(e) => setScopeForm({...scopeForm, description: e.target.value})} placeholder="Access to SME operators in Cameroon" />
-            </div>
+          </AdminModal.Section>
 
-            <div className="p-4 bg-slate-50 rounded-xl">
-              <p className="text-sm text-slate-600">Leave all filters empty for global access. Multiple selections within a category = OR logic. Across categories = AND logic.</p>
-            </div>
+          <div className="p-3 bg-violet-50 rounded-xl border border-violet-100 text-sm text-violet-700">
+            Leave all filters empty for global access. Multiple selections within a category = OR logic. Across categories = AND logic.
+          </div>
 
-            {/* Countries with Search */}
-            <div>
-              <Label className="mb-2 block">Countries (empty = all)</Label>
-              <div className="relative mb-2">
+          {/* Countries with Search */}
+          <AdminModal.Section title="Countries (empty = all)" icon={<Globe className="w-4 h-4" />}>
+            <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100">
+              <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input placeholder="Search countries..." value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)} className="pl-9" data-testid="scope-country-search" />
+                <Input placeholder="Search countries..." value={countrySearch} onChange={(e) => setCountrySearch(e.target.value)} className="pl-9 bg-white" data-testid="scope-country-search" />
               </div>
               <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
                 {countries.filter(c => !countrySearch || c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.code.toLowerCase().includes(countrySearch.toLowerCase())).map(c => (
-                  <label key={c.code} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.countries.includes(c.code) ? 'bg-blue-100 border-blue-300' : 'bg-slate-100 hover:bg-slate-200'} border`}>
+                  <label key={c.code} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.countries.includes(c.code) ? 'bg-blue-100 border-blue-300 shadow-sm' : 'bg-white hover:bg-slate-50'} border`}>
                     <Checkbox checked={scopeForm.countries.includes(c.code)} onCheckedChange={() => setScopeForm({...scopeForm, countries: toggleArrayItem(scopeForm.countries, c.code)})} />
                     <span className="text-sm">{c.name} ({c.code})</span>
                   </label>
@@ -416,61 +426,60 @@ export default function EmployeeScopeManagement() {
                 )}
               </div>
             </div>
+          </AdminModal.Section>
 
-            {/* Market Segments with Search */}
-            <div>
-              <Label className="mb-2 block">Market Segments (empty = all)</Label>
-              <div className="relative mb-2">
+          {/* Market Segments with Search */}
+          <AdminModal.Section title="Market Segments (empty = all)" icon={<TrendingUp className="w-4 h-4" />}>
+            <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-100">
+              <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input placeholder="Search segments..." value={segmentSearch} onChange={(e) => setSegmentSearch(e.target.value)} className="pl-9" data-testid="scope-segment-search" />
+                <Input placeholder="Search segments..." value={segmentSearch} onChange={(e) => setSegmentSearch(e.target.value)} className="pl-9 bg-white" data-testid="scope-segment-search" />
               </div>
               <div className="flex flex-wrap gap-2">
                 {marketSegments.filter(s => !segmentSearch || s.name.toLowerCase().includes(segmentSearch.toLowerCase())).map(s => (
-                  <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.market_segments.includes(s.id) ? 'border-2' : 'bg-slate-100 hover:bg-slate-200 border'}`} style={scopeForm.market_segments.includes(s.id) ? { backgroundColor: s.color + '20', borderColor: s.color } : {}}>
+                  <label key={s.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.market_segments.includes(s.id) ? 'border-2 shadow-sm' : 'bg-white hover:bg-slate-50 border'}`} style={scopeForm.market_segments.includes(s.id) ? { backgroundColor: s.color + '20', borderColor: s.color } : {}}>
                     <Checkbox checked={scopeForm.market_segments.includes(s.id)} onCheckedChange={() => setScopeForm({...scopeForm, market_segments: toggleArrayItem(scopeForm.market_segments, s.id)})} />
                     <span className="text-sm font-medium" style={scopeForm.market_segments.includes(s.id) ? { color: s.color } : {}}>{s.name}</span>
                   </label>
                 ))}
               </div>
             </div>
+          </AdminModal.Section>
 
-            {/* Service Types */}
-            <div>
-              <Label className="mb-2 block">Service Types (empty = all)</Label>
+          {/* Service Types */}
+          <AdminModal.Section title="Service Types (empty = all)" icon={<Briefcase className="w-4 h-4" />}>
+            <div className="p-4 bg-emerald-50/40 rounded-xl border border-emerald-100">
               <div className="flex flex-wrap gap-2">
                 {SERVICE_TYPES.map(s => (
-                  <label key={s.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.service_types.includes(s.value) ? 'bg-purple-100 border-purple-300' : 'bg-slate-100 hover:bg-slate-200'} border`}>
+                  <label key={s.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${scopeForm.service_types.includes(s.value) ? 'bg-emerald-100 border-emerald-300 shadow-sm' : 'bg-white hover:bg-slate-50'} border`}>
                     <Checkbox checked={scopeForm.service_types.includes(s.value)} onCheckedChange={() => setScopeForm({...scopeForm, service_types: toggleArrayItem(scopeForm.service_types, s.value)})} />
                     <span className="text-sm">{s.label}</span>
                   </label>
                 ))}
               </div>
             </div>
+          </AdminModal.Section>
 
-            {/* Assigned Pods */}
-            <div>
-              <Label className="mb-2 block">Assigned Pods</Label>
-              <p className="text-xs text-slate-500 mb-2">Pods assigned to this scope. Operators available to these pods will be filtered by this scope's criteria.</p>
+          {/* Assigned Pods */}
+          <AdminModal.Section title="Assigned Pods" icon={<Network className="w-4 h-4" />}>
+            <div className="p-4 bg-indigo-50/40 rounded-xl border border-indigo-100">
+              <p className="text-xs text-slate-500 mb-3">Pods assigned to this scope. Operators available to these pods will be filtered by this scope's criteria.</p>
               <div className="flex flex-wrap gap-2">
                 {pods.map(p => (
                   <label key={p.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all border ${
-                    (scopeForm.assigned_pod_ids || []).includes(p.id) ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-200'
+                    (scopeForm.assigned_pod_ids || []).includes(p.id) ? 'bg-indigo-100 border-indigo-300 text-indigo-700 shadow-sm' : 'bg-white hover:bg-slate-50 border-slate-200'
                   }`}>
                     <Checkbox checked={(scopeForm.assigned_pod_ids || []).includes(p.id)} onCheckedChange={() => setScopeForm({...scopeForm, assigned_pod_ids: toggleArrayItem(scopeForm.assigned_pod_ids || [], p.id)})} />
                     <span className="text-sm font-medium">{p.name}</span>
-                    <span className="text-xs text-slate-400">({p.total_members || 0} members)</span>
+                    <span className="text-xs text-slate-400">({p.total_members || 0})</span>
                   </label>
                 ))}
                 {pods.length === 0 && <p className="text-sm text-slate-400">No pods available</p>}
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScopeModal(false)}>Cancel</Button>
-            <Button onClick={handleSaveScope} data-testid="save-scope-btn">Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AdminModal.Section>
+        </div>
+      </AdminModal>
 
       {/* Assign Employee Modal */}
       <Dialog open={showAssignModal} onOpenChange={(open) => { setShowAssignModal(open); if (!open) { setAssignSearch(''); setSelectedUserId(''); } }}>
