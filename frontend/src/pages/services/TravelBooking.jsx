@@ -521,27 +521,39 @@ export default function TravelBooking() {
               {/* Seat Selection */}
               <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
                 <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
-                  <div className="flex items-center justify-between text-white">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/20 rounded-xl">
-                        <Armchair className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">Choose Your Seats</h3>
-                        <p className="text-sm text-white/70">Optional seat selection</p>
-                      </div>
+                  <div className="flex items-center gap-3 text-white">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <Armchair className="h-6 w-6" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-white/70">Enable</span>
-                      <Switch
-                        checked={showSeatSelection}
-                        onCheckedChange={setShowSeatSelection}
-                      />
+                    <div>
+                      <h3 className="font-bold text-lg">Choose Your Seats</h3>
+                      <p className="text-sm text-white/70">Select your preferred seats for a better experience</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-6">
+                {/* Enable toggle - prominent, outside the dark header */}
+                <div className="px-6 pt-5 pb-2">
+                  <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${showSeatSelection ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}
+                    onClick={() => setShowSeatSelection(!showSeatSelection)}
+                    data-testid="seat-selection-toggle"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${showSeatSelection ? 'bg-emerald-100' : 'bg-slate-200'}`}>
+                        <Armchair className={`w-5 h-5 ${showSeatSelection ? 'text-emerald-600' : 'text-slate-500'}`} />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">{showSeatSelection ? 'Seat Selection Enabled' : 'Enable Seat Selection'}</p>
+                        <p className="text-xs text-slate-500">{showSeatSelection ? 'Choose your preferred seats below' : 'Seats will be auto-assigned at check-in'}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={showSeatSelection}
+                      onCheckedChange={setShowSeatSelection}
+                      data-testid="seat-selection-switch"
+                    />
+                  </div>
+                </div>
                   {showSeatSelection ? (
                     <div className="space-y-6">
                       <p className="text-sm text-slate-600">
