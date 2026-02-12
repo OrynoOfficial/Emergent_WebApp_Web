@@ -388,7 +388,9 @@ export default function EmployeeScopeManagement() {
         size="lg"
         footer={<>
           <Button variant="outline" onClick={() => setShowScopeModal(false)}>Cancel</Button>
-          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={handleSaveScope} data-testid="save-scope-btn">Save</Button>
+          <Button className="bg-violet-600 hover:bg-violet-700 text-white" onClick={handleSaveScope} data-testid="save-scope-btn">
+            {editingScope ? 'Save' : 'Create'}
+          </Button>
         </>}
       >
         <div className="space-y-5">
