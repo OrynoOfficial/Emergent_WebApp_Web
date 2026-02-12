@@ -264,7 +264,7 @@ const TripCardList = ({ trip, onSelect, tripDate, onImageClick }) => {
           <div className="mt-4 flex items-center gap-4 text-sm text-white/80">
             <span className="flex items-center gap-1">
               <Armchair className="w-4 h-4" />
-              {isTripPast ? 'N/A' : `${trip.available_seats || 40} seats`}
+              {isTripPast ? 'N/A' : trip.available_seats === 0 ? 'Sold Out' : `${trip.available_seats ?? trip.total_seats ?? 40} seats`}
             </span>
           </div>
         </div>
