@@ -116,10 +116,11 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
         {!isTripPast && (
           <div className="absolute top-3 right-3">
             <button
-              onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+              onClick={(e) => { e.stopPropagation(); toggleFav(trip); }}
               className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
+              data-testid={`fav-btn-${tripId}`}
             >
-              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+              <Heart className={`h-4 w-4 ${isFav(tripId) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
             </button>
           </div>
         )}
