@@ -357,6 +357,7 @@ export default function TravelResults() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
+  const { isFav, toggleFav } = useFavourites('travel');
   
   const [trips, setTrips] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
