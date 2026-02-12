@@ -23,6 +23,7 @@ import {
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import AuditLogs from './AuditLogs';
 
 // Available system roles for assignment
 const SYSTEM_ROLES = [
