@@ -66,6 +66,6 @@
   "seed_data_creation": "No new seed data created. Used existing: Alpha Team pod with 1 member (Admin Testing)",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Iteration 34 tested employee cards pod info display. The merge logic in EmployeesManagement.jsx works correctly - it fetches employees, pods (with member details), and users in parallel, then merges pod members not already in the employees list. Admin Testing (user_id=e922ec7e-ebdd-4c90-8be7-174459782dd5) is the only pod member in Alpha Team and correctly shows the blue pod info section. The notifications API continues to fail with mixed content (HTTP vs HTTPS) - pre-existing issue from iteration 33.",
+  "context_for_next_testing_agent": "Iteration 34 tested employee cards pod info display. The merge logic in EmployeesManagement.jsx works correctly - it fetches employees, pods (with member details), and users in parallel, then merges pod members not already in the employees list. Admin Testing (user_id=location-filter-app) is the only pod member in Alpha Team and correctly shows the blue pod info section. The notifications API continues to fail with mixed content (HTTP vs HTTPS) - pre-existing issue from iteration 33.",
   "rca_of_the_issue": "N/A - No issues found. All requested features working correctly."
 }
