@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.promo_code import PromoCodeCreate, PromoCodeValidate
 from typing import Optional
 from datetime import datetime
@@ -11,13 +12,10 @@ router = APIRouter(prefix="/api/promo-codes", tags=["Promo Codes"])
 @router.post("/")
 async def create_promo_code(
     promo_data: PromoCodeCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["promo.create"]))
 ):
-    """Create a promo code (admin/operator only)"""
+    """Create a promo code - requires promo.create permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["admin", "super_admin", "operator"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if code already exists
     existing = await db.promo_codes.find_one({"code": promo_data.code.upper()})
