@@ -886,3 +886,22 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Frontend passes `outbound_price` for correct per-leg pricing split
   - Single trip orders remain 100% backwards compatible
 - **Testing**: 100% verified via iteration_52 (8/8 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 17) - Phase 3: Loyalty Promo Codes
+
+- [x] **Promo Code Generation from Rewards**: New endpoint `POST /api/loyalty/admin/rewards/{id}/generate-promo` creates a promo code from a loyalty reward. Code format: `LYL-XXXXXX`. Maps reward type to discount_type (discount→percentage, others→fixed). Stores in `promo_codes` collection with `source: 'loyalty_reward'` and `reward_id` link.
+- [x] **Admin Promo Codes View**: New `GET /api/loyalty/admin/promo-codes` endpoint returns all loyalty-generated promos. Frontend Rewards tab now shows:
+  - Tag icon "Generate Promo Code" button on each reward card
+  - "Generated Promo Codes" table showing: Code, Reward, Discount, Used/Limit, Valid Until, Status (Active/Expired/Exhausted), Copy button
+- [x] **Customer Booking Integration**: Fixed TravelBooking.jsx promo code flow:
+  - Replaced raw `fetch` with `api.post` for correct auth
+  - Passes `service_type` and `order_amount` for proper validation
+  - Handles both percentage and fixed discount calculations
+  - Records promo usage via `POST /api/promo-codes/use` after successful booking
+- [x] **End-to-End Status Tracking**: 
+  - `times_used` increments on each use (visible in admin promo table)
+  - `per_user_limit` prevents reuse by same customer (default: 1)
+  - `usage_limit` prevents over-use (from reward's max_redemptions)
+  - Status shows Active/Expired/Exhausted based on dates and usage
+- **Testing**: 100% verified via iteration_53 (16/16 backend tests passed)
