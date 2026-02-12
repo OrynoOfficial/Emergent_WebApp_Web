@@ -301,8 +301,8 @@ async def get_redemptions(
     db = get_database()
     
     query = {"user_id": current_user["_id"]}
-    if status:
-        query["status"] = status
+    if redemption_status:
+        query["status"] = redemption_status
     
     redemptions = await db.loyalty_redemptions.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.loyalty_redemptions.count_documents(query)
