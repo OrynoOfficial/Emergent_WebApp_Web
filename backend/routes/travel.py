@@ -339,3 +339,95 @@ async def approve_travel_route(
     )
     
     return {"message": "Route approved", "route_id": route_id}
+
+
+@router.get("/analytics/dashboard")
+async def get_travel_analytics(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get travel analytics data for the management dashboard"""
+    db = get_database()
+
+    # Operator filter
+    op_filter = {}
+    if current_user.get("role") == "operator":
+        op_id = current_user.get("operator_id")
+        if op_id:
+            op_filter = {"operator_id": op_id}
+
+    # Monthly bookings and revenue (last 6 months)
+    from dateutil.relativedelta import relativedelta
+    now = datetime.utcnow()
+    monthly_data = []
+    for i in range(5, -1, -1):
+        month_start = (now - relativedelta(months=i)).replace(day=1, hour=0, minute=0, second=0)
+        if i > 0:
+            month_end = (now - relativedelta(months=i-1)).replace(day=1, hour=0, minute=0, second=0)
+        else:
+            month_end = now
+
+        query = {
+            "service_category": "travel",
+            "created_at": {"$gte": month_start, "$lt": month_end},
+            **op_filter
+        }
+        month_orders = await db.orders.find(query).to_list(1000)
+        bookings = len(month_orders)
+        revenue = sum(o.get("total_amount", 0) for o in month_orders)
+
+        monthly_data.append({
+            "month": month_start.strftime("%b"),
+            "bookings": bookings,
+            "revenue": revenue
+        })
+
+    # Route popularity
+    route_popularity = []
+    routes = await db.travel_routes.find({**op_filter, "status": "active"}).to_list(100)
+    for r in routes[:10]:
+        rid = r.get("_id") or r.get("id")
+        booking_count = await db.orders.count_documents({
+            "service_category": "travel",
+            "service_id": rid,
+            **op_filter
+        })
+        route_popularity.append({
+            "route": f"{r.get('origin', r.get('from_city', '?'))} → {r.get('destination', r.get('to_city', '?'))}",
+            "bookings": booking_count,
+            "revenue": booking_count * (r.get("price", 0))
+        })
+    route_popularity.sort(key=lambda x: x["bookings"], reverse=True)
+
+    # Vehicle utilization from seat bookings
+    vehicle_util = []
+    vehicles = await db.vehicles.find(op_filter).to_list(50)
+    for v in vehicles[:8]:
+        total_trips = await db.travel_routes.count_documents({"vehicle_id": v.get("_id"), **op_filter})
+        booked_seats = await db.seat_bookings.count_documents({"vehicle_id": v.get("_id"), "status": "booked"})
+        capacity = v.get("capacity", v.get("total_seats", 45))
+        utilization = min(100, round((booked_seats / max(1, capacity * max(1, total_trips))) * 100))
+        vehicle_util.append({
+            "name": (v.get("vehicle_name") or v.get("name", "Vehicle"))[:15],
+            "utilization": utilization
+        })
+
+    # Summary stats
+    total_bookings = await db.orders.count_documents({"service_category": "travel", **op_filter})
+    total_revenue_pipeline = [
+        {"$match": {"service_category": "travel", **op_filter}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}}
+    ]
+    rev_result = await db.orders.aggregate(total_revenue_pipeline).to_list(1)
+    total_revenue = rev_result[0]["total"] if rev_result else 0
+
+    return {
+        "monthly_trend": monthly_data,
+        "route_popularity": route_popularity[:6],
+        "vehicle_utilization": vehicle_util,
+        "summary": {
+            "total_bookings": total_bookings,
+            "total_revenue": total_revenue,
+            "active_routes": len(routes),
+            "active_vehicles": len(vehicles)
+        }
+    }
