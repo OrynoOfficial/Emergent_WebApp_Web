@@ -562,10 +562,9 @@ async def delete_reward(
 @router.get("/admin/members/{user_id}")
 async def get_member_detail(
     user_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_programs"]))
 ):
-    """Get detailed loyalty info for a specific member"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
+    """Get detailed loyalty info for a specific member - requires loyalty.view permission"""
         raise HTTPException(status_code=403, detail="Admin access required")
     
     db = get_database()
@@ -598,11 +597,9 @@ async def get_member_detail(
 
 @router.get("/admin/stats/tier-history")
 async def get_tier_distribution_history(
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_programs"]))
 ):
-    """Get tier distribution over time for charts"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Get tier distribution over time for charts - requires loyalty.view permission"""
     
     db = get_database()
     
