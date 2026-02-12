@@ -225,8 +225,10 @@ async def redeem_reward(
     """Redeem a reward"""
     db = get_database()
     
-    # Get reward
+    # Get reward - support both _id and id fields
     reward = await db.loyalty_rewards.find_one({"_id": reward_id, "is_active": True})
+    if not reward:
+        reward = await db.loyalty_rewards.find_one({"id": reward_id, "is_active": True})
     if not reward:
         raise HTTPException(status_code=404, detail="Reward not found")
     
