@@ -46,10 +46,12 @@ async def send_invitation(
         raise HTTPException(status_code=400, detail="A user with this email already exists")
 
     # Check for pending invitation
+    # Note: expires_at is stored as ISO string, so compare as strings
+    current_time_iso = datetime.now(timezone.utc).isoformat()
     pending = await db.invitations.find_one({
         "email": req.email,
         "status": "pending",
-        "expires_at": {"$gt": datetime.now(timezone.utc)},
+        "expires_at": {"$gt": current_time_iso},
     })
     if pending:
         raise HTTPException(status_code=400, detail="An invitation is already pending for this email")
