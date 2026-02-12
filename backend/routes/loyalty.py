@@ -670,9 +670,21 @@ async def generate_promo_from_reward(
 async def get_loyalty_promo_codes(
     current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
 ):
-    """Get all promo codes generated from loyalty rewards"""
+    """Get all promo codes generated from loyalty (both admin-generated and customer-redeemed)"""
     db = get_database()
-    promos = await db.promo_codes.find({"source": "loyalty_reward"}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    promos = await db.promo_codes.find(
+        {"source": {"$in": ["loyalty_reward", "loyalty_redemption"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    
+    # Enrich with redeemer info for customer-redeemed codes
+    for p in promos:
+        if p.get("source") == "loyalty_redemption" and p.get("redeemed_by"):
+            user = await db.users.find_one({"_id": p["redeemed_by"]}, {"full_name": 1, "email": 1, "_id": 0})
+            if user:
+                p["redeemed_by_name"] = user.get("full_name", "")
+                p["redeemed_by_email"] = user.get("email", "")
+    
     return {"promo_codes": promos, "total": len(promos)}
 
 
