@@ -722,52 +722,81 @@ export default function HotelDetails() {
                 </Button>
               </div>
 
-              {/* Explore Area */}
-              <div>
-                <h3 className="font-bold text-lg mb-4">Explore the area</h3>
-                <div className="aspect-video rounded-lg overflow-hidden mb-4 bg-slate-100">
-                  {mapEmbedUrl ? (
-                    <iframe 
-                      src={mapEmbedUrl}
-                      width="100%" 
-                      height="100%" 
-                      style={{border: 0}} 
-                      allowFullScreen="" 
-                      loading="lazy"
-                      title={`Map of ${hotel.name}`}
-                    ></iframe>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <MapPin className="w-12 h-12" />
+              {/* Explore Area - Enhanced with Live Map & Platform Services */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="p-5">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Navigation className="h-5 w-5 text-[#082c59]" />
+                    Explore the area
+                  </h3>
+                  <div className="aspect-[16/10] rounded-xl overflow-hidden mb-4 bg-slate-100 border border-slate-200">
+                    {mapEmbedUrl ? (
+                      <iframe 
+                        src={mapEmbedUrl}
+                        width="100%" 
+                        height="100%" 
+                        style={{border: 0}} 
+                        allowFullScreen="" 
+                        loading="lazy"
+                        title={`Map of ${hotel.name}`}
+                      ></iframe>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <MapPin className="w-12 h-12" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="font-semibold text-sm text-slate-800">{hotel.address}</p>
+                  {hotel.location?.lat && hotel.location?.lon && (
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.lat},${hotel.location.lon}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-sm text-[#082c59] hover:underline"
+                    >
+                      View in Google Maps &gt;
+                    </a>
+                  )}
+                  
+                  {/* Nearby Landmarks */}
+                  {hotel.landmarks && hotel.landmarks.length > 0 && (
+                    <div className="mt-4 space-y-3">
+                      <h4 className="text-sm font-semibold text-slate-700">Nearby Attractions</h4>
+                      {hotel.landmarks.map((item, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <LandmarkIcon mode={item.mode} />
+                          <div className="flex justify-between w-full text-sm">
+                            <span className="text-slate-800">{item.name}</span>
+                            <span className="text-slate-500">{item.distance}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </div>
-                <p className="font-semibold text-sm">{hotel.address}</p>
-                {hotel.location?.lat && hotel.location?.lon && (
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.lat},${hotel.location.lon}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-sm text-[#082c59] hover:underline"
-                  >
-                    View in a map &gt;
-                  </a>
-                )}
-                
-                {/* Landmarks */}
-                {hotel.landmarks && hotel.landmarks.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    {hotel.landmarks.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <LandmarkIcon mode={item.mode} />
-                        <div className="flex justify-between w-full text-sm">
-                          <span className="text-slate-800">{item.name}</span>
-                          <span className="text-slate-500">{item.distance}</span>
-                        </div>
+
+                  {/* Platform Services Nearby */}
+                  <div className="mt-5 pt-4 border-t border-slate-100">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3">Oryno Services Nearby</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 p-2.5 bg-orange-50 rounded-lg border border-orange-100 text-xs">
+                        <Utensils className="w-4 h-4 text-orange-500 shrink-0" />
+                        <span className="text-slate-700">Restaurants</span>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg border border-blue-100 text-xs">
+                        <Car className="w-4 h-4 text-blue-500 shrink-0" />
+                        <span className="text-slate-700">Car Rentals</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2.5 bg-purple-50 rounded-lg border border-purple-100 text-xs">
+                        <Film className="w-4 h-4 text-purple-500 shrink-0" />
+                        <span className="text-slate-700">Cinemas</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2.5 bg-pink-50 rounded-lg border border-pink-100 text-xs">
+                        <Music className="w-4 h-4 text-pink-500 shrink-0" />
+                        <span className="text-slate-700">Events</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
