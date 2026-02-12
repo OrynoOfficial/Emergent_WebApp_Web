@@ -83,298 +83,316 @@ function Loyalty() {
   const { user } = useAuth();
   const [selectedReward, setSelectedReward] = useState(null);
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
-  const [showReferralDialog, setShowReferralDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState(false);
+  const [activeTab, setActiveTab] = useState('my-rewards');
   
-  // Real data from API
   const [loyaltyProgram, setLoyaltyProgram] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [rewards, setRewards] = useState(DEFAULT_REWARDS);
   const [redemptions, setRedemptions] = useState([]);
+  const [referralInfo, setReferralInfo] = useState(null);
 
-  useEffect(() => {
-    loadLoyaltyData();
-  }, []);
+  const TIER_SYMBOLS = { bronze: '🥉', silver: '🥈', gold: '🥇', platinum: '💎' };
+  const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum'];
+  const TIER_THRESHOLDS = { bronze: 0, silver: 1000, gold: 5000, platinum: 15000 };
+
+  useEffect(() => { loadLoyaltyData(); }, []);
 
   const loadLoyaltyData = async () => {
     setLoading(true);
     try {
-      // Load loyalty program
-      const programRes = await api.get('/loyalty/program');
-      const program = programRes.data;
+      const [programRes, txRes, rewardsRes, redemptionsRes, referralRes] = await Promise.all([
+        api.get('/loyalty/program'),
+        api.get('/loyalty/transactions'),
+        api.get('/loyalty/rewards'),
+        api.get('/loyalty/redemptions'),
+        api.get('/loyalty/referral').catch(() => ({ data: null }))
+      ]);
       
-      // Calculate tier progress
-      const tierThresholds = { bronze: 0, silver: 1000, gold: 5000, platinum: 15000 };
-      const tiers = ['bronze', 'silver', 'gold', 'platinum'];
-      const currentTierIdx = tiers.indexOf(program.tier || 'bronze');
-      const nextTier = currentTierIdx < tiers.length - 1 ? tiers[currentTierIdx + 1] : null;
-      const currentThreshold = tierThresholds[program.tier || 'bronze'];
-      const nextThreshold = nextTier ? tierThresholds[nextTier] : tierThresholds.platinum;
+      const program = programRes.data;
+      const currentTierIdx = TIER_ORDER.indexOf(program.tier || 'bronze');
+      const nextTier = currentTierIdx < TIER_ORDER.length - 1 ? TIER_ORDER[currentTierIdx + 1] : null;
+      const currentThreshold = TIER_THRESHOLDS[program.tier || 'bronze'];
+      const nextThreshold = nextTier ? TIER_THRESHOLDS[nextTier] : TIER_THRESHOLDS.platinum;
       const progress = nextTier ? ((program.total_points - currentThreshold) / (nextThreshold - currentThreshold)) * 100 : 100;
       
       setLoyaltyProgram({
         ...program,
         tier: program.tier || 'bronze',
-        tier_progress: Math.min(progress, 100),
+        tier_progress: Math.min(Math.max(progress, 0), 100),
         next_tier: nextTier,
-        points_to_next_tier: nextTier ? nextThreshold - program.total_points : 0,
-        referral_code: 'ORYNO' + (user?.id?.slice(-6) || 'ABC123').toUpperCase(),
-        total_referrals: program.total_referrals || 0,
+        points_to_next_tier: nextTier ? Math.max(0, nextThreshold - program.total_points) : 0,
         member_since: program.joined_at || program.created_at
       });
-
-      // Load transactions
-      const txRes = await api.get('/loyalty/transactions');
       setTransactions(txRes.data.transactions || []);
-
-      // Load rewards
-      const rewardsRes = await api.get('/loyalty/rewards');
-      if (rewardsRes.data.rewards?.length > 0) {
-        setRewards(rewardsRes.data.rewards);
-      }
-
-      // Load redemptions
-      const redemptionsRes = await api.get('/loyalty/redemptions');
+      if (rewardsRes.data.rewards?.length > 0) setRewards(rewardsRes.data.rewards);
       setRedemptions(redemptionsRes.data.redemptions || []);
-
+      if (referralRes.data) setReferralInfo(referralRes.data);
     } catch (error) {
       console.error('Failed to load loyalty data:', error);
-      // Set default values on error
-      setLoyaltyProgram({
-        tier: 'bronze',
-        total_points: 0,
-        available_points: 0,
-        tier_progress: 0,
-        next_tier: 'silver',
-        points_to_next_tier: 1000,
-        referral_code: 'ORYNO' + (user?.id?.slice(-6) || 'ABC123').toUpperCase(),
-        total_referrals: 0,
-        member_since: new Date().toISOString()
-      });
+      setLoyaltyProgram({ tier: 'bronze', total_points: 0, available_points: 0, tier_progress: 0, next_tier: 'silver', points_to_next_tier: 1000, member_since: new Date().toISOString() });
     } finally {
       setLoading(false);
     }
   };
 
   const currentTierConfig = TIER_CONFIG[loyaltyProgram?.tier || 'bronze'] || TIER_CONFIG.bronze;
-  const TierIcon = currentTierConfig.icon;
 
-  const handleRedeemReward = (reward) => {
-    setSelectedReward(reward);
-    setShowRedeemDialog(true);
-  };
+  const handleRedeemReward = (reward) => { setSelectedReward(reward); setShowRedeemDialog(true); };
 
   const confirmRedemption = async () => {
     if (!selectedReward) return;
-    
     setRedeeming(true);
     try {
       const res = await api.post(`/loyalty/redeem/${selectedReward.id}`);
-      toast.success(`Successfully redeemed: ${selectedReward.title}\nYour code: ${res.data.redemption_code}`);
+      toast.success(`Redeemed: ${selectedReward.title}. Code: ${res.data.redemption_code}`);
       setShowRedeemDialog(false);
-      loadLoyaltyData(); // Refresh data
+      loadLoyaltyData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to redeem reward');
-    } finally {
-      setRedeeming(false);
-    }
+    } finally { setRedeeming(false); }
   };
 
   const copyReferralCode = () => {
-    navigator.clipboard.writeText(loyaltyProgram?.referral_code || '');
-    toast.success('Referral code copied to clipboard!');
+    navigator.clipboard.writeText(referralInfo?.code || loyaltyProgram?.referral_code || '');
+    toast.success('Referral code copied!');
   };
 
-  // formatDate is now imported from dateUtils
-
-  if (loading) {
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#082c59]" />
-      </div>
-    );
-  }
-
-  if (!loyaltyProgram) {
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <p className="text-slate-500">Unable to load loyalty program</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-[400px] flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-[#082c59]" /></div>;
+  if (!loyaltyProgram) return <div className="min-h-[400px] flex items-center justify-center text-slate-500">Unable to load loyalty program</div>;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <Award className="h-7 w-7 text-[#082c59]" />
-          My Loyalty Program
-        </h1>
-        <p className="text-slate-600 mt-1">Earn points and unlock exclusive rewards</p>
-      </div>
-
-      {/* Tier Status Card */}
-      <Card className={`border-2 ${currentTierConfig.borderColor} ${currentTierConfig.bgColor} relative overflow-hidden`}>
-        <div className="absolute top-0 right-0 opacity-10">
-          <TierIcon className="h-48 w-48" />
-        </div>
-        <CardContent className="p-6 relative z-10">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${currentTierConfig.color} flex items-center justify-center shadow-lg`}>
-                  <TierIcon className="h-8 w-8 text-white" />
-                </div>
+      {/* Tier Status Card — Subtle palette */}
+      <Card className={`border ${currentTierConfig.borderColor} overflow-hidden`}>
+        <CardContent className="p-0">
+          <div className={`bg-gradient-to-r ${currentTierConfig.color} p-6 text-white`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-5xl">{TIER_SYMBOLS[loyaltyProgram.tier]}</span>
                 <div>
-                  <p className="text-sm text-slate-500">Current Tier</p>
-                  <h2 className="text-2xl font-bold text-slate-900">{currentTierConfig.name}</h2>
+                  <p className="text-white/70 text-sm">Current Tier</p>
+                  <h2 className="text-2xl font-bold">{currentTierConfig.name} Member</h2>
+                  <p className="text-white/60 text-xs mt-0.5">Since {loyaltyProgram.member_since ? formatDateShort(loyaltyProgram.member_since) : 'N/A'}</p>
                 </div>
               </div>
-
-              {loyaltyProgram?.next_tier && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Progress to {TIER_CONFIG[loyaltyProgram.next_tier]?.name}</span>
-                    <span className="font-semibold">{loyaltyProgram.tier_progress || 0}%</span>
-                  </div>
-                  <Progress value={loyaltyProgram.tier_progress || 0} className="h-3" />
-                  <p className="text-xs text-slate-500">
-                    {(loyaltyProgram.points_to_next_tier || 0).toLocaleString()} more points needed
-                  </p>
-                </div>
-              )}
+              <div className="text-right hidden sm:block">
+                <p className="text-3xl font-bold">{(loyaltyProgram.available_points || 0).toLocaleString()}</p>
+                <p className="text-white/70 text-sm">available points</p>
+              </div>
             </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center shadow">
-                <Star className="h-6 w-6 text-amber-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{(loyaltyProgram?.available_points || 0).toLocaleString()}</p>
-                <p className="text-xs text-slate-600">Available Points</p>
+          </div>
+          <div className="p-5">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xl font-bold text-slate-900">{(loyaltyProgram.available_points || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">Available</p>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center shadow">
-                <TrendingUp className="h-6 w-6 text-green-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{(loyaltyProgram?.total_points || 0).toLocaleString()}</p>
-                <p className="text-xs text-slate-600">Total Earned</p>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xl font-bold text-slate-900">{(loyaltyProgram.total_points || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">Total Earned</p>
               </div>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 text-center shadow">
-                <Gift className="h-6 w-6 text-blue-500 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-slate-900">{(loyaltyProgram?.redeemed_points || 0).toLocaleString()}</p>
-                <p className="text-xs text-slate-600">Redeemed</p>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xl font-bold text-slate-900">{((loyaltyProgram.total_points || 0) - (loyaltyProgram.available_points || 0)).toLocaleString()}</p>
+                <p className="text-xs text-slate-500">Redeemed</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Referral Card */}
-      <Card className="overflow-hidden">
-        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-1">Refer Friends & Earn</h3>
-              <p className="text-emerald-100">Share your code and earn 10 points per referral</p>
-            </div>
-            <div className="h-14 w-14 bg-white/20 rounded-full flex items-center justify-center">
-              <Users className="h-7 w-7" />
+      {/* Referral Card — Subtle colors */}
+      <Card className="border border-slate-200">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-blue-50 rounded-xl"><Users className="w-5 h-5 text-blue-600" /></div>
+              <div>
+                <h3 className="font-bold text-slate-900">Refer Friends & Earn</h3>
+                <p className="text-xs text-slate-500">Share your code — earn 10 points per referral</p>
+              </div>
             </div>
           </div>
-        </div>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-1 bg-slate-100 rounded-lg p-4 text-center w-full">
-              <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Your Referral Code</p>
-              <p className="text-2xl font-bold text-slate-900 tracking-wider">{loyaltyProgram?.referral_code || 'ORYNO000000'}</p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 bg-slate-100 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-400 uppercase font-semibold mb-0.5">Your Code</p>
+              <p className="text-lg font-bold text-slate-900 tracking-widest">{referralInfo?.code || 'ORYNO...'}</p>
             </div>
-            <Button onClick={copyReferralCode} className="bg-[#082c59] hover:bg-[#0a3a75] gap-2 w-full sm:w-auto">
-              <Copy className="h-4 w-4" />
-              Copy Code
+            <Button onClick={copyReferralCode} variant="outline" className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50">
+              <Copy className="h-4 w-4" /> Copy
             </Button>
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-4 text-center text-sm">
-            <div className="bg-emerald-50 p-3 rounded-lg">
-              <p className="font-bold text-emerald-900">{loyaltyProgram?.total_referrals || 0}</p>
-              <p className="text-emerald-700">Total Referrals</p>
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="bg-blue-50/60 p-2.5 rounded-lg text-center">
+              <p className="font-bold text-blue-800">{referralInfo?.successful_referrals || 0}</p>
+              <p className="text-xs text-blue-600">Referrals</p>
             </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="font-bold text-blue-900">10 pts</p>
-              <p className="text-blue-700">Per Referral</p>
+            <div className="bg-emerald-50/60 p-2.5 rounded-lg text-center">
+              <p className="font-bold text-emerald-800">{referralInfo?.points_earned || 0} pts</p>
+              <p className="text-xs text-emerald-600">Points Earned</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="rewards" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-100">
-          <TabsTrigger value="rewards" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Gift className="h-4 w-4 mr-2" />
-            Rewards
+      {/* 3-Tab Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
+          <TabsTrigger value="my-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm">
+            <Crown className="h-4 w-4 mr-1.5" /> My Rewards
           </TabsTrigger>
-          <TabsTrigger value="activity" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Clock className="h-4 w-4 mr-2" />
-            Activity
+          <TabsTrigger value="activity" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm">
+            <TrendingUp className="h-4 w-4 mr-1.5" /> Activity
           </TabsTrigger>
-          <TabsTrigger value="redemptions" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Trophy className="h-4 w-4 mr-2" />
-            My Rewards
+          <TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm">
+            <Gift className="h-4 w-4 mr-1.5" /> Rewards
           </TabsTrigger>
         </TabsList>
 
-        {/* Rewards Tab */}
+        {/* === MY REWARDS TAB — Tier Roadmap === */}
+        <TabsContent value="my-rewards" className="space-y-6">
+          {/* Tier Roadmap */}
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-500" /> Tier Roadmap</CardTitle></CardHeader>
+            <CardContent>
+              <div className="relative">
+                {/* Progress Track */}
+                <div className="flex items-center justify-between mb-2">
+                  {TIER_ORDER.map((tier, i) => {
+                    const cfg = TIER_CONFIG[tier];
+                    const isActive = loyaltyProgram.tier === tier;
+                    const isUnlocked = TIER_ORDER.indexOf(loyaltyProgram.tier) >= i;
+                    return (
+                      <div key={tier} className="flex flex-col items-center flex-1">
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center border-3 transition-all ${
+                          isActive ? `bg-gradient-to-br ${cfg.color} text-white shadow-lg scale-110` : isUnlocked ? `${cfg.bgColor} ${cfg.borderColor} border-2` : 'bg-slate-100 border-2 border-slate-200'
+                        }`}>
+                          <span className="text-2xl">{TIER_SYMBOLS[tier]}</span>
+                        </div>
+                        <p className={`text-xs font-semibold mt-2 ${isActive ? cfg.textColor : isUnlocked ? 'text-slate-700' : 'text-slate-400'}`}>{cfg.name}</p>
+                        <p className="text-[10px] text-slate-400">{TIER_THRESHOLDS[tier].toLocaleString()} pts</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Connecting line */}
+                <div className="absolute top-7 left-[12%] right-[12%] h-1 bg-slate-200 rounded -z-10">
+                  <div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded transition-all" style={{ width: `${Math.min(100, (TIER_ORDER.indexOf(loyaltyProgram.tier) / 3) * 100 + (loyaltyProgram.tier_progress / 3))}%` }} />
+                </div>
+              </div>
+
+              {/* Next tier progress */}
+              {loyaltyProgram.next_tier && (
+                <div className="mt-6 p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-slate-600">Progress to <strong>{TIER_CONFIG[loyaltyProgram.next_tier]?.name}</strong></span>
+                    <span className="text-sm font-bold text-slate-900">{Math.round(loyaltyProgram.tier_progress)}%</span>
+                  </div>
+                  <Progress value={loyaltyProgram.tier_progress} className="h-2.5" />
+                  <p className="text-xs text-slate-500 mt-1.5">{(loyaltyProgram.points_to_next_tier || 0).toLocaleString()} more points to {TIER_SYMBOLS[loyaltyProgram.next_tier]} {TIER_CONFIG[loyaltyProgram.next_tier]?.name}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Redeemed Rewards */}
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="w-5 h-5 text-violet-500" /> Redeemed Rewards</CardTitle></CardHeader>
+            <CardContent>
+              {redemptions.length === 0 ? (
+                <div className="text-center py-8"><Trophy className="h-12 w-12 text-slate-200 mx-auto mb-3" /><p className="text-slate-500">No rewards redeemed yet</p><p className="text-sm text-slate-400">Visit the Rewards tab to redeem!</p></div>
+              ) : (
+                <div className="space-y-2">
+                  {redemptions.map((rd) => (
+                    <div key={rd.id || rd._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Gift className="w-5 h-5 text-violet-500" />
+                        <div>
+                          <p className="font-medium text-sm">{rd.reward_title || rd.reward_name}</p>
+                          <p className="text-xs text-slate-500">Code: <span className="font-mono font-bold">{rd.code}</span></p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={rd.status === 'active' || rd.status === 'pending' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'} >{rd.status}</Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { navigator.clipboard.writeText(rd.code); toast.success('Code copied!'); }}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* === ACTIVITY TAB — Bookings & Points === */}
+        <TabsContent value="activity">
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" /> Points Activity</CardTitle></CardHeader>
+            <CardContent>
+              {transactions.length === 0 ? (
+                <div className="text-center py-8"><Clock className="w-12 h-12 text-slate-200 mx-auto mb-3" /><p className="text-slate-500">No activity yet</p><p className="text-sm text-slate-400">Book services to start earning points!</p></div>
+              ) : (
+                <div className="space-y-2">
+                  {transactions.map((tx, i) => {
+                    const isEarn = tx.transaction_type === 'earn' || tx.type === 'earn';
+                    return (
+                      <div key={tx.id || tx._id || i} className={`flex items-center justify-between p-3.5 rounded-xl border ${isEarn ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isEarn ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                            {isEarn ? <TrendingUp className="h-4 w-4 text-emerald-600" /> : <Gift className="h-4 w-4 text-red-500" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm text-slate-900">{tx.description}</p>
+                            <p className="text-xs text-slate-400">{tx.created_at ? formatDateShort(tx.created_at) : tx.date ? formatDateShort(tx.date) : ''}{tx.service_type ? ` \u00B7 ${tx.service_type}` : ''}</p>
+                          </div>
+                        </div>
+                        <span className={`font-bold text-sm ${isEarn ? 'text-emerald-700' : 'text-red-600'}`}>
+                          {isEarn ? '+' : ''}{tx.points?.toLocaleString()} pts
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* === REWARDS TAB — Redeemable === */}
         <TabsContent value="rewards" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rewards.map((reward) => {
               const canRedeem = loyaltyProgram.available_points >= reward.points_required;
-              const tierIndex = ['bronze', 'silver', 'gold', 'platinum'].indexOf(loyaltyProgram.tier);
-              const rewardTierIndex = ['bronze', 'silver', 'gold', 'platinum'].indexOf(reward.min_tier);
-              const tierUnlocked = tierIndex >= rewardTierIndex;
+              const tierIdx = TIER_ORDER.indexOf(loyaltyProgram.tier);
+              const rewardTierIdx = TIER_ORDER.indexOf(reward.min_tier);
+              const tierUnlocked = tierIdx >= rewardTierIdx;
               const pointsProgress = Math.min(100, (loyaltyProgram.available_points / reward.points_required) * 100);
               const pointsNeeded = Math.max(0, reward.points_required - loyaltyProgram.available_points);
+              const rewardTierCfg = TIER_CONFIG[reward.min_tier] || TIER_CONFIG.bronze;
 
               return (
-                <Card key={reward.id} className={`overflow-hidden transition-all duration-300 ${!tierUnlocked ? 'opacity-60' : ''}`}>
+                <Card key={reward.id} className={`overflow-hidden transition-all border ${!tierUnlocked ? 'opacity-50' : canRedeem ? 'border-emerald-200 shadow-sm' : 'border-slate-200'}`}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#082c59] to-blue-600 flex items-center justify-center">
-                        {reward.type === 'discount' ? <Coins className="h-6 w-6 text-white" /> : 
-                         reward.type === 'upgrade' ? <Zap className="h-6 w-6 text-white" /> :
-                         <Gift className="h-6 w-6 text-white" />}
+                      <div className={`p-2.5 rounded-xl ${rewardTierCfg.bgColor}`}>
+                        {reward.type === 'discount' ? <Percent className="h-5 w-5 text-slate-600" /> : reward.type === 'upgrade' ? <Zap className="h-5 w-5 text-slate-600" /> : <Gift className="h-5 w-5 text-slate-600" />}
                       </div>
-                      <Badge className={TIER_CONFIG[reward.min_tier].bgColor + ' ' + TIER_CONFIG[reward.min_tier].textColor}>
-                        {TIER_CONFIG[reward.min_tier].name}+
-                      </Badge>
+                      <Badge className={`${rewardTierCfg.bgColor} ${rewardTierCfg.textColor} text-xs`}>{TIER_SYMBOLS[reward.min_tier]} {rewardTierCfg.name}+</Badge>
                     </div>
-
-                    <h4 className="font-bold text-lg mb-1">{reward.title}</h4>
-                    <p className="text-sm text-slate-600 mb-4">{reward.description}</p>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-xl font-bold text-[#082c59]">{reward.points_required.toLocaleString()}</p>
-                          <p className="text-xs text-slate-500">points required</p>
-                        </div>
-                        {canRedeem ? (
-                          <Badge className="bg-green-100 text-green-700">
-                            <Check className="h-3 w-3 mr-1" />Ready
-                          </Badge>
-                        ) : (
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-orange-600">{pointsNeeded.toLocaleString()}</p>
-                            <p className="text-xs text-slate-500">more needed</p>
-                          </div>
-                        )}
+                    <h4 className="font-bold text-slate-900 mb-1">{reward.title}</h4>
+                    <p className="text-sm text-slate-500 mb-4">{reward.description}</p>
+                    <div className="mb-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-lg font-bold text-[#082c59]">{reward.points_required?.toLocaleString()} pts</span>
+                        {canRedeem && <Badge className="bg-emerald-100 text-emerald-700 text-xs"><Check className="h-3 w-3 mr-0.5" /> Ready</Badge>}
                       </div>
-                      <Progress value={pointsProgress} className={`h-1.5 ${canRedeem ? 'bg-green-100' : 'bg-slate-100'}`} />
+                      <Progress value={pointsProgress} className="h-1.5" />
+                      {!canRedeem && <p className="text-xs text-slate-400 mt-1">{pointsNeeded.toLocaleString()} more needed</p>}
                     </div>
-
-                    <Button
-                      onClick={() => handleRedeemReward(reward)}
-                      disabled={!canRedeem || !tierUnlocked}
-                      className={`w-full ${canRedeem && tierUnlocked ? 'bg-[#082c59] hover:bg-[#0a3a75]' : 'bg-slate-300'}`}
-                    >
+                    <Button onClick={() => handleRedeemReward(reward)} disabled={!canRedeem || !tierUnlocked} className={`w-full ${canRedeem && tierUnlocked ? 'bg-[#082c59] hover:bg-[#0a3a75]' : ''}`} variant={canRedeem && tierUnlocked ? 'default' : 'outline'}>
                       {!tierUnlocked ? 'Tier Locked' : canRedeem ? 'Redeem Now' : `Need ${pointsNeeded.toLocaleString()} pts`}
                     </Button>
                   </CardContent>
@@ -383,221 +401,28 @@ function Loyalty() {
             })}
           </div>
         </TabsContent>
-
-        {/* Activity Tab */}
-        <TabsContent value="activity">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {transactions.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">
-                    <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No transactions yet</p>
-                    <p className="text-sm">Start booking to earn points!</p>
-                  </div>
-                ) : transactions.map((tx) => (
-                  <div key={tx.id || tx._id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        tx.transaction_type === 'earn' || tx.type === 'earn' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                      }`}>
-                        {tx.transaction_type === 'earn' || tx.type === 'earn' ? <TrendingUp className="h-5 w-5" /> : <Gift className="h-5 w-5" />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{tx.description}</p>
-                        <p className="text-sm text-slate-500">{formatDate(tx.date || tx.created_at)}</p>
-                      </div>
-                    </div>
-                    <div className={`text-lg font-bold ${tx.transaction_type === 'earn' || tx.type === 'earn' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.transaction_type === 'earn' || tx.type === 'earn' ? '+' : ''}{tx.points}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Redemptions Tab */}
-        <TabsContent value="redemptions">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Redeemed Rewards</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {redemptions.length === 0 ? (
-                <div className="text-center py-12">
-                  <Trophy className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="font-medium text-slate-700 mb-2">No rewards redeemed yet</h3>
-                  <p className="text-slate-500 mb-4">Start earning points and redeem exciting rewards!</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {redemptions.map((redemption) => (
-                    <div key={redemption.id || redemption._id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-bold">{redemption.reward_title}</h4>
-                          <Badge className={
-                            redemption.status === 'active' ? 'bg-green-100 text-green-700' :
-                            redemption.status === 'used' ? 'bg-blue-100 text-blue-700' :
-                            'bg-slate-100 text-slate-700'
-                          }>
-                            {redemption.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-1">Code: <strong>{redemption.code}</strong></p>
-                        <div className="flex items-center gap-4 text-xs text-slate-500">
-                          <span>Redeemed: {formatDate(redemption.redeemed_at)}</span>
-                          <span>Expires: {formatDate(redemption.expires_at)}</span>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(redemption.code)}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
-
-      {/* How to Earn */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            How to Earn Points
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Gift className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-semibold">Every Booking</p>
-                <p className="text-sm text-slate-600">Earn 1-3x points per 1,000 FCFA spent</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <Star className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="font-semibold">Write Reviews</p>
-                <p className="text-sm text-slate-600">Earn 5 points per review</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
-                <Users className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="font-semibold">Refer Friends</p>
-                <p className="text-sm text-slate-600">Earn 10 points per referral</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tier Benefits */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-amber-500" />
-            Tier Benefits
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(TIER_CONFIG).map(([tierKey, tier]) => {
-              const TIcon = tier.icon;
-              const isCurrentTier = loyaltyProgram.tier === tierKey;
-              const tierOrder = ['bronze', 'silver', 'gold', 'platinum'];
-              const isUnlocked = tierOrder.indexOf(loyaltyProgram.tier) >= tierOrder.indexOf(tierKey);
-
-              return (
-                <div
-                  key={tierKey}
-                  className={`p-4 rounded-lg border-2 ${
-                    isCurrentTier
-                      ? `bg-gradient-to-br ${tier.color} text-white border-transparent`
-                      : isUnlocked
-                      ? `${tier.bgColor} ${tier.borderColor}`
-                      : 'bg-slate-50 border-slate-200 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <TIcon className={`h-5 w-5 ${isCurrentTier ? 'text-white' : tier.textColor}`} />
-                    <span className={`font-bold ${isCurrentTier ? 'text-white' : 'text-slate-900'}`}>
-                      {tier.name}
-                    </span>
-                    {isCurrentTier && (
-                      <Badge className="bg-white/20 text-white text-xs ml-auto">Current</Badge>
-                    )}
-                  </div>
-                  <p className={`text-xs mb-2 ${isCurrentTier ? 'text-white/80' : 'text-slate-500'}`}>
-                    {tier.pointsRequired === 0 ? '0+' : `${tier.pointsRequired.toLocaleString()}+`} points
-                  </p>
-                  {tier.discount > 0 && (
-                    <Badge className={`mb-2 ${isCurrentTier ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'}`}>
-                      {tier.discount}% off
-                    </Badge>
-                  )}
-                  <ul className={`text-xs space-y-1 ${isCurrentTier ? 'text-white/90' : 'text-slate-600'}`}>
-                    {tier.benefits.map((benefit, idx) => (
-                      <li key={idx} className="flex items-center gap-1">
-                        <Check className="h-3 w-3" />
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Redeem Dialog */}
       <Dialog open={showRedeemDialog} onOpenChange={setShowRedeemDialog}>
-        <DialogContent className="bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-[#082c59]">Confirm Redemption</DialogTitle>
-            <DialogDescription>Are you sure you want to redeem this reward?</DialogDescription>
-          </DialogHeader>
+        <DialogContent className="bg-white"><DialogHeader><DialogTitle>Confirm Redemption</DialogTitle><DialogDescription>This will deduct points from your balance.</DialogDescription></DialogHeader>
           {selectedReward && (
-            <div className="p-4 bg-slate-50 rounded-lg">
-              <h4 className="font-bold text-lg mb-2">{selectedReward.title}</h4>
-              <p className="text-slate-600 mb-4">{selectedReward.description}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Points Required:</span>
-                <span className="font-bold text-[#082c59]">{selectedReward.points_required.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-slate-500">Your Balance After:</span>
-                <span className="font-bold text-green-600">
-                  {(loyaltyProgram.available_points - selectedReward.points_required).toLocaleString()}
-                </span>
-              </div>
+            <div className="p-4 bg-slate-50 rounded-lg space-y-3">
+              <h4 className="font-bold text-lg">{selectedReward.title}</h4>
+              <p className="text-slate-600 text-sm">{selectedReward.description}</p>
+              <div className="flex items-center justify-between"><span className="text-slate-500 text-sm">Points Required:</span><span className="font-bold text-[#082c59]">{selectedReward.points_required?.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between"><span className="text-slate-500 text-sm">Balance After:</span><span className="font-bold text-emerald-600">{((loyaltyProgram.available_points || 0) - (selectedReward.points_required || 0)).toLocaleString()}</span></div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRedeemDialog(false)}>Cancel</Button>
-            <Button onClick={confirmRedemption} className="bg-[#082c59] hover:bg-[#0a3a75]">
-              Confirm Redemption
-            </Button>
+            <Button onClick={confirmRedemption} disabled={redeeming} className="bg-[#082c59] hover:bg-[#0a3a75]">{redeeming ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Confirm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
     </div>
   );
 }
