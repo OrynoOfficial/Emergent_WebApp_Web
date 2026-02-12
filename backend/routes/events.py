@@ -264,10 +264,8 @@ async def get_my_event_bookings(
     total = await db.orders.count_documents(
         {"user_id": current_user["_id"], "service_category": "event"}
     )
-    
 
-
-
+    return {"bookings": bookings, "total": total}
 @router.get("/management/my-events")
 async def get_my_events(
     search: Optional[str] = None,
