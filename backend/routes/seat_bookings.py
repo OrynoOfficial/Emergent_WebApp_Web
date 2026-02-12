@@ -268,6 +268,51 @@ async def get_my_bookings(
     
     return {"bookings": bookings, "total": total}
 
+
+@router.get("/available-counts")
+async def get_available_seat_counts(
+    route_ids: str = Query(..., description="Comma-separated route IDs"),
+    travel_date: str = Query(..., description="Travel date YYYY-MM-DD")
+):
+    """Get available seat counts for multiple routes on a date. Public endpoint for search results."""
+    db = get_database()
+    
+    ids = [rid.strip() for rid in route_ids.split(",") if rid.strip()]
+    
+    # Clean up expired reservations
+    await db.seat_bookings.delete_many({
+        "travel_date": travel_date,
+        "status": SeatStatus.RESERVED,
+        "reservation_expires": {"$lt": datetime.utcnow()}
+    })
+    
+    # Aggregate booked+reserved counts per route
+    pipeline = [
+        {"$match": {
+            "route_id": {"$in": ids},
+            "travel_date": travel_date,
+            "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
+        }},
+        {"$group": {"_id": "$route_id", "taken": {"$sum": 1}}}
+    ]
+    taken_counts = {doc["_id"]: doc["taken"] for doc in await db.seat_bookings.aggregate(pipeline).to_list(100)}
+    
+    # Get total seats per route
+    routes = await db.travel_routes.find(
+        {"$or": [{"_id": {"$in": ids}}, {"id": {"$in": ids}}]},
+        {"_id": 1, "id": 1, "total_seats": 1}
+    ).to_list(100)
+    
+    result = {}
+    for r in routes:
+        rid = str(r.get("_id") or r.get("id"))
+        total = r.get("total_seats", 45)
+        taken = taken_counts.get(rid, 0)
+        result[rid] = {"total": total, "taken": taken, "available": max(0, total - taken)}
+    
+    return {"counts": result, "travel_date": travel_date}
+
+
 @router.post("/release-beacon")
 async def release_seats_beacon(
     data: dict
