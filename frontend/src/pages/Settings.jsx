@@ -15,7 +15,7 @@ import {
   Settings as SettingsIcon, HelpCircle, CreditCard, FileText, Info,
   Languages, MessageSquare, ChevronRight, Check, Palette, Smartphone,
   Database, Key, AlertTriangle, Eye, EyeOff, Loader2, Edit, LogOut, MapPin, Heart, Trash2,
-  Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Gift, Package
+  Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Gift, Package, Star
 } from 'lucide-react';
 import api from '../api/client';
 import { toast } from 'sonner';
