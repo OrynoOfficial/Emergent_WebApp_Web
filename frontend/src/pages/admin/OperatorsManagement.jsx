@@ -902,6 +902,44 @@ export default function OperatorsManagement() {
               </FormField>
             </div>
           </AdminModal.Section>
+
+          <AdminModal.Section title="Owner Account" icon={<UserCog className="w-4 h-4" />}>
+            <div className="p-4 bg-violet-50/40 rounded-xl border border-violet-100">
+              <label className="flex items-center gap-3 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createForm.create_owner_account}
+                  onChange={e => setCreateForm(p => ({ ...p, create_owner_account: e.target.checked }))}
+                  className="rounded text-violet-600 focus:ring-violet-500 h-4 w-4"
+                  data-testid="create-owner-toggle"
+                />
+                <div>
+                  <p className="text-sm font-medium text-slate-800">Create owner user account</p>
+                  <p className="text-xs text-slate-500">Create a login account for the operator owner</p>
+                </div>
+              </label>
+              {createForm.create_owner_account && (
+                <div className="space-y-4 pt-3 border-t border-violet-200/50">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Owner Full Name" required>
+                      <StyledInput value={createForm.owner_full_name} onChange={e => setCreateForm(p => ({ ...p, owner_full_name: e.target.value }))} placeholder="John Doe" data-testid="owner-name-input" />
+                    </FormField>
+                    <FormField label="Owner Email" required>
+                      <StyledInput type="email" value={createForm.owner_email} onChange={e => setCreateForm(p => ({ ...p, owner_email: e.target.value }))} placeholder="owner@company.cm" data-testid="owner-email-input" />
+                    </FormField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Owner Phone">
+                      <StyledInput value={createForm.owner_phone} onChange={e => setCreateForm(p => ({ ...p, owner_phone: e.target.value }))} placeholder="+237 600 000 000" />
+                    </FormField>
+                    <FormField label="Password" hint="Leave empty for default: Oryno@2024">
+                      <StyledInput type="password" value={createForm.owner_password} onChange={e => setCreateForm(p => ({ ...p, owner_password: e.target.value }))} placeholder="Leave empty for default" />
+                    </FormField>
+                  </div>
+                </div>
+              )}
+            </div>
+          </AdminModal.Section>
         </div>
       </AdminModal>
 
