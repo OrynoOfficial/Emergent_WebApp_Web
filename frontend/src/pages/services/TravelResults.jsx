@@ -89,10 +89,10 @@ const VehicleImageThumbnails = ({ images, vehicleName, onImageClick }) => {
 };
 
 // Modern Trip Card for Grid View with Vehicle Info
-const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav }) => {
   const tripAmenities = trip.amenities?.length > 0 ? trip.amenities : getDefaultAmenities(trip.vehicle_type);
   const isTripPast = isPast(tripDate, trip.departure_time);
+  const tripId = trip._id || trip.id;
 
   return (
     <Card 
