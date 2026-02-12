@@ -817,3 +817,13 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - `GET /api/activity/export` — Export activity logs (requires activity.export)
 - [x] **Admin Default Permissions Expanded**: Added 40+ permissions for admin role including all service CRUD, employee/pod/scope management, geography management, validation, orders, promo codes
 - **Testing**: 100% verified via iteration_48 (41/42 passed, 1 skipped)
+
+
+### Session: Feb 12, 2026 (Part 12) - Frontend Permissions Update & Audit Trail
+
+- [x] **Frontend Permission Matrix Updated**: Replaced old PERMISSION_MODULES (26 aspirational modules) with 26 modules aligned to backend enforcement. Added `enforced: true` flag to permissions with actual backend API enforcement. "API" badge shown in Matrix tab for enforced permissions.
+- [x] **Permission Audit Trail (Backend)**: Added `_log_permission_denial()` to `permissions.py` — logs every blocked action to `permission_audit_trail` MongoDB collection with user_id, email, role, required_permissions, and timestamp. Called from `require_permission`, `require_any_permission`, and `require_all_permissions`.
+- [x] **Permission Audit Trail (API)**: New `GET /api/access/audit-trail` endpoint with pagination, filtering by permission/user, and aggregated stats (total_denials, top_denied_users, top_denied_permissions). Requires `access.view_permissions`.
+- [x] **Permission Audit Trail (Frontend)**: New "Audit Trail" tab on Permissions page (super_admin only). Features: 3 stats cards (Total Denials, Top Blocked Users, Most Blocked Permissions), denial log table (Time, User, Role, Required Permissions), filter by permission, pagination.
+- [x] **ADMIN_ASSIGNABLE_PERMISSIONS Updated**: Expanded to match all new backend-enforced permissions across all service modules.
+- **Testing**: 100% verified via iteration_49 (15/15 backend, all frontend features)
