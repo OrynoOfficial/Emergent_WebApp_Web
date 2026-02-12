@@ -377,6 +377,9 @@ export default function HotelDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   
+  // Scroll to top on mount
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  
   const [hotel, setHotel] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
