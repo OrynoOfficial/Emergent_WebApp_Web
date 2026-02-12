@@ -340,9 +340,49 @@ export default function AdminLoyaltyView() {
               );
             })}
           </div>
-        </TabsContent>
 
-        {/* === MEMBERS TAB === */}
+          {/* Generated Promo Codes Section */}
+          {loyaltyPromos.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <Tag className="h-5 w-5 text-violet-600" /> Generated Promo Codes
+                <Badge className="bg-violet-100 text-violet-700 text-xs">{loyaltyPromos.length}</Badge>
+              </h3>
+              <div className="overflow-x-auto bg-white rounded-xl border">
+                <table className="w-full text-sm" data-testid="promo-codes-table">
+                  <thead>
+                    <tr className="border-b bg-slate-50">
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Code</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Reward</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Discount</th>
+                      <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Used / Limit</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Valid Until</th>
+                      <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Status</th>
+                      <th className="text-center py-3 px-4 text-xs font-semibold text-slate-600 uppercase">Copy</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loyaltyPromos.map((promo, i) => {
+                      const isExpired = promo.valid_to && new Date(promo.valid_to) < new Date();
+                      const isExhausted = promo.usage_limit && promo.times_used >= promo.usage_limit;
+                      return (
+                        <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
+                          <td className="py-3 px-4"><code className="font-mono font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded">{promo.code}</code></td>
+                          <td className="py-3 px-4 text-slate-700">{promo.reward_title || promo.name}</td>
+                          <td className="py-3 px-4"><span className="font-medium text-emerald-700">{promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `${promo.discount_value} FCFA`}</span></td>
+                          <td className="py-3 px-4 text-center"><span className={`font-bold ${isExhausted ? 'text-red-600' : 'text-slate-700'}`}>{promo.times_used}</span><span className="text-slate-400"> / {promo.usage_limit || '--'}</span></td>
+                          <td className="py-3 px-4 text-slate-500 text-xs">{promo.valid_to ? new Date(promo.valid_to).toLocaleDateString() : '--'}</td>
+                          <td className="py-3 px-4 text-center"><Badge className={`text-xs ${isExpired ? 'bg-red-100 text-red-700' : isExhausted ? 'bg-amber-100 text-amber-700' : promo.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{isExpired ? 'Expired' : isExhausted ? 'Exhausted' : promo.is_active ? 'Active' : 'Inactive'}</Badge></td>
+                          <td className="py-3 px-4 text-center"><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyPromo(promo.code)}>{copiedPromoCode === promo.code ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}</Button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
         <TabsContent value="members" className="mt-6">
           <Card>
             <CardHeader>
