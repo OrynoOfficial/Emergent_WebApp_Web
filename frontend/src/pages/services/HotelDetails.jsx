@@ -208,8 +208,8 @@ const RoomCard = ({ room, nights, checkIn, checkOut, onReserve, compact = false 
             </div>
           </div>
 
-          {/* Room Details Section - Compact */}
-          <div className="lg:w-2/3 p-4 flex flex-col">
+          {/* Room Details Section */}
+          <div className={compact ? 'p-4 flex flex-col' : 'lg:w-2/3 p-4 flex flex-col'}>
             {/* Header */}
             <div className="mb-3">
               <h3 className="text-base font-bold text-slate-900 capitalize">{roomName}</h3>
