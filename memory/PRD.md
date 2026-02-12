@@ -993,3 +993,22 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Payment on Right Side**: Payment section moved to right column in clean `bg-slate-50` card (matching Hotel/Travel booking style). Includes promo code input, commission breakdown, and "Confirm Reservation" button.
 - [x] **Promo Code Integration**: Uses `api.post('/promo-codes/validate')` with `service_type: 'restaurant'`. Handles both percentage and fixed discounts. Records usage after successful payment.
 - **Testing**: 100% verified via iteration_59 (8/8 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 24) - Phase E: Management Pages
+
+- [x] **Section Navigation Redesigned**: All 4 management pages (Hotels, Travel, Restaurant, CarRental) updated to match Events Management style:
+  - Changed from `bg-white border shadow-sm p-1 rounded-xl` with custom `data-[state=active]` colors to `grid w-full grid-cols-N` full-width tabs
+  - Consistent across all pages: Dashboard, Management, Communications tabs evenly distributed
+  - Hotels has 4 tabs (Dashboard, Hotels, Rooms, Communications)
+- [x] **Refresh Buttons Verified**: All management pages (Hotels, Travel, Restaurant, CarRental) have working Refresh buttons with proper onClick handlers that reload data. Loading spinners animate during refresh.
+- [x] **Restaurant Image Upload**: Replaced URL textarea in RestaurantForm with `ImageUploader` component:
+  - Grid display with image previews and remove buttons
+  - Upload via `/api/uploads/` with drag-and-click support
+  - Max 6 images per restaurant
+  - Images stored as URLs and displayed in restaurant results pages
+- [x] **Menu Item Image Upload**: Replaced URL input in MenuItemForm with `MenuImageUploader`:
+  - Upload button with preview and remove
+  - Uses same `/api/uploads/` endpoint with `folder: 'menu-items'`
+- [x] **Bug Fix**: Testing agent fixed upload endpoint — `POST /api/uploads/` now accepts `folder` from both form-data and query params (was only accepting query param).
+- **Testing**: 100% verified via iteration_60 (11/11 backend tests passed)
