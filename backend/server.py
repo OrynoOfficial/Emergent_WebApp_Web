@@ -66,6 +66,7 @@ from routes.geography import router as geography_router
 from routes.pods import router as pods_router
 from routes.employee_scopes import router as employee_scopes_router
 from routes.customer_location import router as customer_location_router
+from routes.communications import router as communications_router
 
 # Create the main app
 app = FastAPI(
