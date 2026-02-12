@@ -482,54 +482,57 @@ export default function EmployeeScopeManagement() {
       </AdminModal>
 
       {/* Assign Employee Modal */}
-      <Dialog open={showAssignModal} onOpenChange={(open) => { setShowAssignModal(open); if (!open) { setAssignSearch(''); setSelectedUserId(''); } }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Assign Employee to "{selectedScope?.name}"</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input placeholder="Search by name or email..." value={assignSearch} onChange={(e) => setAssignSearch(e.target.value)} className="pl-9" data-testid="assign-search-input" />
-            </div>
-
-            {/* Employee List */}
-            <div className="max-h-64 overflow-y-auto space-y-1.5 border rounded-lg p-2" data-testid="assign-employee-list">
-              {(() => {
-                const filtered = users.filter(u => {
-                  const name = (u.full_name || '').toLowerCase();
-                  const email = (u.email || '').toLowerCase();
-                  return !assignSearch || name.includes(assignSearch.toLowerCase()) || email.includes(assignSearch.toLowerCase());
-                });
-                if (filtered.length === 0) return <p className="text-sm text-slate-400 text-center py-4">No matching employees</p>;
-                return filtered.map(u => {
-                  const uid = u.id || u._id;
-                  const isAssigned = selectedScope?.assignments?.some(a => a.user_id === uid);
-                  const isSelected = selectedUserId === uid;
-                  return (
-                    <label key={uid} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
-                      isAssigned ? 'bg-slate-50 opacity-50 cursor-not-allowed' : isSelected ? 'bg-blue-50 border border-blue-300' : 'hover:bg-slate-50 border border-transparent'
-                    }`}>
-                      <input type="radio" name="assign_user" value={uid} checked={isSelected} onChange={() => !isAssigned && setSelectedUserId(uid)} disabled={isAssigned} className="w-4 h-4 accent-blue-600" />
-                      <Avatar className="w-8 h-8"><AvatarFallback className="text-xs">{(u.full_name || u.email)?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm truncate">{u.full_name || 'No name'}</p>
-                        <p className="text-xs text-slate-500 truncate">{u.email}{u.role ? ` · ${u.role}` : ''}</p>
-                      </div>
-                      {isAssigned && <Badge className="ml-auto bg-green-100 text-green-700 text-xs shrink-0">Assigned</Badge>}
-                    </label>
-                  );
-                });
-              })()}
-            </div>
+      <AdminModal
+        open={showAssignModal}
+        onOpenChange={(open) => { setShowAssignModal(open); if (!open) { setAssignSearch(''); setSelectedUserId(''); } }}
+        title={`Assign Employee to "${selectedScope?.name || ''}"`}
+        subtitle="Select an employee to grant this access scope"
+        icon={<UserPlus className="w-5 h-5 text-white" />}
+        accentColor="emerald"
+        size="md"
+        footer={<>
+          <Button variant="outline" onClick={() => { setShowAssignModal(false); setSelectedUserId(''); }}>Cancel</Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleAssignScope} disabled={!selectedUserId} data-testid="assign-btn">Assign</Button>
+        </>}
+      >
+        <div className="space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input placeholder="Search by name or email..." value={assignSearch} onChange={(e) => setAssignSearch(e.target.value)} className="pl-9 bg-slate-50/80" data-testid="assign-search-input" />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAssignModal(false); setSelectedUserId(''); }}>Cancel</Button>
-            <Button onClick={handleAssignScope} disabled={!selectedUserId} data-testid="assign-btn">Assign</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+          {/* Employee List */}
+          <div className="max-h-64 overflow-y-auto space-y-1.5 border rounded-xl p-2 bg-slate-50/30" data-testid="assign-employee-list">
+            {(() => {
+              const filtered = users.filter(u => {
+                const name = (u.full_name || '').toLowerCase();
+                const email = (u.email || '').toLowerCase();
+                return !assignSearch || name.includes(assignSearch.toLowerCase()) || email.includes(assignSearch.toLowerCase());
+              });
+              if (filtered.length === 0) return <p className="text-sm text-slate-400 text-center py-4">No matching employees</p>;
+              return filtered.map(u => {
+                const uid = u.id || u._id;
+                const isAssigned = selectedScope?.assignments?.some(a => a.user_id === uid);
+                const isSelected = selectedUserId === uid;
+                return (
+                  <label key={uid} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                    isAssigned ? 'bg-slate-50 opacity-50 cursor-not-allowed' : isSelected ? 'bg-emerald-50 border border-emerald-300 shadow-sm' : 'hover:bg-white border border-transparent'
+                  }`}>
+                    <input type="radio" name="assign_user" value={uid} checked={isSelected} onChange={() => !isAssigned && setSelectedUserId(uid)} disabled={isAssigned} className="w-4 h-4 accent-emerald-600" />
+                    <Avatar className="w-8 h-8"><AvatarFallback className="text-xs bg-emerald-100 text-emerald-700">{(u.full_name || u.email)?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{u.full_name || 'No name'}</p>
+                      <p className="text-xs text-slate-500 truncate">{u.email}{u.role ? ` \u00B7 ${u.role}` : ''}</p>
+                    </div>
+                    {isAssigned && <Badge className="ml-auto bg-green-100 text-green-700 text-xs shrink-0">Assigned</Badge>}
+                  </label>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      </AdminModal>
     </div>
   );
 }
