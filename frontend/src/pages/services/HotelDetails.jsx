@@ -400,6 +400,8 @@ export default function HotelDetails() {
   const [isPoliciesDialogOpen, setIsPoliciesDialogOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
+  const [roomViewMode, setRoomViewMode] = useState('list');
   
   const nights = differenceInDays(bookingParams.checkOut, bookingParams.checkIn) || 1;
   
