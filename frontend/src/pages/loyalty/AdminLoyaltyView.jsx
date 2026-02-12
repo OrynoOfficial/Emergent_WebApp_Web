@@ -369,10 +369,16 @@ export default function AdminLoyaltyView() {
                         <tr key={i} className="border-b last:border-0 hover:bg-slate-50">
                           <td className="py-3 px-4"><code className="font-mono font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded">{promo.code}</code></td>
                           <td className="py-3 px-4 text-slate-700">{promo.reward_title || promo.name}</td>
+                          <td className="py-3 px-4">
+                            {promo.source === 'loyalty_redemption' ? (
+                              <div><Badge className="bg-blue-100 text-blue-700 text-[10px]">Redeemed</Badge>{promo.redeemed_by_name && <p className="text-[10px] text-slate-500 mt-0.5">{promo.redeemed_by_name}</p>}</div>
+                            ) : (
+                              <Badge className="bg-violet-100 text-violet-700 text-[10px]">Admin</Badge>
+                            )}
+                          </td>
                           <td className="py-3 px-4"><span className="font-medium text-emerald-700">{promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `${promo.discount_value} FCFA`}</span></td>
                           <td className="py-3 px-4 text-center"><span className={`font-bold ${isExhausted ? 'text-red-600' : 'text-slate-700'}`}>{promo.times_used}</span><span className="text-slate-400"> / {promo.usage_limit || '--'}</span></td>
-                          <td className="py-3 px-4 text-slate-500 text-xs">{promo.valid_to ? new Date(promo.valid_to).toLocaleDateString() : '--'}</td>
-                          <td className="py-3 px-4 text-center"><Badge className={`text-xs ${isExpired ? 'bg-red-100 text-red-700' : isExhausted ? 'bg-amber-100 text-amber-700' : promo.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{isExpired ? 'Expired' : isExhausted ? 'Exhausted' : promo.is_active ? 'Active' : 'Inactive'}</Badge></td>
+                          <td className="py-3 px-4 text-center"><Badge className={`text-xs ${isExpired ? 'bg-red-100 text-red-700' : isExhausted ? 'bg-amber-100 text-amber-700' : promo.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{isExpired ? 'Expired' : isExhausted ? 'Exhausted' : promo.is_active ? 'Active' : 'Used'}</Badge></td>
                           <td className="py-3 px-4 text-center"><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyPromo(promo.code)}>{copiedPromoCode === promo.code ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}</Button></td>
                         </tr>
                       );
