@@ -287,6 +287,7 @@ app.include_router(geography_router)  # Geography (countries, regions) managemen
 app.include_router(pods_router)  # Pod-based team structure management
 app.include_router(employee_scopes_router)  # Employee access scopes management
 app.include_router(customer_location_router)  # Customer location-aware filtering
+app.include_router(communications_router)  # Service communications (announcements, alerts)
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
