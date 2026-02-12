@@ -20,12 +20,15 @@ async def upload_file(
 ):
     """Upload a file to S3 or local storage"""
     try:
+        # Support folder from form data or query param, default to "uploads"
+        target_folder = folder or folder_query or "uploads"
+        
         file_data = await file.read()
         result = await storage_service.upload_file(
             file_data=file_data,
             filename=file.filename,
             content_type=file.content_type,
-            folder=folder
+            folder=target_folder
         )
         
         if result["success"]:
