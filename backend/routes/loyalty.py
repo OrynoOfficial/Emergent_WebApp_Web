@@ -414,7 +414,7 @@ async def get_admin_loyalty_members(
                     continue
             
             members.append({
-                "id": prog.get("_id") or prog.get("user_id"),
+                "id": prog.get("user_id"),  # Use user_id for member detail endpoint compatibility
                 "name": user.get("full_name", "Unknown"),
                 "email": user.get("email", ""),
                 "tier": prog.get("tier", "bronze"),
