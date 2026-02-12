@@ -17,7 +17,8 @@ import {
 import { formatCurrency } from '../utils/currency';
 import { formatDate, formatDateShort } from '../utils/dateUtils';
 import api from '../api/client';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import { AdminModal, FormField, StyledInput } from '../components/shared/AdminModal';
 
 // Tier configuration
 const TIER_CONFIG = {
