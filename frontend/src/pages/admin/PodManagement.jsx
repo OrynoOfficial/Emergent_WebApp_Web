@@ -96,9 +96,9 @@ export default function PodManagement() {
         if (emp.email) usedEmails.add(emp.email.toLowerCase());
       }
       
-      // Second: admin/super_admin users not already in the employees list
+      // Second: platform users (admin/super_admin/employee) not already in the employees list
       for (const u of allUsers) {
-        if (u.role === 'admin' || u.role === 'super_admin') {
+        if (u.role === 'admin' || u.role === 'super_admin' || u.role === 'employee') {
           if (!u.email || !usedEmails.has(u.email.toLowerCase())) {
             combined.push({
               id: u.id || u._id,
