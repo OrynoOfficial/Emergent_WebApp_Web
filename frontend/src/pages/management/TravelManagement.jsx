@@ -12,6 +12,7 @@ import {
   DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { travelRouteApi, vehicleApi, operatorApi } from '@/api/management';
+import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
