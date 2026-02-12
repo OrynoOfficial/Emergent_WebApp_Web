@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from config.database import get_database
 from middleware.auth import get_current_active_user
-from utils.permissions import require_permission
+from utils.permissions import require_permission, require_any_permission
 from typing import Optional
 from datetime import datetime
 import uuid
@@ -29,7 +29,7 @@ class TravelRouteCreate(BaseModel):
 @router.post("/routes")
 async def create_travel_route(
     route_data: TravelRouteCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["travel.create", "operator.services.create"]))
 ):
     """Create a new travel route - operators can create routes for their organization"""
     db = get_database()
@@ -269,9 +269,9 @@ class TravelRouteUpdate(BaseModel):
 async def update_travel_route(
     route_id: str,
     route_data: TravelRouteUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["travel.edit", "operator.services.edit"]))
 ):
-    """Update a travel route"""
+    """Update a travel route - requires travel.edit permission"""
     db = get_database()
     
     route = await db.travel_routes.find_one({"_id": route_id})
@@ -300,9 +300,9 @@ async def update_travel_route(
 @router.delete("/routes/{route_id}")
 async def delete_travel_route(
     route_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["travel.delete", "operator.services.delete"]))
 ):
-    """Delete a travel route"""
+    """Delete a travel route - requires travel.delete permission"""
     db = get_database()
     
     route = await db.travel_routes.find_one({"_id": route_id})
