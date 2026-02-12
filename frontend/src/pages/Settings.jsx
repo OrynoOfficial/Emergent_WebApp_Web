@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 // Settings menu items configuration - for Customers
 const CUSTOMER_SETTINGS_SECTIONS = [
   { key: 'profile', label: 'Profile', icon: User, description: 'Manage your personal information' },
+  { key: 'favourites', label: 'Favourites', icon: Heart, description: 'Your saved services and items' },
   { key: 'location', label: 'Location', icon: MapPin, description: 'Set your country for local services' },
   { key: 'security', label: 'Security', icon: Shield, description: 'Password and authentication settings' },
   { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
