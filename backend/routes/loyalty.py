@@ -292,7 +292,7 @@ async def redeem_reward(
 
 @router.get("/redemptions")
 async def get_redemptions(
-    status: Optional[str] = None,
+    redemption_status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user)
