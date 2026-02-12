@@ -388,7 +388,7 @@ export default function Settings() {
   };
 
   const renderSectionContent = () => {
-    const isCustomer = user?.role === 'customer' || !user?.role;
+    const isCustomerRole = !isAdmin && !isOperator;
     
     switch (activeSection) {
       case 'profile':
