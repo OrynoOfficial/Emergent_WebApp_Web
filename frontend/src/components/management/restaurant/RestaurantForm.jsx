@@ -220,19 +220,14 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
           </div>
         </div>
 
-        {/* Images */}
+        {/* Images - Upload */}
         <div className="space-y-3">
           <h4 className="font-medium text-slate-900 border-b pb-2">Images</h4>
-          <div>
-            <Label>Image URLs (one per line)</Label>
-            <Textarea
-              value={(form.images || []).join('\n')}
-              onChange={(e) => updateForm('images', e.target.value.split('\n').filter(url => url.trim()))}
-              placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-              rows={3}
-              className="mt-1 font-mono text-sm"
-            />
-          </div>
+          <ImageUploader
+            images={form.images || []}
+            onChange={(imgs) => updateForm('images', imgs)}
+            maxImages={6}
+          />
         </div>
       </div>
     </ScrollArea>
