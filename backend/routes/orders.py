@@ -100,28 +100,121 @@ async def create_direct_order(
 ):
     """
     Create an order directly without service lookup.
-    Used for booking flows where the frontend has all the details.
+    For round trips, creates 2 separate tickets (orders) linked by trip_group_id, plus a single receipt.
     """
     db = get_database()
     
     user_id = current_user.get("_id") or current_user.get("id")
     
-    # Generate order number based on service type
     service_prefix_map = {
-        'hotel': 'HTL',
-        'travel': 'TRV',
-        'car_rental': 'CAR',
-        'restaurant': 'RST',
-        'event': 'EVT',
-        'package': 'PKG',
-        'cinema': 'CIN',
-        'laundry': 'LND',
-        'banquet': 'BQT'
+        'hotel': 'HTL', 'travel': 'TRV', 'car_rental': 'CAR', 'restaurant': 'RST',
+        'event': 'EVT', 'package': 'PKG', 'cinema': 'CIN', 'laundry': 'LND', 'banquet': 'BQT'
     }
     service_prefix = service_prefix_map.get(order_data.service_type, 'ORD')
-    order_number = f"{service_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
     
-    # Calculate subtotal (total before any fees)
+    booking_details = order_data.booking_details or {}
+    is_round_trip = booking_details.get("is_round_trip", False) and order_data.service_type == "travel"
+    
+    if is_round_trip:
+        # Create 2 separate orders (tickets) for round trip
+        trip_group_id = str(uuid.uuid4())
+        outbound_id = str(uuid.uuid4())
+        return_id = str(uuid.uuid4())
+        
+        outbound_number = f"{service_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        return_number = f"{service_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        
+        # Split pricing between legs
+        outbound_details = {**booking_details}
+        outbound_details.pop("return_date", None)
+        outbound_details["leg"] = "outbound"
+        
+        return_details = {**booking_details}
+        return_details["leg"] = "return"
+        
+        # Calculate per-leg amounts from booking_details if possible
+        passengers_count = len(booking_details.get("passengers", [{}]))
+        outbound_price = booking_details.get("outbound_price", order_data.total_amount / 2)
+        return_price = order_data.total_amount - outbound_price
+        
+        outbound_order = {
+            "_id": outbound_id,
+            "order_number": outbound_number,
+            "user_id": user_id,
+            "user_email": current_user.get("email", ""),
+            "service_type": order_data.service_type,
+            "service_category": order_data.service_type,
+            "service_id": order_data.service_id,
+            "service_name": f"{order_data.service_name} (Outbound)",
+            "subtotal": outbound_price,
+            "total_amount": outbound_price,
+            "final_amount": outbound_price,
+            "currency": order_data.currency,
+            "status": order_data.status,
+            "payment_status": order_data.payment_status,
+            "booking_details": outbound_details,
+            "trip_group_id": trip_group_id,
+            "trip_leg": "outbound",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        return_order = {
+            "_id": return_id,
+            "order_number": return_number,
+            "user_id": user_id,
+            "user_email": current_user.get("email", ""),
+            "service_type": order_data.service_type,
+            "service_category": order_data.service_type,
+            "service_id": order_data.service_id,
+            "service_name": f"{order_data.service_name} (Return)",
+            "subtotal": return_price,
+            "total_amount": return_price,
+            "final_amount": return_price,
+            "currency": order_data.currency,
+            "status": order_data.status,
+            "payment_status": order_data.payment_status,
+            "booking_details": return_details,
+            "trip_group_id": trip_group_id,
+            "trip_leg": "return",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        await db.orders.insert_many([outbound_order, return_order])
+        
+        # Create a single receipt for both legs
+        receipt_number = f"RCT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        receipt = {
+            "_id": str(uuid.uuid4()),
+            "receipt_number": receipt_number,
+            "user_id": user_id,
+            "user_email": current_user.get("email", ""),
+            "order_ids": [outbound_id, return_id],
+            "trip_group_id": trip_group_id,
+            "total_amount": order_data.total_amount,
+            "currency": order_data.currency,
+            "service_type": order_data.service_type,
+            "description": f"Round Trip: {order_data.service_name}",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc),
+        }
+        await db.receipts.insert_one(receipt)
+        
+        return {
+            "success": True,
+            "message": "Round trip orders created (2 tickets, 1 receipt)",
+            "order_id": outbound_id,
+            "return_order_id": return_id,
+            "trip_group_id": trip_group_id,
+            "receipt_number": receipt_number,
+            "order_number": outbound_number,
+            "return_order_number": return_number,
+            "total_amount": order_data.total_amount
+        }
+    
+    # Single trip order
+    order_number = f"{service_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
     subtotal = order_data.total_amount
     
     order = {
@@ -130,12 +223,12 @@ async def create_direct_order(
         "user_id": user_id,
         "user_email": current_user.get("email", ""),
         "service_type": order_data.service_type,
-        "service_category": order_data.service_type,  # Also store as service_category for consistency
+        "service_category": order_data.service_type,
         "service_id": order_data.service_id,
         "service_name": order_data.service_name,
         "subtotal": subtotal,
         "tax": 0,
-        "discount": order_data.booking_details.get("promo_discount", 0) if order_data.booking_details else 0,
+        "discount": booking_details.get("promo_discount", 0),
         "total_amount": order_data.total_amount,
         "final_amount": order_data.total_amount,
         "currency": order_data.currency,
