@@ -106,15 +106,16 @@ const ImageGallery = ({ images, hotelName }) => {
 
       {/* Fullscreen Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl p-0 bg-black border-none">
+        <DialogContent className="max-w-4xl p-0 bg-black border-none [&>button]:hidden">
           <div className="relative">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+              className="absolute top-4 right-4 z-20 text-white bg-black/50 hover:bg-black/70 rounded-full h-10 w-10"
               onClick={() => setIsModalOpen(false)}
+              data-testid="gallery-close-btn"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5" />
             </Button>
             
             <div className="relative aspect-video">
@@ -127,19 +128,21 @@ const ImageGallery = ({ images, hotelName }) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/50 hover:bg-black/70 rounded-full h-12 w-12"
                 onClick={goToPrevious}
+                data-testid="gallery-prev-btn"
               >
-                <ChevronLeft className="h-8 w-8" />
+                <ChevronLeft className="h-7 w-7" />
               </Button>
               
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/50 hover:bg-black/70 rounded-full h-12 w-12"
                 onClick={goToNext}
+                data-testid="gallery-next-btn"
               >
-                <ChevronRight className="h-8 w-8" />
+                <ChevronRight className="h-7 w-7" />
               </Button>
             </div>
             
