@@ -62,7 +62,6 @@ export default function AuthPage() {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [loginPassword, setLoginPassword] = useState('');
-  const [isOperator, setIsOperator] = useState(false);
   
   // Register form
   const [fullName, setFullName] = useState('');
