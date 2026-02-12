@@ -420,7 +420,7 @@ const PaymentMethodsSelection = ({
               }}
               disabled={disabled || isProcessingInternal || method.isDisabled}
               className={`
-                flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all
+                flex items-center justify-center p-3 rounded-lg border-2 transition-all
                 ${selectedMethodInternal === method.id 
                   ? 'border-[#052c59] bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
@@ -435,15 +435,6 @@ const PaymentMethodsSelection = ({
               ) : (
                 <method.icon />
               )}
-              <div className="text-center">
-                <span className="text-sm font-medium text-slate-700 flex items-center gap-1">
-                  {method.name}
-                  {method.isStripe && <ExternalLink className="w-3 h-3 opacity-50" />}
-                </span>
-                {method.description && (
-                  <span className="text-xs text-slate-500">{method.description}</span>
-                )}
-              </div>
             </button>
           ))}
         </div>
