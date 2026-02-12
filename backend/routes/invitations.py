@@ -178,11 +178,14 @@ async def accept_invitation(req: InvitationAccept):
     user = {
         "_id": user_id,
         "email": invitation["email"],
+        "username": invitation["email"],  # Use email as username
         "password_hash": pwd_context.hash(req.password),
         "full_name": req.full_name,
         "phone": req.phone or "",
         "role": invitation["role"],
+        "status": "active",  # Required by auth system
         "is_active": True,
+        "email_verified": True,  # Invitation-based users are pre-verified
         "invited_by": invitation.get("invited_by"),
         "operator_id": invitation.get("operator_id"),
         "created_at": datetime.now(timezone.utc).isoformat(),
