@@ -833,3 +833,22 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 
 - [x] **Bills moved to Transactions**: Moved "Bills" from Admin Config submenu to the Transactions dropdown in the main sidebar. Renamed to "All Bills" to match the "All Orders", "All Receipts", "All Bookings" naming convention. Transactions dropdown now has 4 items: All Orders, All Receipts, All Bookings, All Bills.
 - [x] **Page title updated**: BillsManagement.jsx heading changed from "Bills & Invoices" to "All Bills"
+
+
+### Session: Feb 12, 2026 (Part 14) - Operator Management Enhancements
+
+- [x] **Owner Account Creation in Create Operator Modal**: Added "Owner Account" section with toggle checkbox. When enabled, shows Owner Full Name, Email, Phone, Password fields. Backend creates a user with `role: operator`, `operator_role: owner`, linked via `operator_id`. Owner can immediately login. Default password: Oryno@2024.
+  - Backend: Updated `OperatorCreate` model with `create_owner_account`, `owner_full_name`, `owner_email`, `owner_phone`, `owner_password` fields
+  - Backend: `POST /api/operators/` now conditionally creates owner user account and links it to the operator
+- [x] **Data Correctness Verified**: All table columns pull correct data from backend:
+  - Services: From `service_types` array with colored badges
+  - Owner: Resolved from `owner_user_id` -> users collection (name + email)
+  - Date Joined: From `created_at` timestamp
+  - Status: From `status` field with colored badges
+  - Revenue: Computed in real-time from orders collection aggregation
+- [x] **Enhanced Filters**: Added "Filters" toggle button next to search bar that expands to show:
+  - Owner filter (search by owner name/email)
+  - Date From / Date To (filter by join date range)
+  - Existing Status and Service type filters preserved
+  - Active filter count badge + Clear All button
+- **Testing**: 100% verified via iteration_50 (6/6 backend, all frontend tests passed)
