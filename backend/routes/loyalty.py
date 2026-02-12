@@ -345,12 +345,9 @@ class RewardUpdate(BaseModel):
 
 @router.get("/admin/stats")
 async def get_admin_loyalty_stats(
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_programs"]))
 ):
-    """Get loyalty program statistics for admin dashboard"""
-    # Check if user is admin
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Get loyalty program statistics for admin dashboard - requires loyalty.view permission"""
     
     db = get_database()
     
@@ -404,11 +401,9 @@ async def get_admin_loyalty_members(
     tier: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_programs"]))
 ):
-    """Get all loyalty program members for admin"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Get all loyalty program members for admin - requires loyalty.view permission"""
     
     db = get_database()
     
@@ -450,11 +445,9 @@ async def get_admin_loyalty_members(
 
 @router.get("/admin/rewards")
 async def get_admin_rewards(
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_rewards"]))
 ):
-    """Get all rewards for admin management"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Get all rewards for admin management - requires loyalty.view permission"""
     
     db = get_database()
     rewards = await db.loyalty_rewards.find({}).to_list(100)
@@ -471,11 +464,9 @@ async def get_admin_rewards(
 @router.post("/admin/rewards")
 async def create_reward(
     reward_data: RewardCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
 ):
-    """Create a new reward"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Create a new reward - requires loyalty.manage_rewards permission"""
     
     db = get_database()
     
@@ -508,11 +499,9 @@ async def create_reward(
 async def update_reward(
     reward_id: str,
     reward_data: RewardUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
 ):
-    """Update an existing reward"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Update an existing reward - requires loyalty.manage_rewards permission"""
     
     db = get_database()
     
@@ -557,11 +546,9 @@ async def update_reward(
 @router.delete("/admin/rewards/{reward_id}")
 async def delete_reward(
     reward_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["loyalty.manage_rewards"]))
 ):
-    """Delete a reward"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Delete a reward - requires loyalty.manage_rewards permission"""
     
     db = get_database()
     
