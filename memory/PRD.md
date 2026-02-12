@@ -1041,6 +1041,33 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Room type highlighted with `border-2 border-[#082c59]/20` accent styling
   - Room type also shown in pricing breakdown section
   - Removed percentage "(10%)" from "Taxes & Fees" line
+
+
+### Session: Feb 12, 2026 (Part 26) - Restaurant Menu, Payment Labels, Travel & Car Rental UI
+
+- [x] **Restaurant Menu Revamp**: Full rewrite of `RestaurantMenu.jsx` with:
+  - Warm color scheme (`bg-[#f0ebe3]`, `bg-[#faf7f2]`, `border-[#e0d5c7]`)
+  - Modern search bar and category pills in gradient header
+  - Cart items with hover states and active border on selected items
+  - Removed promo code section (already exists on booking page)
+  - Button changed from "Proceed to Booking - [price]" to "Final Step" with "You will not be charged yet" message
+- [x] **Payment Logo Labels Removed**: Updated `PaymentMethodsSelection.jsx` to show only logo images - removed all text labels ("Pay with Card", "MTN MoMo", "Orange Money", descriptions). Also removed method-specific info text below the selector.
+- [x] **Travel Booking Trip Summary Modernized**: 
+  - Added warm gradient background (`from-[#f8f6f2] to-white`) to summary area
+  - Trip cards now white with shadow and colored borders
+  - Extra luggage shown in amber-highlighted row
+  - Commission calculation fixed: only applies to trip fare, NOT luggage extras
+  - Price breakdown shows "Trip Fare" label instead of "Subtotal"
+- [x] **Car Rental Results Cards Compacted**:
+  - Grid cards: image height reduced from h-52 to h-36, content padding from p-5 to p-3
+  - List cards: image width reduced from lg:w-2/5 to md:w-56, height from h-64/min-h-[250px] to h-44/min-h-[160px]
+  - Smaller text sizes and tighter spacing throughout
+- [x] **Car Rental Details Modernized**:
+  - Warm color scheme matching restaurant (`bg-[#f0ebe3]`, `bg-[#faf7f2]`)
+  - Sidebar booking widget with gradient header and warm background
+  - Features/policies/owner tabs with warm styling
+  - "Book Now" changed to "Final Step" with "You will not be charged yet" message
+- **Testing**: 100% verified via iteration_62 (6/6 frontend tests passed)
 - [x] **Step Indicators - Travel & Restaurant Booking**:
   - Added `TravelStepIndicator`: "Traveler Details > Seats & Extras > Payment"
   - Added `RestaurantStepIndicator`: "Guest Details > Review Order > Payment"
