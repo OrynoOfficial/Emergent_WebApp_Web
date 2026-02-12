@@ -358,5 +358,57 @@ async def get_payment_methods_analytics(
         "time_range": time_range
     }
 
-    
-    return {"message": "Order cancelled successfully"}
+
+class OrderUpdate(BaseModel):
+    status: Optional[str] = None
+    payment_status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.put("/{order_id}")
+async def update_order(
+    order_id: str,
+    update_data: OrderUpdate,
+    current_user: dict = Depends(require_any_permission(["orders.edit", "orders.view_all"]))
+):
+    """Update an order - requires orders.edit permission"""
+    db = get_database()
+
+    order = await db.orders.find_one({"_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+    update_dict["updated_at"] = datetime.utcnow()
+
+    await db.orders.update_one({"_id": order_id}, {"$set": update_dict})
+
+    return {"message": "Order updated successfully"}
+
+
+@router.put("/{order_id}/process")
+async def process_order(
+    order_id: str,
+    current_user: dict = Depends(require_permission("orders.process"))
+):
+    """Process/confirm a pending order - requires orders.process permission"""
+    db = get_database()
+
+    order = await db.orders.find_one({"_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Only pending orders can be processed")
+
+    await db.orders.update_one(
+        {"_id": order_id},
+        {"$set": {
+            "status": OrderStatus.CONFIRMED,
+            "processed_by": current_user.get("_id"),
+            "processed_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+
+    return {"message": "Order processed successfully", "order_id": order_id}
