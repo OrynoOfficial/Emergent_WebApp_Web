@@ -239,6 +239,7 @@ async def confirm_booking(
             }
         )
     
+    await _notify_seat_change(booking.route_id, booking.travel_date)
     return {"message": "Booking confirmed", "order_id": booking.order_id}
 
 @router.post("/release")
