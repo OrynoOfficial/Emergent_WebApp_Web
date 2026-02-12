@@ -40,6 +40,8 @@ export default function AdminLoyaltyView() {
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [loadingMember, setLoadingMember] = useState(false);
   const [savingReward, setSavingReward] = useState(false);
+  const [generatingPromo, setGeneratingPromo] = useState(null);
+  const [loyaltyPromos, setLoyaltyPromos] = useState([]);
 
   const [programStats, setProgramStats] = useState({
     totalMembers: 0, totalPointsIssued: 0, totalPointsRedeemed: 0, activeRewards: 0,
