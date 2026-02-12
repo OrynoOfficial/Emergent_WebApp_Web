@@ -10,6 +10,15 @@ router = APIRouter(prefix="/api/seat-bookings", tags=["Seat Bookings"])
 
 RESERVATION_TIMEOUT_MINUTES = 10  # Seats are held for 10 minutes
 
+
+async def _notify_seat_change(route_id: str, travel_date: str):
+    """Broadcast seat change to all WebSocket clients."""
+    try:
+        from routes.seat_ws import broadcast_seat_change
+        await broadcast_seat_change(route_id, travel_date)
+    except Exception:
+        pass  # Non-blocking – WS is best-effort
+
 @router.get("/availability")
 async def get_seat_availability(
     route_id: str,
