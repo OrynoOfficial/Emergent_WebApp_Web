@@ -1012,3 +1012,38 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Uses same `/api/uploads/` endpoint with `folder: 'menu-items'`
 - [x] **Bug Fix**: Testing agent fixed upload endpoint — `POST /api/uploads/` now accepts `folder` from both form-data and query params (was only accepting query param).
 - **Testing**: 100% verified via iteration_60 (11/11 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 25) - P1: Payment Logos & Hotel UI Improvements
+
+- [x] **Payment Logos (P1)**: Replaced generic SVG payment icons in `PaymentMethodsSelection.jsx` with actual user-provided logo images:
+  - Visa/Mastercard: `/assets/payment-logos/card-payment.png`
+  - MTN MoMo: `/assets/payment-logos/mtn-momo.png`
+  - Orange Money: `/assets/payment-logos/orange-money.png`
+  - Logos scaled small (w-10 h-10 object-contain) to fit modal/button contexts
+  - Applied to ALL booking pages via the shared `PaymentMethodsSelection` component
+- [x] **Hotel Results - "View Deal" Fix**: Changed grid view button text from "View Deal" to "View Details" for consistency with list view in `HotelsResults.jsx`
+- [x] **Hotel Details - "About this property" Revamp**: Modern card design with:
+  - Clean white card with border
+  - Expandable amenities accordion (shows first 4, click to expand all)
+  - "+N more amenities" link when collapsed
+  - Toggle button with Sparkles icon and chevron indicator
+- [x] **Hotel Details - "Explore the area" Enhancement**:
+  - Improved map section with 16:10 aspect ratio
+  - Added "Oryno Services Nearby" section showing platform services (Restaurants, Car Rentals, Cinemas, Events)
+  - Each service type has colored icon and background
+- [x] **Hotel Details - "Choose your room" Improvements**:
+  - Added Grid/List view toggle buttons for room cards
+  - Grid mode shows rooms in 2-column layout, List mode shows full-width cards
+  - Room count badge now prominently displayed with dark blue `bg-[#082c59]` background and white text
+- [x] **Hotel Booking - Summary Improvements**:
+  - Added Check-in/Check-out policy boxes (green/amber colored) showing "From 14:00" / "Before 12:00"
+  - Room type highlighted with `border-2 border-[#082c59]/20` accent styling
+  - Room type also shown in pricing breakdown section
+  - Removed percentage "(10%)" from "Taxes & Fees" line
+- [x] **Step Indicators - Travel & Restaurant Booking**:
+  - Added `TravelStepIndicator`: "Traveler Details > Seats & Extras > Payment"
+  - Added `RestaurantStepIndicator`: "Guest Details > Review Order > Payment"
+  - Both use consistent pill-shaped design matching Hotel booking's step indicator
+  - Steps advance to 3 when payment is initiated
+- **Testing**: 100% verified via iteration_61 (10/10 frontend tests passed)
