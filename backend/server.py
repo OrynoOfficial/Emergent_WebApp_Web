@@ -293,6 +293,7 @@ app.include_router(customer_location_router)  # Customer location-aware filterin
 app.include_router(communications_router)  # Service communications (announcements, alerts)
 app.include_router(favourites_router)  # User favourites
 app.include_router(seat_ws_router)  # WebSocket for real-time seat updates
+app.include_router(invitations_router)  # Email invitation system
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
