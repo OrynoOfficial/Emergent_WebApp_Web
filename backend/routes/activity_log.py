@@ -394,3 +394,38 @@ async def get_local_permissions(
     
     return {"permissions": target_user.get("local_permissions", [])}
 
+
+
+@router.get("/export")
+async def export_activity_logs(
+    action_type: Optional[str] = None,
+    entity_type: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(require_permission("activity.export"))
+):
+    """Export activity logs as JSON - requires activity.export permission"""
+    db = get_database()
+
+    query = {}
+    if action_type:
+        query["action"] = action_type
+    if entity_type:
+        query["entity_type"] = entity_type
+    if date_from:
+        query.setdefault("timestamp", {})["$gte"] = date_from
+    if date_to:
+        query.setdefault("timestamp", {})["$lte"] = date_to
+
+    logs = await db.activity_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(5000).to_list(5000)
+
+    return {
+        "export": logs,
+        "total": len(logs),
+        "filters": {
+            "action_type": action_type,
+            "entity_type": entity_type,
+            "date_from": date_from,
+            "date_to": date_to
+        }
+    }
