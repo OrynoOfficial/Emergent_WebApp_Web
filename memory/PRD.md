@@ -970,3 +970,14 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Removed Page Transition Animation**: Added `useEffect(() => { window.scrollTo(0, 0); }, [])` to both HotelDetails and HotelBooking components. Pages now load at the top instead of showing a scroll-down animation.
 - [x] **Dynamic "Rooms Left"**: Updated `GET /api/rooms/` to accept optional `check_in` and `check_out` params. Dynamically calculates `available_rooms = total_rooms - active_bookings` by counting overlapping reservations in `room_bookings` collection. Frontend passes dates when loading rooms. Backwards compatible without dates.
 - **Testing**: 100% verified via iteration_57 (14/14 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 22) - Phase C: Car Rental Fixes
+
+- [x] **Fixed Navigation Flow: Results → Details → Booking**: `handleSelectVehicle` in CarRentalResults now navigates to `/services/car-rental/details/{id}` instead of directly to `/services/car-rental/booking`. The existing CarRentalDetails page (which was unused) is now properly in the flow.
+- [x] **Fixed Rental Details Display**: CarRentalBooking right column redesigned as clean white cards (was dark gradient). Shows vehicle image, name, specs (seats, transmission, fuel), rental details (location, dates, duration), selected extras, and price breakdown. All data properly mapped from both `carRentalBookingDetails` and `selectedVehicle` sessionStorage keys.
+- [x] **Vehicle Image Support**: Backend `POST /api/car-rental/` already accepts `images` array (up to 6 URLs). Images stored in car_rentals collection and returned by GET endpoints. Frontend can use `/api/uploads/` for file uploads.
+- [x] **Payment on Right Side**: Price breakdown and confirm button moved to clean right column card layout (matching Hotel Booking style). Dark gradient removed.
+- [x] **Scroll-to-Top**: Added `window.scrollTo(0, 0)` on mount for CarRentalBooking.
+- [x] **Bug Fix**: Added missing return statement in `get_my_car_bookings` endpoint.
+- **Testing**: 100% verified via iteration_58 (10/10 backend tests passed)
