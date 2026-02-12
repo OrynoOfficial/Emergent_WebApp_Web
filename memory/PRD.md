@@ -981,3 +981,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Scroll-to-Top**: Added `window.scrollTo(0, 0)` on mount for CarRentalBooking.
 - [x] **Bug Fix**: Added missing return statement in `get_my_car_bookings` endpoint.
 - **Testing**: 100% verified via iteration_58 (10/10 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 23) - Phase D: Restaurant Booking Fixes
+
+- [x] **Fixed Reservation Details Display**: Complete rewrite of `RestaurantBooking.jsx`. Now reads from `restaurantOrder` sessionStorage (set by Menu page) which contains items with prices, reservation date/time, guests, order type. Right column shows:
+  - Restaurant image/name/location
+  - Reservation details (date, time, guests, order type) in orange-tinted card
+  - Selected items with quantities and prices (scrollable list)
+- [x] **Removed 30% Deposit**: Removed `DEPOSIT_PERCENTAGE = 30`. Customer now pays full item price + 5% commission. No more "remaining balance at restaurant" — payment is complete upfront.
+- [x] **Payment on Right Side**: Payment section moved to right column in clean `bg-slate-50` card (matching Hotel/Travel booking style). Includes promo code input, commission breakdown, and "Confirm Reservation" button.
+- [x] **Promo Code Integration**: Uses `api.post('/promo-codes/validate')` with `service_type: 'restaurant'`. Handles both percentage and fixed discounts. Records usage after successful payment.
+- **Testing**: 100% verified via iteration_59 (8/8 backend tests passed)
