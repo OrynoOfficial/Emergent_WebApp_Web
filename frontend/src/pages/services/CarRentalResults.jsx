@@ -315,6 +315,7 @@ export default function CarRentalResults() {
   }, [vehicles, sortBy, searchQuery, selectedType, selectedTransmission]);
 
   const handleSelectVehicle = (vehicle) => {
+    const vehicleId = vehicle._id || vehicle.id;
     sessionStorage.setItem('selectedVehicle', JSON.stringify({
       ...vehicle,
       pickupLocation,
@@ -322,7 +323,7 @@ export default function CarRentalResults() {
       returnDate,
       days
     }));
-    navigate(`/services/car-rental/booking`);
+    navigate(`/services/car-rental/details/${vehicleId}?pickupDate=${pickupDate}&returnDate=${returnDate}`);
   };
 
   if (loading) {
