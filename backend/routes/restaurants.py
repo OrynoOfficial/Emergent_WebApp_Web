@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_permission, require_any_permission
 from typing import Optional, List
 from datetime import datetime, timezone
 import uuid
@@ -50,13 +51,10 @@ class RestaurantOrderCreate(BaseModel):
 @router.post("/")
 async def create_restaurant(
     restaurant_data: RestaurantCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.create", "operator.services.create"]))
 ):
-    """Create a new restaurant"""
+    """Create a new restaurant - requires restaurants.create permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin", "service_provider"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Use provided operator_id or default to current user
     operator_id = restaurant_data.operator_id or current_user["_id"]
@@ -190,13 +188,10 @@ async def get_restaurant_menu(restaurant_id: str):
 async def add_menu_item(
     restaurant_id: str,
     item_data: MenuItemCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.manage_menu", "operator.services.edit"]))
 ):
-    """Add menu item to restaurant"""
+    """Add menu item to restaurant - requires restaurants.manage_menu permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     menu_item = {
         "_id": str(uuid.uuid4()),
@@ -310,13 +305,10 @@ class MenuItemUpdate(BaseModel):
 async def update_restaurant(
     restaurant_id: str,
     update_data: RestaurantUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.edit", "operator.services.edit"]))
 ):
-    """Update a restaurant"""
+    """Update a restaurant - requires restaurants.edit permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if restaurant exists
     existing = await db.restaurants.find_one({"_id": restaurant_id})
@@ -344,13 +336,10 @@ async def update_restaurant(
 @router.delete("/{restaurant_id}")
 async def delete_restaurant(
     restaurant_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.delete", "operator.services.delete"]))
 ):
-    """Delete a restaurant"""
+    """Delete a restaurant - requires restaurants.delete permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if restaurant exists
     existing = await db.restaurants.find_one({"_id": restaurant_id})
@@ -377,13 +366,10 @@ async def update_menu_item(
     restaurant_id: str,
     item_id: str,
     update_data: MenuItemUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.manage_menu", "operator.services.edit"]))
 ):
-    """Update a menu item"""
+    """Update a menu item - requires restaurants.manage_menu permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if menu item exists
     existing = await db.restaurant_menu.find_one({"_id": item_id, "restaurant_id": restaurant_id})
@@ -411,13 +397,10 @@ async def update_menu_item(
 async def delete_menu_item(
     restaurant_id: str,
     item_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["restaurants.manage_menu", "operator.services.delete"]))
 ):
-    """Delete a menu item"""
+    """Delete a menu item - requires restaurants.manage_menu permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if menu item exists
     existing = await db.restaurant_menu.find_one({"_id": item_id, "restaurant_id": restaurant_id})
