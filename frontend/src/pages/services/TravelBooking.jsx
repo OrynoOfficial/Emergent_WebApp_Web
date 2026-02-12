@@ -327,10 +327,16 @@ export default function TravelBooking() {
           }
         }
 
+        // Record promo code usage if applied
+        if (appliedPromo?.code) {
+          try {
+            await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${response.booking_id || response.transactionRef || orderId}&discount_amount=${pricing.discount}`);
+          } catch { /* promo usage recording is non-blocking */ }
+        }
+
         toast.success('Travel booking confirmed!');
         sessionStorage.removeItem('selectedTrip');
-        // Navigate back to travel search page
-        navigate('/services/travel');
+        navigate('/orders');
       } catch (error) {
         console.error('Booking confirmation failed:', error);
         // Still navigate since payment was successful
