@@ -866,3 +866,23 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Frontend `TravelResults.jsx` now fetches dynamic seat counts after loading routes and updates `available_seats` field
   - Shows "Sold Out" when `available_seats === 0`
 - **Testing**: 100% verified via iteration_51 (16/16 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 16) - Phase 2: Travel Booking Page UX Overhaul
+
+- [x] **Redesigned Trip Summary & Price Breakdown**: Split into 2 separate cards:
+  - Trip Summary card: Blue header, outbound in blue-tinted bg, return in emerald-tinted bg, with icons and date formatting
+  - Price Breakdown card: Clean white bg with clear subtotal, commission, promo code input, and prominent total
+  - Removed the dark slate-800/900 gradient that made text hard to read
+- [x] **Fixed "Enable" Button for Seat Selection**: Moved the Switch toggle from inside the dark gradient header to a prominent clickable card below it. Card style: green border when enabled, slate when disabled. Shows "Enable Seat Selection" / "Seat Selection Enabled" text. Much more visible and accessible.
+- [x] **Payment Method Logos**: Replaced generic lucide-react icons with branded SVG logos:
+  - Stripe: Shows Visa + Mastercard logo marks
+  - MTN MoMo: Yellow bg with MTN MoMo branding text
+  - Orange Money: Orange bg with OM branding
+- [x] **Round Trip → 2 Tickets, 1 Receipt**: Backend `POST /api/orders/create` now detects `is_round_trip=true` + `service_type=travel` and creates:
+  - 2 separate order records (outbound + return) linked by `trip_group_id`
+  - Each order has `trip_leg` field ("outbound" or "return")
+  - 1 receipt in `receipts` collection with `order_ids` array referencing both orders
+  - Frontend passes `outbound_price` for correct per-leg pricing split
+  - Single trip orders remain 100% backwards compatible
+- **Testing**: 100% verified via iteration_52 (8/8 backend tests passed)
