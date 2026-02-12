@@ -830,113 +830,80 @@ export default function OperatorsManagement() {
       </AdminModal>
 
       {/* Create Operator Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="bg-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-[#082c59]" />
-              Add New Operator
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Company Name</Label>
-              <Input 
-                value={createForm.name} 
-                onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))} 
-                placeholder="Company Name"
-              />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input 
-                type="email" 
-                value={createForm.email} 
-                onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))} 
-                placeholder="contact@company.cm"
-              />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input 
-                value={createForm.phone} 
-                onChange={e => setCreateForm(p => ({ ...p, phone: e.target.value }))} 
-                placeholder="+237 600 000 000"
-              />
-            </div>
-            <div>
-              <Label>City</Label>
-              <Input 
-                value={createForm.city} 
-                onChange={e => setCreateForm(p => ({ ...p, city: e.target.value }))} 
-                placeholder="Douala"
-              />
-            </div>
-            
-            {/* Geography & Segment */}
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Country</Label>
-                <Select value={createForm.country} onValueChange={v => { setCreateForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'create'); }}>
-                  <SelectTrigger data-testid="create-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {countries.map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      <AdminModal
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        title="Add New Operator"
+        subtitle="Register a new service provider on the platform"
+        icon={<Plus className="w-5 h-5 text-white" />}
+        accentColor="emerald"
+        size="lg"
+        footer={<>
+          <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>Create Operator</Button>
+        </>}
+      >
+        <div className="space-y-5">
+          <AdminModal.Section title="Company Details" icon={<Building className="w-4 h-4" />}>
+            <div className="space-y-4 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
+              <FormField label="Company Name" required>
+                <StyledInput value={createForm.name} onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))} placeholder="Company Name" />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Email" required>
+                  <StyledInput type="email" value={createForm.email} onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))} placeholder="contact@company.cm" />
+                </FormField>
+                <FormField label="Phone">
+                  <StyledInput value={createForm.phone} onChange={e => setCreateForm(p => ({ ...p, phone: e.target.value }))} placeholder="+237 600 000 000" />
+                </FormField>
               </div>
-              <div>
-                <Label>Region</Label>
+              <FormField label="City">
+                <StyledInput value={createForm.city} onChange={e => setCreateForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
+              </FormField>
+            </div>
+          </AdminModal.Section>
+            
+          <AdminModal.Section title="Geography & Segment" icon={<Globe className="w-4 h-4" />}>
+            <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50/40 rounded-xl border border-blue-100">
+              <FormField label="Country">
+                <Select value={createForm.country} onValueChange={v => { setCreateForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'create'); }}>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
+                  <SelectContent className="bg-white">{countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </FormField>
+              <FormField label="Region">
                 <Select value={createForm.region || undefined} onValueChange={v => setCreateForm(p => ({ ...p, region: v }))}>
-                  <SelectTrigger data-testid="create-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
                   <SelectContent className="bg-white">
-                    {regions.map(r => (
-                      <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>
-                    ))}
+                    {regions.map(r => <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>)}
                     {regions.length === 0 && <SelectItem value="__none__" disabled>No regions</SelectItem>}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label>Market Segment</Label>
+              </FormField>
+              <FormField label="Market Segment">
                 <Select value={createForm.market_segment} onValueChange={v => setCreateForm(p => ({ ...p, market_segment: v }))}>
-                  <SelectTrigger data-testid="create-segment-select"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-segment-select"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white">
-                    {marketSegments.map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                    {marketSegments.length === 0 && <>
-                      <SelectItem value="sme">SME</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                      <SelectItem value="strategic">Strategic</SelectItem>
-                    </>}
+                    {marketSegments.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    {marketSegments.length === 0 && <><SelectItem value="sme">SME</SelectItem><SelectItem value="enterprise">Enterprise</SelectItem><SelectItem value="strategic">Strategic</SelectItem></>}
                   </SelectContent>
                 </Select>
-              </div>
+              </FormField>
             </div>
+          </AdminModal.Section>
 
-            <div>
-              <Label>Primary Service Type</Label>
-              <Select 
-                value={createForm.operator_type} 
-                onValueChange={v => setCreateForm(p => ({ ...p, operator_type: v, service_types: [v] }))}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  {SERVICE_TYPES.filter(s => s !== 'all').map(s => (
-                    <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <AdminModal.Section title="Service Type" icon={<Star className="w-4 h-4" />}>
+            <div className="p-4 bg-emerald-50/40 rounded-xl border border-emerald-100">
+              <FormField label="Primary Service Type" required>
+                <Select value={createForm.operator_type} onValueChange={v => setCreateForm(p => ({ ...p, operator_type: v, service_types: [v] }))}>
+                  <SelectTrigger className="bg-white border-emerald-200"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">{SERVICE_TYPES.filter(s => s !== 'all').map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}</SelectContent>
+                </Select>
+              </FormField>
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-            <Button className="bg-[#082c59]" onClick={handleCreate}>Create Operator</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </AdminModal.Section>
+        </div>
+      </AdminModal>
 
       {/* Suspend Confirmation Dialog */}
       <Dialog open={isSuspendOpen} onOpenChange={setIsSuspendOpen}>
