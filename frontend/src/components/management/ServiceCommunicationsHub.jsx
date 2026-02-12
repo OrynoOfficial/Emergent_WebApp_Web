@@ -88,19 +88,18 @@ export default function ServiceCommunicationsHub({
   const loadCommunications = useCallback(async () => {
     setLoading(true);
     try {
-      // Load notifications
-      const notifRes = await api.get('/notifications/?limit=10');
-      setNotifications(notifRes.data.notifications || []);
+      // Load recent communications (notifications + announcements + alerts)
+      const recentRes = await api.get(`/communications/recent?service_type=${serviceTag}&limit=10`);
+      const items = recentRes.data.items || [];
+      setNotifications(items.filter(i => i.comm_type === 'notification' || i.comm_type === 'announcement'));
+      setAlerts(items.filter(i => i.comm_type === 'alert'));
     } catch (error) {
-      console.error('Failed to load notifications:', error);
-    }
-    
-    try {
-      // Load alerts
-      const alertRes = await api.get(`/hotels/alerts?service_type=${serviceTag}`);
-      setAlerts(alertRes.data.alerts || []);
-    } catch (error) {
-      // Alerts endpoint might not exist for all services, use mock data
+      console.error('Failed to load communications:', error);
+      // Fallback: load notifications separately
+      try {
+        const notifRes = await api.get('/notifications/?limit=10');
+        setNotifications(notifRes.data.notifications || []);
+      } catch { setNotifications([]); }
       setAlerts([]);
     }
     
@@ -109,8 +108,7 @@ export default function ServiceCommunicationsHub({
       try {
         const opRes = await api.get(`/support-tickets/operators-by-service?service_type=${serviceType}`);
         setOperators(opRes.data.operators || []);
-      } catch (error) {
-        console.error('Failed to load operators:', error);
+      } catch {
         setOperators([]);
       }
     }
