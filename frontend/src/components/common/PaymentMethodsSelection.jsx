@@ -38,14 +38,8 @@ const PaymentMethodsSelection = ({
       name: 'Pay with Card',
       description: 'Visa, Mastercard, etc.',
       icon: () => (
-        <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 flex items-center justify-center p-1.5">
-          <svg viewBox="0 0 120 40" className="w-full h-full">
-            <rect x="2" y="8" width="36" height="24" rx="3" fill="#1A1F71"/>
-            <text x="20" y="24" textAnchor="middle" fill="white" fontSize="11" fontWeight="bold" fontFamily="Arial">VISA</text>
-            <circle cx="72" cy="20" r="12" fill="#EB001B"/>
-            <circle cx="88" cy="20" r="12" fill="#F79E1B"/>
-            <path d="M80 12a12 12 0 000 16 12 12 0 000-16z" fill="#FF5F00"/>
-          </svg>
+        <div className="w-12 h-12 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden bg-white">
+          <img src="/assets/payment-logos/card-payment.png" alt="Visa / Mastercard" className="w-10 h-10 object-contain" />
         </div>
       ),
       requiresPhone: false,
@@ -56,11 +50,8 @@ const PaymentMethodsSelection = ({
       name: 'MTN MoMo',
       description: 'Mobile Money',
       icon: () => (
-        <div className="w-12 h-12 bg-[#FFCC00] rounded-lg flex items-center justify-center p-1">
-          <svg viewBox="0 0 40 40" className="w-full h-full">
-            <text x="20" y="17" textAnchor="middle" fill="#004F9F" fontSize="8" fontWeight="900" fontFamily="Arial">MTN</text>
-            <text x="20" y="30" textAnchor="middle" fill="#004F9F" fontSize="7" fontWeight="700" fontFamily="Arial">MoMo</text>
-          </svg>
+        <div className="w-12 h-12 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden bg-[#FFCC00]">
+          <img src="/assets/payment-logos/mtn-momo.png" alt="MTN MoMo" className="w-10 h-10 object-contain" />
         </div>
       ),
       requiresPhone: true,
@@ -71,11 +62,8 @@ const PaymentMethodsSelection = ({
       name: 'Orange Money',
       description: 'Coming Soon',
       icon: () => (
-        <div className="w-12 h-12 bg-[#FF6600] rounded-lg flex items-center justify-center p-1 opacity-50">
-          <svg viewBox="0 0 40 40" className="w-full h-full">
-            <circle cx="20" cy="16" r="10" fill="white"/>
-            <text x="20" y="35" textAnchor="middle" fill="white" fontSize="7" fontWeight="700" fontFamily="Arial">OM</text>
-          </svg>
+        <div className="w-12 h-12 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden bg-black opacity-50">
+          <img src="/assets/payment-logos/orange-money.png" alt="Orange Money" className="w-10 h-10 object-contain" />
         </div>
       ),
       requiresPhone: true,

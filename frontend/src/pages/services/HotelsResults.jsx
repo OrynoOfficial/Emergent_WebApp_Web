@@ -209,7 +209,7 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails, isFav, toggleFav }) => {
               size="sm"
               className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs px-3 h-8"
             >
-              View Deal
+              View Details
             </Button>
           </div>
         </CardContent>
