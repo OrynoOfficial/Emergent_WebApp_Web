@@ -303,7 +303,7 @@ export default function LiveSeatMap({
           const next = new Map(reservedBookingIds); next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
           setReservedBookingIds(next);
           onSeatsChange(updatedSeats, Array.from(next.values()));
-          const timeoutMinutes = data.timeout_minutes || 10;
+          const timeoutMinutes = data.timeout_minutes || 3;
           const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + timeoutMinutes * 60 * 1000);
           setCountdown(expiry);
           toast.success(`Seat ${seatNumber} reserved for ${timeoutMinutes} minutes`);
@@ -313,8 +313,8 @@ export default function LiveSeatMap({
           const next = new Map(reservedBookingIds); next.set(seatNumber, `booking-${seatNumber}`);
           setReservedBookingIds(next);
           onSeatsChange(updatedSeats, Array.from(next.values()));
-          setCountdown(new Date(Date.now() + 10 * 60 * 1000));
-          toast.success(`Seat ${seatNumber} reserved for 10 minutes`);
+          setCountdown(new Date(Date.now() + 3 * 60 * 1000));
+          toast.success(`Seat ${seatNumber} reserved for 3 minutes`);
         }
       }
     }
