@@ -736,7 +736,16 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 ### Upcoming (Phase 2 & 3) — Loyalty Program Overhaul
 - Loyalty Admin Overview with visual charts/stats
 - Loyalty Rewards CRUD with enhanced modals and backend APIs
-- Loyalty Members: clickable with activity modal, tier badges, filters
+- ~~Loyalty Members: clickable with activity modal, tier badges, filters~~ DONE
 - Customer Loyalty Frontend: 3-tab redesign (Rewards/Activity/My Rewards)
 - Referral System with codes and tracking
 - UI color refinements (subtle palette)
+
+### Session: Feb 12, 2026 (Part 6) - Phase 2: Loyalty Program Admin Overhaul
+
+- [x] **Admin Overview Revamp**: Gradient stat cards (blue/amber/emerald/violet), tier distribution with emoji symbols (🥉🥈🥇💎) and progress bars, Tier Symbols Guide, Points Flow visualization, Earning Rules section
+- [x] **Rewards CRUD Enhanced**: AdminModal with violet header, 4 sections (Details, Points & Eligibility, Type & Value, Availability & Limits). New fields: valid_from, valid_to, max_redemptions, total_available. Rewards displayed as cards with tier-colored left borders. Loading spinner on save.
+- [x] **Members Enhanced**: Tier emoji next to member name, tier filter dropdown, clickable rows opening member detail modal (AdminModal blue header) showing tier card, point activity transactions, redemptions
+- [x] **Backend**: Extended RewardCreate/RewardUpdate models with new fields. New endpoints: `GET /loyalty/admin/members/{user_id}` (member detail with transactions/redemptions), `GET /loyalty/admin/stats/tier-history` (tier distribution data)
+- [x] **Bug Fix**: Member list was returning loyalty program ID instead of user ID — fixed for proper detail modal
+- **Testing**: 100% verified via iteration_44
