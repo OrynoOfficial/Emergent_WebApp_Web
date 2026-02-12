@@ -285,7 +285,7 @@ export default function LiveSeatMap({
           const next = new Map(reservedBookingIds); next.delete(oldestSeat); next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
           setReservedBookingIds(next);
           onSeatsChange(updatedSeats, Array.from(next.values()));
-          const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + 10 * 60 * 1000);
+          const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + 3 * 60 * 1000);
           setCountdown(expiry);
           toast.success(`Seat swapped: ${oldestSeat} → ${seatNumber}`);
         } catch (err) {
@@ -293,7 +293,7 @@ export default function LiveSeatMap({
           const next = new Map(reservedBookingIds); next.delete(oldestSeat); next.set(seatNumber, `booking-${seatNumber}`);
           setReservedBookingIds(next);
           onSeatsChange(updatedSeats, Array.from(next.values()));
-          setCountdown(new Date(Date.now() + 10 * 60 * 1000));
+          setCountdown(new Date(Date.now() + 3 * 60 * 1000));
           toast.success(`Seat swapped: ${oldestSeat} → ${seatNumber}`);
         }
       } else {
