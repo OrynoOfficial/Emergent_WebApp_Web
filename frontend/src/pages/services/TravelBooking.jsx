@@ -723,7 +723,7 @@ export default function TravelBooking() {
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-b from-[#f8f6f2] to-white p-5 space-y-4">
+                  <div className="bg-gradient-to-b from-slate-50 to-white p-5 space-y-4">
                     {/* Outbound Trip */}
                     <div className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
@@ -815,7 +815,7 @@ export default function TravelBooking() {
 
                 {/* Price Breakdown Card */}
                 <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-                  <div className="bg-gradient-to-b from-[#f8f6f2] to-white p-5">
+                  <div className="bg-gradient-to-b from-slate-50 to-white p-5">
                     <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-emerald-600" />
                       Price Breakdown
