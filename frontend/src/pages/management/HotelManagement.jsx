@@ -370,17 +370,17 @@ export default function HotelManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-white border shadow-sm p-1 rounded-xl mb-6">
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-lg px-4 py-2">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
-            <TabsTrigger value="hotels" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-lg px-4 py-2">
+            <TabsTrigger value="hotels">
               <Hotel className="h-4 w-4 mr-2" /> Hotels
             </TabsTrigger>
-            <TabsTrigger value="rooms" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-lg px-4 py-2" disabled={!selectedHotel}>
+            <TabsTrigger value="rooms" disabled={!selectedHotel}>
               <Bed className="h-4 w-4 mr-2" /> Rooms
             </TabsTrigger>
-            <TabsTrigger value="communications" className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-lg px-4 py-2">
+            <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
             </TabsTrigger>
           </TabsList>
