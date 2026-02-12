@@ -67,6 +67,7 @@ from routes.pods import router as pods_router
 from routes.employee_scopes import router as employee_scopes_router
 from routes.customer_location import router as customer_location_router
 from routes.communications import router as communications_router
+from routes.favourites import router as favourites_router
 
 # Create the main app
 app = FastAPI(
@@ -288,6 +289,7 @@ app.include_router(pods_router)  # Pod-based team structure management
 app.include_router(employee_scopes_router)  # Employee access scopes management
 app.include_router(customer_location_router)  # Customer location-aware filtering
 app.include_router(communications_router)  # Service communications (announcements, alerts)
+app.include_router(favourites_router)  # User favourites
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
