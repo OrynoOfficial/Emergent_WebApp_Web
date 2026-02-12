@@ -927,7 +927,7 @@ export default function Permissions() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'audit-trail') loadAuditTrail(); }}>
-        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-4' : 'grid-cols-2'} max-w-2xl`}>
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-2'} max-w-3xl`}>
           <TabsTrigger value="roles" className="gap-2">
             <Shield className="h-4 w-4" />
             Roles ({roles.length})
@@ -946,6 +946,12 @@ export default function Permissions() {
             <TabsTrigger value="audit-trail" className="gap-2">
               <ShieldAlert className="h-4 w-4" />
               Audit Trail
+            </TabsTrigger>
+          )}
+          {isSuperAdmin && (
+            <TabsTrigger value="audit-logs" className="gap-2">
+              <History className="h-4 w-4" />
+              Audit Logs
             </TabsTrigger>
           )}
         </TabsList>
