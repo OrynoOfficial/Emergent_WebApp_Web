@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.pressing import PressingCreate, PressingUpdate, LaundryStatus
 from typing import Optional, List
 from datetime import datetime
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/pressing", tags=["Laundry/Pressing"])
 @router.post("/")
 async def create_pressing(
     pressing_data: PressingCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["pressing.create", "operator.services.create"]))
 ):
     """Create a new pressing/laundry service"""
     db = get_database()
