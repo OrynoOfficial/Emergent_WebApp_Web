@@ -131,7 +131,26 @@ function Loyalty() {
     } catch (error) { toast.error(error.response?.data?.detail || 'Failed to redeem'); }
     finally { setRedeeming(false); }
   };
-  const copyCode = (code) => { navigator.clipboard.writeText(code); toast.success('Code copied!'); };
+  const [copiedCode, setCopiedCode] = useState(null);
+  const copyCode = async (code) => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Fallback for non-HTTPS
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedCode(code);
+    toast.success('Code copied to clipboard!');
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
   const getExpiryInfo = (expiresAt) => {
     if (!expiresAt) return { text: 'No expiry', color: 'text-slate-400' };
     const daysLeft = Math.ceil((new Date(expiresAt) - new Date()) / 86400000);
