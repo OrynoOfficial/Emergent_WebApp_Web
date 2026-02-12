@@ -15,7 +15,6 @@ async def create_banquet(
     current_user: dict = Depends(require_any_permission(["banquets.create", "operator.services.create"]))
 ):
     """Create a new banquet venue - requires banquets.create permission"""
-    """Create a new banquet venue"""
     db = get_database()
     
     if current_user["role"] not in ["operator", "admin", "super_admin"]:
