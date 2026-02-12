@@ -569,6 +569,26 @@ export default function Permissions() {
     fetchData();
   }, []);
 
+  // Load audit trail data
+  const loadAuditTrail = async (page = 1) => {
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams({ page, limit: 30 });
+      if (auditFilter) params.append('permission', auditFilter);
+      const res = await api.get(`/access/audit-trail?${params}`);
+      setAuditTrail(res.data.logs || []);
+      setAuditTotal(res.data.total || 0);
+      setAuditStats(res.data.stats || null);
+      setAuditPage(page);
+    } catch (error) {
+      console.error('Failed to load audit trail:', error);
+      setAuditTrail([]);
+      setAuditStats(null);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   const handleOpenDialog = (role = null) => {
     if (role) {
       setEditingRole(role);
