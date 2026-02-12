@@ -18,6 +18,7 @@ import { formatCurrency } from '../../utils/currency';
 import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
 import api from '../../api/client';
+import { useFavourites } from '../../hooks/useFavourites';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
