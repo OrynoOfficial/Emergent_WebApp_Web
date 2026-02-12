@@ -71,7 +71,12 @@ export default function OperatorsManagement() {
     service_types: ['travel'],
     country: 'CM',
     region: '',
-    market_segment: 'sme'
+    market_segment: 'sme',
+    create_owner_account: false,
+    owner_full_name: '',
+    owner_email: '',
+    owner_phone: '',
+    owner_password: '',
   });
   
   // Geography data
