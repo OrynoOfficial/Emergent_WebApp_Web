@@ -826,6 +826,20 @@ export default function Layout({ children }) {
                   </div>
                 )}
                 <span className="text-sm font-medium text-slate-700">{user?.full_name}</span>
+                {loyaltyTier && user?.role === 'customer' && (() => {
+                  const tierConfig = {
+                    bronze: { label: 'Bronze', bg: 'bg-amber-100', text: 'text-amber-700', icon: '🥉' },
+                    silver: { label: 'Silver', bg: 'bg-slate-200', text: 'text-slate-700', icon: '🥈' },
+                    gold: { label: 'Gold', bg: 'bg-yellow-100', text: 'text-yellow-700', icon: '🥇' },
+                    platinum: { label: 'Platinum', bg: 'bg-violet-100', text: 'text-violet-700', icon: '💎' },
+                  };
+                  const t = tierConfig[loyaltyTier] || tierConfig.bronze;
+                  return (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${t.bg} ${t.text}`} data-testid="loyalty-tier-badge">
+                      {t.icon} {t.label}
+                    </span>
+                  );
+                })()}
               </div>
               
               {/* Location Indicator for Customers */}
