@@ -117,10 +117,10 @@ const ScrollableImageGallery = ({ images, onImageClick, hotelName }) => {
 };
 
 // Grid View Hotel Card - Compact Design
-const HotelCardGrid = ({ hotel, nights, onViewDetails }) => {
+const HotelCardGrid = ({ hotel, nights, onViewDetails, isFav, toggleFav }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const hotelId = hotel._id || hotel.id;
   
   const defaultImages = [
     'https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070',
