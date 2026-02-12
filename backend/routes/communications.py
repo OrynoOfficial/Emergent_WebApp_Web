@@ -165,9 +165,9 @@ async def get_recent_communications(
         n["id"] = str(n.pop("_id", ""))
         n["comm_type"] = "notification"
 
-    # Combine and sort by date
+    # Combine and sort by date (use datetime.min as fallback for missing created_at)
     combined = announcements + alerts + notifications
-    combined.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    combined.sort(key=lambda x: x.get("created_at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
 
     return {
         "items": combined[:limit],
