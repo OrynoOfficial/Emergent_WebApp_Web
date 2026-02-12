@@ -158,7 +158,7 @@ const ImageGallery = ({ images, hotelName }) => {
 };
 
 // Compact Room Card Component
-const RoomCard = ({ room, nights, checkIn, checkOut, onReserve }) => {
+const RoomCard = ({ room, nights, checkIn, checkOut, onReserve, compact = false }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
