@@ -9,7 +9,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Card, CardContent } from '../components/ui/card';
 import { 
   Eye, EyeOff, Mail, Lock, User, Phone, Loader2, 
-  ArrowLeft, Home, Building2, Globe, ChevronDown
+  ArrowLeft, Home, Building2, Globe, ChevronDown, CheckCircle, XCircle, RefreshCw, ArrowRight
 } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '../components/ui/input-otp';
 import api from '../api/client';
