@@ -144,6 +144,10 @@ const StepIndicator = ({ currentStep }) => {
 export default function HotelBooking() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // Scroll to top on mount
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  
   const [language, setLanguage] = useState('en');
   const [hotel, setHotel] = useState(null);
   const [searchParams, setSearchParams] = useState(null);
