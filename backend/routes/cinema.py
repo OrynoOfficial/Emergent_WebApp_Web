@@ -80,9 +80,9 @@ async def get_cinema(cinema_id: str):
 async def update_cinema(
     cinema_id: str,
     cinema_data: CinemaUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["cinema.edit", "operator.services.edit"]))
 ):
-    """Update a cinema"""
+    """Update a cinema - requires cinema.edit permission"""
     db = get_database()
     
     cinema = await db.cinemas.find_one({"_id": cinema_id})
@@ -102,9 +102,9 @@ async def update_cinema(
 @router.delete("/{cinema_id}")
 async def delete_cinema(
     cinema_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["cinema.delete", "operator.services.delete"]))
 ):
-    """Delete a cinema"""
+    """Delete a cinema - requires cinema.delete permission"""
     db = get_database()
     
     cinema = await db.cinemas.find_one({"_id": cinema_id})
@@ -133,13 +133,10 @@ async def create_film(
     poster_url: Optional[str] = None,
     trailer_url: Optional[str] = None,
     release_date: Optional[str] = None,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.create"]))
 ):
-    """Create a new film"""
+    """Create a new film - requires cinema.manage_screenings permission"""
     db = get_database()
-    
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     
     film = {
         "_id": str(uuid.uuid4()),
@@ -208,9 +205,9 @@ async def create_showtime(
     screen_type: str = "2d",
     vip_price: Optional[float] = None,
     total_seats: int = 100,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
 ):
-    """Create a showtime"""
+    """Create a showtime - requires cinema.manage_screenings permission"""
     db = get_database()
     
     cinema = await db.cinemas.find_one({"_id": cinema_id})
