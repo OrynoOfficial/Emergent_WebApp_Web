@@ -255,23 +255,12 @@ export default function AuthPage() {
       const result = await register(userData);
       
       if (result.success || result.user_id) {
-        if (!result.requires_verification) {
-          try {
-            const loginResult = await login(registerEmail, registerPassword);
-            if (loginResult.access_token) {
-              navigate('/dashboard');
-            } else {
-              setError('Registration successful! Please login with your credentials.');
-              setCurrentView(AUTH_VIEWS.LOGIN);
-            }
-          } catch {
-            setError('Registration successful! Please login with your credentials.');
-            setCurrentView(AUTH_VIEWS.LOGIN);
-          }
-        } else {
+        if (result.requires_verification) {
           setError('Registration successful! Please check your email to verify your account, then login.');
-          setCurrentView(AUTH_VIEWS.LOGIN);
+        } else {
+          setError('Account created successfully! Please login with your credentials.');
         }
+        setCurrentView(AUTH_VIEWS.LOGIN);
       } else {
         setError(result.message || 'Registration failed. Please try again.');
       }
