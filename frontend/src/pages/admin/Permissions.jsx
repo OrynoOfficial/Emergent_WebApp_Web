@@ -561,7 +561,6 @@ export default function Permissions() {
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
-        // Keep default roles if fetch fails
       } finally {
         setIsLoading(false);
       }
