@@ -151,13 +151,10 @@ async def get_promo_codes(
     is_active: Optional[bool] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["promo.view"]))
 ):
-    """Get promo codes (admin/operator)"""
+    """Get promo codes - requires promo.view permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["admin", "super_admin", "operator"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     query = {}
     if current_user["role"] == "operator":
@@ -174,13 +171,10 @@ async def get_promo_codes(
 async def update_promo_code(
     code: str,
     is_active: bool,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["promo.edit"]))
 ):
-    """Activate/deactivate a promo code"""
+    """Activate/deactivate a promo code - requires promo.edit permission"""
     db = get_database()
-    
-    if current_user["role"] not in ["admin", "super_admin", "operator"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
     
     query = {"code": code.upper()}
     if current_user["role"] == "operator":
@@ -199,13 +193,10 @@ async def update_promo_code(
 @router.delete("/{code}")
 async def delete_promo_code(
     code: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["promo.delete"]))
 ):
-    """Delete a promo code"""
+    """Delete a promo code - requires promo.delete permission"""
     db = get_database()
-    
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     
     result = await db.promo_codes.delete_one({"code": code.upper()})
     
