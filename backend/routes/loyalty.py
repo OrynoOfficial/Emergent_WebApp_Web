@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.permissions import require_any_permission
 from models.loyalty import LoyaltyTier
 from typing import Optional
 from datetime import datetime, timedelta
