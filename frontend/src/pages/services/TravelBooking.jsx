@@ -710,10 +710,10 @@ export default function TravelBooking() {
             <div className="lg:col-span-1">
               <div className="sticky top-24 space-y-5">
                 {/* Trip Summary Card */}
-                <div className="rounded-2xl shadow-lg bg-white overflow-hidden border border-slate-100">
+                <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
                   <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
                     <div className="flex items-center gap-3 text-white">
-                      <div className="p-2 bg-white/20 rounded-xl">
+                      <div className="p-2 bg-white/15 rounded-xl">
                         <Bus className="h-6 w-6" />
                       </div>
                       <div>
@@ -723,17 +723,19 @@ export default function TravelBooking() {
                     </div>
                   </div>
                   
-                  <div className="p-5 space-y-4">
+                  <div className="bg-gradient-to-b from-[#f8f6f2] to-white p-5 space-y-4">
                     {/* Outbound Trip */}
-                    <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-100">
+                    <div className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <h4 className="font-semibold text-slate-800 text-sm">Outbound</h4>
+                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-white" />
+                        </div>
+                        <h4 className="font-bold text-slate-800 text-sm">Outbound</h4>
                       </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-slate-600">
+                      <div className="space-y-2 text-sm pl-8">
+                        <div className="flex items-center gap-2 text-slate-700">
                           <Bus className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="font-medium text-slate-800">{outbound.operator_name}</span>
+                          <span className="font-semibold">{outbound.operator_name}</span>
                         </div>
                         <div className="flex items-center gap-2 text-slate-600">
                           <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -753,7 +755,7 @@ export default function TravelBooking() {
                             <span className="font-medium">Seats: {selectedSeats.join(', ')}</span>
                           </div>
                         )}
-                        <div className="pt-1">
+                        <div className="pt-1.5 mt-1.5 border-t border-blue-50">
                           <span className="text-[#082c59] font-bold">{formatCurrency(pricing.outboundPrice)}</span>
                         </div>
                       </div>
@@ -761,15 +763,17 @@ export default function TravelBooking() {
 
                     {/* Return Trip */}
                     {isRoundTrip && returnTrip && (
-                      <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-100">
+                      <div className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <h4 className="font-semibold text-slate-800 text-sm">Return</h4>
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          </div>
+                          <h4 className="font-bold text-slate-800 text-sm">Return</h4>
                         </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2 text-slate-600">
+                        <div className="space-y-2 text-sm pl-8">
+                          <div className="flex items-center gap-2 text-slate-700">
                             <Bus className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span className="font-medium text-slate-800">{returnTrip.operator_name}</span>
+                            <span className="font-semibold">{returnTrip.operator_name}</span>
                           </div>
                           <div className="flex items-center gap-2 text-slate-600">
                             <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -789,7 +793,7 @@ export default function TravelBooking() {
                               <span className="font-medium">Seats: {returnSelectedSeats.join(', ')}</span>
                             </div>
                           )}
-                          <div className="pt-1">
+                          <div className="pt-1.5 mt-1.5 border-t border-emerald-50">
                             <span className="text-emerald-700 font-bold">{formatCurrency(pricing.returnPrice)}</span>
                           </div>
                         </div>
@@ -798,9 +802,12 @@ export default function TravelBooking() {
 
                     {/* Extras */}
                     {extraLuggage > 0 && (
-                      <div className="flex justify-between items-center text-sm px-1">
-                        <span className="text-slate-600">Extra Luggage x {extraLuggage}</span>
-                        <span className="font-medium text-slate-800">{formatCurrency(pricing.extras)}</span>
+                      <div className="flex justify-between items-center text-sm px-2 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                        <span className="text-slate-700 flex items-center gap-1.5">
+                          <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                          Extra Luggage x {extraLuggage}
+                        </span>
+                        <span className="font-semibold text-slate-800">{formatCurrency(pricing.extras)}</span>
                       </div>
                     )}
                   </div>
