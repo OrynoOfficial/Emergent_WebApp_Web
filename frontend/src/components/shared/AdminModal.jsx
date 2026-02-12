@@ -35,9 +35,9 @@ export function AdminModal({ open, onOpenChange, title, subtitle, icon, accentCo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`p-0 overflow-hidden ${sizeClass} max-h-[92vh] bg-white border-0 shadow-2xl`} data-testid="admin-modal">
+      <DialogContent className={`p-0 overflow-hidden ${sizeClass} max-h-[92vh] bg-white border-0 shadow-2xl flex flex-col`} data-testid="admin-modal">
         {/* Colored Header */}
-        <div className={`${accent.headerBg} px-6 py-5 text-white`}>
+        <div className={`${accent.headerBg} px-6 py-5 text-white flex-shrink-0`}>
           <div className="flex items-center gap-3">
             {icon && (
               <div className={`p-2.5 rounded-xl ${accent.iconBg} backdrop-blur-sm`}>
@@ -52,13 +52,13 @@ export function AdminModal({ open, onOpenChange, title, subtitle, icon, accentCo
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 140px)' }}>
+        <div className="px-6 py-5 overflow-y-auto flex-1 min-h-0">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t bg-slate-50/80 flex justify-end gap-2">
+          <div className="px-6 py-4 border-t bg-slate-50/80 flex justify-end gap-2 flex-shrink-0">
             {footer}
           </div>
         )}
