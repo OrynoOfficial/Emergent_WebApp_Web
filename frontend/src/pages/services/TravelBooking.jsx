@@ -815,22 +815,28 @@ export default function TravelBooking() {
 
                 {/* Price Breakdown Card */}
                 <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-                  <div className="bg-white p-5">
+                  <div className="bg-gradient-to-b from-[#f8f6f2] to-white p-5">
                     <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-emerald-600" />
                       Price Breakdown
                     </h4>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between text-slate-600">
-                        <span>Subtotal</span>
-                        <span className="font-medium text-slate-800">{formatCurrency(pricing.subtotal)}</span>
+                        <span>Trip Fare</span>
+                        <span className="font-medium text-slate-800">{formatCurrency(pricing.base)}</span>
                       </div>
+                      {pricing.extras > 0 && (
+                        <div className="flex justify-between text-slate-600">
+                          <span>Extra Luggage</span>
+                          <span className="font-medium text-slate-800">{formatCurrency(pricing.extras)}</span>
+                        </div>
+                      )}
                       
                       <CommissionBreakdown
-                        basePrice={pricing.subtotal}
+                        basePrice={pricing.base}
                         commissionRate={pricing.commissionRate}
                         commissionAmount={pricing.commission}
-                        totalAmount={pricing.subtotal + pricing.commission}
+                        totalAmount={pricing.base + pricing.commission}
                         showDetails={true}
                       />
 
