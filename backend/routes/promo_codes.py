@@ -124,7 +124,7 @@ async def use_promo_code(
     discount_amount: float,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Record promo code usage"""
+    """Record promo code usage and update linked loyalty redemption status"""
     db = get_database()
     
     # Record usage
@@ -138,11 +138,24 @@ async def use_promo_code(
     }
     await db.promo_code_uses.insert_one(usage)
     
-    # Increment usage count
-    await db.promo_codes.update_one(
-        {"code": code.upper()},
-        {"$inc": {"times_used": 1}}
-    )
+    # Increment usage count on promo code
+    promo = await db.promo_codes.find_one({"code": code.upper()})
+    if promo:
+        new_times_used = promo.get("times_used", 0) + 1
+        update_fields = {"times_used": new_times_used, "updated_at": datetime.utcnow()}
+        
+        # Deactivate if usage limit reached
+        if promo.get("usage_limit") and new_times_used >= promo["usage_limit"]:
+            update_fields["is_active"] = False
+        
+        await db.promo_codes.update_one({"code": code.upper()}, {"$set": update_fields})
+        
+        # If this promo came from a loyalty redemption, update the redemption status to "used"
+        if promo.get("source") == "loyalty_redemption" and promo.get("redemption_id"):
+            await db.loyalty_redemptions.update_one(
+                {"_id": promo["redemption_id"]},
+                {"$set": {"status": "used", "used_at": datetime.utcnow(), "used_in_order": order_id}}
+            )
     
     return {"message": "Promo code applied"}
 
