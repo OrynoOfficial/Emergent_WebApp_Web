@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import { useFavourites } from '@/hooks/useFavourites';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const AMENITIES = [
