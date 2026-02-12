@@ -394,10 +394,6 @@ async def delete_user(
     """Delete a user - requires users.delete permission"""
     db = get_database()
     
-    # Permission check - only admin and super_admin can delete users
-    if current_user["role"] not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
     # Cannot delete yourself
     if current_user["_id"] == user_id or current_user.get("id") == user_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
