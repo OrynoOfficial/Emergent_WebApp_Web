@@ -200,16 +200,19 @@ export default function EmployeesManagement() {
 
   const confirmDelete = async () => {
     try {
-      await api.delete(`/employees/${selectedEmployee.id}`);
+      const res = await api.delete(`/employees/${selectedEmployee.id}`);
       setEmployees(prev => prev.filter(e => e.id !== selectedEmployee.id));
+      
+      const cascade = res.data?.cascade;
+      if (cascade && (cascade.pods_removed > 0 || cascade.scopes_removed > 0)) {
+        toast.success(`Employee deleted. Removed from ${cascade.pods_removed} pod(s) and ${cascade.scopes_removed} scope(s).`);
+      } else {
+        toast.success('Employee deleted successfully');
+      }
       setIsDeleteOpen(false);
       setSelectedEmployee(null);
     } catch (error) {
-      console.error('Failed to delete employee:', error);
-      // Still remove from UI for demo
-      setEmployees(prev => prev.filter(e => e.id !== selectedEmployee.id));
-      setIsDeleteOpen(false);
-      setSelectedEmployee(null);
+      toast.error(error.response?.data?.detail || 'Failed to delete employee');
     }
   };
 
