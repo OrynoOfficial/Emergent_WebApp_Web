@@ -18,7 +18,7 @@ import {
   Database, FileText, CreditCard, Bell, Globe, Sparkles, Gift, Film,
   Ticket, Receipt, TrendingUp, History, MessageSquare, HelpCircle,
   LayoutDashboard, ShoppingBag, Award, Briefcase, Percent, QrCode, 
-  ChevronRight, ChevronDown, UserCheck
+  ChevronRight, ChevronDown, UserCheck, ShieldAlert, Clock, Filter
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
