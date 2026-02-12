@@ -269,6 +269,8 @@ async def get_my_car_bookings(
         {"user_id": current_user["_id"], "service_category": "car_rental"}
     )
     
+    return {"bookings": bookings, "total": total}
+
 
 
 
