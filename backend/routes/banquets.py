@@ -17,9 +17,6 @@ async def create_banquet(
     """Create a new banquet venue - requires banquets.create permission"""
     db = get_database()
     
-    if current_user["role"] not in ["operator", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
     operator_id = banquet_data.operator_id or current_user.get("operator_id")
     operator_name = banquet_data.operator_name or current_user.get("operator_name", "")
     
