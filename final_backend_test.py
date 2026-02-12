@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 class FinalBackendTester:
-    def __init__(self, base_url="https://employee-portal-122.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://oryno-overhaul.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
         self.tests_run = 0
