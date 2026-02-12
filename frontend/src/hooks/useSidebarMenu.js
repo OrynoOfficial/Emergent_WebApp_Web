@@ -189,11 +189,6 @@ export default function useSidebarMenu() {
     if (isSuperAdmin) adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
     if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: FileText });
 
-    // Invitations - available to admins, super_admins, operators
-    if (isSuperAdmin || isAdmin || isOperator) {
-      adminSubmenu.push({ key: 'invitations', label: 'Invitations', path: '/admin/invitations', icon: UserPlus });
-    }
-
     // Operator-specific admin items
     if (isOperator) {
       adminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/admin/team-roles', icon: Users });
