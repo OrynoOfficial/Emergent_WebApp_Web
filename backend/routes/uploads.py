@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form, Query
 from services.s3_service import S3Service
 from services.local_storage_service import LocalStorageService
 from middleware.auth import get_current_active_user
 from config.settings import settings
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/api/uploads", tags=["File Uploads"])
 
@@ -14,7 +14,8 @@ storage_service = LocalStorageService() if USE_LOCAL else S3Service()
 @router.post("/")
 async def upload_file(
     file: UploadFile = File(...),
-    folder: str = "uploads",
+    folder: Optional[str] = Form(None),
+    folder_query: Optional[str] = Query(None, alias="folder"),
     current_user: dict = Depends(get_current_active_user)
 ):
     """Upload a file to S3 or local storage"""
