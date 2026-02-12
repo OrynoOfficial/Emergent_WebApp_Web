@@ -140,7 +140,7 @@ export default function RestaurantMenu() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0ebe3]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-[#082c59] via-[#0a3a75] to-[#082c59] text-white">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -164,9 +164,9 @@ export default function RestaurantMenu() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Menu */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e0d5c7] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               {/* Menu Header */}
-              <div className="bg-gradient-to-r from-[#f7f2eb] to-[#ede5d8] p-5 border-b border-[#e0d5c7]">
+              <div className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 p-5 border-b border-slate-200">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold text-[#082c59] flex items-center gap-2">
                     <Utensils className="h-5 w-5" /> Menu
@@ -181,7 +181,7 @@ export default function RestaurantMenu() {
                     placeholder="Search dishes..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-white border-[#d9cfc1] rounded-xl"
+                    className="pl-10 bg-white border-slate-200 rounded-xl"
                   />
                 </div>
 
@@ -192,7 +192,7 @@ export default function RestaurantMenu() {
                       <TabsTrigger
                         key={cat}
                         value={cat}
-                        className="capitalize rounded-full px-4 py-1.5 text-xs font-medium data-[state=active]:bg-[#082c59] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-slate-600 border border-[#d9cfc1] data-[state=active]:border-[#082c59]"
+                        className="capitalize rounded-full px-4 py-1.5 text-xs font-medium data-[state=active]:bg-[#082c59] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-slate-600 border border-slate-200 data-[state=active]:border-[#082c59]"
                       >
                         {cat}
                       </TabsTrigger>
@@ -209,7 +209,7 @@ export default function RestaurantMenu() {
                     className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${
                       cart[item.id] 
                         ? 'bg-[#082c59]/5 border border-[#082c59]/20' 
-                        : 'bg-[#faf7f2] border border-transparent hover:border-[#e0d5c7] hover:bg-[#f5f0e8]'
+                        : 'bg-slate-50 border border-transparent hover:border-slate-200 hover:bg-slate-100'
                     }`}
                   >
                     <div className="flex-1 mr-3">
@@ -250,7 +250,7 @@ export default function RestaurantMenu() {
           {/* Right: Cart & Reservation */}
           <div className="space-y-5">
             {/* Cart Summary */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e0d5c7] overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-4">
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-2.5">
@@ -269,7 +269,7 @@ export default function RestaurantMenu() {
                 {cartCount === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-14 h-14 bg-[#f5f0e8] rounded-full flex items-center justify-center mx-auto mb-3">
-                      <ShoppingCart className="w-6 h-6 text-[#b8a88a]" />
+                      <ShoppingCart className="w-6 h-6 text-slate-400" />
                     </div>
                     <p className="text-sm text-slate-500">Your cart is empty</p>
                     <p className="text-xs text-slate-400 mt-1">Add items from the menu</p>
@@ -277,7 +277,7 @@ export default function RestaurantMenu() {
                 ) : (
                   <div className="space-y-2.5">
                     {getCartItems().map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-2.5 bg-[#faf7f2] rounded-lg">
+                      <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg">
                         <div className="flex-1 mr-2">
                           <p className="font-medium text-sm text-slate-900">{item.name}</p>
                           <p className="text-xs text-slate-500">{item.quantity} x {formatFCFA(item.price)}</p>
@@ -290,7 +290,7 @@ export default function RestaurantMenu() {
                         </div>
                       </div>
                     ))}
-                    <div className="border-t border-[#e0d5c7] pt-3 mt-3">
+                    <div className="border-t border-slate-200 pt-3 mt-3">
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-slate-900">Total</span>
                         <span className="text-xl font-bold text-[#082c59]">{formatFCFA(subtotal)}</span>
@@ -302,8 +302,8 @@ export default function RestaurantMenu() {
             </div>
 
             {/* Reservation Details */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e0d5c7] overflow-hidden">
-              <div className="bg-gradient-to-r from-[#f7f2eb] to-[#ede5d8] p-4 border-b border-[#e0d5c7]">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 p-4 border-b border-slate-200">
                 <h3 className="font-bold text-[#082c59] text-sm">Reservation Details</h3>
               </div>
               <div className="p-4 space-y-3.5">
@@ -311,7 +311,7 @@ export default function RestaurantMenu() {
                 <div>
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Order Type</label>
                   <Select value={orderType} onValueChange={setOrderType}>
-                    <SelectTrigger className="mt-1.5 bg-[#faf7f2] border-[#e0d5c7] rounded-xl">
+                    <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -327,7 +327,7 @@ export default function RestaurantMenu() {
                       <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Date</label>
                       <Button 
                         variant="outline" 
-                        className="w-full justify-start mt-1.5 bg-[#faf7f2] border-[#e0d5c7] rounded-xl hover:bg-[#f5f0e8]"
+                        className="w-full justify-start mt-1.5 bg-slate-50 border-slate-200 rounded-xl hover:bg-slate-100"
                         onClick={() => setIsReservationDateOpen(true)}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4 text-[#082c59]" />
@@ -345,7 +345,7 @@ export default function RestaurantMenu() {
                     <div>
                       <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Time</label>
                       <Select value={reservationTime} onValueChange={setReservationTime}>
-                        <SelectTrigger className="mt-1.5 bg-[#faf7f2] border-[#e0d5c7] rounded-xl">
+                        <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
@@ -358,7 +358,7 @@ export default function RestaurantMenu() {
                     <div>
                       <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Guests</label>
                       <Select value={String(guests)} onValueChange={v => setGuests(Number(v))}>
-                        <SelectTrigger className="mt-1.5 bg-[#faf7f2] border-[#e0d5c7] rounded-xl">
+                        <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white">
@@ -377,7 +377,7 @@ export default function RestaurantMenu() {
                     value={specialRequests}
                     onChange={e => setSpecialRequests(e.target.value)}
                     placeholder="Allergies, preferences, etc."
-                    className="mt-1.5 bg-[#faf7f2] border-[#e0d5c7] rounded-xl min-h-[60px] text-sm"
+                    className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl min-h-[60px] text-sm"
                     rows={2}
                   />
                 </div>
