@@ -12,7 +12,7 @@ import { Textarea } from '../components/ui/textarea';
 import { 
   Award, TrendingUp, Gift, Star, Users, Calendar, Crown, Trophy, 
   Zap, Check, Copy, Sparkles, Coins, Clock, ArrowRight, Loader2,
-  Plus, Edit2, Trash2, Settings, Search, BarChart3, Target, Percent
+  Plus, Edit2, Trash2, Settings, Search, BarChart3, Target, Percent, User
 } from 'lucide-react';
 import { formatCurrency } from '../utils/currency';
 import { formatDate, formatDateShort } from '../utils/dateUtils';
