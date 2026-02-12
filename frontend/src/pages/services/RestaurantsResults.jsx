@@ -104,7 +104,7 @@ const ScrollableImageGallery = ({ images, onImageClick, name }) => {
 };
 
 // Grid View Restaurant Card - Compact Design
-const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
+const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve, isFav, toggleFav }) => {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   // Favourites handled by parent via isFav/toggleFav props
@@ -129,10 +129,10 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
           
           {/* Favorite button */}
           <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(restaurant);  }}
             className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
           >
-            <Heart className={`h-4 w-4 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+            <Heart className={`h-4 w-4 ${(isFav && isFav(restaurant._id || restaurant.id)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
           </button>
           
           {/* Badges */}
@@ -233,7 +233,7 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve }) => {
 };
 
 // List View Restaurant Card - Compact Design
-const RestaurantCardList = ({ restaurant, onViewDetails }) => {
+const RestaurantCardList = ({ restaurant, onViewDetails, isFav, toggleFav }) => {
   const defaultImages = [
     'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070',
   ];

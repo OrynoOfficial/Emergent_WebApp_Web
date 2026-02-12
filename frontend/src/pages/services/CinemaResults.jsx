@@ -33,7 +33,7 @@ const GENRE_COLORS = {
 };
 
 // Grid View Film Card
-const FilmCardGrid = ({ film, onViewDetails }) => {
+const FilmCardGrid = ({ film, onViewDetails, isFav, toggleFav }) => {
   // Favourites handled by parent via isFav/toggleFav props
   const isComingSoon = film.status === 'coming_soon';
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400';
@@ -51,10 +51,10 @@ const FilmCardGrid = ({ film, onViewDetails }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(film);  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
         >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(film._id || film.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         {/* Status Badge */}
@@ -114,7 +114,7 @@ const FilmCardGrid = ({ film, onViewDetails }) => {
 };
 
 // List View Film Card
-const FilmCardList = ({ film, onViewDetails }) => {
+const FilmCardList = ({ film, onViewDetails, isFav, toggleFav }) => {
   const isComingSoon = film.status === 'coming_soon';
   const defaultPoster = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400';
   

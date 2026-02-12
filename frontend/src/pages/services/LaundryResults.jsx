@@ -29,7 +29,7 @@ const getServiceIcon = (service) => {
 };
 
 // Grid View Service Card
-const ServiceCardGrid = ({ service, onBook }) => {
+const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
   // Favourites handled by parent via isFav/toggleFav props
   const ServiceIcon = getServiceIcon(service.services?.[0]);
   
@@ -46,10 +46,10 @@ const ServiceCardGrid = ({ service, onBook }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(service);  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
         >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(service._id || service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         {/* Badges */}
@@ -110,7 +110,7 @@ const ServiceCardGrid = ({ service, onBook }) => {
 };
 
 // List View Service Card
-const ServiceCardList = ({ service, onBook }) => {
+const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
   return (
     <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
       <div className="flex flex-col md:flex-row">

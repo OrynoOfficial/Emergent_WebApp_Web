@@ -51,7 +51,7 @@ const getVehicleTypeColor = (type) => {
 };
 
 // Grid View Vehicle Card
-const VehicleCardGrid = ({ vehicle, days, onSelect }) => {
+const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   // Favourites handled by parent via isFav/toggleFav props
   const totalPrice = vehicle.price_per_day * days;
   
@@ -70,10 +70,10 @@ const VehicleCardGrid = ({ vehicle, days, onSelect }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(vehicle);  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/80 hover:bg-white shadow-md transition-all"
         >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(vehicle._id || vehicle.id)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
         </button>
         
         {/* Badges */}
@@ -151,7 +151,7 @@ const VehicleCardGrid = ({ vehicle, days, onSelect }) => {
 };
 
 // List View Vehicle Card
-const VehicleCardList = ({ vehicle, days, onSelect }) => {
+const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   const totalPrice = vehicle.price_per_day * days;
   const defaultImage = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800';
   const image = vehicle.images?.[0] || vehicle.image || defaultImage;

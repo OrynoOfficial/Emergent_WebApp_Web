@@ -46,7 +46,7 @@ const getAmenityIcon = (amenity) => {
 };
 
 // Grid View Venue Card
-const VenueCardGrid = ({ venue, onBook }) => {
+const VenueCardGrid = ({ venue, onBook, isFav, toggleFav }) => {
   // Favourites handled by parent via isFav/toggleFav props
   const VenueIcon = getVenueIcon(venue.venue_type);
   const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
@@ -65,10 +65,10 @@ const VenueCardGrid = ({ venue, onBook }) => {
         
         {/* Favorite button */}
         <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(venue);  }}
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
         >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          <Heart className={`h-5 w-5 ${(isFav && isFav(venue._id || venue.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
         </button>
         
         {/* Type Badge */}
@@ -128,7 +128,7 @@ const VenueCardGrid = ({ venue, onBook }) => {
 };
 
 // List View Venue Card
-const VenueCardList = ({ venue, onBook }) => {
+const VenueCardList = ({ venue, onBook, isFav, toggleFav }) => {
   const VenueIcon = getVenueIcon(venue.venue_type);
   const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
   const image = venue.images?.[0] || defaultImage;

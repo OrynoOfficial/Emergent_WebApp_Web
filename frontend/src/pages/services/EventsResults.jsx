@@ -43,7 +43,7 @@ const getEventIcon = (type) => {
 };
 
 // Grid View Event Card
-const EventCardGrid = ({ event, onBook }) => {
+const EventCardGrid = ({ event, onBook, isFav, toggleFav }) => {
   // Favourites handled by parent via isFav/toggleFav props
   const EventIcon = getEventIcon(event.type);
   const isEventPast = isPast(event.date, event.time);
@@ -69,10 +69,10 @@ const EventCardGrid = ({ event, onBook }) => {
         {/* Favorite button - only show for future events */}
         {!isEventPast && (
           <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(item || {});  }}
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(event);  }}
             className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
           >
-            <Heart className={`h-5 w-5 ${(isFav && isFav(itemId)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+            <Heart className={`h-5 w-5 ${(isFav && isFav(event._id || event.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
           </button>
         )}
         
@@ -146,7 +146,7 @@ const EventCardGrid = ({ event, onBook }) => {
 };
 
 // List View Event Card
-const EventCardList = ({ event, onBook }) => {
+const EventCardList = ({ event, onBook, isFav, toggleFav }) => {
   const EventIcon = getEventIcon(event.type);
   const isEventPast = isPast(event.date, event.time);
   
