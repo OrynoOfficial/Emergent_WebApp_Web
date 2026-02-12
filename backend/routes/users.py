@@ -409,13 +409,22 @@ async def delete_user(
     if target_user.get("role") == "super_admin" and current_user["role"] != "super_admin":
         raise HTTPException(status_code=403, detail="Only super admins can delete super admin accounts")
     
+    # Cascade: remove from pods, scopes, teams
+    from utils.cascade import cascade_delete_user
+    remover_id = str(current_user.get("_id") or current_user.get("id"))
+    cascade_result = await cascade_delete_user(db, user_id, remover_id)
+
     # Delete the user
     result = await db.users.delete_one({"$or": [{"id": user_id}, {"_id": user_id}]})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found or already deleted")
     
-    return {"message": "User deleted successfully", "deleted_user_id": user_id}
+    return {
+        "message": "User deleted successfully",
+        "deleted_user_id": user_id,
+        "cascade": cascade_result
+    }
 
 
 
