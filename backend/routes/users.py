@@ -263,19 +263,24 @@ async def get_user_activity(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Query activity_logs for this user (field is actor_id)
-    query = {"actor_id": user_id}
+    # Query activity_logs for this user - match by actor_id OR actor_email
+    user_email = target_user.get("email")
+    activity_query = {"$or": [{"actor_id": user_id}]}
+    if user_email:
+        activity_query["$or"].append({"actor_email": user_email})
     
-    # Also try user_id field for audit_logs
+    # Audit logs may use user_id or actor_id
     audit_query = {"$or": [{"user_id": user_id}, {"actor_id": user_id}]}
+    if user_email:
+        audit_query["$or"].append({"actor_email": user_email})
     
     # Get from audit_logs collection
     audit_logs = await db.audit_logs.find(audit_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total_audit = await db.audit_logs.count_documents(audit_query)
     
     # Get from activity_logs collection
-    activity_logs = await db.activity_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
-    total_activity = await db.activity_logs.count_documents(query)
+    activity_logs = await db.activity_logs.find(activity_query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    total_activity = await db.activity_logs.count_documents(activity_query)
     
     # Combine and format
     combined_activities = []
