@@ -20,6 +20,36 @@ import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { toast } from 'sonner';
 
+// Step indicator for restaurant booking
+const RestaurantStepIndicator = ({ currentStep }) => {
+  const steps = [
+    { number: 1, label: 'Guest Details', icon: User },
+    { number: 2, label: 'Review Order', icon: ShoppingBag },
+    { number: 3, label: 'Payment', icon: CreditCard },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.number}>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+            currentStep >= step.number 
+              ? 'bg-[#082c59] text-white' 
+              : 'bg-slate-100 text-slate-400'
+          }`}>
+            <step.icon className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">{step.label}</span>
+            <span className="text-sm font-medium sm:hidden">{step.number}</span>
+          </div>
+          {idx < steps.length - 1 && (
+            <ChevronRight className={`w-5 h-5 ${currentStep > step.number ? 'text-[#082c59]' : 'text-slate-300'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 export default function RestaurantBooking() {
   const { user } = useAuth();
   const navigate = useNavigate();
