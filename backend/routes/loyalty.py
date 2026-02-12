@@ -55,6 +55,18 @@ async def get_loyalty_program(
         await db.loyalty_programs.insert_one(program)
         program.pop("_id")
     
+    # Auto-recalculate tier based on total_points
+    correct_tier = LoyaltyTier.BRONZE
+    for tier_name, threshold in TIER_THRESHOLDS.items():
+        if program["total_points"] >= threshold:
+            correct_tier = tier_name
+    if program["tier"] != correct_tier:
+        program["tier"] = correct_tier
+        await db.loyalty_programs.update_one(
+            {"user_id": current_user["_id"]},
+            {"$set": {"tier": correct_tier, "updated_at": datetime.utcnow()}}
+        )
+    
     # Add tier info
     program["tier_multiplier"] = TIER_MULTIPLIERS.get(program["tier"], 1.0)
     program["next_tier"] = None
