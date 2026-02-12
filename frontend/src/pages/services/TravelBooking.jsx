@@ -217,8 +217,14 @@ export default function TravelBooking() {
     const commission = subtotal * (commissionRate / 100);
     
     let discount = 0;
-    if (appliedPromo?.discount_percent) {
-      discount = (subtotal + commission) * (appliedPromo.discount_percent / 100);
+    if (appliedPromo) {
+      if (appliedPromo.discount_percent) {
+        discount = (subtotal + commission) * (appliedPromo.discount_percent / 100);
+      } else if (appliedPromo.fixed_discount) {
+        discount = appliedPromo.fixed_discount;
+      } else if (appliedPromo.discount_amount) {
+        discount = appliedPromo.discount_amount;
+      }
     }
     
     return {
