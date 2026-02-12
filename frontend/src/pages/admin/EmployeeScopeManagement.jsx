@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
+import { AdminModal, FormField, StyledInput } from '@/components/shared/AdminModal';
 
 export default function EmployeeScopeManagement() {
   const navigate = useNavigate();
