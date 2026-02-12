@@ -565,8 +565,6 @@ async def get_member_detail(
     current_user: dict = Depends(require_any_permission(["loyalty.view", "loyalty.manage_programs"]))
 ):
     """Get detailed loyalty info for a specific member - requires loyalty.view permission"""
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
     db = get_database()
     
     # Get loyalty program
