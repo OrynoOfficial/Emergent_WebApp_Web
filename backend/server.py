@@ -291,6 +291,7 @@ app.include_router(employee_scopes_router)  # Employee access scopes management
 app.include_router(customer_location_router)  # Customer location-aware filtering
 app.include_router(communications_router)  # Service communications (announcements, alerts)
 app.include_router(favourites_router)  # User favourites
+app.include_router(seat_ws_router)  # WebSocket for real-time seat updates
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
