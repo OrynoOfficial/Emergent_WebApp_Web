@@ -296,7 +296,7 @@ const RoomCard = ({ room, nights, checkIn, checkOut, onReserve }) => {
 
       {/* Gallery Modal */}
       <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
-        <DialogContent className="max-w-4xl w-full h-[80vh] p-0 bg-black border-none">
+        <DialogContent className="max-w-4xl w-full h-[80vh] p-0 bg-black border-none [&>button]:hidden">
           <div className="relative w-full h-full flex flex-col">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 z-20 p-3 bg-gradient-to-b from-black/80 to-transparent">
