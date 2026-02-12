@@ -657,6 +657,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/admin/invitations"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'super_admin', 'operator']}>
+                <InvitationsManagement />
+              </ProtectedRoute>
+            }
+          />
           
           <Route
             path="/admin/sales"
