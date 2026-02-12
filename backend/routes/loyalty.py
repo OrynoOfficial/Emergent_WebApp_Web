@@ -551,3 +551,89 @@ async def delete_reward(
         raise HTTPException(status_code=404, detail="Reward not found")
     
     return {"message": "Reward deleted successfully"}
+
+
+@router.get("/admin/members/{user_id}")
+async def get_member_detail(
+    user_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get detailed loyalty info for a specific member"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Get loyalty program
+    program = await db.loyalty_programs.find_one({"user_id": user_id}, {"_id": 0})
+    if not program:
+        raise HTTPException(status_code=404, detail="Loyalty program not found for this user")
+    
+    # Get user info
+    user = await db.users.find_one({"_id": user_id}, {"password_hash": 0, "_id": 0})
+    
+    # Get point transactions
+    transactions = await db.loyalty_transactions.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    
+    # Get redemptions
+    redemptions = await db.loyalty_redemptions.find(
+        {"user_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    return {
+        "user": user,
+        "program": program,
+        "transactions": transactions,
+        "redemptions": redemptions
+    }
+
+
+@router.get("/admin/stats/tier-history")
+async def get_tier_distribution_history(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get tier distribution over time for charts"""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    # Current tier distribution
+    pipeline = [
+        {"$group": {"_id": "$tier", "count": {"$sum": 1}, "total_points": {"$sum": "$total_points"}, "total_spent": {"$sum": "$total_spent"}}}
+    ]
+    tier_data = await db.loyalty_programs.aggregate(pipeline).to_list(10)
+    
+    tiers = {}
+    for t in tier_data:
+        tiers[t["_id"] or "bronze"] = {
+            "count": t["count"],
+            "total_points": t["total_points"],
+            "total_spent": t["total_spent"]
+        }
+    
+    # Recent transactions summary (last 30 days)
+    from datetime import timedelta
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    
+    tx_pipeline = [
+        {"$match": {"created_at": {"$gte": thirty_days_ago}}},
+        {"$group": {"_id": "$transaction_type", "total": {"$sum": {"$abs": "$points"}}, "count": {"$sum": 1}}}
+    ]
+    tx_summary = await db.loyalty_transactions.aggregate(tx_pipeline).to_list(10)
+    
+    recent_activity = {}
+    for tx in tx_summary:
+        recent_activity[tx["_id"] or "other"] = {"total_points": tx["total"], "count": tx["count"]}
+    
+    # Total redemptions
+    total_redemptions = await db.loyalty_redemptions.count_documents({})
+    
+    return {
+        "tier_distribution": tiers,
+        "recent_activity": recent_activity,
+        "total_redemptions": total_redemptions
+    }
+
