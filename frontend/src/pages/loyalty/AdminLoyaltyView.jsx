@@ -10,7 +10,7 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   TrendingUp, Gift, Star, Users, Crown, Trophy, Zap, Sparkles, Coins,
   Clock, ArrowRight, Loader2, Plus, Edit2, Trash2, Search, BarChart3,
-  Target, Percent, User
+  Target, Percent, User, Tag, Copy, Check
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate, formatDateShort } from '../../utils/dateUtils';
