@@ -586,7 +586,7 @@ async def team_lead_add_member(
     user = await db.users.find_one({"_id": data.user_id})
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
-    if user.get("role") not in ["admin", "super_admin"]:
+    if user.get("role") not in ["admin", "super_admin", "employee"]:
         raise HTTPException(status_code=400, detail="Only platform employees can be added to pods")
 
     # One employee = one pod rule
