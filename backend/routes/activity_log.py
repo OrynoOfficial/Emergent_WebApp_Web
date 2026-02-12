@@ -134,9 +134,9 @@ async def get_activity_logs(
     search: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_any_permission(["activity.view"]))
 ):
-    """Get activity logs with filtering and pagination - role-based access"""
+    """Get activity logs with filtering and pagination - requires activity.view permission"""
     db = get_database()
     
     # Get user role and permissions
