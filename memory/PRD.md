@@ -778,3 +778,15 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Admin: stats, tier-history, members list, member detail, rewards CRUD (create/update/delete with all fields)
   - Customer: program (auto tier recalc), rewards (with id), transactions, redemptions, referral
 - **Testing**: 100% verified via iteration_46 (10/10 backend, all frontend features)
+
+
+### Session: Feb 12, 2026 (Part 10) - Refactoring & Code Quality
+
+- [x] **Loyalty.jsx Refactoring**: Split from 838 lines into clean modular structure:
+  - `frontend/src/pages/loyalty/constants.js` — Shared TIER_CONFIG, TIER_SYMBOLS, DEFAULT_REWARDS, getExpiryInfo
+  - `frontend/src/pages/loyalty/CustomerLoyaltyView.jsx` — Customer-facing loyalty view
+  - `frontend/src/pages/loyalty/AdminLoyaltyView.jsx` — Admin loyalty management view
+  - `frontend/src/pages/Loyalty.jsx` — Lean router component (43 lines)
+- [x] **Settings.jsx Role Detection Fix**: Standardized isCustomer logic — removed redundant duplicate definition in renderSectionContent (was `user?.role === 'customer' || !user?.role`, now uses single consistent `!isAdmin && !isOperator`)
+- [x] **Mixed Content WebSocket Investigation**: Confirmed no WebSocket usage in frontend (NotificationContext uses HTTP polling). Backend WebSocket endpoints exist for live chat but frontend doesn't connect to them. Non-issue.
+- **Testing**: 100% verified via iteration_47 (9/9 backend, all frontend features)
