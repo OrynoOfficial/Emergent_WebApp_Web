@@ -259,7 +259,8 @@ async def release_seats(
         "user_id": current_user["_id"],
         "status": SeatStatus.RESERVED
     })
-    
+
+    await _notify_seat_change(route_id, travel_date)
     return {"message": f"Released {result.deleted_count} seats"}
 
 @router.get("/my-bookings")
