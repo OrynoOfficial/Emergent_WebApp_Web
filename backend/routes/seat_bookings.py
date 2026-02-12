@@ -73,7 +73,7 @@ async def reserve_seats(
     reservation: SeatReservationRequest,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Temporarily reserve seats (10 minute hold)"""
+    """Temporarily reserve seats (3 minute hold)"""
     db = get_database()
     
     # Check route exists - support both id and _id
