@@ -632,7 +632,26 @@ export default function CarRentalBooking() {
                     </div>
                 </div>
 
-                {/* Payment Section */}
+                {/* Payment Section - Right Side */}
+                <div className="bg-white border-t border-slate-200 p-5">
+                  <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    Payment Method
+                  </h4>
+                  <div className={!canSelectPayment ? 'opacity-50 pointer-events-none' : ''}>
+                    <PaymentMethodsSelection
+                      amount={pricing.total}
+                      orderId={orderId}
+                      serviceName={car?.name || 'Car Rental'}
+                      onPaymentInitiated={handlePaymentInitiated}
+                      onPaymentError={handlePaymentError}
+                      triggerPayment={triggerPayment}
+                      onMethodSelected={(method) => setSelectedPaymentMethod(method)}
+                    />
+                  </div>
+                </div>
+
+                {/* Confirm Button */}
                 <div className="bg-slate-50 border-t border-slate-200 p-5">
                     <Button 
                       onClick={handleSubmit}
