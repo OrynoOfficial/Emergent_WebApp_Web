@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 59 - Backend testing for Restaurant Booking Phase D changes. All 8 tests PASSED. Verified: 1) POST /api/orders/create accepts full item prices with service_type='restaurant' (no 30% deposit). 2) booking_details includes items array with name, price, quantity. 3) total_amount reflects full item price + commission (NOT old 30% deposit calculation). 4) Promo code validation endpoint /api/promo-codes/validate works for restaurant service_type. 5) Order type variations (dine-in, takeout) stored correctly. 6) service_type='restaurant' stored correctly in orders.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "test_01_create_restaurant_order_full_price": "PASS - Created order with full price 15750 XAF (items: 15000 + commission: 750)",
+    "test_02_verify_booking_details_items": "PASS - booking_details contains items array with name, price, quantity",
+    "test_03_full_price_no_deposit_calculation": "PASS - Total 26250 XAF = items (25000) + commission (1250), NOT old 30% deposit (7500)",
+    "test_04_promo_code_validation_restaurant": "PASS - Promo validation endpoint works for restaurant service_type",
+    "test_05_create_order_with_promo_discount": "PASS - Order with promo discount created (19000 XAF)",
+    "test_06_order_type_variations": "PASS - Both dine-in and takeout order types work",
+    "test_07_service_type_restaurant": "PASS - service_type='restaurant' stored correctly",
+    "test_99_cleanup_test_orders": "PASS - Cleanup attempted for 7 test orders"
+  },
+  "features_verified": {
+    "POST /api/orders/create (restaurant)": "VERIFIED - Accepts full item prices (no 30% deposit)",
+    "booking_details.items": "VERIFIED - Array with name, price, quantity stored correctly",
+    "total_amount calculation": "VERIFIED - Full price + 5% commission (NOT old 30% deposit)",
+    "POST /api/promo-codes/validate": "VERIFIED - Works for service_type='restaurant'",
+    "order_type field": "VERIFIED - dine-in and takeout variants work"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_restaurant_booking_iteration59.py",
+    "/app/test_reports/pytest/pytest_results_iteration59.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend POST /api/orders/create correctly stores whatever total_amount frontend sends",
+    "booking_details is passed through unchanged - items array with name, price, quantity preserved",
+    "Frontend RestaurantBooking.jsx now calculates full price + commission (no DEPOSIT_PERCENTAGE)",
+    "RestaurantMenu.jsx stores order data in sessionStorage with items, prices, reservation details",
+    "Promo code validation uses api.post as intended"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_restaurant_booking_iteration59.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": {
+    "customer": "customer@test.com / testpassword123",
+    "super_admin": "superadmin@oryno.com / testpassword123"
+  },
+  "seed_data_creation": "Test orders created with TEST_ prefix and automatically cleanup attempted via cancel endpoint",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 59 verified backend accepts restaurant orders with full price (no 30% deposit). Frontend RestaurantBooking.jsx was rewritten to: 1) Read from 'restaurantOrder' sessionStorage (set by RestaurantMenu), 2) Calculate full price + 5% commission, 3) Include items array in booking_details. All backend APIs work correctly for restaurant booking flow."
+}
