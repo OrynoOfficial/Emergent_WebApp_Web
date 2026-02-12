@@ -66,6 +66,9 @@ const StepIndicator = ({ currentStep }) => {
 export default function CarRentalBooking() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
   const [car, setCar] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
