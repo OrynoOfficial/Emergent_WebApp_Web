@@ -463,12 +463,17 @@ async def create_reward(
     reward = {
         "_id": str(uuid.uuid4()),
         "title": reward_data.title,
-        "name": reward_data.title,  # For compatibility
+        "name": reward_data.title,
         "description": reward_data.description,
         "points_required": reward_data.points_required,
         "min_tier": reward_data.min_tier,
         "type": reward_data.type,
         "discount_value": reward_data.discount_value,
+        "service_types": reward_data.service_types,
+        "valid_from": reward_data.valid_from,
+        "valid_to": reward_data.valid_to,
+        "max_redemptions": reward_data.max_redemptions,
+        "total_available": reward_data.total_available,
         "is_active": True,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
