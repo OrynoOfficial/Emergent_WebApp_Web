@@ -679,16 +679,34 @@ export default function HotelBooking() {
               </div>
               
               <div className="p-5 space-y-4">
-                {/* Room Type */}
+                {/* Room Type - Highlighted */}
                 {hotel.room_type && (
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3 p-3 bg-[#082c59]/5 rounded-xl border-2 border-[#082c59]/20">
                     <Bed className="h-5 w-5 text-[#082c59]" />
                     <div>
-                      <p className="text-xs text-slate-500">Room Type</p>
-                      <p className="font-medium text-slate-900">{hotel.room_type}</p>
+                      <p className="text-xs text-slate-500">Selected Room</p>
+                      <p className="font-bold text-[#082c59]">{hotel.room_type}</p>
                     </div>
                   </div>
                 )}
+
+                {/* Check-in / Check-out Policy */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                      <p className="text-xs font-semibold text-emerald-700">Check-in</p>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">From 14:00</p>
+                  </div>
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Clock className="h-3.5 w-3.5 text-amber-600" />
+                      <p className="text-xs font-semibold text-amber-700">Check-out</p>
+                    </div>
+                    <p className="font-bold text-slate-900 text-sm">Before 12:00</p>
+                  </div>
+                </div>
                 
                 {/* Amenities */}
                 <div className="space-y-2">
