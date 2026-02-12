@@ -111,6 +111,7 @@ import Analytics from './pages/admin/Analytics';
 import AdminBookings from './pages/admin/Bookings';
 import UserManagement from './pages/admin/Users';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import InvitationsManagement from './pages/admin/InvitationsManagement';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentCancel from './pages/payment/PaymentCancel';
 import StripeCheckoutConfirm from './pages/payment/StripeCheckoutConfirm';
