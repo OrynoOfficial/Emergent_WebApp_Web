@@ -960,3 +960,13 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Remove button per item
   - Empty state with helpful prompt
 - **Testing**: 100% verified via iteration_56 (27/27 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 21) - Phase B: Hotel Booking Fixes
+
+- [x] **Photo Navigation Always Visible**: Gallery modal nav buttons changed from transparent `hover:bg-white/20` to solid `bg-black/50 hover:bg-black/70` with larger 48px hit targets. Always visible without hovering.
+- [x] **Fixed Double X Close Button**: Added `[&>button]:hidden` to both gallery DialogContent elements to hide the default shadcn close button, keeping only the custom X button. Applied to both hotel gallery and room card gallery.
+- [x] **Payment Section Redesigned**: Removed purple gradient header, replaced with clean white card layout matching the Travel booking style. Simplified "Pay" button styling.
+- [x] **Removed Page Transition Animation**: Added `useEffect(() => { window.scrollTo(0, 0); }, [])` to both HotelDetails and HotelBooking components. Pages now load at the top instead of showing a scroll-down animation.
+- [x] **Dynamic "Rooms Left"**: Updated `GET /api/rooms/` to accept optional `check_in` and `check_out` params. Dynamically calculates `available_rooms = total_rooms - active_bookings` by counting overlapping reservations in `room_bookings` collection. Frontend passes dates when loading rooms. Backwards compatible without dates.
+- **Testing**: 100% verified via iteration_57 (14/14 backend tests passed)
