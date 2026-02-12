@@ -184,7 +184,6 @@ export default function useSidebarMenu() {
     if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operator Management', path: '/admin/operators', icon: Building2 });
     if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
     if (isSuperAdmin && canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
-    if (isAdmin || isSuperAdmin) adminSubmenu.push({ key: 'bills', label: 'Bills', path: '/admin/bills', icon: Receipt });
     if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-revenue', label: 'Revenue', path: '/admin/sales', icon: TrendingUp });
     if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     if (isSuperAdmin) adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
