@@ -114,6 +114,25 @@ export default function AdminLoyaltyView() {
     } catch { toast.error('Failed to delete reward'); }
   };
 
+  const handleGeneratePromo = async (reward) => {
+    setGeneratingPromo(reward.id);
+    try {
+      const res = await api.post(`/loyalty/admin/rewards/${reward.id}/generate-promo`);
+      toast.success(`Promo code generated: ${res.data.code}`);
+      loadAdminData(); // Refresh to show new promo
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to generate promo code');
+    } finally { setGeneratingPromo(null); }
+  };
+
+  const [copiedPromoCode, setCopiedPromoCode] = useState(null);
+  const copyPromo = (code) => {
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopiedPromoCode(code);
+    toast.success('Code copied!');
+    setTimeout(() => setCopiedPromoCode(null), 2000);
+  };
+
   const handleEditReward = (reward) => {
     setEditingReward(reward);
     setRewardForm({
