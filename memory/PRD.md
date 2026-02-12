@@ -905,3 +905,16 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - `usage_limit` prevents over-use (from reward's max_redemptions)
   - Status shows Active/Expired/Exhausted based on dates and usage
 - **Testing**: 100% verified via iteration_53 (16/16 backend tests passed)
+
+
+### Session: Feb 12, 2026 (Part 18) - Loyalty Redemption ↔ Promo Code Alignment
+
+- [x] **Bridge: Redemption → Promo Code**: `POST /api/loyalty/redeem/{id}` now creates entries in BOTH `loyalty_redemptions` (with status "active") AND `promo_codes` (with `source: "loyalty_redemption"`, `redemption_id` link, `usage_limit: 1`). Codes are immediately usable in booking pages.
+- [x] **Feedback Loop: Use → Status Update**: `POST /api/promo-codes/use` now:
+  - Increments `times_used` on promo code
+  - Sets `is_active=false` when usage_limit reached
+  - Updates linked `loyalty_redemptions` record: `status="used"`, `used_in_order=order_id`
+- [x] **Admin View Unified**: `GET /api/loyalty/admin/promo-codes` returns both `source="loyalty_reward"` (admin-generated) AND `source="loyalty_redemption"` (customer-redeemed) codes. Customer-redeemed codes show redeemer name/email.
+- [x] **Customer View**: Redemptions page shows "used" status with blue badge after code is consumed. Active codes in "Redeemable Codes" section. Used codes in "All Redeemed" section.
+- [x] **Reuse Prevention**: Used code returns 404 on validation (deactivated after single use).
+- **Testing**: 100% verified via iteration_54 (21/21 backend E2E tests passed)
