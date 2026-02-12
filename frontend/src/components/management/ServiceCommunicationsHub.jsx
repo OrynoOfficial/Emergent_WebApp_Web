@@ -141,12 +141,9 @@ export default function ServiceCommunicationsHub({
       await onAnnouncementSend(announcementTitle, announcementText);
     } else {
       try {
-        await api.post('/hotels/announcements', {
-          title: announcementTitle,
-          message: announcementText,
-          service_type: serviceTag
-        });
+        await api.post(`/communications/announcements?title=${encodeURIComponent(announcementTitle)}&message=${encodeURIComponent(announcementText)}&service_type=${serviceTag}`);
         toast.success('Announcement sent successfully');
+        loadCommunications();
       } catch (error) {
         toast.error('Failed to send announcement');
       }
