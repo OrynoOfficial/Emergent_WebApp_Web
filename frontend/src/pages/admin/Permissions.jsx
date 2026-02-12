@@ -485,6 +485,14 @@ export default function Permissions() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [roleDialogSearchQuery, setRoleDialogSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState(null);
+
+  // Audit Trail state
+  const [auditTrail, setAuditTrail] = useState([]);
+  const [auditStats, setAuditStats] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditFilter, setAuditFilter] = useState('');
   
   const [formData, setFormData] = useState({
     name: '',
