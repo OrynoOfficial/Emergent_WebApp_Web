@@ -519,6 +519,16 @@ async def update_reward(
         update_dict["discount_value"] = reward_data.discount_value
     if reward_data.is_active is not None:
         update_dict["is_active"] = reward_data.is_active
+    if reward_data.service_types is not None:
+        update_dict["service_types"] = reward_data.service_types
+    if reward_data.valid_from is not None:
+        update_dict["valid_from"] = reward_data.valid_from
+    if reward_data.valid_to is not None:
+        update_dict["valid_to"] = reward_data.valid_to
+    if reward_data.max_redemptions is not None:
+        update_dict["max_redemptions"] = reward_data.max_redemptions
+    if reward_data.total_available is not None:
+        update_dict["total_available"] = reward_data.total_available
     
     await db.loyalty_rewards.update_one({"_id": reward_id}, {"$set": update_dict})
     
