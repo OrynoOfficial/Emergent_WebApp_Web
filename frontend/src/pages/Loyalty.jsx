@@ -423,9 +423,6 @@ function Loyalty() {
     </div>
   );
 }
-    </div>
-  );
-}
 
 // Admin Loyalty Program Management View
 function AdminLoyaltyView() {
