@@ -770,3 +770,11 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Activity Tab**: Shows point transactions from bookings with earn/redeem styling and service type labels
 - [x] **Expiry Info**: All codes show days-left countdown (color-coded: green for OK, amber for ≤7 days, red for expired) + formatted expiry date
 - **Testing**: Verified via screenshots — full redeem flow working end-to-end
+
+### Session: Feb 12, 2026 (Part 9) - Copy Button Fix & Full Loyalty Audit
+
+- [x] **Copy Button Fix**: Added clipboard fallback for non-HTTPS (`document.execCommand('copy')`). Visual feedback: Copy icon → Check (green) for 2 seconds + toast "Code copied to clipboard!"
+- [x] **Full Loyalty Audit**: All endpoints verified working:
+  - Admin: stats, tier-history, members list, member detail, rewards CRUD (create/update/delete with all fields)
+  - Customer: program (auto tier recalc), rewards (with id), transactions, redemptions, referral
+- **Testing**: 100% verified via iteration_46 (10/10 backend, all frontend features)
