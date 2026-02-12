@@ -566,33 +566,84 @@ export default function PodManagement() {
       </Dialog>
 
       {/* Add Member Modal */}
-      <Dialog open={showMemberModal} onOpenChange={setShowMemberModal}>
-        <DialogContent className="bg-white">
+      <Dialog open={showMemberModal} onOpenChange={(open) => { setShowMemberModal(open); if (!open) { setMemberSearch(''); setMemberDeptFilter('all'); } }}>
+        <DialogContent className="bg-white max-w-lg">
           <DialogHeader className="pb-4 border-b">
             <DialogTitle className="flex items-center gap-2">
               <div className="p-2 bg-emerald-100 rounded-lg"><UserPlus className="w-4 h-4 text-emerald-600" /></div>
               Add Member to {selectedPod?.name}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5 pt-2">
-            <div>
-              <Label className="text-sm font-medium">Select Employee</Label>
-              <Select value={memberForm.user_id} onValueChange={(v) => setMemberForm({...memberForm, user_id: v})}>
-                <SelectTrigger data-testid="select-employee-trigger" className="mt-1.5">
-                  <SelectValue placeholder="Choose an employee..." />
+          <div className="space-y-4 pt-2">
+            {/* Search & Filter */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="member-search-input"
+                />
+              </div>
+              <Select value={memberDeptFilter} onValueChange={setMemberDeptFilter}>
+                <SelectTrigger className="w-[140px]" data-testid="member-dept-filter">
+                  <SelectValue placeholder="Department" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  {availableUsers.map(u => (
-                    <SelectItem key={u._linked_user_id} value={u._linked_user_id}>
-                      {getEmployeeLabel(u)}{u.department ? ` (${u.department.replace('_', ' ')})` : ''}{u.city ? ` - ${u.city}` : ''}
-                    </SelectItem>
+                  <SelectItem value="all">All Depts</SelectItem>
+                  {[...new Set(availableUsers.map(u => u.department).filter(Boolean))].map(d => (
+                    <SelectItem key={d} value={d} className="capitalize">{d.replace('_', ' ')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Employee List */}
+            <div>
+              <Label className="text-sm font-medium mb-1.5 block">Select Employee</Label>
+              <div className="max-h-56 overflow-y-auto space-y-1.5 border rounded-lg p-2" data-testid="member-employee-list">
+                {(() => {
+                  const filtered = availableUsers.filter(u => {
+                    const label = getEmployeeLabel(u).toLowerCase();
+                    const email = (u.email || '').toLowerCase();
+                    const matchesSearch = !memberSearch || label.includes(memberSearch.toLowerCase()) || email.includes(memberSearch.toLowerCase());
+                    const matchesDept = memberDeptFilter === 'all' || u.department === memberDeptFilter;
+                    return matchesSearch && matchesDept;
+                  });
+                  if (filtered.length === 0) return <p className="text-sm text-slate-400 text-center py-4">No matching employees found</p>;
+                  return filtered.map(u => {
+                    const isSelected = memberForm.user_id === u._linked_user_id;
+                    return (
+                      <label
+                        key={u._linked_user_id}
+                        className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                          isSelected ? 'bg-blue-50 border border-blue-300' : 'hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="pod_member"
+                          checked={isSelected}
+                          onChange={() => setMemberForm({...memberForm, user_id: u._linked_user_id})}
+                          className="w-4 h-4 accent-blue-600"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm truncate">{getEmployeeLabel(u)}</p>
+                          <p className="text-xs text-slate-500 truncate">{u.email}{u.department ? ` · ${u.department.replace('_', ' ')}` : ''}{u.city ? ` · ${u.city}` : ''}</p>
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
+              </div>
               {availableUsers.length === 0 && (
                 <p className="text-sm text-amber-600 mt-1.5 bg-amber-50 p-2 rounded">No available employees to add</p>
               )}
             </div>
+
+            {/* Role Selector */}
             <div>
               <Label className="text-sm font-medium">Role</Label>
               <div className="grid grid-cols-2 gap-2 mt-1.5">
