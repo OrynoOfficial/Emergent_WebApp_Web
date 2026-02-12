@@ -53,14 +53,16 @@ export default function AdminLoyaltyView() {
   const loadAdminData = async () => {
     setLoading(true);
     try {
-      const [rewardsRes, statsRes, membersRes] = await Promise.all([
+      const [rewardsRes, statsRes, membersRes, promosRes] = await Promise.all([
         api.get('/loyalty/admin/rewards'),
         api.get('/loyalty/admin/stats'),
-        api.get('/loyalty/admin/members')
+        api.get('/loyalty/admin/members'),
+        api.get('/loyalty/admin/promo-codes').catch(() => ({ data: { promo_codes: [] } }))
       ]);
       if (rewardsRes.data?.rewards?.length > 0) setRewards(rewardsRes.data.rewards);
       if (statsRes.data) setProgramStats(statsRes.data);
       if (membersRes.data?.members) setMembers(membersRes.data.members);
+      setLoyaltyPromos(promosRes.data?.promo_codes || []);
     } catch (error) {
       console.error('Failed to load admin data:', error);
     } finally { setLoading(false); }
