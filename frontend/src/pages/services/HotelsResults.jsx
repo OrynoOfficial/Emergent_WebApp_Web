@@ -143,10 +143,10 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails, isFav, toggleFav }) => {
           
           {/* Favorite button */}
           <button
-            onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+            onClick={(e) => { e.stopPropagation(); toggleFav(hotel); }}
             className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
           >
-            <Heart className={`h-4 w-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+            <Heart className={`h-4 w-4 ${isFav(hotelId) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
           </button>
           
           {/* Badges */}
