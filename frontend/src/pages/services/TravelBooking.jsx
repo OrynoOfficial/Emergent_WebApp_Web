@@ -18,6 +18,36 @@ import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { toast } from 'sonner';
 
+// Step indicator for travel booking
+const TravelStepIndicator = ({ currentStep }) => {
+  const steps = [
+    { number: 1, label: 'Traveler Details', icon: Users },
+    { number: 2, label: 'Seats & Extras', icon: Armchair },
+    { number: 3, label: 'Payment', icon: CreditCard },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.number}>
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+            currentStep >= step.number 
+              ? 'bg-[#082c59] text-white' 
+              : 'bg-slate-100 text-slate-400'
+          }`}>
+            <step.icon className="w-4 h-4" />
+            <span className="text-sm font-medium hidden sm:inline">{step.label}</span>
+            <span className="text-sm font-medium sm:hidden">{step.number}</span>
+          </div>
+          {idx < steps.length - 1 && (
+            <ChevronRight className={`w-5 h-5 ${currentStep > step.number ? 'text-[#082c59]' : 'text-slate-300'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 // Styled Input component matching original design - improved disabled state visibility
 const StyledInput = ({ id, label, icon: Icon, error, disabled, ...props }) => (
   <div className={`relative w-full h-14 flex items-center rounded-xl px-4 border transition-all duration-300 ${disabled ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-300'} ${error ? 'border-red-500 animate-shake' : ''}`}>
