@@ -310,5 +310,3 @@ async def get_my_events(
         "total": total,
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
     }
-
-    return {"bookings": bookings, "total": total}
