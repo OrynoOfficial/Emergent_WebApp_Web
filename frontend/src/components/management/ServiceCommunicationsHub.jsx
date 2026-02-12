@@ -164,11 +164,7 @@ export default function ServiceCommunicationsHub({
       await onAlertCreate(alertTitle, alertText);
     } else {
       try {
-        await api.post('/hotels/alerts', {
-          title: alertTitle,
-          message: alertText,
-          service_type: serviceTag
-        });
+        await api.post(`/communications/alerts?title=${encodeURIComponent(alertTitle)}&message=${encodeURIComponent(alertText)}&service_type=${serviceTag}`);
         toast.success('Alert created successfully');
         loadCommunications();
       } catch (error) {
