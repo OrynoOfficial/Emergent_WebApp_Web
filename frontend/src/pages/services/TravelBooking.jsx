@@ -600,9 +600,9 @@ export default function TravelBooking() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-center py-6 bg-slate-50 rounded-xl">
-                      <Armchair className="w-12 h-12 mx-auto text-slate-400 mb-2" />
-                      <p className="text-slate-600">Seats will be auto-assigned at check-in</p>
+                    <div className="text-center py-6 bg-slate-50 rounded-xl mt-2">
+                      <Armchair className="w-12 h-12 mx-auto text-slate-300 mb-2" />
+                      <p className="text-slate-500 text-sm">Seats will be auto-assigned at check-in</p>
                     </div>
                   )}
                 </div>
