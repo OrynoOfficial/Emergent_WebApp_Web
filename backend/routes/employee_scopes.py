@@ -203,7 +203,7 @@ async def assign_scope_to_user(
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
     
-    if user.get("role") not in ["admin", "super_admin"]:
+    if user.get("role") not in ["admin", "super_admin", "employee"]:
         raise HTTPException(status_code=400, detail="Only platform employees can have access scopes")
     
     # Check if already assigned
