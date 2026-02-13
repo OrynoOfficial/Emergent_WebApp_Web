@@ -402,6 +402,8 @@ export default function HotelDetails() {
   const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
   const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
   const [roomViewMode, setRoomViewMode] = useState('list');
+  const [policiesExpanded, setPoliciesExpanded] = useState(false);
+  const [nearbyServiceFilter, setNearbyServiceFilter] = useState(null);
   
   const nights = differenceInDays(bookingParams.checkOut, bookingParams.checkIn) || 1;
   
