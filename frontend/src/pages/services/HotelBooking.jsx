@@ -873,11 +873,13 @@ export default function HotelBooking() {
 
             {/* Payment Card */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-              <div className="p-5">
-                <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-blue-600" />
+              <div className="bg-slate-400 p-4">
+                <h3 className="font-bold text-white flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
                   {t('paymentInfo')}
                 </h3>
+              </div>
+              <div className="p-5">
                 <PaymentMethodsSelection
                   amount={pricing.total}
                   customerPhone={formData.phone}
