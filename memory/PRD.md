@@ -1137,3 +1137,18 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - All fallback timeouts in LiveSeatMap changed from `10 * 60 * 1000` to `3 * 60 * 1000`
 - [x] **Seat Selection Swap**: LiveSeatMap already had correct swap logic (release oldest → reserve new), verified working with API calls
 - **Testing**: 100% verified via iteration_65 (all 9 features passed)
+
+### Session: Feb 13, 2026 (Part 30) - Hotel Details/Booking UI & Payment Header
+
+- [x] **Hotel Details - Policies**: Revamped from plain list to expandable card (matching About section style) with check-in/check-out policy boxes at top and collapsible "Additional Policies" toggle
+- [x] **Hotel Details - Live Map**: Fixed blank map by switching from Google Maps embed (requires API key) to OpenStreetMap embed (no key needed)
+- [x] **Hotel Details - Oryno Services Nearby**: Converted from static labels to clickable filter buttons with active/inactive toggle states and dynamic filter text
+- [x] **Hotel Booking - Guest Toggle**: Changed color from blue to `#082c59` (brand color) with matching Switch accent
+- [x] **Hotel Booking - Hotel Card**: Replaced "Selected Room" + hardcoded amenity list with check-in/check-out policy boxes + expandable amenities (4 visible, expandable to all)
+- [x] **Hotel Booking - Booking Summary**: Restructured with:
+  - `bg-slate-400` header (consistent with payment sections)
+  - Separate mini-cards for Guests (blue), Duration/Nights (indigo), Room Selected (navy with "Your Selected Room" label)
+  - Tighter spacing, room card moved below guests/nights
+- [x] **Payment Header slate-400 Across All Booking Pages**: Updated 9 booking pages (Hotel, Travel, Car Rental, Restaurant, Cinema, Event, Laundry, Banquet, Package) to use `bg-slate-400` for payment section headers
+- [x] **AdminModal Fix**: Fixed footer visibility with flex layout (from Part 29)
+- **Testing**: Code review 100% via iteration_66 (all 7 feature groups verified in source code)
