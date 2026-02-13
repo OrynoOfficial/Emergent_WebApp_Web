@@ -766,16 +766,16 @@ export default function HotelDetails() {
                     Explore the area
                   </h3>
                   <div className="aspect-[16/10] rounded-xl overflow-hidden mb-4 bg-slate-100 border border-slate-200">
-                    {mapEmbedUrl ? (
-                      <iframe 
-                        src={mapEmbedUrl}
-                        width="100%" 
-                        height="100%" 
-                        style={{border: 0}} 
-                        allowFullScreen="" 
-                        loading="lazy"
-                        title={`Map of ${hotel.name}`}
-                      ></iframe>
+                    {mapCenter ? (
+                      <MapContainer center={mapCenter} zoom={15} style={{ width: '100%', height: '100%' }} scrollWheelZoom={false}>
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <Marker position={mapCenter}>
+                          <Popup>{hotel.name}<br />{hotel.address}</Popup>
+                        </Marker>
+                      </MapContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
                         <MapPin className="w-12 h-12" />
