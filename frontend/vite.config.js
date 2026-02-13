@@ -13,10 +13,6 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    allowedHosts: [
-      'app-web-trio.preview.emergentagent.com',
-      '.emergentagent.com',
-      'localhost',
-    ],
+    allowedHosts: true,
   },
 })
