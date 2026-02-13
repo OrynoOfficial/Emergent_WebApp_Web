@@ -681,17 +681,6 @@ export default function HotelBooking() {
               </div>
               
               <div className="p-5 space-y-4">
-                {/* Room Type - Highlighted */}
-                {hotel.room_type && (
-                  <div className="flex items-center gap-3 p-3 bg-[#082c59]/5 rounded-xl border-2 border-[#082c59]/20">
-                    <Bed className="h-5 w-5 text-[#082c59]" />
-                    <div>
-                      <p className="text-xs text-slate-500">Selected Room</p>
-                      <p className="font-bold text-[#082c59]">{hotel.room_type}</p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Check-in / Check-out Policy */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -710,30 +699,27 @@ export default function HotelBooking() {
                   </div>
                 </div>
                 
-                {/* Amenities */}
-                <div className="space-y-2">
-                  {hotel.amenities?.includes('wifi') && (
-                    <div className="flex items-center gap-2 text-sm text-emerald-600">
-                      <Check className="h-4 w-4" />
-                      <Wifi className="h-4 w-4" />
-                      <span>{t('wifiIncluded')}</span>
+                {/* Expandable Amenities */}
+                {hotel.amenities && hotel.amenities.length > 0 && (
+                  <div className="border-t border-slate-100 pt-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {hotel.amenities.slice(0, bookingAmenitiesExpanded ? hotel.amenities.length : 4).map((amenity, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-100 text-xs capitalize">
+                          <Check className="h-3 w-3 text-emerald-500" />
+                          <span className="text-slate-600">{amenity.replace(/_/g, ' ')}</span>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  {hotel.amenities?.includes('breakfast') && (
-                    <div className="flex items-center gap-2 text-sm text-emerald-600">
-                      <Check className="h-4 w-4" />
-                      <Coffee className="h-4 w-4" />
-                      <span>{t('breakfastIncluded')}</span>
-                    </div>
-                  )}
-                  {hotel.amenities?.includes('parking') && (
-                    <div className="flex items-center gap-2 text-sm text-emerald-600">
-                      <Check className="h-4 w-4" />
-                      <Car className="h-4 w-4" />
-                      <span>{t('parkingIncluded')}</span>
-                    </div>
-                  )}
-                </div>
+                    {hotel.amenities.length > 4 && (
+                      <button
+                        onClick={() => setBookingAmenitiesExpanded(!bookingAmenitiesExpanded)}
+                        className="mt-2 text-xs text-[#082c59] font-medium hover:underline"
+                      >
+                        {bookingAmenitiesExpanded ? 'Show less' : `+${hotel.amenities.length - 4} more amenities`}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
