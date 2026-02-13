@@ -179,6 +179,7 @@ export default function HotelBooking() {
     commissionAmount: 0,
     totalAmount: 0
   });
+  const [bookingAmenitiesExpanded, setBookingAmenitiesExpanded] = useState(false);
 
   const t = useCallback((key, params = {}) => {
     let translation = translations[language][key] || key;
