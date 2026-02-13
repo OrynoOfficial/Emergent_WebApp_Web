@@ -725,7 +725,7 @@ export default function HotelBooking() {
 
             {/* Booking Summary Card */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-5">
+              <div className="bg-slate-400 p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <Calendar className="h-6 w-6" />
@@ -737,9 +737,9 @@ export default function HotelBooking() {
                 </div>
               </div>
               
-              <div className="p-5 space-y-4">
+              <div className="p-5 space-y-3">
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-slate-50 rounded-xl">
                     <p className="text-xs text-slate-500 font-medium">{t('checkIn')}</p>
                     <p className="font-bold text-slate-900">{format(new Date(searchParams.checkIn), 'MMM dd')}</p>
@@ -752,15 +752,34 @@ export default function HotelBooking() {
                   </div>
                 </div>
 
-                {/* Guests & Duration */}
-                <div className="flex justify-between items-center text-sm p-3 bg-blue-50 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <span className="text-slate-700">{searchParams.adults} {t('adults')}</span>
-                    {searchParams.children > 0 && <span className="text-slate-500">+ {searchParams.children} {t('children')}</span>}
+                {/* Guests - Mini card */}
+                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-slate-500">Guests</p>
+                    <p className="font-bold text-slate-900 text-sm">{searchParams.adults} {t('adults')}{searchParams.children > 0 ? ` + ${searchParams.children} ${t('children')}` : ''}</p>
                   </div>
-                  <Badge className="bg-blue-600">{nights} {t('nights')}</Badge>
                 </div>
+
+                {/* Nights - Mini card */}
+                <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                  <Calendar className="h-5 w-5 text-indigo-600" />
+                  <div>
+                    <p className="text-xs text-slate-500">Duration</p>
+                    <p className="font-bold text-slate-900 text-sm">{nights} {t('nights')}</p>
+                  </div>
+                </div>
+
+                {/* Room Selected - Mini card with label */}
+                {hotel.room_type && (
+                  <div className="flex items-center gap-3 p-3 bg-[#082c59]/5 rounded-xl border border-[#082c59]/15">
+                    <Bed className="h-5 w-5 text-[#082c59]" />
+                    <div>
+                      <p className="text-xs text-slate-500">Your Selected Room</p>
+                      <p className="font-bold text-[#082c59] text-sm">{hotel.room_type}</p>
+                    </div>
+                  </div>
+                )}
 
                 <Separator />
 
