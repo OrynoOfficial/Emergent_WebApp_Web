@@ -800,27 +800,37 @@ export default function HotelDetails() {
                     </div>
                   )}
 
-                  {/* Platform Services Nearby */}
+                  {/* Platform Services Nearby - Dynamic Filters */}
                   <div className="mt-5 pt-4 border-t border-slate-100">
                     <h4 className="text-sm font-semibold text-slate-700 mb-3">Oryno Services Nearby</h4>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="flex items-center gap-2 p-2.5 bg-orange-50 rounded-lg border border-orange-100 text-xs">
-                        <Utensils className="w-4 h-4 text-orange-500 shrink-0" />
-                        <span className="text-slate-700">Restaurants</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg border border-blue-100 text-xs">
-                        <Car className="w-4 h-4 text-blue-500 shrink-0" />
-                        <span className="text-slate-700">Car Rentals</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2.5 bg-purple-50 rounded-lg border border-purple-100 text-xs">
-                        <Film className="w-4 h-4 text-purple-500 shrink-0" />
-                        <span className="text-slate-700">Cinemas</span>
-                      </div>
-                      <div className="flex items-center gap-2 p-2.5 bg-pink-50 rounded-lg border border-pink-100 text-xs">
-                        <Music className="w-4 h-4 text-pink-500 shrink-0" />
-                        <span className="text-slate-700">Events</span>
-                      </div>
+                      {[
+                        { key: 'restaurants', icon: Utensils, label: 'Restaurants', bg: 'bg-orange-50', border: 'border-orange-200', activeBg: 'bg-orange-500', color: 'text-orange-500', activeColor: 'text-white' },
+                        { key: 'car-rental', icon: Car, label: 'Car Rentals', bg: 'bg-blue-50', border: 'border-blue-200', activeBg: 'bg-blue-500', color: 'text-blue-500', activeColor: 'text-white' },
+                        { key: 'cinemas', icon: Film, label: 'Cinemas', bg: 'bg-purple-50', border: 'border-purple-200', activeBg: 'bg-purple-500', color: 'text-purple-500', activeColor: 'text-white' },
+                        { key: 'events', icon: Music, label: 'Events', bg: 'bg-pink-50', border: 'border-pink-200', activeBg: 'bg-pink-500', color: 'text-pink-500', activeColor: 'text-white' },
+                      ].map(svc => {
+                        const isActive = nearbyServiceFilter === svc.key;
+                        return (
+                          <button
+                            key={svc.key}
+                            onClick={() => setNearbyServiceFilter(isActive ? null : svc.key)}
+                            className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs transition-all ${
+                              isActive
+                                ? `${svc.activeBg} ${svc.activeColor} border-transparent shadow-sm`
+                                : `${svc.bg} ${svc.border} text-slate-700 hover:opacity-80`
+                            }`}
+                            data-testid={`filter-${svc.key}`}
+                          >
+                            <svc.icon className={`w-4 h-4 shrink-0 ${isActive ? svc.activeColor : svc.color}`} />
+                            <span>{svc.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
+                    {nearbyServiceFilter && (
+                      <p className="text-xs text-slate-500 mt-2 italic">Showing {nearbyServiceFilter.replace('-', ' ')} near {hotel.city || hotel.address}</p>
+                    )}
                   </div>
                 </div>
               </div>
