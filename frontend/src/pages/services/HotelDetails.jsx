@@ -572,10 +572,9 @@ export default function HotelDetails() {
   const checkOutTime = extractPolicyTime(hotel?.policies, 'check-out');
   const isDescriptionLong = hotel?.description && hotel.description.split('\n').length > 3;
   
-  // Map URL - Use OpenStreetMap embed (no API key needed)
-  const mapEmbedUrl = hotel.location?.lat && hotel.location?.lon 
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${hotel.location.lon - 0.02},${hotel.location.lat - 0.015},${hotel.location.lon + 0.02},${hotel.location.lat + 0.015}&layer=mapnik&marker=${hotel.location.lat},${hotel.location.lon}`
-    : null;
+  // Map coordinates
+  const hasLocation = hotel.location?.lat && hotel.location?.lon;
+  const mapCenter = hasLocation ? [hotel.location.lat, hotel.location.lon] : null;
 
   return (
     <div className="bg-slate-100 min-h-screen">
