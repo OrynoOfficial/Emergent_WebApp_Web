@@ -586,14 +586,13 @@ export default function PackageBooking() {
 
             {/* Payment Section */}
             <Card className="shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-5">
+              <div className="bg-slate-400 p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <CreditCard className="h-6 w-6" />
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">Payment Method</h3>
-                    <p className="text-sm text-white/70">Secure payment options</p>
                   </div>
                 </div>
               </div>
