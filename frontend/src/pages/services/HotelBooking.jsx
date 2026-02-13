@@ -274,16 +274,39 @@ export default function HotelBooking() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleIsSenderChange = (checked) => {
+  const handleIsSenderChange = async (checked) => {
     setIsSender(checked);
-    if (checked && user) {
-      setFormData(prev => ({
-        ...prev,
-        firstName: user.first_name || '',
-        lastName: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
+    if (checked) {
+      // Fetch latest user profile from API (same as Settings page Basic Information)
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = profile.first_name || nameParts[0] || '';
+        const lastName = profile.last_name || nameParts.slice(1).join(' ') || '';
+        
+        setFormData(prev => ({
+          ...prev,
+          firstName,
+          lastName,
+          email: profile.email || prev.email,
+          phone: profile.phone || ''
+        }));
+      } catch {
+        // Fallback to cached user object
+        if (user) {
+          const fullName = user.full_name || '';
+          const nameParts = fullName.trim().split(/\s+/);
+          setFormData(prev => ({
+            ...prev,
+            firstName: user.first_name || nameParts[0] || '',
+            lastName: user.last_name || nameParts.slice(1).join(' ') || '',
+            email: user.email || prev.email,
+            phone: user.phone || ''
+          }));
+        }
+      }
     } else {
       setFormData(prev => ({
         ...prev,
