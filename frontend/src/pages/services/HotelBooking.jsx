@@ -539,15 +539,16 @@ export default function HotelBooking() {
               
               <div className="p-6">
                 {/* I'm the Guest toggle */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <div className="mb-6 p-4 bg-[#082c59]/5 rounded-xl border border-[#082c59]/15">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                      <CheckCircle2 className="h-5 w-5 text-[#082c59]" />
                       <span className="font-medium text-slate-700">{t('imSender')}</span>
                     </div>
                     <Switch
                       checked={isSender}
                       onCheckedChange={handleIsSenderChange}
+                      className="data-[state=checked]:bg-[#082c59]"
                     />
                   </div>
                   <p className="text-sm text-slate-500 mt-2 ml-8">Fill form with your account details</p>
