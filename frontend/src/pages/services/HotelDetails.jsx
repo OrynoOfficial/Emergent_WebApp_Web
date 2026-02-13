@@ -688,40 +688,62 @@ export default function HotelDetails() {
                 </Button>
               </a>
               
-              {/* Policies Card */}
-              <div className="p-6 border rounded-xl">
-                <h3 className="font-bold text-lg mb-4">Policies</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-semibold">Check-in</p>
-                    <p className="text-slate-600">{checkInTime || '14:00'}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Check-out</p>
-                    <p className="text-slate-600">{checkOutTime || '12:00'}</p>
+              {/* Policies Card - Modern expandable like About section */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="p-5">
+                  <h3 className="font-bold text-lg mb-4">Policies</h3>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                        <p className="text-xs font-semibold text-emerald-700">Check-in</p>
+                      </div>
+                      <p className="font-bold text-slate-900 text-sm">{checkInTime || '14:00'}</p>
+                    </div>
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                        <p className="text-xs font-semibold text-amber-700">Check-out</p>
+                      </div>
+                      <p className="font-bold text-slate-900 text-sm">{checkOutTime || '12:00'}</p>
+                    </div>
                   </div>
                 </div>
-                
+
                 {Array.isArray(hotel.policies) && hotel.policies.length > 0 && (
-                  <div className="mt-4">
-                    <ul className="list-disc list-inside text-slate-600 space-y-1 text-sm">
-                      {hotel.policies
-                        .filter(p => !p.toLowerCase().startsWith('check-in:') && !p.toLowerCase().startsWith('check-out:'))
-                        .slice(0, 3)
-                        .map((p, idx) => (
-                          <li key={idx}>{p}</li>
-                        ))}
-                    </ul>
+                  <div className="border-t border-slate-100">
+                    <button
+                      onClick={() => setPoliciesExpanded(!policiesExpanded)}
+                      className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
+                      data-testid="policies-toggle"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
+                          <CheckCircle className="h-5 w-5 text-[#082c59]" />
+                        </div>
+                        <div className="text-left">
+                          <h4 className="font-semibold text-slate-900 text-sm">Additional Policies</h4>
+                          <p className="text-xs text-slate-500">{hotel.policies.filter(p => !p.toLowerCase().startsWith('check-in:') && !p.toLowerCase().startsWith('check-out:')).length} policies</p>
+                        </div>
+                      </div>
+                      {policiesExpanded ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
+                    </button>
+                    {policiesExpanded && (
+                      <div className="px-5 pb-4">
+                        <ul className="space-y-2">
+                          {hotel.policies
+                            .filter(p => !p.toLowerCase().startsWith('check-in:') && !p.toLowerCase().startsWith('check-out:'))
+                            .map((p, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                                <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                <span>{p}</span>
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
-                
-                <Button
-                  variant="link"
-                  className="p-0 mt-4 text-[#082c59]"
-                  onClick={() => setIsPoliciesDialogOpen(true)}
-                >
-                  See all policies &gt;
-                </Button>
               </div>
 
               {/* Explore Area - Enhanced with Live Map & Platform Services */}
