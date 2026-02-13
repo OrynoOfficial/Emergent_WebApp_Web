@@ -783,7 +783,7 @@ export default function HotelDetails() {
                     )}
                   </div>
                   <p className="font-semibold text-sm text-slate-800">{hotel.address}</p>
-                  {hotel.location?.lat && hotel.location?.lon && (
+                  {hasLocation && (
                     <a 
                       href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.lat},${hotel.location.lon}`} 
                       target="_blank" 
