@@ -450,11 +450,13 @@ export default function RestaurantBooking() {
                 </div>
 
                 {/* Payment */}
-                <div className="bg-slate-50 border-t border-slate-200 p-5">
-                  <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-blue-600" />
+                <div className="bg-slate-400 border-t border-slate-200 p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
                     Payment Method
                   </h4>
+                </div>
+                <div className="bg-slate-50 p-5">
                   <PaymentMethodsSelection
                     amount={pricing.total}
                     customerPhone={formData.phone}
