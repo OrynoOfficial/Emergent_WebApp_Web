@@ -438,7 +438,6 @@ export default function Support() {
 
   const openChatBot = () => {
     setChatBotOpen(true);
-    topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const filteredTickets = useMemo(() => {

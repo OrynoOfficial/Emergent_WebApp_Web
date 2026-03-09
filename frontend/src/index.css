@@ -153,9 +153,3 @@
     @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
   }
 }
-
-/* Chatbot overlay - ensure it covers sidebar and header */
-body.chatbot-overlay-open aside,
-body.chatbot-overlay-open header {
-  z-index: 0 !important;
-}

@@ -117,7 +117,6 @@ export default function useSidebarMenu() {
         submenu: [
           { key: 'analytics-dash', label: 'Analytics Dashboard', path: '/analytics', icon: BarChart },
           ...(isSuperAdmin ? [{ key: 'admin-dash', label: 'Admin Dashboard', path: '/admin/admin-dashboard', icon: LayoutDashboard }] : []),
-          { key: 'cs-dash', label: 'CS Center Dashboard', path: '/management/customer-service', icon: HeadphonesIcon },
         ]
       });
     } else {
@@ -214,6 +213,11 @@ export default function useSidebarMenu() {
       items.push({ key: 'ratings', label: 'All Ratings', icon: Star, path: '/ratings' });
     } else if (isOperator) {
       items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
+    }
+
+    // Customer Service (Admin/Super Admin standalone)
+    if (isSuperAdmin || isAdmin) {
+      items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
     }
 
     // Support/CS

@@ -261,111 +261,210 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
   );
 }
 
-// ========== Statistics Tab ==========
+// ========== Statistics Tab (Enhanced) ==========
 function StatisticsTab() {
   const [stats, setStats] = useState(null);
+  const [basicStats, setBasicStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSection, setExpandedSection] = useState(null);
+  const [expanded, setExpanded] = useState({});
+  const [filter, setFilter] = useState({ dateRange: 'all', category: 'all', priority: 'all' });
+  const [teamPage, setTeamPage] = useState(1);
+  const TEAM_PER_PAGE = 4;
 
   useEffect(() => {
     (async () => {
-      try { const r = await api.get('/support-tickets/stats/detailed'); setStats(r.data); }
-      catch { toast.error('Failed to load statistics'); }
+      try {
+        const [det, basic] = await Promise.all([
+          api.get('/support-tickets/stats/detailed'),
+          api.get('/support-tickets/stats')
+        ]);
+        setStats(det.data);
+        setBasicStats(basic.data);
+      } catch { toast.error('Failed to load statistics'); }
       finally { setLoading(false); }
     })();
   }, []);
 
+  const toggle = (key) => setExpanded(p => ({ ...p, [key]: !p[key] }));
+
   if (loading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#082c59]" /></div>;
   if (!stats) return <p className="text-slate-500 text-center py-12">No statistics available</p>;
 
-  const priorityColors = { low: 'bg-slate-100 text-slate-700', medium: 'bg-blue-100 text-blue-700', high: 'bg-orange-100 text-orange-700', urgent: 'bg-red-100 text-red-700' };
+  const priorityColors = { low: 'bg-slate-100 text-slate-700 border-slate-200', medium: 'bg-blue-100 text-blue-700 border-blue-200', high: 'bg-orange-100 text-orange-700 border-orange-200', urgent: 'bg-red-100 text-red-700 border-red-200' };
+  const statusColors = { open: 'text-sky-700', pending: 'text-amber-700', in_progress: 'text-violet-700', resolved: 'text-emerald-700', closed: 'text-slate-500' };
+
+  const paginatedTeam = stats.team_workload?.slice((teamPage - 1) * TEAM_PER_PAGE, teamPage * TEAM_PER_PAGE) || [];
+  const teamTotalPages = Math.ceil((stats.team_workload?.length || 0) / TEAM_PER_PAGE);
 
   return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-[#082c59]/10 to-[#082c59]/[0.03] rounded-xl p-5 border border-[#082c59]/10">
-          <p className="text-3xl font-bold text-[#082c59]">{stats.total}</p>
-          <p className="text-sm text-slate-600 mt-1">Total Tickets</p>
+    <div className="space-y-5">
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Select value={filter.category} onValueChange={v => setFilter(p => ({...p, category: v}))}>
+          <SelectTrigger className="w-36 h-8 text-xs bg-white/70 shadow-sm"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent className="bg-white"><SelectItem value="all" className="text-xs">All Categories</SelectItem>
+            {TICKET_CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-xs capitalize">{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filter.priority} onValueChange={v => setFilter(p => ({...p, priority: v}))}>
+          <SelectTrigger className="w-32 h-8 text-xs bg-white/70 shadow-sm"><SelectValue placeholder="Priority" /></SelectTrigger>
+          <SelectContent className="bg-white"><SelectItem value="all" className="text-xs">All Priorities</SelectItem>
+            {TICKET_PRIORITIES.map(p => <SelectItem key={p} value={p} className="text-xs capitalize">{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setFilter({ dateRange: 'all', category: 'all', priority: 'all' })}>Clear Filters</Button>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-[#082c59]/10 to-[#082c59]/[0.03] rounded-xl p-4 border border-[#082c59]/10">
+          <p className="text-2xl font-bold text-[#082c59]">{stats.total}</p><p className="text-xs text-slate-600 mt-0.5">Total Tickets</p>
         </div>
-        <div className="bg-gradient-to-br from-sky-50 to-sky-100/30 rounded-xl p-5 border border-sky-200/50 cursor-pointer hover:shadow-md" onClick={() => setExpandedSection(expandedSection === 'customer' ? null : 'customer')}>
-          <p className="text-3xl font-bold text-sky-700">{stats.customer_total}</p>
-          <p className="text-sm text-slate-600 mt-1 flex items-center gap-1"><User className="w-3.5 h-3.5" />Customer Tickets</p>
-          <p className="text-[10px] text-sky-600 mt-1">Click to expand</p>
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 rounded-xl p-4 border border-amber-200/50">
+          <p className="text-2xl font-bold text-amber-700">{basicStats?.unassigned || 0}</p><p className="text-xs text-slate-600 mt-0.5">Unassigned</p>
         </div>
-        <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/30 rounded-xl p-5 border border-indigo-200/50 cursor-pointer hover:shadow-md" onClick={() => setExpandedSection(expandedSection === 'operator' ? null : 'operator')}>
-          <p className="text-3xl font-bold text-indigo-700">{stats.operator_total}</p>
-          <p className="text-sm text-slate-600 mt-1 flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />Operator Tickets</p>
-          <p className="text-[10px] text-indigo-600 mt-1">Click to expand</p>
+        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/30 rounded-xl p-4 border border-emerald-200/50">
+          <p className="text-2xl font-bold text-emerald-700">{basicStats?.today || 0}</p><p className="text-xs text-slate-600 mt-0.5">Resolved Today</p>
+        </div>
+        <div className="bg-gradient-to-br from-red-50 to-red-100/30 rounded-xl p-4 border border-red-200/50">
+          <p className="text-2xl font-bold text-red-700">{basicStats?.urgent || 0}</p><p className="text-xs text-slate-600 mt-0.5">Urgent</p>
         </div>
       </div>
 
-      {/* Expanded Customer/Operator breakdown */}
-      {expandedSection === 'customer' && stats.customer_by_category?.length > 0 && (
-        <div className="bg-gradient-to-b from-sky-50/60 to-white rounded-xl border border-sky-200/40 p-5 shadow-sm">
-          <h3 className="font-semibold text-sm text-sky-800 mb-3 flex items-center gap-2"><User className="w-4 h-4" />Customer Tickets by Category</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stats.customer_by_category.map(c => (
-              <div key={c.category} className="bg-white/70 rounded-lg p-3 border border-slate-200/40">
-                <p className="font-semibold text-sm capitalize text-slate-800">{c.category}</p>
-                <p className="text-2xl font-bold text-sky-700 mt-1">{c.count}</p>
-                <div className="flex gap-2 mt-1 text-[10px]">
-                  <span className="text-amber-600">{c.open} open</span>
-                  <span className="text-emerald-600">{c.resolved} resolved</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {expandedSection === 'operator' && stats.operator_by_category?.length > 0 && (
-        <div className="bg-gradient-to-b from-indigo-50/60 to-white rounded-xl border border-indigo-200/40 p-5 shadow-sm">
-          <h3 className="font-semibold text-sm text-indigo-800 mb-3 flex items-center gap-2"><Building2 className="w-4 h-4" />Operator Tickets by Category</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stats.operator_by_category.map(c => (
-              <div key={c.category} className="bg-white/70 rounded-lg p-3 border border-slate-200/40">
-                <p className="font-semibold text-sm capitalize text-slate-800">{c.category}</p>
-                <p className="text-2xl font-bold text-indigo-700 mt-1">{c.count}</p>
-                <div className="flex gap-2 mt-1 text-[10px]">
-                  <span className="text-amber-600">{c.open} open</span>
-                  <span className="text-emerald-600">{c.resolved} resolved</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Team Workload */}
+      {/* ===== STATUS BREAKDOWN (Expandable L1 > L2 > L3) ===== */}
       <div className="bg-gradient-to-b from-[#082c59]/[0.04] to-slate-50/60 rounded-xl border border-slate-200/40 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-200/40 bg-[#082c59]/[0.04]">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2"><Users className="w-4 h-4 text-[#082c59]" />Team Workload</h3>
+        <button onClick={() => toggle('status')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+          <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2"><BarChart2 className="w-4 h-4 text-[#082c59]" />Status Breakdown</h3>
+          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.status ? 'rotate-90' : ''}`} />
+        </button>
+        {expanded.status && (
+          <div className="px-4 pb-4 space-y-2">
+            {Object.entries(basicStats?.by_status || {}).map(([status, count]) => (
+              <div key={status}>
+                <button onClick={() => toggle(`status_${status}`)} className="w-full flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-200/40 hover:bg-white/80 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Badge className={`capitalize text-xs ${statusColors[status] || ''} bg-slate-50`}>{status.replace('_',' ')}</Badge>
+                    <span className="text-lg font-bold text-slate-800">{count}</span>
+                  </div>
+                  <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expanded[`status_${status}`] ? 'rotate-90' : ''}`} />
+                </button>
+                {/* L3: Category within status */}
+                {expanded[`status_${status}`] && (
+                  <div className="ml-6 mt-1.5 space-y-1">
+                    {TICKET_CATEGORIES.map(cat => {
+                      const catCount = (stats.customer_by_category || []).find(c => c.category === cat)?.count || 0;
+                      if (catCount === 0) return null;
+                      return (
+                        <div key={cat} className="flex items-center justify-between p-2 bg-slate-50/80 rounded-md text-xs">
+                          <span className="capitalize text-slate-600">{cat}</span>
+                          <span className="font-medium text-slate-800">{catCount}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ===== CUSTOMER / OPERATOR TICKETS (Expandable L1 > L2 > L3) ===== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Customer Tickets */}
+        <div className="bg-gradient-to-b from-sky-50/60 to-white rounded-xl border border-sky-200/40 shadow-sm overflow-hidden">
+          <button onClick={() => toggle('customer')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-sky-100 rounded-lg"><User className="w-4 h-4 text-sky-700" /></div>
+              <div className="text-left"><p className="font-semibold text-sm text-slate-800">Customer Tickets</p><p className="text-xl font-bold text-sky-700">{stats.customer_total}</p></div>
+            </div>
+            <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.customer ? 'rotate-90' : ''}`} />
+          </button>
+          {expanded.customer && (
+            <div className="px-4 pb-4 space-y-1.5">
+              {(stats.customer_by_category || []).map(c => (
+                <div key={c.category}>
+                  <button onClick={() => toggle(`cust_${c.category}`)} className="w-full flex items-center justify-between p-2.5 bg-white/60 rounded-lg border border-slate-200/30 hover:bg-white/90 text-xs">
+                    <span className="capitalize font-medium text-slate-700">{c.category}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800">{c.count}</span>
+                      <ChevronRight className={`w-3 h-3 text-slate-400 transition-transform ${expanded[`cust_${c.category}`] ? 'rotate-90' : ''}`} />
+                    </div>
+                  </button>
+                  {expanded[`cust_${c.category}`] && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      <div className="flex justify-between p-1.5 bg-amber-50/50 rounded text-[10px]"><span className="text-amber-700">Open</span><span className="font-bold">{c.open}</span></div>
+                      <div className="flex justify-between p-1.5 bg-emerald-50/50 rounded text-[10px]"><span className="text-emerald-700">Resolved</span><span className="font-bold">{c.resolved}</span></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="p-5">
-          {stats.team_workload.length === 0 ? (
+        {/* Operator Tickets */}
+        <div className="bg-gradient-to-b from-indigo-50/60 to-white rounded-xl border border-indigo-200/40 shadow-sm overflow-hidden">
+          <button onClick={() => toggle('operator')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 rounded-lg"><Building2 className="w-4 h-4 text-indigo-700" /></div>
+              <div className="text-left"><p className="font-semibold text-sm text-slate-800">Operator Tickets</p><p className="text-xl font-bold text-indigo-700">{stats.operator_total}</p></div>
+            </div>
+            <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.operator ? 'rotate-90' : ''}`} />
+          </button>
+          {expanded.operator && (
+            <div className="px-4 pb-4 space-y-1.5">
+              {(stats.operator_by_category || []).length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">No operator tickets</p>
+              ) : (stats.operator_by_category || []).map(c => (
+                <div key={c.category}>
+                  <button onClick={() => toggle(`op_${c.category}`)} className="w-full flex items-center justify-between p-2.5 bg-white/60 rounded-lg border border-slate-200/30 hover:bg-white/90 text-xs">
+                    <span className="capitalize font-medium text-slate-700">{c.category}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-800">{c.count}</span>
+                      <ChevronRight className={`w-3 h-3 text-slate-400 transition-transform ${expanded[`op_${c.category}`] ? 'rotate-90' : ''}`} />
+                    </div>
+                  </button>
+                  {expanded[`op_${c.category}`] && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      <div className="flex justify-between p-1.5 bg-amber-50/50 rounded text-[10px]"><span className="text-amber-700">Open</span><span className="font-bold">{c.open}</span></div>
+                      <div className="flex justify-between p-1.5 bg-emerald-50/50 rounded text-[10px]"><span className="text-emerald-700">Resolved</span><span className="font-bold">{c.resolved}</span></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===== TEAM WORKLOAD (with pagination) ===== */}
+      <div className="bg-gradient-to-b from-[#082c59]/[0.04] to-slate-50/60 rounded-xl border border-slate-200/40 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-200/40 bg-[#082c59]/[0.04] flex items-center justify-between">
+          <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2"><Users className="w-4 h-4 text-[#082c59]" />Team Workload ({stats.team_workload?.length || 0} members)</h3>
+          {teamTotalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" disabled={teamPage === 1} onClick={() => setTeamPage(p => p - 1)} className="h-7 w-7 p-0"><ChevronLeft className="h-3.5 w-3.5" /></Button>
+              <span className="text-xs text-slate-500 px-2">{teamPage}/{teamTotalPages}</span>
+              <Button variant="outline" size="sm" disabled={teamPage === teamTotalPages} onClick={() => setTeamPage(p => p + 1)} className="h-7 w-7 p-0"><ChevronRight className="h-3.5 w-3.5" /></Button>
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          {paginatedTeam.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-6">No tickets assigned to team members yet</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {stats.team_workload.map(m => (
+              {paginatedTeam.map(m => (
                 <div key={m.id} className="flex items-center gap-4 p-4 bg-white/50 rounded-xl border border-slate-200/40 shadow-sm">
                   <Avatar className="w-10 h-10"><AvatarFallback className="bg-[#082c59] text-white">{m.name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-800 truncate">{m.name}</p>
-                    <p className="text-xs text-slate-500">{m.total} tickets assigned</p>
+                    <p className="text-xs text-slate-500">{m.total} assigned</p>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="text-center px-2.5 py-1 bg-amber-50 rounded-lg border border-amber-200/50">
-                      <p className="text-lg font-bold text-amber-700">{m.open}</p>
-                      <p className="text-[9px] text-amber-600">Open</p>
-                    </div>
-                    <div className="text-center px-2.5 py-1 bg-violet-50 rounded-lg border border-violet-200/50">
-                      <p className="text-lg font-bold text-violet-700">{m.in_progress}</p>
-                      <p className="text-[9px] text-violet-600">Active</p>
-                    </div>
-                    <div className="text-center px-2.5 py-1 bg-emerald-50 rounded-lg border border-emerald-200/50">
-                      <p className="text-lg font-bold text-emerald-700">{m.resolved}</p>
-                      <p className="text-[9px] text-emerald-600">Done</p>
-                    </div>
+                  <div className="flex gap-1.5">
+                    <div className="text-center px-2 py-1 bg-amber-50 rounded-lg border border-amber-200/50"><p className="text-sm font-bold text-amber-700">{m.open}</p><p className="text-[8px] text-amber-600">Open</p></div>
+                    <div className="text-center px-2 py-1 bg-violet-50 rounded-lg border border-violet-200/50"><p className="text-sm font-bold text-violet-700">{m.in_progress}</p><p className="text-[8px] text-violet-600">Active</p></div>
+                    <div className="text-center px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-200/50"><p className="text-sm font-bold text-emerald-700">{m.resolved}</p><p className="text-[8px] text-emerald-600">Done</p></div>
                   </div>
                 </div>
               ))}
@@ -374,22 +473,105 @@ function StatisticsTab() {
         </div>
       </div>
 
-      {/* Priority Breakdown */}
-      <div className="bg-gradient-to-b from-[#082c59]/[0.03] to-slate-50/50 rounded-xl border border-slate-200/40 p-5 shadow-sm">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-[#082c59]" />By Priority</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {stats.by_priority.map(p => (
-            <div key={p.priority} className="bg-white/60 rounded-lg p-3 border border-slate-200/40">
-              <Badge className={`${priorityColors[p.priority] || 'bg-slate-100'} text-xs capitalize mb-2`}>{p.priority}</Badge>
-              <p className="text-2xl font-bold text-slate-800">{p.count}</p>
-              <div className="flex gap-2 mt-1 text-[10px]">
-                <span className="text-amber-600">{p.open} open</span>
-                <span className="text-violet-600">{p.in_progress} active</span>
-                <span className="text-emerald-600">{p.resolved} done</span>
+      {/* ===== PRIORITY BREAKDOWN (Expandable) ===== */}
+      <div className="bg-gradient-to-b from-[#082c59]/[0.03] to-slate-50/50 rounded-xl border border-slate-200/40 shadow-sm overflow-hidden">
+        <button onClick={() => toggle('priority')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+          <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-[#082c59]" />Priority Breakdown</h3>
+          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.priority ? 'rotate-90' : ''}`} />
+        </button>
+        {expanded.priority && (
+          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {stats.by_priority.map(p => (
+              <div key={p.priority} className="bg-white/60 rounded-lg p-3 border border-slate-200/40">
+                <Badge className={`${priorityColors[p.priority] || 'bg-slate-100'} border text-xs capitalize mb-2`}>{p.priority}</Badge>
+                <p className="text-xl font-bold text-slate-800">{p.count}</p>
+                <div className="flex gap-2 mt-1 text-[10px]">
+                  <span className="text-amber-600">{p.open} open</span>
+                  <span className="text-violet-600">{p.in_progress} active</span>
+                  <span className="text-emerald-600">{p.resolved} done</span>
+                </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ===== SOURCE BREAKDOWN (Expandable) ===== */}
+      <div className="bg-gradient-to-b from-[#082c59]/[0.03] to-slate-50/50 rounded-xl border border-slate-200/40 shadow-sm overflow-hidden">
+        <button onClick={() => toggle('source')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+          <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2"><FileText className="w-4 h-4 text-[#082c59]" />Ticket Source & Trends</h3>
+          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.source ? 'rotate-90' : ''}`} />
+        </button>
+        {expanded.source && (
+          <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200/40">
+              <p className="text-xs text-slate-500">Last 7 Days</p>
+              <p className="text-xl font-bold text-[#082c59]">{basicStats?.recent_7_days || 0}</p>
+              <p className="text-[10px] text-slate-400">new tickets</p>
             </div>
-          ))}
-        </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200/40">
+              <p className="text-xs text-slate-500">Today</p>
+              <p className="text-xl font-bold text-emerald-700">{basicStats?.today || 0}</p>
+              <p className="text-[10px] text-slate-400">tickets today</p>
+            </div>
+            <div className="bg-white/60 rounded-lg p-3 border border-slate-200/40">
+              <p className="text-xs text-slate-500">High Priority Active</p>
+              <p className="text-xl font-bold text-red-700">{(basicStats?.urgent || 0) + (basicStats?.high_priority || 0)}</p>
+              <p className="text-[10px] text-slate-400">need attention</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===== CATEGORY BREAKDOWN (Expandable with L3) ===== */}
+      <div className="bg-gradient-to-b from-[#082c59]/[0.03] to-slate-50/50 rounded-xl border border-slate-200/40 shadow-sm overflow-hidden">
+        <button onClick={() => toggle('categories')} className="w-full p-4 flex items-center justify-between hover:bg-white/30 transition-colors">
+          <h3 className="font-semibold text-sm text-slate-800 flex items-center gap-2"><Tag className="w-4 h-4 text-[#082c59]" />Category Deep Dive</h3>
+          <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded.categories ? 'rotate-90' : ''}`} />
+        </button>
+        {expanded.categories && (
+          <div className="px-4 pb-4 space-y-2">
+            {Object.entries(basicStats?.by_category || {}).filter(([,v]) => v > 0).map(([cat, count]) => (
+              <div key={cat}>
+                <button onClick={() => toggle(`cat_${cat}`)} className="w-full flex items-center justify-between p-3 bg-white/50 rounded-lg border border-slate-200/40 hover:bg-white/80 transition-colors">
+                  <div className="flex items-center gap-2">
+                    {getCategoryIcon(cat)}
+                    <span className="capitalize font-medium text-sm text-slate-700">{cat}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-slate-800">{count}</span>
+                    <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expanded[`cat_${cat}`] ? 'rotate-90' : ''}`} />
+                  </div>
+                </button>
+                {expanded[`cat_${cat}`] && (
+                  <div className="ml-5 mt-1.5 space-y-1.5">
+                    {/* L2: By user type */}
+                    {['customer', 'operator'].map(utype => {
+                      const data = utype === 'customer' ? stats.customer_by_category : stats.operator_by_category;
+                      const catData = (data || []).find(c => c.category === cat);
+                      if (!catData || catData.count === 0) return null;
+                      return (
+                        <div key={utype}>
+                          <button onClick={() => toggle(`cat_${cat}_${utype}`)} className="w-full flex items-center justify-between p-2 bg-slate-50/80 rounded-md text-xs hover:bg-slate-100/80">
+                            <span className="capitalize text-slate-600 flex items-center gap-1.5">{utype === 'customer' ? <User className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}{utype}</span>
+                            <div className="flex items-center gap-2"><span className="font-bold">{catData.count}</span><ChevronRight className={`w-3 h-3 text-slate-400 transition-transform ${expanded[`cat_${cat}_${utype}`] ? 'rotate-90' : ''}`} /></div>
+                          </button>
+                          {/* L3: Open/Resolved detail */}
+                          {expanded[`cat_${cat}_${utype}`] && (
+                            <div className="ml-4 mt-1 space-y-0.5">
+                              <div className="flex justify-between p-1.5 bg-amber-50/50 rounded text-[10px]"><span className="text-amber-700">Open</span><span className="font-bold">{catData.open}</span></div>
+                              <div className="flex justify-between p-1.5 bg-emerald-50/50 rounded text-[10px]"><span className="text-emerald-700">Resolved</span><span className="font-bold">{catData.resolved}</span></div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
