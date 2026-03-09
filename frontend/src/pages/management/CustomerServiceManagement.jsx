@@ -881,16 +881,18 @@ export default function CustomerServiceManagement() {
     if (!selectedAssignee || !ticketToAssign) return;
     const m = teamMembers.find(m => m.id === selectedAssignee);
     if (!m) return;
-    try { await api.post(`/support-tickets/${ticketToAssign.id}/assign`, { assignee_id: m.id, assignee_name: m.name, notes: assignmentNotes }); toast.success(`Assigned to ${m.name}`); setShowAssignModal(false); setTicketToAssign(null); setSelectedAssignee(''); setAssignmentNotes(''); loadTickets(); loadStats(); }
-    catch { toast.error('Failed'); }
+    await api.post(`/support-tickets/${ticketToAssign.id}/assign`, { assignee_id: m.id, assignee_name: m.name, notes: assignmentNotes });
+    // Don't close modal — AssignModal shows success state and auto-closes after 4s
+    loadTickets(); loadStats();
   };
 
   const handleBulkAssign = async () => {
     if (!selectedAssignee || !selectedTickets.length) return;
     const m = teamMembers.find(m => m.id === selectedAssignee);
     if (!m) return;
-    try { await api.post('/support-tickets/bulk-action', { ticket_ids: selectedTickets, action: 'assign', assignee_id: m.id, assignee_name: m.name }); toast.success(`${selectedTickets.length} tickets assigned`); setShowBulkAssignModal(false); setSelectedTickets([]); setSelectedAssignee(''); loadTickets(); loadStats(); }
-    catch { toast.error('Failed'); }
+    await api.post('/support-tickets/bulk-action', { ticket_ids: selectedTickets, action: 'assign', assignee_id: m.id, assignee_name: m.name });
+    setSelectedTickets([]);
+    loadTickets(); loadStats();
   };
 
   const handleBulkStatusUpdate = async (s) => {
