@@ -260,10 +260,9 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
               <h4 className="font-medium text-sm text-slate-600 flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Conversation</h4>
               {visibleMessages.slice(1).map((msg, idx) => (
                 msg.is_system ? (
-                  <div key={idx} className="flex items-center justify-center gap-2 py-1">
-                    <div className="h-px flex-1 bg-slate-200/60" />
-                    <Badge className={`text-[9px] border ${getTagColor(msg.tag?.toLowerCase().replace(/ /g, '-') || '')} shadow-sm`}>{msg.tag || msg.message}</Badge>
-                    <div className="h-px flex-1 bg-slate-200/60" />
+                  <div key={idx} className="flex items-center gap-2 py-0.5 pl-8">
+                    <div className="w-1 h-1 rounded-full bg-slate-300" />
+                    <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full border ${getTagColor(msg.tag?.toLowerCase().replace(/ /g, '-') || '')}`}>{msg.tag || msg.message}</span>
                   </div>
                 ) : (
                 <div key={idx} className={`p-3.5 rounded-xl ${msg.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'} shadow-sm`}>

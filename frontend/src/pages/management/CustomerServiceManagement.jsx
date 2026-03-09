@@ -186,10 +186,9 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.messages.length - 1})</h4>
                   {ticket.messages.slice(1).map((r, idx) => (
                     r.is_system ? (
-                      <div key={idx} className="flex items-center justify-center gap-2 py-1.5">
-                        <div className="h-px flex-1 bg-slate-200/60" />
-                        <Badge className={`text-[9px] border ${getTagColor(r.tag?.toLowerCase().replace(/ /g, '-') || '')} shadow-sm`}>{r.tag || r.message}</Badge>
-                        <div className="h-px flex-1 bg-slate-200/60" />
+                      <div key={idx} className="flex items-center gap-2 py-0.5 pl-8">
+                        <div className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full border ${getTagColor(r.tag?.toLowerCase().replace(/ /g, '-') || '')}`}>{r.tag || r.message}</span>
                       </div>
                     ) : (
                     <div key={idx} className={`p-3.5 rounded-xl shadow-sm ${r.is_internal ? 'bg-amber-50/70 border border-amber-200/50 ml-2' : r.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'}`}>
