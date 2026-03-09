@@ -14,15 +14,37 @@ router = APIRouter(prefix="/api/support-tickets", tags=["Support Tickets"])
 class TicketCreate(BaseModel):
     subject: str
     description: str
-    category: str = "general"  # booking, payment, refund, technical, complaint, inquiry, operator, general
-    priority: str = "medium"  # low, medium, high, urgent
-    source: str = "web"  # web, mobile, email, phone, chat
+    category: str = "general"
+    priority: str = "medium"
+    source: str = "web"
     related_order_id: Optional[str] = None
     related_service_type: Optional[str] = None
-    # New fields for operator support integration
-    service_tag: Optional[str] = None  # Hotels, Travel, Restaurants, Car Rental, Events, Laundry, Banquet, Cinema, Packages
+    service_tag: Optional[str] = None
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    product_involved: Optional[str] = None
+    product_id: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class TicketCreateOnBehalf(BaseModel):
+    subject: str
+    description: str
+    category: str = "general"
+    priority: str = "medium"
+    source: str = "admin"
+    on_behalf_of_id: str
+    on_behalf_of_type: str = "customer"  # customer or operator
+    product_involved: Optional[str] = None
+    product_id: Optional[str] = None
+    service_tag: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class TicketFromChat(BaseModel):
+    session_id: str
+    subject: str
+    category: str = "general"
+    product_involved: Optional[str] = None
+    service_tag: Optional[str] = None
 
 class TicketUpdate(BaseModel):
     subject: Optional[str] = None
@@ -49,6 +71,19 @@ class TicketBulkAction(BaseModel):
     assignee_id: Optional[str] = None
     assignee_name: Optional[str] = None
 
+# ==================== HELPERS ====================
+
+def generate_tags(category: str, service_tag: str = None, product: str = None) -> list:
+    """Auto-generate tags based on category and service"""
+    tags = []
+    if category:
+        tags.append(category)
+    if service_tag:
+        tags.append(service_tag.lower().replace(" ", "-"))
+    if product:
+        tags.append(f"product:{product[:30]}")
+    return tags
+
 # ==================== TICKET ENDPOINTS ====================
 
 @router.post("/")
@@ -66,6 +101,9 @@ async def create_ticket(
     
     # Determine if ticket is from operator or customer
     user_type = "operator" if current_user.get("role") == "operator" else "customer"
+    
+    # Auto-generate tags
+    tags = ticket_data.tags or generate_tags(ticket_data.category, ticket_data.service_tag, ticket_data.product_involved)
     
     ticket = {
         "_id": str(uuid.uuid4()),
@@ -85,10 +123,13 @@ async def create_ticket(
         # Related info
         "related_order_id": ticket_data.related_order_id,
         "related_service_type": ticket_data.related_service_type,
-        # Service and operator info for operator support integration
+        # Product and service info
+        "product_involved": ticket_data.product_involved,
+        "product_id": ticket_data.product_id,
         "service_tag": ticket_data.service_tag,
         "operator_id": ticket_data.operator_id,
         "operator_name": ticket_data.operator_name,
+        "tags": tags,
         # Assignment
         "assigned_to": None,
         "assigned_to_name": None,
@@ -134,6 +175,260 @@ async def create_ticket(
     
     ticket["id"] = ticket.pop("_id")
     return {"message": "Ticket created successfully", "ticket": ticket}
+
+
+@router.post("/create-on-behalf")
+async def create_ticket_on_behalf(
+    ticket_data: TicketCreateOnBehalf,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Admin/SuperAdmin creates a ticket on behalf of a customer or operator"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Only admins can create tickets on behalf of users")
+    
+    # Find the target user
+    target_user = await db.users.find_one({"_id": ticket_data.on_behalf_of_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    count = await db.support_tickets.count_documents({})
+    ticket_number = f"TKT-{today}-{str(count + 1).zfill(5)}"
+    
+    tags = ticket_data.tags or generate_tags(ticket_data.category, ticket_data.service_tag, ticket_data.product_involved)
+    
+    ticket = {
+        "_id": str(uuid.uuid4()),
+        "ticket_number": ticket_number,
+        "subject": ticket_data.subject,
+        "description": ticket_data.description,
+        "category": ticket_data.category,
+        "priority": ticket_data.priority,
+        "status": "open",
+        "source": "admin",
+        "user_type": ticket_data.on_behalf_of_type,
+        "customer_id": ticket_data.on_behalf_of_id,
+        "customer_name": target_user.get("full_name") or target_user.get("username", "Unknown"),
+        "customer_email": target_user.get("email", ""),
+        "customer_phone": target_user.get("phone", ""),
+        "product_involved": ticket_data.product_involved,
+        "product_id": ticket_data.product_id,
+        "service_tag": ticket_data.service_tag,
+        "tags": tags,
+        "created_by_admin": current_user["_id"],
+        "created_by_admin_name": current_user.get("full_name") or current_user.get("username", "Admin"),
+        "related_order_id": None,
+        "related_service_type": None,
+        "operator_id": None,
+        "operator_name": None,
+        "assigned_to": None,
+        "assigned_to_name": None,
+        "assigned_at": None,
+        "assigned_by": None,
+        "internal_notes": "",
+        "resolution": None,
+        "resolved_at": None,
+        "resolved_by": None,
+        "first_response_at": None,
+        "last_response_at": None,
+        "response_count": 0,
+        "messages": [{
+            "id": str(uuid.uuid4()),
+            "sender_type": "agent",
+            "sender_id": current_user["_id"],
+            "sender_name": current_user.get("full_name") or "Admin",
+            "message": ticket_data.description,
+            "is_internal": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.support_tickets.insert_one(ticket)
+    ticket["id"] = ticket.pop("_id")
+    return {"message": "Ticket created on behalf of user", "ticket": ticket}
+
+
+@router.post("/from-chat")
+async def create_ticket_from_chat(
+    data: TicketFromChat,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Create a support ticket from an AI chat session, attaching the conversation context"""
+    db = get_database()
+    
+    # Get the chat session
+    session = await db.chat_sessions.find_one({"_id": data.session_id, "user_id": current_user["_id"]})
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found")
+    
+    # Build description from chat context
+    chat_messages = session.get("messages", [])
+    context_lines = []
+    for msg in chat_messages:
+        role = "Customer" if msg["role"] == "user" else "AI Assistant"
+        context_lines.append(f"[{role}]: {msg['content']}")
+    
+    chat_context = "\n".join(context_lines)
+    description = f"--- Conversation Context ---\n{chat_context}\n--- End of Conversation ---"
+    
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    count = await db.support_tickets.count_documents({})
+    ticket_number = f"TKT-{today}-{str(count + 1).zfill(5)}"
+    
+    user_type = "operator" if current_user.get("role") == "operator" else "customer"
+    tags = generate_tags(data.category, data.service_tag, data.product_involved)
+    tags.append("from-chat")
+    
+    ticket = {
+        "_id": str(uuid.uuid4()),
+        "ticket_number": ticket_number,
+        "subject": data.subject,
+        "description": description,
+        "category": data.category,
+        "priority": "medium",
+        "status": "open",
+        "source": "chat",
+        "user_type": user_type,
+        "customer_id": current_user["_id"],
+        "customer_name": current_user.get("full_name") or current_user.get("username", "Unknown"),
+        "customer_email": current_user.get("email", ""),
+        "customer_phone": current_user.get("phone", ""),
+        "product_involved": data.product_involved,
+        "product_id": None,
+        "service_tag": data.service_tag,
+        "tags": tags,
+        "chat_session_id": data.session_id,
+        "related_order_id": None,
+        "related_service_type": None,
+        "operator_id": None,
+        "operator_name": None,
+        "assigned_to": None,
+        "assigned_to_name": None,
+        "assigned_at": None,
+        "assigned_by": None,
+        "internal_notes": "",
+        "resolution": None,
+        "resolved_at": None,
+        "resolved_by": None,
+        "first_response_at": None,
+        "last_response_at": None,
+        "response_count": 0,
+        "messages": [{
+            "id": str(uuid.uuid4()),
+            "sender_type": "customer",
+            "sender_id": current_user["_id"],
+            "sender_name": current_user.get("full_name") or "Customer",
+            "message": f"[Escalated from AI Chat]\n\n{data.subject}",
+            "is_internal": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.support_tickets.insert_one(ticket)
+    
+    # Mark chat session as escalated
+    await db.chat_sessions.update_one(
+        {"_id": data.session_id},
+        {"$set": {"escalated": True, "ticket_id": ticket["_id"]}}
+    )
+    
+    ticket["id"] = ticket.pop("_id")
+    return {"message": "Ticket created from chat", "ticket": ticket}
+
+
+@router.get("/products")
+async def get_products_for_tickets(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get available products/services for the product_involved field in ticket creation"""
+    db = get_database()
+    
+    products = []
+    
+    # Service categories (static list)
+    service_categories = [
+        {"value": "Hotels", "label": "Hotels"},
+        {"value": "Travel", "label": "Travel / Transport"},
+        {"value": "Restaurants", "label": "Restaurants"},
+        {"value": "Car Rental", "label": "Car Rental"},
+        {"value": "Events", "label": "Events"},
+        {"value": "Cinema", "label": "Cinema"},
+        {"value": "Banquet", "label": "Banquet Halls"},
+        {"value": "Laundry", "label": "Laundry / Pressing"},
+        {"value": "Packages", "label": "Package Delivery"},
+    ]
+    
+    # Get actual service names from each collection
+    for cat in service_categories:
+        collection_map = {
+            "Hotels": "hotels",
+            "Restaurants": "restaurants",
+            "Car Rental": "car_rentals",
+            "Events": "events",
+            "Cinema": "cinemas",
+        }
+        col_name = collection_map.get(cat["value"])
+        if col_name:
+            items = await db[col_name].find(
+                {},
+                {"_id": 1, "name": 1}
+            ).limit(50).to_list(50)
+            for item in items:
+                products.append({
+                    "id": str(item.get("_id", "")),
+                    "name": item.get("name", "Unknown"),
+                    "category": cat["value"]
+                })
+    
+    return {"categories": service_categories, "products": products}
+
+
+@router.get("/users-for-behalf")
+async def get_users_for_behalf(
+    search: Optional[str] = None,
+    user_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get customers and operators that admins can create tickets on behalf of"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = {"status": "active"}
+    
+    if user_type == "customer":
+        query["role"] = "customer"
+    elif user_type == "operator":
+        query["role"] = "operator"
+    else:
+        query["role"] = {"$in": ["customer", "operator"]}
+    
+    if search:
+        query["$or"] = [
+            {"full_name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"username": {"$regex": search, "$options": "i"}}
+        ]
+    
+    users = await db.users.find(query, {"_id": 1, "full_name": 1, "username": 1, "email": 1, "role": 1}).limit(50).to_list(50)
+    
+    result = []
+    for u in users:
+        result.append({
+            "id": str(u["_id"]),
+            "name": u.get("full_name") or u.get("username", "Unknown"),
+            "email": u.get("email", ""),
+            "role": u.get("role", "customer")
+        })
+    
+    return {"users": result}
 
 
 @router.get("/")

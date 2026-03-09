@@ -7,10 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import {
   MessageSquare, CheckCircle, Search, 
   RefreshCw, AlertTriangle, Inbox, Users, UserPlus, ArrowUpDown, X,
-  SlidersHorizontal, Activity, BarChart2
+  SlidersHorizontal, Activity, BarChart2, Plus, Loader2, Send, Tag, Package
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,8 +21,8 @@ import { toast } from 'sonner';
 // Import extracted components and constants
 import { 
   TICKET_CATEGORIES, 
-  TICKET_PRIORITIES, 
-  TICKET_STATUSES, 
+  TICKET_PRIORITIES_LIST as TICKET_PRIORITIES, 
+  TICKET_STATUSES_LIST as TICKET_STATUSES, 
   ITEMS_PER_PAGE,
   getStatusConfig,
   getPriorityConfig
@@ -380,6 +382,54 @@ export default function CustomerServiceManagement() {
     }
   }, [showAddMemberModal, loadAvailableMembers]);
 
+  // Create on behalf state
+  const [showCreateOnBehalfModal, setShowCreateOnBehalfModal] = useState(false);
+  const [onBehalfUsers, setOnBehalfUsers] = useState([]);
+  const [onBehalfSearch, setOnBehalfSearch] = useState('');
+  const [onBehalfForm, setOnBehalfForm] = useState({
+    subject: '', description: '', category: 'general', priority: 'medium',
+    on_behalf_of_id: '', on_behalf_of_type: 'customer',
+    product_involved: '', service_tag: ''
+  });
+  const [products, setProducts] = useState({ categories: [], products: [] });
+  const [creatingTicket, setCreatingTicket] = useState(false);
+
+  // Load users for create-on-behalf
+  const loadOnBehalfUsers = useCallback(async (search = '') => {
+    try {
+      const res = await api.get(`/support-tickets/users-for-behalf${search ? `?search=${search}` : ''}`);
+      setOnBehalfUsers(res.data?.users || []);
+    } catch (error) { console.error('Failed to load users:', error); }
+  }, []);
+
+  const loadProducts = useCallback(async () => {
+    try {
+      const res = await api.get('/support-tickets/products');
+      setProducts(res.data || { categories: [], products: [] });
+    } catch { /* empty */ }
+  }, []);
+
+  useEffect(() => {
+    if (showCreateOnBehalfModal) { loadOnBehalfUsers(); loadProducts(); }
+  }, [showCreateOnBehalfModal, loadOnBehalfUsers, loadProducts]);
+
+  const handleCreateOnBehalf = async () => {
+    if (!onBehalfForm.subject || !onBehalfForm.description || !onBehalfForm.on_behalf_of_id) {
+      toast.error('Please fill subject, description, and select a user');
+      return;
+    }
+    setCreatingTicket(true);
+    try {
+      await api.post('/support-tickets/create-on-behalf', onBehalfForm);
+      toast.success('Ticket created successfully');
+      setShowCreateOnBehalfModal(false);
+      setOnBehalfForm({ subject: '', description: '', category: 'general', priority: 'medium', on_behalf_of_id: '', on_behalf_of_type: 'customer', product_involved: '', service_tag: '' });
+      loadTickets();
+      loadStats();
+    } catch (error) { toast.error('Failed to create ticket'); }
+    finally { setCreatingTicket(false); }
+  };
+
   // Prepare chart data
   const categoryChartData = stats ? Object.entries(stats.by_category || {}).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value })) : [];
   const statusChartData = stats ? Object.entries(stats.by_status || {}).map(([name, value]) => ({ name: name.replace('_', ' ').charAt(0).toUpperCase() + name.replace('_', ' ').slice(1), value })) : [];
@@ -394,6 +444,9 @@ export default function CustomerServiceManagement() {
             <p className="text-slate-600 mt-1">Manage support tickets, inquiries, and customer communications</p>
           </div>
           <div className="flex items-center gap-3">
+            <Button onClick={() => setShowCreateOnBehalfModal(true)} className="bg-[#082c59] hover:bg-[#0a3a75] gap-2 shadow-md" data-testid="create-on-behalf-btn">
+              <Plus className="w-4 h-4" /> Create Ticket
+            </Button>
             <Button variant="outline" onClick={() => { loadTickets(); loadStats(); }} className="gap-2">
               <RefreshCw className="w-4 h-4" />Refresh
             </Button>
@@ -771,6 +824,115 @@ export default function CustomerServiceManagement() {
         onAssigneeChange={setSelectedAssignee}
         onAssign={handleBulkAssign}
       />
+
+      {/* Create on Behalf Modal */}
+      <Dialog open={showCreateOnBehalfModal} onOpenChange={setShowCreateOnBehalfModal}>
+        <DialogContent className="max-w-lg bg-white border-0 shadow-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
+                <Plus className="h-4 w-4 text-[#082c59]" />
+              </div>
+              Create Ticket on Behalf
+            </DialogTitle>
+            <DialogDescription>Create a support ticket for a customer or operator</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* User selection */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-1.5 block">On Behalf Of *</Label>
+              <div className="flex gap-2 mb-2">
+                <Button size="sm" variant={onBehalfForm.on_behalf_of_type === 'customer' ? 'default' : 'outline'}
+                  className={onBehalfForm.on_behalf_of_type === 'customer' ? 'bg-[#082c59]' : ''}
+                  onClick={() => { setOnBehalfForm(p => ({ ...p, on_behalf_of_type: 'customer', on_behalf_of_id: '' })); loadOnBehalfUsers(''); }}>
+                  Customer
+                </Button>
+                <Button size="sm" variant={onBehalfForm.on_behalf_of_type === 'operator' ? 'default' : 'outline'}
+                  className={onBehalfForm.on_behalf_of_type === 'operator' ? 'bg-[#082c59]' : ''}
+                  onClick={() => { setOnBehalfForm(p => ({ ...p, on_behalf_of_type: 'operator', on_behalf_of_id: '' })); loadOnBehalfUsers(''); }}>
+                  Operator
+                </Button>
+              </div>
+              <Input placeholder="Search by name or email..." value={onBehalfSearch}
+                onChange={(e) => { setOnBehalfSearch(e.target.value); loadOnBehalfUsers(e.target.value); }}
+                className="mb-2 bg-slate-50/50" />
+              <div className="max-h-32 overflow-y-auto border rounded-lg divide-y">
+                {onBehalfUsers.filter(u => u.role === onBehalfForm.on_behalf_of_type).map(u => (
+                  <button key={u.id} onClick={() => setOnBehalfForm(p => ({ ...p, on_behalf_of_id: u.id }))}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-slate-50 transition-colors ${onBehalfForm.on_behalf_of_id === u.id ? 'bg-[#082c59]/5 border-l-2 border-l-[#082c59]' : ''}`}>
+                    <div><p className="font-medium text-slate-800">{u.name}</p><p className="text-xs text-slate-500">{u.email}</p></div>
+                    {onBehalfForm.on_behalf_of_id === u.id && <CheckCircle className="h-4 w-4 text-[#082c59]" />}
+                  </button>
+                ))}
+                {onBehalfUsers.filter(u => u.role === onBehalfForm.on_behalf_of_type).length === 0 && (
+                  <p className="text-xs text-slate-400 text-center py-3">No users found</p>
+                )}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Subject *</Label>
+              <Input value={onBehalfForm.subject} onChange={(e) => setOnBehalfForm(p => ({ ...p, subject: e.target.value }))} placeholder="Brief description" className="bg-slate-50/50" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Category</Label>
+                <Select value={onBehalfForm.category} onValueChange={(v) => setOnBehalfForm(p => ({ ...p, category: v }))}>
+                  <SelectTrigger className="bg-slate-50/50"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {TICKET_CATEGORIES.map(c => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Priority</Label>
+                <Select value={onBehalfForm.priority} onValueChange={(v) => setOnBehalfForm(p => ({ ...p, priority: v }))}>
+                  <SelectTrigger className="bg-slate-50/50"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {TICKET_PRIORITIES.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {/* Product Involved */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Service</Label>
+                <Select value={onBehalfForm.service_tag || 'none'} onValueChange={(v) => setOnBehalfForm(p => ({ ...p, service_tag: v === 'none' ? '' : v, product_involved: '' }))}>
+                  <SelectTrigger className="bg-slate-50/50"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="none">None</SelectItem>
+                    {(products.categories || []).map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Product</Label>
+                <Select value={onBehalfForm.product_involved || 'none'} onValueChange={(v) => setOnBehalfForm(p => ({ ...p, product_involved: v === 'none' ? '' : v }))}>
+                  <SelectTrigger className="bg-slate-50/50"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="none">None</SelectItem>
+                    {(products.products || []).filter(p => !onBehalfForm.service_tag || p.category === onBehalfForm.service_tag).map(p => (
+                      <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-1.5 block">Description *</Label>
+              <Textarea value={onBehalfForm.description} onChange={(e) => setOnBehalfForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="Describe the issue..." rows={4} className="bg-slate-50/50" />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateOnBehalfModal(false)}>Cancel</Button>
+              <Button onClick={handleCreateOnBehalf} disabled={creatingTicket} className="bg-[#082c59] hover:bg-[#0a3a75] gap-2">
+                {creatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Create Ticket
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

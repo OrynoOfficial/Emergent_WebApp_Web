@@ -2,8 +2,22 @@ import { Calendar, Briefcase, RefreshCw, Zap, AlertTriangle, MessageCircle, Buil
 import { formatDate } from '../../utils/dateUtils';
 
 export const TICKET_CATEGORIES = ['booking', 'payment', 'refund', 'technical', 'complaint', 'inquiry', 'operator', 'general'];
-export const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent'];
-export const TICKET_STATUSES = ['open', 'pending', 'in_progress', 'resolved', 'closed'];
+export const TICKET_PRIORITIES_LIST = ['low', 'medium', 'high', 'urgent'];
+export const TICKET_STATUSES_LIST = ['open', 'pending', 'in_progress', 'resolved', 'closed'];
+// Object arrays for Select components
+export const TICKET_PRIORITIES = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' }
+];
+export const TICKET_STATUSES = [
+  { value: 'open', label: 'Open' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'closed', label: 'Closed' }
+];
 export const USER_TYPES = ['customer', 'operator'];
 export const CHART_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F97316', '#10B981', '#06B6D4', '#EAB308', '#EF4444'];
 export const ITEMS_PER_PAGE = 10;
