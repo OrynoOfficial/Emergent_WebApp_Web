@@ -110,7 +110,19 @@ export default function useSidebarMenu() {
     }
 
     // ==================== NON-CUSTOMER (OPERATOR/ADMIN/SUPER) ====================
-    items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: isAdmin && !isSuperAdmin ? '/admin/admin-dashboard' : '/analytics' });
+    // Dashboards submenu for admin/super admin
+    if (isAdminOrSuper) {
+      items.push({
+        key: 'dashboards', label: 'Dashboards', icon: LayoutDashboard, isDropdown: true,
+        submenu: [
+          { key: 'analytics-dash', label: 'Analytics Dashboard', path: '/analytics', icon: BarChart },
+          ...(isSuperAdmin ? [{ key: 'admin-dash', label: 'Admin Dashboard', path: '/admin/admin-dashboard', icon: LayoutDashboard }] : []),
+          { key: 'cs-dash', label: 'CS Center Dashboard', path: '/management/customer-service', icon: HeadphonesIcon },
+        ]
+      });
+    } else {
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: isAdmin && !isSuperAdmin ? '/admin/admin-dashboard' : '/analytics' });
+    }
 
     // Sales (Operator + Super Admin)
     if (isSuperAdmin || isOperator) {
@@ -177,9 +189,6 @@ export default function useSidebarMenu() {
 
     // Admin Config
     const adminSubmenu = [];
-    if (isSuperAdmin) {
-      adminSubmenu.push({ key: 'admin-dashboard', label: 'Dashboard for Admins', path: '/admin/admin-dashboard', icon: LayoutDashboard });
-    }
     if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
     if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operator Management', path: '/admin/operators', icon: Building2 });
     if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
@@ -208,9 +217,7 @@ export default function useSidebarMenu() {
     }
 
     // Support/CS
-    if (isSuperAdmin || isAdmin) {
-      items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
-    } else if (isOperator) {
+    if (isOperator) {
       items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
     }
 

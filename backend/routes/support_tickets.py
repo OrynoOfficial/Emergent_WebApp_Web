@@ -607,6 +607,87 @@ async def get_ticket_stats(
     }
 
 
+@router.get("/stats/detailed")
+async def get_detailed_stats(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get detailed ticket statistics with team workload breakdown"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin", "employee"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Team workload with status breakdown
+    team_pipeline = [
+        {"$match": {"assigned_to": {"$ne": None}}},
+        {"$group": {
+            "_id": {"assignee": "$assigned_to", "status": "$status"},
+            "name": {"$first": "$assigned_to_name"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    team_raw = await db.support_tickets.aggregate(team_pipeline).to_list(500)
+    
+    # Build team workload structure
+    team_map = {}
+    for item in team_raw:
+        assignee = item["_id"]["assignee"]
+        status = item["_id"]["status"]
+        if assignee not in team_map:
+            team_map[assignee] = {"id": assignee, "name": item.get("name", "Unknown"), "open": 0, "in_progress": 0, "resolved": 0, "total": 0}
+        team_map[assignee]["total"] += item["count"]
+        if status in ("open", "pending"):
+            team_map[assignee]["open"] += item["count"]
+        elif status == "in_progress":
+            team_map[assignee]["in_progress"] += item["count"]
+        elif status in ("resolved", "closed"):
+            team_map[assignee]["resolved"] += item["count"]
+    
+    # Customer tickets breakdown by category
+    cust_pipeline = [
+        {"$match": {"user_type": "customer"}},
+        {"$group": {"_id": "$category", "count": {"$sum": 1},
+                    "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
+                    "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
+        }}
+    ]
+    customer_by_cat = await db.support_tickets.aggregate(cust_pipeline).to_list(50)
+    
+    # Operator tickets breakdown by category
+    op_pipeline = [
+        {"$match": {"user_type": "operator"}},
+        {"$group": {"_id": "$category", "count": {"$sum": 1},
+                    "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
+                    "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
+        }}
+    ]
+    operator_by_cat = await db.support_tickets.aggregate(op_pipeline).to_list(50)
+    
+    # Priority breakdown with status
+    priority_pipeline = [
+        {"$group": {"_id": "$priority", "count": {"$sum": 1},
+                    "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
+                    "in_progress": {"$sum": {"$cond": [{"$eq": ["$status", "in_progress"]}, 1, 0]}},
+                    "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
+        }}
+    ]
+    by_priority = await db.support_tickets.aggregate(priority_pipeline).to_list(10)
+    
+    total = await db.support_tickets.count_documents({})
+    customer_total = await db.support_tickets.count_documents({"user_type": "customer"})
+    operator_total = await db.support_tickets.count_documents({"user_type": "operator"})
+    
+    return {
+        "total": total,
+        "customer_total": customer_total,
+        "operator_total": operator_total,
+        "team_workload": list(team_map.values()),
+        "customer_by_category": [{"category": c["_id"], "count": c["count"], "open": c["open"], "resolved": c["resolved"]} for c in customer_by_cat],
+        "operator_by_category": [{"category": c["_id"], "count": c["count"], "open": c["open"], "resolved": c["resolved"]} for c in operator_by_cat],
+        "by_priority": [{"priority": p["_id"], "count": p["count"], "open": p["open"], "in_progress": p["in_progress"], "resolved": p["resolved"]} for p in by_priority]
+    }
+
+
 @router.get("/team-members")
 async def get_team_members(
     current_user: dict = Depends(get_current_active_user)
