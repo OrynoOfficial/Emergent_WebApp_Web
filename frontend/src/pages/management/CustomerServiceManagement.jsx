@@ -176,19 +176,19 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                 <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
               </div>
               {/* Responses */}
-              {ticket.responses?.length > 0 && (
+              {ticket.messages?.length > 1 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.responses.length})</h4>
-                  {ticket.responses.map((r, idx) => (
-                    <div key={idx} className={`p-3.5 rounded-xl shadow-sm ${r.is_internal ? 'bg-amber-50/70 border border-amber-200/50 ml-2' : r.is_staff ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'}`}>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.messages.length - 1})</h4>
+                  {ticket.messages.slice(1).map((r, idx) => (
+                    <div key={idx} className={`p-3.5 rounded-xl shadow-sm ${r.is_internal ? 'bg-amber-50/70 border border-amber-200/50 ml-2' : r.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'}`}>
                       <div className="flex items-start gap-2.5">
-                        <Avatar className="w-6 h-6"><AvatarFallback className={`text-[9px] ${r.is_staff ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>{r.author_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
+                        <Avatar className="w-6 h-6"><AvatarFallback className={`text-[9px] ${r.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>{r.sender_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-xs">{r.author_name}</span>
+                              <span className="font-medium text-xs">{r.sender_name}</span>
                               {r.is_internal && <Badge className="bg-amber-100 text-amber-700 text-[9px] h-4">Internal</Badge>}
-                              {r.is_staff && !r.is_internal && <Badge className="bg-[#082c59]/10 text-[#082c59] text-[9px] h-4">Staff</Badge>}
+                              {r.sender_type === 'agent' && !r.is_internal && <Badge className="bg-[#082c59]/10 text-[#082c59] text-[9px] h-4">Staff</Badge>}
                             </div>
                             <span className="text-[10px] text-slate-400">{getTimeAgo(r.created_at)}</span>
                           </div>

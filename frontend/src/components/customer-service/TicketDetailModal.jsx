@@ -135,36 +135,36 @@ export const TicketDetailModal = ({
               </div>
 
               {/* Responses */}
-              {ticket.responses?.length > 0 && (
+              {ticket.messages?.length > 1 && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                    <MessageSquare className="w-3.5 h-3.5" /> Conversation ({ticket.responses.length})
+                    <MessageSquare className="w-3.5 h-3.5" /> Conversation ({ticket.messages.length - 1})
                   </h4>
-                  {ticket.responses.map((response, idx) => (
+                  {ticket.messages.slice(1).map((response, idx) => (
                     <div
                       key={idx}
                       className={`p-3.5 rounded-xl ${
                         response.is_internal
                           ? 'bg-amber-50/70 border border-amber-100'
-                          : response.is_staff
+                          : response.sender_type === 'agent'
                           ? 'bg-[#082c59]/5 border border-[#082c59]/10 ml-4'
                           : 'bg-slate-50 border border-slate-100 mr-4'
                       }`}
                     >
                       <div className="flex items-start gap-2.5">
                         <Avatar className="w-7 h-7">
-                          <AvatarFallback className={`text-[9px] ${response.is_staff ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>
-                            {response.author_name?.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                          <AvatarFallback className={`text-[9px] ${response.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>
+                            {response.sender_name?.split(' ').map(n => n[0]).join('').substring(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-xs">{response.author_name}</span>
+                              <span className="font-medium text-xs">{response.sender_name}</span>
                               {response.is_internal && (
                                 <Badge className="bg-amber-100 text-amber-700 text-[9px] h-4">Internal</Badge>
                               )}
-                              {response.is_staff && !response.is_internal && (
+                              {response.sender_type === 'agent' && !response.is_internal && (
                                 <Badge className="bg-[#082c59]/10 text-[#082c59] text-[9px] h-4">Staff</Badge>
                               )}
                             </div>
