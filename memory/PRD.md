@@ -27,6 +27,12 @@
   - Ticket cards, modals, and FAQ use #082c59/slate gradient backgrounds (no plain white)
   - AI Chatbot sidebar collapsed by default, expandable via toggle
   - Portal-based chatbot overlay with z-index fix for proper layering
+- **Admin Customer Service UI Overhaul (March 9, 2026)**:
+  - Applied same #082c59/slate gradient backgrounds to Dashboard, Tickets, and Team tabs
+  - Custom button-based tab switcher (Dashboard/Tickets/Team) clearly distinguishable with filled/outline styles
+  - Gradient backgrounds on all cards: KPI stats, charts, ticket cards, team member cards, modals
+  - Service-specific colored tags on admin ticket cards
+  - Consistent design language between customer/operator and admin views
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
