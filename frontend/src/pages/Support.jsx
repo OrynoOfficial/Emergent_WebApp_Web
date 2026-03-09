@@ -223,9 +223,14 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl p-0 bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80">
+      <DialogContent
+        className="max-w-2xl border-0 shadow-2xl rounded-2xl p-0 bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200/60 bg-gradient-to-r from-[#082c59]/[0.06] to-slate-100/50">
+        <div className="px-6 py-4 border-b border-slate-200/60 bg-gradient-to-r from-[#082c59]/[0.06] to-slate-100/50 flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -250,8 +255,8 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
             <div className="mt-2"><Badge className="bg-blue-50 text-blue-700 border border-blue-100 text-xs">Product: {ticket.product_involved}</Badge></div>
           )}
         </div>
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+        {/* Content - scrollable */}
+        <div className="px-6 py-4 flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
           <div className="p-4 bg-white/50 rounded-xl border border-slate-200/40 mb-4 shadow-sm">
             <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">{ticket.description}</p>
           </div>
@@ -283,7 +288,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
           )}
         </div>
         {ticket.status !== 'closed' && (
-          <div className="px-6 py-4 border-t border-slate-200/60 bg-white/40">
+          <div className="px-6 py-4 border-t border-slate-200/60 bg-white/40 flex-shrink-0">
             <div className="flex gap-2">
               <Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Type your reply..." rows={2} className="flex-1 resize-none bg-white/70" />
               <Button onClick={handleReply} disabled={!replyText.trim() || submitting} className="bg-[#082c59] hover:bg-[#0a3a75] self-end">
