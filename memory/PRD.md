@@ -33,6 +33,13 @@
   - Gradient backgrounds on all cards: KPI stats, charts, ticket cards, team member cards, modals
   - Service-specific colored tags on admin ticket cards
   - Consistent design language between customer/operator and admin views
+- **Admin CS Page Major Restructure (March 9, 2026)**:
+  - Moved Dashboard to "Dashboards" sidebar submenu (Analytics Dashboard, Admin Dashboard, CS Center Dashboard)
+  - Replaced Dashboard tab with new "Statistics" tab: Team Workload (Open/Active/Done per member), Customer/Operator ticket breakdowns (expandable), Priority breakdown
+  - Tickets tab: Create Ticket + AI Assistant buttons at top right, List/Grid toggle, 8-item pagination
+  - Compact Create on Behalf modal (max-w-md) matching Access Scope modal style
+  - Ticket detail modal: colorful sidebar (status=colored border, requester=indigo, category=amber), clear conversation foreground/background differentiation
+  - New backend API: `GET /api/support-tickets/stats/detailed` for team workload with status breakdown
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
