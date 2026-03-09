@@ -19,6 +19,7 @@ import api from '../api/client';
 import { toast } from 'sonner';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import AIChatBot from '../components/AIChatBot';
+import TicketReplyBox from '../components/TicketReplyBox';
 
 const TICKET_CATEGORIES = [
   { value: 'booking', label: 'Booking Issue', icon: Calendar },
@@ -204,17 +205,8 @@ function CreateTicketDialog({ isOpen, onClose, onSubmit, chatSessionId, chatMess
 }
 
 // ========== Ticket Detail Dialog ==========
-function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
-  const [replyText, setReplyText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+function TicketDetailDialog({ ticket, isOpen, onClose, onRefresh, isCustomer }) {
   if (!ticket) return null;
-
-  const handleReply = async () => {
-    if (!replyText.trim()) return;
-    setSubmitting(true);
-    try { await onReply(ticket.id, replyText); setReplyText(''); }
-    finally { setSubmitting(false); }
-  };
 
   const status = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.open;
   const category = TICKET_CATEGORIES.find(c => c.value === ticket.category);
@@ -281,6 +273,16 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
                     <span className="text-[10px] text-slate-400 ml-auto">{formatDateTime(msg.created_at || msg.timestamp)}</span>
                   </div>
                   <p className="text-sm text-slate-700 pl-8">{msg.message || msg.content}</p>
+                  {/* Attachments */}
+                  {msg.attachments?.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mt-2 pl-8">
+                      {msg.attachments.map((att, ai) => (
+                        <a key={ai} href={att.url} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                          <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 )
               ))}
@@ -288,14 +290,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
           )}
         </div>
         {ticket.status !== 'closed' && (
-          <div className="px-6 py-4 border-t border-slate-200/60 bg-white/40 flex-shrink-0">
-            <div className="flex gap-2">
-              <Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Type your reply..." rows={2} className="flex-1 resize-none bg-white/70" />
-              <Button onClick={handleReply} disabled={!replyText.trim() || submitting} className="bg-[#082c59] hover:bg-[#0a3a75] self-end">
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </div>
-          </div>
+          <TicketReplyBox ticketId={ticket.id} onReplySent={onRefresh} />
         )}
       </DialogContent>
     </Dialog>
@@ -645,7 +640,9 @@ export default function Support() {
 
       {/* Dialogs */}
       <CreateTicketDialog isOpen={createDialogOpen} onClose={() => { setCreateDialogOpen(false); setChatSessionForTicket(null); setChatMessagesForTicket(null); }} onSubmit={handleCreateTicket} chatSessionId={chatSessionForTicket} chatMessages={chatMessagesForTicket} isCustomer={isCustomer} />
-      <TicketDetailDialog ticket={selectedTicket} isOpen={!!selectedTicket} onClose={() => setSelectedTicket(null)} onReply={handleReplyToTicket} isCustomer={isCustomer} />
+      <TicketDetailDialog ticket={selectedTicket} isOpen={!!selectedTicket} onClose={() => setSelectedTicket(null)} onRefresh={async () => {
+        try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); fetchTickets(); } catch {}
+      }} isCustomer={isCustomer} />
 
       {/* AI Chatbot */}
       <AIChatBot isOpen={chatBotOpen} onClose={() => setChatBotOpen(false)} onCreateTicket={handleChatCreateTicket} />

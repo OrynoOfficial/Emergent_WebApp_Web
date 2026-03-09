@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status as http_status, Depends, Query
+from fastapi import APIRouter, HTTPException, status as http_status, Depends, Query, UploadFile, File, Form
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_permission
@@ -1317,6 +1317,114 @@ async def reply_to_ticket(
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
+    
+    return {"message": "Reply added successfully", "reply": new_message}
+
+
+@router.post("/{ticket_id}/reply-with-attachments")
+async def reply_with_attachments(
+    ticket_id: str,
+    message: str = Form(""),
+    is_internal: bool = Form(False),
+    files: List[UploadFile] = File(default=[]),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Add a reply with image attachments (JPEG/PNG only)"""
+    from services.local_storage_service import LocalStorageService
+    storage = LocalStorageService()
+    db = get_database()
+    
+    ticket = await db.support_tickets.find_one({"_id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    # Validate and upload files
+    ALLOWED_TYPES = {"image/jpeg", "image/png", "image/jpg"}
+    attachments = []
+    for f in files:
+        if f.content_type not in ALLOWED_TYPES:
+            raise HTTPException(status_code=400, detail=f"Only JPEG and PNG images allowed. Got: {f.content_type}")
+        file_data = await f.read()
+        if len(file_data) > 5 * 1024 * 1024:  # 5MB limit
+            raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+        result = await storage.upload_file(file_data=file_data, filename=f.filename, content_type=f.content_type, folder="ticket-attachments")
+        if result["success"]:
+            attachments.append({"url": result["file_url"], "name": result["filename"], "type": f.content_type})
+    
+    if not message.strip() and not attachments:
+        raise HTTPException(status_code=400, detail="Provide a message or at least one image")
+    
+    is_agent = current_user.get("role") in ["admin", "super_admin", "employee"]
+    sender_type = "agent" if is_agent else "customer"
+    
+    new_message = {
+        "id": str(uuid.uuid4()),
+        "sender_type": sender_type,
+        "sender_id": current_user["_id"],
+        "sender_name": current_user.get("full_name") or current_user.get("username", "User"),
+        "message": message.strip() if message.strip() else f"[{len(attachments)} image(s) attached]",
+        "is_internal": is_internal if is_agent else False,
+        "attachments": attachments,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    update_data = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "last_response_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if is_agent and not ticket.get("first_response_at") and not is_internal:
+        update_data["first_response_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # Auto-tag and re-open logic (same as regular reply)
+    current_status = ticket.get("status", "open")
+    messages_to_push = [new_message]
+    tags_to_add = []
+    tags_to_remove = []
+    
+    if current_status in ("resolved", "closed") and not is_internal:
+        update_data["status"] = "open"
+        update_data["resolved_at"] = None
+        update_data["resolved_by"] = None
+        tags_to_add.append("re-opened")
+        messages_to_push.append({
+            "id": str(uuid.uuid4()), "sender_type": "system", "sender_id": "system",
+            "sender_name": "System", "message": f"Ticket re-opened by {current_user.get('full_name', 'user')}",
+            "is_internal": False, "is_system": True, "tag": "Re-Opened",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    if not is_internal:
+        if is_agent:
+            tags_to_remove.extend(["waiting-for-admin", "re-opened"])
+            tags_to_add.append("waiting-for-user")
+            messages_to_push.append({
+                "id": str(uuid.uuid4()), "sender_type": "system", "sender_id": "system",
+                "sender_name": "System", "message": "Waiting for user response",
+                "is_internal": False, "is_system": True, "tag": "Waiting for User Response",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        else:
+            tags_to_remove.extend(["waiting-for-user", "re-opened"])
+            tags_to_add.append("waiting-for-admin")
+            messages_to_push.append({
+                "id": str(uuid.uuid4()), "sender_type": "system", "sender_id": "system",
+                "sender_name": "System", "message": "Waiting for admin response",
+                "is_internal": False, "is_system": True, "tag": "Waiting for Admin Response",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    current_tags = ticket.get("tags", [])
+    new_tags = [t for t in current_tags if t not in tags_to_remove]
+    for t in tags_to_add:
+        if t not in new_tags:
+            new_tags.append(t)
+    update_data["tags"] = new_tags
+    
+    await db.support_tickets.update_one(
+        {"_id": ticket_id},
+        {"$push": {"messages": {"$each": messages_to_push}}, "$set": update_data, "$inc": {"response_count": 1}}
+    )
     
     return {"message": "Reply added successfully", "reply": new_message}
 

@@ -31,6 +31,7 @@ import { TeamTab } from '@/components/customer-service/TeamTab';
 import { AssignModal, BulkAssignModal } from '@/components/customer-service/AssignModal';
 import { AddMemberModal } from '@/components/customer-service/AddMemberModal';
 import AIChatBot from '@/components/AIChatBot';
+import TicketReplyBox from '@/components/TicketReplyBox';
 
 // Tag colors
 const TAG_COLORS = {
@@ -132,7 +133,7 @@ function AdminTicketCardGrid({ ticket, onView }) {
 }
 
 // ========== Admin Ticket Detail Modal ==========
-function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onStatusChange, onPriorityChange, onAssign, replyText, onReplyChange, isInternalNote, onInternalNoteChange, onSendReply, sendingReply }) {
+function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onStatusChange, onPriorityChange, onAssign, onRefreshTicket }) {
   if (!ticket) return null;
   const statusConfig = getStatusConfig(ticket.status);
   const priorityConfig = getPriorityConfig(ticket.priority);
@@ -208,6 +209,15 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                             <span className="text-[10px] text-slate-400">{getTimeAgo(r.created_at)}</span>
                           </div>
                           <p className="text-sm text-slate-700 whitespace-pre-wrap">{r.message}</p>
+                          {r.attachments?.length > 0 && (
+                            <div className="flex gap-2 flex-wrap mt-2">
+                              {r.attachments.map((att, ai) => (
+                                <a key={ai} href={att.url} target="_blank" rel="noopener noreferrer" className="block w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                                  <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -217,20 +227,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
               )}
             </div>
             {/* Reply */}
-            <div className="p-4 border-t border-slate-200/60 bg-white/40">
-              <div className="flex items-center gap-2 mb-2">
-                <label className="flex items-center gap-2 cursor-pointer text-xs">
-                  <Checkbox checked={isInternalNote} onCheckedChange={onInternalNoteChange} />
-                  <span className={isInternalNote ? 'text-amber-600 font-medium' : 'text-slate-500'}>{isInternalNote ? 'Internal Note' : 'Public Reply'}</span>
-                </label>
-              </div>
-              <div className="flex gap-2">
-                <Textarea value={replyText} onChange={(e) => onReplyChange(e.target.value)} placeholder={isInternalNote ? "Internal note..." : "Reply..."} className="flex-1 min-h-[60px] resize-none bg-white/70" />
-                <Button onClick={onSendReply} disabled={!replyText?.trim() || sendingReply} className="bg-[#082c59] hover:bg-[#0a3a75] self-end">
-                  {sendingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+            <TicketReplyBox ticketId={ticket.id} showInternalToggle onReplySent={onRefreshTicket} />
           </div>
           {/* Sidebar */}
           <div className="w-56 border-l border-slate-200/40 bg-slate-50/30 p-4 overflow-auto hidden lg:block">
@@ -1041,7 +1038,9 @@ export default function CustomerServiceManagement() {
       {/* Modals */}
       <AddMemberModal open={showAddMemberModal} onOpenChange={setShowAddMemberModal} availableMembers={availableMembers} searchTerm={memberSearchTerm} onSearchChange={setMemberSearchTerm} onAddMember={handleAddTeamMember} />
       <AdminTicketDetailModal open={showDetailModal} onOpenChange={setShowDetailModal} ticket={selectedTicket} teamMembers={teamMembers} onStatusChange={handleStatusChange} onPriorityChange={handlePriorityChange}
-        onAssign={() => { setTicketToAssign(selectedTicket); setShowAssignModal(true); }} replyText={replyText} onReplyChange={setReplyText} isInternalNote={isInternalNote} onInternalNoteChange={setIsInternalNote} onSendReply={handleSendReply} sendingReply={sendingReply} />
+        onAssign={() => { setTicketToAssign(selectedTicket); setShowAssignModal(true); }} onRefreshTicket={async () => {
+          try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); loadTickets(); } catch {}
+        }} />
       <AssignModal open={showAssignModal} onOpenChange={(o) => { setShowAssignModal(o); if (!o) { setTicketToAssign(null); setSelectedAssignee(''); setAssignmentNotes(''); } }} ticket={ticketToAssign} teamMembers={teamMembers} selectedAssignee={selectedAssignee} onAssigneeChange={setSelectedAssignee} notes={assignmentNotes} onNotesChange={setAssignmentNotes} onAssign={handleAssignTicket} />
       <BulkAssignModal open={showBulkAssignModal} onOpenChange={(o) => { setShowBulkAssignModal(o); if (!o) setSelectedAssignee(''); }} selectedCount={selectedTickets.length} teamMembers={teamMembers} selectedAssignee={selectedAssignee} onAssigneeChange={setSelectedAssignee} onAssign={handleBulkAssign} />
       <CreateOnBehalfModal open={showCreateModal} onOpenChange={setShowCreateModal} onCreated={() => { loadTickets(); loadStats(); }} />
