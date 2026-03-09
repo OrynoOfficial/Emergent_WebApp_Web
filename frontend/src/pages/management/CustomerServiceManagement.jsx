@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -435,51 +434,62 @@ export default function CustomerServiceManagement() {
   const statusChartData = stats ? Object.entries(stats.by_status || {}).map(([name, value]) => ({ name: name.replace('_', ' ').charAt(0).toUpperCase() + name.replace('_', ' ').slice(1), value })) : [];
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/50">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[#082c59]">Customer Service Center</h1>
-            <p className="text-slate-600 mt-1">Manage support tickets, inquiries, and customer communications</p>
+            <h1 className="text-2xl font-bold text-slate-900">Customer Service Center</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Manage support tickets, inquiries, and customer communications</p>
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={() => setShowCreateOnBehalfModal(true)} className="bg-[#082c59] hover:bg-[#0a3a75] gap-2 shadow-md" data-testid="create-on-behalf-btn">
               <Plus className="w-4 h-4" /> Create Ticket
             </Button>
-            <Button variant="outline" onClick={() => { loadTickets(); loadStats(); }} className="gap-2">
+            <Button variant="outline" onClick={() => { loadTickets(); loadStats(); }} className="gap-2 bg-white/70">
               <RefreshCw className="w-4 h-4" />Refresh
             </Button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 max-w-md bg-white shadow-sm">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-              <BarChart2 className="h-4 w-4" />Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="tickets" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-              <Inbox className="h-4 w-4" />Tickets
-            </TabsTrigger>
-            <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-              <Users className="h-4 w-4" />Team
-            </TabsTrigger>
-          </TabsList>
+        {/* Tabs — prominent toggle style */}
+        <div className="inline-flex bg-[#082c59]/[0.06] p-1 rounded-xl border border-slate-200/50">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:text-[#082c59]'}`}
+          >
+            <BarChart2 className="h-4 w-4" />Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('tickets')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'tickets' ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:text-[#082c59]'}`}
+          >
+            <Inbox className="h-4 w-4" />Tickets
+          </button>
+          <button
+            onClick={() => setActiveTab('team')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'team' ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:text-[#082c59]'}`}
+          >
+            <Users className="h-4 w-4" />Team
+          </button>
+        </div>
 
-          {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="mt-6">
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="mt-6">
             <DashboardTab 
               stats={stats} 
               categoryChartData={categoryChartData} 
               statusChartData={statusChartData} 
             />
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Tickets Tab */}
-          <TabsContent value="tickets" className="mt-6 space-y-4">
+        {/* Tickets Tab */}
+        {activeTab === 'tickets' && (
+          <div className="mt-6 space-y-4">
             {/* Sub-tabs for ticket categories */}
-            <div className="bg-white rounded-xl shadow-sm p-1.5 inline-flex gap-1">
+            <div className="bg-[#082c59]/[0.04] rounded-xl p-1.5 inline-flex gap-1 border border-slate-200/40">
               <button
                 onClick={() => setTicketSubTab('open')}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -525,7 +535,7 @@ export default function CustomerServiceManagement() {
             </div>
 
             {/* Search and Filters Bar */}
-            <Card className="shadow-sm border-0 bg-gradient-to-r from-slate-50 to-white">
+            <Card className="shadow-sm border-slate-200/50 bg-gradient-to-r from-[#082c59]/[0.03] to-slate-50/60">
               <CardContent className="p-4">
                 <div className="flex flex-col lg:flex-row gap-4">
                   {/* Search */}
@@ -681,7 +691,7 @@ export default function CustomerServiceManagement() {
             )}
 
             {/* Tickets Count */}
-            <div className="flex items-center justify-between bg-white/50 backdrop-blur-sm p-3 rounded-lg">
+            <div className="flex items-center justify-between bg-white/40 backdrop-blur-sm p-3 rounded-lg border border-slate-200/30">
               <p className="text-sm text-slate-600 font-medium">
                 Showing <span className="text-[#082c59]">{tickets.length}</span> of <span className="text-[#082c59]">{total}</span> tickets
                 <span className="text-slate-400 ml-2">
@@ -696,14 +706,14 @@ export default function CustomerServiceManagement() {
 
             {/* Tickets List */}
             {loading ? (
-              <div className="flex items-center justify-center py-20 bg-white rounded-xl shadow-sm">
+              <div className="flex items-center justify-center py-20 bg-gradient-to-b from-[#082c59]/[0.03] to-slate-50/60 rounded-xl shadow-sm border border-slate-200/40">
                 <RefreshCw className="w-8 h-8 animate-spin text-[#082c59]" />
               </div>
             ) : tickets.length === 0 ? (
-              <Card className={`shadow-sm border-0 ${
-                ticketSubTab === 'open' ? 'bg-gradient-to-br from-blue-50 to-white' :
-                ticketSubTab === 'in_progress' ? 'bg-gradient-to-br from-purple-50 to-white' :
-                'bg-gradient-to-br from-green-50 to-white'
+              <Card className={`shadow-sm border-slate-200/40 ${
+                ticketSubTab === 'open' ? 'bg-gradient-to-br from-blue-50/60 to-[#082c59]/[0.03]' :
+                ticketSubTab === 'in_progress' ? 'bg-gradient-to-br from-purple-50/60 to-[#082c59]/[0.03]' :
+                'bg-gradient-to-br from-green-50/60 to-[#082c59]/[0.03]'
               }`}>
                 <CardContent className="py-16 text-center">
                   {ticketSubTab === 'open' ? (
@@ -751,18 +761,20 @@ export default function CustomerServiceManagement() {
 
             {/* Pagination */}
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Team Tab */}
-          <TabsContent value="team" className="mt-6">
+        {/* Team Tab */}
+        {activeTab === 'team' && (
+          <div className="mt-6">
             <TeamTab 
               teamMembers={teamMembers}
               onAddMember={() => setShowAddMemberModal(true)}
               onRemoveMember={handleRemoveTeamMember}
               onRefresh={loadTeamMembers}
             />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
 
       {/* Add Team Member Modal */}
