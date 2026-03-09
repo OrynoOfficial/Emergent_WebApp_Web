@@ -101,14 +101,15 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         
-        // Refresh failed, clear tokens
+        // Refresh failed — clear tokens but NEVER hard-reload the page.
+        // Dispatch a custom event so AuthContext can clear user state,
+        // which lets ProtectedRoute redirect naturally via React Router.
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('operator_context');
+        window.dispatchEvent(new Event('auth:session-expired'));
         
-        // Only redirect if not already on login page and not a silent request
-        if (!window.location.pathname.includes('/login') && !originalRequest._silent && !originalRequest.url?.includes('/notifications')) {
-          window.location.href = '/login';
-        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

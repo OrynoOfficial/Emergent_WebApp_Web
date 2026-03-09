@@ -1,7 +1,13 @@
 # Oryno Services Hub - Product Requirements Document
 
 ## Latest Changes (March 9, 2026)
-- **P0 Fix Verified: Auto-refresh issue** — Confirmed stable with HMR disabled, file watcher ignored, and 401 handler guarded
+- **P0 Fix Verified: Auto-refresh issue** — COMPREHENSIVE FIX applied:
+  1. Removed ALL `window.location.href` hard redirects from API interceptor and AuthContext logout
+  2. 401 errors now clear tokens + dispatch `auth:session-expired` event → AuthContext clears state → ProtectedRoute redirects via React Router (no page reload)
+  3. Vite config: `watch: null` (completely disables file watcher)
+  4. WebSocket interceptor in `main.jsx` blocks Vite `full-reload` signals
+  5. Logout uses React state update → ProtectedRoute natural redirect (no hard reload)
+  - **Files changed**: `api/client.js`, `contexts/AuthContext.jsx`, `main.jsx`, `vite.config.js`
 - **Bug Fix: Mixed Content Error** — Fixed trailing slash issue in NotificationContext.jsx
 - **Support/Customer Service System Overhaul (March 9, 2026)**:
   - Revamped Customer/Operator Support page (`Support.jsx`) with premium modern UI, stat cards, contact options

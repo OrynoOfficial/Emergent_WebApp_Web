@@ -100,6 +100,17 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [fetchUser]);
 
+  // Listen for session-expired events from API interceptor
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      setOperatorContext(null);
+      setEffectivePermissions([]);
+    };
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, []);
+
   const login = async (identifier, password) => {
     // Determine if identifier is email or phone
     const isEmail = identifier.includes('@');
@@ -137,7 +148,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setOperatorContext(null);
     setEffectivePermissions([]);
-    window.location.href = '/login';
+    // ProtectedRoute will detect isAuthenticated=false and redirect via React Router
+    // No hard page reload needed
   };
 
   // Re-authenticate function to refresh user state without full page reload
