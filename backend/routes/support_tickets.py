@@ -431,6 +431,68 @@ async def get_users_for_behalf(
     return {"users": result}
 
 
+@router.get("/operators-search")
+async def search_operators_for_behalf(
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Search operators from the operators collection for creating tickets on behalf"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    query = {"status": "active"}
+    if search and len(search) >= 3:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}}
+        ]
+    elif not search or len(search) < 3:
+        return {"operators": []}
+    
+    operators = await db.operators.find(query, {"_id": 1, "name": 1, "email": 1, "operator_type": 1}).limit(10).to_list(10)
+    
+    result = []
+    for op in operators:
+        result.append({
+            "id": str(op.get("_id", "")),
+            "name": op.get("name", "Unknown"),
+            "email": op.get("email", ""),
+            "operator_type": op.get("operator_type", "")
+        })
+    
+    return {"operators": result}
+
+
+@router.get("/operator-users/{operator_id}")
+async def get_operator_users(
+    operator_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get employees/users of a specific operator"""
+    db = get_database()
+    
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    employees = await db.employees.find(
+        {"operator_id": operator_id, "status": "active"},
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "email": 1, "position": 1}
+    ).to_list(50)
+    
+    result = []
+    for emp in employees:
+        result.append({
+            "id": emp.get("id", ""),
+            "name": f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip(),
+            "email": emp.get("email", ""),
+            "position": emp.get("position", "")
+        })
+    
+    return {"users": result, "operator_id": operator_id}
+
+
 @router.get("/")
 async def get_tickets(
     status: Optional[List[str]] = Query(None),

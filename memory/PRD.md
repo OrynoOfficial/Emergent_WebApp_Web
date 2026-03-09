@@ -44,6 +44,12 @@
   - Moved CS Center Dashboard out of Dashboards submenu, added standalone "Customer Service" below Admin Config
   - AI Chatbot: Changed from full-screen overlay to floating right-side widget (380x520px), added rich messages (quick reply buttons, info cards), fixed "Talk to human" to trigger escalation flow
   - Statistics tab enhanced: Filters (category, priority), 7 expandable sections with 3-level drill-down (Status > Per-status > Category), Team Workload with pagination, Source & Trends, Category Deep Dive
+- **Create on Behalf Modal & Auto-Refresh Fixes (March 9, 2026)**:
+  - Customer search: only shows suggestions after 3+ characters, clicking fills the search field with selection + green badge
+  - Operator search: searches from operators collection (not users), shows operator type badge, 3+ char trigger
+  - After selecting operator: shows "Operator's User" dropdown pulling employees from that operator
+  - Auto-refresh fix: Removed broken `location.reload` override, kept WebSocket `full-reload` signal blocker
+  - New backend APIs: `GET /api/support-tickets/operators-search`, `GET /api/support-tickets/operator-users/{id}`
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.

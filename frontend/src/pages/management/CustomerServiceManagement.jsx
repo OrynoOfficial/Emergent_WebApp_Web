@@ -577,30 +577,87 @@ function StatisticsTab() {
   );
 }
 
-// ========== Create on Behalf Modal (Compact) ==========
+// ========== Create on Behalf Modal (Fixed) ==========
 function CreateOnBehalfModal({ open, onOpenChange, onCreated }) {
-  const [users, setUsers] = useState([]);
-  const [search, setSearch] = useState('');
+  const [customers, setCustomers] = useState([]);
+  const [operators, setOperators] = useState([]);
+  const [operatorUsers, setOperatorUsers] = useState([]);
+  const [custSearch, setCustSearch] = useState('');
+  const [opSearch, setOpSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedOperator, setSelectedOperator] = useState(null);
+  const [selectedOpUser, setSelectedOpUser] = useState(null);
   const [products, setProducts] = useState({ categories: [], products: [] });
-  const [form, setForm] = useState({ subject: '', description: '', category: 'general', priority: 'medium', on_behalf_of_id: '', on_behalf_of_type: 'customer', product_involved: '', service_tag: '' });
+  const [form, setForm] = useState({ subject: '', description: '', category: 'general', priority: 'medium', on_behalf_of_type: 'customer', product_involved: '', service_tag: '' });
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (open) {
-      api.get('/support-tickets/users-for-behalf').then(r => setUsers(r.data?.users || [])).catch(() => {});
       api.get('/support-tickets/products').then(r => setProducts(r.data)).catch(() => {});
+      // Reset state
+      setCustSearch(''); setOpSearch('');
+      setCustomers([]); setOperators([]); setOperatorUsers([]);
+      setSelectedCustomer(null); setSelectedOperator(null); setSelectedOpUser(null);
+      setForm({ subject: '', description: '', category: 'general', priority: 'medium', on_behalf_of_type: 'customer', product_involved: '', service_tag: '' });
     }
   }, [open]);
 
-  const filteredUsers = users.filter(u => u.role === form.on_behalf_of_type && (!search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase())));
+  // Customer search (3+ chars)
+  useEffect(() => {
+    if (custSearch.length >= 3) {
+      api.get(`/support-tickets/users-for-behalf?search=${custSearch}&user_type=customer`).then(r => setCustomers(r.data?.users || [])).catch(() => {});
+    } else { setCustomers([]); }
+  }, [custSearch]);
+
+  // Operator search (3+ chars)
+  useEffect(() => {
+    if (opSearch.length >= 3) {
+      api.get(`/support-tickets/operators-search?search=${opSearch}`).then(r => setOperators(r.data?.operators || [])).catch(() => {});
+    } else { setOperators([]); }
+  }, [opSearch]);
+
+  // Load operator users when operator selected
+  useEffect(() => {
+    if (selectedOperator) {
+      api.get(`/support-tickets/operator-users/${selectedOperator.id}`).then(r => {
+        setOperatorUsers(r.data?.users || []);
+        setSelectedOpUser(null);
+      }).catch(() => setOperatorUsers([]));
+    } else { setOperatorUsers([]); setSelectedOpUser(null); }
+  }, [selectedOperator]);
+
+  const handleSelectCustomer = (u) => { setSelectedCustomer(u); setCustSearch(u.name); };
+  const handleSelectOperator = (op) => { setSelectedOperator(op); setOpSearch(op.name); };
+
+  const getOnBehalfId = () => {
+    if (form.on_behalf_of_type === 'customer') return selectedCustomer?.id || '';
+    // For operator: use selected user if exists, otherwise use operator's owner
+    return selectedOpUser?.id || selectedOperator?.id || '';
+  };
 
   const handleSubmit = async () => {
-    if (!form.subject || !form.description || !form.on_behalf_of_id) { toast.error('Fill subject, description, and select user'); return; }
+    const onBehalfId = getOnBehalfId();
+    if (!form.subject || !form.description || !onBehalfId) {
+      toast.error(form.on_behalf_of_type === 'customer' ? 'Fill subject, description, and select a customer' : 'Fill subject, description, and select an operator');
+      return;
+    }
     setCreating(true);
-    try { await api.post('/support-tickets/create-on-behalf', form); toast.success('Ticket created'); onOpenChange(false); onCreated(); setForm({ subject: '', description: '', category: 'general', priority: 'medium', on_behalf_of_id: '', on_behalf_of_type: 'customer', product_involved: '', service_tag: '' }); }
-    catch { toast.error('Failed to create'); }
+    try {
+      await api.post('/support-tickets/create-on-behalf', {
+        ...form,
+        on_behalf_of_id: onBehalfId,
+        on_behalf_of_type: form.on_behalf_of_type,
+        operator_id: selectedOperator?.id || null,
+        operator_name: selectedOperator?.name || null,
+      });
+      toast.success('Ticket created');
+      onOpenChange(false);
+      onCreated();
+    } catch { toast.error('Failed to create'); }
     finally { setCreating(false); }
   };
+
+  const isCustomerTab = form.on_behalf_of_type === 'customer';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -614,21 +671,85 @@ function CreateOnBehalfModal({ open, onOpenChange, onCreated }) {
         </div>
         <ScrollArea className="flex-1 px-5 py-4">
           <div className="space-y-3">
-            {/* User type toggle */}
+            {/* Tab toggle */}
             <div className="flex gap-1.5 p-0.5 bg-slate-100/80 rounded-lg border border-slate-200/50">
-              <button onClick={() => setForm(p => ({...p, on_behalf_of_type: 'customer', on_behalf_of_id: ''}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${form.on_behalf_of_type === 'customer' ? 'bg-[#082c59] text-white shadow-sm' : 'text-slate-600'}`}>Customer</button>
-              <button onClick={() => setForm(p => ({...p, on_behalf_of_type: 'operator', on_behalf_of_id: ''}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${form.on_behalf_of_type === 'operator' ? 'bg-[#082c59] text-white shadow-sm' : 'text-slate-600'}`}>Operator</button>
+              <button onClick={() => { setForm(p => ({...p, on_behalf_of_type: 'customer'})); setSelectedOperator(null); setSelectedOpUser(null); setOpSearch(''); }}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${isCustomerTab ? 'bg-[#082c59] text-white shadow-sm' : 'text-slate-600'}`}>Customer</button>
+              <button onClick={() => { setForm(p => ({...p, on_behalf_of_type: 'operator'})); setSelectedCustomer(null); setCustSearch(''); }}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${!isCustomerTab ? 'bg-[#082c59] text-white shadow-sm' : 'text-slate-600'}`}>Operator</button>
             </div>
-            {/* User search */}
-            <Input placeholder="Search user..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 text-xs bg-white/70" />
-            <div className="max-h-24 overflow-y-auto border border-slate-200/50 rounded-lg divide-y divide-slate-100">
-              {filteredUsers.slice(0,5).map(u => (
-                <button key={u.id} onClick={() => setForm(p => ({...p, on_behalf_of_id: u.id}))} className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 ${form.on_behalf_of_id === u.id ? 'bg-[#082c59]/5 border-l-2 border-l-[#082c59]' : ''}`}>
-                  <span className="font-medium">{u.name}</span> <span className="text-slate-400">{u.email}</span>
-                </button>
-              ))}
-              {filteredUsers.length === 0 && <p className="text-[10px] text-slate-400 text-center py-2">No users found</p>}
-            </div>
+
+            {/* Customer search */}
+            {isCustomerTab && (
+              <>
+                <div className="relative">
+                  <Input placeholder="Search customer (min 3 chars)..." value={custSearch} onChange={(e) => { setCustSearch(e.target.value); if (selectedCustomer && e.target.value !== selectedCustomer.name) setSelectedCustomer(null); }} className="h-8 text-xs bg-white/70" />
+                  {selectedCustomer && <Badge className="absolute right-2 top-1.5 bg-emerald-100 text-emerald-700 text-[9px] h-5"><CheckCircle className="w-2.5 h-2.5 mr-0.5" />{selectedCustomer.name}</Badge>}
+                </div>
+                {custSearch.length >= 3 && !selectedCustomer && customers.length > 0 && (
+                  <div className="max-h-24 overflow-y-auto border border-slate-200/50 rounded-lg divide-y divide-slate-100">
+                    {customers.slice(0,5).map(u => (
+                      <button key={u.id} onClick={() => handleSelectCustomer(u)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#082c59]/5 transition-colors">
+                        <span className="font-medium text-slate-800">{u.name}</span> <span className="text-slate-400">{u.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {custSearch.length >= 3 && customers.length === 0 && !selectedCustomer && (
+                  <p className="text-[10px] text-slate-400 text-center py-1">No customers found</p>
+                )}
+                {custSearch.length > 0 && custSearch.length < 3 && (
+                  <p className="text-[10px] text-slate-400 text-center py-1">Type at least 3 characters</p>
+                )}
+              </>
+            )}
+
+            {/* Operator search */}
+            {!isCustomerTab && (
+              <>
+                <div className="relative">
+                  <Input placeholder="Search operator (min 3 chars)..." value={opSearch} onChange={(e) => { setOpSearch(e.target.value); if (selectedOperator && e.target.value !== selectedOperator.name) { setSelectedOperator(null); setSelectedOpUser(null); } }} className="h-8 text-xs bg-white/70" />
+                  {selectedOperator && <Badge className="absolute right-2 top-1.5 bg-indigo-100 text-indigo-700 text-[9px] h-5"><CheckCircle className="w-2.5 h-2.5 mr-0.5" />{selectedOperator.name}</Badge>}
+                </div>
+                {opSearch.length >= 3 && !selectedOperator && operators.length > 0 && (
+                  <div className="max-h-24 overflow-y-auto border border-slate-200/50 rounded-lg divide-y divide-slate-100">
+                    {operators.slice(0,5).map(op => (
+                      <button key={op.id} onClick={() => handleSelectOperator(op)} className="w-full text-left px-3 py-1.5 text-xs hover:bg-indigo-50 transition-colors">
+                        <span className="font-medium text-slate-800">{op.name}</span> <span className="text-slate-400">{op.email}</span>
+                        <Badge className="ml-2 text-[8px] bg-slate-100 text-slate-500">{op.operator_type}</Badge>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {opSearch.length >= 3 && operators.length === 0 && !selectedOperator && (
+                  <p className="text-[10px] text-slate-400 text-center py-1">No operators found</p>
+                )}
+                {opSearch.length > 0 && opSearch.length < 3 && (
+                  <p className="text-[10px] text-slate-400 text-center py-1">Type at least 3 characters</p>
+                )}
+
+                {/* Operator's users sub-section */}
+                {selectedOperator && (
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Operator's User (optional)</label>
+                    <Select value={selectedOpUser?.id || 'none'} onValueChange={(v) => {
+                      if (v === 'none') { setSelectedOpUser(null); }
+                      else { const u = operatorUsers.find(u => u.id === v); setSelectedOpUser(u || null); }
+                    }}>
+                      <SelectTrigger className="h-8 text-xs bg-white/70"><SelectValue placeholder="Select user" /></SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="none" className="text-xs">None (use operator directly)</SelectItem>
+                        {operatorUsers.map(u => (
+                          <SelectItem key={u.id} value={u.id} className="text-xs">{u.name} — {u.position || 'Staff'}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {operatorUsers.length === 0 && <p className="text-[9px] text-slate-400 mt-0.5">No users found for this operator</p>}
+                  </div>
+                )}
+              </>
+            )}
+
             <Input placeholder="Subject *" value={form.subject} onChange={(e) => setForm(p => ({...p, subject: e.target.value}))} className="h-8 text-xs bg-white/70" />
             <div className="grid grid-cols-2 gap-2">
               <Select value={form.category} onValueChange={(v) => setForm(p => ({...p, category: v}))}>
