@@ -17,7 +17,16 @@
   - Admin "Create on Behalf" feature: admins create tickets for customers/operators
   - Admin ticket detail modal: fixed duplicate close buttons, added role-specific info, product/tags sidebar
   - New backend APIs: `/api/support/chat/sessions`, `/api/support/chat/new-session`, `/api/support-tickets/from-chat`, `/api/support-tickets/create-on-behalf`, `/api/support-tickets/products`, `/api/support-tickets/users-for-behalf`
-- **Note:** With Vite file watcher disabled (`watch: { ignored: ['**'] }`), frontend code changes require `sudo supervisorctl restart frontend`
+- **Support Page UI Overhaul v2 (March 9, 2026)**:
+  - Removed Contact cards (Call Us, Email Us, AI Chat)
+  - Compact inline badge stats (Open, In Progress, Resolved)
+  - Bold tab switcher with filled/outline differentiation
+  - Added List/Grid view toggle
+  - Added pagination (8 items/page)
+  - Service-specific tag colors (hotels=rose, booking=blue, technical=red, etc.)
+  - Ticket cards, modals, and FAQ use #082c59/slate gradient backgrounds (no plain white)
+  - AI Chatbot sidebar collapsed by default, expandable via toggle
+  - Portal-based chatbot overlay with z-index fix for proper layering
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
