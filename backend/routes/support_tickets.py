@@ -155,6 +155,16 @@ async def create_ticket(
             "message": ticket_data.description,
             "is_internal": False,
             "created_at": datetime.now(timezone.utc).isoformat()
+        }, {
+            "id": str(uuid.uuid4()),
+            "sender_type": "system",
+            "sender_id": "system",
+            "sender_name": "System",
+            "message": "Waiting for admin response",
+            "is_internal": False,
+            "is_system": True,
+            "tag": "Waiting for Admin Response",
+            "created_at": datetime.now(timezone.utc).isoformat()
         }],
         # Timestamps
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -267,6 +277,16 @@ async def create_ticket_on_behalf(
             "message": ticket_data.description,
             "is_internal": False,
             "created_at": datetime.now(timezone.utc).isoformat()
+        }, {
+            "id": str(uuid.uuid4()),
+            "sender_type": "system",
+            "sender_id": "system",
+            "sender_name": "System",
+            "message": "Waiting for user response",
+            "is_internal": False,
+            "is_system": True,
+            "tag": "Waiting for User Response",
+            "created_at": datetime.now(timezone.utc).isoformat()
         }],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
@@ -349,6 +369,16 @@ async def create_ticket_from_chat(
             "sender_name": current_user.get("full_name") or "Customer",
             "message": f"[Escalated from AI Chat]\n\n{data.subject}",
             "is_internal": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }, {
+            "id": str(uuid.uuid4()),
+            "sender_type": "system",
+            "sender_id": "system",
+            "sender_name": "System",
+            "message": "Waiting for admin response",
+            "is_internal": False,
+            "is_system": True,
+            "tag": "Waiting for Admin Response",
             "created_at": datetime.now(timezone.utc).isoformat()
         }],
         "created_at": datetime.now(timezone.utc).isoformat(),
