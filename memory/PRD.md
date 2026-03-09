@@ -2,7 +2,15 @@
 
 ## Latest Changes (March 9, 2026)
 - **P0 Fix Verified: Auto-refresh issue** — Confirmed stable with HMR disabled, file watcher ignored, and 401 handler guarded
-- **Bug Fix: Mixed Content Error** — Fixed trailing slash issue in NotificationContext.jsx that caused a 307 redirect from HTTPS to HTTP for `/api/notifications`
+- **Bug Fix: Mixed Content Error** — Fixed trailing slash issue in NotificationContext.jsx
+- **Support/Customer Service System Overhaul (March 9, 2026)**:
+  - Revamped Customer/Operator Support page (`Support.jsx`) with premium modern UI, stat cards, contact options
+  - Built full-screen AI Chatbot overlay (`AIChatBot.jsx`) with MongoDB-persisted sessions, hibernate/resume, new chat, escalation to ticket
+  - Chatbot uses GPT-4o via Emergent LLM key for context-aware responses
+  - Updated ticket creation dialog: Product Involved + Service dropdowns, auto-tags, no priority for customers
+  - Admin "Create on Behalf" feature: admins create tickets for customers/operators
+  - Admin ticket detail modal: fixed duplicate close buttons, added role-specific info, product/tags sidebar
+  - New backend APIs: `/api/support/chat/sessions`, `/api/support/chat/new-session`, `/api/support-tickets/from-chat`, `/api/support-tickets/create-on-behalf`, `/api/support-tickets/products`, `/api/support-tickets/users-for-behalf`
 - **Note:** With Vite file watcher disabled (`watch: { ignored: ['**'] }`), frontend code changes require `sudo supervisorctl restart frontend`
 
 ## Overview
