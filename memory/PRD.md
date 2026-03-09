@@ -50,6 +50,10 @@
   - After selecting operator: shows "Operator's User" dropdown pulling employees from that operator
   - Auto-refresh fix: Removed broken `location.reload` override, kept WebSocket `full-reload` signal blocker
   - New backend APIs: `GET /api/support-tickets/operators-search`, `GET /api/support-tickets/operator-users/{id}`
+- **Critical Fixes (March 9, 2026)**:
+  - Auto-refresh FIXED: Vite HMR client now points to unreachable port (127.0.0.1:1), WebSocket fails immediately, no reload signals possible
+  - Create on Behalf: Backend now checks users, operators, AND employees collections when resolving target
+  - Ticket assignment verified working (was working, user may have been affected by page reload before fix)
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.

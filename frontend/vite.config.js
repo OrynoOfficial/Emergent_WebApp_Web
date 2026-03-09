@@ -14,7 +14,13 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: true,
-    hmr: false,
+    hmr: {
+      // Point the client to an unreachable port so it can never connect
+      // This prevents ALL Vite-triggered page reloads
+      clientPort: 1,
+      host: '127.0.0.1',
+      overlay: false,
+    },
     watch: null,
   },
 })

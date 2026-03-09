@@ -188,10 +188,32 @@ async def create_ticket_on_behalf(
     if current_user.get("role") not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Only admins can create tickets on behalf of users")
     
-    # Find the target user
+    # Find the target user - check users collection first, then operators, then employees
     target_user = await db.users.find_one({"_id": ticket_data.on_behalf_of_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="Target user not found")
+    target_name = None
+    target_email = ""
+    target_phone = ""
+    
+    if target_user:
+        target_name = target_user.get("full_name") or target_user.get("username", "Unknown")
+        target_email = target_user.get("email", "")
+        target_phone = target_user.get("phone", "")
+    else:
+        # Check operators collection
+        target_op = await db.operators.find_one({"_id": ticket_data.on_behalf_of_id})
+        if target_op:
+            target_name = target_op.get("name", "Unknown Operator")
+            target_email = target_op.get("email", "")
+            target_phone = target_op.get("phone", "")
+        else:
+            # Check employees collection
+            target_emp = await db.employees.find_one({"id": ticket_data.on_behalf_of_id})
+            if target_emp:
+                target_name = f"{target_emp.get('first_name', '')} {target_emp.get('last_name', '')}".strip()
+                target_email = target_emp.get("email", "")
+                target_phone = target_emp.get("phone", "")
+            else:
+                raise HTTPException(status_code=404, detail="Target user not found")
     
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
     count = await db.support_tickets.count_documents({})
@@ -210,9 +232,9 @@ async def create_ticket_on_behalf(
         "source": "admin",
         "user_type": ticket_data.on_behalf_of_type,
         "customer_id": ticket_data.on_behalf_of_id,
-        "customer_name": target_user.get("full_name") or target_user.get("username", "Unknown"),
-        "customer_email": target_user.get("email", ""),
-        "customer_phone": target_user.get("phone", ""),
+        "customer_name": target_name,
+        "customer_email": target_email,
+        "customer_phone": target_phone,
         "product_involved": ticket_data.product_involved,
         "product_id": ticket_data.product_id,
         "service_tag": ticket_data.service_tag,
