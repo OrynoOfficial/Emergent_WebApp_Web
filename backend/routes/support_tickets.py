@@ -104,6 +104,9 @@ async def create_ticket(
     
     # Auto-generate tags
     tags = ticket_data.tags or generate_tags(ticket_data.category, ticket_data.service_tag, ticket_data.product_involved)
+    # Add waiting-for-admin tag on creation (user/operator created this ticket)
+    if "waiting-for-admin" not in tags:
+        tags.append("waiting-for-admin")
     
     ticket = {
         "_id": str(uuid.uuid4()),
@@ -1038,13 +1041,55 @@ async def update_ticket(
     update_data = {k: v for k, v in ticket_data.dict().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    # Track status changes
+    system_messages = []
+    
+    # Track status changes with auto-tags
     if ticket_data.status and ticket_data.status != ticket.get("status"):
+        current_tags = ticket.get("tags", [])
+        # Remove old status tags
+        new_tags = [t for t in current_tags if t not in ("resolved", "closed", "re-opened")]
+        
         if ticket_data.status == "resolved":
             update_data["resolved_at"] = datetime.now(timezone.utc).isoformat()
             update_data["resolved_by"] = current_user["_id"]
+            if "resolved" not in new_tags:
+                new_tags.append("resolved")
+            # Remove waiting tags
+            new_tags = [t for t in new_tags if t not in ("waiting-for-admin", "waiting-for-user")]
+            system_messages.append({
+                "id": str(uuid.uuid4()),
+                "sender_type": "system",
+                "sender_id": "system",
+                "sender_name": "System",
+                "message": f"Ticket marked as resolved by {current_user.get('full_name', 'Admin')}",
+                "is_internal": False,
+                "is_system": True,
+                "tag": "Resolved",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        elif ticket_data.status == "closed":
+            if "closed" not in new_tags:
+                new_tags.append("closed")
+            new_tags = [t for t in new_tags if t not in ("waiting-for-admin", "waiting-for-user")]
+            system_messages.append({
+                "id": str(uuid.uuid4()),
+                "sender_type": "system",
+                "sender_id": "system",
+                "sender_name": "System",
+                "message": f"Ticket closed by {current_user.get('full_name', 'Admin')}",
+                "is_internal": False,
+                "is_system": True,
+                "tag": "Closed",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        
+        update_data["tags"] = new_tags
     
-    await db.support_tickets.update_one({"_id": ticket_id}, {"$set": update_data})
+    update_ops = {"$set": update_data}
+    if system_messages:
+        update_ops["$push"] = {"messages": {"$each": system_messages}}
+    
+    await db.support_tickets.update_one({"_id": ticket_id}, update_ops)
     
     return {"message": "Ticket updated successfully"}
 
@@ -1141,10 +1186,76 @@ async def reply_to_ticket(
     if is_agent and not ticket.get("first_response_at") and not reply.is_internal:
         update_data["first_response_at"] = datetime.now(timezone.utc).isoformat()
     
+    # === AUTO-TAG LOGIC ===
+    current_status = ticket.get("status", "open")
+    messages_to_push = [new_message]
+    tags_to_add = []
+    tags_to_remove = []
+    
+    # Auto re-open if resolved/closed and someone replies
+    if current_status in ("resolved", "closed") and not reply.is_internal:
+        update_data["status"] = "open"
+        update_data["resolved_at"] = None
+        update_data["resolved_by"] = None
+        tags_to_add.append("re-opened")
+        # Add system message about re-opening
+        messages_to_push.append({
+            "id": str(uuid.uuid4()),
+            "sender_type": "system",
+            "sender_id": "system",
+            "sender_name": "System",
+            "message": f"Ticket re-opened by {current_user.get('full_name', 'user')}",
+            "is_internal": False,
+            "is_system": True,
+            "tag": "Re-Opened",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Waiting tag logic (only for non-internal replies)
+    if not reply.is_internal:
+        if is_agent:
+            # Admin replied → waiting for user
+            tags_to_remove.extend(["waiting-for-admin", "re-opened"])
+            tags_to_add.append("waiting-for-user")
+            messages_to_push.append({
+                "id": str(uuid.uuid4()),
+                "sender_type": "system",
+                "sender_id": "system",
+                "sender_name": "System",
+                "message": "Waiting for user response",
+                "is_internal": False,
+                "is_system": True,
+                "tag": "Waiting for User Response",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+        else:
+            # User replied → waiting for admin
+            tags_to_remove.extend(["waiting-for-user", "re-opened"])
+            tags_to_add.append("waiting-for-admin")
+            messages_to_push.append({
+                "id": str(uuid.uuid4()),
+                "sender_type": "system",
+                "sender_id": "system",
+                "sender_name": "System",
+                "message": "Waiting for admin response",
+                "is_internal": False,
+                "is_system": True,
+                "tag": "Waiting for Admin Response",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+    
+    # Update tags
+    current_tags = ticket.get("tags", [])
+    new_tags = [t for t in current_tags if t not in tags_to_remove]
+    for t in tags_to_add:
+        if t not in new_tags:
+            new_tags.append(t)
+    update_data["tags"] = new_tags
+    
     await db.support_tickets.update_one(
         {"_id": ticket_id},
         {
-            "$push": {"messages": new_message},
+            "$push": {"messages": {"$each": messages_to_push}},
             "$set": update_data,
             "$inc": {"response_count": 1}
         }
@@ -1152,7 +1263,6 @@ async def reply_to_ticket(
     
     # Create notification for the other party
     if is_agent and not reply.is_internal:
-        # Notify customer
         notification = {
             "_id": str(uuid.uuid4()),
             "user_id": ticket.get("customer_id"),
@@ -1165,7 +1275,6 @@ async def reply_to_ticket(
         }
         await db.notifications.insert_one(notification)
     elif not is_agent:
-        # Notify assigned agent or support team
         notify_user = ticket.get("assigned_to") or "support_team"
         notification = {
             "_id": str(uuid.uuid4()),

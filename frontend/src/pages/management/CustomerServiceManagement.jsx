@@ -47,6 +47,11 @@ const TAG_COLORS = {
   banquet: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
   packages: 'bg-lime-100 text-lime-700 border-lime-200',
   'from-chat': 'bg-slate-100 text-slate-600 border-slate-200',
+  'waiting-for-admin': 'bg-orange-100 text-orange-700 border-orange-200',
+  'waiting-for-user': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'resolved': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'closed': 'bg-slate-200 text-slate-700 border-slate-300',
+  're-opened': 'bg-yellow-100 text-yellow-700 border-yellow-200',
 };
 const getTagColor = (tag) => TAG_COLORS[tag?.toLowerCase()] || 'bg-slate-100 text-slate-600 border-slate-200';
 
@@ -180,6 +185,13 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.messages.length - 1})</h4>
                   {ticket.messages.slice(1).map((r, idx) => (
+                    r.is_system ? (
+                      <div key={idx} className="flex items-center justify-center gap-2 py-1.5">
+                        <div className="h-px flex-1 bg-slate-200/60" />
+                        <Badge className={`text-[9px] border ${getTagColor(r.tag?.toLowerCase().replace(/ /g, '-') || '')} shadow-sm`}>{r.tag || r.message}</Badge>
+                        <div className="h-px flex-1 bg-slate-200/60" />
+                      </div>
+                    ) : (
                     <div key={idx} className={`p-3.5 rounded-xl shadow-sm ${r.is_internal ? 'bg-amber-50/70 border border-amber-200/50 ml-2' : r.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'}`}>
                       <div className="flex items-start gap-2.5">
                         <Avatar className="w-6 h-6"><AvatarFallback className={`text-[9px] ${r.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>{r.sender_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
@@ -196,6 +208,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                         </div>
                       </div>
                     </div>
+                    )
                   ))}
                 </div>
               )}

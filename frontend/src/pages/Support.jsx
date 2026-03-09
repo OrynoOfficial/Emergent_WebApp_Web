@@ -56,6 +56,11 @@ const TAG_COLORS = {
   banquet: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
   packages: 'bg-lime-100 text-lime-700 border-lime-200',
   'from-chat': 'bg-slate-100 text-slate-600 border-slate-200',
+  'waiting-for-admin': 'bg-orange-100 text-orange-700 border-orange-200',
+  'waiting-for-user': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'resolved': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'closed': 'bg-slate-200 text-slate-700 border-slate-300',
+  're-opened': 'bg-yellow-100 text-yellow-700 border-yellow-200',
 };
 const getTagColor = (tag) => TAG_COLORS[tag?.toLowerCase()] || 'bg-slate-100 text-slate-600 border-slate-200';
 
@@ -254,6 +259,13 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
             <div className="space-y-3">
               <h4 className="font-medium text-sm text-slate-600 flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Conversation</h4>
               {visibleMessages.slice(1).map((msg, idx) => (
+                msg.is_system ? (
+                  <div key={idx} className="flex items-center justify-center gap-2 py-1">
+                    <div className="h-px flex-1 bg-slate-200/60" />
+                    <Badge className={`text-[9px] border ${getTagColor(msg.tag?.toLowerCase().replace(/ /g, '-') || '')} shadow-sm`}>{msg.tag || msg.message}</Badge>
+                    <div className="h-px flex-1 bg-slate-200/60" />
+                  </div>
+                ) : (
                 <div key={idx} className={`p-3.5 rounded-xl ${msg.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'} shadow-sm`}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <Avatar className="w-6 h-6">
@@ -266,6 +278,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
                   </div>
                   <p className="text-sm text-slate-700 pl-8">{msg.message || msg.content}</p>
                 </div>
+                )
               ))}
             </div>
           )}
