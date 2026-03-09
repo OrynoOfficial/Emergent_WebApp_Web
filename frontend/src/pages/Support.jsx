@@ -251,7 +251,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
           )}
         </div>
         {/* Content */}
-        <ScrollArea className="flex-1 px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
           <div className="p-4 bg-white/50 rounded-xl border border-slate-200/40 mb-4 shadow-sm">
             <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">{ticket.description}</p>
           </div>
@@ -281,7 +281,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onReply, isCustomer }) {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
         {ticket.status !== 'closed' && (
           <div className="px-6 py-4 border-t border-slate-200/60 bg-white/40">
             <div className="flex gap-2">

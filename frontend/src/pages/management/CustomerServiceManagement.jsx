@@ -141,7 +141,11 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80 [&>button]:hidden">
+      <DialogContent
+        className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80 [&>button]:hidden"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <div className="px-6 py-4 border-b border-slate-200/60 bg-gradient-to-r from-[#082c59]/[0.06] to-slate-100/50">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -166,7 +170,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
         <div className="flex flex-1 overflow-hidden">
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <ScrollArea className="flex-1 p-5">
+            <div className="flex-1 overflow-y-auto p-5 min-h-0">
               {/* Original message */}
               <div className="mb-5 p-4 rounded-xl bg-white/50 border border-slate-200/40 shadow-sm">
                 <div className="flex items-start gap-3 mb-2">
@@ -211,7 +215,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
             {/* Reply */}
             <div className="p-4 border-t border-slate-200/60 bg-white/40">
               <div className="flex items-center gap-2 mb-2">
@@ -874,8 +878,25 @@ export default function CustomerServiceManagement() {
     finally { setSendingReply(false); }
   };
 
-  const handleStatusChange = async (s) => { if (!selectedTicket) return; try { await api.put(`/support-tickets/${selectedTicket.id}`, {status:s}); setSelectedTicket(p=>({...p,status:s})); loadTickets(); loadStats(); } catch { toast.error('Failed'); } };
-  const handlePriorityChange = async (p) => { if (!selectedTicket) return; try { await api.put(`/support-tickets/${selectedTicket.id}`, {priority:p}); setSelectedTicket(prev=>({...prev,priority:p})); loadTickets(); } catch { toast.error('Failed'); } };
+  const handleStatusChange = async (s) => {
+    if (!selectedTicket) return;
+    try {
+      await api.put(`/support-tickets/${selectedTicket.id}`, { status: s });
+      // Re-fetch the full ticket to get new system messages and tags
+      const r = await api.get(`/support-tickets/${selectedTicket.id}`);
+      setSelectedTicket(r.data);
+      // Defer list refresh to avoid modal closure
+      setTimeout(() => { loadTickets(); loadStats(); }, 100);
+    } catch { toast.error('Failed to update status'); }
+  };
+  const handlePriorityChange = async (p) => {
+    if (!selectedTicket) return;
+    try {
+      await api.put(`/support-tickets/${selectedTicket.id}`, { priority: p });
+      setSelectedTicket(prev => ({ ...prev, priority: p }));
+      setTimeout(() => { loadTickets(); }, 100);
+    } catch { toast.error('Failed to update priority'); }
+  };
 
   const handleAssignTicket = async () => {
     if (!selectedAssignee || !ticketToAssign) return;
