@@ -40,6 +40,10 @@
   - Compact Create on Behalf modal (max-w-md) matching Access Scope modal style
   - Ticket detail modal: colorful sidebar (status=colored border, requester=indigo, category=amber), clear conversation foreground/background differentiation
   - New backend API: `GET /api/support-tickets/stats/detailed` for team workload with status breakdown
+- **Navigation & Chatbot & Statistics Enhancement (March 9, 2026)**:
+  - Moved CS Center Dashboard out of Dashboards submenu, added standalone "Customer Service" below Admin Config
+  - AI Chatbot: Changed from full-screen overlay to floating right-side widget (380x520px), added rich messages (quick reply buttons, info cards), fixed "Talk to human" to trigger escalation flow
+  - Statistics tab enhanced: Filters (category, priority), 7 expandable sections with 3-level drill-down (Status > Per-status > Category), Team Workload with pagination, Source & Trends, Category Deep Dive
 
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
