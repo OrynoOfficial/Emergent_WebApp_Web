@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 # Use PUBLIC URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://oryno-overhaul.preview.emergentagent.com"
+    BASE_URL = "https://modernized-portal.preview.emergentagent.com"
 
 # Test credentials
 CUSTOMER_EMAIL = "customer@test.com"

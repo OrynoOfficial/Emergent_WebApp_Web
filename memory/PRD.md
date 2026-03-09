@@ -1,5 +1,10 @@
 # Oryno Services Hub - Product Requirements Document
 
+## Latest Changes (March 9, 2026)
+- **P0 Fix Verified: Auto-refresh issue** — Confirmed stable with HMR disabled, file watcher ignored, and 401 handler guarded
+- **Bug Fix: Mixed Content Error** — Fixed trailing slash issue in NotificationContext.jsx that caused a 307 redirect from HTTPS to HTTP for `/api/notifications`
+- **Note:** With Vite file watcher disabled (`watch: { ignored: ['**'] }`), frontend code changes require `sudo supervisorctl restart frontend`
+
 ## Overview
 Oryno is a full-stack multi-tenant services booking platform built with FastAPI + React + MongoDB. It provides hotel bookings, restaurant reservations, travel tickets, car rentals, cinema, laundry, events, packages, and banquet services.
 

@@ -58,7 +58,7 @@ export function NotificationProvider({ children }) {
     
     try {
       setLoading(true);
-      const response = await api.get('/notifications');
+      const response = await api.get('/notifications/');
       const data = response.data?.notifications || [];
       
       // Transform data - store created_at, calculate time dynamically
