@@ -106,7 +106,7 @@ api.interceptors.response.use(
         localStorage.removeItem('refresh_token');
         
         // Only redirect if not already on login page and not a silent request
-        if (!window.location.pathname.includes('/login') && !originalRequest._silent) {
+        if (!window.location.pathname.includes('/login') && !originalRequest._silent && !originalRequest.url?.includes('/notifications')) {
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);
