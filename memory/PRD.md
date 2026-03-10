@@ -1253,3 +1253,25 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Ratings page now has 4 tabs: All Ratings | Queue | Audit Log | Reports
   - **Testing**: 100% (iteration_73)
 
+
+### Session: Mar 10, 2026 (Part 2) — Subscribe Fix, Ratings Revamp, Promotions Approval, Events Cleanup
+
+- [x] **SubscribeButton Visibility Fix** — Removed role-based filter; now shows for ALL logged-in users on 7 service pages
+- [x] **Ratings Page UI Revamp**:
+  - Gradient backgrounds (#082c59/slate) on filter bar and empty states (no more plain white)
+  - Smaller moderation dialogs (max-w-sm instead of max-w-md)
+  - List/Grid view toggle on All Ratings tab
+  - Pagination (8 items/page) on All Ratings tab
+  - Compact review cards with reduced padding
+- [x] **Promotions Approval Flow**:
+  - Promotions now created with `status: pending_approval`
+  - New endpoint: `PUT /api/subscriptions/promotions/{id}/approve` (admin-only, sends notifications)
+  - New endpoint: `PUT /api/subscriptions/promotions/{id}/reject` (admin-only)
+  - Communications tab shows Approve/Reject buttons for admins on pending promotions
+- [x] **On-Demand Alerts**:
+  - New endpoint: `POST /api/subscriptions/alerts` (immediate, no approval needed)
+  - Target all subscribers or specific user (e.g., for order updates)
+  - "Send Alert" button in Communications tab with target selection dialog
+- [x] **Events Management Analytics Deleted** — Removed BusinessAnalytics component and tab, now 3 tabs
+- **Testing**: 17/17 backend, frontend verified (iteration_74)
+

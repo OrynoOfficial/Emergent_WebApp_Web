@@ -1131,7 +1131,7 @@ function AdminRatingsView() {
       {/* Filters */}
       <Card className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 border-slate-200">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="flex flex-wrap gap-3 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
