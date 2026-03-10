@@ -1275,3 +1275,13 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Events Management Analytics Deleted** — Removed BusinessAnalytics component and tab, now 3 tabs
 - **Testing**: 17/17 backend, frontend verified (iteration_74)
 
+
+- [x] **Promotion Approval in Validation Page**:
+  - Backend: `GET /api/validation/pending` now returns `pending_promotions` array + count
+  - Backend: `POST /api/validation/promotions/{id}/approve` — approves + sends to subscribers + notifies operator
+  - Backend: `POST /api/validation/promotions/{id}/reject` — rejects with reason + notifies operator
+  - Backend: Operator creating a promotion auto-sends "Pending Approval" notification to all admins
+  - Frontend: New "Pending Promotion Approvals" section on Validation page with Approve/Reject cards
+  - Full notification flow: Operator submits → Admins notified → Admin approves/rejects → Operator notified
+  - **Testing**: 12/12 backend (iteration_75)
+
