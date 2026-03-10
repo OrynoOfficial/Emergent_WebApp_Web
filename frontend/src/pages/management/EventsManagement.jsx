@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Calendar, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
-  LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
+  LayoutDashboard, MessageSquare, RefreshCw,
   Bell, Send, Ticket, Music, Mic, Eye
 } from 'lucide-react';
 import api from '@/api/client';
@@ -23,12 +23,7 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend
-} from 'recharts';
 
-const CHART_COLORS = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
 const EVENT_TYPES = ['concert', 'conference', 'workshop', 'festival', 'sports', 'exhibition', 'party', 'other'];
 
 const DEFAULT_EVENT_FORM = {
@@ -54,48 +49,6 @@ const DEFAULT_EVENT_FORM = {
 
 // Events specific dashboard data generator
 // Dashboard data now fetched from API via useRealDashboardData hook
-
-const BusinessAnalytics = ({ events }) => {
-  const analyticsData = useMemo(() => {
-    // Fixed monthly trend data
-    const monthlyTrend = [
-      { month: 'Jan', events: 12, revenue: 850000 },
-      { month: 'Feb', events: 15, revenue: 1120000 },
-      { month: 'Mar', events: 18, revenue: 1480000 },
-      { month: 'Apr', events: 14, revenue: 980000 },
-      { month: 'May', events: 22, revenue: 1850000 },
-      { month: 'Jun', events: 28, revenue: 2350000 }
-    ];
-
-    return { monthlyTrend };
-  }, [events]);
-
-  return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Monthly Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={analyticsData.monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="events" stroke="#8B5CF6" strokeWidth={2} name="Events" />
-                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} name="Revenue" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
 export default function EventsManagement() {
   const { user } = useAuth();
@@ -221,7 +174,7 @@ export default function EventsManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-[#082c59]">Events Management Center</h1>
-          <p className="text-gray-600">Manage events, tickets, analytics, and communications</p>
+          <p className="text-gray-600">Manage events, tickets, and communications</p>
         </div>
         <Button onClick={loadEvents} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -230,11 +183,10 @@ export default function EventsManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><Calendar className="h-4 w-4 mr-2" />Management</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
@@ -317,10 +269,6 @@ export default function EventsManagement() {
             serviceIcon={<Calendar className="h-5 w-5 text-purple-600" />}
             primaryColor="purple"
           />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="mt-6">
-          <BusinessAnalytics events={events} />
         </TabsContent>
       </Tabs>
 

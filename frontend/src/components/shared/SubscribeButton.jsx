@@ -13,7 +13,7 @@ export default function SubscribeButton({ operatorId, operatorName, size = 'sm',
   const { user } = useAuth();
   const { isSubscribed, toggleSubscription, loading, checked } = useSubscription(operatorId, operatorName);
 
-  if (!user || !operatorId || user.role === 'operator' || user.role === 'admin' || user.role === 'super_admin') return null;
+  if (!user || !operatorId) return null;
   if (!checked) return null;
 
   const handleClick = async (e) => {

@@ -35,6 +35,9 @@ export default function ServiceCommunicationsHub({
   const [showPromoDialog, setShowPromoDialog] = useState(false);
   const [promoForm, setPromoForm] = useState({ title: '', message: '', promotion_type: 'general', discount_value: '', valid_until: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [alertForm, setAlertForm] = useState({ title: '', message: '', target_type: 'subscribers', target_user_id: '', target_user_name: '' });
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
@@ -59,8 +62,9 @@ export default function ServiceCommunicationsHub({
       setSubscriberCount(subRes.data?.count || 0);
 
       // Load promotions
-      const promoRes = await api.get('/subscriptions/promotions?limit=10').catch(() => ({ data: { promotions: [] } }));
+      const promoRes = await api.get('/subscriptions/promotions?limit=10').catch(() => ({ data: { promotions: [], pending_approval_count: 0 } }));
       setPromotions(promoRes.data?.promotions || []);
+      setPendingApprovalCount(promoRes.data?.pending_approval_count || 0);
     } catch (err) {
       console.error('Failed to load communications data:', err);
     } finally {
@@ -82,7 +86,7 @@ export default function ServiceCommunicationsHub({
         service_type: serviceTag,
         valid_until: promoForm.valid_until || null,
       });
-      toast.success(`Promotion sent to ${res.data.notified_count} subscribers`);
+      toast.success(res.data.status === 'pending_approval' ? 'Promotion submitted for admin approval' : 'Promotion created');
       setShowPromoDialog(false);
       setPromoForm({ title: '', message: '', promotion_type: 'general', discount_value: '', valid_until: '' });
       loadData();
@@ -96,9 +100,49 @@ export default function ServiceCommunicationsHub({
   const deletePromotion = async (id) => {
     try {
       await api.delete(`/subscriptions/promotions/${id}`);
-      toast.success('Promotion deleted');
+      toast.success('Deleted');
       loadData();
     } catch { toast.error('Failed to delete'); }
+  };
+
+  const sendAlert = async () => {
+    if (!alertForm.title.trim() || !alertForm.message.trim()) {
+      toast.error('Please fill in title and message');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await api.post('/subscriptions/alerts', {
+        ...alertForm,
+        service_type: serviceTag,
+      });
+      toast.success(`Alert sent to ${res.data.notified_count} user(s)`);
+      setShowAlertDialog(false);
+      setAlertForm({ title: '', message: '', target_type: 'subscribers', target_user_id: '', target_user_name: '' });
+      loadData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send alert');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const approvePromotion = async (id) => {
+    try {
+      const res = await api.put(`/subscriptions/promotions/${id}/approve`);
+      toast.success(`Approved! Sent to ${res.data.notified_count} subscribers`);
+      loadData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Approval failed');
+    }
+  };
+
+  const rejectPromotion = async (id) => {
+    try {
+      await api.put(`/subscriptions/promotions/${id}/reject`);
+      toast.success('Promotion rejected');
+      loadData();
+    } catch { toast.error('Rejection failed'); }
   };
 
   const colorMap = {
@@ -154,9 +198,11 @@ export default function ServiceCommunicationsHub({
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-violet-100 text-sm font-medium">Promotions Sent</p>
+                <p className="text-violet-100 text-sm font-medium">Promotions</p>
                 <p className="text-3xl font-bold mt-1">{promotions.length}</p>
-                <p className="text-violet-200 text-xs mt-1">Alerts & offers to subscribers</p>
+                <p className="text-violet-200 text-xs mt-1">
+                  {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending approval` : 'Alerts & promotions'}
+                </p>
               </div>
               <div className="bg-white/20 rounded-2xl p-3">
                 <Megaphone className="h-7 w-7" />
@@ -291,6 +337,16 @@ export default function ServiceCommunicationsHub({
                 <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               {(isOperator || isAdmin) && (
+                <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  onClick={() => setShowAlertDialog(true)}
+                  data-testid="create-alert-btn"
+                >
+                  <Bell className="h-3 w-3" /> Send Alert
+                </Button>
                 <Button
                   size="sm"
                   className={`${c.accent} hover:opacity-90 text-white gap-1`}
@@ -299,6 +355,7 @@ export default function ServiceCommunicationsHub({
                 >
                   <Megaphone className="h-3 w-3" /> New Promotion
                 </Button>
+                </>
               )}
             </div>
           </div>
@@ -315,10 +372,19 @@ export default function ServiceCommunicationsHub({
               {promotions.map((promo) => (
                 <div key={promo.id} className={`p-4 rounded-xl ${c.light} ${c.border} border relative group`}>
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge className={`text-[10px] ${c.accent} text-white`}>
-                        {promoTypeLabels[promo.promotion_type] || promo.promotion_type}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge className={`text-[10px] ${promo.type === 'alert' ? 'bg-amber-500' : c.accent} text-white`}>
+                        {promo.type === 'alert' ? 'Alert' : promoTypeLabels[promo.promotion_type] || 'Promotion'}
                       </Badge>
+                      {promo.status && (
+                        <Badge variant="outline" className={`text-[10px] ${
+                          promo.status === 'pending_approval' ? 'border-amber-300 text-amber-700 bg-amber-50' :
+                          promo.status === 'approved' ? 'border-green-300 text-green-700 bg-green-50' :
+                          promo.status === 'rejected' ? 'border-red-300 text-red-700 bg-red-50' : ''
+                        }`}>
+                          {promo.status === 'pending_approval' ? 'Pending' : promo.status}
+                        </Badge>
+                      )}
                       {promo.discount_value && (
                         <Badge variant="outline" className="text-[10px]">
                           <Tag className="h-2.5 w-2.5 mr-1" />{promo.discount_value}
@@ -336,16 +402,21 @@ export default function ServiceCommunicationsHub({
                   </div>
                   <h4 className={`font-semibold text-sm mt-2 ${c.text}`}>{promo.title}</h4>
                   <p className="text-xs text-slate-600 mt-1 line-clamp-2">{promo.message}</p>
-                  <div className="flex items-center justify-between mt-3 text-[10px] text-slate-400">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
                       {promo.created_at ? formatDate(promo.created_at) : 'Just now'}
                     </span>
-                    {promo.valid_until && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Until {formatDate(promo.valid_until)}
-                      </span>
+                    {/* Admin approve/reject for pending promotions */}
+                    {isAdmin && promo.status === 'pending_approval' && (
+                      <div className="flex gap-1">
+                        <Button size="sm" className="h-6 text-[10px] bg-green-600 hover:bg-green-700 text-white px-2" onClick={() => approvePromotion(promo.id)}>
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] text-red-600 border-red-200 px-2" onClick={() => rejectPromotion(promo.id)}>
+                          Reject
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -419,7 +490,7 @@ export default function ServiceCommunicationsHub({
             </div>
             <div className={`p-3 ${c.light} rounded-lg ${c.border} border`}>
               <p className={`text-xs ${c.text}`}>
-                This promotion will be sent as a notification to all <strong>{subscriberCount}</strong> subscribers of your services.
+                Promotions require admin approval before sending to <strong>{subscriberCount}</strong> subscribers.
               </p>
             </div>
           </div>
@@ -427,7 +498,74 @@ export default function ServiceCommunicationsHub({
             <Button variant="outline" onClick={() => setShowPromoDialog(false)}>Cancel</Button>
             <Button onClick={createPromotion} disabled={submitting} className={`${c.accent} text-white`}>
               {submitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Send to {subscriberCount} subscribers
+              Submit for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Alert Dialog */}
+      <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-amber-600" />
+              Send Alert
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Send To</Label>
+              <select
+                value={alertForm.target_type}
+                onChange={(e) => setAlertForm(f => ({ ...f, target_type: e.target.value }))}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
+              >
+                <option value="subscribers">All Subscribers ({subscriberCount})</option>
+                <option value="specific_user">Specific User</option>
+              </select>
+            </div>
+            {alertForm.target_type === 'specific_user' && (
+              <div>
+                <Label>User ID</Label>
+                <Input
+                  value={alertForm.target_user_id}
+                  onChange={(e) => setAlertForm(f => ({ ...f, target_user_id: e.target.value }))}
+                  placeholder="Enter user ID or email"
+                  className="mt-1"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Title *</Label>
+              <Input
+                value={alertForm.title}
+                onChange={(e) => setAlertForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Order Update, Service Notice"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Message *</Label>
+              <Textarea
+                value={alertForm.message}
+                onChange={(e) => setAlertForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="Alert message..."
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs text-amber-700">
+                Alerts are sent immediately without approval. Use for urgent communications.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAlertDialog(false)}>Cancel</Button>
+            <Button onClick={sendAlert} disabled={submitting} className="bg-amber-600 hover:bg-amber-700 text-white">
+              {submitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Send Now
             </Button>
           </DialogFooter>
         </DialogContent>

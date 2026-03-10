@@ -16,7 +16,7 @@ import {
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
   MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
   Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
-  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText
+  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List
 } from 'lucide-react';
 import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 import { toast } from 'sonner';
@@ -789,6 +789,9 @@ function AdminRatingsView() {
   const [bulkAction, setBulkAction] = useState('');
   const [bulkReason, setBulkReason] = useState('');
   const [submittingBulk, setSubmittingBulk] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
     fetchAllRatings();
@@ -1126,9 +1129,9 @@ function AdminRatingsView() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 border-slate-200">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -1180,6 +1183,14 @@ function AdminRatingsView() {
             }}>
               <FileText className="h-4 w-4" /> Export
             </Button>
+            <div className="flex border rounded-lg overflow-hidden">
+              <button onClick={() => setViewMode('list')} className={`px-2.5 py-1.5 ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="list-view-btn">
+                <List className="h-4 w-4" />
+              </button>
+              <button onClick={() => setViewMode('grid')} className={`px-2.5 py-1.5 ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="grid-view-btn">
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1257,7 +1268,7 @@ function AdminRatingsView() {
 
       {/* Ratings List */}
       {filteredRatings.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed bg-gradient-to-r from-[#082c59]/5 to-slate-100">
           <CardContent className="py-16 text-center">
             <Star className="h-16 w-16 text-slate-300 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-slate-700 mb-2">No reviews found</h3>
@@ -1269,20 +1280,20 @@ function AdminRatingsView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {filteredRatings.map((review) => {
+        <>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}>
+          {filteredRatings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             const needsResponse = !review.operator_response;
             
             return (
-              <Card key={review.id} className={`overflow-hidden transition-all duration-300 hover:shadow-md ${review.is_flagged ? 'ring-2 ring-orange-300' : ''} ${review.is_hidden ? 'opacity-60' : ''}`}>
+              <Card key={review.id} className={`overflow-hidden transition-all duration-300 hover:shadow-md bg-gradient-to-r from-[#082c59]/[0.03] to-slate-50 ${review.is_flagged ? 'ring-2 ring-orange-300' : ''} ${review.is_hidden ? 'opacity-60' : ''}`}>
                 <CardContent className="p-0">
                   <div className="flex">
-                    <div className="w-1.5" style={{ backgroundColor: review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981' }}></div>
+                    <div className="w-1.5 flex-shrink-0" style={{ backgroundColor: review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981' }}></div>
                     
-                    {/* Checkbox column */}
-                    <div className="flex items-start p-4">
+                    <div className="flex items-start p-3">
                       <Checkbox 
                         checked={selectedRatings.has(review.id)}
                         onCheckedChange={(checked) => handleSelectRating(review.id, checked)}
@@ -1290,95 +1301,54 @@ function AdminRatingsView() {
                       />
                     </div>
                     
-                    <div className="flex-1 p-6 pl-0">{/* Header */}
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                            <User className="h-5 w-5 text-slate-500" />
+                    <div className={`flex-1 ${viewMode === 'grid' ? 'p-4 pl-0' : 'p-5 pl-0'}`}>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                            <User className="h-4 w-4 text-slate-500" />
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">{review.customer_name}</p>
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Clock className="h-3.5 w-3.5" />
-                              {formatDate(review.created_at)}
-                            </div>
+                            <p className="font-semibold text-sm text-slate-900">{review.customer_name}</p>
+                            <span className="text-[10px] text-slate-400">{formatDate(review.created_at)}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap justify-end">
-                          <Badge className="capitalize text-xs" style={{ backgroundColor: `${color}20`, color }}>
-                            <IconComponent className="h-3 w-3 mr-1" />
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <Badge className="capitalize text-[10px]" style={{ backgroundColor: `${color}20`, color }}>
+                            <IconComponent className="h-2.5 w-2.5 mr-0.5" />
                             {review.service_name}
                           </Badge>
-                          {review.operator_name && (
-                            <Badge variant="outline" className="text-xs">
-                              {review.operator_name}
-                            </Badge>
-                          )}
-                          {review.is_flagged && (
-                            <Badge className="bg-orange-100 text-orange-700 text-xs">
-                              <Flag className="h-3 w-3 mr-1" /> Flagged
-                            </Badge>
-                          )}
-                          {review.is_hidden && (
-                            <Badge className="bg-slate-100 text-slate-700 text-xs">
-                              <EyeOff className="h-3 w-3 mr-1" /> Hidden
-                            </Badge>
-                          )}
-                          {needsResponse && !review.is_flagged && (
-                            <Badge className="bg-amber-100 text-amber-700 text-xs">Needs Response</Badge>
-                          )}
+                          {review.is_flagged && <Badge className="bg-orange-100 text-orange-700 text-[10px]"><Flag className="h-2.5 w-2.5 mr-0.5" />Flagged</Badge>}
+                          {review.is_hidden && <Badge className="bg-slate-100 text-slate-700 text-[10px]"><EyeOff className="h-2.5 w-2.5 mr-0.5" />Hidden</Badge>}
                         </div>
                       </div>
 
-                      {/* Rating & Comment */}
-                      <div className="mb-4">
-                        <StarRating rating={review.rating} />
-                        <p className="text-slate-700 mt-3 leading-relaxed">{review.comment}</p>
-                      </div>
+                      <StarRating rating={review.rating} />
+                      <p className={`text-slate-700 mt-2 leading-relaxed ${viewMode === 'grid' ? 'text-xs line-clamp-3' : 'text-sm line-clamp-2'}`}>{review.comment}</p>
 
-                      {/* Operator Response */}
                       {review.operator_response && (
-                        <div className="mt-4 p-4 bg-emerald-50 rounded-lg border-l-4 border-emerald-500">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle className="h-4 w-4 text-emerald-600" />
-                            <span className="font-medium text-emerald-700 text-sm">
-                              Response from {review.operator_response.responder_name}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              • {formatDate(review.operator_response.responded_at)}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 text-sm">{review.operator_response.message}</p>
+                        <div className="mt-2 p-2.5 bg-emerald-50 rounded-lg border-l-3 border-emerald-500 text-xs">
+                          <span className="text-emerald-700 font-medium">{review.operator_response.responder_name}:</span>
+                          <span className="text-slate-600 ml-1">{review.operator_response.message}</span>
                         </div>
                       )}
 
-                      {/* Footer with Moderation Tools */}
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                          <ThumbsUp className="h-4 w-4" />
-                          {review.helpful_count || 0} helpful votes
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-xs text-slate-400">
+                          <ThumbsUp className="h-3 w-3" /> {review.helpful_count || 0}
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {review.is_flagged ? (
-                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'unflag')} className="text-green-600 hover:bg-green-50">
-                              <CheckCircle className="h-4 w-4 mr-1" /> Unflag
-                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'unflag')} className="h-7 text-[10px] text-green-600 hover:bg-green-50 px-2">Unflag</Button>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'flag')} className="text-orange-600 hover:bg-orange-50">
-                              <Flag className="h-4 w-4 mr-1" /> Flag
-                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'flag')} className="h-7 text-[10px] text-orange-600 hover:bg-orange-50 px-2">Flag</Button>
                           )}
                           {review.is_hidden ? (
-                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'unhide')} className="text-blue-600 hover:bg-blue-50">
-                              <Eye className="h-4 w-4 mr-1" /> Show
-                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'unhide')} className="h-7 text-[10px] text-blue-600 hover:bg-blue-50 px-2">Show</Button>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'hide')} className="text-slate-600 hover:bg-slate-50">
-                              <EyeOff className="h-4 w-4 mr-1" /> Hide
-                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'hide')} className="h-7 text-[10px] text-slate-600 hover:bg-slate-50 px-2">Hide</Button>
                           )}
-                          <Button variant="outline" size="sm" onClick={() => handleModerate(review, 'delete')} className="text-red-600 hover:bg-red-50">
-                            <Trash2 className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'delete')} className="h-7 text-[10px] text-red-600 hover:bg-red-50 px-2">
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
@@ -1389,11 +1359,27 @@ function AdminRatingsView() {
             );
           })}
         </div>
+        {/* Pagination */}
+        {filteredRatings.length > ITEMS_PER_PAGE && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-sm text-slate-500">
+              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredRatings.length)} of {filteredRatings.length}
+            </span>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.ceil(filteredRatings.length / ITEMS_PER_PAGE) }, (_, i) => (
+                <button key={i} onClick={() => setPage(i + 1)} className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`} data-testid={`page-${i + 1}`}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Moderation Dialog */}
       <Dialog open={showModerateDialog} onOpenChange={setShowModerateDialog}>
-        <DialogContent className="bg-white max-w-md">
+        <DialogContent className="bg-gradient-to-br from-slate-50 to-[#082c59]/5 border-slate-200 max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-orange-500" />
@@ -1451,7 +1437,7 @@ function AdminRatingsView() {
 
       {/* Bulk Action Dialog */}
       <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
-        <DialogContent className="bg-white max-w-md">
+        <DialogContent className="bg-gradient-to-br from-slate-50 to-[#082c59]/5 border-slate-200 max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-orange-500" />

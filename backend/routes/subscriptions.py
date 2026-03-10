@@ -28,6 +28,16 @@ class PromotionCreate(BaseModel):
     image_url: Optional[str] = None
 
 
+class AlertCreate(BaseModel):
+    title: str
+    message: str
+    target_type: str = "subscribers"  # subscribers, specific_user
+    target_user_id: Optional[str] = None
+    target_user_name: Optional[str] = None
+    service_type: Optional[str] = None
+    related_order_id: Optional[str] = None
+
+
 @router.post("/subscribe")
 async def subscribe_to_operator(
     data: SubscribeRequest,
@@ -171,29 +181,100 @@ async def get_operator_subscribers(
     return {"subscribers": subs, "total": total}
 
 
-# ---- Promotions / Alerts ----
+# ---- Alerts (immediate, on-demand) ----
+
+@router.post("/alerts")
+async def create_alert(
+    data: AlertCreate,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Operator sends an on-demand alert to subscribers or a specific user."""
+    db = get_database()
+
+    operator_id = current_user.get("operator_id")
+    if not operator_id:
+        raise HTTPException(400, "No operator linked to your account")
+
+    op = await db.operators.find_one({"_id": operator_id})
+    operator_name = op.get("name", "Unknown") if op else "Unknown"
+
+    alert_id = str(uuid.uuid4())
+    alert = {
+        "_id": alert_id,
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "title": data.title,
+        "message": data.message,
+        "target_type": data.target_type,
+        "target_user_id": data.target_user_id,
+        "target_user_name": data.target_user_name,
+        "service_type": data.service_type,
+        "related_order_id": data.related_order_id,
+        "created_by": current_user.get("_id") or current_user.get("id"),
+        "created_by_name": current_user.get("full_name", ""),
+        "created_at": datetime.now(timezone.utc),
+        "type": "alert",
+    }
+    await db.promotions.insert_one(alert)
+
+    # Send notifications immediately
+    notifications = []
+    if data.target_type == "specific_user" and data.target_user_id:
+        notifications.append({
+            "_id": str(uuid.uuid4()),
+            "user_id": data.target_user_id,
+            "title": f"Alert from {operator_name}: {data.title}",
+            "message": data.message,
+            "type": "operator_alert",
+            "source": "operator_alert",
+            "operator_id": operator_id,
+            "operator_name": operator_name,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+    else:
+        subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
+        for sub in subscribers:
+            notifications.append({
+                "_id": str(uuid.uuid4()),
+                "user_id": sub["user_id"],
+                "title": f"Alert from {operator_name}: {data.title}",
+                "message": data.message,
+                "type": "operator_alert",
+                "source": "operator_alert",
+                "operator_id": operator_id,
+                "operator_name": operator_name,
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc),
+            })
+
+    if notifications:
+        await db.notifications.insert_many(notifications)
+
+    return {
+        "message": f"Alert sent to {len(notifications)} user(s)",
+        "alert_id": alert_id,
+        "notified_count": len(notifications),
+    }
+
+
+# ---- Promotions (require approval) ----
 
 @router.post("/promotions")
 async def create_promotion(
     data: PromotionCreate,
     current_user: dict = Depends(get_current_active_user),
 ):
-    """Operator creates a promotion/alert that pushes notifications to subscribers."""
+    """Operator creates a promotion that requires admin approval before sending."""
     db = get_database()
-
-    # Only operators can create promotions
-    if current_user.get("role") not in ("operator",):
-        raise HTTPException(403, "Only operators can create promotions")
 
     operator_id = current_user.get("operator_id")
     if not operator_id:
         raise HTTPException(400, "No operator linked to your account")
 
-    # Get operator name
     op = await db.operators.find_one({"_id": operator_id})
     operator_name = op.get("name", "Unknown") if op else "Unknown"
 
-    # Create promotion record
     promo_id = str(uuid.uuid4())
     valid_until = None
     if data.valid_until:
@@ -216,25 +297,60 @@ async def create_promotion(
         "created_by": current_user.get("_id") or current_user.get("id"),
         "created_by_name": current_user.get("full_name", ""),
         "created_at": datetime.now(timezone.utc),
-        "status": "active",
+        "status": "pending_approval",
+        "type": "promotion",
     }
     await db.promotions.insert_one(promotion)
 
-    # Push notifications to all subscribers
-    subscribers = await db.subscriptions.find(
-        {"operator_id": operator_id}
-    ).to_list(10000)
+    return {
+        "message": "Promotion submitted for approval",
+        "promotion_id": promo_id,
+        "status": "pending_approval",
+    }
+
+
+@router.put("/promotions/{promotion_id}/approve")
+async def approve_promotion(
+    promotion_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Admin/Super Admin approves a promotion and sends notifications to subscribers."""
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(403, "Only admins can approve promotions")
+
+    db = get_database()
+
+    promo = await db.promotions.find_one({"_id": promotion_id})
+    if not promo:
+        raise HTTPException(404, "Promotion not found")
+    if promo.get("status") != "pending_approval":
+        raise HTTPException(400, f"Promotion is already {promo.get('status')}")
+
+    await db.promotions.update_one(
+        {"_id": promotion_id},
+        {"$set": {
+            "status": "approved",
+            "approved_by": current_user.get("_id"),
+            "approved_by_name": current_user.get("full_name", ""),
+            "approved_at": datetime.now(timezone.utc),
+        }}
+    )
+
+    # Send notifications to subscribers
+    operator_id = promo.get("operator_id")
+    operator_name = promo.get("operator_name", "Operator")
+    subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
 
     notifications = []
     for sub in subscribers:
         notifications.append({
             "_id": str(uuid.uuid4()),
             "user_id": sub["user_id"],
-            "title": f"New from {operator_name}: {data.title}",
-            "message": data.message,
+            "title": f"New from {operator_name}: {promo['title']}",
+            "message": promo.get("message", ""),
             "type": "promotion",
             "source": "operator_promotion",
-            "promotion_id": promo_id,
+            "promotion_id": promotion_id,
             "operator_id": operator_id,
             "operator_name": operator_name,
             "is_read": False,
@@ -245,20 +361,47 @@ async def create_promotion(
         await db.notifications.insert_many(notifications)
 
     return {
-        "message": f"Promotion created and sent to {len(subscribers)} subscribers",
-        "promotion_id": promo_id,
+        "message": f"Promotion approved and sent to {len(subscribers)} subscribers",
         "notified_count": len(subscribers),
     }
+
+
+@router.put("/promotions/{promotion_id}/reject")
+async def reject_promotion(
+    promotion_id: str,
+    reason: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Admin/Super Admin rejects a promotion."""
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(403, "Only admins can reject promotions")
+
+    db = get_database()
+    result = await db.promotions.update_one(
+        {"_id": promotion_id},
+        {"$set": {
+            "status": "rejected",
+            "rejected_by": current_user.get("_id"),
+            "rejected_by_name": current_user.get("full_name", ""),
+            "rejected_at": datetime.now(timezone.utc),
+            "rejection_reason": reason,
+        }}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Promotion not found")
+
+    return {"message": "Promotion rejected"}
 
 
 @router.get("/promotions")
 async def get_promotions(
     operator_id: Optional[str] = None,
+    status: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """Get promotions created by operator."""
+    """Get promotions and alerts. Operators see their own; admins see all."""
     db = get_database()
 
     op_id = operator_id
@@ -268,13 +411,19 @@ async def get_promotions(
     query = {}
     if op_id:
         query["operator_id"] = op_id
+    if status:
+        query["status"] = status
 
     promos = await db.promotions.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     for p in promos:
         p["id"] = str(p.pop("_id", ""))
 
     total = await db.promotions.count_documents(query)
-    return {"promotions": promos, "total": total}
+
+    # Count pending approvals (for admins)
+    pending_count = await db.promotions.count_documents({"status": "pending_approval"})
+
+    return {"promotions": promos, "total": total, "pending_approval_count": pending_count}
 
 
 @router.delete("/promotions/{promotion_id}")
