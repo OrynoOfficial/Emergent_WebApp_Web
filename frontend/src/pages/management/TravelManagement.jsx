@@ -23,6 +23,7 @@ import PermissionGate from '@/components/common/PermissionGate';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import SeatLayoutEditor from '@/components/travel/SeatLayoutEditor';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 
 // Travel-specific components
 import { RouteForm, VehicleForm, ViewDetailsDialog } from '@/components/management/travel';
@@ -53,65 +54,7 @@ const AMENITY_ICONS = {
   tv_screen: Tv, reclining_seats: Armchair, refreshments: Coffee
 };
 
-// Dashboard data generator hook
-const useTravelDashboardData = (routes, vehicles) => {
-  return useMemo(() => {
-    const activeRoutes = routes.filter(r => r.status === 'active');
-    const activeVehicles = vehicles.filter(v => v.maintenance_status === 'active');
-    const totalRevenue = activeRoutes.reduce((sum, r) => sum + (r.price || 0) * 10, 0);
-    const avgOccupancy = activeRoutes.length > 0 
-      ? Math.round(activeRoutes.reduce((sum, r) => {
-          const occupied = (r.total_seats || 0) - (r.available_seats || 0);
-          return sum + (r.total_seats > 0 ? (occupied / r.total_seats) * 100 : 0);
-        }, 0) / activeRoutes.length)
-      : 0;
-
-    const routeDistribution = ['normal', 'vip', 'luxury'].map((type, i) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      count: routes.filter(r => r.vehicle_type === type).length,
-      color: CHART_COLORS[i]
-    })).filter(d => d.count > 0);
-
-    // Calculate real stats based on routes (no mock data)
-    const totalBookings = routes.reduce((sum, r) => sum + (r.booking_count || 0), 0);
-    const avgRating = routes.length > 0 
-      ? routes.reduce((sum, r) => sum + (r.average_rating || 0), 0) / routes.length 
-      : 0;
-
-    // Daily trend - only show if there's actual data
-    const dailyTrend = routes.length > 0 ? [
-      { date: 'Mon', bookings: Math.round(totalBookings * 0.1), revenue: Math.round(totalRevenue * 0.1) },
-      { date: 'Tue', bookings: Math.round(totalBookings * 0.12), revenue: Math.round(totalRevenue * 0.12) },
-      { date: 'Wed', bookings: Math.round(totalBookings * 0.11), revenue: Math.round(totalRevenue * 0.11) },
-      { date: 'Thu', bookings: Math.round(totalBookings * 0.14), revenue: Math.round(totalRevenue * 0.14) },
-      { date: 'Fri', bookings: Math.round(totalBookings * 0.18), revenue: Math.round(totalRevenue * 0.18) },
-      { date: 'Sat', bookings: Math.round(totalBookings * 0.2), revenue: Math.round(totalRevenue * 0.2) },
-      { date: 'Sun', bookings: Math.round(totalBookings * 0.15), revenue: Math.round(totalRevenue * 0.15) }
-    ] : [];
-
-    return {
-      stats: {
-        totalItems: routes.length,
-        activeItems: activeRoutes.length,
-        totalBookings: totalBookings,
-        totalRevenue,
-        avgRating: Math.round(avgRating * 10) / 10,
-        occupancyRate: avgOccupancy,
-        bookingsGrowth: 0,
-        revenueGrowth: 0
-      },
-      bookingsByStatus: {
-        confirmed: Math.round(totalBookings * 0.5),
-        pending: Math.round(totalBookings * 0.15),
-        cancelled: Math.round(totalBookings * 0.05),
-        completed: Math.round(totalBookings * 0.3)
-      },
-      dailyTrend,
-      distribution: routeDistribution,
-      secondaryCount: activeVehicles.length
-    };
-  }, [routes, vehicles]);
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 // Analytics Section Component for Dashboard
 const TravelAnalyticsSection = ({ routes, vehicles }) => {
@@ -465,7 +408,7 @@ export default function TravelManagement() {
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
-  const dashboardData = useTravelDashboardData(routes, vehicles);
+  const dashboardData = useRealDashboardData('travel');
 
   // Filtered data
   const filteredRoutes = useMemo(() => {

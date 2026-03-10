@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 const CUSTOMER_SETTINGS_SECTIONS = [
   { key: 'profile', label: 'Profile', icon: User, description: 'Manage your personal information' },
   { key: 'favourites', label: 'Favourites', icon: Heart, description: 'Your saved services and items' },
+  { key: 'subscriptions', label: 'Subscriptions', icon: Bell, description: 'Operators you follow for promotions' },
   { key: 'location', label: 'Location', icon: MapPin, description: 'Set your country for local services' },
   { key: 'security', label: 'Security', icon: Shield, description: 'Password and authentication settings' },
   { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
@@ -135,6 +136,65 @@ function FavouritesSection() {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubscriptionsSection() {
+  const [subs, setSubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get('/subscriptions/my');
+        setSubs(res.data.subscriptions || []);
+      } catch { setSubs([]); }
+      finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
+  const unsubscribe = async (operatorId) => {
+    try {
+      await api.post('/subscriptions/unsubscribe', { operator_id: operatorId });
+      setSubs(prev => prev.filter(s => s.operator_id !== operatorId));
+      toast.success('Unsubscribed');
+    } catch { toast.error('Failed to unsubscribe'); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-bold text-slate-900 mb-1">Your Subscriptions</h3>
+        <p className="text-sm text-slate-500">{subs.length} operator{subs.length !== 1 ? 's' : ''} you follow for promotions and updates</p>
+      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+      ) : subs.length === 0 ? (
+        <div className="text-center py-12 bg-slate-50 rounded-xl">
+          <Bell className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium">No subscriptions yet</p>
+          <p className="text-sm text-slate-400 mt-1">Subscribe to operators on service pages to receive their promotions</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {subs.map((sub, i) => (
+            <div key={i} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:shadow-sm transition-shadow" data-testid={`sub-item-${sub.operator_id}`}>
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-violet-500 flex items-center justify-center text-white font-bold text-lg">
+                {(sub.operator_name || 'O').charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-slate-900">{sub.operator_name || 'Operator'}</p>
+                <p className="text-xs text-slate-500 mt-0.5">Subscribed {sub.created_at ? new Date(sub.created_at).toLocaleDateString() : ''}</p>
+              </div>
+              <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50" onClick={() => unsubscribe(sub.operator_id)}>
+                Unsubscribe
+              </Button>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -707,6 +767,9 @@ export default function Settings() {
 
       case 'favourites':
         return <FavouritesSection />;
+
+      case 'subscriptions':
+        return <SubscriptionsSection />;
 
       case 'location':
         return (

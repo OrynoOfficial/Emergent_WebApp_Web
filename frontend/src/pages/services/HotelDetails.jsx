@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -601,10 +602,13 @@ export default function HotelDetails() {
               {/* Hotel Header */}
               <div>
                 <h1 className="text-4xl font-bold text-slate-900">{hotel.name}</h1>
-                <div className="flex items-center gap-2 mt-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className={`h-5 w-5 ${i < hotel.star_rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`} />
-                  ))}
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-5 w-5 ${i < hotel.star_rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`} />
+                    ))}
+                  </div>
+                  <SubscribeButton operatorId={hotel.operator_id} operatorName={hotel.operator_name || hotel.name} />
                 </div>
                 
                 {/* Policy Tags */}

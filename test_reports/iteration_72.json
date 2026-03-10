@@ -1,0 +1,82 @@
+{
+  "summary": "Iteration 72: Tested dashboard stats API and subscriptions/promotions system. All backend APIs pass (25/25 tests). Frontend verified: Hotel Management shows real data (16 hotels, 39 rooms, 715K FCFA revenue), Communications tab has modern UI with Subscribers/Tickets/Promotions sections, Settings page has Subscriptions section with unsubscribe functionality. SubscribeButton is integrated in HotelDetails.jsx.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/subscriptions/promotions",
+        "issue": "Users with operator_id can create promotions regardless of role (customer@test.com has operator_id='Prestige Pressing' assigned). This is design-by-behavior but may need role check.",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Hotel Dashboard",
+        "issues": ["Chart component shows warnings about width/height being -1 in console (non-blocking)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_subscriptions_dashboard_iteration72.py",
+    "/app/test_reports/pytest/pytest_results_iteration72.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "management_dashboard.py: Real operator-scoped stats working correctly - pulls from orders, ratings collections",
+    "subscriptions.py: Subscribe/unsubscribe/check/my/operator-count all working",
+    "ServiceCommunicationsHub.jsx: Modern UI with Subscribers count, Open Tickets, Promotions Sent stats cards",
+    "Settings.jsx: SubscriptionsSection component properly shows user subscriptions with unsubscribe button",
+    "HotelDetails.jsx line 611: SubscribeButton integrated next to star rating"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_subscriptions_dashboard_iteration72.py"
+  ],
+  "success_rate": {
+    "backend": "100% (25/25 tests passed)",
+    "frontend": "100% (Dashboard, Communications, Settings Subscriptions verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@test.com / testpassword123",
+    "operator": "operator@test.com / testpassword123",
+    "customer": "customer@test.com / testpassword123",
+    "superadmin": "superadmin@oryno.com / testpassword123"
+  },
+  "seed_data_creation": "Used existing data, created TEST_ prefixed subscriptions (cleaned up)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dashboard stats now use useRealDashboardData hook that calls /api/management/dashboard-stats. Communications tab uses ServiceCommunicationsHub component. Settings page has Subscriptions section for customers. SubscribeButton component exists on hotel detail pages. API rate limiting (429) observed during rapid testing but not a code issue.",
+  "features_tested": {
+    "dashboard_stats_api": {
+      "status": "PASS",
+      "details": "GET /api/management/dashboard-stats returns real stats from orders/ratings collections"
+    },
+    "subscriptions_api": {
+      "status": "PASS",
+      "details": "Subscribe, unsubscribe, check, my, operator-count all working"
+    },
+    "promotions_api": {
+      "status": "PASS",
+      "details": "List and create promotions working (sends notifications to subscribers)"
+    },
+    "hotel_dashboard_ui": {
+      "status": "PASS",
+      "details": "Shows 16 Hotels, 39 Rooms, 715K FCFA revenue, 3 bookings, 5★ rating"
+    },
+    "hotel_communications_ui": {
+      "status": "PASS",
+      "details": "Shows Subscribers (0), Open Tickets (2), Promotions Sent (5), New Promotion button"
+    },
+    "settings_subscriptions_section": {
+      "status": "PASS",
+      "details": "Customer settings shows 'Your Subscriptions' with list and Unsubscribe buttons"
+    },
+    "subscribe_button_hotel_details": {
+      "status": "PASS",
+      "details": "SubscribeButton component integrated in HotelDetails.jsx at line 611"
+    }
+  }
+}

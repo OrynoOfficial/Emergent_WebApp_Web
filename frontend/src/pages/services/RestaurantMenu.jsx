@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const MENU_CATEGORIES = ['all', 'starters', 'mains', 'desserts', 'drinks', 'specials'];
 
@@ -148,7 +149,7 @@ export default function RestaurantMenu() {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold tracking-tight">{restaurant.name}</h1>
               <div className="flex items-center gap-4 text-sm text-white/70 mt-1">
                 <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {restaurant.city}</span>
@@ -156,6 +157,7 @@ export default function RestaurantMenu() {
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatOpeningHours(restaurant.opening_hours)}</span>
               </div>
             </div>
+            <SubscribeButton operatorId={restaurant.operator_id} operatorName={restaurant.operator_name || restaurant.name} />
           </div>
         </div>
       </div>

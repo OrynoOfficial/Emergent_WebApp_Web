@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import { toast } from 'sonner';
 
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+
 // Shared management components
 import { Pagination, EmptyState, ConfirmDialog } from '@/components/management/shared';
 
@@ -44,60 +46,7 @@ const DEFAULT_ROOM_FORM = {
   size_sqm: 25, total_rooms: 1, available_rooms: 1, images: []
 };
 
-// Dashboard data generator
-const useDashboardData = (hotels, rooms) => {
-  return useMemo(() => {
-    const totalHotels = hotels.length;
-    const totalRooms = rooms.length;
-    const totalRevenue = hotels.reduce((sum, h) => sum + (h.total_revenue || 0), 0) || hotels.length * 500000;
-    const avgRating = hotels.length > 0
-      ? (hotels.reduce((sum, h) => sum + (h.star_rating || 3), 0) / hotels.length).toFixed(1)
-      : 3.5;
-
-    // Room type distribution
-    const roomTypeCount = {};
-    rooms.forEach(r => {
-      const type = r.room_type || 'standard';
-      roomTypeCount[type] = (roomTypeCount[type] || 0) + 1;
-    });
-    const distribution = Object.entries(roomTypeCount).map(([type, count]) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1), count
-    }));
-
-    // Daily trend (deterministic based on hotels count)
-    const baseTrend = hotels.length || 1;
-    const dailyTrend = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => ({
-      date: day,
-      bookings: baseTrend * 4 + (i * 3) + 12,
-      revenue: (baseTrend * 4 + (i * 3) + 12) * 35000
-    }));
-
-    // Bookings by status
-    const baseBookings = hotels.length || 1;
-
-    return {
-      stats: {
-        totalItems: totalHotels,
-        activeItems: totalHotels,
-        avgRating: parseFloat(avgRating),
-        totalRevenue,
-        totalBookings: baseBookings * 15 + 50,
-        occupancyRate: 75,
-        bookingsGrowth: 12.5,
-        revenueGrowth: 8.3
-      },
-      bookingsByStatus: {
-        confirmed: baseBookings * 3 + 10,
-        pending: baseBookings * 2 + 5,
-        completed: baseBookings * 5 + 20,
-        cancelled: baseBookings + 2
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: totalRooms
-    };
-  }, [hotels, rooms]);
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 export default function HotelManagement() {
   const { user } = useAuth();
@@ -140,7 +89,7 @@ export default function HotelManagement() {
   const [editingRoom, setEditingRoom] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const dashboardData = useDashboardData(hotels, rooms);
+  const dashboardData = useRealDashboardData('hotels');
 
   // Filtered hotels
   const filteredHotels = useMemo(() => {

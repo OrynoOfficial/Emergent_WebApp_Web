@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -50,59 +51,7 @@ const DEFAULT_BANQUET_FORM = {
 };
 
 // Banquet specific dashboard data generator
-const useBanquetDashboardData = (banquets) => {
-  return useMemo(() => {
-    const totalBanquets = banquets.length;
-    const totalCapacity = banquets.reduce((sum, b) => sum + (b.capacity_max || b.capacity || 200), 0);
-    const totalRevenue = banquets.reduce((sum, b) => sum + (b.base_price || 0) * 5, 0);
-
-    // Type distribution
-    const typeCount = {};
-    banquets.forEach(b => {
-      const type = b.venue_type || 'hall';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    // Daily trend - fixed data
-    const dailyTrend = [
-      { date: 'Mon', bookings: 3, revenue: 450000 },
-      { date: 'Tue', bookings: 2, revenue: 320000 },
-      { date: 'Wed', bookings: 4, revenue: 580000 },
-      { date: 'Thu', bookings: 3, revenue: 420000 },
-      { date: 'Fri', bookings: 6, revenue: 920000 },
-      { date: 'Sat', bookings: 8, revenue: 1350000 },
-      { date: 'Sun', bookings: 5, revenue: 780000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalBanquets,
-        activeItems: totalBanquets,
-        totalBookings: totalBanquets * 4 + 15,
-        totalRevenue: totalRevenue || totalBanquets * 850000,
-        avgRating: 4.6,
-        occupancyRate: 78,
-        bookingsGrowth: 24.5,
-        revenueGrowth: 19.8
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(18, totalBanquets * 2),
-        pending: Math.max(6, totalBanquets),
-        cancelled: 2,
-        completed: Math.max(12, totalBanquets)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: totalCapacity,
-      recentBookings: []
-    };
-  }, [banquets])
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 // Business Analytics Component
 const BusinessAnalytics = ({ banquets }) => {
@@ -160,7 +109,7 @@ export default function BanquetManagement() {
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
 
   // Use the banquet dashboard data hook
-  const dashboardData = useBanquetDashboardData(banquets);
+  const dashboardData = useRealDashboardData('banquets');
 
   const handleViewBanquet = (banquet) => {
     setViewingBanquet(banquet);

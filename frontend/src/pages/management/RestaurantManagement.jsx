@@ -27,6 +27,7 @@ import { RestaurantForm, MenuItemForm } from '@/components/management/restaurant
 // Service components
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 
 const ITEMS_PER_PAGE = 8;
 const PRICE_RANGE_LABELS = { budget: '$', moderate: '$$', upscale: '$$$', fine_dining: '$$$$' };
@@ -50,53 +51,7 @@ const DEFAULT_MENU_ITEM = {
 };
 
 // Dashboard data generator
-const useDashboardData = (restaurants, menuItems) => {
-  return useMemo(() => {
-    const activeRestaurants = restaurants.filter(r => r.status === 'active');
-    const totalMenuItems = menuItems?.length || 0;
-    const totalRevenue = restaurants.reduce((sum, r) => sum + (r.total_revenue || 0), 0);
-    const avgRating = restaurants.length > 0
-      ? (restaurants.reduce((sum, r) => sum + (r.rating || 4.2), 0) / restaurants.length).toFixed(1)
-      : 4.2;
-
-    const cuisineCount = {};
-    restaurants.forEach(r => {
-      (r.cuisine_type || ['local']).forEach(c => {
-        cuisineCount[c] = (cuisineCount[c] || 0) + 1;
-      });
-    });
-    const distribution = Object.entries(cuisineCount).slice(0, 5).map(([type, count]) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1), count
-    }));
-
-    const baseTrend = restaurants.length || 1;
-    const dailyTrend = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => ({
-      name: day, reservations: baseTrend * 3 + (i * 2) + 10
-    }));
-
-    const baseBookings = restaurants.length || 1;
-    
-    return {
-      stats: {
-        totalItems: restaurants.length,
-        activeItems: activeRestaurants.length,
-        avgRating: parseFloat(avgRating),
-        totalRevenue: totalRevenue || restaurants.length * 350000,
-        pendingBookings: baseBookings * 2 + 5,
-        completedToday: baseBookings + 3
-      },
-      bookingsByStatus: {
-        confirmed: baseBookings * 3 + 10,
-        pending: baseBookings * 2 + 5,
-        completed: baseBookings * 5 + 20,
-        cancelled: baseBookings + 2
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: totalMenuItems
-    };
-  }, [restaurants, menuItems]);
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 // Modern Restaurant Card Component
 const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, canDelete, isSelected = false, isOtherSelected = false }) => {
@@ -303,7 +258,7 @@ export default function RestaurantManagement() {
   const [editingMenuItem, setEditingMenuItem] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const dashboardData = useDashboardData(restaurants, menuItems);
+  const dashboardData = useRealDashboardData('restaurants');
 
   // Load restaurants
   const loadRestaurants = useCallback(async () => {

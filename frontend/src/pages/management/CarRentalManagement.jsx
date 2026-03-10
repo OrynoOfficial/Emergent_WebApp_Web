@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -38,57 +39,7 @@ const DEFAULT_CAR_FORM = {
 };
 
 // Car Rental specific dashboard data generator
-const useCarRentalDashboardData = (cars) => {
-  return useMemo(() => {
-    const totalCars = cars.length;
-    const availableCars = cars.filter(c => c.is_available).length;
-    const totalRevenue = cars.reduce((sum, c) => sum + (c.price_per_day || 0) * 8, 0);
-    const utilization = totalCars > 0 ? Math.round(((totalCars - availableCars) / totalCars) * 100) : 0;
-
-    const typeCount = {};
-    cars.forEach(c => {
-      const type = c.car_type || 'sedan';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    const dailyTrend = [
-      { date: 'Mon', bookings: 12, revenue: 180000 },
-      { date: 'Tue', bookings: 15, revenue: 220000 },
-      { date: 'Wed', bookings: 18, revenue: 280000 },
-      { date: 'Thu', bookings: 22, revenue: 350000 },
-      { date: 'Fri', bookings: 28, revenue: 450000 },
-      { date: 'Sat', bookings: 35, revenue: 580000 },
-      { date: 'Sun', bookings: 25, revenue: 420000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalCars,
-        activeItems: availableCars,
-        totalBookings: totalCars * 6 + 25,
-        totalRevenue: totalRevenue || totalCars * 180000,
-        avgRating: 4.3,
-        occupancyRate: utilization,
-        bookingsGrowth: 18.5,
-        revenueGrowth: 14.2
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(28, totalCars * 3),
-        pending: Math.max(8, totalCars),
-        cancelled: 2,
-        completed: Math.max(22, totalCars * 2)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: availableCars
-    };
-  }, [cars]);
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 // Analytics Section for Dashboard
 const CarRentalAnalyticsSection = ({ cars }) => {
@@ -339,7 +290,7 @@ export default function CarRentalManagement() {
   const [editingCar, setEditingCar] = useState(null);
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
-  const dashboardData = useCarRentalDashboardData(cars);
+  const dashboardData = useRealDashboardData('car_rental');
 
   // Filtered cars
   const filteredCars = useMemo(() => {

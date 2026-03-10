@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -54,61 +55,7 @@ const DEFAULT_PACKAGE_FORM = {
 };
 
 // Package specific dashboard data generator
-const usePackageDashboardData = (packages) => {
-  return useMemo(() => {
-    const totalPackages = packages.length;
-    const avgDuration = packages.length > 0
-      ? Math.round(packages.reduce((sum, p) => sum + (p.duration_days || 3), 0) / packages.length)
-      : 3;
-    const totalRevenue = packages.reduce((sum, p) => sum + (p.base_price || 0) * 3, 0);
-
-    // Type distribution
-    const typeCount = {};
-    packages.forEach(p => {
-      const type = p.package_type || 'tour';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    // Daily trend - fixed data
-    const dailyTrend = [
-      { date: 'Mon', bookings: 5, revenue: 1250000 },
-      { date: 'Tue', bookings: 8, revenue: 2150000 },
-      { date: 'Wed', bookings: 6, revenue: 1650000 },
-      { date: 'Thu', bookings: 10, revenue: 2850000 },
-      { date: 'Fri', bookings: 12, revenue: 3450000 },
-      { date: 'Sat', bookings: 15, revenue: 4250000 },
-      { date: 'Sun', bookings: 9, revenue: 2550000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalPackages,
-        activeItems: totalPackages,
-        totalBookings: totalPackages * 6 + 20,
-        totalRevenue: totalRevenue || totalPackages * 1500000,
-        avgRating: 4.7,
-        occupancyRate: 82,
-        bookingsGrowth: 28.3,
-        revenueGrowth: 22.6
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(22, totalPackages * 3),
-        pending: Math.max(8, totalPackages),
-        cancelled: 3,
-        completed: Math.max(18, totalPackages * 2)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: avgDuration,
-      recentBookings: []
-    };
-  }, [packages])
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 const BusinessAnalytics = ({ packages }) => {
   const analyticsData = useMemo(() => {
@@ -165,7 +112,7 @@ export default function PackageManagement() {
   const [packageForm, setPackageForm] = useState(DEFAULT_PACKAGE_FORM);
 
   // Use the package dashboard data hook
-  const dashboardData = usePackageDashboardData(packages);
+  const dashboardData = useRealDashboardData('packages');
 
   const handleViewPackage = (pkg) => {
     setViewingPackage(pkg);

@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -50,59 +51,7 @@ const DEFAULT_PRESSING_FORM = {
 };
 
 // Laundry specific dashboard data generator
-const useLaundryDashboardData = (pressings) => {
-  return useMemo(() => {
-    const totalShops = pressings.length;
-    const totalRevenue = pressings.reduce((sum, p) => sum + (p.price_per_kg || 0) * 50, 0);
-
-    // Services distribution
-    const serviceCount = {};
-    pressings.forEach(p => {
-      (p.services || []).forEach(s => {
-        serviceCount[s] = (serviceCount[s] || 0) + 1;
-      });
-    });
-    const distribution = Object.entries(serviceCount).slice(0, 5).map(([type, count], i) => ({
-      type: type.replace('_', ' ').charAt(0).toUpperCase() + type.replace('_', ' ').slice(1),
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    // Daily trend - fixed data
-    const dailyTrend = [
-      { date: 'Mon', bookings: 35, revenue: 85000 },
-      { date: 'Tue', bookings: 42, revenue: 105000 },
-      { date: 'Wed', bookings: 38, revenue: 92000 },
-      { date: 'Thu', bookings: 48, revenue: 120000 },
-      { date: 'Fri', bookings: 55, revenue: 145000 },
-      { date: 'Sat', bookings: 62, revenue: 165000 },
-      { date: 'Sun', bookings: 28, revenue: 68000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalShops,
-        activeItems: totalShops,
-        totalBookings: totalShops * 15 + 45,
-        totalRevenue: totalRevenue || totalShops * 250000,
-        avgRating: 4.4,
-        occupancyRate: 94,
-        bookingsGrowth: 22.3,
-        revenueGrowth: 18.6
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(42, totalShops * 5),
-        pending: Math.max(15, totalShops * 2),
-        cancelled: 3,
-        completed: Math.max(35, totalShops * 4)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: Object.keys(serviceCount).length,
-      recentBookings: []
-    };
-  }, [pressings]);
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 const BusinessAnalytics = ({ pressings }) => {
   const analyticsData = useMemo(() => {
@@ -159,7 +108,7 @@ export default function LaundryManagement() {
   const [pressingForm, setPressingForm] = useState(DEFAULT_PRESSING_FORM);
 
   // Use the laundry dashboard data hook
-  const dashboardData = useLaundryDashboardData(pressings);
+  const dashboardData = useRealDashboardData('laundry');
 
   const handleViewPressing = (pressing) => {
     setViewingPressing(pressing);

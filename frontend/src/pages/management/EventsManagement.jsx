@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -52,60 +53,7 @@ const DEFAULT_EVENT_FORM = {
 };
 
 // Events specific dashboard data generator
-const useEventsDashboardData = (events) => {
-  return useMemo(() => {
-    const totalEvents = events.length;
-    const upcomingEvents = events.filter(e => new Date(e.start_date || e.date) > new Date()).length;
-    const totalCapacity = events.reduce((sum, e) => sum + (e.total_capacity || e.capacity || 100), 0);
-    const totalRevenue = events.reduce((sum, e) => sum + (e.ticket_price || 15000) * 50, 0);
-
-    // Type distribution
-    const typeCount = {};
-    events.forEach(e => {
-      const type = e.event_type || e.type || 'other';
-      typeCount[type] = (typeCount[type] || 0) + 1;
-    });
-    const distribution = Object.entries(typeCount).slice(0, 5).map(([type, count], i) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1),
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    // Daily trend - fixed data
-    const dailyTrend = [
-      { date: 'Mon', bookings: 45, revenue: 280000 },
-      { date: 'Tue', bookings: 38, revenue: 235000 },
-      { date: 'Wed', bookings: 52, revenue: 320000 },
-      { date: 'Thu', bookings: 65, revenue: 420000 },
-      { date: 'Fri', bookings: 95, revenue: 680000 },
-      { date: 'Sat', bookings: 125, revenue: 950000 },
-      { date: 'Sun', bookings: 85, revenue: 580000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalEvents,
-        activeItems: upcomingEvents,
-        totalBookings: totalEvents * 35 + 80,
-        totalRevenue: totalRevenue || totalEvents * 650000,
-        avgRating: 4.5,
-        occupancyRate: 75,
-        bookingsGrowth: 32.1,
-        revenueGrowth: 26.4
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(85, totalEvents * 12),
-        pending: Math.max(22, totalEvents * 3),
-        cancelled: 5,
-        completed: Math.max(65, totalEvents * 8)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: totalCapacity,
-      recentBookings: []
-    };
-  }, [events])
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 const BusinessAnalytics = ({ events }) => {
   const analyticsData = useMemo(() => {
@@ -162,7 +110,7 @@ export default function EventsManagement() {
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
 
   // Use the events dashboard data hook
-  const dashboardData = useEventsDashboardData(events);
+  const dashboardData = useRealDashboardData('events');
 
   const handleViewEvent = (event) => {
     setViewingEvent(event);

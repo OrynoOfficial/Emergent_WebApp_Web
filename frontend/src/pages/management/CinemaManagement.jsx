@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -56,60 +57,7 @@ const DEFAULT_MOVIE_FORM = {
 };
 
 // Cinema specific dashboard data generator
-const useCinemaDashboardData = (cinemas, movies) => {
-  return useMemo(() => {
-    const totalCinemas = cinemas.length;
-    const totalScreens = cinemas.reduce((sum, c) => sum + (c.total_screens || 3), 0);
-    const totalMovies = movies.length;
-    const totalRevenue = totalCinemas * 450000 + totalMovies * 85000;
-
-    // Genre distribution
-    const genreCount = {};
-    movies.forEach(m => {
-      const genre = m.genre || 'Other';
-      genreCount[genre] = (genreCount[genre] || 0) + 1;
-    });
-    const distribution = Object.entries(genreCount).slice(0, 5).map(([type, count], i) => ({
-      type,
-      count,
-      color: CHART_COLORS[i]
-    }));
-
-    // Daily trend - fixed data
-    const dailyTrend = [
-      { date: 'Mon', bookings: 85, revenue: 180000 },
-      { date: 'Tue', bookings: 72, revenue: 155000 },
-      { date: 'Wed', bookings: 95, revenue: 210000 },
-      { date: 'Thu', bookings: 110, revenue: 245000 },
-      { date: 'Fri', bookings: 185, revenue: 420000 },
-      { date: 'Sat', bookings: 245, revenue: 580000 },
-      { date: 'Sun', bookings: 195, revenue: 450000 }
-    ];
-
-    return {
-      stats: {
-        totalItems: totalCinemas,
-        activeItems: totalCinemas,
-        totalBookings: totalCinemas * 50 + totalMovies * 20,
-        totalRevenue,
-        avgRating: 4.3,
-        occupancyRate: 68,
-        bookingsGrowth: 15.8,
-        revenueGrowth: 12.4
-      },
-      bookingsByStatus: {
-        confirmed: Math.max(120, totalCinemas * 25),
-        pending: Math.max(25, totalCinemas * 5),
-        cancelled: 8,
-        completed: Math.max(95, totalCinemas * 20)
-      },
-      dailyTrend,
-      distribution,
-      secondaryCount: totalScreens,
-      recentBookings: []
-    };
-  }, [cinemas, movies])
-};
+// Dashboard data now fetched from API via useRealDashboardData hook
 
 // Business Analytics
 const BusinessAnalytics = ({ cinemas, movies }) => {
@@ -175,7 +123,7 @@ export default function CinemaManagement() {
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
 
   // Use the cinema dashboard data hook
-  const dashboardData = useCinemaDashboardData(cinemas, movies);
+  const dashboardData = useRealDashboardData('cinema');
 
   const handleViewItem = (item, type) => {
     setViewingItem(item);
