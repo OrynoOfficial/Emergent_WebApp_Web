@@ -1237,3 +1237,19 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 
 - **Testing**: 100% backend (25/25), 100% frontend verified via testing agent (iteration_72)
 
+
+- [x] **SubscribeButton on All Service Detail Pages**
+  - Added to: CarRentalDetails, CinemaFilmDetails, RestaurantDetails, TravelBooking, PackageBooking
+  - Previously done: HotelDetails, RestaurantMenu (7 total pages)
+
+- [x] **P1 Deleted from Backlog** — Email Invitation System moved to P3
+
+- [x] **Enhanced Bulk Moderation for Ratings**
+  - New backend: `GET /api/ratings/moderation-queue`, `GET /api/ratings/moderation-audit`, `GET /api/ratings/export`
+  - Moderation audit trail on all moderate/bulk-moderate actions
+  - New "Queue" tab: Flagged/hidden items with Approve/Hide/Delete, bulk select, stat cards
+  - New "Audit Log" tab: Moderation history with actor names, timestamps, bulk indicators
+  - Export button on All Ratings and Audit Log tabs
+  - Ratings page now has 4 tabs: All Ratings | Queue | Audit Log | Reports
+  - **Testing**: 100% (iteration_73)
+
