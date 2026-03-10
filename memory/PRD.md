@@ -1317,3 +1317,35 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - History/Validated cards: action badge (green=approved, red=rejected), item type, performer + role, operator, amount, subscriber count, **rejection reason prominently displayed** in red-bordered box
   - All cards have colored left border by type (amber=payment, blue=ticket, purple=service, violet=promotion)
 
+
+## Latest Changes (March 10, 2026)
+
+### Bug Fixes
+- **Route Mismatch Fix (Banquet & Laundry Management)**:
+  - Sidebar linked to `/management/banquets` and `/management/pressing` but App.jsx only had routes for `/management/banquet` and `/management/laundry`
+  - Added matching routes in App.jsx so both path variants resolve correctly
+  - Files: `App.jsx`
+
+### Notification Linking
+- **Clickable Notifications**: Notifications now navigate to the relevant page when clicked
+  - `operator_alert` / `promotion` → `/alerts`
+  - `promotion_pending` → `/admin/validation`
+  - `booking` / `order` / `payment` → `/orders`
+  - `ticket_reply` → `/support`
+  - Backend now stores `action_url` on new notifications for future-proofing
+  - Frontend has fallback type-based URL mapping for existing notifications
+  - Both notification dropdown (Layout.jsx) and full Notifications page support click navigation
+  - Files: `Notifications.jsx`, `Layout.jsx`, `subscriptions.py`, `notifications.py`
+
+### User Alerts & Promotions Inbox
+- **New `/alerts` Page**: Users can now view alerts and approved promotions from operators they subscribe to
+  - New backend endpoint: `GET /api/subscriptions/user-alerts` fetches alerts + approved promotions from subscribed operators
+  - New frontend page: `Alerts.jsx` with stats cards, styled alert/promotion items
+  - Added "Messages & Alerts" entry in customer sidebar navigation
+  - Added in command palette search
+  - Files: `Alerts.jsx` (new), `App.jsx`, `useSidebarMenu.js`, `subscriptions.py`
+
+### Notification ID Fix
+- Fixed notification API returning undefined IDs by transforming `_id` → `id` properly
+  - File: `notifications.py`
+
