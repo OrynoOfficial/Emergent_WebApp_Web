@@ -181,13 +181,13 @@ async def create_promotion(
     """Operator creates a promotion/alert that pushes notifications to subscribers."""
     db = get_database()
 
-    # Determine operator_id
-    operator_id = current_user.get("operator_id")
-    if not operator_id and current_user.get("role") in ("admin", "super_admin"):
-        raise HTTPException(400, "Admin must specify operator context")
-
-    if not operator_id:
+    # Only operators can create promotions
+    if current_user.get("role") not in ("operator",):
         raise HTTPException(403, "Only operators can create promotions")
+
+    operator_id = current_user.get("operator_id")
+    if not operator_id:
+        raise HTTPException(400, "No operator linked to your account")
 
     # Get operator name
     op = await db.operators.find_one({"_id": operator_id})

@@ -1207,3 +1207,33 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] **Payment Header slate-400 Across All Booking Pages**: Updated 9 booking pages (Hotel, Travel, Car Rental, Restaurant, Cinema, Event, Laundry, Banquet, Package) to use `bg-slate-400` for payment section headers
 - [x] **AdminModal Fix**: Fixed footer visibility with flex layout (from Part 29)
 - **Testing**: Code review 100% via iteration_66 (all 7 feature groups verified in source code)
+
+### Session: Mar 10, 2026 - Real Dashboard Data, Communications Revamp & Subscription System
+
+- [x] **P0: Real Operator-Scoped Dashboard Data (All 9 Service Management Pages)**
+  - New backend API: `GET /api/management/dashboard-stats?service_type=X&period=Y`
+  - Queries real data from `orders`, `ratings` collections, scoped to operator
+  - Counters: Total Bookings, Pending, Confirmed, Revenue, Avg Rating, Growth % — all from REAL data
+  - Removed ALL mock data generators (`useDashboardData`, `useCarRentalDashboardData`, etc.) from 9 pages
+  - Created shared hook: `useRealDashboardData(serviceType)` used by all management pages
+  - Removed default mock chart data from `ServiceExecutiveDashboard.jsx`
+  - Updated: HotelManagement, TravelManagement, RestaurantManagement, CarRentalManagement, CinemaManagement, EventsManagement, BanquetManagement, LaundryManagement, PackageManagement
+
+- [x] **P1: Communications Page Revamp**
+  - Complete redesign of `ServiceCommunicationsHub.jsx` with modern UI
+  - 3 stat cards: Subscribers count, Open Tickets, Promotions Sent
+  - Support Tickets panel: Shows operator's open/pending tickets with status badges
+  - Recent Reviews panel: Shows user reviews with star ratings and reply link
+  - Promotions section: Grid of promotions with type badges, expiry dates, delete option
+  - Create Promotion dialog: Title, message, type, discount value, valid until date
+
+- [x] **P2: Subscription System (Backend + Frontend)**
+  - Backend API: `/api/subscriptions` with subscribe, unsubscribe, check, my, operator-count endpoints
+  - Backend API: `/api/subscriptions/promotions` for operator promotions that push notifications
+  - Frontend hook: `useSubscription(operatorId, operatorName)` for subscription state management
+  - Frontend component: `SubscribeButton` renders on service detail pages (HotelDetails, RestaurantMenu)
+  - Settings page: "Subscriptions" section shows user's subscriptions with unsubscribe buttons
+  - Promotion→Notification flow: When operator creates promotion, notifications pushed to all subscribers
+
+- **Testing**: 100% backend (25/25), 100% frontend verified via testing agent (iteration_72)
+
