@@ -11,7 +11,7 @@ import {
   Check, X, RefreshCw, Loader2, CreditCard, Ticket, Package,
   Bus, Car, Hotel as HotelIcon, Utensils, Calendar, MapPin,
   Clock, Users, ChevronDown, ChevronUp, AlertTriangle, XCircle, CheckCircle,
-  Tag, ArrowRight, CircleDot, Mail, Phone, Search, Filter
+  Tag, ArrowRight, CircleDot, Mail, Phone, Search, Filter, Megaphone
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -640,11 +640,12 @@ export default function ValidationManagement() {
     cancellation_tickets: [],
     pending_payments: [],
     pending_operators: [],
+    pending_promotions: [],
     services: {
       travel_routes: [], hotels: [], car_rentals: [], restaurants: [],
       packages: [], events: [], cinemas: [], pressing: [], banquets: []
     },
-    counts: { general_tickets: 0, cancellation_tickets: 0, pending_payments: 0, pending_operators: 0, services: 0 }
+    counts: { general_tickets: 0, cancellation_tickets: 0, pending_payments: 0, pending_operators: 0, pending_promotions: 0, services: 0 }
   });
 
   // Search and filter states
@@ -785,6 +786,33 @@ export default function ValidationManagement() {
     }
   };
 
+  // Promotion approval/rejection
+  const handlePromotionApproval = async (promotionId) => {
+    setIsProcessing(true);
+    try {
+      const res = await api.post(`/validation/promotions/${promotionId}/approve`);
+      toast.success(`Promotion approved! Sent to ${res.data.notified_count} subscribers`);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve promotion');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePromotionRejection = async (promotionId, reason) => {
+    setIsProcessing(true);
+    try {
+      await api.post(`/validation/promotions/${promotionId}/reject`, { reason: reason || 'Does not meet guidelines' });
+      toast.success('Promotion rejected');
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reject promotion');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Compute all pending services
   const allServices = [
     ...data.services.travel_routes.map(s => ({ ...s, type: 'travel_route' })),
@@ -839,7 +867,8 @@ export default function ValidationManagement() {
     allServices.filter(filterItem), [allServices, filterItem]);
 
   const totalCount = data.counts.general_tickets + data.counts.cancellation_tickets + 
-                     data.counts.pending_payments + data.counts.services + (data.counts.pending_operators || 0);
+                     data.counts.pending_payments + data.counts.services + 
+                     (data.counts.pending_operators || 0) + (data.counts.pending_promotions || 0);
 
   if (!isAdmin && !isOperator) {
     return (
@@ -975,6 +1004,67 @@ export default function ValidationManagement() {
                     onReject={handleOperatorRejection}
                     isProcessing={isProcessing}
                   />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Pending Promotions Section */}
+        {(data.pending_promotions || []).length > 0 && (
+          <Card className="border-2 border-violet-200 bg-violet-50/30" data-testid="pending-promotions-section">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-violet-600" />
+                Pending Promotion Approvals
+                <Badge className="ml-2 bg-violet-100 text-violet-800">
+                  {data.pending_promotions.length}
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-slate-600">
+                Operator promotions requiring approval before sending to subscribers.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {data.pending_promotions.map((promo) => (
+                  <Card key={promo.id} className="bg-white shadow-md" data-testid={`promo-card-${promo.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Badge className="bg-violet-100 text-violet-800 capitalize text-xs">
+                          {promo.promotion_type || 'promotion'}
+                        </Badge>
+                        <Badge className="bg-amber-100 text-amber-800 text-xs">Pending</Badge>
+                      </div>
+                      <h3 className="font-semibold text-slate-900 mb-1">{promo.title}</h3>
+                      <p className="text-sm text-slate-600 line-clamp-2 mb-2">{promo.message}</p>
+                      <div className="text-xs text-slate-500 space-y-1 mb-3">
+                        <p>Operator: <span className="font-medium text-slate-700">{promo.operator_name}</span></p>
+                        <p>By: {promo.created_by_name}</p>
+                        {promo.discount_value && <p>Discount: <span className="font-medium">{promo.discount_value}</span></p>}
+                        {promo.valid_until && <p>Valid until: {new Date(promo.valid_until).toLocaleDateString()}</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handlePromotionApproval(promo.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          size="sm"
+                          disabled={isProcessing}
+                        >
+                          <CheckCircle className="mr-1 h-4 w-4" /> Approve
+                        </Button>
+                        <Button
+                          onClick={() => handlePromotionRejection(promo.id)}
+                          variant="outline"
+                          className="flex-1 text-red-600 border-red-300"
+                          size="sm"
+                          disabled={isProcessing}
+                        >
+                          <XCircle className="mr-1 h-4 w-4" /> Reject
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </CardContent>

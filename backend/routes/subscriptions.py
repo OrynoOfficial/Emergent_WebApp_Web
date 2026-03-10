@@ -302,6 +302,28 @@ async def create_promotion(
     }
     await db.promotions.insert_one(promotion)
 
+    # Notify all admin/super_admin users about the pending approval
+    admin_users = await db.users.find(
+        {"role": {"$in": ["admin", "super_admin"]}, "status": "active"},
+        {"_id": 1}
+    ).to_list(100)
+    admin_notifications = []
+    for admin in admin_users:
+        admin_notifications.append({
+            "_id": str(uuid.uuid4()),
+            "user_id": admin["_id"],
+            "title": "Promotion Pending Approval",
+            "message": f"{operator_name} submitted a promotion: \"{data.title}\". Review it in the Validation page.",
+            "type": "promotion_pending",
+            "source": "promotion_approval",
+            "promotion_id": promo_id,
+            "operator_id": operator_id,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+    if admin_notifications:
+        await db.notifications.insert_many(admin_notifications)
+
     return {
         "message": "Promotion submitted for approval",
         "promotion_id": promo_id,

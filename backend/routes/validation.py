@@ -101,11 +101,21 @@ async def get_pending_validations(
                     processed["created_by_role"] = creator.get("role")
             pending_operators.append(processed)
     
+    # Get pending promotions
+    pending_promotions_raw = await db.promotions.find({"status": "pending_approval"}).sort("created_at", -1).to_list(100)
+    pending_promotions = []
+    for p in pending_promotions_raw:
+        p_id = str(p.get("_id", ""))
+        processed = {k: v for k, v in p.items() if k != "_id"}
+        processed["id"] = p_id
+        pending_promotions.append(processed)
+    
     return {
         "general_tickets": general_tickets,
         "cancellation_tickets": cancellation_tickets,
         "pending_payments": pending_payments,
         "pending_operators": pending_operators,
+        "pending_promotions": pending_promotions,
         "services": {
             "travel_routes": travel_routes,
             "hotels": hotels,
@@ -122,6 +132,7 @@ async def get_pending_validations(
             "cancellation_tickets": len(cancellation_tickets),
             "pending_payments": len(pending_payments),
             "pending_operators": len(pending_operators),
+            "pending_promotions": len(pending_promotions),
             "services": sum([
                 len(travel_routes), len(hotels), len(car_rentals), len(restaurants),
                 len(packages), len(events), len(cinemas), len(pressing), len(banquets)
@@ -550,3 +561,118 @@ async def reject_operator_validation(
         await db.notifications.insert_one(notification)
     
     return {"message": "Operator rejected", "operator_id": operator_id}
+
+
+# ---- Promotion Approval/Rejection ----
+
+@router.post("/promotions/{promotion_id}/approve")
+async def approve_promotion_validation(
+    promotion_id: str,
+    current_user: dict = Depends(require_permission("validation.view"))
+):
+    """Approve a pending promotion and send notifications to subscribers."""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    promo = await db.promotions.find_one({"_id": promotion_id})
+    if not promo:
+        raise HTTPException(status_code=404, detail="Promotion not found")
+    if promo.get("status") != "pending_approval":
+        raise HTTPException(status_code=400, detail=f"Promotion is already {promo.get('status')}")
+    
+    await db.promotions.update_one(
+        {"_id": promotion_id},
+        {"$set": {
+            "status": "approved",
+            "approved_by": current_user.get("_id"),
+            "approved_by_name": current_user.get("full_name", ""),
+            "approved_at": datetime.now(timezone.utc),
+        }}
+    )
+    
+    # Send notifications to subscribers
+    import uuid
+    operator_id = promo.get("operator_id")
+    operator_name = promo.get("operator_name", "Operator")
+    subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
+    
+    notifications = []
+    for sub in subscribers:
+        notifications.append({
+            "_id": str(uuid.uuid4()),
+            "user_id": sub["user_id"],
+            "title": f"New from {operator_name}: {promo['title']}",
+            "message": promo.get("message", ""),
+            "type": "promotion",
+            "source": "operator_promotion",
+            "promotion_id": promotion_id,
+            "operator_id": operator_id,
+            "operator_name": operator_name,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+    
+    if notifications:
+        await db.notifications.insert_many(notifications)
+    
+    # Notify the operator that their promotion was approved
+    created_by = promo.get("created_by")
+    if created_by:
+        await db.notifications.insert_one({
+            "_id": str(uuid.uuid4()),
+            "user_id": created_by,
+            "title": "Promotion Approved",
+            "message": f"Your promotion '{promo['title']}' has been approved and sent to {len(subscribers)} subscribers.",
+            "type": "promotion_approved",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+    
+    return {
+        "message": f"Promotion approved and sent to {len(subscribers)} subscribers",
+        "notified_count": len(subscribers),
+    }
+
+
+@router.post("/promotions/{promotion_id}/reject")
+async def reject_promotion_validation(
+    promotion_id: str,
+    request: RejectionRequest,
+    current_user: dict = Depends(require_permission("validation.view"))
+):
+    """Reject a pending promotion."""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    db = get_database()
+    
+    result = await db.promotions.update_one(
+        {"_id": promotion_id, "status": "pending_approval"},
+        {"$set": {
+            "status": "rejected",
+            "rejected_by": current_user.get("_id"),
+            "rejected_by_name": current_user.get("full_name", ""),
+            "rejected_at": datetime.now(timezone.utc),
+            "rejection_reason": request.reason,
+        }}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Promotion not found or already processed")
+    
+    # Notify the operator
+    import uuid
+    promo = await db.promotions.find_one({"_id": promotion_id})
+    if promo and promo.get("created_by"):
+        await db.notifications.insert_one({
+            "_id": str(uuid.uuid4()),
+            "user_id": promo["created_by"],
+            "title": "Promotion Rejected",
+            "message": f"Your promotion '{promo.get('title', '')}' was rejected. Reason: {request.reason}",
+            "type": "promotion_rejected",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+    
+    return {"message": "Promotion rejected"}
