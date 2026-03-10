@@ -7,11 +7,14 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Check, X, RefreshCw, Loader2, CreditCard, Ticket, Package,
   Bus, Car, Hotel as HotelIcon, Utensils, Calendar, MapPin,
   Clock, Users, ChevronDown, ChevronUp, AlertTriangle, XCircle, CheckCircle,
-  Tag, ArrowRight, CircleDot, Mail, Phone, Search, Filter, Megaphone
+  Tag, ArrowRight, CircleDot, Mail, Phone, Search, Filter, Megaphone,
+  LayoutGrid, List, History, Eye, EyeOff, ShieldCheck
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -631,190 +634,188 @@ const OperatorApprovalCard = ({ operator, onApprove, onReject, isProcessing }) =
 };
 
 // Main Component
+// --- Reusable SubPage Component: search, filters, list/grid, pagination, bulk ---
+const ITEMS_PER_PAGE = 8;
+
+function ValidationSubPage({ items, renderCard, renderListRow, emptyIcon, emptyText, onBulkApprove, onBulkReject, showBulk = true }) {
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState(new Set());
+
+  const filtered = useMemo(() => {
+    if (!search) return items;
+    const s = search.toLowerCase();
+    return items.filter(item => {
+      const text = [item.service_name, item.order_number, item.customer_name, item.user_email, item.name, item.title, item.operator_name, item.service_category, item.type, item.item_name, item.performed_by_name].filter(Boolean).join(' ').toLowerCase();
+      return text.includes(s);
+    });
+  }, [items, search]);
+
+  const paginated = useMemo(() => filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE), [filtered, page]);
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+
+  const toggleSelect = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll = (checked) => setSelected(checked ? new Set(paginated.map(i => i.id)) : new Set());
+
+  useEffect(() => { setPage(1); }, [search]);
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+        {emptyIcon || <CheckCircle className="h-14 w-14 mb-3 text-green-300" />}
+        <p className="font-medium text-slate-600">{emptyText || 'No items'}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search + View Toggle */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 bg-white h-9" />
+        </div>
+        <div className="flex border rounded-lg overflow-hidden">
+          <button onClick={() => setViewMode('list')} className={`px-2 py-1.5 ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="list-view-btn"><List className="h-4 w-4" /></button>
+          <button onClick={() => setViewMode('grid')} className={`px-2 py-1.5 ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="grid-view-btn"><LayoutGrid className="h-4 w-4" /></button>
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      {showBulk && selected.size > 0 && (
+        <Card className="bg-[#082c59] text-white border-0">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-sm">{selected.size} selected</span>
+            <div className="flex gap-2">
+              {onBulkApprove && <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-7" onClick={() => { onBulkApprove(Array.from(selected)); setSelected(new Set()); }}><CheckCircle className="h-3 w-3 mr-1" />Approve All</Button>}
+              {onBulkReject && <Button size="sm" variant="destructive" className="h-7" onClick={() => { onBulkReject(Array.from(selected)); setSelected(new Set()); }}><XCircle className="h-3 w-3 mr-1" />Reject All</Button>}
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white/20 h-7" onClick={() => setSelected(new Set())}><X className="h-3 w-3" /></Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Select All */}
+      {showBulk && (
+        <div className="flex items-center gap-2 px-1">
+          <Checkbox checked={paginated.length > 0 && selected.size >= paginated.length} onCheckedChange={selectAll} />
+          <span className="text-xs text-slate-500">{filtered.length} item{filtered.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
+
+      {/* Items */}
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
+        {paginated.map(item => (
+          <div key={item.id || item._id || Math.random()} className="relative">
+            {showBulk && (
+              <div className="absolute top-3 left-3 z-10">
+                <Checkbox checked={selected.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} />
+              </div>
+            )}
+            {viewMode === 'grid' ? renderCard(item) : (renderListRow ? renderListRow(item) : renderCard(item))}
+          </div>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs text-slate-500">Page {page} of {totalPages} ({filtered.length} items)</span>
+          <div className="flex gap-1">
+            {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => (
+              <button key={i} onClick={() => setPage(i + 1)} className={`w-7 h-7 rounded text-xs font-medium ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 border hover:bg-slate-50'}`}>{i + 1}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function ValidationManagement() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [data, setData] = useState({
-    general_tickets: [],
-    cancellation_tickets: [],
-    pending_payments: [],
-    pending_operators: [],
-    pending_promotions: [],
-    services: {
-      travel_routes: [], hotels: [], car_rentals: [], restaurants: [],
-      packages: [], events: [], cinemas: [], pressing: [], banquets: []
-    },
+    general_tickets: [], cancellation_tickets: [], pending_payments: [],
+    pending_operators: [], pending_promotions: [],
+    services: { travel_routes: [], hotels: [], car_rentals: [], restaurants: [], packages: [], events: [], cinemas: [], pressing: [], banquets: [] },
     counts: { general_tickets: 0, cancellation_tickets: 0, pending_payments: 0, pending_operators: 0, pending_promotions: 0, services: 0 }
   });
-
-  // Search and filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [history, setHistory] = useState({ entries: [], total: 0, type_counts: {} });
+  const [mainTab, setMainTab] = useState('pending');
+  const [pendingTab, setPendingTab] = useState('payments');
+  const [validatedTab, setValidatedTab] = useState('payments');
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isSuperAdmin = user?.role === 'super_admin';
-  const isOperator = user?.role === 'operator';
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/validation/pending');
-      setData(response.data);
+      const [pendingRes, historyRes] = await Promise.all([
+        api.get('/validation/pending'),
+        api.get('/validation/history?limit=200'),
+      ]);
+      setData(pendingRes.data);
+      setHistory(historyRes.data);
     } catch (error) {
-      console.error('Failed to load validation data:', error);
+      console.error('Failed to load:', error);
       toast.error('Failed to load validation data');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-    activityLogger.pageView('Service Validation Center', '/admin/validation');
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const handleTicketApproval = async (ticketId, customerId) => {
+  const handleApprove = async (type, id, name) => {
     setIsProcessing(true);
     try {
-      await api.post(`/validation/tickets/${ticketId}/approve`, {});
-      activityLogger.validationApprove('ticket', ticketId, `Ticket #${ticketId}`);
-      toast.success('Ticket approved successfully');
+      if (type === 'ticket') await api.post(`/validation/tickets/${id}/approve`, {});
+      else if (type === 'payment') await api.post(`/validation/payments/${id}/verify?verified=true`);
+      else if (type === 'promotion') await api.post(`/validation/promotions/${id}/approve`);
+      else if (type === 'operator') await api.post(`/validation/operators/${id}/approve`);
+      else await api.post(`/validation/services/${id}/approve?collection=${type}`);
+      toast.success(`${name || 'Item'} approved`);
       loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to approve ticket');
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Approval failed');
+    } finally { setIsProcessing(false); }
   };
 
-  const handleTicketRejection = async (ticketId, reason, customerId) => {
+  const openRejectDialog = (type, id, name) => {
+    setRejectTarget({ type, id, name });
+    setRejectReason('');
+    setShowRejectDialog(true);
+  };
+
+  const submitRejection = async () => {
+    if (!rejectTarget || !rejectReason.trim()) { toast.error('Please enter a reason'); return; }
     setIsProcessing(true);
     try {
-      await api.post(`/validation/tickets/${ticketId}/reject`, { reason });
-      activityLogger.validationReject('ticket', ticketId, `Ticket #${ticketId}`, reason);
-      toast.success('Ticket rejected');
+      const { type, id } = rejectTarget;
+      if (type === 'ticket') await api.post(`/validation/tickets/${id}/reject`, { reason: rejectReason });
+      else if (type === 'payment') await api.post(`/validation/payments/${id}/verify?verified=false`, { notes: rejectReason });
+      else if (type === 'promotion') await api.post(`/validation/promotions/${id}/reject`, { reason: rejectReason });
+      else if (type === 'operator') await api.post(`/validation/operators/${id}/reject`, { reason: rejectReason });
+      else await api.post(`/validation/services/${id}/reject?collection=${type}`, { reason: rejectReason });
+      toast.success('Rejected');
+      setShowRejectDialog(false);
       loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reject ticket');
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Rejection failed');
+    } finally { setIsProcessing(false); }
   };
 
-  const handlePaymentVerification = async (orderId, verified, notes) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/payments/${orderId}/verify?verified=${verified}`, { notes });
-      activityLogger.paymentVerify(orderId, orderId);
-      toast.success(verified ? 'Payment verified' : 'Payment rejected');
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to process payment');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleBulkPaymentVerification = async () => {
-    setIsProcessing(true);
-    try {
-      const result = await api.post('/validation/payments/bulk-verify');
-      toast.success(result.data.message || 'All payments verified');
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to bulk verify payments');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleServiceApproval = async (serviceId, operatorId, serviceType) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/services/${serviceType}/${serviceId}/approve`);
-      activityLogger.validationApprove('service', serviceId, `${serviceType} #${serviceId}`);
-      toast.success(`${serviceType.replace('_', ' ')} approved`);
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to approve service');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleServiceRejection = async (serviceId, reason, operatorId, serviceType) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/services/${serviceType}/${serviceId}/reject`, { reason });
-      activityLogger.validationReject('service', serviceId, `${serviceType} #${serviceId}`, reason);
-      toast.success(`${serviceType.replace('_', ' ')} rejected`);
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reject service');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Operator approval handlers (super_admin only)
-  const handleOperatorApproval = async (operatorId) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/operators/${operatorId}/approve`);
-      activityLogger.validationApprove('operator', operatorId, `Operator #${operatorId}`);
-      toast.success('Operator approved and activated');
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to approve operator');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleOperatorRejection = async (operatorId, reason) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/operators/${operatorId}/reject`, { reason });
-      activityLogger.validationReject('operator', operatorId, `Operator #${operatorId}`, reason);
-      toast.success('Operator rejected');
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reject operator');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Promotion approval/rejection
-  const handlePromotionApproval = async (promotionId) => {
-    setIsProcessing(true);
-    try {
-      const res = await api.post(`/validation/promotions/${promotionId}/approve`);
-      toast.success(`Promotion approved! Sent to ${res.data.notified_count} subscribers`);
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to approve promotion');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePromotionRejection = async (promotionId, reason) => {
-    setIsProcessing(true);
-    try {
-      await api.post(`/validation/promotions/${promotionId}/reject`, { reason: reason || 'Does not meet guidelines' });
-      toast.success('Promotion rejected');
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to reject promotion');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Compute all pending services
-  const allServices = [
+  const allTickets = [...data.general_tickets, ...data.cancellation_tickets];
+  const allServices = useMemo(() => [
     ...data.services.travel_routes.map(s => ({ ...s, type: 'travel_route' })),
     ...data.services.hotels.map(s => ({ ...s, type: 'hotel' })),
     ...data.services.car_rentals.map(s => ({ ...s, type: 'car_rental' })),
@@ -823,445 +824,166 @@ export default function ValidationManagement() {
     ...data.services.events.map(s => ({ ...s, type: 'event' })),
     ...data.services.cinemas.map(s => ({ ...s, type: 'cinema' })),
     ...data.services.pressing.map(s => ({ ...s, type: 'pressing' })),
-    ...data.services.banquets.map(s => ({ ...s, type: 'banquet' }))
-  ].sort((a, b) => new Date(b.created_at || b.created_date) - new Date(a.created_at || a.created_date));
+    ...data.services.banquets.map(s => ({ ...s, type: 'banquet' })),
+    ...(isSuperAdmin ? (data.pending_operators || []).map(s => ({ ...s, type: 'operator' })) : []),
+  ], [data, isSuperAdmin]);
 
-  const pendingOperators = data.pending_operators || [];
+  const pendingCounts = {
+    payments: data.counts.pending_payments || 0,
+    tickets: (data.counts.general_tickets || 0) + (data.counts.cancellation_tickets || 0),
+    services: (data.counts.services || 0) + (data.counts.pending_operators || 0),
+    promotions: data.counts.pending_promotions || 0,
+  };
+  const totalPending = Object.values(pendingCounts).reduce((a, b) => a + b, 0);
+  const validatedCounts = history.type_counts || {};
+  const totalValidated = Object.values(validatedCounts).reduce((a, b) => a + b, 0);
+  const historyByType = (type) => (history.entries || []).filter(e => e.item_type === type);
 
-  // Filter function for items
-  const filterItem = useCallback((item) => {
-    const search = searchQuery.toLowerCase().trim();
-    
-    // Category filter
-    if (categoryFilter !== 'all') {
-      const itemCategory = item.service_category || item.service_type || item.type || '';
-      if (itemCategory !== categoryFilter) return false;
-    }
-    
-    // Search filter
-    if (search) {
-      const customerName = (item.customer_name || item.user_email || '').toLowerCase();
-      const orderNumber = (item.order_number || item.id || item._id || '').toLowerCase();
-      const serviceName = (item.service_name || item.service_title || item.name || item.title || '').toLowerCase();
-      const category = (item.service_category || item.service_type || item.type || '').toLowerCase();
-      const createdAt = item.created_at || item.created_date || '';
-      
-      return customerName.includes(search) || 
-             orderNumber.includes(search) || 
-             serviceName.includes(search) ||
-             category.includes(search) ||
-             createdAt.includes(search);
-    }
-    
-    return true;
-  }, [searchQuery, categoryFilter]);
-
-  // Filtered data
-  const filteredGeneralTickets = useMemo(() => 
-    data.general_tickets.filter(filterItem), [data.general_tickets, filterItem]);
-  const filteredCancellationTickets = useMemo(() => 
-    data.cancellation_tickets.filter(filterItem), [data.cancellation_tickets, filterItem]);
-  const filteredPendingPayments = useMemo(() => 
-    data.pending_payments.filter(filterItem), [data.pending_payments, filterItem]);
-  const filteredServices = useMemo(() => 
-    allServices.filter(filterItem), [allServices, filterItem]);
-
-  const totalCount = data.counts.general_tickets + data.counts.cancellation_tickets + 
-                     data.counts.pending_payments + data.counts.services + 
-                     (data.counts.pending_operators || 0) + (data.counts.pending_promotions || 0);
-
-  if (!isAdmin && !isOperator) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-8 flex justify-center items-center">
-        <Card className="text-center p-8 bg-white shadow-lg max-w-md">
-          <XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
-          <p className="text-slate-600">You need admin or operator permissions to access this page.</p>
-        </Card>
-      </div>
-    );
+  if (!isAdmin) {
+    return <div className="min-h-screen bg-slate-50 p-8 flex justify-center items-center"><Card className="text-center p-8"><XCircle className="mx-auto h-12 w-12 text-red-500 mb-4" /><h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1></Card></div>;
   }
 
   if (isLoading) {
-    return (
-      <div className="p-8 flex justify-center items-center min-h-[60vh]">
-        <div className="text-center">
-          <Loader2 className="animate-spin h-10 w-10 text-blue-500 mx-auto" />
-          <p className="text-lg text-gray-700 mt-2">Loading validation data...</p>
-        </div>
-      </div>
-    );
+    return <div className="p-8 flex justify-center items-center min-h-[60vh]"><Loader2 className="animate-spin h-10 w-10 text-[#082c59]" /></div>;
   }
 
+  const renderPaymentCard = (order) => (
+    <Card className="bg-white shadow-sm hover:shadow-md transition-shadow"><CardContent className="p-4">
+      <div className="flex items-center justify-between mb-2"><Badge variant="outline" className="text-xs capitalize">{order.service_category || 'Order'}</Badge><Badge className="bg-amber-100 text-amber-800 text-xs">Payment Pending</Badge></div>
+      <h3 className="font-semibold text-sm mb-1">{order.service_name || 'Order'}</h3>
+      <p className="text-xs text-slate-500">#{order.order_number || order.id}</p>
+      <p className="text-xs text-slate-500">{order.customer_name || order.user_email || 'Customer'}</p>
+      <p className="font-bold text-emerald-600 text-sm mt-1">{formatFCFA(order.total_amount || 0)}</p>
+      <div className="flex gap-2 mt-3">
+        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs" onClick={() => handleApprove('payment', order.id, order.service_name)} disabled={isProcessing}><CheckCircle className="h-3 w-3 mr-1" />Verify</Button>
+        <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 h-8 text-xs" onClick={() => openRejectDialog('payment', order.id, order.service_name)} disabled={isProcessing}><XCircle className="h-3 w-3 mr-1" />Reject</Button>
+      </div>
+    </CardContent></Card>
+  );
+
+  const renderTicketCard = (ticket) => (
+    <Card className="bg-white shadow-sm hover:shadow-md transition-shadow"><CardContent className="p-4">
+      <div className="flex items-center justify-between mb-2"><StatusTag status={ticket.status} size="small" /><span className="text-[10px] text-slate-400">{formatDate(ticket.created_at)}</span></div>
+      <h3 className="font-semibold text-sm mb-1">{ticket.service_name || ticket.order_number || 'Ticket'}</h3>
+      <p className="text-xs text-slate-500">{ticket.customer_name || ticket.user_email || 'Customer'}</p>
+      <p className="font-bold text-sm mt-1">{formatFCFA(ticket.total_amount || 0)}</p>
+      <div className="flex gap-2 mt-3">
+        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs" onClick={() => handleApprove('ticket', ticket.id, ticket.service_name)} disabled={isProcessing}><CheckCircle className="h-3 w-3 mr-1" />Approve</Button>
+        <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 h-8 text-xs" onClick={() => openRejectDialog('ticket', ticket.id, ticket.service_name)} disabled={isProcessing}><XCircle className="h-3 w-3 mr-1" />Reject</Button>
+      </div>
+    </CardContent></Card>
+  );
+
+  const renderServiceCard = (service) => (
+    <Card className="bg-white shadow-sm hover:shadow-md transition-shadow"><CardContent className="p-4">
+      <div className="flex items-center justify-between mb-2"><Badge variant="outline" className="text-xs capitalize">{service.type?.replace('_', ' ')}</Badge><StatusTag status={service.status || 'pending'} size="small" /></div>
+      <h3 className="font-semibold text-sm mb-1">{service.name || service.title || 'Service'}</h3>
+      <p className="text-xs text-slate-500">{service.operator_name || service.city || ''}</p>
+      {service.price && <p className="font-bold text-sm mt-1">{formatFCFA(service.price)}</p>}
+      <div className="flex gap-2 mt-3">
+        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs" onClick={() => handleApprove(service.type, service.id, service.name || service.title)} disabled={isProcessing}><CheckCircle className="h-3 w-3 mr-1" />Approve</Button>
+        <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 h-8 text-xs" onClick={() => openRejectDialog(service.type, service.id, service.name || service.title)} disabled={isProcessing}><XCircle className="h-3 w-3 mr-1" />Reject</Button>
+      </div>
+    </CardContent></Card>
+  );
+
+  const renderPromotionCard = (promo) => (
+    <Card className="bg-white shadow-sm hover:shadow-md transition-shadow"><CardContent className="p-4">
+      <div className="flex items-center justify-between mb-2"><Badge className="bg-violet-100 text-violet-800 text-xs capitalize">{promo.promotion_type || 'promotion'}</Badge><Badge className="bg-amber-100 text-amber-800 text-xs">Pending</Badge></div>
+      <h3 className="font-semibold text-sm mb-1">{promo.title}</h3>
+      <p className="text-xs text-slate-600 line-clamp-2">{promo.message}</p>
+      <p className="text-xs text-slate-500 mt-1">By: {promo.operator_name} &middot; {promo.created_by_name}</p>
+      {promo.discount_value && <Badge variant="outline" className="mt-1 text-[10px]">{promo.discount_value}</Badge>}
+      <div className="flex gap-2 mt-3">
+        <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-8 text-xs" onClick={() => handleApprove('promotion', promo.id, promo.title)} disabled={isProcessing}><CheckCircle className="h-3 w-3 mr-1" />Approve</Button>
+        <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 h-8 text-xs" onClick={() => openRejectDialog('promotion', promo.id, promo.title)} disabled={isProcessing}><XCircle className="h-3 w-3 mr-1" />Reject</Button>
+      </div>
+    </CardContent></Card>
+  );
+
+  const renderHistoryCard = (entry) => {
+    const actionColors = { approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700', verified: 'bg-blue-100 text-blue-700' };
+    return (
+      <Card className="bg-white shadow-sm"><CardContent className="p-4">
+        <div className="flex items-center justify-between mb-2"><Badge className={`text-xs capitalize ${actionColors[entry.action] || 'bg-slate-100 text-slate-700'}`}>{entry.action}</Badge><span className="text-[10px] text-slate-400">{entry.created_at ? new Date(entry.created_at).toLocaleString() : ''}</span></div>
+        <h3 className="font-semibold text-sm">{entry.item_name || 'Item'}</h3>
+        <p className="text-xs text-slate-500 mt-0.5">By: {entry.performed_by_name} ({entry.performed_by_role})</p>
+        {entry.reason && <p className="text-xs text-slate-600 mt-1 bg-slate-50 p-2 rounded">Reason: {entry.reason}</p>}
+        {entry.amount && <p className="text-xs font-medium text-emerald-600 mt-1">{formatFCFA(entry.amount)}</p>}
+      </CardContent></Card>
+    );
+  };
+
   return (
-    <div className="bg-slate-50 min-h-screen p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="bg-white mb-8 p-6 rounded-xl shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="bg-slate-50 min-h-screen p-4 sm:p-6 lg:p-8" data-testid="validation-page">
+      <div className="bg-white mb-6 p-5 rounded-xl shadow-sm">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-[#082c59]">
-              Service Validation Center
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Review and approve/reject pending tickets and service submissions
-            </p>
+            <h1 className="text-2xl font-bold text-[#082c59]">Service Validation Center</h1>
+            <p className="text-slate-500 text-sm mt-1">Review, approve, and track validations</p>
           </div>
-          <Button onClick={loadData} variant="outline" className="w-full lg:w-auto" disabled={isLoading}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-        
-        {/* Search and Filter Section */}
-        <div className="mt-6 pt-6 border-t border-slate-200">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search Bar */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search by customer name, order number, service name, category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-full"
-              />
-            </div>
-            
-            {/* Category Filter */}
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="travel">Travel / Bus</SelectItem>
-                <SelectItem value="hotel">Hotels</SelectItem>
-                <SelectItem value="car_rental">Car Rental</SelectItem>
-                <SelectItem value="restaurant">Restaurants</SelectItem>
-                <SelectItem value="event">Events</SelectItem>
-                <SelectItem value="package">Packages</SelectItem>
-                <SelectItem value="cinema">Cinema</SelectItem>
-                <SelectItem value="laundry">Laundry</SelectItem>
-                <SelectItem value="banquet">Banquet</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Clear Filters Button */}
-            {(searchQuery || categoryFilter !== 'all') && (
-              <Button 
-                variant="ghost" 
-                onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
-                className="text-slate-600"
-              >
-                <X className="h-4 w-4 mr-1" /> Clear
-              </Button>
-            )}
-          </div>
-          
-          {/* Active Filters Display */}
-          {(searchQuery || categoryFilter !== 'all') && (
-            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span>Showing results for:</span>
-              {searchQuery && (
-                <Badge variant="secondary" className="font-normal">
-                  Search: "{searchQuery}"
-                </Badge>
-              )}
-              {categoryFilter !== 'all' && (
-                <Badge variant="secondary" className="font-normal capitalize">
-                  Category: {categoryFilter.replace('_', ' ')}
-                </Badge>
-              )}
-            </div>
-          )}
+          <Button onClick={loadData} variant="outline" disabled={isLoading}><RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</Button>
         </div>
       </div>
 
-      <div className="space-y-8">
-        {/* Pending Operators Section (Super Admin Only) */}
-        {isSuperAdmin && pendingOperators.length > 0 && (
-          <Card className="border-2 border-indigo-200 bg-indigo-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-indigo-600" />
-                Pending Operator Approvals
-                <Badge className="ml-2 bg-indigo-100 text-indigo-800">
-                  {pendingOperators.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-600">
-                Operators created by admins require super admin approval to become active.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pendingOperators.map((operator) => (
-                  <OperatorApprovalCard
-                    key={operator.id}
-                    operator={operator}
-                    onApprove={handleOperatorApproval}
-                    onReject={handleOperatorRejection}
-                    isProcessing={isProcessing}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+      <Tabs value={mainTab} onValueChange={setMainTab}>
+        <TabsList className="grid w-full grid-cols-2 max-w-md bg-white shadow-sm mb-6">
+          <TabsTrigger value="pending" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="pending-main-tab">
+            <Clock className="h-4 w-4" /> Pending {totalPending > 0 && <Badge className="bg-amber-500 text-white text-[10px] ml-1">{totalPending}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="validated" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="validated-main-tab">
+            <ShieldCheck className="h-4 w-4" /> Validated {totalValidated > 0 && <Badge variant="outline" className="text-[10px] ml-1">{totalValidated}</Badge>}
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Pending Promotions Section */}
-        {(data.pending_promotions || []).length > 0 && (
-          <Card className="border-2 border-violet-200 bg-violet-50/30" data-testid="pending-promotions-section">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-violet-600" />
-                Pending Promotion Approvals
-                <Badge className="ml-2 bg-violet-100 text-violet-800">
-                  {data.pending_promotions.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-600">
-                Operator promotions requiring approval before sending to subscribers.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {data.pending_promotions.map((promo) => (
-                  <Card key={promo.id} className="bg-white shadow-md" data-testid={`promo-card-${promo.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge className="bg-violet-100 text-violet-800 capitalize text-xs">
-                          {promo.promotion_type || 'promotion'}
-                        </Badge>
-                        <Badge className="bg-amber-100 text-amber-800 text-xs">Pending</Badge>
-                      </div>
-                      <h3 className="font-semibold text-slate-900 mb-1">{promo.title}</h3>
-                      <p className="text-sm text-slate-600 line-clamp-2 mb-2">{promo.message}</p>
-                      <div className="text-xs text-slate-500 space-y-1 mb-3">
-                        <p>Operator: <span className="font-medium text-slate-700">{promo.operator_name}</span></p>
-                        <p>By: {promo.created_by_name}</p>
-                        {promo.discount_value && <p>Discount: <span className="font-medium">{promo.discount_value}</span></p>}
-                        {promo.valid_until && <p>Valid until: {new Date(promo.valid_until).toLocaleDateString()}</p>}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handlePromotionApproval(promo.id)}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          size="sm"
-                          disabled={isProcessing}
-                        >
-                          <CheckCircle className="mr-1 h-4 w-4" /> Approve
-                        </Button>
-                        <Button
-                          onClick={() => handlePromotionRejection(promo.id)}
-                          variant="outline"
-                          className="flex-1 text-red-600 border-red-300"
-                          size="sm"
-                          disabled={isProcessing}
-                        >
-                          <XCircle className="mr-1 h-4 w-4" /> Reject
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <TabsContent value="pending">
+          <Tabs value={pendingTab} onValueChange={setPendingTab}>
+            <TabsList className="bg-white shadow-sm mb-4">
+              <TabsTrigger value="payments" className="text-xs gap-1.5 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-800"><CreditCard className="h-3.5 w-3.5" />Payments {pendingCounts.payments > 0 && <Badge className="bg-amber-500 text-white text-[9px] px-1">{pendingCounts.payments}</Badge>}</TabsTrigger>
+              <TabsTrigger value="tickets" className="text-xs gap-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-800"><Ticket className="h-3.5 w-3.5" />Tickets {pendingCounts.tickets > 0 && <Badge className="bg-blue-500 text-white text-[9px] px-1">{pendingCounts.tickets}</Badge>}</TabsTrigger>
+              <TabsTrigger value="services" className="text-xs gap-1.5 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-800"><Package className="h-3.5 w-3.5" />Services {pendingCounts.services > 0 && <Badge className="bg-purple-500 text-white text-[9px] px-1">{pendingCounts.services}</Badge>}</TabsTrigger>
+              <TabsTrigger value="promotions" className="text-xs gap-1.5 data-[state=active]:bg-violet-50 data-[state=active]:text-violet-800"><Megaphone className="h-3.5 w-3.5" />Promotions {pendingCounts.promotions > 0 && <Badge className="bg-violet-500 text-white text-[9px] px-1">{pendingCounts.promotions}</Badge>}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="payments"><ValidationSubPage items={data.pending_payments} renderCard={renderPaymentCard} emptyText="No pending payments" /></TabsContent>
+            <TabsContent value="tickets"><ValidationSubPage items={allTickets} renderCard={renderTicketCard} emptyText="No pending tickets" /></TabsContent>
+            <TabsContent value="services"><ValidationSubPage items={allServices} renderCard={renderServiceCard} emptyText="No pending services" /></TabsContent>
+            <TabsContent value="promotions"><ValidationSubPage items={data.pending_promotions || []} renderCard={renderPromotionCard} emptyText="No pending promotions" /></TabsContent>
+          </Tabs>
+        </TabsContent>
 
-        {/* Pending Payments Section (Admin Only) */}
-        {isAdmin && filteredPendingPayments.length > 0 && (
-          <Card className="border-2 border-orange-200 bg-orange-50/30">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-orange-600" />
-                    Pending Payment Verification
-                    <Badge className="ml-2 bg-orange-100 text-orange-800">
-                      {filteredPendingPayments.length}
-                    </Badge>
-                  </CardTitle>
-                  <p className="text-sm text-slate-600 mt-1">
-                    Orders awaiting payment confirmation. Verify payments manually.
-                  </p>
-                </div>
-                <Button
-                  onClick={handleBulkPaymentVerification}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={isProcessing}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Verify All ({data.pending_payments.length})
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredPendingPayments.map((order) => (
-                  <Card key={order.id || order._id} className="bg-white shadow-md">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <Badge variant="outline">{order.service_category || order.service_type}</Badge>
-                        <Badge className="bg-yellow-100 text-yellow-800">Payment Pending</Badge>
-                      </div>
-                      <h3 className="font-semibold mb-2">{order.service_name || order.service_title || 'Order'}</h3>
-                      <div className="text-sm text-slate-600 space-y-1">
-                        <p>Order: {order.order_number}</p>
-                        <p>Customer: {order.customer_name || order.user_email || 'N/A'}</p>
-                        <p className="font-bold text-emerald-600">{formatFCFA(order.total_amount || order.final_amount || order.amount || 0)}</p>
-                      </div>
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          onClick={() => handlePaymentVerification(order.id || order._id, true)}
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          size="sm"
-                          disabled={isProcessing}
-                        >
-                          <CheckCircle className="mr-1 h-4 w-4" /> Verify
-                        </Button>
-                        <Button
-                          onClick={() => handlePaymentVerification(order.id || order._id, false)}
-                          variant="outline"
-                          className="flex-1 text-red-600 border-red-600"
-                          size="sm"
-                          disabled={isProcessing}
-                        >
-                          <XCircle className="mr-1 h-4 w-4" /> Reject
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <TabsContent value="validated">
+          <Tabs value={validatedTab} onValueChange={setValidatedTab}>
+            <TabsList className="bg-white shadow-sm mb-4">
+              <TabsTrigger value="payments" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><CreditCard className="h-3.5 w-3.5" />Payments <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.payment || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="tickets" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Ticket className="h-3.5 w-3.5" />Tickets <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.ticket || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="services" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Package className="h-3.5 w-3.5" />Services <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.service || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="promotions" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Megaphone className="h-3.5 w-3.5" />Promotions <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.promotion || 0}</Badge></TabsTrigger>
+            </TabsList>
+            <TabsContent value="payments"><ValidationSubPage items={historyByType('payment')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated payments yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="tickets"><ValidationSubPage items={historyByType('ticket')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated tickets yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="services"><ValidationSubPage items={historyByType('service')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated services yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="promotions"><ValidationSubPage items={historyByType('promotion')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated promotions yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+          </Tabs>
+        </TabsContent>
+      </Tabs>
 
-        {/* General Tickets Section */}
-        {filteredGeneralTickets.length > 0 && (
-          <Card className="border-2 border-blue-200 bg-blue-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5 text-blue-600" />
-                Tickets for Approval
-                <Badge className="ml-2 bg-blue-100 text-blue-800">
-                  {filteredGeneralTickets.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-600">Review and approve pending ticket bookings.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredGeneralTickets.map((ticket) => (
-                  <TicketApprovalCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onApprove={handleTicketApproval}
-                    onReject={handleTicketRejection}
-                    isProcessing={isProcessing}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Cancellation & Refund Requests */}
-        {filteredCancellationTickets.length > 0 && (
-          <Card className="border-2 border-red-200 bg-red-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                Cancellation & Refund Requests
-                <Badge className="ml-2 bg-red-100 text-red-800">
-                  {filteredCancellationTickets.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-600">Review and approve cancellation and refund requests.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCancellationTickets.map((ticket) => (
-                  <TicketApprovalCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onApprove={handleTicketApproval}
-                    onReject={handleTicketRejection}
-                    isProcessing={isProcessing}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Services for Approval */}
-        {filteredServices.length > 0 && (
-          <Card className="border-2 border-purple-200 bg-purple-50/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-purple-600" />
-                Services for Approval
-                <Badge className="ml-2 bg-purple-100 text-purple-800">
-                  {filteredServices.length}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-slate-600">Review and approve pending service submissions.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredServices.map((service) => (
-                  <ServiceApprovalCard
-                    key={`${service.type}-${service.id}`}
-                    service={service}
-                    serviceType={service.type}
-                    onApprove={handleServiceApproval}
-                    onReject={handleServiceRejection}
-                    isProcessing={isProcessing}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* No Results from Search/Filter */}
-        {(searchQuery || categoryFilter !== 'all') && 
-         filteredGeneralTickets.length === 0 && 
-         filteredCancellationTickets.length === 0 && 
-         filteredPendingPayments.length === 0 && 
-         filteredServices.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Search className="mx-auto h-12 w-12 text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No results found</h3>
-              <p className="text-slate-500 mb-4">
-                No items match your search criteria. Try adjusting your filters.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }}
-              >
-                Clear Filters
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* All Clear State */}
-        {totalCount === 0 && !searchQuery && categoryFilter === 'all' && (
-          <Card className="text-center py-16 bg-white shadow-lg">
-            <CardContent>
-              <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">All Clear!</h3>
-              <p className="text-slate-600">All tickets and services have been reviewed. Great job!</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent className="bg-gradient-to-br from-slate-50 to-[#082c59]/5 max-w-sm" data-testid="reject-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><XCircle className="h-5 w-5 text-red-500" />Reject: {rejectTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <label className="text-sm font-medium">Reason for rejection *</label>
+            <Textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Explain why this item is being rejected..." rows={3} className="mt-2 bg-white" data-testid="reject-reason-input" />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>Cancel</Button>
+            <Button onClick={submitRejection} disabled={isProcessing || !rejectReason.trim()} className="bg-red-600 hover:bg-red-700 text-white" data-testid="confirm-reject-btn">
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Reject
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

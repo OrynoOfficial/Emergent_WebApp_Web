@@ -8,11 +8,32 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/validation", tags=["Validation"])
 
+import uuid
+
 class ApprovalRequest(BaseModel):
     reason: Optional[str] = None
 
 class RejectionRequest(BaseModel):
     reason: str
+
+
+async def log_validation_action(db, action: str, item_type: str, item_id: str, item_name: str, user: dict, reason: str = None, extra: dict = None):
+    """Log a validation action to the validation_history collection."""
+    entry = {
+        "_id": str(uuid.uuid4()),
+        "action": action,  # approved, rejected, verified, refunded
+        "item_type": item_type,  # payment, ticket, service, promotion, operator
+        "item_id": item_id,
+        "item_name": item_name,
+        "performed_by": user.get("_id"),
+        "performed_by_name": user.get("full_name", user.get("email", "")),
+        "performed_by_role": user.get("role"),
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc),
+    }
+    if extra:
+        entry.update(extra)
+    await db.validation_history.insert_one(entry)
 
 def check_validation_access(current_user: dict):
     """Check if user has validation access"""
@@ -194,6 +215,10 @@ async def approve_ticket(
     # Update using the MongoDB _id
     await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
     
+    await log_validation_action(db, "approved", "ticket", ticket_id, 
+        order.get("service_name", order.get("order_number", ticket_id)),
+        current_user, request.reason, {"order_status": update_data.get("status")})
+    
     return {"message": message, "ticket_id": ticket_id}
 
 @router.post("/tickets/{ticket_id}/reject")
@@ -248,6 +273,10 @@ async def reject_ticket(
     # Update using the MongoDB _id
     await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
     
+    await log_validation_action(db, "rejected", "ticket", ticket_id,
+        order.get("service_name", order.get("order_number", ticket_id)),
+        current_user, request.reason)
+    
     return {"message": message, "ticket_id": ticket_id}
 
 @router.post("/payments/{order_id}/verify")
@@ -296,6 +325,10 @@ async def verify_payment(
     
     # Update using the MongoDB _id
     await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
+    
+    await log_validation_action(db, "approved" if verified else "rejected", "payment", order_id,
+        order.get("service_name", order.get("order_number", order_id)),
+        current_user, notes, {"amount": order.get("total_amount")})
     
     return {"message": message, "order_id": order_id}
 
@@ -630,6 +663,10 @@ async def approve_promotion_validation(
             "created_at": datetime.now(timezone.utc),
         })
     
+    await log_validation_action(db, "approved", "promotion", promotion_id,
+        promo.get("title", ""), current_user, None,
+        {"operator_name": promo.get("operator_name", ""), "subscribers_notified": len(subscribers)})
+    
     return {
         "message": f"Promotion approved and sent to {len(subscribers)} subscribers",
         "notified_count": len(subscribers),
@@ -648,6 +685,9 @@ async def reject_promotion_validation(
     
     db = get_database()
     
+    # Get promo first for logging
+    promo = await db.promotions.find_one({"_id": promotion_id})
+    
     result = await db.promotions.update_one(
         {"_id": promotion_id, "status": "pending_approval"},
         {"$set": {
@@ -661,9 +701,11 @@ async def reject_promotion_validation(
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Promotion not found or already processed")
     
+    await log_validation_action(db, "rejected", "promotion", promotion_id,
+        promo.get("title", "") if promo else "", current_user, request.reason,
+        {"operator_name": promo.get("operator_name") if promo else ""})
+    
     # Notify the operator
-    import uuid
-    promo = await db.promotions.find_one({"_id": promotion_id})
     if promo and promo.get("created_by"):
         await db.notifications.insert_one({
             "_id": str(uuid.uuid4()),
@@ -676,3 +718,39 @@ async def reject_promotion_validation(
         })
     
     return {"message": "Promotion rejected"}
+
+
+# ---- Validation History ----
+
+@router.get("/history")
+async def get_validation_history(
+    item_type: Optional[str] = None,
+    action: Optional[str] = None,
+    search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(require_permission("validation.view"))
+):
+    """Get validation history — all approved/rejected items with who performed the action."""
+    db = get_database()
+
+    query = {}
+    if item_type:
+        query["item_type"] = item_type
+    if action:
+        query["action"] = action
+
+    entries = await db.validation_history.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.validation_history.count_documents(query)
+
+    # If search, filter client-side
+    if search:
+        s = search.lower()
+        entries = [e for e in entries if s in (e.get("item_name", "") or "").lower() or s in (e.get("performed_by_name", "") or "").lower()]
+
+    # Count by type
+    type_counts = {}
+    for t in ["payment", "ticket", "service", "promotion", "operator"]:
+        type_counts[t] = await db.validation_history.count_documents({"item_type": t})
+
+    return {"entries": entries, "total": total, "type_counts": type_counts}
