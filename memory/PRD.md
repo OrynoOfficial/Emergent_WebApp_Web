@@ -1349,3 +1349,14 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - Fixed notification API returning undefined IDs by transforming `_id` → `id` properly
   - File: `notifications.py`
 
+### Messages Restructure into Loyalty Page (March 10, 2026)
+- **Messages tab added to Loyalty page**: 4th tab alongside My Rewards, Activity, Rewards
+  - Accepts `?tab=messages` URL param to open directly
+- **Messages sub-tabs**: "Alerts" (operator alerts only, no promotions) and "Notifications" (all notifications with mark-as-read/delete)
+- **Approved Promotions moved to Rewards tab**: Purple-themed promotion cards from subscribed operators appear above point-based rewards
+- **Notification dropdown marks as read**: Clicking a notification in the header dropdown now calls `markAsRead` before navigating
+- **Routes consolidated**: `/alerts` and `/notifications` now redirect to `/loyalty?tab=messages`
+- **Sidebar cleaned**: Removed standalone "Messages & Alerts" entry; everything lives under Loyalty
+- New file: `MessagesTab.jsx`
+- Updated: `CustomerLoyaltyView.jsx`, `Loyalty.jsx`, `App.jsx`, `Layout.jsx`, `useSidebarMenu.js`, `subscriptions.py`
+
