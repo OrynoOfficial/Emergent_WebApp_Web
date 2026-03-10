@@ -832,7 +832,14 @@ export default function CustomerServiceManagement() {
   const [viewMode, setViewMode] = useState('list');
 
   const getSubTabStatuses = useCallback(() => {
-    switch (ticketSubTab) { case 'open': return ['open','pending']; case 'in_progress': return ['in_progress']; case 'closed': return ['resolved','closed']; default: return []; }
+    switch (ticketSubTab) {
+      case 'open': return ['open'];
+      case 'pending': return ['pending'];
+      case 'in_progress': return ['in_progress'];
+      case 'resolved': return ['resolved'];
+      case 'closed': return ['closed'];
+      default: return [];
+    }
   }, [ticketSubTab]);
 
   const loadTickets = useCallback(async () => {
@@ -963,10 +970,13 @@ export default function CustomerServiceManagement() {
           <div className="space-y-4">
             {/* Sub-tabs */}
             <div className="flex items-center gap-3">
-              <div className="bg-[#082c59]/[0.04] rounded-xl p-1 inline-flex gap-1 border border-slate-200/40">
-                {[{k:'open',l:'Open',c:`${(stats?.by_status?.open||0)+(stats?.by_status?.pending||0)}`,i:Inbox,active:'from-blue-500 to-blue-600'},
+              <div className="bg-[#082c59]/[0.04] rounded-xl p-1 inline-flex gap-1 border border-slate-200/40 flex-wrap">
+                {[
+                  {k:'open',l:'Open',c:`${stats?.by_status?.open||0}`,i:Inbox,active:'from-blue-500 to-blue-600'},
+                  {k:'pending',l:'Pending',c:`${stats?.by_status?.pending||0}`,i:Clock,active:'from-orange-500 to-orange-600'},
                   {k:'in_progress',l:'In Progress',c:`${stats?.by_status?.in_progress||0}`,i:Activity,active:'from-purple-500 to-purple-600'},
-                  {k:'closed',l:'Closed',c:`${(stats?.by_status?.resolved||0)+(stats?.by_status?.closed||0)}`,i:CheckCircle,active:'from-green-500 to-green-600'}
+                  {k:'resolved',l:'Resolved',c:`${stats?.by_status?.resolved||0}`,i:CheckCircle,active:'from-emerald-500 to-emerald-600'},
+                  {k:'closed',l:'Closed',c:`${stats?.by_status?.closed||0}`,i:CheckCircle,active:'from-slate-500 to-slate-600'}
                 ].map(s => (
                   <button key={s.k} onClick={() => setTicketSubTab(s.k)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${ticketSubTab === s.k ? `bg-gradient-to-r ${s.active} text-white shadow-md` : 'text-slate-600 hover:bg-slate-100'}`}>
                     <s.i className="w-4 h-4" />{s.l}<Badge className={`ml-1 ${ticketSubTab === s.k ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'} text-xs h-5 min-w-[20px]`}>{s.c}</Badge>

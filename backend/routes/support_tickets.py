@@ -1142,7 +1142,7 @@ async def assign_ticket(
         "assigned_to_name": assignment.assignee_name,
         "assigned_at": datetime.now(timezone.utc).isoformat(),
         "assigned_by": current_user["_id"],
-        "status": "in_progress" if ticket.get("status") == "open" else ticket.get("status"),
+        "status": "in_progress" if ticket.get("status") in ("open", "pending") else ticket.get("status"),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -1244,9 +1244,11 @@ async def reply_to_ticket(
     # Waiting tag logic (only for non-internal replies)
     if not reply.is_internal:
         if is_agent:
-            # Admin replied → waiting for user
+            # Admin replied → waiting for user → status "in_progress"
             tags_to_remove.extend(["waiting-for-admin", "re-opened"])
             tags_to_add.append("waiting-for-user")
+            if current_status not in ("resolved", "closed"):
+                update_data["status"] = "in_progress"
             messages_to_push.append({
                 "id": str(uuid.uuid4()),
                 "sender_type": "system",
@@ -1259,9 +1261,11 @@ async def reply_to_ticket(
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
         else:
-            # User replied → waiting for admin
+            # User replied → waiting for admin → status "pending"
             tags_to_remove.extend(["waiting-for-user", "re-opened"])
             tags_to_add.append("waiting-for-admin")
+            if current_status not in ("resolved", "closed"):
+                update_data["status"] = "pending"
             messages_to_push.append({
                 "id": str(uuid.uuid4()),
                 "sender_type": "system",
@@ -1398,6 +1402,8 @@ async def reply_with_attachments(
         if is_agent:
             tags_to_remove.extend(["waiting-for-admin", "re-opened"])
             tags_to_add.append("waiting-for-user")
+            if current_status not in ("resolved", "closed"):
+                update_data["status"] = "in_progress"
             messages_to_push.append({
                 "id": str(uuid.uuid4()), "sender_type": "system", "sender_id": "system",
                 "sender_name": "System", "message": "Waiting for user response",
@@ -1407,6 +1413,8 @@ async def reply_with_attachments(
         else:
             tags_to_remove.extend(["waiting-for-user", "re-opened"])
             tags_to_add.append("waiting-for-admin")
+            if current_status not in ("resolved", "closed"):
+                update_data["status"] = "pending"
             messages_to_push.append({
                 "id": str(uuid.uuid4()), "sender_type": "system", "sender_id": "system",
                 "sender_name": "System", "message": "Waiting for admin response",
