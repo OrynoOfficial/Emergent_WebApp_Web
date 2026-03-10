@@ -1308,3 +1308,12 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 
 - **Testing**: 12/12 backend, 12/12 frontend (iteration_76)
 
+
+- [x] **Enhanced Validation Cards with Full Detail**:
+  - Payment cards: order #, service category, operator, customer info (name/email/phone), booking details (date, seats, route), amount + currency, payment method, timestamps
+  - Ticket cards: status tag, category, operator, payment info, cancellation reason (for cancel_pending), amount, timestamps
+  - Service cards: type-specific detail (travel: route + departure/arrival + vehicle + seats; hotel: city + star rating; all: operator, description, amenities), price
+  - Promotion cards: title, full message, operator, submitter, discount value, valid until, service type
+  - History/Validated cards: action badge (green=approved, red=rejected), item type, performer + role, operator, amount, subscriber count, **rejection reason prominently displayed** in red-bordered box
+  - All cards have colored left border by type (amber=payment, blue=ticket, purple=service, violet=promotion)
+
