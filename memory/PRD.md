@@ -1285,3 +1285,26 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - Full notification flow: Operator submits → Admins notified → Admin approves/rejects → Operator notified
   - **Testing**: 12/12 backend (iteration_75)
 
+
+### Session: Mar 10, 2026 (Part 3) — Validation Page Complete Restructure
+
+- [x] **Validation Page Restructured with Pending/Validated Tabs**:
+  - Top-level tabs: **Pending** (with count badge) | **Validated** (with count badge)
+  - Pending sub-tabs: Payments | Tickets | Services | Promotions (each with count badges)
+  - Validated sub-tabs: Payments | Tickets | Services | Promotions (each with count badges)
+  - Each sub-tab has: Local search bar, List/Grid view toggle, Pagination (8/page), Bulk select + actions
+  - Reusable `ValidationSubPage` component used across all 8 sub-tabs
+
+- [x] **Rejection Reason Modal**:
+  - Dialog with textarea for entering rejection reason
+  - Required field — cannot submit without reason
+  - Used for all rejection actions (payments, tickets, services, promotions, operators)
+
+- [x] **Validation History Tracking**:
+  - New backend: `GET /api/validation/history` with type_counts
+  - `log_validation_action()` utility logs all approve/reject actions to `validation_history` collection
+  - Tracks: action, item_type, item_id, item_name, performer, reason, timestamp
+  - Validated tab shows audit trail with performer name, role, and action badges
+
+- **Testing**: 12/12 backend, 12/12 frontend (iteration_76)
+
