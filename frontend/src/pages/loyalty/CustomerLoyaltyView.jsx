@@ -7,19 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import {
   TrendingUp, Gift, Crown, Trophy, Check, Copy, Sparkles, Clock,
-  Loader2, Percent, Users
+  Loader2, Percent, Users, MessageSquare
 } from 'lucide-react';
 import { formatDateShort } from '../../utils/dateUtils';
 import api from '../../api/client';
 import { toast } from 'sonner';
 import { TIER_CONFIG, TIER_SYMBOLS, TIER_ORDER, TIER_THRESHOLDS, DEFAULT_REWARDS, getExpiryInfo } from './constants';
+import MessagesTab from './MessagesTab';
 
-export default function CustomerLoyaltyView() {
+export default function CustomerLoyaltyView({ initialTab }) {
   const [selectedReward, setSelectedReward] = useState(null);
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState(false);
-  const [activeTab, setActiveTab] = useState('my-rewards');
+  const [activeTab, setActiveTab] = useState(initialTab || 'my-rewards');
   const [redeemSuccess, setRedeemSuccess] = useState(null);
   const [loyaltyProgram, setLoyaltyProgram] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -27,15 +28,17 @@ export default function CustomerLoyaltyView() {
   const [redemptions, setRedemptions] = useState([]);
   const [referralInfo, setReferralInfo] = useState(null);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [approvedPromos, setApprovedPromos] = useState([]);
 
   useEffect(() => { loadLoyaltyData(); }, []);
 
   const loadLoyaltyData = async () => {
     setLoading(true);
     try {
-      const [programRes, txRes, rewardsRes, redemptionsRes, referralRes] = await Promise.all([
+      const [programRes, txRes, rewardsRes, redemptionsRes, referralRes, promosRes] = await Promise.all([
         api.get('/loyalty/program'), api.get('/loyalty/transactions'), api.get('/loyalty/rewards'),
-        api.get('/loyalty/redemptions'), api.get('/loyalty/referral').catch(() => ({ data: null }))
+        api.get('/loyalty/redemptions'), api.get('/loyalty/referral').catch(() => ({ data: null })),
+        api.get('/subscriptions/user-alerts').catch(() => ({ data: { alerts: [] } }))
       ]);
       const program = programRes.data;
       const currentTierIdx = TIER_ORDER.indexOf(program.tier || 'bronze');
@@ -54,6 +57,9 @@ export default function CustomerLoyaltyView() {
       if (rewardsRes.data.rewards?.length > 0) setRewards(rewardsRes.data.rewards);
       setRedemptions(redemptionsRes.data.redemptions || []);
       if (referralRes.data) setReferralInfo(referralRes.data);
+      // Load approved promotions from subscribed operators
+      const allAlerts = promosRes.data?.alerts || [];
+      setApprovedPromos(allAlerts.filter(a => a.type === 'promotion' && a.status === 'approved'));
     } catch {
       setLoyaltyProgram({ tier: 'bronze', total_points: 0, available_points: 0, tier_progress: 0, next_tier: 'silver', points_to_next_tier: 1000, member_since: new Date().toISOString() });
     } finally { setLoading(false); }
@@ -122,7 +128,7 @@ export default function CustomerLoyaltyView() {
 
       {/* 3-Tab */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl"><TabsTrigger value="my-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><Crown className="h-4 w-4 mr-1.5" /> My Rewards</TabsTrigger><TabsTrigger value="activity" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><TrendingUp className="h-4 w-4 mr-1.5" /> Activity</TabsTrigger><TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><Gift className="h-4 w-4 mr-1.5" /> Rewards</TabsTrigger></TabsList>
+        <TabsList className="grid w-full grid-cols-4 bg-slate-100 p-1 rounded-xl"><TabsTrigger value="my-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><Crown className="h-4 w-4 mr-1.5" /> My Rewards</TabsTrigger><TabsTrigger value="activity" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><TrendingUp className="h-4 w-4 mr-1.5" /> Activity</TabsTrigger><TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><Gift className="h-4 w-4 mr-1.5" /> Rewards</TabsTrigger><TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="loyalty-messages-tab"><MessageSquare className="h-4 w-4 mr-1.5" /> Messages</TabsTrigger></TabsList>
 
         <TabsContent value="my-rewards" className="space-y-6">
           <Card><CardHeader><CardTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-amber-500" /> Tier Roadmap</CardTitle></CardHeader><CardContent>
@@ -139,7 +145,50 @@ export default function CustomerLoyaltyView() {
         </CardContent></Card></TabsContent>
 
         <TabsContent value="rewards" className="space-y-4">
-          {availableRewards.length === 0 ? <Card><CardContent className="py-12 text-center"><Gift className="w-12 h-12 text-slate-200 mx-auto mb-3" /><p className="text-slate-500">All rewards redeemed!</p></CardContent></Card> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{availableRewards.map(reward => { const canRedeem = loyaltyProgram.available_points >= reward.points_required; const tierIdx = TIER_ORDER.indexOf(loyaltyProgram.tier); const rewardTierIdx = TIER_ORDER.indexOf(reward.min_tier); const tierUnlocked = tierIdx >= rewardTierIdx; const pointsNeeded = Math.max(0, reward.points_required - loyaltyProgram.available_points); const rewardTierCfg = TIER_CONFIG[reward.min_tier] || TIER_CONFIG.bronze; return (<Card key={reward.id} className={`overflow-hidden transition-all border ${!tierUnlocked ? 'opacity-50' : canRedeem ? 'border-emerald-200 shadow-sm' : 'border-slate-200'}`}><CardContent className="p-5"><div className="flex items-start justify-between mb-3"><div className={`p-2.5 rounded-xl ${rewardTierCfg.bgColor}`}>{reward.type === 'discount' ? <Percent className="h-5 w-5 text-slate-600" /> : <Gift className="h-5 w-5 text-slate-600" />}</div><Badge className={`${rewardTierCfg.bgColor} ${rewardTierCfg.textColor} text-xs`}>{TIER_SYMBOLS[reward.min_tier]} {rewardTierCfg.name}+</Badge></div><h4 className="font-bold text-slate-900 mb-1">{reward.title}</h4><p className="text-sm text-slate-500 mb-2">{reward.description}</p>{reward.valid_to && <p className="text-xs text-amber-600 mb-2">Expires: {formatDateShort(reward.valid_to)}</p>}<div className="mb-3"><div className="flex justify-between items-center mb-1"><span className="text-lg font-bold text-[#082c59]">{reward.points_required?.toLocaleString()} pts</span>{canRedeem && <Badge className="bg-emerald-100 text-emerald-700 text-xs"><Check className="h-3 w-3 mr-0.5" /> Ready</Badge>}</div><Progress value={Math.min(100, (loyaltyProgram.available_points / reward.points_required) * 100)} className="h-1.5" />{!canRedeem && <p className="text-xs text-slate-400 mt-1">{pointsNeeded.toLocaleString()} more needed</p>}</div><Button onClick={() => handleRedeemReward(reward)} disabled={!canRedeem || !tierUnlocked} className={`w-full ${canRedeem && tierUnlocked ? 'bg-[#082c59] hover:bg-[#0a3a75]' : ''}`} variant={canRedeem && tierUnlocked ? 'default' : 'outline'}>{!tierUnlocked ? 'Tier Locked' : canRedeem ? 'Redeem Now' : `Need ${pointsNeeded.toLocaleString()} pts`}</Button></CardContent></Card>); })}</div>}
+          {/* Approved Promotions from Operators */}
+          {approvedPromos.length > 0 && (
+            <Card className="border border-purple-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Gift className="w-5 h-5 text-purple-500" /> Operator Promotions
+                  <Badge className="bg-purple-100 text-purple-700 text-xs">{approvedPromos.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {approvedPromos.map(promo => (
+                    <Card key={promo.id} className="border border-purple-100 overflow-hidden" data-testid={`promo-card-${promo.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="p-2 rounded-lg bg-purple-50">
+                            <Gift className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <Badge className="bg-purple-50 text-purple-700 text-[10px]">Promotion</Badge>
+                        </div>
+                        <h4 className="font-bold text-slate-900 text-sm mb-1">{promo.title}</h4>
+                        <p className="text-xs text-slate-500 mb-2 line-clamp-2">{promo.message}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                          <span>{promo.operator_name}</span>
+                          {promo.discount_value && (
+                            <Badge variant="outline" className="text-[10px] text-green-600 border-green-300">{promo.discount_value}</Badge>
+                          )}
+                        </div>
+                        {promo.valid_until && (
+                          <p className="text-[10px] text-amber-600 mt-1">Valid until {new Date(promo.valid_until).toLocaleDateString()}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* Point-based Rewards */}
+          {availableRewards.length === 0 && approvedPromos.length === 0 ? <Card><CardContent className="py-12 text-center"><Gift className="w-12 h-12 text-slate-200 mx-auto mb-3" /><p className="text-slate-500">All rewards redeemed!</p></CardContent></Card> : availableRewards.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{availableRewards.map(reward => { const canRedeem = loyaltyProgram.available_points >= reward.points_required; const tierIdx = TIER_ORDER.indexOf(loyaltyProgram.tier); const rewardTierIdx = TIER_ORDER.indexOf(reward.min_tier); const tierUnlocked = tierIdx >= rewardTierIdx; const pointsNeeded = Math.max(0, reward.points_required - loyaltyProgram.available_points); const rewardTierCfg = TIER_CONFIG[reward.min_tier] || TIER_CONFIG.bronze; return (<Card key={reward.id} className={`overflow-hidden transition-all border ${!tierUnlocked ? 'opacity-50' : canRedeem ? 'border-emerald-200 shadow-sm' : 'border-slate-200'}`}><CardContent className="p-5"><div className="flex items-start justify-between mb-3"><div className={`p-2.5 rounded-xl ${rewardTierCfg.bgColor}`}>{reward.type === 'discount' ? <Percent className="h-5 w-5 text-slate-600" /> : <Gift className="h-5 w-5 text-slate-600" />}</div><Badge className={`${rewardTierCfg.bgColor} ${rewardTierCfg.textColor} text-xs`}>{TIER_SYMBOLS[reward.min_tier]} {rewardTierCfg.name}+</Badge></div><h4 className="font-bold text-slate-900 mb-1">{reward.title}</h4><p className="text-sm text-slate-500 mb-2">{reward.description}</p>{reward.valid_to && <p className="text-xs text-amber-600 mb-2">Expires: {formatDateShort(reward.valid_to)}</p>}<div className="mb-3"><div className="flex justify-between items-center mb-1"><span className="text-lg font-bold text-[#082c59]">{reward.points_required?.toLocaleString()} pts</span>{canRedeem && <Badge className="bg-emerald-100 text-emerald-700 text-xs"><Check className="h-3 w-3 mr-0.5" /> Ready</Badge>}</div><Progress value={Math.min(100, (loyaltyProgram.available_points / reward.points_required) * 100)} className="h-1.5" />{!canRedeem && <p className="text-xs text-slate-400 mt-1">{pointsNeeded.toLocaleString()} more needed</p>}</div><Button onClick={() => handleRedeemReward(reward)} disabled={!canRedeem || !tierUnlocked} className={`w-full ${canRedeem && tierUnlocked ? 'bg-[#082c59] hover:bg-[#0a3a75]' : ''}`} variant={canRedeem && tierUnlocked ? 'default' : 'outline'}>{!tierUnlocked ? 'Tier Locked' : canRedeem ? 'Redeem Now' : `Need ${pointsNeeded.toLocaleString()} pts`}</Button></CardContent></Card>); })}</div>}
+        </TabsContent>
+
+        <TabsContent value="messages">
+          <MessagesTab />
         </TabsContent>
       </Tabs>
 

@@ -247,7 +247,7 @@ async def create_alert(
                 "operator_id": operator_id,
                 "operator_name": operator_name,
                 "alert_id": alert_id,
-                "action_url": "/alerts",
+                "action_url": "/loyalty?tab=messages",
                 "is_read": False,
                 "created_at": datetime.now(timezone.utc),
             })
@@ -380,7 +380,7 @@ async def approve_promotion(
             "promotion_id": promotion_id,
             "operator_id": operator_id,
             "operator_name": operator_name,
-            "action_url": "/alerts",
+            "action_url": "/loyalty?tab=messages",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })

@@ -156,8 +156,8 @@ export default function Layout({ children }) {
     { type: 'page', label: 'My Ratings', description: 'Your reviews & ratings', path: '/ratings', icon: 'Star', color: '#FBBF24', keywords: ['review', 'feedback'] },
     { type: 'page', label: 'Support', description: 'Get help & support', path: '/support', icon: 'HelpCircle', color: '#22C55E', keywords: ['help', 'chat', 'contact', 'assistance'] },
     { type: 'page', label: 'Settings', description: 'Account settings', path: '/settings', icon: 'Settings', color: '#64748b', keywords: ['profile', 'account', 'preferences', 'password'] },
-    { type: 'page', label: 'Notifications', description: 'View notifications', path: '/notifications', icon: 'Bell', color: '#F59E0B', keywords: ['alerts', 'messages'] },
-    { type: 'page', label: 'Messages & Alerts', description: 'View operator alerts and promotions', path: '/alerts', icon: 'Bell', color: '#3B82F6', keywords: ['alerts', 'messages', 'promotions', 'operator'] },
+    { type: 'page', label: 'Notifications', description: 'View notifications', path: '/loyalty?tab=messages', icon: 'Bell', color: '#F59E0B', keywords: ['alerts', 'messages', 'notifications'] },
+    { type: 'page', label: 'Messages & Alerts', description: 'View operator alerts and promotions', path: '/loyalty?tab=messages', icon: 'Bell', color: '#3B82F6', keywords: ['alerts', 'messages', 'promotions', 'operator'] },
     
     // Admin Pages (only shown to admin/operator)
     ...(canManage ? [
@@ -335,6 +335,7 @@ export default function Layout({ children }) {
   const notificationsList = notificationData?.notifications || [];
   const unreadCount = notificationData?.unreadCount || 0;
   const clearAllNotifications = notificationData?.clearAll || (() => {});
+  const markNotificationAsRead = notificationData?.markAsRead || (() => {});
 
   const toggleMenu = (key) => {
     setExpandedMenus(prev => ({ ...prev, [key]: !prev[key] }));
@@ -762,7 +763,7 @@ export default function Layout({ children }) {
                         ) : (
                           notificationsList.map((notification) => {
                             const actionUrl = notification.action_url || 
-                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/alerts' :
+                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/loyalty?tab=messages' :
                               notification.type === 'promotion_pending' ? '/admin/validation' :
                               ['booking', 'order'].includes(notification.type) ? '/orders' :
                               notification.type === 'payment' ? '/orders' :
@@ -770,11 +771,13 @@ export default function Layout({ children }) {
                             return (
                             <div 
                               key={notification.id}
+                              data-testid={`notif-dropdown-${notification.id}`}
                               className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50' : ''}`}
                               onClick={() => {
+                                if (!notification.read) markNotificationAsRead(notification.id);
                                 setNotificationsOpen(false);
                                 if (actionUrl) navigate(actionUrl);
-                                else navigate('/notifications');
+                                else navigate('/loyalty?tab=messages');
                               }}
                             >
                               <div className="flex items-start gap-3">
@@ -799,7 +802,7 @@ export default function Layout({ children }) {
                         <button 
                           onClick={() => {
                             setNotificationsOpen(false);
-                            navigate('/notifications');
+                            navigate('/loyalty?tab=messages');
                           }}
                           className="text-sm text-[#082c59] hover:text-[#0a3a75] font-medium py-1 transition-colors"
                         >

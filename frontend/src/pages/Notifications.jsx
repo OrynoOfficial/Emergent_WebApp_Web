@@ -54,12 +54,12 @@ export default function Notifications() {
     if (notification.action_url) return notification.action_url;
     // Fallback mapping by type/source
     const type = notification.type || notification.source || '';
-    if (type === 'operator_alert' || type === 'promotion' || type === 'operator_promotion') return '/alerts';
+    if (type === 'operator_alert' || type === 'promotion' || type === 'operator_promotion') return '/loyalty?tab=messages';
     if (type === 'promotion_pending') return '/admin/validation';
     if (type === 'booking' || type === 'order') return '/orders';
     if (type === 'payment') return '/orders';
     if (type === 'ticket_reply' || type === 'support') return '/support';
-    if (type === 'system') return '/notifications';
+    if (type === 'system') return '/loyalty?tab=messages';
     return null;
   };
 
