@@ -11,6 +11,7 @@ import {
 import { format, addDays } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const MOCK_FILM = {
   id: '1',
@@ -203,7 +204,10 @@ export default function CinemaFilmDetails() {
 
             {/* Film Info */}
             <div className="flex-1 text-white">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{film.title}</h1>
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-3xl md:text-4xl font-bold">{film.title}</h1>
+                <SubscribeButton operatorId={film.operator_id} operatorName={film.cinema_name || film.title} className="border-white/30" />
+              </div>
               
               {/* Genres */}
               <div className="flex flex-wrap gap-2 mb-4">

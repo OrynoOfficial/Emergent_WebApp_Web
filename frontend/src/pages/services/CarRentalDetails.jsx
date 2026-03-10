@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const FEATURE_LABELS = {
   ac: 'Air Conditioning',
@@ -167,10 +168,13 @@ export default function CarRentalDetails() {
                     <h1 className="text-2xl font-bold text-[#082c59]">{vehicle.name}</h1>
                     <p className="text-slate-600 text-sm">{vehicle.brand} {vehicle.model} · {vehicle.year}</p>
                   </div>
-                  <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
-                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                    <span className="text-lg font-bold">{vehicle.rating}</span>
-                    <span className="text-xs text-slate-500">({vehicle.reviews_count})</span>
+                  <div className="flex items-center gap-3">
+                    <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name || vehicle.name} />
+                    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
+                      <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                      <span className="text-lg font-bold">{vehicle.rating}</span>
+                      <span className="text-xs text-slate-500">({vehicle.reviews_count})</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -344,6 +344,17 @@ async def moderate_rating(
         update_data["hide_reason"] = None
     elif moderation.action == "delete":
         await db.ratings.delete_one({"_id": rating_id})
+        await db.moderation_audit.insert_one({
+            "_id": str(uuid.uuid4()),
+            "rating_id": rating_id,
+            "action": "delete",
+            "reason": moderation.reason,
+            "performed_by": current_user.get("_id"),
+            "performed_by_name": current_user.get("full_name", current_user.get("email", "")),
+            "performed_by_role": current_user.get("role"),
+            "created_at": datetime.now(timezone.utc),
+            "bulk": False,
+        })
         return {"message": "Rating deleted successfully"}
     else:
         raise HTTPException(status_code=400, detail="Invalid moderation action")
@@ -352,6 +363,19 @@ async def moderate_rating(
         update_data["moderation_notes"] = moderation.reason
     
     await db.ratings.update_one({"_id": rating_id}, {"$set": update_data})
+    
+    # Log moderation audit
+    await db.moderation_audit.insert_one({
+        "_id": str(uuid.uuid4()),
+        "rating_id": rating_id,
+        "action": moderation.action,
+        "reason": moderation.reason,
+        "performed_by": current_user.get("_id"),
+        "performed_by_name": current_user.get("full_name", current_user.get("email", "")),
+        "performed_by_role": current_user.get("role"),
+        "created_at": datetime.now(timezone.utc),
+        "bulk": False,
+    })
     
     return {"message": f"Rating {moderation.action}ged successfully"}
 
@@ -414,7 +438,165 @@ async def bulk_moderate_ratings(
     )
     updated_count = result.modified_count
     
+    # Log moderation audit trail
+    audit_entries = []
+    for rid in moderation.rating_ids:
+        audit_entries.append({
+            "_id": str(uuid.uuid4()),
+            "rating_id": rid,
+            "action": moderation.action,
+            "reason": moderation.reason,
+            "performed_by": current_user.get("_id"),
+            "performed_by_name": current_user.get("full_name", current_user.get("email", "")),
+            "performed_by_role": current_user.get("role"),
+            "created_at": datetime.now(timezone.utc),
+            "bulk": True,
+            "batch_size": len(moderation.rating_ids),
+        })
+    if audit_entries:
+        await db.moderation_audit.insert_many(audit_entries)
+    
     return {"message": f"{updated_count} rating(s) {moderation.action}ged successfully", "count": updated_count}
+
+
+@router.get("/moderation-queue")
+async def get_moderation_queue(
+    status_filter: str = "all",
+    sort_by: str = "newest",
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get moderation queue — flagged, hidden, and reported ratings for review."""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    db = get_database()
+
+    query = {}
+    if status_filter == "flagged":
+        query["is_flagged"] = True
+    elif status_filter == "hidden":
+        query["is_hidden"] = True
+    elif status_filter == "low":
+        query["rating"] = {"$lte": 2}
+    elif status_filter == "needs_review":
+        query["$or"] = [{"is_flagged": True}, {"is_hidden": True}, {"rating": {"$lte": 1}}]
+    else:
+        query["$or"] = [{"is_flagged": True}, {"is_hidden": True}]
+
+    sort_field = "created_at"
+    sort_dir = -1
+    if sort_by == "oldest":
+        sort_dir = 1
+    elif sort_by == "lowest":
+        sort_field = "rating"
+        sort_dir = 1
+    elif sort_by == "highest":
+        sort_field = "rating"
+        sort_dir = -1
+
+    items = await db.ratings.find(query).sort(sort_field, sort_dir).skip(skip).limit(limit).to_list(limit)
+    total = await db.ratings.count_documents(query)
+
+    queue = []
+    for r in items:
+        queue.append({
+            "id": str(r.get("_id", "")),
+            "service_name": r.get("entity_name", "Service"),
+            "service_category": r.get("entity_type", ""),
+            "customer_name": r.get("user_name", "Customer"),
+            "customer_id": r.get("user_id", ""),
+            "operator_id": r.get("operator_id"),
+            "rating": r.get("rating", 0),
+            "comment": r.get("review", ""),
+            "created_at": r.get("created_at"),
+            "is_flagged": r.get("is_flagged", False),
+            "is_hidden": r.get("is_hidden", False),
+            "flag_reason": r.get("flag_reason"),
+            "moderation_notes": r.get("moderation_notes"),
+            "moderated_at": r.get("moderated_at"),
+            "operator_response": r.get("operator_response"),
+        })
+
+    # Counts for queue tabs
+    flagged_count = await db.ratings.count_documents({"is_flagged": True})
+    hidden_count = await db.ratings.count_documents({"is_hidden": True})
+    low_rating_count = await db.ratings.count_documents({"rating": {"$lte": 2}})
+
+    return {
+        "queue": queue,
+        "total": total,
+        "counts": {
+            "flagged": flagged_count,
+            "hidden": hidden_count,
+            "low_rating": low_rating_count,
+        }
+    }
+
+
+@router.get("/moderation-audit")
+async def get_moderation_audit(
+    skip: int = 0,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get moderation audit log showing all moderation actions taken."""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    db = get_database()
+
+    entries = await db.moderation_audit.find({}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.moderation_audit.count_documents({})
+
+    return {"entries": entries, "total": total}
+
+
+@router.get("/export")
+async def export_ratings(
+    format: str = "json",
+    service_type: Optional[str] = None,
+    flagged_only: bool = False,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Export ratings data as JSON for admin reporting."""
+    if current_user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    db = get_database()
+
+    query = {}
+    if service_type:
+        query["entity_type"] = service_type
+    if flagged_only:
+        query["is_flagged"] = True
+
+    ratings = await db.ratings.find(query).sort("created_at", -1).to_list(10000)
+
+    export_data = []
+    for r in ratings:
+        export_data.append({
+            "id": str(r.get("_id", "")),
+            "service_name": r.get("entity_name", ""),
+            "service_type": r.get("entity_type", ""),
+            "customer_name": r.get("user_name", ""),
+            "rating": r.get("rating", 0),
+            "review": r.get("review", ""),
+            "created_at": r.get("created_at").isoformat() if r.get("created_at") else None,
+            "is_flagged": r.get("is_flagged", False),
+            "is_hidden": r.get("is_hidden", False),
+            "flag_reason": r.get("flag_reason"),
+            "moderation_notes": r.get("moderation_notes"),
+            "operator_response": r.get("operator_response"),
+        })
+
+    return {
+        "ratings": export_data,
+        "total": len(export_data),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "filters": {"service_type": service_type, "flagged_only": flagged_only},
+    }
 
 
 @router.get("/stats")

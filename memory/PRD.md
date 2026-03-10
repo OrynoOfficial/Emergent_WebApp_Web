@@ -237,7 +237,7 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - [x] Added real-time revenue calculation to Operators Management page (Jan 9, 2026)
 
 ## Backlog / Future Tasks
-- [ ] Email-based invitation system for team members - P1
+- [ ] Email-based invitation system for team members - P3 (deprioritized)
 - [ ] Add more ratings moderation features (bulk actions, reports) - P3
 - [ ] Link test orders to operators for revenue demonstration - P4
 - [ ] Further refactor CustomerServiceManagement.jsx (~1365 lines) - P4
@@ -399,7 +399,7 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
   - All tests passed (15/15 backend tests)
 
 ## Backlog (Updated)
-- [ ] **P1: Email Invitation System** - Allow inviting new users via email
+- [ ] **P3: Email Invitation System** - Allow inviting new users via email (deprioritized)
 - [ ] **P4: Mobile App (Customer Only)** - Capacitor + React for iOS/Android
   - Reuse 90%+ of existing React code
   - Native features: Push notifications, Camera, GPS, Offline mode

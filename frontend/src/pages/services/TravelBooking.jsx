@@ -16,6 +16,7 @@ import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import LiveSeatMap from '../../components/travel/LiveSeatMap';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import { toast } from 'sonner';
 
 // Step indicator for travel booking
@@ -523,10 +524,11 @@ export default function TravelBooking() {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-slate-100">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-slate-900">Complete Your Booking</h1>
               <p className="text-sm text-slate-500">{outbound.from_city} → {outbound.to_city}</p>
             </div>
+            <SubscribeButton operatorId={outbound.operator_id} operatorName={outbound.operator_name} />
           </div>
         </div>
       </div>

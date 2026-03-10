@@ -18,6 +18,7 @@ import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import api from '@/api/client';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 
@@ -288,10 +289,11 @@ export default function PackageBooking() {
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-slate-100">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl font-bold text-slate-900">Complete Your Delivery</h1>
               <p className="text-sm text-slate-500">{service.service_name}</p>
             </div>
+            <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} />
           </div>
         </div>
       </div>

@@ -1166,6 +1166,20 @@ function AdminRatingsView() {
                 <SelectItem value="1">1 Star</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap" data-testid="export-ratings-btn" onClick={async () => {
+              try {
+                const params = filterService !== 'all' ? `?service_type=${filterService}` : '';
+                const res = await api.get(`/ratings/export${params}`);
+                const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `ratings_export_${new Date().toISOString().split('T')[0]}.json`; a.click();
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${res.data.total} ratings`);
+              } catch { toast.error('Export failed'); }
+            }}>
+              <FileText className="h-4 w-4" /> Export
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -1966,6 +1980,302 @@ function AdminReportsView() {
   );
 }
 
+// Moderation Queue Component
+function ModerationQueueView() {
+  const [queue, setQueue] = useState([]);
+  const [counts, setCounts] = useState({ flagged: 0, hidden: 0, low_rating: 0 });
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [processingAction, setProcessingAction] = useState(false);
+
+  const fetchQueue = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/ratings/moderation-queue', {
+        params: { status_filter: filter, sort_by: sortBy, limit: 50 }
+      });
+      setQueue(res.data.queue || []);
+      setCounts(res.data.counts || { flagged: 0, hidden: 0, low_rating: 0 });
+    } catch {
+      setQueue([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchQueue(); }, [filter, sortBy]);
+
+  const handleBulkAction = async (action) => {
+    if (selectedIds.size === 0) return;
+    setProcessingAction(true);
+    try {
+      await api.post('/ratings/bulk-moderate', {
+        rating_ids: Array.from(selectedIds),
+        action,
+        reason: `Bulk ${action} from moderation queue`,
+      });
+      toast.success(`${selectedIds.size} rating(s) ${action}ed`);
+      setSelectedIds(new Set());
+      fetchQueue();
+    } catch (err) {
+      toast.error('Action failed');
+    } finally {
+      setProcessingAction(false);
+    }
+  };
+
+  const handleSingleAction = async (ratingId, action) => {
+    try {
+      await api.post(`/ratings/${ratingId}/moderate`, { action });
+      toast.success(`Rating ${action}ed`);
+      fetchQueue();
+    } catch {
+      toast.error('Action failed');
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = (checked) => {
+    setSelectedIds(checked ? new Set(queue.map(q => q.id)) : new Set());
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-[#082c59]" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4" data-testid="moderation-queue">
+      {/* Queue Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className={`cursor-pointer transition-all ${filter === 'flagged' ? 'ring-2 ring-orange-400' : ''}`} onClick={() => setFilter(f => f === 'flagged' ? 'all' : 'flagged')}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg"><Flag className="h-4 w-4 text-orange-600" /></div>
+            <div>
+              <p className="text-xl font-bold">{counts.flagged}</p>
+              <p className="text-xs text-slate-500">Flagged</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={`cursor-pointer transition-all ${filter === 'hidden' ? 'ring-2 ring-slate-400' : ''}`} onClick={() => setFilter(f => f === 'hidden' ? 'all' : 'hidden')}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-slate-100 rounded-lg"><EyeOff className="h-4 w-4 text-slate-600" /></div>
+            <div>
+              <p className="text-xl font-bold">{counts.hidden}</p>
+              <p className="text-xs text-slate-500">Hidden</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={`cursor-pointer transition-all ${filter === 'low' ? 'ring-2 ring-red-400' : ''}`} onClick={() => setFilter(f => f === 'low' ? 'all' : 'low')}>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg"><AlertTriangle className="h-4 w-4 text-red-600" /></div>
+            <div>
+              <p className="text-xl font-bold">{counts.low_rating}</p>
+              <p className="text-xs text-slate-500">Low Rating (&le;2)</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <Card className="bg-[#082c59] text-white border-0">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <div className="flex gap-2">
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleBulkAction('unflag')} disabled={processingAction}>
+                <CheckCircle className="h-3 w-3 mr-1" /> Approve
+              </Button>
+              <Button size="sm" className="bg-slate-500 hover:bg-slate-600 text-white" onClick={() => handleBulkAction('hide')} disabled={processingAction}>
+                <EyeOff className="h-3 w-3 mr-1" /> Hide
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => handleBulkAction('delete')} disabled={processingAction}>
+                <Trash2 className="h-3 w-3 mr-1" /> Delete
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white/20" onClick={() => setSelectedIds(new Set())}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sort controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={queue.length > 0 && selectedIds.size === queue.length} onCheckedChange={selectAll} />
+          <span className="text-sm text-slate-500">{queue.length} items in queue</span>
+        </div>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="text-sm border rounded-lg px-3 py-1.5 bg-white">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="lowest">Lowest Rating</option>
+        </select>
+      </div>
+
+      {/* Queue Items */}
+      {queue.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <CheckCircle className="h-12 w-12 mx-auto text-green-300 mb-3" />
+            <p className="font-semibold text-slate-700">Queue is clear</p>
+            <p className="text-sm text-slate-500 mt-1">No items need moderation right now</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {queue.map((item) => (
+            <Card key={item.id} className={`transition-all ${item.is_flagged ? 'border-l-4 border-l-orange-400' : item.is_hidden ? 'border-l-4 border-l-slate-400 opacity-70' : 'border-l-4 border-l-red-400'}`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox checked={selectedIds.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} className="mt-1" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{item.customer_name}</span>
+                        <div className="flex gap-0.5">
+                          {[1,2,3,4,5].map(s => <Star key={s} className={`h-3 w-3 ${s <= item.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />)}
+                        </div>
+                        {item.is_flagged && <Badge className="bg-orange-100 text-orange-700 text-[10px]"><Flag className="h-2.5 w-2.5 mr-0.5" />Flagged</Badge>}
+                        {item.is_hidden && <Badge className="bg-slate-100 text-slate-600 text-[10px]"><EyeOff className="h-2.5 w-2.5 mr-0.5" />Hidden</Badge>}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">{item.service_name} · {item.service_category}</p>
+                    {item.comment && <p className="text-sm text-slate-700 mt-1 line-clamp-2">{item.comment}</p>}
+                    {item.flag_reason && <p className="text-xs text-orange-600 mt-1">Reason: {item.flag_reason}</p>}
+                    <div className="flex items-center gap-2 mt-2">
+                      {item.is_flagged && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-green-600" onClick={() => handleSingleAction(item.id, 'unflag')}>
+                          <CheckCircle className="h-3 w-3 mr-1" /> Approve
+                        </Button>
+                      )}
+                      {!item.is_hidden ? (
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-slate-600" onClick={() => handleSingleAction(item.id, 'hide')}>
+                          <EyeOff className="h-3 w-3 mr-1" /> Hide
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-blue-600" onClick={() => handleSingleAction(item.id, 'unhide')}>
+                          <Eye className="h-3 w-3 mr-1" /> Show
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" className="h-7 text-xs text-red-600" onClick={() => handleSingleAction(item.id, 'delete')}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Moderation Audit Log Component
+function ModerationAuditView() {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get('/ratings/moderation-audit?limit=50');
+        setEntries(res.data.entries || []);
+        setTotal(res.data.total || 0);
+      } catch {
+        setEntries([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const actionColors = {
+    flag: 'text-orange-600 bg-orange-50',
+    unflag: 'text-green-600 bg-green-50',
+    hide: 'text-slate-600 bg-slate-100',
+    unhide: 'text-blue-600 bg-blue-50',
+    delete: 'text-red-600 bg-red-50',
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-[#082c59]" /></div>;
+  }
+
+  return (
+    <div className="space-y-4" data-testid="moderation-audit">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500">{total} moderation action{total !== 1 ? 's' : ''} recorded</p>
+        <Button variant="outline" size="sm" className="gap-1" onClick={async () => {
+          try {
+            const res = await api.get('/ratings/export');
+            const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ratings_export_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Export downloaded');
+          } catch { toast.error('Export failed'); }
+        }}>
+          <FileText className="h-3 w-3" /> Export Ratings
+        </Button>
+      </div>
+
+      {entries.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <ShieldAlert className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="font-semibold text-slate-700">No moderation history</p>
+            <p className="text-sm text-slate-500 mt-1">Actions taken on ratings will appear here</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className={`px-2.5 py-1 rounded-full text-xs font-medium capitalize ${actionColors[entry.action] || 'text-slate-600 bg-slate-50'}`}>
+                  {entry.action}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">
+                    <span className="font-medium">{entry.performed_by_name}</span>
+                    <span className="text-slate-500"> {entry.action === 'delete' ? 'deleted' : `${entry.action}ed`} a rating</span>
+                    {entry.bulk && <Badge variant="outline" className="ml-2 text-[10px]">Bulk ({entry.batch_size})</Badge>}
+                  </p>
+                  {entry.reason && <p className="text-xs text-slate-500 mt-0.5">Reason: {entry.reason}</p>}
+                </div>
+                <span className="text-xs text-slate-400 whitespace-nowrap">
+                  {entry.created_at ? new Date(entry.created_at).toLocaleString() : ''}
+                </span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Main Ratings Component
 export default function Ratings() {
   const { user, isOperatorUser } = useAuth();
@@ -1995,7 +2305,7 @@ export default function Ratings() {
       {/* Admin View with Tabs */}
       {isAdmin ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl bg-white shadow-sm">
             <TabsTrigger 
               value="ratings" 
               className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
@@ -2003,6 +2313,22 @@ export default function Ratings() {
             >
               <MessageSquare className="h-4 w-4" />
               All Ratings
+            </TabsTrigger>
+            <TabsTrigger 
+              value="queue" 
+              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
+              data-testid="queue-tab"
+            >
+              <ShieldAlert className="h-4 w-4" />
+              Queue
+            </TabsTrigger>
+            <TabsTrigger 
+              value="audit" 
+              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
+              data-testid="audit-tab"
+            >
+              <Activity className="h-4 w-4" />
+              Audit Log
             </TabsTrigger>
             <TabsTrigger 
               value="reports" 
@@ -2016,6 +2342,14 @@ export default function Ratings() {
 
           <TabsContent value="ratings" className="mt-6">
             <AdminRatingsView />
+          </TabsContent>
+
+          <TabsContent value="queue" className="mt-6">
+            <ModerationQueueView />
+          </TabsContent>
+
+          <TabsContent value="audit" className="mt-6">
+            <ModerationAuditView />
           </TabsContent>
 
           <TabsContent value="reports" className="mt-6">
