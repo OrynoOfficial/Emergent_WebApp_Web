@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://support-modern.preview.emergentagent.com/api"
+BASE_URL = "https://validation-hub-15.preview.emergentagent.com/api"
 
 # Test credentials
 SUPER_ADMIN_CREDS = {"email": "superadmin@oryno.com", "password": "testpassword123"}
@@ -210,7 +210,7 @@ class OperatorRolesTester:
         try:
             # This would typically be a frontend test, but we can check if the backend supports it
             # by checking if the route is accessible (even if it returns frontend content)
-            frontend_url = "https://support-modern.preview.emergentagent.com/management/team-roles"
+            frontend_url = "https://validation-hub-15.preview.emergentagent.com/management/team-roles"
             
             # Make a simple GET request to see if the route exists
             response = self.session.get(frontend_url, allow_redirects=True)

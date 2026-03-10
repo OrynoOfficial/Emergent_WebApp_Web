@@ -20,6 +20,7 @@ import Support from './pages/Support';
 import Ratings from './pages/Ratings';
 import Loyalty from './pages/Loyalty';
 import Notifications from './pages/Notifications';
+import Alerts from './pages/Alerts';
 
 // Static Pages
 import HelpCenter from './pages/static/HelpCenter';
@@ -822,9 +823,25 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/management/pressing"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+                <LaundryManagement />
+              </ProtectedRoute>
+            }
+          />
           
           <Route
             path="/management/banquet"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+                <BanquetManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/management/banquets"
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
                 <BanquetManagement />
@@ -889,6 +906,7 @@ function App() {
           <Route path="/confirmation" element={<Confirmation />} />
           <Route path="/booking-confirmation" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
           
           {/* Redirects */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

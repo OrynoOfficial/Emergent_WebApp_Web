@@ -47,7 +47,15 @@ async def get_notifications(
     if notification_type:
         query["notification_type"] = notification_type
     
-    notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    notifications = await db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Transform _id to id and serialize datetimes
+    for n in notifications:
+        n["id"] = str(n.pop("_id", ""))
+        for dt_field in ["created_at", "read_at"]:
+            if n.get(dt_field) and hasattr(n[dt_field], "isoformat"):
+                n[dt_field] = n[dt_field].isoformat()
+    
     total = await db.notifications.count_documents(query)
     unread = await db.notifications.count_documents({"user_id": current_user["_id"], "is_read": False})
     

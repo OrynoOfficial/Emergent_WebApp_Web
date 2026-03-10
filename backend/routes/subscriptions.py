@@ -229,6 +229,8 @@ async def create_alert(
             "source": "operator_alert",
             "operator_id": operator_id,
             "operator_name": operator_name,
+            "alert_id": alert_id,
+            "action_url": "/alerts",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
@@ -244,6 +246,8 @@ async def create_alert(
                 "source": "operator_alert",
                 "operator_id": operator_id,
                 "operator_name": operator_name,
+                "alert_id": alert_id,
+                "action_url": "/alerts",
                 "is_read": False,
                 "created_at": datetime.now(timezone.utc),
             })
@@ -318,6 +322,7 @@ async def create_promotion(
             "source": "promotion_approval",
             "promotion_id": promo_id,
             "operator_id": operator_id,
+            "action_url": "/admin/validation",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
@@ -375,6 +380,7 @@ async def approve_promotion(
             "promotion_id": promotion_id,
             "operator_id": operator_id,
             "operator_name": operator_name,
+            "action_url": "/alerts",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
@@ -459,3 +465,44 @@ async def delete_promotion(
     if result.deleted_count == 0:
         raise HTTPException(404, "Promotion not found")
     return {"message": "Promotion deleted"}
+
+
+@router.get("/user-alerts")
+async def get_user_alerts(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(30, ge=1, le=100),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Get alerts and approved promotions for the current user from subscribed operators."""
+    db = get_database()
+    user_id = current_user.get("_id") or current_user.get("id")
+
+    # Get operator IDs the user is subscribed to
+    subs = await db.subscriptions.find(
+        {"user_id": user_id}, {"operator_id": 1}
+    ).to_list(10000)
+    operator_ids = [s["operator_id"] for s in subs]
+
+    if not operator_ids:
+        return {"alerts": [], "total": 0}
+
+    # Fetch alerts (type=alert) and approved promotions from subscribed operators
+    query = {
+        "operator_id": {"$in": operator_ids},
+        "$or": [
+            {"type": "alert"},
+            {"type": "promotion", "status": "approved"},
+        ],
+    }
+
+    items = await db.promotions.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    for item in items:
+        item["id"] = str(item.pop("_id", ""))
+        # Serialize datetimes
+        for field in ["created_at", "approved_at", "valid_until"]:
+            if item.get(field) and hasattr(item[field], "isoformat"):
+                item[field] = item[field].isoformat()
+
+    total = await db.promotions.count_documents(query)
+
+    return {"alerts": items, "total": total}

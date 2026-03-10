@@ -157,6 +157,7 @@ export default function Layout({ children }) {
     { type: 'page', label: 'Support', description: 'Get help & support', path: '/support', icon: 'HelpCircle', color: '#22C55E', keywords: ['help', 'chat', 'contact', 'assistance'] },
     { type: 'page', label: 'Settings', description: 'Account settings', path: '/settings', icon: 'Settings', color: '#64748b', keywords: ['profile', 'account', 'preferences', 'password'] },
     { type: 'page', label: 'Notifications', description: 'View notifications', path: '/notifications', icon: 'Bell', color: '#F59E0B', keywords: ['alerts', 'messages'] },
+    { type: 'page', label: 'Messages & Alerts', description: 'View operator alerts and promotions', path: '/alerts', icon: 'Bell', color: '#3B82F6', keywords: ['alerts', 'messages', 'promotions', 'operator'] },
     
     // Admin Pages (only shown to admin/operator)
     ...(canManage ? [
@@ -759,15 +760,28 @@ export default function Layout({ children }) {
                             <p className="text-sm text-slate-500">No notifications yet</p>
                           </div>
                         ) : (
-                          notificationsList.map((notification) => (
+                          notificationsList.map((notification) => {
+                            const actionUrl = notification.action_url || 
+                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/alerts' :
+                              notification.type === 'promotion_pending' ? '/admin/validation' :
+                              ['booking', 'order'].includes(notification.type) ? '/orders' :
+                              notification.type === 'payment' ? '/orders' :
+                              ['ticket_reply', 'support'].includes(notification.type) ? '/support' : null);
+                            return (
                             <div 
                               key={notification.id}
                               className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50' : ''}`}
+                              onClick={() => {
+                                setNotificationsOpen(false);
+                                if (actionUrl) navigate(actionUrl);
+                                else navigate('/notifications');
+                              }}
                             >
                               <div className="flex items-start gap-3">
                                 <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
                                   notification.type === 'success' ? 'bg-green-500' :
-                                  notification.type === 'promo' ? 'bg-amber-500' :
+                                  notification.type === 'promo' || notification.type === 'promotion' ? 'bg-amber-500' :
+                                  notification.type === 'operator_alert' ? 'bg-blue-500' :
                                   'bg-blue-500'
                                 }`}></div>
                                 <div className="flex-1 min-w-0">
@@ -777,7 +791,8 @@ export default function Layout({ children }) {
                                 </div>
                               </div>
                             </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                       <div className="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-2">

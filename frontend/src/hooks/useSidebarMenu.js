@@ -102,6 +102,7 @@ export default function useSidebarMenu() {
       items.push({ key: 'services', label: 'Services', icon: ShoppingBag, isDropdown: true, submenu: allServices });
       items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
       items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
+      items.push({ key: 'alerts', label: 'Messages & Alerts', icon: Bell, path: '/alerts' });
       items.push({ key: 'loyalty', label: 'Loyalty', icon: Award, path: '/loyalty' });
       items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
       items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });

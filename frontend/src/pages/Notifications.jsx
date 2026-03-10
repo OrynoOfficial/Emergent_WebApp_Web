@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { 
   Bell, Check, Trash2, CheckCheck, Package, CreditCard, 
-  Info, AlertTriangle, Gift, Calendar, Settings, X
+  Info, AlertTriangle, Gift, Calendar, Settings, X, ExternalLink, Megaphone
 } from 'lucide-react';
 import { useNotifications, NOTIFICATION_TYPES } from '../contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -24,6 +25,7 @@ const getNotificationIcon = (type) => {
 };
 
 export default function Notifications() {
+  const navigate = useNavigate();
   const { 
     notifications, 
     unreadCount, 
@@ -45,6 +47,26 @@ export default function Notifications() {
     } catch {
       return dateString;
     }
+  };
+
+  const getActionUrl = (notification) => {
+    // Use action_url from backend if available
+    if (notification.action_url) return notification.action_url;
+    // Fallback mapping by type/source
+    const type = notification.type || notification.source || '';
+    if (type === 'operator_alert' || type === 'promotion' || type === 'operator_promotion') return '/alerts';
+    if (type === 'promotion_pending') return '/admin/validation';
+    if (type === 'booking' || type === 'order') return '/orders';
+    if (type === 'payment') return '/orders';
+    if (type === 'ticket_reply' || type === 'support') return '/support';
+    if (type === 'system') return '/notifications';
+    return null;
+  };
+
+  const handleNotificationClick = (notification) => {
+    const url = getActionUrl(notification);
+    if (!notification.read) markAsRead(notification.id);
+    if (url) navigate(url);
   };
 
   return (
@@ -152,13 +174,16 @@ export default function Notifications() {
             <div className="divide-y divide-slate-100">
               {notifications.map((notification) => {
                 const { icon: Icon, color, bg } = getNotificationIcon(notification.type);
+                const actionUrl = getActionUrl(notification);
                 
                 return (
                   <div 
                     key={notification.id}
+                    data-testid={`notification-item-${notification.id}`}
                     className={`p-4 flex items-start gap-4 hover:bg-slate-50 transition-colors ${
                       !notification.read ? 'bg-blue-50/50' : ''
-                    }`}
+                    } ${actionUrl ? 'cursor-pointer' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
                       <Icon className={`h-5 w-5 ${color}`} />
@@ -174,9 +199,14 @@ export default function Notifications() {
                             {notification.message}
                           </p>
                         </div>
-                        {!notification.read && (
-                          <Badge className="bg-[#082c59] text-white text-xs">New</Badge>
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {!notification.read && (
+                            <Badge className="bg-[#082c59] text-white text-xs">New</Badge>
+                          )}
+                          {actionUrl && (
+                            <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center justify-between mt-2">
@@ -184,13 +214,14 @@ export default function Notifications() {
                           {notification.time || formatTime(notification.created_at)}
                         </span>
                         
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           {!notification.read && (
                             <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => markAsRead(notification.id)}
                               className="h-8 text-xs gap-1"
+                              data-testid={`mark-read-${notification.id}`}
                             >
                               <Check className="h-3 w-3" />
                               Mark read
@@ -201,6 +232,7 @@ export default function Notifications() {
                             size="sm"
                             onClick={() => deleteNotification(notification.id)}
                             className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`delete-notification-${notification.id}`}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
