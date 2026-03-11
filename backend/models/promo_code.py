@@ -53,3 +53,4 @@ class PromoCodeValidate(BaseModel):
     code: str
     service_type: Optional[str] = None
     order_amount: Optional[float] = None
+    operator_id: Optional[str] = None

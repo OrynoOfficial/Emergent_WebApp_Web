@@ -78,6 +78,11 @@ async def validate_promo_code(
     if user_uses >= promo.get("per_user_limit", 1):
         raise HTTPException(status_code=400, detail="You have already used this promo code")
     
+    # Check operator scope — promotion-redeemed codes only work for that operator
+    if promo.get("operator_id") and validation.operator_id:
+        if promo["operator_id"] != validation.operator_id:
+            raise HTTPException(status_code=400, detail="This promo code is only valid for a specific operator's services")
+
     # Check service type
     if promo.get("service_types") and validation.service_type:
         if validation.service_type not in promo["service_types"]:
@@ -154,6 +159,13 @@ async def use_promo_code(
         if promo.get("source") == "loyalty_redemption" and promo.get("redemption_id"):
             await db.loyalty_redemptions.update_one(
                 {"_id": promo["redemption_id"]},
+                {"$set": {"status": "used", "used_at": datetime.utcnow(), "used_in_order": order_id}}
+            )
+
+        # If this promo came from an operator promotion redemption, update status to "used"
+        if promo.get("source") == "promotion_redemption" and promo.get("promotion_redemption_id"):
+            await db.promotion_redemptions.update_one(
+                {"_id": promo["promotion_redemption_id"]},
                 {"$set": {"status": "used", "used_at": datetime.utcnow(), "used_in_order": order_id}}
             )
     

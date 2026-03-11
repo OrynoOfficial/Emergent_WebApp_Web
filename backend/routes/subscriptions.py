@@ -7,8 +7,10 @@ from config.database import get_database
 from middleware.auth import get_current_active_user
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
+import secrets
+import string
 
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
@@ -507,3 +509,144 @@ async def get_user_alerts(
     total = await db.promotions.count_documents(query)
 
     return {"alerts": items, "total": total}
+
+
+@router.post("/promotions/{promotion_id}/redeem")
+async def redeem_promotion(
+    promotion_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Customer redeems an approved operator promotion — generates a scoped promo code."""
+    db = get_database()
+    user_id = current_user.get("_id") or current_user.get("id")
+
+    # Fetch the promotion
+    promo = await db.promotions.find_one({"_id": promotion_id})
+    if not promo:
+        raise HTTPException(404, "Promotion not found")
+    if promo.get("type") != "promotion" or promo.get("status") != "approved":
+        raise HTTPException(400, "This promotion is not available for redemption")
+
+    # Check if user already redeemed this promotion
+    existing = await db.promotion_redemptions.find_one({
+        "user_id": user_id,
+        "promotion_id": promotion_id,
+    })
+    if existing:
+        raise HTTPException(400, "You have already redeemed this promotion")
+
+    # Check validity
+    if promo.get("valid_until"):
+        valid_until = promo["valid_until"]
+        if isinstance(valid_until, str):
+            valid_until = datetime.fromisoformat(valid_until.replace("Z", "+00:00"))
+        # Ensure both are timezone-aware for comparison
+        now_utc = datetime.now(timezone.utc)
+        if hasattr(valid_until, 'tzinfo') and valid_until.tzinfo is None:
+            valid_until = valid_until.replace(tzinfo=timezone.utc)
+        if valid_until < now_utc:
+            raise HTTPException(400, "This promotion has expired")
+
+    # Generate unique code
+    code = "PROMO-" + ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    while await db.promo_codes.find_one({"code": code}):
+        code = "PROMO-" + ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+    operator_id = promo.get("operator_id")
+    operator_name = promo.get("operator_name", "Operator")
+    service_type = promo.get("service_type")
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+
+    # Parse discount_value from the promotion
+    discount_value = 0
+    discount_type = "percentage"
+    dv = promo.get("discount_value", "")
+    if isinstance(dv, str):
+        numeric = ''.join(c for c in dv if c.isdigit() or c == '.')
+        if numeric:
+            discount_value = float(numeric)
+        if "%" in dv:
+            discount_type = "percentage"
+        elif numeric:
+            discount_type = "fixed"
+    elif isinstance(dv, (int, float)):
+        discount_value = float(dv)
+
+    redemption_id = str(uuid.uuid4())
+
+    # Create promotion_redemptions record
+    redemption = {
+        "_id": redemption_id,
+        "user_id": user_id,
+        "promotion_id": promotion_id,
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "service_type": service_type,
+        "promotion_title": promo.get("title", ""),
+        "promotion_message": promo.get("message", ""),
+        "code": code,
+        "status": "active",
+        "expires_at": expires_at,
+        "created_at": datetime.now(timezone.utc),
+    }
+    await db.promotion_redemptions.insert_one(redemption)
+
+    # Create promo_codes entry scoped to operator + service
+    promo_entry = {
+        "_id": str(uuid.uuid4()),
+        "code": code,
+        "name": promo.get("title", "Operator Promotion"),
+        "description": promo.get("message", ""),
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "min_order_amount": None,
+        "max_discount_amount": None,
+        "service_types": [service_type] if service_type else [],
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "usage_limit": 1,
+        "per_user_limit": 1,
+        "times_used": 0,
+        "valid_from": datetime.now(timezone.utc).isoformat(),
+        "valid_to": expires_at.isoformat(),
+        "is_active": True,
+        "first_order_only": False,
+        "source": "promotion_redemption",
+        "promotion_id": promotion_id,
+        "promotion_redemption_id": redemption_id,
+        "redeemed_by": user_id,
+        "created_by": user_id,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    await db.promo_codes.insert_one(promo_entry)
+
+    return {
+        "message": "Promotion redeemed successfully",
+        "code": code,
+        "operator_name": operator_name,
+        "service_type": service_type,
+        "expires_at": expires_at.isoformat(),
+        "redemption_id": redemption_id,
+    }
+
+
+@router.get("/promotions/my-redeemed")
+async def get_my_redeemed_promotions(
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Get all promotion codes redeemed by the current user."""
+    db = get_database()
+    user_id = current_user.get("_id") or current_user.get("id")
+
+    redemptions = await db.promotion_redemptions.find(
+        {"user_id": user_id}
+    ).sort("created_at", -1).to_list(100)
+
+    for r in redemptions:
+        r["id"] = str(r.pop("_id", ""))
+        for field in ["created_at", "expires_at", "used_at"]:
+            if r.get(field) and hasattr(r[field], "isoformat"):
+                r[field] = r[field].isoformat()
+
+    return {"redemptions": redemptions}
