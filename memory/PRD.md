@@ -1360,3 +1360,13 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - New file: `MessagesTab.jsx`
 - Updated: `CustomerLoyaltyView.jsx`, `Loyalty.jsx`, `App.jsx`, `Layout.jsx`, `useSidebarMenu.js`, `subscriptions.py`
 
+### Messages Moved to Ratings Page + Deep Linking (March 11, 2026)
+- **Messages tab moved from Loyalty to Ratings page**: Customer Ratings page now has 2 tabs: "My Reviews" and "Messages"
+  - Loyalty page reverted to 3 tabs (My Rewards, Activity, Rewards)
+- **Deep linking for notifications/alerts**: Clicking a notification navigates to the exact item:
+  - URL format: `/ratings?tab=messages&subtab=alerts&id=<item_id>`
+  - Backend stores `action_url` with item ID on new notifications
+  - Frontend `MessagesTab` accepts `highlightId` prop, scrolls to item with `data-item-id`, and highlights with blue ring for 3 seconds
+- **Routes updated**: `/alerts` → `/ratings?tab=messages&subtab=alerts`, `/notifications` → `/ratings?tab=messages&subtab=notifications`
+- Updated: `Ratings.jsx`, `MessagesTab.jsx`, `CustomerLoyaltyView.jsx`, `Loyalty.jsx`, `App.jsx`, `Layout.jsx`, `subscriptions.py`
+
