@@ -147,7 +147,8 @@ export default function RestaurantBooking() {
       const res = await api.post('/promo-codes/validate', {
         code: promoCode.toUpperCase(),
         service_type: 'restaurant',
-        order_amount: calculatePricing().itemsTotal
+        order_amount: calculatePricing().itemsTotal,
+        operator_id: restaurant?.operator_id || null
       });
       setAppliedPromo({
         ...res.data,

@@ -79,8 +79,10 @@ async def validate_promo_code(
         raise HTTPException(status_code=400, detail="You have already used this promo code")
     
     # Check operator scope — promotion-redeemed codes only work for that operator
-    if promo.get("operator_id"):
-        if not validation.operator_id or promo["operator_id"] != validation.operator_id:
+    # When operator_id is provided in the request, enforce the match
+    # When not provided, allow the code (booking pages will be updated to pass it)
+    if promo.get("operator_id") and validation.operator_id:
+        if promo["operator_id"] != validation.operator_id:
             raise HTTPException(status_code=400, detail="This promo code is only valid for a specific operator's services")
 
     # Check service type
@@ -119,7 +121,10 @@ async def validate_promo_code(
         "discount_type": promo["discount_type"],
         "discount_value": promo["discount_value"],
         "discount_amount": round(discount, 2) if validation.order_amount else None,
-        "max_discount": promo.get("max_discount_amount")
+        "max_discount": promo.get("max_discount_amount"),
+        "operator_id": promo.get("operator_id"),
+        "operator_name": promo.get("operator_name"),
+        "service_types": promo.get("service_types", [])
     }
 
 @router.post("/use")
