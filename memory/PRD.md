@@ -1377,3 +1377,10 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - **MessagesTab prop reactivity**: Added `useEffect` watchers for `initialSubTab` prop changes
 - Files: `MessagesTab.jsx`, `Layout.jsx`, `Ratings.jsx`
 
+### Notifications Tab for All User Roles (March 11, 2026)
+- **Admin Ratings page**: Now has 5 tabs — All Ratings, Queue, Audit Log, Reports, **Notifications**
+- **Operator Ratings page**: Now has 2 tabs — Customer Reviews, **Notifications**
+- **Customer Ratings page**: Unchanged (My Reviews, Messages)
+- All roles use the shared `MessagesTab` component with Alerts + Notifications sub-tabs
+- Updated: `Ratings.jsx`
+
