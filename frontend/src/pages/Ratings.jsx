@@ -17,7 +17,7 @@ import {
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
   MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
   Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
-  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List
+  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List, Bell
 } from 'lucide-react';
 import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 import { toast } from 'sonner';
@@ -2300,7 +2300,7 @@ export default function Ratings() {
       {/* Admin View with Tabs */}
       {isAdmin ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl bg-white shadow-sm">
             <TabsTrigger 
               value="ratings" 
               className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
@@ -2333,6 +2333,14 @@ export default function Ratings() {
               <BarChart3 className="h-4 w-4" />
               Reports
             </TabsTrigger>
+            <TabsTrigger 
+              value="messages" 
+              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
+              data-testid="admin-messages-tab"
+            >
+              <Bell className="h-4 w-4" />
+              Notifications
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="ratings" className="mt-6">
@@ -2350,9 +2358,36 @@ export default function Ratings() {
           <TabsContent value="reports" className="mt-6">
             <AdminReportsView />
           </TabsContent>
+
+          <TabsContent value="messages" className="mt-6">
+            <MessagesTab
+              key={`${searchParams.get('subtab') || 'alerts'}-${searchParams.get('id') || ''}`}
+              highlightId={searchParams.get('id')}
+              initialSubTab={searchParams.get('subtab')}
+            />
+          </TabsContent>
         </Tabs>
       ) : isOperator ? (
-        <OperatorRatingsView />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 max-w-sm bg-slate-100 p-1 rounded-xl">
+            <TabsTrigger value="ratings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="operator-reviews-tab">
+              <Star className="h-4 w-4 mr-1.5" /> Customer Reviews
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="operator-messages-tab">
+              <Bell className="h-4 w-4 mr-1.5" /> Notifications
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="ratings" className="mt-6">
+            <OperatorRatingsView />
+          </TabsContent>
+          <TabsContent value="messages" className="mt-6">
+            <MessagesTab
+              key={`${searchParams.get('subtab') || 'alerts'}-${searchParams.get('id') || ''}`}
+              highlightId={searchParams.get('id')}
+              initialSubTab={searchParams.get('subtab')}
+            />
+          </TabsContent>
+        </Tabs>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 max-w-sm bg-slate-100 p-1 rounded-xl">
