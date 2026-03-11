@@ -156,8 +156,8 @@ export default function Layout({ children }) {
     { type: 'page', label: 'My Ratings', description: 'Your reviews & ratings', path: '/ratings', icon: 'Star', color: '#FBBF24', keywords: ['review', 'feedback'] },
     { type: 'page', label: 'Support', description: 'Get help & support', path: '/support', icon: 'HelpCircle', color: '#22C55E', keywords: ['help', 'chat', 'contact', 'assistance'] },
     { type: 'page', label: 'Settings', description: 'Account settings', path: '/settings', icon: 'Settings', color: '#64748b', keywords: ['profile', 'account', 'preferences', 'password'] },
-    { type: 'page', label: 'Notifications', description: 'View notifications', path: '/loyalty?tab=messages', icon: 'Bell', color: '#F59E0B', keywords: ['alerts', 'messages', 'notifications'] },
-    { type: 'page', label: 'Messages & Alerts', description: 'View operator alerts and promotions', path: '/loyalty?tab=messages', icon: 'Bell', color: '#3B82F6', keywords: ['alerts', 'messages', 'promotions', 'operator'] },
+    { type: 'page', label: 'Notifications', description: 'View notifications', path: '/ratings?tab=messages&subtab=notifications', icon: 'Bell', color: '#F59E0B', keywords: ['alerts', 'messages', 'notifications'] },
+    { type: 'page', label: 'Messages & Alerts', description: 'View operator alerts and promotions', path: '/ratings?tab=messages&subtab=alerts', icon: 'Bell', color: '#3B82F6', keywords: ['alerts', 'messages', 'promotions', 'operator'] },
     
     // Admin Pages (only shown to admin/operator)
     ...(canManage ? [
@@ -763,11 +763,14 @@ export default function Layout({ children }) {
                         ) : (
                           notificationsList.map((notification) => {
                             const actionUrl = notification.action_url || 
-                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/loyalty?tab=messages' :
+                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/ratings?tab=messages&subtab=alerts' :
                               notification.type === 'promotion_pending' ? '/admin/validation' :
                               ['booking', 'order'].includes(notification.type) ? '/orders' :
                               notification.type === 'payment' ? '/orders' :
                               ['ticket_reply', 'support'].includes(notification.type) ? '/support' : null);
+                            // Append item ID for deep linking
+                            const deepLink = actionUrl && notification.id ? 
+                              (actionUrl.includes('?') ? `${actionUrl}&id=${notification.id}` : `${actionUrl}?id=${notification.id}`) : actionUrl;
                             return (
                             <div 
                               key={notification.id}
@@ -776,8 +779,8 @@ export default function Layout({ children }) {
                               onClick={() => {
                                 if (!notification.read) markNotificationAsRead(notification.id);
                                 setNotificationsOpen(false);
-                                if (actionUrl) navigate(actionUrl);
-                                else navigate('/loyalty?tab=messages');
+                                if (deepLink) navigate(deepLink);
+                                else navigate('/ratings?tab=messages&subtab=notifications');
                               }}
                             >
                               <div className="flex items-start gap-3">
@@ -802,7 +805,7 @@ export default function Layout({ children }) {
                         <button 
                           onClick={() => {
                             setNotificationsOpen(false);
-                            navigate('/loyalty?tab=messages');
+                            navigate('/ratings?tab=messages&subtab=notifications');
                           }}
                           className="text-sm text-[#082c59] hover:text-[#0a3a75] font-medium py-1 transition-colors"
                         >

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import api, { ratingsAPI } from '../api/client';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 import { toast } from 'sonner';
+import MessagesTab from './loyalty/MessagesTab';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend
@@ -2266,9 +2268,16 @@ function ModerationAuditView() {
 export default function Ratings() {
   const { user, isOperatorUser } = useAuth();
   const [activeTab, setActiveTab] = useState('ratings');
+  const [searchParams] = useSearchParams();
   
   const isOperator = user?.role === 'operator' || isOperatorUser;
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+  // Support deep linking via ?tab=messages
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'messages') setActiveTab('messages');
+  }, [searchParams]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -2345,7 +2354,22 @@ export default function Ratings() {
       ) : isOperator ? (
         <OperatorRatingsView />
       ) : (
-        <CustomerRatingsView />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 max-w-sm bg-slate-100 p-1 rounded-xl">
+            <TabsTrigger value="ratings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="my-reviews-tab">
+              <Star className="h-4 w-4 mr-1.5" /> My Reviews
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="ratings-messages-tab">
+              <MessageSquare className="h-4 w-4 mr-1.5" /> Messages
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="ratings" className="mt-6">
+            <CustomerRatingsView />
+          </TabsContent>
+          <TabsContent value="messages" className="mt-6">
+            <MessagesTab highlightId={searchParams.get('id')} initialSubTab={searchParams.get('subtab')} />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );

@@ -41,11 +41,12 @@ const getActionUrl = (notification) => {
   return null;
 };
 
-export default function MessagesTab() {
+export default function MessagesTab({ highlightId, initialSubTab }) {
   const navigate = useNavigate();
-  const [subTab, setSubTab] = useState('alerts');
+  const [subTab, setSubTab] = useState(initialSubTab || 'alerts');
   const [alerts, setAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
+  const [highlightedId, setHighlightedId] = useState(highlightId || null);
 
   const {
     notifications, unreadCount, loading: notifLoading,
@@ -70,6 +71,24 @@ export default function MessagesTab() {
     fetchAlerts();
     fetchNotifications();
   }, [fetchAlerts, fetchNotifications]);
+
+  // Auto-scroll to highlighted item after data loads
+  useEffect(() => {
+    if (highlightedId) {
+      const timer = setTimeout(() => {
+        const el = document.querySelector(`[data-item-id="${highlightedId}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-blue-400');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-blue-400');
+            setHighlightedId(null);
+          }, 3000);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedId, alerts, notifications]);
 
   const formatTime = (dateString) => {
     try {
@@ -127,7 +146,7 @@ export default function MessagesTab() {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {alerts.map((item) => (
-                    <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`alert-item-${item.id}`}>
+                    <div key={item.id} className="p-4 hover:bg-slate-50 transition-all rounded-lg" data-testid={`alert-item-${item.id}`} data-item-id={item.id}>
                       <div className="flex items-start gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
                           <Megaphone className="h-4 w-4 text-blue-600" />
@@ -194,7 +213,8 @@ export default function MessagesTab() {
                       <div
                         key={notification.id}
                         data-testid={`notification-item-${notification.id}`}
-                        className={`p-4 flex items-start gap-3 hover:bg-slate-50 transition-colors ${
+                        data-item-id={notification.id}
+                        className={`p-4 flex items-start gap-3 hover:bg-slate-50 transition-all rounded-lg ${
                           !notification.read ? 'bg-blue-50/50' : ''
                         } ${actionUrl ? 'cursor-pointer' : ''}`}
                         onClick={() => handleNotificationClick(notification)}

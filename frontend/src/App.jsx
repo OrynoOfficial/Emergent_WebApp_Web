@@ -905,8 +905,8 @@ function App() {
           <Route path="/scanner" element={<ProtectedRoute requiredRoles={['admin', 'operator']}><Scanner /></ProtectedRoute>} />
           <Route path="/confirmation" element={<Confirmation />} />
           <Route path="/booking-confirmation" element={<ProtectedRoute><BookingConfirmation /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><Navigate to="/loyalty?tab=messages" replace /></ProtectedRoute>} />
-          <Route path="/alerts" element={<ProtectedRoute><Navigate to="/loyalty?tab=messages" replace /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Navigate to="/ratings?tab=messages&subtab=notifications" replace /></ProtectedRoute>} />
+          <Route path="/alerts" element={<ProtectedRoute><Navigate to="/ratings?tab=messages&subtab=alerts" replace /></ProtectedRoute>} />
           
           {/* Redirects */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

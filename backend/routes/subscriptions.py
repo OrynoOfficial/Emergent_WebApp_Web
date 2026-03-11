@@ -230,15 +230,16 @@ async def create_alert(
             "operator_id": operator_id,
             "operator_name": operator_name,
             "alert_id": alert_id,
-            "action_url": "/alerts",
+            "action_url": f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
     else:
         subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
         for sub in subscribers:
+            notif_id = str(uuid.uuid4())
             notifications.append({
-                "_id": str(uuid.uuid4()),
+                "_id": notif_id,
                 "user_id": sub["user_id"],
                 "title": f"Alert from {operator_name}: {data.title}",
                 "message": data.message,
@@ -247,7 +248,7 @@ async def create_alert(
                 "operator_id": operator_id,
                 "operator_name": operator_name,
                 "alert_id": alert_id,
-                "action_url": "/loyalty?tab=messages",
+                "action_url": f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
                 "is_read": False,
                 "created_at": datetime.now(timezone.utc),
             })
@@ -380,7 +381,7 @@ async def approve_promotion(
             "promotion_id": promotion_id,
             "operator_id": operator_id,
             "operator_name": operator_name,
-            "action_url": "/loyalty?tab=messages",
+            "action_url": f"/ratings?tab=messages&subtab=notifications&id={promotion_id}",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })

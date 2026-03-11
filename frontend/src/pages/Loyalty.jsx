@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useSearchParams } from 'react-router-dom';
 import { Card } from '../components/ui/card';
 import { Award } from 'lucide-react';
 import CustomerLoyaltyView from './loyalty/CustomerLoyaltyView';
@@ -8,8 +7,6 @@ import AdminLoyaltyView from './loyalty/AdminLoyaltyView';
 
 export default function LoyaltyPage() {
   const { user, isOperatorUser } = useAuth();
-  const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || null;
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator' || isOperatorUser;
@@ -40,7 +37,7 @@ export default function LoyaltyPage() {
           </p>
         </div>
       </div>
-      {isAdmin ? <AdminLoyaltyView /> : <CustomerLoyaltyView initialTab={initialTab} />}
+      {isAdmin ? <AdminLoyaltyView /> : <CustomerLoyaltyView />}
     </div>
   );
 }
