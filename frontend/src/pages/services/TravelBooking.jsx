@@ -280,7 +280,7 @@ export default function TravelBooking() {
         code: promoCode.toUpperCase(),
         service_type: 'travel',
         order_amount: pricing.subtotal + pricing.commission,
-        operator_id: outbound?.operator_id || null
+        operator_id: bookingData?.outbound?.operator_id || null
       });
       
       const promo = response.data;

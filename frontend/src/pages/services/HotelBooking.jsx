@@ -331,7 +331,7 @@ export default function HotelBooking() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ code: promoCode.toUpperCase(), operator_id: hotel?.operator_id || null })
+        body: JSON.stringify({ code: promoCode.toUpperCase(), service_type: 'hotel', operator_id: hotel?.operator_id || null })
       });
 
       if (response.ok) {
