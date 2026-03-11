@@ -12,38 +12,25 @@ Oryno is a comprehensive services hub platform (hotels, travel, restaurants, cin
 
 ### Completed Features (Latest First)
 
+**Feb 2026 - Bug Fix: Service Validation Approval**
+- Fixed service approve/reject URL mismatch in ValidationManagement.jsx
+- Was: `/validation/services/{id}/approve?collection={type}` (404)
+- Now: `/validation/services/{type}/{id}/approve` (matches backend route)
+
 **Feb 2026 - Loyalty Page Search, Filters & Promotion Enhancements**
-- Collapsible "All Redeemed" section (default collapsed, expands downward)
-- Redeemable promotions count badge on Rewards tab
-- Search + filter on Redeemable Codes (by type: all/referral/loyalty/operator)
-- Search + filter on All Redeemed (by status: all/active/used; by source: loyalty/operator)
-- Search + filter on Rewards tab (All/Available/Locked/Promotions)
-- Filter on Activity tab (All/Earned/Redeemed)
-- Create Promotion modal: title max 50 chars, message max 300 chars, type locked to "discount", discount value as percentage with % suffix
-- Operator-scoped promo code validation: codes from operator promotions ONLY valid for that specific operator (rejects if no operator_id or wrong operator_id passed)
+- Collapsible "All Redeemed" section, search/filter on all sections
+- Create Promotion modal: title 50 chars, message 300 chars, type=discount only, % input
+- Operator-scoped promo code validation
 
 **Feb 2026 - Loyalty Promotion Redemption System**
-- Collapsible "Redeemable Codes" section (default collapsed)
-- Operator promotion redemption: generates unique promo codes scoped to operator + service
-- Backend endpoints: redeem promotion, get my-redeemed, updated validate with operator_id
-- New DB collection: `promotion_redemptions`
+- Collapsible "Redeemable Codes", operator promotion redemption, operator-scoped promo codes
 
 **Feb 2026 - Unified Notification Center & Deep-Linking**
-- Deep-linking system for all notifications
-- Unified "Messages" tab in Ratings page for all user roles
-- Mark-as-read, HighlightableItem component
+- Deep-linking, unified Messages tab, mark-as-read, HighlightableItem
 
 **Earlier Features**
-- Full loyalty program (tiers, points, rewards, referrals, redemptions)
-- Subscription system (subscribe to operators, alerts, promotions with admin approval)
-- Ratings & moderation, Service management, Real-time WebSocket seat selection
-- Stripe payment, AI Assistant chatbot, Email invitations, Promo codes system
-
-## Key API Endpoints
-- `POST /api/subscriptions/promotions/{id}/redeem` — Redeem operator promotion
-- `GET /api/subscriptions/promotions/my-redeemed` — User's redeemed promotions
-- `POST /api/promo-codes/validate` — Validate promo code (with operator_id scope enforcement)
-- `POST /api/promo-codes/use` — Use promo code (updates promotion_redemptions)
+- Full loyalty, subscriptions, ratings & moderation, service management, WebSocket seats
+- Stripe, AI chatbot, email invitations, promo codes
 
 ## Backlog (Prioritized)
 - **P1:** "Airline-Style" Live Seat Selection UI enhancement
@@ -55,6 +42,3 @@ Oryno is a comprehensive services hub platform (hotels, travel, restaurants, cin
 - Admin: admin@test.com / testpassword123
 - Customer: customer@test.com / testpassword123
 - Operator: operator@test.com / testpassword123
-
-## 3rd Party Integrations
-- OpenAI GPT-4o (via Emergent LLM Key), Stripe, react-leaflet / OpenStreetMap

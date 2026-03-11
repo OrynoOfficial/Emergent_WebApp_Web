@@ -782,7 +782,7 @@ export default function ValidationManagement() {
       else if (type === 'payment') await api.post(`/validation/payments/${id}/verify?verified=true`);
       else if (type === 'promotion') await api.post(`/validation/promotions/${id}/approve`);
       else if (type === 'operator') await api.post(`/validation/operators/${id}/approve`);
-      else await api.post(`/validation/services/${id}/approve?collection=${type}`);
+      else await api.post(`/validation/services/${type}/${id}/approve`);
       toast.success(`${name || 'Item'} approved`);
       loadData();
     } catch (err) {
@@ -805,7 +805,7 @@ export default function ValidationManagement() {
       else if (type === 'payment') await api.post(`/validation/payments/${id}/verify?verified=false`, { notes: rejectReason });
       else if (type === 'promotion') await api.post(`/validation/promotions/${id}/reject`, { reason: rejectReason });
       else if (type === 'operator') await api.post(`/validation/operators/${id}/reject`, { reason: rejectReason });
-      else await api.post(`/validation/services/${id}/reject?collection=${type}`, { reason: rejectReason });
+      else await api.post(`/validation/services/${type}/${id}/reject`, { reason: rejectReason });
       toast.success('Rejected');
       setShowRejectDialog(false);
       loadData();
