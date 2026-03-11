@@ -24,7 +24,7 @@ class PromotionCreate(BaseModel):
     title: str
     message: str
     service_type: Optional[str] = None
-    promotion_type: Optional[str] = "general"  # general, discount, event, new_service
+    promotion_type: str = "discount"
     discount_value: Optional[str] = None
     valid_until: Optional[str] = None  # ISO date string
     image_url: Optional[str] = None
@@ -557,7 +557,7 @@ async def redeem_promotion(
     service_type = promo.get("service_type")
     expires_at = datetime.now(timezone.utc) + timedelta(days=30)
 
-    # Parse discount_value from the promotion
+    # Parse discount_value from the promotion — always percentage
     discount_value = 0
     discount_type = "percentage"
     dv = promo.get("discount_value", "")
@@ -565,10 +565,6 @@ async def redeem_promotion(
         numeric = ''.join(c for c in dv if c.isdigit() or c == '.')
         if numeric:
             discount_value = float(numeric)
-        if "%" in dv:
-            discount_type = "percentage"
-        elif numeric:
-            discount_type = "fixed"
     elif isinstance(dv, (int, float)):
         discount_value = float(dv)
 

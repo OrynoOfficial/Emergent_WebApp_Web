@@ -79,8 +79,8 @@ async def validate_promo_code(
         raise HTTPException(status_code=400, detail="You have already used this promo code")
     
     # Check operator scope — promotion-redeemed codes only work for that operator
-    if promo.get("operator_id") and validation.operator_id:
-        if promo["operator_id"] != validation.operator_id:
+    if promo.get("operator_id"):
+        if not validation.operator_id or promo["operator_id"] != validation.operator_id:
             raise HTTPException(status_code=400, detail="This promo code is only valid for a specific operator's services")
 
     # Check service type

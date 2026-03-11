@@ -33,7 +33,7 @@ export default function ServiceCommunicationsHub({
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPromoDialog, setShowPromoDialog] = useState(false);
-  const [promoForm, setPromoForm] = useState({ title: '', message: '', promotion_type: 'general', discount_value: '', valid_until: '' });
+  const [promoForm, setPromoForm] = useState({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [alertForm, setAlertForm] = useState({ title: '', message: '', target_type: 'subscribers', target_user_id: '', target_user_name: '' });
@@ -79,16 +79,22 @@ export default function ServiceCommunicationsHub({
       toast.error('Please fill in title and message');
       return;
     }
+    if (!promoForm.discount_value || isNaN(Number(promoForm.discount_value)) || Number(promoForm.discount_value) <= 0 || Number(promoForm.discount_value) > 100) {
+      toast.error('Please enter a valid discount percentage (1-100)');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await api.post('/subscriptions/promotions', {
         ...promoForm,
+        promotion_type: 'discount',
+        discount_value: `${promoForm.discount_value}%`,
         service_type: serviceTag,
         valid_until: promoForm.valid_until || null,
       });
       toast.success(res.data.status === 'pending_approval' ? 'Promotion submitted for admin approval' : 'Promotion created');
       setShowPromoDialog(false);
-      setPromoForm({ title: '', message: '', promotion_type: 'general', discount_value: '', valid_until: '' });
+      setPromoForm({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '' });
       loadData();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to create promotion');
@@ -437,46 +443,50 @@ export default function ServiceCommunicationsHub({
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <Label>Title *</Label>
+              <Label>Title * <span className="text-xs text-slate-400 ml-1">{promoForm.title.length}/50</span></Label>
               <Input
                 value={promoForm.title}
-                onChange={(e) => setPromoForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="e.g. 50% Off Weekend Special"
+                onChange={(e) => { if (e.target.value.length <= 50) setPromoForm(f => ({ ...f, title: e.target.value })); }}
+                placeholder="e.g. 25% Off Weekend Special"
+                maxLength={50}
                 className="mt-1"
+                data-testid="promo-title-input"
               />
             </div>
             <div>
-              <Label>Message *</Label>
+              <Label>Message * <span className="text-xs text-slate-400 ml-1">{promoForm.message.length}/300</span></Label>
               <Textarea
                 value={promoForm.message}
-                onChange={(e) => setPromoForm(f => ({ ...f, message: e.target.value }))}
+                onChange={(e) => { if (e.target.value.length <= 300) setPromoForm(f => ({ ...f, message: e.target.value })); }}
                 placeholder="Describe your promotion..."
+                maxLength={300}
                 rows={3}
                 className="mt-1"
+                data-testid="promo-message-input"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Type</Label>
-                <select
-                  value={promoForm.promotion_type}
-                  onChange={(e) => setPromoForm(f => ({ ...f, promotion_type: e.target.value }))}
-                  className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
-                >
-                  <option value="general">General</option>
-                  <option value="discount">Discount</option>
-                  <option value="event">Event</option>
-                  <option value="new_service">New Service</option>
-                </select>
+                <div className="mt-1 h-9 rounded-md border border-slate-200 px-3 text-sm bg-slate-50 flex items-center text-slate-600">
+                  Discount
+                </div>
               </div>
               <div>
-                <Label>Discount Value</Label>
-                <Input
-                  value={promoForm.discount_value}
-                  onChange={(e) => setPromoForm(f => ({ ...f, discount_value: e.target.value }))}
-                  placeholder="e.g. 50%"
-                  className="mt-1"
-                />
+                <Label>Discount (%)</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={promoForm.discount_value}
+                    onChange={(e) => setPromoForm(f => ({ ...f, discount_value: e.target.value }))}
+                    placeholder="e.g. 25"
+                    className="pr-8"
+                    data-testid="promo-discount-input"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">%</span>
+                </div>
               </div>
             </div>
             <div>
