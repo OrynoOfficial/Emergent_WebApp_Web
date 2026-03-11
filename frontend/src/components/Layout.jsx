@@ -762,15 +762,30 @@ export default function Layout({ children }) {
                           </div>
                         ) : (
                           notificationsList.map((notification) => {
-                            const actionUrl = notification.action_url || 
-                              (['operator_alert', 'promotion', 'operator_promotion'].includes(notification.type || notification.source) ? '/ratings?tab=messages&subtab=alerts' :
-                              notification.type === 'promotion_pending' ? '/admin/validation' :
-                              ['booking', 'order'].includes(notification.type) ? '/orders' :
-                              notification.type === 'payment' ? '/orders' :
-                              ['ticket_reply', 'support'].includes(notification.type) ? '/support' : null);
-                            // Append item ID for deep linking
-                            const deepLink = actionUrl && notification.id ? 
-                              (actionUrl.includes('?') ? `${actionUrl}&id=${notification.id}` : `${actionUrl}?id=${notification.id}`) : actionUrl;
+                            // Build the correct deep-link based on notification type
+                            const type = notification.type || notification.source || '';
+                            let deepLink;
+                            
+                            if (notification.action_url) {
+                              deepLink = notification.action_url;
+                            } else if (['operator_alert'].includes(type)) {
+                              // Alert notifications: link to alerts sub-tab with the alert_id
+                              const targetId = notification.alert_id || notification.id;
+                              deepLink = `/ratings?tab=messages&subtab=alerts&id=${targetId}`;
+                            } else if (['promotion', 'operator_promotion'].includes(type)) {
+                              const targetId = notification.promotion_id || notification.id;
+                              deepLink = `/ratings?tab=messages&subtab=notifications&id=${targetId}`;
+                            } else if (type === 'promotion_pending') {
+                              deepLink = '/admin/validation';
+                            } else if (['booking', 'order'].includes(type)) {
+                              deepLink = '/orders';
+                            } else if (type === 'payment') {
+                              deepLink = '/orders';
+                            } else if (['ticket_reply', 'support'].includes(type)) {
+                              deepLink = '/support';
+                            } else {
+                              deepLink = `/ratings?tab=messages&subtab=notifications&id=${notification.id}`;
+                            }
                             return (
                             <div 
                               key={notification.id}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -41,17 +41,49 @@ const getActionUrl = (notification) => {
   return null;
 };
 
+// Component that auto-scrolls and highlights when it matches the target ID
+function HighlightableItem({ id, highlightId, children, className = '' }) {
+  const ref = useRef(null);
+  const [highlighted, setHighlighted] = useState(false);
+
+  useEffect(() => {
+    if (highlightId && id === highlightId && ref.current) {
+      // Small delay to ensure layout is complete
+      const timer = setTimeout(() => {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlighted(true);
+        setTimeout(() => setHighlighted(false), 3500);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId, id]);
+
+  return (
+    <div
+      ref={ref}
+      data-item-id={id}
+      className={`${className} transition-all duration-300 ${highlighted ? 'ring-2 ring-blue-400 ring-offset-2 bg-blue-50/80 scale-[1.01]' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function MessagesTab({ highlightId, initialSubTab }) {
   const navigate = useNavigate();
   const [subTab, setSubTab] = useState(initialSubTab || 'alerts');
   const [alerts, setAlerts] = useState([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
-  const [highlightedId, setHighlightedId] = useState(highlightId || null);
 
   const {
     notifications, unreadCount, loading: notifLoading,
     markAsRead, markAllAsRead, deleteNotification, clearAll, fetchNotifications
   } = useNotifications();
+
+  // React to prop changes when navigating between deep-links
+  useEffect(() => {
+    if (initialSubTab) setSubTab(initialSubTab);
+  }, [initialSubTab]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -71,24 +103,6 @@ export default function MessagesTab({ highlightId, initialSubTab }) {
     fetchAlerts();
     fetchNotifications();
   }, [fetchAlerts, fetchNotifications]);
-
-  // Auto-scroll to highlighted item after data loads
-  useEffect(() => {
-    if (highlightedId) {
-      const timer = setTimeout(() => {
-        const el = document.querySelector(`[data-item-id="${highlightedId}"]`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('ring-2', 'ring-blue-400');
-          setTimeout(() => {
-            el.classList.remove('ring-2', 'ring-blue-400');
-            setHighlightedId(null);
-          }, 3000);
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightedId, alerts, notifications]);
 
   const formatTime = (dateString) => {
     try {
@@ -146,7 +160,7 @@ export default function MessagesTab({ highlightId, initialSubTab }) {
               ) : (
                 <div className="divide-y divide-slate-100">
                   {alerts.map((item) => (
-                    <div key={item.id} className="p-4 hover:bg-slate-50 transition-all rounded-lg" data-testid={`alert-item-${item.id}`} data-item-id={item.id}>
+                    <HighlightableItem key={item.id} id={item.id} highlightId={highlightId} className="p-4 hover:bg-slate-50 rounded-lg" data-testid={`alert-item-${item.id}`}>
                       <div className="flex items-start gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
                           <Megaphone className="h-4 w-4 text-blue-600" />
@@ -164,7 +178,7 @@ export default function MessagesTab({ highlightId, initialSubTab }) {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </HighlightableItem>
                   ))}
                 </div>
               )}
@@ -210,15 +224,16 @@ export default function MessagesTab({ highlightId, initialSubTab }) {
                     const { icon: Icon, color, bg } = getNotificationIcon(notification.type);
                     const actionUrl = getActionUrl(notification);
                     return (
-                      <div
+                      <HighlightableItem
                         key={notification.id}
-                        data-testid={`notification-item-${notification.id}`}
-                        data-item-id={notification.id}
-                        className={`p-4 flex items-start gap-3 hover:bg-slate-50 transition-all rounded-lg ${
+                        id={notification.id}
+                        highlightId={highlightId}
+                        className={`p-4 flex items-start gap-3 hover:bg-slate-50 rounded-lg ${
                           !notification.read ? 'bg-blue-50/50' : ''
                         } ${actionUrl ? 'cursor-pointer' : ''}`}
-                        onClick={() => handleNotificationClick(notification)}
+                        data-testid={`notification-item-${notification.id}`}
                       >
+                        <div onClick={() => handleNotificationClick(notification)} className="flex items-start gap-3 flex-1">
                         <div className={`w-9 h-9 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
                           <Icon className={`h-4 w-4 ${color}`} />
                         </div>
@@ -244,7 +259,8 @@ export default function MessagesTab({ highlightId, initialSubTab }) {
                             </div>
                           </div>
                         </div>
-                      </div>
+                        </div>
+                      </HighlightableItem>
                     );
                   })}
                 </div>

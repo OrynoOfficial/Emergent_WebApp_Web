@@ -2367,7 +2367,11 @@ export default function Ratings() {
             <CustomerRatingsView />
           </TabsContent>
           <TabsContent value="messages" className="mt-6">
-            <MessagesTab highlightId={searchParams.get('id')} initialSubTab={searchParams.get('subtab')} />
+            <MessagesTab
+              key={`${searchParams.get('subtab') || 'alerts'}-${searchParams.get('id') || ''}`}
+              highlightId={searchParams.get('id')}
+              initialSubTab={searchParams.get('subtab')}
+            />
           </TabsContent>
         </Tabs>
       )}
