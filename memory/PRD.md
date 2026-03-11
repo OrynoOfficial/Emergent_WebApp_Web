@@ -1370,3 +1370,10 @@ Oryno is a full-stack multi-tenant services booking platform built with FastAPI 
 - **Routes updated**: `/alerts` → `/ratings?tab=messages&subtab=alerts`, `/notifications` → `/ratings?tab=messages&subtab=notifications`
 - Updated: `Ratings.jsx`, `MessagesTab.jsx`, `CustomerLoyaltyView.jsx`, `Loyalty.jsx`, `App.jsx`, `Layout.jsx`, `subscriptions.py`
 
+### Deep-Link & Highlight Bug Fix (March 11, 2026)
+- **Replaced querySelector-based highlight with ref-based `HighlightableItem` component**: Each item uses `useRef` + `useEffect` to scroll itself into view and apply a blue ring highlight when its ID matches the URL's `id` param
+- **Fixed ID mismatch**: Layout dropdown now uses `notification.alert_id` (not `notification.id`) when building deep-links to the Alerts sub-tab, since alert items have a different ID than notification items
+- **Key prop on MessagesTab**: Forces component remount when URL params change, ensuring fresh state
+- **MessagesTab prop reactivity**: Added `useEffect` watchers for `initialSubTab` prop changes
+- Files: `MessagesTab.jsx`, `Layout.jsx`, `Ratings.jsx`
+
