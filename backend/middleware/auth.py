@@ -49,11 +49,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if user.get("operator_id"):
         operator = await db.operators.find_one({"_id": user["operator_id"]})
         if operator:
+            _svc_map = {"hotels": "hotel", "restaurants": "restaurant", "event": "events"}
+            raw_types = operator.get("service_types", [])
             user["_operator_context"] = {
                 "operator_id": operator["_id"],
                 "operator_name": operator.get("name"),
                 "operator_type": operator.get("operator_type"),
-                "service_types": operator.get("service_types", []),
+                "service_types": [_svc_map.get(s, s) for s in raw_types],
                 "status": operator.get("status"),
                 "country": operator.get("country"),
                 "region": operator.get("region"),

@@ -75,8 +75,17 @@ export default function useSidebarMenu() {
     const canOperatorAccessService = (serviceType) => {
       if (isAdminOrSuper) return true;
       if (isOperatorUser) {
-        if (operatorServiceTypes.length > 0) return operatorServiceTypes.includes(serviceType);
-        if (operatorType) return operatorType === serviceType;
+        // Normalize service type names for matching (handle legacy plural/singular mismatches)
+        const normalize = (types) => {
+          const map = { hotels: 'hotel', restaurants: 'restaurant', event: 'events' };
+          return types.map(t => map[t] || t);
+        };
+        const normalizedTypes = normalize(operatorServiceTypes);
+        if (normalizedTypes.length > 0) return normalizedTypes.includes(serviceType);
+        if (operatorType) {
+          const normalizedOp = { hotels: 'hotel', restaurants: 'restaurant', event: 'events' }[operatorType] || operatorType;
+          return normalizedOp === serviceType;
+        }
         return false;
       }
       return true;

@@ -185,11 +185,15 @@ async def login(credentials: UserLogin, request: Request):
     if user.get("operator_id"):
         operator = await db.operators.find_one({"_id": user["operator_id"]})
         if operator:
+            # Normalize service type names for consistency
+            _svc_map = {"hotels": "hotel", "restaurants": "restaurant", "event": "events"}
+            raw_types = operator.get("service_types", [])
+            normalized_types = [_svc_map.get(s, s) for s in raw_types]
             operator_context = {
                 "operator_id": operator["_id"],
                 "operator_name": operator.get("name"),
                 "operator_type": operator.get("operator_type"),
-                "service_types": operator.get("service_types", []),
+                "service_types": normalized_types,
                 "operator_role": user.get("operator_role"),
             }
     
