@@ -488,6 +488,10 @@ export default function TravelManagement() {
         operator_id: selectedOperator.id,
         operator_name: selectedOperator.name
       };
+      // Operators cannot send status changes — strip it
+      if (!isAdmin) {
+        delete data.status;
+      }
       if (editingRoute) {
         await travelRouteApi.update(editingRoute.id, data);
         toast.success('Route updated');

@@ -121,17 +121,24 @@ export function RouteForm({
       </div>
       <div>
         <Label>Status</Label>
-        <Select value={form.status || 'active'} onValueChange={v => updateForm({ status: v })}>
-          <SelectTrigger className="bg-white">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
+        {isAdmin ? (
+          <Select value={form.status || 'pending'} onValueChange={v => updateForm({ status: v })}>
+            <SelectTrigger className="bg-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="h-9 px-3 rounded-md border border-slate-200 bg-slate-50 flex items-center text-sm text-slate-600 capitalize">
+            {form.status || 'pending'}
+          </div>
+        )}
+        {!isAdmin && <p className="text-[11px] text-slate-400 mt-1">Status can only be changed by admins. Use Suspend/Reinstate actions.</p>}
       </div>
       <div>
         <Label>Total Seats</Label>
