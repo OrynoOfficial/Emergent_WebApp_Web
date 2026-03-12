@@ -2,6 +2,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Building2 } from 'lucide-react';
 
 /**
@@ -134,11 +135,15 @@ export function RouteForm({
             </SelectContent>
           </Select>
         ) : (
-          <div className="h-9 px-3 rounded-md border border-slate-200 bg-slate-50 flex items-center text-sm text-slate-600 capitalize">
-            {form.status || 'pending'}
-          </div>
+          <>
+            <Badge className={`mt-1 block w-fit capitalize text-xs ${
+              form.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+              form.status === 'suspended' ? 'bg-red-100 text-red-700' :
+              'bg-amber-100 text-amber-700'
+            }`}>{form.status || 'pending'}</Badge>
+            <p className="text-[11px] text-slate-400 mt-1">Only admins can change status</p>
+          </>
         )}
-        {!isAdmin && <p className="text-[11px] text-slate-400 mt-1">Status can only be changed by admins. Use Suspend/Reinstate actions.</p>}
       </div>
       <div>
         <Label>Total Seats</Label>
