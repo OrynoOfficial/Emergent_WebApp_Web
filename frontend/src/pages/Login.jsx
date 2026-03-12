@@ -53,6 +53,14 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [bgIndex, setBgIndex] = useState(0);
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   
   // Signup flow state
   const [selectedRole, setSelectedRole] = useState('customer');
@@ -379,9 +387,9 @@ export default function AuthPage() {
             </div>
             
             {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              <div className="mb-4 p-3 bg-red-600 text-white rounded-xl animate-pulse shadow-lg" data-testid="login-error-alert">
+                <p className="text-sm font-medium text-center">{error}</p>
+              </div>
             )}
             
             <form onSubmit={handleLogin} className="space-y-4">
@@ -582,9 +590,9 @@ export default function AuthPage() {
             </div>
             
             {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              <div className="mb-4 p-3 bg-red-600 text-white rounded-xl animate-pulse shadow-lg" data-testid="signup-error-alert">
+                <p className="text-sm font-medium text-center">{error}</p>
+              </div>
             )}
             
             <form onSubmit={handleRegister} className="space-y-3">

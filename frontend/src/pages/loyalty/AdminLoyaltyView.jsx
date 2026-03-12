@@ -10,7 +10,7 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   TrendingUp, Gift, Star, Users, Crown, Trophy, Zap, Sparkles, Coins,
   Clock, ArrowRight, Loader2, Plus, Edit2, Trash2, Search, BarChart3,
-  Target, Percent, User, Tag, Copy, Check
+  Target, Percent, User, Tag, Copy, Check, Megaphone, Bell, Store, X, Filter
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate, formatDateShort } from '../../utils/dateUtils';
@@ -42,6 +42,12 @@ export default function AdminLoyaltyView() {
   const [savingReward, setSavingReward] = useState(false);
   const [generatingPromo, setGeneratingPromo] = useState(null);
   const [loyaltyPromos, setLoyaltyPromos] = useState([]);
+  const [opRewards, setOpRewards] = useState([]);
+  const [opRewardsLoading, setOpRewardsLoading] = useState(false);
+  const [opSubTab, setOpSubTab] = useState('promotions');
+  const [opSearch, setOpSearch] = useState('');
+  const [opStatusFilter, setOpStatusFilter] = useState('all');
+  const [opOperatorFilter, setOpOperatorFilter] = useState('all');
 
   const [programStats, setProgramStats] = useState({
     totalMembers: 0, totalPointsIssued: 0, totalPointsRedeemed: 0, activeRewards: 0,
@@ -49,6 +55,19 @@ export default function AdminLoyaltyView() {
   });
 
   useEffect(() => { loadAdminData(); }, []);
+
+  useEffect(() => {
+    if (activeTab === 'operator-rewards' && opRewards.length === 0) loadOpRewards();
+  }, [activeTab]);
+
+  const loadOpRewards = async () => {
+    setOpRewardsLoading(true);
+    try {
+      const res = await api.get('/subscriptions/promotions?limit=500');
+      setOpRewards(res.data?.promotions || []);
+    } catch { setOpRewards([]); }
+    finally { setOpRewardsLoading(false); }
+  };
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -165,6 +184,26 @@ export default function AdminLoyaltyView() {
     });
   }, [members, searchTerm, tierFilter]);
 
+  const filteredOpRewards = useMemo(() => {
+    const q = opSearch.toLowerCase();
+    return opRewards.filter(item => {
+      if (opSubTab === 'promotions' && item.type !== 'promotion') return false;
+      if (opSubTab === 'alerts' && item.type !== 'alert') return false;
+      if (opStatusFilter !== 'all' && item.status !== opStatusFilter) return false;
+      if (opOperatorFilter !== 'all' && item.operator_name !== opOperatorFilter) return false;
+      if (q) {
+        const text = [item.title, item.message, item.operator_name, item.service_type].filter(Boolean).join(' ').toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [opRewards, opSubTab, opSearch, opStatusFilter, opOperatorFilter]);
+
+  const opOperatorNames = useMemo(() => {
+    const names = new Set(opRewards.map(r => r.operator_name).filter(Boolean));
+    return [...names].sort();
+  }, [opRewards]);
+
   const totalTierMembers = Object.values(programStats.membersByTier).reduce((s, v) => s + v, 0) || 1;
 
   if (loading) return (
@@ -213,10 +252,11 @@ export default function AdminLoyaltyView() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-lg bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"><BarChart3 className="w-4 h-4 mr-1.5" /> Overview</TabsTrigger>
-          <TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"><Gift className="w-4 h-4 mr-1.5" /> Rewards</TabsTrigger>
-          <TabsTrigger value="members" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"><Users className="w-4 h-4 mr-1.5" /> Members</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl bg-slate-100 p-1 rounded-xl">
+          <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><BarChart3 className="w-4 h-4 mr-1" /> Overview</TabsTrigger>
+          <TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><Gift className="w-4 h-4 mr-1" /> Rewards</TabsTrigger>
+          <TabsTrigger value="operator-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4 mr-1" /> Op. Rewards</TabsTrigger>
+          <TabsTrigger value="members" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><Users className="w-4 h-4 mr-1" /> Members</TabsTrigger>
         </TabsList>
 
         {/* === OVERVIEW TAB === */}
@@ -389,6 +429,109 @@ export default function AdminLoyaltyView() {
             </div>
           )}
         </TabsContent>
+
+        {/* === OPERATOR REWARDS & ALERTS TAB === */}
+        <TabsContent value="operator-rewards" className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-violet-600" /> Operator Rewards & Alerts
+              </h3>
+              <p className="text-sm text-slate-500">All promotions and alerts from operators across the platform</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadOpRewards} disabled={opRewardsLoading} className="gap-1.5">
+              {opRewardsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Refresh
+            </Button>
+          </div>
+
+          {/* Sub-tabs: Promotions / Alerts */}
+          <div className="flex items-center gap-2">
+            {[{ k: 'promotions', l: 'Promotions', icon: Gift }, { k: 'alerts', l: 'Alerts', icon: Bell }].map(t => (
+              <Button key={t.k} variant={opSubTab === t.k ? 'default' : 'outline'} size="sm" className={`gap-1.5 ${opSubTab === t.k ? 'bg-[#082c59]' : ''}`} onClick={() => setOpSubTab(t.k)} data-testid={`op-subtab-${t.k}`}>
+                <t.icon className="h-3.5 w-3.5" /> {t.l}
+                <Badge className={`ml-1 text-[10px] px-1.5 ${opSubTab === t.k ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                  {opRewards.filter(r => r.type === (t.k === 'promotions' ? 'promotion' : 'alert')).length}
+                </Badge>
+              </Button>
+            ))}
+          </div>
+
+          {/* Search & Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <Input value={opSearch} onChange={e => setOpSearch(e.target.value)} placeholder="Search by title, operator, service..." className="h-9 pl-8 text-sm" data-testid="op-rewards-search" />
+              {opSearch && <button onClick={() => setOpSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2"><X className="w-3.5 h-3.5 text-slate-400" /></button>}
+            </div>
+            <Select value={opStatusFilter} onValueChange={setOpStatusFilter}>
+              <SelectTrigger className="w-[140px] h-9 text-sm" data-testid="op-status-filter"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending_approval">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={opOperatorFilter} onValueChange={setOpOperatorFilter}>
+              <SelectTrigger className="w-[160px] h-9 text-sm" data-testid="op-operator-filter"><SelectValue placeholder="Operator" /></SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Operators</SelectItem>
+                {opOperatorNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Results */}
+          {opRewardsLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#082c59]" /></div>
+          ) : filteredOpRewards.length === 0 ? (
+            <Card><CardContent className="py-12 text-center">
+              {opSubTab === 'promotions' ? <Gift className="h-12 w-12 text-slate-200 mx-auto mb-3" /> : <Bell className="h-12 w-12 text-slate-200 mx-auto mb-3" />}
+              <p className="text-slate-500">{opSearch || opStatusFilter !== 'all' || opOperatorFilter !== 'all' ? 'No matching items found' : `No ${opSubTab} yet`}</p>
+            </CardContent></Card>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-400">{filteredOpRewards.length} {opSubTab} found</p>
+              {filteredOpRewards.map(item => {
+                const isPromo = item.type === 'promotion';
+                const statusColors = {
+                  pending_approval: 'bg-amber-100 text-amber-700',
+                  approved: 'bg-green-100 text-green-700',
+                  rejected: 'bg-red-100 text-red-700',
+                };
+                return (
+                  <Card key={item.id} className={`border-l-4 ${isPromo ? 'border-l-purple-400' : 'border-l-amber-400'} hover:shadow-sm transition-shadow`} data-testid={`op-item-${item.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${isPromo ? 'bg-purple-50' : 'bg-amber-50'}`}>
+                            {isPromo ? <Gift className="w-4 h-4 text-purple-600" /> : <Bell className="w-4 h-4 text-amber-600" />}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-sm text-slate-900 truncate">{item.title}</h4>
+                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{item.message}</p>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Badge variant="outline" className="text-[10px] gap-1"><Store className="h-2.5 w-2.5" /> {item.operator_name}</Badge>
+                              {item.service_type && <Badge variant="outline" className="text-[10px]">{item.service_type}</Badge>}
+                              {item.discount_value && <Badge className="bg-green-50 text-green-700 text-[10px]">{item.discount_value}</Badge>}
+                              {item.valid_until && <span className="text-[10px] text-slate-400">Valid until {new Date(item.valid_until).toLocaleDateString()}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <Badge className={`text-[10px] ${statusColors[item.status] || 'bg-slate-100 text-slate-600'}`}>{item.status === 'pending_approval' ? 'Pending' : item.status}</Badge>
+                          <span className="text-[10px] text-slate-400">{item.created_at ? formatDateShort(item.created_at) : ''}</span>
+                          {item.created_by_name && <span className="text-[10px] text-slate-400">by {item.created_by_name}</span>}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="members" className="mt-6">
           <Card>
             <CardHeader>

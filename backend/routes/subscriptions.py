@@ -428,8 +428,9 @@ async def reject_promotion(
 async def get_promotions(
     operator_id: Optional[str] = None,
     status: Optional[str] = None,
+    item_type: Optional[str] = None,
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(100, ge=1, le=500),
     current_user: dict = Depends(get_current_active_user),
 ):
     """Get promotions and alerts. Operators see their own; admins see all."""
@@ -444,10 +445,15 @@ async def get_promotions(
         query["operator_id"] = op_id
     if status:
         query["status"] = status
+    if item_type:
+        query["type"] = item_type
 
     promos = await db.promotions.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     for p in promos:
         p["id"] = str(p.pop("_id", ""))
+        for field in ["created_at", "approved_at", "valid_until", "rejected_at"]:
+            if p.get(field) and hasattr(p[field], "isoformat"):
+                p[field] = p[field].isoformat()
 
     total = await db.promotions.count_documents(query)
 

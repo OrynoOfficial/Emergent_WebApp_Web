@@ -1,0 +1,70 @@
+{
+  "summary": "Iteration 85: Two features tested - 1) Operator Rewards & Alerts tab in Admin Loyalty page (all UI elements working correctly), 2) Login page error alert (red, flashing, auto-dismiss after ~5 seconds). Both features PASS.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration85_operator_rewards.py",
+    "/app/test_reports/pytest/pytest_results_iteration85.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration85_operator_rewards.py"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@test.com / testpassword123"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 85 features fully implemented and working. Op. Rewards tab in Admin Loyalty page shows 14 promotions and 18 alerts with search, status filter, and operator filter. Login error shows red flashing alert with auto-dismiss after 5 seconds.",
+  "features_verified": {
+    "backend_promotions_api": {
+      "endpoint": "GET /api/subscriptions/promotions",
+      "test_results": [
+        {"test": "Returns all promotions+alerts with limit=500", "result": "PASS"},
+        {"test": "Filter item_type=promotion returns only promotions", "result": "PASS"},
+        {"test": "Filter item_type=alert returns only alerts", "result": "PASS"},
+        {"test": "Items have required fields (id, type, title, message, operator_name)", "result": "PASS"},
+        {"test": "Filtered counts match expectations", "result": "PASS"}
+      ]
+    },
+    "frontend_operator_rewards_tab": {
+      "elements_verified": [
+        {"element": "4 tabs: Overview, Rewards, Op. Rewards, Members", "result": "PASS"},
+        {"element": "Op. Rewards tab with data-testid='operator-rewards-tab'", "result": "PASS"},
+        {"element": "Promotions sub-tab with data-testid='op-subtab-promotions'", "result": "PASS"},
+        {"element": "Alerts sub-tab with data-testid='op-subtab-alerts'", "result": "PASS"},
+        {"element": "Search input with data-testid='op-rewards-search'", "result": "PASS"},
+        {"element": "Status filter with data-testid='op-status-filter'", "result": "PASS"},
+        {"element": "Operator filter with data-testid='op-operator-filter'", "result": "PASS"},
+        {"element": "Item count badges (14 promotions, 18 alerts)", "result": "PASS"},
+        {"element": "Item cards with operator name, service type, status badge, date", "result": "PASS"}
+      ]
+    },
+    "frontend_login_error_alert": {
+      "elements_verified": [
+        {"element": "Error alert with data-testid='login-error-alert'", "result": "PASS"},
+        {"element": "Red background (bg-red-600)", "result": "PASS"},
+        {"element": "Flashing effect (animate-pulse)", "result": "PASS"},
+        {"element": "Auto-dismiss after ~5 seconds", "result": "PASS"}
+      ]
+    }
+  },
+  "data_in_db": {
+    "total_promotions": 14,
+    "total_alerts": 18,
+    "total_items": 32
+  }
+}
