@@ -461,6 +461,78 @@ async def reject_service(
     return {"message": f"{service_type.replace('_', ' ').title()} rejected", "service_id": service_id}
 
 
+COLLECTION_MAP = {
+    "travel_route": "travel_routes", "hotel": "hotels", "car_rental": "car_rentals",
+    "restaurant": "restaurants", "package": "packages", "event": "events",
+    "cinema": "cinemas", "pressing": "pressing", "banquet": "banquets"
+}
+
+@router.post("/services/{service_type}/{service_id}/suspend")
+async def suspend_service(
+    service_type: str,
+    service_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Suspend (pause) an active service. Operators can suspend their own services."""
+    db = get_database()
+    collection_name = COLLECTION_MAP.get(service_type)
+    if not collection_name:
+        raise HTTPException(status_code=400, detail=f"Invalid service type: {service_type}")
+
+    service = await db[collection_name].find_one({"$or": [{"id": service_id}, {"_id": service_id}]})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    # Operators can only suspend their own services
+    if current_user["role"] == "operator":
+        if service.get("operator_id") != current_user.get("operator_id"):
+            raise HTTPException(status_code=403, detail="Not authorized to suspend this service")
+
+    await db[collection_name].update_one(
+        {"_id": service.get("_id")},
+        {"$set": {"status": "suspended", "suspended_at": datetime.now(timezone.utc).isoformat(),
+                  "suspended_by": current_user.get("_id") or current_user.get("id"),
+                  "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    await log_validation_action(db, "suspended", "service", service_id,
+        service.get("name", service.get("title", service_id)), current_user)
+
+    return {"message": f"{service_type.replace('_', ' ').title()} suspended", "service_id": service_id}
+
+
+@router.post("/services/{service_type}/{service_id}/reinstate")
+async def reinstate_service(
+    service_type: str,
+    service_id: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Reinstate a suspended service. Sets status back to 'pending' for admin re-approval."""
+    db = get_database()
+    collection_name = COLLECTION_MAP.get(service_type)
+    if not collection_name:
+        raise HTTPException(status_code=400, detail=f"Invalid service type: {service_type}")
+
+    service = await db[collection_name].find_one({"$or": [{"id": service_id}, {"_id": service_id}]})
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    # Operators can only reinstate their own services
+    if current_user["role"] == "operator":
+        if service.get("operator_id") != current_user.get("operator_id"):
+            raise HTTPException(status_code=403, detail="Not authorized to reinstate this service")
+
+    await db[collection_name].update_one(
+        {"_id": service.get("_id")},
+        {"$set": {"status": "pending", "reinstated_at": datetime.now(timezone.utc).isoformat(),
+                  "reinstated_by": current_user.get("_id") or current_user.get("id"),
+                  "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    await log_validation_action(db, "reinstated", "service", service_id,
+        service.get("name", service.get("title", service_id)), current_user)
+
+    return {"message": f"{service_type.replace('_', ' ').title()} reinstated (pending approval)", "service_id": service_id}
+
+
 @router.post("/operators/{operator_id}/approve")
 async def approve_operator_validation(
     operator_id: str,

@@ -142,6 +142,13 @@ async def update_event(
             raise HTTPException(status_code=403, detail="Not authorized to update this event")
 
     update_dict = {k: v for k, v in event_data.dict().items() if v is not None}
+    
+    if current_user["role"] == "operator":
+        update_dict.pop("status", None)
+        data_fields = {k for k in update_dict if k not in ("updated_at",)}
+        if data_fields:
+            update_dict["status"] = "pending"
+    
     update_dict["updated_at"] = datetime.utcnow()
 
     await db.events.update_one({"_id": event_id}, {"$set": update_dict})

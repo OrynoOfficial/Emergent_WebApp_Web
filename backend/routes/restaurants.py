@@ -323,6 +323,14 @@ async def update_restaurant(
     
     # Build update dict excluding None values
     update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+    
+    # Operators cannot set status to active; data changes reset to pending
+    if current_user["role"] == "operator":
+        update_dict.pop("status", None)
+        data_fields = {k for k in update_dict if k not in ("updated_at",)}
+        if data_fields:
+            update_dict["status"] = "pending"
+    
     update_dict["updated_at"] = datetime.now(timezone.utc)
     
     await db.restaurants.update_one(

@@ -109,6 +109,12 @@ async def update_package(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     update_data = {k: v for k, v in package_data.dict().items() if v is not None}
+    
+    if current_user["role"] == "operator":
+        update_data.pop("status", None)
+        if {k for k in update_data if k not in ("updated_at",)}:
+            update_data["status"] = "pending"
+    
     update_data["updated_at"] = datetime.utcnow()
     
     await db.packages.update_one({"_id": package_id}, {"$set": update_data})

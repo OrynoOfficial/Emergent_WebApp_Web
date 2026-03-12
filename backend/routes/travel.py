@@ -75,7 +75,7 @@ async def create_travel_route(
         "operator_name": operator_name,
         "created_by": current_user["_id"],
         "is_active": True,
-        "status": "active",
+        "status": "pending",
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
@@ -283,14 +283,22 @@ async def update_travel_route(
         raise HTTPException(status_code=403, detail="Not authorized to update this route")
     
     update_data = {}
+    is_operator = current_user["role"] == "operator"
     for k, v in route_data.dict().items():
         if v is not None:
-            # Map route_status back to status in DB
             if k == "route_status":
+                # Operators can only suspend/reinstate, not activate
+                if is_operator and v == "active":
+                    continue  # skip — only admins can set active
                 update_data["status"] = v
             else:
                 update_data[k] = v
     update_data["updated_at"] = datetime.utcnow()
+    
+    # If operator changed any service data (not just status), reset to pending for re-approval
+    data_fields_changed = {k for k in update_data if k not in ("status", "updated_at")}
+    if is_operator and data_fields_changed:
+        update_data["status"] = "pending"
     
     await db.travel_routes.update_one({"_id": route_id}, {"$set": update_data})
     

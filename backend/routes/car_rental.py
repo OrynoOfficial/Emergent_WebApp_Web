@@ -145,6 +145,14 @@ async def update_car(
             if operator:
                 update_data["operator_name"] = operator.get("name", "")
     
+    # Operators cannot set status to active; data changes reset to pending
+    is_operator = user_role not in ["admin", "super_admin"]
+    if is_operator:
+        update_data.pop("status", None)
+        data_fields = {k for k in update_data if k not in ("updated_at",)}
+        if data_fields:
+            update_data["status"] = "pending"
+    
     update_data["updated_at"] = datetime.utcnow()
     
     await db.car_rentals.update_one({"_id": car_id}, {"$set": update_data})

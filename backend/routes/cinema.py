@@ -93,6 +93,12 @@ async def update_cinema(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     update_data = {k: v for k, v in cinema_data.dict().items() if v is not None}
+    
+    if current_user["role"] == "operator":
+        update_data.pop("status", None)
+        if {k for k in update_data if k not in ("updated_at",)}:
+            update_data["status"] = "pending"
+    
     update_data["updated_at"] = datetime.utcnow()
     
     await db.cinemas.update_one({"_id": cinema_id}, {"$set": update_data})

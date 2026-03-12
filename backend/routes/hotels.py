@@ -51,6 +51,7 @@ async def create_hotel(
         "total_ratings": 0,
         "total_rooms": 0,
         "available_rooms": 0,
+        "status": "pending",
         "is_active": True,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
@@ -197,6 +198,14 @@ async def update_hotel(
             operator = await db.operators.find_one({"_id": hotel_data["operator_id"]})
             if operator:
                 hotel_data["operator_name"] = operator.get("name", "")
+    
+    # Operators cannot set status to active; data changes reset status to pending
+    is_operator = user_role not in ["admin", "super_admin"]
+    if is_operator:
+        hotel_data.pop("status", None)  # prevent operator from setting status directly
+        data_fields = {k for k in hotel_data if k not in ("updated_at",)}
+        if data_fields:
+            hotel_data["status"] = "pending"
     
     hotel_data["updated_at"] = datetime.utcnow()
     await db.hotels.update_one({"_id": hotel_id}, {"$set": hotel_data})
