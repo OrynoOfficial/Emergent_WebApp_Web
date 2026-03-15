@@ -426,6 +426,7 @@ export default function TravelBooking() {
             destination_city: destinationCity,
             departure_time: bookingData.outbound.departure_time,
             arrival_time: bookingData.outbound.arrival_time,
+            operator_id: bookingData.outbound.operator_id,
             operator_name: bookingData.outbound.operator_name,
             vehicle_type: bookingData.outbound.vehicle_type,
             travel_date: bookingData.departureDate || bookingData.travelDate,

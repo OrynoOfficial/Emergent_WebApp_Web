@@ -527,7 +527,7 @@ function App() {
           <Route
             path="/admin/analytics"
             element={
-              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+              <ProtectedRoute requiredRoles={['admin', 'super_admin', 'operator']}>
                 <Analytics />
               </ProtectedRoute>
             }

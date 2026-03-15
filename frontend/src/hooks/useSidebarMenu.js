@@ -124,12 +124,12 @@ export default function useSidebarMenu() {
       items.push({
         key: 'dashboards', label: 'Dashboards', icon: LayoutDashboard, isDropdown: true,
         submenu: [
-          { key: 'analytics-dash', label: 'Analytics Dashboard', path: '/analytics', icon: BarChart },
+          { key: 'analytics-dash', label: 'Analytics Dashboard', path: '/admin/analytics', icon: BarChart },
           ...(isSuperAdmin ? [{ key: 'admin-dash', label: 'Admin Dashboard', path: '/admin/admin-dashboard', icon: LayoutDashboard }] : []),
         ]
       });
     } else {
-      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: isAdmin && !isSuperAdmin ? '/admin/admin-dashboard' : '/analytics' });
+      items.push({ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/analytics' });
     }
 
     // Sales (Operator + Super Admin)

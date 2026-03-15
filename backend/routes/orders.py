@@ -115,6 +115,25 @@ async def create_direct_order(
     booking_details = order_data.booking_details or {}
     is_round_trip = booking_details.get("is_round_trip", False) and order_data.service_type == "travel"
     
+    # Resolve operator_id from the service if not provided in the order
+    operator_id = booking_details.get("operator_id") or None
+    operator_name = booking_details.get("operator_name") or ""
+    if not operator_id and order_data.service_id:
+        svc_collection_map = {
+            'travel': 'travel_routes', 'hotel': 'hotels', 'car_rental': 'car_rentals',
+            'restaurant': 'restaurants', 'event': 'events', 'package': 'packages',
+            'cinema': 'cinemas', 'laundry': 'pressings', 'banquet': 'banquets'
+        }
+        col_name = svc_collection_map.get(order_data.service_type)
+        if col_name:
+            svc = await db[col_name].find_one(
+                {"$or": [{"_id": order_data.service_id}, {"id": order_data.service_id}]},
+                {"operator_id": 1, "operator_name": 1}
+            )
+            if svc:
+                operator_id = svc.get("operator_id")
+                operator_name = operator_name or svc.get("operator_name", "")
+    
     if is_round_trip:
         # Create 2 separate orders (tickets) for round trip
         trip_group_id = str(uuid.uuid4())
@@ -145,6 +164,8 @@ async def create_direct_order(
             "service_category": order_data.service_type,
             "service_id": order_data.service_id,
             "service_name": f"{order_data.service_name} (Outbound)",
+            "operator_id": operator_id,
+            "operator_name": operator_name,
             "subtotal": outbound_price,
             "total_amount": outbound_price,
             "final_amount": outbound_price,
@@ -167,6 +188,8 @@ async def create_direct_order(
             "service_category": order_data.service_type,
             "service_id": order_data.service_id,
             "service_name": f"{order_data.service_name} (Return)",
+            "operator_id": operator_id,
+            "operator_name": operator_name,
             "subtotal": return_price,
             "total_amount": return_price,
             "final_amount": return_price,
@@ -191,6 +214,8 @@ async def create_direct_order(
             "user_email": current_user.get("email", ""),
             "order_ids": [outbound_id, return_id],
             "trip_group_id": trip_group_id,
+            "operator_id": operator_id,
+            "operator_name": operator_name,
             "total_amount": order_data.total_amount,
             "currency": order_data.currency,
             "service_type": order_data.service_type,
@@ -225,6 +250,8 @@ async def create_direct_order(
         "service_category": order_data.service_type,
         "service_id": order_data.service_id,
         "service_name": order_data.service_name,
+        "operator_id": operator_id,
+        "operator_name": operator_name,
         "subtotal": subtotal,
         "tax": 0,
         "discount": booking_details.get("promo_discount", 0),
