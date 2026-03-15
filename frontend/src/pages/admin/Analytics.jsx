@@ -132,8 +132,8 @@ export default function Analytics() {
       const params = { period: timeFilter };
       
       // If operator, filter by their services
-      if (isOperator && operatorContext?.id) {
-        params.operator_id = operatorContext.id;
+      if (isOperator && operatorContext?.operator_id) {
+        params.operator_id = operatorContext.operator_id;
       }
       
       // Fetch analytics overview (single call)
@@ -306,7 +306,7 @@ export default function Analytics() {
           </div>
           <div>
             <h3 className="font-medium text-blue-900">
-              Personalized Analytics for {operatorContext.name || 'Your Organization'}
+              Personalized Analytics for {operatorContext.operator_name || 'Your Organization'}
             </h3>
             <p className="text-sm text-blue-700">
               Showing data filtered by your assigned services: {operatorServiceTypes?.join(', ') || 'All services'}
