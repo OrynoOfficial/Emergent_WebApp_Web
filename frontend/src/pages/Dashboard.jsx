@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { analyticsAPI, ordersAPI } from '../api/client';
 import { formatCurrency } from '../utils/currency';
@@ -60,9 +60,17 @@ const MONTHLY_DATA = [
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Redirect operators/admins away from customer dashboard
+  useEffect(() => {
+    if (user?.role === 'operator') navigate('/admin/analytics', { replace: true });
+    else if (user?.role === 'admin') navigate('/admin/admin-dashboard', { replace: true });
+    else if (user?.role === 'super_admin') navigate('/admin/analytics', { replace: true });
+  }, [user?.role, navigate]);
   const [dateFilter, setDateFilter] = useState('7days');
 
   useEffect(() => {

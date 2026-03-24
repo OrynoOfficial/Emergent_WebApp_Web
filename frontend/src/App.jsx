@@ -9,6 +9,16 @@ import ScrollToTop from './components/ScrollToTop';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
+// Smart redirect based on user role
+function RoleBasedRedirect() {
+  const cachedUser = (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
+  const role = cachedUser?.role;
+  if (role === 'super_admin') return <Navigate to="/admin/analytics" replace />;
+  if (role === 'admin') return <Navigate to="/admin/admin-dashboard" replace />;
+  if (role === 'operator') return <Navigate to="/admin/analytics" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
 // Main Pages
 import Dashboard from './pages/Dashboard';
 import Services from './pages/Services';
@@ -909,8 +919,8 @@ function App() {
           <Route path="/alerts" element={<ProtectedRoute><Navigate to="/ratings?tab=messages&subtab=alerts" replace /></ProtectedRoute>} />
           
           {/* Redirects */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RoleBasedRedirect />} />
+          <Route path="*" element={<RoleBasedRedirect />} />
         </Routes>
         </NotificationProvider>
         </PermissionsProvider>
