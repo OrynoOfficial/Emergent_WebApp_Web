@@ -531,3 +531,135 @@ async def process_order(
     )
 
     return {"message": "Order processed successfully", "order_id": order_id}
+
+
+# ============== TICKET SCANNING & VALIDATION ==============
+
+class TicketScanRequest(BaseModel):
+    code: str
+
+
+@router.post("/scan/validate")
+async def validate_ticket_scan(
+    data: TicketScanRequest,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Validate a ticket by order_number. Returns full ticket details.
+    Operators only see tickets for their services.
+    """
+    db = get_database()
+    code = data.code.strip().upper()
+
+    # Look up by order_number or _id
+    order = await db.orders.find_one({
+        "$or": [
+            {"order_number": {"$regex": f"^{code}$", "$options": "i"}},
+            {"_id": code},
+        ]
+    })
+
+    if not order:
+        return {"valid": False, "code": code, "message": "Ticket not found. Check the code and try again."}
+
+    # Operator scoping — only validate tickets for their own services
+    if current_user.get("role") == "operator":
+        op_id = current_user.get("operator_id")
+        if op_id and order.get("operator_id") and order["operator_id"] != op_id:
+            return {"valid": False, "code": code, "message": "This ticket belongs to a different operator."}
+
+    # Get customer info
+    customer = await db.users.find_one({"_id": order.get("user_id")}, {"full_name": 1, "email": 1, "phone": 1})
+    customer_name = customer.get("full_name", "Unknown") if customer else "Unknown"
+    customer_email = customer.get("email", "") if customer else ""
+    customer_phone = customer.get("phone", "") if customer else ""
+
+    booking = order.get("booking_details") or {}
+    order_id = order.get("id") or str(order.get("_id", ""))
+
+    return {
+        "valid": True,
+        "code": order.get("order_number") or order_id,
+        "order_id": order_id,
+        "status": order.get("status", "unknown"),
+        "payment_status": order.get("payment_status", "unknown"),
+        "checked_in": order.get("checked_in", False),
+        "checked_in_at": order.get("checked_in_at"),
+        "service_type": order.get("service_type", ""),
+        "service_name": order.get("service_name", ""),
+        "operator_name": order.get("operator_name", ""),
+        "total_amount": order.get("total_amount", 0),
+        "currency": order.get("currency", "XAF"),
+        "created_at": order.get("created_at").isoformat() if hasattr(order.get("created_at", ""), "isoformat") else str(order.get("created_at", "")),
+        "customer": {
+            "name": customer_name,
+            "email": customer_email,
+            "phone": customer_phone,
+        },
+        "booking": {
+            "departure_city": booking.get("departure_city", booking.get("origin", "")),
+            "destination_city": booking.get("destination_city", booking.get("destination", "")),
+            "travel_date": booking.get("travel_date", ""),
+            "departure_time": booking.get("departure_time", ""),
+            "arrival_time": booking.get("arrival_time", ""),
+            "operator_name": booking.get("operator_name", order.get("operator_name", "")),
+            "seats": booking.get("selected_seats", booking.get("seats", [])),
+            "passengers": booking.get("passengers", []),
+            "is_round_trip": booking.get("is_round_trip", False),
+            "leg": booking.get("leg", ""),
+        },
+    }
+
+
+@router.post("/scan/check-in")
+async def check_in_ticket(
+    data: TicketScanRequest,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Mark a ticket as checked-in. Only confirmed/paid tickets can be checked in.
+    Operators can only check in tickets for their own services.
+    """
+    db = get_database()
+    code = data.code.strip().upper()
+
+    order = await db.orders.find_one({
+        "$or": [
+            {"order_number": {"$regex": f"^{code}$", "$options": "i"}},
+            {"_id": code},
+        ]
+    })
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Operator scoping
+    if current_user.get("role") == "operator":
+        op_id = current_user.get("operator_id")
+        if op_id and order.get("operator_id") and order["operator_id"] != op_id:
+            raise HTTPException(status_code=403, detail="This ticket belongs to a different operator")
+
+    # Check if already checked in
+    if order.get("checked_in"):
+        raise HTTPException(status_code=400, detail=f"Ticket already checked in at {order.get('checked_in_at', 'unknown time')}")
+
+    # Only confirmed/paid tickets can be checked in
+    if order.get("status") not in ("confirmed",) or order.get("payment_status") not in ("paid", "verified"):
+        raise HTTPException(status_code=400, detail=f"Cannot check in — ticket status: {order.get('status')}, payment: {order.get('payment_status')}")
+
+    await db.orders.update_one(
+        {"_id": order["_id"]},
+        {"$set": {
+            "checked_in": True,
+            "checked_in_at": datetime.now(timezone.utc).isoformat(),
+            "checked_in_by": current_user.get("_id") or current_user.get("id"),
+            "checked_in_by_name": current_user.get("full_name", ""),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    return {
+        "message": "Ticket checked in successfully",
+        "order_number": order.get("order_number"),
+        "checked_in_at": datetime.now(timezone.utc).isoformat(),
+    }

@@ -1,213 +1,277 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  QrCode, Camera, CheckCircle, XCircle, RefreshCw,
-  Ticket, User, Calendar, MapPin, AlertCircle
+  QrCode, CheckCircle, XCircle, RefreshCw,
+  Ticket, User, Calendar, MapPin, AlertCircle,
+  Loader2, Shield, Clock, DollarSign, Users, ArrowRight, Search, Bus, Hotel, Utensils, Package
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { formatDateShort } from '@/utils/dateUtils';
+import api from '@/api/client';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+
+const SERVICE_ICONS = {
+  travel: Bus, hotel: Hotel, restaurant: Utensils, car_rental: Package,
+  event: Calendar, package: Package, cinema: Ticket, laundry: Package, banquet: Package,
+};
 
 export default function Scanner() {
-  const [scanning, setScanning] = useState(false);
+  const { user, operatorContext } = useAuth();
   const [manualCode, setManualCode] = useState('');
   const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [scanHistory, setScanHistory] = useState([]);
+  const inputRef = useRef(null);
 
-  const handleManualSubmit = () => {
-    if (!manualCode.trim()) return;
-    
-    setError(null);
-    
-    // Simulate scan result
-    if (manualCode.startsWith('TKT-') || manualCode.startsWith('BK-')) {
-      setResult({
-        valid: true,
-        code: manualCode,
-        type: 'travel',
-        customer: {
-          name: 'Jean Mbarga',
-          email: 'jean@example.com',
-          phone: '+237 699 111 222'
-        },
-        booking: {
-          service: 'Express Voyage',
-          route: 'Yaounde - Douala',
-          date: '2025-12-22',
-          time: '15:00',
-          seat: 'A12',
-          amount: 6500
-        }
-      });
-    } else {
-      setResult({
-        valid: false,
-        code: manualCode,
-        message: 'Invalid code format. Expected TKT-XXXX or BK-XXXX'
-      });
-    }
+  useEffect(() => { inputRef.current?.focus(); }, [result]);
+
+  const handleScan = async (code) => {
+    if (!code?.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await api.post('/orders/scan/validate', { code: code.trim() });
+      setResult(res.data);
+      if (res.data.valid) {
+        setScanHistory(prev => [{ code: res.data.code, valid: true, time: new Date(), service: res.data.service_name }, ...prev.slice(0, 19)]);
+      }
+    } catch (err) {
+      setResult({ valid: false, code, message: err.response?.data?.detail || 'Failed to validate ticket' });
+    } finally { setLoading(false); }
   };
 
-  const handleStartScanner = () => {
-    setScanning(true);
-    setResult(null);
-    setError(null);
-    
-    // Simulate scanner - in production, use a QR scanner library
-    setTimeout(() => {
-      setScanning(false);
-      setError('Camera access not available. Please use manual entry.');
-    }, 3000);
+  const handleCheckIn = async () => {
+    if (!result?.code) return;
+    setCheckingIn(true);
+    try {
+      await api.post('/orders/scan/check-in', { code: result.code });
+      toast.success('Ticket checked in!');
+      setResult(prev => ({ ...prev, checked_in: true, checked_in_at: new Date().toISOString() }));
+      setScanHistory(prev => prev.map(h => h.code === result.code ? { ...h, checkedIn: true } : h));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Check-in failed');
+    } finally { setCheckingIn(false); }
   };
 
-  const handleReset = () => {
-    setResult(null);
-    setError(null);
-    setManualCode('');
+  const handleReset = () => { setResult(null); setManualCode(''); setTimeout(() => inputRef.current?.focus(), 100); };
+
+  const statusColor = (s) => {
+    if (s === 'confirmed') return 'bg-emerald-100 text-emerald-700';
+    if (s === 'pending') return 'bg-amber-100 text-amber-700';
+    if (s === 'cancelled' || s === 'not_confirmed') return 'bg-red-100 text-red-700';
+    return 'bg-slate-100 text-slate-600';
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-[#082c59] rounded-full flex items-center justify-center mx-auto mb-4">
-            <QrCode className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Ticket Scanner</h1>
-          <p className="text-gray-600">Scan QR codes or enter ticket codes manually</p>
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <div className="w-16 h-16 bg-[#082c59] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <QrCode className="w-8 h-8 text-white" />
         </div>
+        <h1 className="text-2xl font-bold text-[#082c59]" data-testid="scanner-title">Ticket Scanner</h1>
+        <p className="text-slate-500 text-sm">
+          {operatorContext ? `Scanning for ${operatorContext.operator_name}` : 'Scan or enter ticket codes to validate'}
+        </p>
+      </div>
 
-        {!result ? (
-          <div className="space-y-6">
-            {/* Scanner Area */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="aspect-square max-h-80 bg-slate-900 rounded-lg flex flex-col items-center justify-center relative overflow-hidden">
-                  {scanning ? (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-48 h-48 border-2 border-white/50 rounded-lg">
-                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-500 animate-pulse" style={{ animation: 'scan 2s ease-in-out infinite' }} />
-                        </div>
-                      </div>
-                      <RefreshCw className="w-8 h-8 text-white animate-spin" />
-                      <p className="text-white mt-4">Scanning...</p>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-16 h-16 text-slate-600 mb-4" />
-                      <p className="text-slate-400 mb-4">Camera preview will appear here</p>
-                      <Button onClick={handleStartScanner} className="bg-white text-slate-900 hover:bg-gray-100">
-                        <Camera className="w-4 h-4 mr-2" /> Start Scanner
-                      </Button>
-                    </>
-                  )}
-                </div>
-                {error && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2 text-yellow-800">
-                    <AlertCircle className="w-5 h-5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Manual Entry */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-4">Manual Entry</h3>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter ticket code (TKT-XXXX or BK-XXXX)"
-                    className="font-mono"
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    onKeyPress={(e) => e.key === 'Enter' && handleManualSubmit()}
-                  />
-                  <Button onClick={handleManualSubmit} className="bg-[#082c59]">
-                    Verify
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card>
+      {!result ? (
+        <div className="space-y-4">
+          {/* Scan Input */}
+          <Card className="border-2 border-dashed border-[#082c59]/20 hover:border-[#082c59]/40 transition-colors">
             <CardContent className="p-6">
-              {result.valid ? (
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle className="w-10 h-10 text-green-600" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-green-600">Valid Ticket</h2>
-                    <p className="font-mono text-gray-500">{result.code}</p>
-                  </div>
-
-                  <div className="border-t pt-6 space-y-4">
-                    <div className="flex items-start gap-3">
-                      <User className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="font-semibold">{result.customer.name}</p>
-                        <p className="text-sm text-gray-500">{result.customer.email}</p>
-                        <p className="text-sm text-gray-500">{result.customer.phone}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Ticket className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="font-semibold">{result.booking.service}</p>
-                        <p className="text-sm text-gray-500">{result.booking.route}</p>
-                        <Badge variant="outline" className="mt-1">Seat {result.booking.seat}</Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
-                      <div>
-                        <p className="font-semibold">{result.booking.date}</p>
-                        <p className="text-sm text-gray-500">Departure: {result.booking.time}</p>
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Amount Paid</span>
-                        <span className="text-xl font-bold text-[#082c59]">{formatFCFA(result.booking.amount)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button className="flex-1 bg-green-600 hover:bg-green-700">
-                      <CheckCircle className="w-4 h-4 mr-2" /> Confirm Entry
-                    </Button>
-                    <Button variant="outline" onClick={handleReset}>
-                      Scan Another
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center space-y-6">
-                  <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                    <XCircle className="w-10 h-10 text-red-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-red-600">Invalid Ticket</h2>
-                    <p className="font-mono text-gray-500">{result.code}</p>
-                    <p className="text-gray-600 mt-2">{result.message}</p>
-                  </div>
-                  <Button onClick={handleReset} className="bg-[#082c59]">
-                    Try Again
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="w-5 h-5 text-[#082c59]" />
+                <h3 className="font-semibold text-slate-900">Enter Ticket Code</h3>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  ref={inputRef}
+                  placeholder="e.g. TRV-20260312-A1B2C3D4"
+                  className="font-mono text-lg h-12 tracking-wide"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && handleScan(manualCode)}
+                  data-testid="scan-input"
+                />
+                <Button onClick={() => handleScan(manualCode)} disabled={loading || !manualCode.trim()} className="bg-[#082c59] hover:bg-[#0a3a75] h-12 px-6" data-testid="scan-btn">
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <QrCode className="w-5 h-5" />}
+                </Button>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">Enter the order number printed on the ticket</p>
             </CardContent>
           </Card>
-        )}
-      </div>
+
+          {/* Scan History */}
+          {scanHistory.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Recent Scans
+                </h4>
+                <div className="space-y-1.5">
+                  {scanHistory.slice(0, 5).map((h, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors" onClick={() => handleScan(h.code)}>
+                      <div className="flex items-center gap-2">
+                        {h.valid ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <XCircle className="w-4 h-4 text-red-500" />}
+                        <span className="font-mono text-sm text-slate-700">{h.code}</span>
+                        {h.checkedIn && <Badge className="bg-blue-100 text-blue-700 text-[10px]">Checked In</Badge>}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{h.time.toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {result.valid ? (
+            <>
+              {/* Valid Ticket Card */}
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <div className={`p-5 text-white ${result.checked_in ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gradient-to-r from-emerald-600 to-emerald-700'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        {result.checked_in ? <Shield className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">{result.checked_in ? 'Already Checked In' : 'Valid Ticket'}</h2>
+                        <p className="font-mono text-white/80 text-sm">{result.code}</p>
+                      </div>
+                    </div>
+                    <Badge className={`${statusColor(result.status)} border-0 text-sm`}>{result.status}</Badge>
+                  </div>
+                </div>
+
+                <CardContent className="p-5 space-y-4">
+                  {/* Customer */}
+                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                    <User className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-slate-900">{result.customer.name}</p>
+                      {result.customer.email && <p className="text-sm text-slate-500">{result.customer.email}</p>}
+                      {result.customer.phone && <p className="text-sm text-slate-500">{result.customer.phone}</p>}
+                    </div>
+                  </div>
+
+                  {/* Service Details */}
+                  <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+                    {(() => { const Icon = SERVICE_ICONS[result.service_type] || Ticket; return <Icon className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />; })()}
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">{result.service_name}</p>
+                      <p className="text-sm text-slate-500">{result.operator_name}</p>
+                      {result.service_type && <Badge variant="outline" className="mt-1 text-xs capitalize">{result.service_type}</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Booking Details */}
+                  {(result.booking.departure_city || result.booking.travel_date) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {result.booking.departure_city && (
+                        <div className="p-3 bg-blue-50 rounded-xl">
+                          <div className="flex items-center gap-1.5 text-xs text-blue-600 mb-1"><MapPin className="w-3 h-3" /> Route</div>
+                          <p className="font-semibold text-sm text-slate-900">{result.booking.departure_city} <ArrowRight className="inline w-3 h-3" /> {result.booking.destination_city}</p>
+                        </div>
+                      )}
+                      {result.booking.travel_date && (
+                        <div className="p-3 bg-amber-50 rounded-xl">
+                          <div className="flex items-center gap-1.5 text-xs text-amber-600 mb-1"><Calendar className="w-3 h-3" /> Date</div>
+                          <p className="font-semibold text-sm text-slate-900">{result.booking.travel_date}</p>
+                          {result.booking.departure_time && <p className="text-xs text-slate-500">Dep: {result.booking.departure_time}</p>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Seats & Passengers */}
+                  {(result.booking.seats?.length > 0 || result.booking.passengers?.length > 0) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {result.booking.seats?.length > 0 && (
+                        <div className="p-3 bg-violet-50 rounded-xl">
+                          <div className="flex items-center gap-1.5 text-xs text-violet-600 mb-1"><Ticket className="w-3 h-3" /> Seats</div>
+                          <div className="flex flex-wrap gap-1">{result.booking.seats.map((s, i) => <Badge key={i} className="bg-violet-100 text-violet-700 text-xs">{s}</Badge>)}</div>
+                        </div>
+                      )}
+                      {result.booking.passengers?.length > 0 && (
+                        <div className="p-3 bg-purple-50 rounded-xl">
+                          <div className="flex items-center gap-1.5 text-xs text-purple-600 mb-1"><Users className="w-3 h-3" /> Passengers</div>
+                          {result.booking.passengers.map((p, i) => <p key={i} className="text-xs text-slate-700">{p.first_name} {p.last_name}</p>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Amount */}
+                  <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-xl">
+                    <div className="flex items-center gap-2"><DollarSign className="w-5 h-5 text-emerald-600" /><span className="text-sm text-slate-600">Amount Paid</span></div>
+                    <span className="text-xl font-bold text-emerald-700">{formatFCFA(result.total_amount)}</span>
+                  </div>
+
+                  {/* Payment Status */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Payment</span>
+                    <Badge className={statusColor(result.payment_status)}>{result.payment_status}</Badge>
+                  </div>
+
+                  {/* Check-in time if already checked in */}
+                  {result.checked_in && result.checked_in_at && (
+                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-sm text-blue-700 flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Checked in at {formatDateShort(result.checked_in_at)}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                {!result.checked_in && result.status === 'confirmed' && (result.payment_status === 'paid' || result.payment_status === 'verified') ? (
+                  <Button onClick={handleCheckIn} disabled={checkingIn} className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-12 text-base" data-testid="check-in-btn">
+                    {checkingIn ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+                    Confirm Check-In
+                  </Button>
+                ) : result.checked_in ? (
+                  <Button disabled className="flex-1 bg-blue-600 h-12 text-base opacity-75">
+                    <Shield className="w-5 h-5 mr-2" /> Already Checked In
+                  </Button>
+                ) : (
+                  <Button disabled className="flex-1 h-12 text-base opacity-75" variant="outline">
+                    <AlertCircle className="w-5 h-5 mr-2" /> {result.status !== 'confirmed' ? 'Not Confirmed' : 'Payment Pending'}
+                  </Button>
+                )}
+                <Button variant="outline" onClick={handleReset} className="h-12 px-6" data-testid="scan-another-btn">
+                  <RefreshCw className="w-4 h-4 mr-2" /> Scan Next
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* Invalid Ticket */
+            <Card className="overflow-hidden border-0 shadow-xl">
+              <div className="bg-gradient-to-r from-red-500 to-red-600 p-5 text-white text-center">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <XCircle className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-bold">Invalid Ticket</h2>
+                <p className="font-mono text-white/80 text-sm mt-1">{result.code}</p>
+              </div>
+              <CardContent className="p-5 text-center">
+                <p className="text-slate-600 mb-4">{result.message}</p>
+                <Button onClick={handleReset} className="bg-[#082c59] hover:bg-[#0a3a75]">
+                  <RefreshCw className="w-4 h-4 mr-2" /> Try Again
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
