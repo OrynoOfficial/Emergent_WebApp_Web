@@ -1,8 +1,5 @@
 # Oryno Platform - Product Requirements Document
 
-## Original Problem Statement
-Oryno is a comprehensive services hub platform with multi-role access (Customer, Operator, Admin, Super Admin).
-
 ## Core Architecture
 - **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI
 - **Backend:** FastAPI + MongoDB (Motor async driver), DB: oryno_webapp
@@ -10,27 +7,34 @@ Oryno is a comprehensive services hub platform with multi-role access (Customer,
 
 ## Completed Features (Latest First)
 
-**Mar 2026 - Operator Rewards & Alerts Admin Tab + Login Error UX**
-- New "Op. Rewards" tab in admin Loyalty page between Rewards and Members
-- Shows all operator promotions (14) and alerts (18) from all operators
-- Sub-tabs for Promotions/Alerts with item count badges
-- Search, status filter (Pending/Approved/Rejected), operator filter
-- Backend: added `item_type` filter param to GET /api/subscriptions/promotions
-- Login page: error alerts now red (bg-red-600), flash (animate-pulse), auto-dismiss after 5 seconds
+**Apr 2026 - Ticket Scanner & Validation System**
+- Real-time ticket scanning: operators enter ticket codes, system validates against actual orders
+- Operator scoping: operators can only validate/check-in tickets for their own services
+- Check-in flow: confirmed+paid tickets can be checked in once; prevents double check-in
+- Endpoints: POST /api/orders/scan/validate, POST /api/orders/scan/check-in
+- Frontend: Scanner page with code input, validation results, check-in button, scan history
+- Sidebar: "Ticket Scanner" link added for operators
 
-**Mar 2026 - Operator Sidebar Service Mismatch Fix**
-- Fixed naming mismatch between admin panel (hotels/restaurants) and sidebar (hotel/restaurant)
-- Normalization at 3 layers: admin UI, backend auth, sidebar hook
+**Mar 2026 - Operator Dashboard Fix**
+- RoleBasedRedirect: operators → /admin/analytics, customers → /dashboard
+- Dashboard.jsx guard: redirects non-customers to their proper dashboard
+- Analytics.jsx: fixed operatorContext property names for scoped data
 
-**Mar 2026 - Operator Promo Code Strict Scoping**
-- Promo codes from operator promotions now strictly tied to that operator
-- Booking pages pass operator_id for validation
+**Mar 2026 - Operator Orders & Service Status**
+- Orders now include operator_id (looked up from service at creation time)
+- Service status: operators cannot set active; edits reset to pending; suspend/reinstate endpoints
+- Service creation: travel/hotels now default to "pending" status
 
-**Feb 2026 - Earlier features**
-- Loyalty system, notification center, deep-linking, service management, Stripe, AI chatbot
+**Earlier:** Loyalty system, notifications, deep-linking, promo codes, ratings, Stripe, AI chatbot
+
+## Key API Endpoints
+- POST /api/orders/scan/validate — Validate ticket by order_number
+- POST /api/orders/scan/check-in — Check in a validated ticket
+- POST /api/validation/services/{type}/{id}/suspend — Operator suspends service
+- POST /api/validation/services/{type}/{id}/reinstate — Operator reinstates (→ pending)
 
 ## Backlog
-- P1: "Airline-Style" Live Seat Selection UI
+- P1: "Airline-Style" Live Seat Selection UI enhancement
 - P2: Customizable Email Templates
 - P3: Bulk moderation features for ratings
 
@@ -38,4 +42,4 @@ Oryno is a comprehensive services hub platform with multi-role access (Customer,
 - Admin: admin@test.com / testpassword123
 - Super Admin: superadmin@test.com / testpassword123
 - Customer: customer@test.com / testpassword123
-- Operator: operator@test.com / testpassword123
+- Operator: operator@test.com / testpassword123 (Musango Bus Service)
