@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, FileText, BarChart3, Database, TrendingUp,
   Download, Eye, Truck, DollarSign, Users, Target, Shield,
   MessageSquare, Activity, RefreshCw, Calendar, Clock, ArrowRight,
-  CheckCircle, XCircle, Package, CreditCard, AlertCircle
+  CheckCircle, XCircle, Package, CreditCard, AlertCircle, List, LayoutGrid, Rows3
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -196,6 +196,8 @@ export default function AuditLogs() {
   const [logSearchTerm, setLogSearchTerm] = useState('');
   const [logActionFilter, setLogActionFilter] = useState('all');
   const [logSeverityFilter, setLogSeverityFilter] = useState('all');
+  const [logExcludeRole, setLogExcludeRole] = useState('none');
+  const [logViewMode, setLogViewMode] = useState('details');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
@@ -226,6 +228,7 @@ export default function AuditLogs() {
       if (logActionFilter !== 'all') params.append('action_type', logActionFilter);
       if (logSeverityFilter !== 'all') params.append('severity', logSeverityFilter);
       if (logSearchTerm) params.append('search', logSearchTerm);
+      if (logExcludeRole !== 'none') params.append('exclude_role', logExcludeRole);
       
       const response = await api.get(`/activity/logs?${params.toString()}`);
       setActivityLogs(response.data.logs || []);
@@ -238,7 +241,7 @@ export default function AuditLogs() {
     } finally {
       setLogsLoading(false);
     }
-  }, [currentPage, logActionFilter, logSeverityFilter, logSearchTerm]);
+  }, [currentPage, logActionFilter, logSeverityFilter, logSearchTerm, logExcludeRole]);
 
   // Load stats (admin only)
   const loadStats = useCallback(async () => {
@@ -429,100 +432,168 @@ export default function AuditLogs() {
         {/* Activity Log Tab */}
         <TabsContent value="activity" className="mt-6">
           {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search by action, user, details..."
-                    value={logSearchTerm}
-                    onChange={(e) => { setLogSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="pl-10 bg-white"
-                  />
+          <Card className="mb-4">
+            <CardContent className="p-3">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search by action, user, details..."
+                      value={logSearchTerm}
+                      onChange={(e) => { setLogSearchTerm(e.target.value); setCurrentPage(1); }}
+                      className="pl-10 bg-white h-9 text-sm"
+                    />
+                  </div>
+                  <Select value={logActionFilter} onValueChange={(v) => { setLogActionFilter(v); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-40 bg-white h-9 text-sm">
+                      <SelectValue placeholder="Action Type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All Actions</SelectItem>
+                      <SelectItem value="user">User Actions</SelectItem>
+                      <SelectItem value="order">Orders</SelectItem>
+                      <SelectItem value="service">Services</SelectItem>
+                      <SelectItem value="payment">Payments</SelectItem>
+                      <SelectItem value="validation">Validation</SelectItem>
+                      <SelectItem value="settings">Settings</SelectItem>
+                      <SelectItem value="security">Security</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={logSeverityFilter} onValueChange={(v) => { setLogSeverityFilter(v); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-36 bg-white h-9 text-sm">
+                      <SelectValue placeholder="Severity" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All Severities</SelectItem>
+                      <SelectItem value="info">Info</SelectItem>
+                      <SelectItem value="warning">Warning</SelectItem>
+                      <SelectItem value="error">Error</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={logActionFilter} onValueChange={(v) => { setLogActionFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-44 bg-white">
-                    <SelectValue placeholder="Action Type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">All Actions</SelectItem>
-                    <SelectItem value="user">User Actions</SelectItem>
-                    <SelectItem value="order">Orders</SelectItem>
-                    <SelectItem value="service">Services</SelectItem>
-                    <SelectItem value="payment">Payments</SelectItem>
-                    <SelectItem value="validation">Validation</SelectItem>
-                    <SelectItem value="settings">Settings</SelectItem>
-                    <SelectItem value="security">Security</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={logSeverityFilter} onValueChange={(v) => { setLogSeverityFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-40 bg-white">
-                    <SelectValue placeholder="Severity" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">All Severities</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Role exclusion filters + View mode toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { k: 'none', l: 'All Users' },
+                      { k: 'super_admin', l: 'Without Superadmin' },
+                      { k: 'admin', l: 'Without Admin' },
+                    ].map(f => (
+                      <Button key={f.k} variant={logExcludeRole === f.k ? 'default' : 'outline'} size="sm"
+                        className={`h-7 text-xs px-2.5 ${logExcludeRole === f.k ? 'bg-[#082c59]' : ''}`}
+                        onClick={() => { setLogExcludeRole(f.k); setCurrentPage(1); }}
+                        data-testid={`exclude-role-${f.k}`}
+                      >{f.l}</Button>
+                    ))}
+                  </div>
+                  <div className="flex border rounded-lg overflow-hidden">
+                    {[
+                      { k: 'details', icon: Rows3, label: 'Details' },
+                      { k: 'list', icon: List, label: 'List' },
+                      { k: 'grid', icon: LayoutGrid, label: 'Grid' },
+                    ].map(v => (
+                      <button key={v.k} onClick={() => setLogViewMode(v.k)} title={v.label}
+                        className={`px-2 py-1.5 ${logViewMode === v.k ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                        data-testid={`view-mode-${v.k}`}
+                      ><v.icon className="h-4 w-4" /></button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Logs */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="flex items-center justify-between text-base">
                 <span>System Activity Log</span>
-                <Badge variant="outline">{totalLogs} entries</Badge>
+                <Badge variant="outline" className="text-xs">{totalLogs} entries</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 pt-0">
               {logsLoading ? (
-                <div className="text-center py-12">
-                  <RefreshCw className="h-8 w-8 text-slate-300 mx-auto animate-spin mb-4" />
-                  <p className="text-slate-500">Loading activity logs...</p>
+                <div className="text-center py-10">
+                  <RefreshCw className="h-7 w-7 text-slate-300 mx-auto animate-spin mb-3" />
+                  <p className="text-slate-500 text-sm">Loading activity logs...</p>
                 </div>
               ) : activityLogs.length === 0 ? (
-                <div className="text-center py-12">
-                  <History className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-slate-700 mb-1">No Activity Logs</h3>
-                  <p className="text-slate-500">
-                    {logSearchTerm || logActionFilter !== 'all' || logSeverityFilter !== 'all'
-                      ? "No logs match your current filters. Try adjusting your search criteria."
-                      : "Activity logging has been set up. Logs will appear here as actions are performed."}
+                <div className="text-center py-10">
+                  <History className="h-12 w-12 text-slate-200 mx-auto mb-3" />
+                  <p className="text-slate-500 text-sm">
+                    {logSearchTerm || logActionFilter !== 'all' || logSeverityFilter !== 'all' || logExcludeRole !== 'none'
+                      ? "No logs match your current filters."
+                      : "No activity logs yet."}
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-1.5">
+              ) : logViewMode === 'details' ? (
+                /* ===== DETAILS VIEW ===== */
+                <div className="space-y-2">
                   {activityLogs.map((log) => (
-                    <div 
-                      key={log.id} 
-                      className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                      onClick={() => handleViewLog(log)}
-                    >
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                        log.severity === 'error' ? 'bg-red-100 text-red-600' :
-                        log.severity === 'warning' ? 'bg-amber-100 text-amber-600' :
-                        'bg-blue-50 text-blue-600'
-                      }`}>
-                        {getActionIcon(log.action)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-xs text-slate-900 truncate">{log.action}</span>
-                          {log.severity !== 'info' && getSeverityBadge(log.severity)}
+                    <div key={log.id} className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer border border-transparent hover:border-slate-200" onClick={() => handleViewLog(log)}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                          log.severity === 'error' ? 'bg-red-100 text-red-600' :
+                          log.severity === 'warning' ? 'bg-amber-100 text-amber-600' :
+                          'bg-blue-50 text-blue-600'
+                        }`}>{getActionIcon(log.action)}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-semibold text-sm text-slate-900">{log.action}</span>
+                            {log.severity === 'error' && <Badge className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0">Error</Badge>}
+                            {log.severity === 'warning' && <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0">Warn</Badge>}
+                          </div>
+                          <p className="text-xs text-slate-600 mb-1.5 line-clamp-2">{log.details || 'No details'}</p>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                            <span className="flex items-center gap-1"><User className="h-3 w-3" />{log.actor_name || log.actor_email}</span>
+                            <Badge variant="outline" className="text-[10px] capitalize py-0 px-1.5">{log.actor_role}</Badge>
+                            {log.entity_type && <span className="capitalize">{log.entity_type}</span>}
+                            <span className="flex items-center gap-1 ml-auto"><Clock className="h-3 w-3" />{formatTimestamp(log.timestamp)}</span>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-500 truncate">{log.details || 'No details'}</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 text-[10px] text-slate-400">
-                        <span className="hidden sm:flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded capitalize">{log.actor_role}</span>
-                        <span className="truncate max-w-[80px]">{log.actor_name || log.actor_email}</span>
-                        <span className="whitespace-nowrap">{formatTimestamp(log.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : logViewMode === 'list' ? (
+                /* ===== LIST VIEW ===== */
+                <div className="space-y-px">
+                  {activityLogs.map((log) => (
+                    <div key={log.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer text-xs" onClick={() => handleViewLog(log)}>
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        log.severity === 'error' ? 'bg-red-500' : log.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'
+                      }`} />
+                      <span className="font-medium text-slate-800 truncate w-40">{log.action}</span>
+                      <span className="text-slate-500 truncate flex-1">{log.details || '—'}</span>
+                      <Badge variant="outline" className="text-[9px] capitalize py-0 px-1 shrink-0">{log.actor_role}</Badge>
+                      <span className="text-slate-400 truncate w-24 text-right shrink-0">{log.actor_name || log.actor_email}</span>
+                      <span className="text-slate-400 w-28 text-right shrink-0">{formatTimestamp(log.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* ===== GRID VIEW ===== */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {activityLogs.map((log) => (
+                    <div key={log.id} className={`p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow ${
+                      log.severity === 'error' ? 'border-red-200 bg-red-50/50' :
+                      log.severity === 'warning' ? 'border-amber-200 bg-amber-50/50' :
+                      'border-slate-200 bg-white'
+                    }`} onClick={() => handleViewLog(log)}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${
+                          log.severity === 'error' ? 'bg-red-100 text-red-600' :
+                          log.severity === 'warning' ? 'bg-amber-100 text-amber-600' :
+                          'bg-blue-50 text-blue-600'
+                        }`}>{getActionIcon(log.action)}</div>
+                        <span className="font-medium text-xs text-slate-900 truncate">{log.action}</span>
                       </div>
-                      <Eye className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                      <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">{log.details || 'No details'}</p>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="truncate">{log.actor_name || log.actor_email}</span>
+                        <span>{formatTimestamp(log.timestamp)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -530,27 +601,35 @@ export default function AuditLogs() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                  <p className="text-sm text-slate-600">
+                <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                  <p className="text-xs text-slate-500">
                     Page {currentPage} of {totalPages} ({totalLogs} total)
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                      <ChevronLeft className="h-3 w-3" /><ChevronLeft className="h-3 w-3 -ml-1.5" />
                     </Button>
-                    <span className="text-sm text-slate-600">Page {currentPage}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      <ChevronRight className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) pageNum = i + 1;
+                      else if (currentPage <= 3) pageNum = i + 1;
+                      else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                      else pageNum = currentPage - 2 + i;
+                      return (
+                        <Button key={pageNum} variant={currentPage === pageNum ? 'default' : 'outline'} size="sm"
+                          className={`h-7 w-7 p-0 text-xs ${currentPage === pageNum ? 'bg-[#082c59]' : ''}`}
+                          onClick={() => setCurrentPage(pageNum)}
+                        >{pageNum}</Button>
+                      );
+                    })}
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>
+                      <ChevronRight className="h-3 w-3" /><ChevronRight className="h-3 w-3 -ml-1.5" />
                     </Button>
                   </div>
                 </div>

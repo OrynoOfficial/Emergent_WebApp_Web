@@ -134,6 +134,7 @@ async def get_activity_logs(
     search: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    exclude_role: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["activity.view"]))
 ):
     """Get activity logs with filtering and pagination - requires activity.view permission"""
@@ -197,6 +198,9 @@ async def get_activity_logs(
         query["actor_id"] = current_user.get("id")
     
     # Apply additional filters
+    if exclude_role and (is_super_admin or is_admin):
+        query["actor_role"] = {"$ne": exclude_role}
+
     if action_type:
         query["action"] = {"$regex": f"^{action_type}", "$options": "i"}
     
