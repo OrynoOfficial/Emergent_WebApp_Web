@@ -153,11 +153,8 @@ async def get_activity_logs(
         # Super Admin: Unrestricted view of all audit logs
         pass
     elif is_admin:
-        # Admin: Can view own logs + all operator logs (hide super_admin and customer logs)
-        query["$or"] = [
-            {"actor_id": current_user.get("id")},
-            {"actor_role": {"$in": ["operator"]}}
-        ]
+        # Admin: Can view all logs (all users including customers, operators, other admins)
+        pass
     elif is_operator:
         # Operator: View own logs + team logs if owner/has permission
         operator_id = current_user.get("operator_id")
