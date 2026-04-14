@@ -114,19 +114,51 @@ function AdminTicketCardGrid({ ticket, onView }) {
   const statusConfig = getStatusConfig(ticket.status);
   const priorityConfig = getPriorityConfig(ticket.priority);
   return (
-    <div className="bg-gradient-to-br from-[#082c59]/[0.03] to-slate-100/60 rounded-xl border border-slate-200/50 p-4 hover:shadow-lg hover:border-[#082c59]/20 transition-all cursor-pointer group shadow-sm"
+    <div className="bg-gradient-to-br from-white via-[#082c59]/[0.02] to-slate-50 rounded-xl border border-slate-200/60 p-4 hover:shadow-lg hover:border-[#082c59]/25 transition-all cursor-pointer group shadow-sm"
       onClick={onView} data-testid={`ticket-card-grid-${ticket.id}`}>
-      <div className="flex items-center justify-between mb-3">
+      {/* Header: Priority + Status */}
+      <div className="flex items-center justify-between mb-2.5">
         <Badge className={`${priorityConfig.bg} ${priorityConfig.text} text-[10px] h-5`}><span className={`w-1.5 h-1.5 rounded-full ${priorityConfig.dot} mr-1`} />{ticket.priority}</Badge>
         <Badge className={`${statusConfig.bg} ${statusConfig.text} text-[10px] gap-1`}>{statusConfig.icon}{ticket.status.replace('_',' ')}</Badge>
       </div>
-      <h3 className="font-semibold text-sm text-slate-800 group-hover:text-[#082c59] line-clamp-2 mb-2">{ticket.subject}</h3>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {ticket.tags?.slice(0,2).map((t,i) => <Badge key={i} className={`text-[9px] border h-5 ${getTagColor(t)}`}>{t}</Badge>)}
+      {/* Ticket number + Operator badge */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[10px] font-mono text-slate-400 bg-slate-100/80 px-1.5 py-0.5 rounded">{ticket.ticket_number}</span>
+        {ticket.user_type === 'operator' && <Badge className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[9px] h-4"><Building2 className="w-2.5 h-2.5 mr-0.5" />Operator</Badge>}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-slate-200/40">
-        <span className="font-mono">{ticket.ticket_number}</span>
-        <span>{ticket.customer_name}</span>
+      {/* Subject */}
+      <h3 className="font-semibold text-sm text-slate-800 group-hover:text-[#082c59] line-clamp-2 mb-1.5 leading-snug">{ticket.subject}</h3>
+      {/* Description snippet */}
+      <p className="text-[11px] text-slate-500 line-clamp-2 mb-2.5 leading-relaxed">{ticket.description || 'No description'}</p>
+      {/* Tags + Product */}
+      <div className="flex flex-wrap gap-1 mb-2.5">
+        {ticket.product_involved && <Badge className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 h-5 gap-0.5"><Package className="w-2.5 h-2.5" />{ticket.product_involved}</Badge>}
+        {ticket.tags?.slice(0, 3).map((t, i) => <Badge key={i} className={`text-[9px] border h-5 ${getTagColor(t)}`}>{t}</Badge>)}
+        {ticket.tags?.length > 3 && <span className="text-[9px] text-slate-400 self-center">+{ticket.tags.length - 3}</span>}
+      </div>
+      {/* Category + Time row */}
+      <div className="flex items-center justify-between text-[10px] text-slate-500 mb-2.5">
+        <span className="flex items-center gap-1">{getCategoryIcon(ticket.category)}<span className="capitalize">{ticket.category}</span></span>
+        <span className="flex items-center gap-1 text-slate-400"><Clock className="w-3 h-3" />{getTimeAgo(ticket.created_at)}</span>
+      </div>
+      {/* Footer: Customer + Assigned */}
+      <div className="pt-2.5 border-t border-slate-200/50 space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <User className="w-3 h-3 text-slate-400 shrink-0" />
+          <span className="text-[11px] font-medium text-slate-700 truncate">{ticket.customer_name}</span>
+          {ticket.customer_email && <span className="text-[10px] text-slate-400 truncate hidden xl:inline">({ticket.customer_email})</span>}
+        </div>
+        {ticket.assigned_to_name ? (
+          <div className="flex items-center gap-1.5">
+            <Avatar className="w-4 h-4"><AvatarFallback className="text-[7px] bg-[#082c59] text-white">{ticket.assigned_to_name.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
+            <span className="text-[10px] text-slate-500">{ticket.assigned_to_name}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-[10px] text-amber-600">
+            <UserPlus className="w-3 h-3" />
+            <span>Unassigned</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -829,7 +861,7 @@ export default function CustomerServiceManagement() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [chatBotOpen, setChatBotOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
 
   const getSubTabStatuses = useCallback(() => {
     switch (ticketSubTab) {

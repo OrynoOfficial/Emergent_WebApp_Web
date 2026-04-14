@@ -579,7 +579,7 @@ export default function Layout({ children }) {
                 <Menu className="h-6 w-6 text-slate-600" />
               </button>
               <div className="hidden md:block">
-                <h1 className="text-xl lg:text-2xl font-bold text-[#082c59]">
+                <h1 className="text-sm font-semibold text-[#082c59]">
                   Welcome back, {user?.full_name?.split(' ')[0] || 'User'}!
                 </h1>
                 <div className="flex items-center gap-2">

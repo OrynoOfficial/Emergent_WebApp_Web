@@ -129,7 +129,7 @@ export default function AuditLogs() {
   const [logActionFilter, setLogActionFilter] = useState('all');
   const [logSeverityFilter, setLogSeverityFilter] = useState('all');
   const [logExcludeRole, setLogExcludeRole] = useState('none');
-  const [logViewMode, setLogViewMode] = useState('details');
+  const [logViewMode, setLogViewMode] = useState('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLogs, setTotalLogs] = useState(0);
