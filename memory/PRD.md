@@ -7,30 +7,26 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Unified Tab Styling (Commission Pattern)**
+- Applied full-width grid tab layout across 9 pages: Users, Permissions, Operators, Employees, Customer Service, Validation, Ratings, Loyalty
+- Pattern: grid w-full grid-cols-N bg-slate-100 with active state bg-[#082c59] text-white
+- Removed max-width constraints so tabs span entire page width
+
 **Apr 2026 - Sidebar Reorder + Grid Card Enhancement**
 - Sidebar: Validation standalone above Customer Service, Admin Config moved below CS
-- Admin Config: Reports now first item, Validation removed from submenu
-- Grid cards: bold 4px priority-colored left border (red=urgent, orange=high, blue=medium, slate=low)
+- Admin Config: Reports first, Validation removed from submenu
+- Grid cards: bold 4px priority-colored left border
 
 **Apr 2026 - UI Polish: Default Views, Grid Cards, Header**
-- Audit Logs default view changed to List
-- Customer Service default view changed to Grid with rich ticket cards
-- Welcome header text size reduced significantly (text-sm)
+- Audit Logs default view: List. Customer Service default view: Grid with rich cards
+- Welcome header text reduced (text-sm)
 
 **Apr 2026 - Sidebar Navigation Restructure**
-- New "System" menu: Sys Config (Settings), Audit Logs, Commission
-- Reports extracted from Audit Logs into standalone page under Admin Config
-- Database page completely removed
+- New "System" menu: Sys Config, Audit Logs, Commission
+- Reports extracted to standalone page under Admin Config
+- Database page removed
 
-**Apr 2026 - Audit Logs Expanded + Compact Layout**
-- 3 view modes: Details, List, Grid with role exclusion filters
-
-**Apr 2026 - Ticket Scanner & Validation System**
-- Real-time ticket scanning with operator scoping
-
-**Mar 2026 - Operator Dashboard & Orders Fix, Service Status Control, Loyalty Enhancements**
-
-**Earlier:** Notification center, deep-linking, loyalty program, subscriptions, ratings, service management, Stripe, AI chatbot
+**Earlier:** Audit Logs expansion, Ticket Scanner, Operator fixes, Service Status Control, Loyalty, Notifications, Stripe, AI chatbot
 
 ## Backlog
 - P1: "Airline-Style" Live Seat Selection UI enhancement
