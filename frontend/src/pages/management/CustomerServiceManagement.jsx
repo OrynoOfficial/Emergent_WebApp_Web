@@ -1016,20 +1016,22 @@ export default function CustomerServiceManagement() {
           <div className="space-y-4">
             {/* Sub-tabs */}
             <div className="flex items-center gap-3">
-              <div className="bg-[#082c59]/[0.04] rounded-xl p-1 inline-flex gap-1 border border-slate-200/40 flex-wrap">
-                {[
-                  {k:'open',l:'Open',c:`${stats?.by_status?.open||0}`,i:Inbox,active:'from-blue-500 to-blue-600'},
-                  {k:'pending',l:'Pending',c:`${stats?.by_status?.pending||0}`,i:Clock,active:'from-orange-500 to-orange-600'},
-                  {k:'in_progress',l:'In Progress',c:`${stats?.by_status?.in_progress||0}`,i:Activity,active:'from-purple-500 to-purple-600'},
-                  {k:'resolved',l:'Resolved',c:`${stats?.by_status?.resolved||0}`,i:CheckCircle,active:'from-emerald-500 to-emerald-600'},
-                  {k:'closed',l:'Closed',c:`${stats?.by_status?.closed||0}`,i:CheckCircle,active:'from-slate-500 to-slate-600'}
-                ].map(s => (
-                  <button key={s.k} onClick={() => setTicketSubTab(s.k)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${ticketSubTab === s.k ? `bg-gradient-to-r ${s.active} text-white shadow-md` : 'text-slate-600 hover:bg-slate-100'}`}>
-                    <s.i className="w-4 h-4" />{s.l}<Badge className={`ml-1 ${ticketSubTab === s.k ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'} text-xs h-5 min-w-[20px]`}>{s.c}</Badge>
-                  </button>
-                ))}
-              </div>
-              <div className="flex bg-slate-100/80 rounded-lg p-0.5 border border-slate-200/50 ml-auto">
+              <Tabs value={ticketSubTab} onValueChange={setTicketSubTab} className="flex-1">
+                <TabsList className="grid w-full grid-cols-5 bg-slate-100">
+                  {[
+                    {k:'open',l:'Open',c:`${stats?.by_status?.open||0}`,i:Inbox},
+                    {k:'pending',l:'Pending',c:`${stats?.by_status?.pending||0}`,i:Clock},
+                    {k:'in_progress',l:'In Progress',c:`${stats?.by_status?.in_progress||0}`,i:Activity},
+                    {k:'resolved',l:'Resolved',c:`${stats?.by_status?.resolved||0}`,i:CheckCircle},
+                    {k:'closed',l:'Closed',c:`${stats?.by_status?.closed||0}`,i:CheckCircle}
+                  ].map(s => (
+                    <TabsTrigger key={s.k} value={s.k} className="flex items-center gap-2 text-sm data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
+                      <s.i className="w-4 h-4" />{s.l}<Badge className={`ml-1 text-xs h-5 min-w-[20px] ${ticketSubTab === s.k ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>{s.c}</Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+              <div className="flex bg-slate-100/80 rounded-lg p-0.5 border border-slate-200/50">
                 <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><List className="h-4 w-4" /></button>
                 <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><LayoutGrid className="h-4 w-4" /></button>
               </div>

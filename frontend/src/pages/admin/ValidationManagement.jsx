@@ -1041,11 +1041,11 @@ export default function ValidationManagement() {
 
         <TabsContent value="pending">
           <Tabs value={pendingTab} onValueChange={setPendingTab}>
-            <TabsList className="bg-white shadow-sm mb-4">
-              <TabsTrigger value="payments" className="text-xs gap-1.5 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-800"><CreditCard className="h-3.5 w-3.5" />Payments {pendingCounts.payments > 0 && <Badge className="bg-amber-500 text-white text-[9px] px-1">{pendingCounts.payments}</Badge>}</TabsTrigger>
-              <TabsTrigger value="tickets" className="text-xs gap-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-800"><Ticket className="h-3.5 w-3.5" />Tickets {pendingCounts.tickets > 0 && <Badge className="bg-blue-500 text-white text-[9px] px-1">{pendingCounts.tickets}</Badge>}</TabsTrigger>
-              <TabsTrigger value="services" className="text-xs gap-1.5 data-[state=active]:bg-purple-50 data-[state=active]:text-purple-800"><Package className="h-3.5 w-3.5" />Services {pendingCounts.services > 0 && <Badge className="bg-purple-500 text-white text-[9px] px-1">{pendingCounts.services}</Badge>}</TabsTrigger>
-              <TabsTrigger value="promotions" className="text-xs gap-1.5 data-[state=active]:bg-violet-50 data-[state=active]:text-violet-800"><Megaphone className="h-3.5 w-3.5" />Promotions {pendingCounts.promotions > 0 && <Badge className="bg-violet-500 text-white text-[9px] px-1">{pendingCounts.promotions}</Badge>}</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-4 bg-slate-100">
+              <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><CreditCard className="h-3.5 w-3.5" />Payments {pendingCounts.payments > 0 && <Badge className="bg-amber-500 text-white text-[9px] px-1">{pendingCounts.payments}</Badge>}</TabsTrigger>
+              <TabsTrigger value="tickets" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Ticket className="h-3.5 w-3.5" />Tickets {pendingCounts.tickets > 0 && <Badge className="bg-blue-500 text-white text-[9px] px-1">{pendingCounts.tickets}</Badge>}</TabsTrigger>
+              <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Package className="h-3.5 w-3.5" />Services {pendingCounts.services > 0 && <Badge className="bg-purple-500 text-white text-[9px] px-1">{pendingCounts.services}</Badge>}</TabsTrigger>
+              <TabsTrigger value="promotions" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Megaphone className="h-3.5 w-3.5" />Promotions {pendingCounts.promotions > 0 && <Badge className="bg-violet-500 text-white text-[9px] px-1">{pendingCounts.promotions}</Badge>}</TabsTrigger>
             </TabsList>
             <TabsContent value="payments"><ValidationSubPage items={data.pending_payments} renderCard={renderPaymentCard} emptyText="No pending payments" /></TabsContent>
             <TabsContent value="tickets"><ValidationSubPage items={allTickets} renderCard={renderTicketCard} emptyText="No pending tickets" /></TabsContent>
@@ -1056,11 +1056,11 @@ export default function ValidationManagement() {
 
         <TabsContent value="validated">
           <Tabs value={validatedTab} onValueChange={setValidatedTab}>
-            <TabsList className="bg-white shadow-sm mb-4">
-              <TabsTrigger value="payments" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><CreditCard className="h-3.5 w-3.5" />Payments <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.payment || 0}</Badge></TabsTrigger>
-              <TabsTrigger value="tickets" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Ticket className="h-3.5 w-3.5" />Tickets <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.ticket || 0}</Badge></TabsTrigger>
-              <TabsTrigger value="services" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Package className="h-3.5 w-3.5" />Services <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.service || 0}</Badge></TabsTrigger>
-              <TabsTrigger value="promotions" className="text-xs gap-1.5 data-[state=active]:bg-green-50 data-[state=active]:text-green-800"><Megaphone className="h-3.5 w-3.5" />Promotions <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.promotion || 0}</Badge></TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-4 bg-slate-100">
+              <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><CreditCard className="h-3.5 w-3.5" />Payments <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.payment || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="tickets" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Ticket className="h-3.5 w-3.5" />Tickets <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.ticket || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Package className="h-3.5 w-3.5" />Services <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.service || 0}</Badge></TabsTrigger>
+              <TabsTrigger value="promotions" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Megaphone className="h-3.5 w-3.5" />Promotions <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.promotion || 0}</Badge></TabsTrigger>
             </TabsList>
             <TabsContent value="payments"><ValidationSubPage items={historyByType('payment')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated payments yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
             <TabsContent value="tickets"><ValidationSubPage items={historyByType('ticket')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated tickets yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
