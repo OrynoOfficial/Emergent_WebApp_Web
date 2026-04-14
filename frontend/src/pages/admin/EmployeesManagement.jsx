@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const DEPARTMENTS = ['all', 'operations', 'customer_service', 'finance', 'marketing', 'it', 'management'];
 const ROLES = ['all', 'manager', 'supervisor', 'agent', 'driver', 'receptionist', 'technician'];
@@ -440,44 +441,23 @@ export default function EmployeesManagement() {
       </div>
 
       {/* Sub-page Navigation */}
-      <div className="grid w-full grid-cols-3 mb-6 bg-slate-100 rounded-lg p-1" data-testid="employee-management-tabs">
-        <button
-          onClick={() => navigate('/admin/employees')}
-          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
-            location.pathname === '/admin/employees'
-              ? 'bg-[#082c59] text-white'
-              : 'text-slate-600 hover:bg-white/60'
-          }`}
-          data-testid="tab-employees"
-        >
-          <Users className="w-4 h-4" />
-          Employees
-        </button>
-        <button
-          onClick={() => navigate('/admin/employees/pods')}
-          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
-            location.pathname === '/admin/employees/pods'
-              ? 'bg-[#082c59] text-white'
-              : 'text-slate-600 hover:bg-white/60'
-          }`}
-          data-testid="tab-pod-management"
-        >
-          <Network className="w-4 h-4" />
-          Pod Management
-        </button>
-        <button
-          onClick={() => navigate('/admin/employees/access-scopes')}
-          className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
-            location.pathname === '/admin/employees/access-scopes'
-              ? 'bg-[#082c59] text-white'
-              : 'text-slate-600 hover:bg-white/60'
-          }`}
-          data-testid="tab-access-scopes"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          Access Scopes
-        </button>
-      </div>
+      <Tabs value={location.pathname.includes('/pods') ? 'pods' : location.pathname.includes('/access-scopes') ? 'access-scopes' : 'employees'} onValueChange={(v) => {
+        if (v === 'employees') navigate('/admin/employees');
+        else if (v === 'pods') navigate('/admin/employees/pods');
+        else if (v === 'access-scopes') navigate('/admin/employees/access-scopes');
+      }}>
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100" data-testid="employee-management-tabs">
+          <TabsTrigger value="employees" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-employees">
+            <Users className="w-4 h-4" />Employees
+          </TabsTrigger>
+          <TabsTrigger value="pods" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-pod-management">
+            <Network className="w-4 h-4" />Pod Management
+          </TabsTrigger>
+          <TabsTrigger value="access-scopes" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-access-scopes">
+            <ShieldCheck className="w-4 h-4" />Access Scopes
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

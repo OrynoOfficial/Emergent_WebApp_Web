@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import UserDetailModal from '../../components/modals/UserDetailModal';
 import InvitationsManagement from './InvitationsManagement';
 import { activityLogger } from '../../utils/activityLogger';
@@ -302,17 +303,23 @@ export default function UserManagement() {
       </div>
 
       {/* Sub-page tabs */}
-      <div className="grid w-full grid-cols-3 mb-6 bg-slate-100 rounded-lg p-1" data-testid="user-management-tabs">
-        <button onClick={() => { navigate('/admin/users'); setActiveView('users'); }} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/admin/users' && activeView === 'users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-users">
-          <Users className="w-4 h-4" />Users
-        </button>
-        <button onClick={() => navigate('/admin/users/permissions')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-permissions">
-          <ShieldCheck className="w-4 h-4" />Permissions
-        </button>
-        <button onClick={() => setActiveView('invitations')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${activeView === 'invitations' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-invitations">
-          <Send className="w-4 h-4" />Invitations
-        </button>
-      </div>
+      <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : activeView === 'invitations' ? 'invitations' : 'users'} onValueChange={(v) => {
+        if (v === 'users') { navigate('/admin/users'); setActiveView('users'); }
+        else if (v === 'permissions') navigate('/admin/users/permissions');
+        else if (v === 'invitations') setActiveView('invitations');
+      }}>
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100" data-testid="user-management-tabs">
+          <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-users">
+            <Users className="w-4 h-4" />Users
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-permissions">
+            <ShieldCheck className="w-4 h-4" />Permissions
+          </TabsTrigger>
+          <TabsTrigger value="invitations" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-invitations">
+            <Send className="w-4 h-4" />Invitations
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Show Invitations view or Users list */}
       {activeView === 'invitations' ? (

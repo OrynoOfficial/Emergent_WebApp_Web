@@ -340,17 +340,23 @@ export default function OperatorsManagement() {
       </div>
 
       {/* Sub-page tabs */}
-      <div className="grid w-full grid-cols-3 mb-6 bg-slate-100 rounded-lg p-1" data-testid="operator-management-tabs">
-        <button onClick={() => navigate('/admin/operators')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/admin/operators' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-operators">
-          <Building className="w-4 h-4" />Operators
-        </button>
-        <button onClick={() => navigate('/admin/operators/geography')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-geography">
-          <Globe className="w-4 h-4" />Geography
-        </button>
-        <button onClick={() => navigate('/admin/operators/market-segments')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname.includes('/market-segments') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-market-segments">
-          <TrendingUp className="w-4 h-4" />Market Segments
-        </button>
-      </div>
+      <Tabs value={location.pathname.includes('/geography') ? 'geography' : location.pathname.includes('/market-segments') ? 'market-segments' : 'operators'} onValueChange={(v) => {
+        if (v === 'operators') navigate('/admin/operators');
+        else if (v === 'geography') navigate('/admin/operators/geography');
+        else if (v === 'market-segments') navigate('/admin/operators/market-segments');
+      }}>
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100" data-testid="operator-management-tabs">
+          <TabsTrigger value="operators" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-operators">
+            <Building className="w-4 h-4" />Operators
+          </TabsTrigger>
+          <TabsTrigger value="geography" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-geography">
+            <Globe className="w-4 h-4" />Geography
+          </TabsTrigger>
+          <TabsTrigger value="market-segments" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-market-segments">
+            <TrendingUp className="w-4 h-4" />Market Segments
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

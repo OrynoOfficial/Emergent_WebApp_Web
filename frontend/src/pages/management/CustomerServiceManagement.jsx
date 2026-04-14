@@ -19,6 +19,7 @@ import {
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   TICKET_CATEGORIES,
   TICKET_PRIORITIES_LIST as TICKET_PRIORITIES,
@@ -983,13 +984,19 @@ export default function CustomerServiceManagement() {
 
         {/* Tabs */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="grid w-full grid-cols-3 bg-slate-100 rounded-lg p-1">
-            {[{k:'tickets',l:'Tickets',i:Inbox},{k:'statistics',l:'Statistics',i:BarChart2},{k:'team',l:'Team',i:Users}].map(t => (
-              <button key={t.k} onClick={() => setActiveTab(t.k)} className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all ${activeTab === t.k ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:bg-white/60'}`}>
-                <t.i className="h-4 w-4" />{t.l}
-              </button>
-            ))}
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
+              <TabsTrigger value="tickets" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
+                <Inbox className="h-4 w-4" />Tickets
+              </TabsTrigger>
+              <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
+                <BarChart2 className="h-4 w-4" />Statistics
+              </TabsTrigger>
+              <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
+                <Users className="h-4 w-4" />Team
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           {/* Action buttons for Tickets tab */}
           {activeTab === 'tickets' && (
