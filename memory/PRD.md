@@ -7,34 +7,28 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Sidebar Reorder + Grid Card Enhancement**
+- Sidebar: Validation standalone above Customer Service, Admin Config moved below CS
+- Admin Config: Reports now first item, Validation removed from submenu
+- Grid cards: bold 4px priority-colored left border (red=urgent, orange=high, blue=medium, slate=low)
+
 **Apr 2026 - UI Polish: Default Views, Grid Cards, Header**
 - Audit Logs default view changed to List
-- Customer Service default view changed to Grid with rich ticket cards (description, category, assignee, tags, customer info)
+- Customer Service default view changed to Grid with rich ticket cards
 - Welcome header text size reduced significantly (text-sm)
 
 **Apr 2026 - Sidebar Navigation Restructure**
 - New "System" menu: Sys Config (Settings), Audit Logs, Commission
 - Reports extracted from Audit Logs into standalone page under Admin Config
 - Database page completely removed
-- Audit Logs default view set to "details" then updated to "list"
 
 **Apr 2026 - Audit Logs Expanded + Compact Layout**
-- Admin/Super Admin now see activity from ALL user roles (customers, operators, admins)
-- Log items ~50% smaller with compact single-line layout, 40 per page
 - 3 view modes: Details, List, Grid with role exclusion filters
 
 **Apr 2026 - Ticket Scanner & Validation System**
 - Real-time ticket scanning with operator scoping
-- Check-in flow: confirmed+paid tickets checked in once; prevents double check-in
 
-**Mar 2026 - Operator Dashboard & Orders Fix**
-- Orders now include operator_id; RoleBasedRedirect for proper dashboard routing
-
-**Mar 2026 - Service Status Control**
-- Operators cannot activate services; edits reset to pending
-
-**Mar 2026 - Loyalty Enhancements**
-- Collapsible codes, search/filters, operator-scoped promo codes
+**Mar 2026 - Operator Dashboard & Orders Fix, Service Status Control, Loyalty Enhancements**
 
 **Earlier:** Notification center, deep-linking, loyalty program, subscriptions, ratings, service management, Stripe, AI chatbot
 

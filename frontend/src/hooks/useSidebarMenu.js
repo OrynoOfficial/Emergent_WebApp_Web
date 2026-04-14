@@ -198,23 +198,17 @@ export default function useSidebarMenu() {
       items.push({ key: 'loyalty', label: 'Loyalty Program', icon: Award, path: '/loyalty' });
     }
 
-    // Admin Config
+    // Admin Config (Reports first, no Validation — moved to standalone)
     const adminSubmenu = [];
+    if (isAdmin) adminSubmenu.push({ key: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChart3 });
     if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
     if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operator Management', path: '/admin/operators', icon: Building2 });
     if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
     if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-revenue', label: 'Revenue', path: '/admin/sales', icon: TrendingUp });
-    if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: FileText });
-    if (isAdmin) adminSubmenu.push({ key: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChart3 });
 
     // Operator-specific admin items
     if (isOperator) {
       adminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/admin/team-roles', icon: Users });
-    }
-
-
-    if (adminSubmenu.length > 0) {
-      items.push({ key: 'admin-config', label: 'Admin Config', icon: Settings, isDropdown: true, submenu: adminSubmenu });
     }
 
     // Ratings
@@ -224,9 +218,19 @@ export default function useSidebarMenu() {
       items.push({ key: 'ratings', label: 'My Ratings', icon: Star, path: '/ratings' });
     }
 
+    // Validation (standalone, above Customer Service)
+    if (canViewValidation) {
+      items.push({ key: 'validation', label: 'Validation', icon: FileText, path: '/admin/validation' });
+    }
+
     // Customer Service (Admin/Super Admin standalone)
     if (isSuperAdmin || isAdmin) {
       items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
+    }
+
+    // Admin Config (below Customer Service)
+    if (adminSubmenu.length > 0) {
+      items.push({ key: 'admin-config', label: 'Admin Config', icon: Settings, isDropdown: true, submenu: adminSubmenu });
     }
 
     // Support/CS
