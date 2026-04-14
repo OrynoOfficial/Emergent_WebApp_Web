@@ -840,14 +840,19 @@ export default function Permissions() {
       <div>
         <h1 className="text-2xl font-bold text-[#082c59] mb-1">User Management</h1>
         <p className="text-slate-500 mb-4">Manage system users, roles, and permissions</p>
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-          <button onClick={() => navigate('/admin/users')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-users">
-            <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Users
-          </button>
-          <button onClick={() => navigate('/admin/users/permissions')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-permissions">
-            <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Permissions
-          </button>
-        </div>
+        <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : 'users'} onValueChange={(v) => {
+          if (v === 'users') navigate('/admin/users');
+          else if (v === 'permissions') navigate('/admin/users/permissions');
+        }}>
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
+            <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-users">
+              <Users className="w-4 h-4" />Users
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-permissions">
+              <ShieldCheck className="w-4 h-4" />Permissions
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Header */}
