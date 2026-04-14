@@ -837,9 +837,17 @@ export default function Permissions() {
   return (
     <div className="space-y-6">
       {/* Parent nav */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#082c59] mb-1">User Management</h1>
+          <p className="text-slate-500">Manage system users, roles, and permissions</p>
+        </div>
+        <Button onClick={() => handleOpenDialog()} className="gap-2 bg-[#082c59] hover:bg-[#0a3a75]">
+          <Plus className="h-4 w-4" />
+          Create Role
+        </Button>
+      </div>
       <div>
-        <h1 className="text-2xl font-bold text-[#082c59] mb-1">User Management</h1>
-        <p className="text-slate-500 mb-4">Manage system users, roles, and permissions</p>
         <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : 'users'} onValueChange={(v) => {
           if (v === 'users') navigate('/admin/users');
           else if (v === 'permissions') navigate('/admin/users/permissions');
@@ -853,15 +861,6 @@ export default function Permissions() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div></div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2 bg-[#082c59] hover:bg-[#0a3a75]">
-          <Plus className="h-4 w-4" />
-          Create Role
-        </Button>
       </div>
 
       {/* Stats Cards */}
