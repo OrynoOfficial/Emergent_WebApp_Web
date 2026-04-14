@@ -7,9 +7,16 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Sidebar Navigation Restructure**
+- New "System" menu: Sys Config (Settings), Audit Logs, Commission
+- Reports extracted from Audit Logs into standalone page under Admin Config
+- Database page completely removed
+- Audit Logs default view set to "details"
+
 **Apr 2026 - Audit Logs Expanded + Compact Layout**
 - Admin/Super Admin now see activity from ALL user roles (customers, operators, admins)
 - Log items ~50% smaller with compact single-line layout, 40 per page
+- 3 view modes: Details, List, Grid with role exclusion filters
 
 **Apr 2026 - Ticket Scanner & Validation System**
 - Real-time ticket scanning with operator scoping
