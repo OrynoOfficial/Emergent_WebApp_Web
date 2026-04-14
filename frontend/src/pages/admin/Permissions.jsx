@@ -857,13 +857,7 @@ export default function Permissions() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-[#082c59]" />
-            Permissions & Access Control
-          </h2>
-          <p className="text-slate-600 mt-1">Manage roles and permissions for your organization</p>
-        </div>
+        <div></div>
         <Button onClick={() => handleOpenDialog()} className="gap-2 bg-[#082c59] hover:bg-[#0a3a75]">
           <Plus className="h-4 w-4" />
           Create Role
