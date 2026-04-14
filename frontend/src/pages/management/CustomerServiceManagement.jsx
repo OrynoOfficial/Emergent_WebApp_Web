@@ -113,8 +113,15 @@ function AdminTicketCard({ ticket, isSelected, onSelect, onView, onAssign }) {
 function AdminTicketCardGrid({ ticket, onView }) {
   const statusConfig = getStatusConfig(ticket.status);
   const priorityConfig = getPriorityConfig(ticket.priority);
+  const priorityBorderColor = {
+    urgent: '#ef4444',
+    high: '#f97316',
+    medium: '#3b82f6',
+    low: '#cbd5e1',
+  }[ticket.priority] || '#cbd5e1';
   return (
     <div className="bg-gradient-to-br from-white via-[#082c59]/[0.02] to-slate-50 rounded-xl border border-slate-200/60 p-4 hover:shadow-lg hover:border-[#082c59]/25 transition-all cursor-pointer group shadow-sm"
+      style={{ borderLeft: `3px solid ${priorityBorderColor}` }}
       onClick={onView} data-testid={`ticket-card-grid-${ticket.id}`}>
       {/* Header: Priority + Status */}
       <div className="flex items-center justify-between mb-2.5">
