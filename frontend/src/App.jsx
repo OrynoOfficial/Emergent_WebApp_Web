@@ -49,8 +49,8 @@ import BookingAnalytics from './pages/admin/BookingAnalytics';
 import Reporting from './pages/admin/Reporting';
 import BillsManagement from './pages/admin/BillsManagement';
 import SalesManagement from './pages/admin/SalesManagement';
-import DatabaseManagement from './pages/admin/DatabaseManagement';
 import ValidationManagement from './pages/admin/ValidationManagement';
+import SystemReports from './pages/admin/SystemReports';
 import GeographyManagement from './pages/admin/GeographyManagement';
 import PodManagement from './pages/admin/PodManagement';
 import EmployeeScopeManagement from './pages/admin/EmployeeScopeManagement';
@@ -688,10 +688,10 @@ function App() {
           />
           
           <Route
-            path="/admin/database"
+            path="/admin/reports"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
-                <DatabaseManagement />
+                <SystemReports />
               </ProtectedRoute>
             }
           />

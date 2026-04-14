@@ -48,7 +48,8 @@ import {
   User,
   PartyPopper,
   Loader2,
-  Globe
+  Globe,
+  Monitor
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
@@ -127,7 +128,7 @@ export default function Layout({ children }) {
     Bus, Hotel, Car, Utensils, Calendar, Package, Film, Gift, PartyPopper,
     Building2, User, Users, Receipt, LayoutDashboard, Ticket, Award, Star, 
     HelpCircle, Settings, Bell, BarChart, Briefcase, Percent, History, QrCode,
-    HeadphonesIcon, Sparkles, Database, FileText, MapPin, Globe
+    HeadphonesIcon, Sparkles, Database, FileText, MapPin, Globe, Monitor
   };
 
   const getIconComponent = (iconName) => {
@@ -171,7 +172,8 @@ export default function Layout({ children }) {
       { type: 'admin', label: 'Operator Management', description: 'Manage operators', path: '/admin/operators', icon: 'Briefcase', color: '#64748b', keywords: ['partners', 'vendors'] },
       { type: 'admin', label: 'Employee Management', description: 'Manage employees', path: '/admin/employees', icon: 'Users', color: '#757575', keywords: ['staff', 'team'] },
       { type: 'admin', label: 'Commission', description: 'Commission settings', path: '/admin/commission', icon: 'Percent', color: '#22C55E', keywords: ['fees', 'percentage'] },
-      { type: 'admin', label: 'Audit Logs', description: 'System audit logs', path: '/admin/audit-logs', icon: 'History', color: '#F59E0B', keywords: ['logs', 'activity', 'history'] },
+      { type: 'admin', label: 'Audit Logs', description: 'System activity logs', path: '/admin/audit-logs', icon: 'History', color: '#F59E0B', keywords: ['logs', 'activity', 'history'] },
+      { type: 'admin', label: 'Reports', description: 'Business intelligence reports', path: '/admin/reports', icon: 'FileText', color: '#3B82F6', keywords: ['reports', 'analytics', 'data'] },
       { type: 'admin', label: 'Validation', description: 'Service validation center', path: '/admin/validation', icon: 'QrCode', color: '#F59E0B', keywords: ['verify', 'check', 'qr'] },
     ] : []),
     

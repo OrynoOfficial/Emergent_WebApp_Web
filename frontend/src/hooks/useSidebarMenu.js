@@ -9,8 +9,9 @@ import {
   LayoutDashboard, ShoppingBag, Ticket, Receipt, Settings, Users,
   BarChart, Star, HelpCircle, Bus, Hotel, Car, Utensils, Package, Gift,
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
-  Percent, HeadphonesIcon, Film, Briefcase, Database, FileText,
-  QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus
+  Percent, HeadphonesIcon, Film, Briefcase, FileText,
+  QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus,
+  Monitor, BarChart3
 } from 'lucide-react';
 
 const USER_ROLES = {
@@ -35,7 +36,8 @@ export const ICON_COLORS = {
   settings: '#64748b', 'customer-service': '#06B6D4',
   'booking-analytics': '#EC4899', reporting: '#3B82F6',
   'trip-report': '#FF7043', 'data-analytics': '#7E57C2',
-  database: '#10B981', validation: '#F59E0B', bills: '#2962FF', sales: '#22C55E'
+  validation: '#F59E0B', bills: '#2962FF', sales: '#22C55E',
+  system: '#6366F1', 'sys-config': '#64748b', reports: '#3B82F6'
 };
 
 export default function useSidebarMenu() {
@@ -201,16 +203,13 @@ export default function useSidebarMenu() {
     if (canViewUsers) adminSubmenu.push({ key: 'users', label: 'User Management', path: '/admin/users', icon: Users });
     if (canViewOperators) adminSubmenu.push({ key: 'operators', label: 'Operator Management', path: '/admin/operators', icon: Building2 });
     if (isSuperAdmin && canViewEmployees) adminSubmenu.push({ key: 'employees', label: 'Employee Management', path: '/admin/employees', icon: Users });
-    if (isSuperAdmin && canViewCommission) adminSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
     if (isAdmin && !isSuperAdmin) adminSubmenu.push({ key: 'admin-revenue', label: 'Revenue', path: '/admin/sales', icon: TrendingUp });
-    if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
-    if (isSuperAdmin) adminSubmenu.push({ key: 'database', label: 'Database', path: '/admin/database', icon: Database });
     if (canViewValidation) adminSubmenu.push({ key: 'validation', label: 'Validation', path: '/admin/validation', icon: FileText });
+    if (isAdmin) adminSubmenu.push({ key: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChart3 });
 
     // Operator-specific admin items
     if (isOperator) {
       adminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/admin/team-roles', icon: Users });
-      if (canViewActivity) adminSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     }
 
 
@@ -235,7 +234,14 @@ export default function useSidebarMenu() {
       items.push({ key: 'support', label: 'Support', icon: HelpCircle, path: '/support' });
     }
 
-    items.push({ key: 'settings', label: 'Settings', icon: Settings, path: '/settings' });
+    // System menu (Sys Config, Audit Logs, Commission)
+    const systemSubmenu = [];
+    systemSubmenu.push({ key: 'sys-config', label: 'Sys Config', path: '/settings', icon: Settings });
+    if (canViewActivity || isOperator) systemSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
+    if (isSuperAdmin && canViewCommission) systemSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
+
+    items.push({ key: 'system', label: 'System', icon: Monitor, isDropdown: true, submenu: systemSubmenu });
+
     return items;
   }, [
     user, userRole, isSuperAdmin, canManage,
