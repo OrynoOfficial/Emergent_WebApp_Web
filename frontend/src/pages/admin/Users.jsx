@@ -302,15 +302,15 @@ export default function UserManagement() {
       </div>
 
       {/* Sub-page tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="user-management-tabs">
-        <button onClick={() => { navigate('/admin/users'); setActiveView('users'); }} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname === '/admin/users' && activeView === 'users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-users">
-          <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Users
+      <div className="grid w-full grid-cols-3 mb-6 bg-slate-100 rounded-lg p-1" data-testid="user-management-tabs">
+        <button onClick={() => { navigate('/admin/users'); setActiveView('users'); }} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname === '/admin/users' && activeView === 'users' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-users">
+          <Users className="w-4 h-4" />Users
         </button>
-        <button onClick={() => navigate('/admin/users/permissions')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-permissions">
-          <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Permissions
+        <button onClick={() => navigate('/admin/users/permissions')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${location.pathname.includes('/permissions') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-permissions">
+          <ShieldCheck className="w-4 h-4" />Permissions
         </button>
-        <button onClick={() => setActiveView('invitations')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeView === 'invitations' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-invitations">
-          <Send className="w-4 h-4 inline mr-1.5 -mt-0.5" />Invitations
+        <button onClick={() => setActiveView('invitations')} className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${activeView === 'invitations' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-white/60'}`} data-testid="tab-invitations">
+          <Send className="w-4 h-4" />Invitations
         </button>
       </div>
 

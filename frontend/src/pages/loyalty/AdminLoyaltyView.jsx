@@ -252,11 +252,11 @@ export default function AdminLoyaltyView() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><BarChart3 className="w-4 h-4 mr-1" /> Overview</TabsTrigger>
-          <TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><Gift className="w-4 h-4 mr-1" /> Rewards</TabsTrigger>
-          <TabsTrigger value="operator-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4 mr-1" /> Op. Rewards</TabsTrigger>
-          <TabsTrigger value="members" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs sm:text-sm"><Users className="w-4 h-4 mr-1" /> Members</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100">
+          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /> Overview</TabsTrigger>
+          <TabsTrigger value="rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Gift className="w-4 h-4" /> Rewards</TabsTrigger>
+          <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Op. Rewards</TabsTrigger>
+          <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Users className="w-4 h-4" /> Members</TabsTrigger>
         </TabsList>
 
         {/* === OVERVIEW TAB === */}

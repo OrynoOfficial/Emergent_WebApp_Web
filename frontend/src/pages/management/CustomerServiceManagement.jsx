@@ -983,9 +983,9 @@ export default function CustomerServiceManagement() {
 
         {/* Tabs */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="inline-flex bg-[#082c59]/[0.06] p-1 rounded-xl border border-slate-200/50">
+          <div className="grid w-full grid-cols-3 bg-slate-100 rounded-lg p-1">
             {[{k:'tickets',l:'Tickets',i:Inbox},{k:'statistics',l:'Statistics',i:BarChart2},{k:'team',l:'Team',i:Users}].map(t => (
-              <button key={t.k} onClick={() => setActiveTab(t.k)} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === t.k ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:text-[#082c59]'}`}>
+              <button key={t.k} onClick={() => setActiveTab(t.k)} className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-md text-sm font-medium transition-all ${activeTab === t.k ? 'bg-[#082c59] text-white shadow-md' : 'text-slate-600 hover:bg-white/60'}`}>
                 <t.i className="h-4 w-4" />{t.l}
               </button>
             ))}

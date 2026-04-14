@@ -1030,7 +1030,7 @@ export default function ValidationManagement() {
       </div>
 
       <Tabs value={mainTab} onValueChange={setMainTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-md bg-white shadow-sm mb-6">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
           <TabsTrigger value="pending" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="pending-main-tab">
             <Clock className="h-4 w-4" /> Pending {totalPending > 0 && <Badge className="bg-amber-500 text-white text-[10px] ml-1">{totalPending}</Badge>}
           </TabsTrigger>

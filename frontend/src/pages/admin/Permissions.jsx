@@ -927,29 +927,29 @@ export default function Permissions() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'audit-trail') loadAuditTrail(); }}>
-        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-2'} max-w-3xl`}>
-          <TabsTrigger value="roles" className="gap-2">
+        <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-5' : 'grid-cols-2'} mb-6 bg-slate-100`}>
+          <TabsTrigger value="roles" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
             <Shield className="h-4 w-4" />
             Roles ({roles.length})
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
+          <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
             <UserCog className="h-4 w-4" />
             User Permissions
           </TabsTrigger>
           {isSuperAdmin && (
-            <TabsTrigger value="permissions" className="gap-2">
+            <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
               <Key className="h-4 w-4" />
               Matrix
             </TabsTrigger>
           )}
           {isSuperAdmin && (
-            <TabsTrigger value="audit-trail" className="gap-2">
+            <TabsTrigger value="audit-trail" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
               <ShieldAlert className="h-4 w-4" />
               Audit Trail
             </TabsTrigger>
           )}
           {isSuperAdmin && (
-            <TabsTrigger value="audit-logs" className="gap-2">
+            <TabsTrigger value="audit-logs" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
               <History className="h-4 w-4" />
               Audit Logs
             </TabsTrigger>

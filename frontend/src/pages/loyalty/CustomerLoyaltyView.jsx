@@ -386,10 +386,10 @@ export default function CustomerLoyaltyView() {
 
       {/* 3-Tab */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
-          <TabsTrigger value="my-rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><Crown className="h-4 w-4 mr-1.5" /> My Rewards</TabsTrigger>
-          <TabsTrigger value="activity" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm"><TrendingUp className="h-4 w-4 mr-1.5" /> Activity</TabsTrigger>
-          <TabsTrigger value="rewards" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="rewards-tab-trigger">
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
+          <TabsTrigger value="my-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-sm"><Crown className="h-4 w-4" /> My Rewards</TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-sm"><TrendingUp className="h-4 w-4" /> Activity</TabsTrigger>
+          <TabsTrigger value="rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-sm" data-testid="rewards-tab-trigger">
             <Gift className="h-4 w-4 mr-1.5" /> Rewards
             {approvedPromos.length > 0 && <Badge className="bg-purple-100 text-purple-700 text-[10px] ml-1.5 px-1.5">{approvedPromos.length}</Badge>}
           </TabsTrigger>

@@ -2300,7 +2300,7 @@ export default function Ratings() {
       {/* Admin View with Tabs */}
       {isAdmin ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-5 mb-6 bg-slate-100">
             <TabsTrigger 
               value="ratings" 
               className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
@@ -2369,12 +2369,12 @@ export default function Ratings() {
         </Tabs>
       ) : isOperator ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-sm bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="ratings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="operator-reviews-tab">
-              <Star className="h-4 w-4 mr-1.5" /> Customer Reviews
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
+            <TabsTrigger value="ratings" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="operator-reviews-tab">
+              <Star className="h-4 w-4" /> Customer Reviews
             </TabsTrigger>
-            <TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="operator-messages-tab">
-              <Bell className="h-4 w-4 mr-1.5" /> Notifications
+            <TabsTrigger value="messages" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="operator-messages-tab">
+              <Bell className="h-4 w-4" /> Notifications
             </TabsTrigger>
           </TabsList>
           <TabsContent value="ratings" className="mt-6">
@@ -2390,12 +2390,12 @@ export default function Ratings() {
         </Tabs>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-sm bg-slate-100 p-1 rounded-xl">
-            <TabsTrigger value="ratings" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="my-reviews-tab">
-              <Star className="h-4 w-4 mr-1.5" /> My Reviews
+          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
+            <TabsTrigger value="ratings" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="my-reviews-tab">
+              <Star className="h-4 w-4" /> My Reviews
             </TabsTrigger>
-            <TabsTrigger value="messages" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-sm" data-testid="ratings-messages-tab">
-              <MessageSquare className="h-4 w-4 mr-1.5" /> Messages
+            <TabsTrigger value="messages" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="ratings-messages-tab">
+              <MessageSquare className="h-4 w-4" /> Messages
             </TabsTrigger>
           </TabsList>
           <TabsContent value="ratings" className="mt-6">
