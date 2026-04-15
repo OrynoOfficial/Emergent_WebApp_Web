@@ -7,21 +7,25 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Event Full Fields + Restaurant Menu Images & Ingredients**
+- Events: Added doors_open, end_date, ticket_price, contact_email, contact_phone, cover_image to Create/Update models
+- Events form now includes all fields; Results cards display date, time, price, contact info, cover image
+- Restaurant Menu: Added ingredients array field to MenuItemCreate/Update models
+- Menu Item Form has ingredients textarea (comma-separated)
+- Restaurant Menu page shows dish images + expandable ingredients badges
+
 **Apr 2026 - Seat Selection, Event Creation, Cinema Management Fixes**
-- Seat Selection: Optimistic UI updates (no blocking await), instant swap with background API sync
-- Event Creation: Fixed field mapping (venue_name→venue, start_date→event_date, total_capacity→total_seats, added country default 'CM')
-- Cinema Management: Fixed permission names (cinemas.*→cinema.*), fixed API paths (/cinemas/→/cinema/), fixed films loading, added Add Cinema/Add Movie buttons visibility
+- Seat Selection: Optimistic UI updates, instant swap
+- Event Creation: Fixed field mapping (venue_name→venue, start_date→event_date, etc.)
+- Cinema Management: Fixed permission names (cinema.*), API paths (/cinema/), films endpoint
 
 **Apr 2026 - Operators Access Filter Fix**
-- Fixed `get_operator_access_filter` to fall back to legacy full access when pod has no assigned operators
+- Fixed admin in pod with no operators getting __no_access__
 
 **Apr 2026 - Laundry Management Blank Screen Fix**
-- Fixed services array handling (objects vs strings) in LaundryManagement.jsx
+- Fixed services array handling (objects vs strings)
 
-**Apr 2026 - Mock Data Removal & Result Page Fixes**
-- Removed all mock data fallbacks, Cinema /films route fix, Event cover image upload, Subscribe button on result cards
-
-**Apr 2026 - Unified Booking Guest Info, Reports, Operator Scoping, Refactoring, Tabs**
+**Apr 2026 - Mock Data Removal, Unified Booking, Reports, Tabs, Refactoring**
 
 **Earlier:** Audit Logs, Ticket Scanner, Operator fixes, Loyalty, Notifications, Stripe, AI chatbot
 
@@ -29,15 +33,13 @@
 - P2: Date range filters for Admin/Operator reports
 
 ## Key Technical Notes
-- `operator_id` is UUID string, NOT BSON ObjectId
-- Backend cinema API prefix: `/api/cinema/` (singular), frontend permissions: `cinema.*` (singular)
-- Backend EventCreate requires: name, event_type, venue, city, country, event_date, start_time, end_time, ticket_price, total_seats
-- Frontend form maps: venue_name→venue, start_date→event_date, doors_open→start_time, total_capacity→total_seats
-- Admin in pod with no assigned operators gets legacy full access
+- Backend EventCreate requires: name, event_type, venue, city, country, event_date, start_time, end_time, ticket_price, total_seats (+ optional: doors_open, end_date, cover_image, contact_email, contact_phone)
+- Backend MenuItemCreate accepts: name, category, price, description, image, ingredients[], available, popular
+- Cinema API: /api/cinema/ (singular), permissions: cinema.* (singular)
+- operator_id is UUID string, NOT BSON ObjectId
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
 - Super Admin: superadmin@test.com / testpassword123
-- Super Admin (alt): superadmin@oryno.com / testpassword123
 - Customer: customer@test.com / testpassword123
 - Operator: operator@test.com / testpassword123 (Musango Bus Service)
