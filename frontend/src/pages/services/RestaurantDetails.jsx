@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const CUISINE_ICONS = {
   african: '🍲',

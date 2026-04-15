@@ -16,7 +16,6 @@ import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import LiveSeatMap from '../../components/travel/LiveSeatMap';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 import { toast } from 'sonner';
 
 // Step indicator for travel booking

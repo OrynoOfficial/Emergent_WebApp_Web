@@ -15,7 +15,6 @@ import {
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const MENU_CATEGORIES = ['all', 'starters', 'mains', 'desserts', 'drinks', 'specials'];
 

@@ -18,7 +18,6 @@ import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 

@@ -11,7 +11,6 @@ import {
 import { format, addDays } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const MOCK_FILM = {
   id: '1',

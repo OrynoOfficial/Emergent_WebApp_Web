@@ -15,7 +15,6 @@ import {
 import { cn } from '@/lib/utils';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const FEATURE_LABELS = {
   ac: 'Air Conditioning',

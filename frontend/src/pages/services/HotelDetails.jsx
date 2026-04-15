@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
-import SubscribeButton from '@/components/shared/SubscribeButton';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
