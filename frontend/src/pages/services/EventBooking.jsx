@@ -351,31 +351,6 @@ export default function EventBooking() {
               isSelf={isSelf}
               onSelfChange={handleSelfChange}
             />
-
-            {/* Payment Section */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-slate-400 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <CreditCard className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Payment Method</h3>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <PaymentMethodsSelection
-                  amount={pricing.total}
-                  orderId={orderId}
-                  serviceName={event?.name || 'Event'}
-                  onPaymentInitiated={handlePaymentInitiated}
-                  onPaymentError={handlePaymentError}
-                  triggerPayment={triggerPayment}
-                />
-              </div>
-            </div>
           </div>
 
           {/* Right Column - Summary */}
@@ -425,50 +400,68 @@ export default function EventBooking() {
                         <Badge className={TICKET_TYPES.find(t => t.id === ticketType)?.color}>
                           {TICKET_TYPES.find(t => t.id === ticketType)?.name}
                         </Badge>
-                        <p className="text-sm text-slate-600 mt-1">× {quantity} ticket{quantity > 1 ? 's' : ''}</p>
+                        <p className="text-sm text-slate-600 mt-1">x {quantity} ticket{quantity > 1 ? 's' : ''}</p>
                       </div>
                       <p className="font-bold text-lg text-pink-600">{formatCurrency(pricing.subtotal)}</p>
                     </div>
                   </div>
 
                   {/* Pricing Summary */}
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 -mx-5 -mb-5 p-5 rounded-b-2xl">
-                    <h4 className="font-semibold text-white mb-3">Order Summary</h4>
+                  <div className="mb-4 pb-4 border-b border-slate-100">
+                    <h4 className="font-semibold text-slate-800 mb-3">Order Summary</h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-slate-300">
+                      <div className="flex justify-between text-slate-600">
                         <span>Subtotal ({quantity} tickets)</span>
                         <span>{formatCurrency(pricing.subtotal)}</span>
                       </div>
-                      <div className="flex justify-between text-slate-300">
+                      <div className="flex justify-between text-slate-600">
                         <span>Service Fee</span>
                         <span>+{formatCurrency(pricing.commission)}</span>
                       </div>
-                      <div className="pt-3 mt-3 border-t border-slate-700">
+                      <div className="pt-3 mt-3 border-t border-slate-200">
                         <div className="flex justify-between items-center">
-                          <span className="text-white font-semibold">Total</span>
-                          <span className="text-2xl font-bold text-emerald-400">{formatCurrency(pricing.total)}</span>
+                          <span className="font-bold text-slate-900">Total</span>
+                          <span className="text-2xl font-bold text-pink-600">{formatCurrency(pricing.total)}</span>
                         </div>
                       </div>
                     </div>
-
-                    <Button 
-                      onClick={handleSubmit}
-                      disabled={paymentInProgress}
-                      className="w-full mt-4 bg-pink-500 hover:bg-pink-600 text-white h-12 font-semibold rounded-xl"
-                    >
-                      {paymentInProgress ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Ticket className="w-4 h-4 mr-2" />
-                          Get Tickets
-                        </>
-                      )}
-                    </Button>
                   </div>
+
+                  {/* Payment Method — right under Order Summary */}
+                  <div>
+                    <div className="bg-slate-400 -mx-5 px-5 py-3 mb-4">
+                      <h4 className="font-bold text-white flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Select Payment Method
+                      </h4>
+                    </div>
+                    <PaymentMethodsSelection
+                      amount={pricing.total}
+                      orderId={orderId}
+                      serviceName={event?.name || 'Event'}
+                      onPaymentInitiated={handlePaymentInitiated}
+                      onPaymentError={handlePaymentError}
+                      triggerPayment={triggerPayment}
+                    />
+                  </div>
+
+                  <Button 
+                    onClick={handleSubmit}
+                    disabled={paymentInProgress}
+                    className="w-full mt-4 bg-pink-500 hover:bg-pink-600 text-white h-12 font-semibold rounded-xl"
+                  >
+                    {paymentInProgress ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Ticket className="w-4 h-4 mr-2" />
+                        Get Tickets
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>

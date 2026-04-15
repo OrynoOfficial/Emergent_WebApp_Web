@@ -53,7 +53,10 @@ const DEFAULT_MOVIE_FORM = {
   rating: 'PG-13',
   description: '',
   show_times: [],
-  ticket_price: ''
+  ticket_price: '',
+  poster_url: '',
+  director: '',
+  language: 'English'
 };
 
 // Cinema specific dashboard data generator
@@ -213,23 +216,41 @@ export default function CinemaManagement() {
 
   const openMovieDialog = (movie = null) => {
     setEditingMovie(movie);
-    setMovieForm(movie ? { ...movie, ticket_price: movie.ticket_price?.toString() || '' } : DEFAULT_MOVIE_FORM);
+    setMovieForm(movie ? {
+      title: movie.title || '',
+      genre: Array.isArray(movie.genre) ? movie.genre.join(', ') : (movie.genre || ''),
+      duration: movie.duration_minutes ? String(movie.duration_minutes) : (movie.duration || ''),
+      rating: movie.rating || 'PG-13',
+      description: movie.description || '',
+      show_times: movie.show_times || [],
+      ticket_price: movie.ticket_price?.toString() || '',
+      poster_url: movie.poster_url || '',
+      director: movie.director || '',
+      language: movie.language || 'English'
+    } : DEFAULT_MOVIE_FORM);
     setIsMovieDialogOpen(true);
   };
 
   const handleSaveMovie = async () => {
     try {
+      const durationMin = parseInt(movieForm.duration) || 120;
+      const genreArr = movieForm.genre ? movieForm.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
+      
+      const params = new URLSearchParams();
+      params.append('title', movieForm.title);
+      params.append('duration_minutes', String(durationMin));
+      genreArr.forEach(g => params.append('genre', g));
+      if (movieForm.description) params.append('description', movieForm.description);
+      params.append('rating', movieForm.rating || 'PG-13');
+      if (movieForm.director) params.append('director', movieForm.director);
+      if (movieForm.language) params.append('language', movieForm.language);
+      if (movieForm.poster_url) params.append('poster_url', movieForm.poster_url);
+
       if (editingMovie) {
-        // Update not supported by backend — just show a message
-        toast.info('Film updated');
+        const filmId = editingMovie.id || editingMovie._id;
+        await api.put(`/cinema/films/${filmId}?${params.toString()}`);
+        toast.success('Film updated');
       } else {
-        // POST /cinema/films uses query parameters
-        const params = new URLSearchParams();
-        params.append('title', movieForm.title);
-        params.append('duration_minutes', movieForm.duration || '120');
-        if (movieForm.genre) params.append('genre', movieForm.genre);
-        if (movieForm.description) params.append('description', movieForm.description);
-        params.append('rating', movieForm.rating || 'PG-13');
         await api.post(`/cinema/films?${params.toString()}`);
         toast.success('Film added');
       }
@@ -502,17 +523,45 @@ export default function CinemaManagement() {
               <Label>Title</Label>
               <Input value={movieForm.title} onChange={e => setMovieForm(p => ({ ...p, title: e.target.value }))} placeholder="Movie title" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Genre</Label>
-                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action" />
-              </div>
-              <div>
-                <Label>Duration</Label>
-                <Input value={movieForm.duration} onChange={e => setMovieForm(p => ({ ...p, duration: e.target.value }))} placeholder="2h 30m" />
+            <div>
+              <Label>Cover Image</Label>
+              <div className="mt-1 flex items-center gap-3">
+                {movieForm.poster_url && (
+                  <img src={movieForm.poster_url} alt="Poster" className="h-20 w-14 object-cover rounded-lg border" />
+                )}
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      formData.append('folder', 'films');
+                      try {
+                        const res = await api.post('/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        const url = res.data?.file_url || res.data?.urls?.[0] || res.data?.files?.[0]?.url;
+                        if (url) setMovieForm(p => ({ ...p, poster_url: url }));
+                      } catch { toast.error('Upload failed'); }
+                    }}
+                    className="h-10"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Upload a cover/poster image for this film</p>
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Genre</Label>
+                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action, Drama" />
+              </div>
+              <div>
+                <Label>Duration (minutes)</Label>
+                <Input type="number" value={movieForm.duration} onChange={e => setMovieForm(p => ({ ...p, duration: e.target.value }))} placeholder="120" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Rating</Label>
                 <Select value={movieForm.rating} onValueChange={v => setMovieForm(p => ({ ...p, rating: v }))}>
@@ -526,8 +575,12 @@ export default function CinemaManagement() {
                 </Select>
               </div>
               <div>
-                <Label>Ticket Price (FCFA)</Label>
-                <Input type="number" value={movieForm.ticket_price} onChange={e => setMovieForm(p => ({ ...p, ticket_price: e.target.value }))} placeholder="3000" />
+                <Label>Director</Label>
+                <Input value={movieForm.director} onChange={e => setMovieForm(p => ({ ...p, director: e.target.value }))} placeholder="Director name" />
+              </div>
+              <div>
+                <Label>Language</Label>
+                <Input value={movieForm.language} onChange={e => setMovieForm(p => ({ ...p, language: e.target.value }))} placeholder="English" />
               </div>
             </div>
             <div>

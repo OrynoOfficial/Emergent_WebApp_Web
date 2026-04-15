@@ -82,10 +82,13 @@ async def get_films(
     if genre:
         query["genre"] = genre
     
-    films = await db.films.find(query, {"_id": 0}).sort("title", 1).skip(skip).limit(limit).to_list(limit)
+    films_list = []
+    for f in await db.films.find(query).sort("title", 1).skip(skip).limit(limit).to_list(limit):
+        f["id"] = str(f.pop("_id", ""))
+        films_list.append(f)
     total = await db.films.count_documents(query)
     
-    return {"films": films, "total": total}
+    return {"films": films_list, "total": total}
 
 @router.get("/films/{film_id}")
 async def get_film(film_id: str):
@@ -197,6 +200,41 @@ async def create_film(
     await db.films.insert_one(film)
     
     return {"message": "Film created", "film_id": film["_id"]}
+
+
+@router.put("/films/{film_id}")
+async def update_film(
+    film_id: str,
+    title: Optional[str] = None,
+    duration_minutes: Optional[int] = None,
+    genre: Optional[List[str]] = None,
+    description: Optional[str] = None,
+    language: Optional[str] = None,
+    rating: Optional[str] = None,
+    director: Optional[str] = None,
+    poster_url: Optional[str] = None,
+    trailer_url: Optional[str] = None,
+    release_date: Optional[str] = None,
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.edit"]))
+):
+    """Update a film"""
+    db = get_database()
+    film = await db.films.find_one({"_id": film_id})
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+    
+    update_data = {}
+    for field, value in [("title", title), ("duration_minutes", duration_minutes), ("genre", genre),
+                         ("description", description), ("language", language), ("rating", rating),
+                         ("director", director), ("poster_url", poster_url), ("trailer_url", trailer_url),
+                         ("release_date", release_date)]:
+        if value is not None:
+            update_data[field] = value
+    
+    update_data["updated_at"] = datetime.utcnow()
+    await db.films.update_one({"_id": film_id}, {"$set": update_data})
+    return {"message": "Film updated"}
+
 
 # Showtimes
 @router.post("/{cinema_id}/showtimes")

@@ -196,7 +196,7 @@ export default function CinemaResults() {
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const res = await cinemaApi.getFilms({ city });
+      const res = await cinemaApi.listFilms({ city });
       setFilms(res.data.films || res.data || []);
     } catch (error) {
       console.error('Failed to load films:', error);
