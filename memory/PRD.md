@@ -1,32 +1,28 @@
 # Oryno Platform - Product Requirements Document
 
 ## Core Architecture
-- **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI
+- **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI + Recharts
 - **Backend:** FastAPI + MongoDB (Motor async driver), DB: oryno_webapp
 - **Auth:** Custom JWT-based auth with 2FA
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Reports with Real Data & Operator Scoping**
+- 8 report types pulling real data from MongoDB (bookings, revenue, financial, customer insights, operational, service performance, satisfaction, analytics)
+- Operator scoping: admins/super_admins can scope per operator or all. Operators see own data only. Customers blocked (403)
+- Visual view with Recharts (pie, bar, line charts + KPI cards)
+- Data view with tables and detailed breakdowns
+- Download dropdown: Visual (JSON) and Data (CSV) export
+- Backend: /api/reports/generate, /api/reports/operators-list
+
 **Apr 2026 - Unified Tab Styling (Commission Pattern)**
-- Applied full-width grid tab layout across 9 pages: Users, Permissions, Operators, Employees, Customer Service, Validation, Ratings, Loyalty
-- Pattern: grid w-full grid-cols-N bg-slate-100 with active state bg-[#082c59] text-white
-- Removed max-width constraints so tabs span entire page width
+- Full-width grid tabs across all pages + sub-tabs (Validation, Customer Service)
 
-**Apr 2026 - Sidebar Reorder + Grid Card Enhancement**
-- Sidebar: Validation standalone above Customer Service, Admin Config moved below CS
-- Admin Config: Reports first, Validation removed from submenu
-- Grid cards: bold 4px priority-colored left border
+**Apr 2026 - Sidebar Restructure & UI Polish**
+- System menu, Reports standalone page, Database removed
+- Grid cards with priority borders, default views, welcome text reduced
 
-**Apr 2026 - UI Polish: Default Views, Grid Cards, Header**
-- Audit Logs default view: List. Customer Service default view: Grid with rich cards
-- Welcome header text reduced (text-sm)
-
-**Apr 2026 - Sidebar Navigation Restructure**
-- New "System" menu: Sys Config, Audit Logs, Commission
-- Reports extracted to standalone page under Admin Config
-- Database page removed
-
-**Earlier:** Audit Logs expansion, Ticket Scanner, Operator fixes, Service Status Control, Loyalty, Notifications, Stripe, AI chatbot
+**Earlier:** Audit Logs, Ticket Scanner, Operator fixes, Loyalty, Notifications, Stripe, AI chatbot
 
 ## Backlog
 - P1: "Airline-Style" Live Seat Selection UI enhancement
