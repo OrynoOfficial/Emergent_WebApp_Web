@@ -237,7 +237,7 @@ export default function CarRentalBooking() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone || !formData.licenseNumber) {
+    if (!formData.firstName || !formData.email || !formData.phone || !formData.licenseNumber) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -454,68 +454,25 @@ export default function CarRentalBooking() {
                     Please confirm your extras selection first
                   </div>
                 )}
-                <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      <span className="font-medium text-slate-700">I&apos;m the driver</span>
-                    </div>
-                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} disabled={!extrasConfirmed} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <BookerInfoSection
+                  title="Driver Information"
+                  subtitle="Who will be driving?"
+                  toggleLabel="I'm the driver"
+                  firstName={formData.firstName}
+                  lastName={formData.lastName}
+                  email={formData.email}
+                  phone={formData.phone}
+                  onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                  user={user}
+                  isSelf={isSelf}
+                  onSelfChange={handleSelfChange}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                   <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Full Name *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="John Doe"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf || !extrasConfirmed}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Email Address *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="john@example.com"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={!extrasConfirmed}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Phone Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+237 6XX XXX XXX"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf || !extrasConfirmed}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">License Number *</Label>
+                    <Label className="text-sm font-medium text-slate-700">License Number <span className="text-red-500">*</span></Label>
                     <div className="relative">
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={formData.licenseNumber}
-                        onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
-                        placeholder="DL123456789"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={!extrasConfirmed}
-                      />
+                      <Input value={formData.licenseNumber} onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="DL123456789" className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20" disabled={!extrasConfirmed} />
                     </div>
                   </div>
                 </div>

@@ -7,15 +7,20 @@
 
 ## Completed Features (Latest First)
 
-**Apr 2026 - Operator Scoping for Support Tickets & Promo Codes**
-- Support Tickets: GET /, stats, stats/detailed, GET /{id} now scope by operator_id OR customer_id for operators
-- Promo Codes: DELETE /{code} now scoped by operator_id for operators
-- Communications/Alerts: Already had operator scoping (no changes needed)
-- Admin/Super Admin see all data; Operators see only their own
+**Apr 2026 - Unified Booking Guest Info Component**
+- Created shared `BookerInfoSection` at `/components/booking/BookerInfoSection.jsx`
+- Identical template across all booking pages: gradient navy header, self-fill toggle, 4 fields (First Name, Last Name, Email, Phone)
+- Self-fill toggle fetches latest profile from `/api/auth/me` (full_name, email, phone)
+- Applied to: Hotel, Restaurant, Cinema, Event, CarRental, Banquet, Travel, Package booking pages
 
 **Apr 2026 - Reports with Real Data & Operator Scoping**
-- 8 report types pulling real data from MongoDB
-- Operator scoping for reports. Customers blocked.
+- 8 report types pulling real MongoDB data, operator scoping, Visual/Data/Download
+
+**Apr 2026 - Operator Scoping for Support Tickets & Promo Codes**
+- Support tickets and promo codes scoped per operator
+
+**Apr 2026 - ValidationManagement.jsx & Login.jsx Refactoring**
+- ValidationManagement: 1092 -> 367 lines. Login: 1006 -> 275 lines
 
 **Apr 2026 - Unified Tab Styling + Sidebar Restructure**
 - Full-width grid tabs, System menu, Reports page, Database removed
@@ -24,7 +29,6 @@
 
 ## Backlog
 - P1: "Airline-Style" Live Seat Selection UI enhancement
-- Minor: Operator missing promo.view permission in role config
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
