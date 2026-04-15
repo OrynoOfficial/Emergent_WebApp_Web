@@ -335,13 +335,13 @@ export default function CinemaResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredFilms.map((film) => (
-              <FilmCardGrid key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <FilmCardGrid key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredFilms.map((film) => (
-              <FilmCardList key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <FilmCardList key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}

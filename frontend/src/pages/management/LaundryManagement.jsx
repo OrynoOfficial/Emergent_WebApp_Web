@@ -249,8 +249,10 @@ export default function LaundryManagement() {
                         </div>
                         {pressing.services?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {pressing.services.slice(0, 3).map(s => (
-                              <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
+                            {pressing.services.slice(0, 3).map((s, idx) => (
+                              <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
+                                {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
+                              </Badge>
                             ))}
                           </div>
                         )}
@@ -324,23 +326,27 @@ export default function LaundryManagement() {
             <div>
               <Label>Services</Label>
               <div className="flex flex-wrap gap-2 mt-2">
-                {SERVICES.map(service => (
-                  <Badge
-                    key={service}
-                    variant={pressingForm.services?.includes(service) ? 'default' : 'outline'}
-                    className="cursor-pointer capitalize"
-                    onClick={() => {
-                      setPressingForm(p => ({
-                        ...p,
-                        services: p.services?.includes(service)
-                          ? p.services.filter(s => s !== service)
-                          : [...(p.services || []), service]
-                      }));
-                    }}
-                  >
-                    {service.replace('_', ' ')}
-                  </Badge>
-                ))}
+                {SERVICES.map(service => {
+                  const serviceTypes = (pressingForm.services || []).map(s => typeof s === 'string' ? s : s?.type || s?.name || '');
+                  const isSelected = serviceTypes.includes(service);
+                  return (
+                    <Badge
+                      key={service}
+                      variant={isSelected ? 'default' : 'outline'}
+                      className="cursor-pointer capitalize"
+                      onClick={() => {
+                        setPressingForm(p => ({
+                          ...p,
+                          services: isSelected
+                            ? (p.services || []).filter(s => (typeof s === 'string' ? s : s?.type || s?.name) !== service)
+                            : [...(p.services || []), service]
+                        }));
+                      }}
+                    >
+                      {service.replace('_', ' ')}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -414,8 +420,10 @@ export default function LaundryManagement() {
                 <div>
                   <p className="text-slate-500 text-sm mb-2">Services Offered</p>
                   <div className="flex flex-wrap gap-1">
-                    {viewingPressing.services.map(s => (
-                      <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
+                    {viewingPressing.services.map((s, idx) => (
+                      <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
+                        {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
+                      </Badge>
                     ))}
                   </div>
                 </div>

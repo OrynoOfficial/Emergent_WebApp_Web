@@ -372,13 +372,13 @@ export default function PackagesResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredServices.map((service) => (
-              <ServiceCardGrid key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <ServiceCardGrid key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredServices.map((service) => (
-              <ServiceCardList key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <ServiceCardList key={service.id} service={service} packageSize={packageSize} onSelect={handleSelect} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}

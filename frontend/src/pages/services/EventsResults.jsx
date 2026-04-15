@@ -423,13 +423,13 @@ export default function EventsResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredEvents.map((event) => (
-              <EventCardGrid key={event.id} event={event} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <EventCardGrid key={event.id} event={event} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredEvents.map((event) => (
-              <EventCardList key={event.id} event={event} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <EventCardList key={event.id} event={event} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}

@@ -361,13 +361,13 @@ export default function BanquetResults() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredVenues.map((venue) => (
-              <VenueCardGrid key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <VenueCardGrid key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredVenues.map((venue) => (
-              <VenueCardList key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} isFav={isFav} toggleFav={toggleFav} />
+              <VenueCardList key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
         )}
