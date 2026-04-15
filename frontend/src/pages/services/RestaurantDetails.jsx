@@ -167,7 +167,6 @@ export default function RestaurantDetails() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <SubscribeButton operatorId={restaurant.operator_id} operatorName={restaurant.operator_name || restaurant.name} />
                     <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg">
                       <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                       <span className="text-xl font-bold">{restaurant.rating}</span>

@@ -14,6 +14,7 @@ import {
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 import { differenceInDays, format } from 'date-fns';
 
@@ -61,12 +62,15 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
       {/* Image */}
       <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
         <img src={image} alt={vehicle.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(vehicle); }}
-          className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
-        >
-          <Heart className={`h-4 w-4 ${(isFav && isFav(vehicle._id || vehicle.id)) ? 'fill-red-500 text-red-500' : 'text-slate-500'}`} />
-        </button>
+        <div className="absolute top-2 right-2 z-10 flex gap-1.5">
+          <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name} variant="icon" />
+          <button
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(vehicle); }}
+            className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
+          >
+            <Heart className={`h-4 w-4 ${(isFav && isFav(vehicle._id || vehicle.id)) ? 'fill-red-500 text-red-500' : 'text-slate-500'}`} />
+          </button>
+        </div>
         <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 ${getVehicleTypeColor(vehicle.type)}`}>
           {vehicle.type}
         </Badge>

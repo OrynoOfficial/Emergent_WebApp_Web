@@ -9,19 +9,10 @@ import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, Heart, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
 import { eventsApi } from '@/api/services';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
-
-const MOCK_EVENTS = [
-  // Past events (for grey-out demonstration)
-  { id: '1', name: 'Afrobeats Music Festival 2025', type: 'Concert', venue: 'Stade Omnisports', city: 'Yaoundé', date: '2026-01-15', time: '18:00', priceFrom: 15000, ticketsLeft: 0, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800', rating: 4.8, description: 'The biggest Afrobeats festival featuring top African artists.' },
-  { id: '2', name: 'Cameroon vs Nigeria Football Match', type: 'Sports', venue: 'Stade Ahmadou Ahidjo', city: 'Yaoundé', date: '2026-02-01', time: '16:00', priceFrom: 5000, ticketsLeft: 0, image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800', rating: 4.9, description: 'AFCON qualifier match between rival nations.' },
-  // Future events (bookable)
-  { id: '3', name: 'Comedy Night with Top Comedians', type: 'Comedy', venue: 'Palais des Congrès', city: 'Douala', date: '2026-03-15', time: '20:00', priceFrom: 10000, ticketsLeft: 150, image: 'https://images.unsplash.com/photo-1527224538127-2104bb71c51b?w=800', rating: 4.6, description: 'An evening of laughter with the best comedians in Africa.' },
-  { id: '4', name: 'Tech Conference Cameroon 2026', type: 'Conference', venue: 'Hotel Hilton', city: 'Yaoundé', date: '2026-04-10', time: '09:00', priceFrom: 25000, ticketsLeft: 200, image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800', rating: 4.7, description: 'Annual tech conference featuring industry leaders.' },
-  { id: '5', name: 'Makossa Dance Party', type: 'Party', venue: 'Club Premium', city: 'Douala', date: '2026-03-28', time: '22:00', priceFrom: 8000, ticketsLeft: 300, image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800', rating: 4.5, description: 'All-night party celebrating Makossa music culture.' }
-];
 
 const EVENT_TYPE_COLORS = {
   'Concert': 'bg-gradient-to-r from-purple-500 to-purple-600 text-white',
@@ -43,7 +34,18 @@ const getEventIcon = (type) => {
 };
 
 // Grid View Event Card
-const EventCardGrid = ({ event, onBook, isFav, toggleFav }) => {
+const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
+  const event = {
+    ...rawEvent,
+    type: rawEvent.type || rawEvent.event_type,
+    venue: rawEvent.venue || rawEvent.venue_name,
+    date: rawEvent.date || rawEvent.start_date,
+    time: rawEvent.time || rawEvent.doors_open,
+    priceFrom: rawEvent.priceFrom || (rawEvent.ticket_types?.[0]?.price) || 0,
+    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : 999),
+    image: rawEvent.image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
+    rating: rawEvent.rating || 4.5,
+  };
   // Favourites handled by parent via isFav/toggleFav props
   const EventIcon = getEventIcon(event.type);
   const isEventPast = isPast(event.date, event.time);
@@ -66,14 +68,17 @@ const EventCardGrid = ({ event, onBook, isFav, toggleFav }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
-        {/* Favorite button - only show for future events */}
+        {/* Favorite & Subscribe buttons - only show for future events */}
         {!isEventPast && (
-          <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(event);  }}
-            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-          >
-            <Heart className={`h-5 w-5 ${(isFav && isFav(event._id || event.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-          </button>
+          <div className="absolute top-3 right-3 z-10 flex gap-1.5">
+            <SubscribeButton operatorId={event.operator_id} operatorName={event.operator_name} variant="icon" />
+            <button
+              onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(event);  }}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
+            >
+              <Heart className={`h-5 w-5 ${(isFav && isFav(event._id || event.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+            </button>
+          </div>
         )}
         
         {/* Type Badge & Past Event Badge */}
@@ -146,7 +151,18 @@ const EventCardGrid = ({ event, onBook, isFav, toggleFav }) => {
 };
 
 // List View Event Card
-const EventCardList = ({ event, onBook, isFav, toggleFav }) => {
+const EventCardList = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
+  const event = {
+    ...rawEvent,
+    type: rawEvent.type || rawEvent.event_type,
+    venue: rawEvent.venue || rawEvent.venue_name,
+    date: rawEvent.date || rawEvent.start_date,
+    time: rawEvent.time || rawEvent.doors_open,
+    priceFrom: rawEvent.priceFrom || (rawEvent.ticket_types?.[0]?.price) || 0,
+    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : 999),
+    image: rawEvent.image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
+    rating: rawEvent.rating || 4.5,
+  };
   const EventIcon = getEventIcon(event.type);
   const isEventPast = isPast(event.date, event.time);
   
@@ -259,13 +275,10 @@ export default function EventsResults() {
     setLoading(true);
     try {
       const res = await eventsApi.search({ city, date });
-      if (res.data.events?.length > 0) {
-        setEvents(res.data.events);
-      } else {
-        setEvents(MOCK_EVENTS);
-      }
+      setEvents(res.data.events || []);
     } catch (error) {
-      setEvents(MOCK_EVENTS);
+      console.error('Failed to load events:', error);
+      setEvents([]);
     } finally {
       setLoading(false);
     }

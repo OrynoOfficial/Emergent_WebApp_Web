@@ -17,6 +17,7 @@ import {
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const CUISINE_TYPES = ['African', 'French', 'Italian', 'Chinese', 'Lebanese', 'Seafood', 'Fast Food', 'Fusion'];
@@ -127,13 +128,16 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve, isFav, toggl
             onClick={() => { setSelectedImageIndex(0); setGalleryOpen(true); }}
           />
           
-          {/* Favorite button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(restaurant);  }}
-            className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
-          >
-            <Heart className={`h-4 w-4 ${(isFav && isFav(restaurant._id || restaurant.id)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
-          </button>
+          {/* Favorite & Subscribe buttons */}
+          <div className="absolute top-2 right-2 z-10 flex gap-1.5">
+            <SubscribeButton operatorId={restaurant.operator_id} operatorName={restaurant.operator_name} variant="icon" />
+            <button
+              onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(restaurant);  }}
+              className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
+            >
+              <Heart className={`h-4 w-4 ${(isFav && isFav(restaurant._id || restaurant.id)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+            </button>
+          </div>
           
           {/* Badges */}
           <div className="absolute top-2 left-2 flex gap-1.5">

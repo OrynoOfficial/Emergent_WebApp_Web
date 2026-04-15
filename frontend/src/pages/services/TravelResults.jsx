@@ -19,6 +19,7 @@ import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
 import api from '../../api/client';
 import { useFavourites } from '../../hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
@@ -114,7 +115,8 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
           </div>
         )}
         {!isTripPast && (
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 flex gap-1.5">
+            <SubscribeButton operatorId={trip.operator_id} operatorName={trip.operator_name} variant="icon" />
             <button
               onClick={(e) => { e.stopPropagation(); toggleFav(trip); }}
               className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"

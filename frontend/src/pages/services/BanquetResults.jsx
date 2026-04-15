@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MapPin, Users, Star, Utensils, Music, Camera, ArrowLeft, Search, LayoutGrid, List, SlidersHorizontal, Heart, Loader2, PartyPopper, Building, Sparkles } from 'lucide-react';
 import { banquetApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
@@ -63,13 +64,16 @@ const VenueCardGrid = ({ venue, onBook, isFav, toggleFav }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         
-        {/* Favorite button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(venue);  }}
-          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-        >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(venue._id || venue.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-        </button>
+        {/* Favorite & Subscribe buttons */}
+        <div className="absolute top-3 right-3 z-10 flex gap-1.5">
+          <SubscribeButton operatorId={venue.operator_id} operatorName={venue.operator_name} variant="icon" />
+          <button
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(venue);  }}
+            className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
+          >
+            <Heart className={`h-5 w-5 ${(isFav && isFav(venue._id || venue.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          </button>
+        </div>
         
         {/* Type Badge */}
         <Badge className={`absolute top-3 left-3 capitalize ${VENUE_TYPE_COLORS[venue.venue_type] || 'bg-purple-600'}`}>

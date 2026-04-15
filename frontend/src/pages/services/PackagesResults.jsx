@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import { packageApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 
 const PACKAGE_SIZES = {
@@ -64,12 +65,15 @@ const ServiceCardGrid = ({ service, packageSize, onSelect, isFav, toggleFav }) =
     <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
       {/* Header */}
       <div className="relative h-32 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] p-4">
-        <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(service);  }}
-          className="absolute top-3 right-3 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
-        >
-          <Heart className={`h-4 w-4 ${(isFav && isFav(service._id || service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-        </button>
+        <div className="absolute top-3 right-3 flex gap-1.5">
+          <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
+          <button
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(service);  }}
+            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
+          >
+            <Heart className={`h-4 w-4 ${(isFav && isFav(service._id || service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          </button>
+        </div>
         
         <Badge className={`absolute top-3 left-3 ${SERVICE_TYPE_COLORS[service.service_type]}`}>
           <ServiceIcon className="w-3 h-3 mr-1" />

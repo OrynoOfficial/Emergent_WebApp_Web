@@ -547,7 +547,6 @@ export default function TravelBooking() {
               <h1 className="text-xl font-bold text-slate-900">Complete Your Booking</h1>
               <p className="text-sm text-slate-500">{outbound.from_city} → {outbound.to_city}</p>
             </div>
-            <SubscribeButton operatorId={outbound.operator_id} operatorName={outbound.operator_name} />
           </div>
         </div>
       </div>

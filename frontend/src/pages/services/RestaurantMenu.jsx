@@ -157,7 +157,6 @@ export default function RestaurantMenu() {
                 <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatOpeningHours(restaurant.opening_hours)}</span>
               </div>
             </div>
-            <SubscribeButton operatorId={restaurant.operator_id} operatorName={restaurant.operator_name || restaurant.name} />
           </div>
         </div>
       </div>

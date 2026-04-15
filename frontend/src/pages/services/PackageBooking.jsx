@@ -306,7 +306,6 @@ export default function PackageBooking() {
               <h1 className="text-xl font-bold text-slate-900">Complete Your Delivery</h1>
               <p className="text-sm text-slate-500">{service.service_name}</p>
             </div>
-            <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} />
           </div>
         </div>
       </div>

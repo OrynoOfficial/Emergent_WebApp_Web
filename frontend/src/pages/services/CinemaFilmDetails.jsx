@@ -206,7 +206,6 @@ export default function CinemaFilmDetails() {
             <div className="flex-1 text-white">
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-3xl md:text-4xl font-bold">{film.title}</h1>
-                <SubscribeButton operatorId={film.operator_id} operatorName={film.cinema_name || film.title} className="border-white/30" />
               </div>
               
               {/* Genres */}

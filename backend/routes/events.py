@@ -68,7 +68,7 @@ async def get_events(
     """Get events - optionally filtered by country for location-based visibility"""
     db = get_database()
     
-    query = {"is_active": True}
+    query = {"$or": [{"is_active": True}, {"is_active": {"$exists": False}}, {"is_active": None}]}
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if event_type:

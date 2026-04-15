@@ -608,7 +608,6 @@ export default function HotelDetails() {
                       <Star key={i} className={`h-5 w-5 ${i < hotel.star_rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-300'}`} />
                     ))}
                   </div>
-                  <SubscribeButton operatorId={hotel.operator_id} operatorName={hotel.operator_name || hotel.name} />
                 </div>
                 
                 {/* Policy Tags */}

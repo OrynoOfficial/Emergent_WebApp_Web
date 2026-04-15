@@ -169,7 +169,6 @@ export default function CarRentalDetails() {
                     <p className="text-slate-600 text-sm">{vehicle.brand} {vehicle.model} · {vehicle.year}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name || vehicle.name} />
                     <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
                       <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                       <span className="text-lg font-bold">{vehicle.rating}</span>

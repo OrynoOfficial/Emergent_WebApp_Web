@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Film, Clock, Star, Calendar, Play, Ticket, Loader2, MapPin, Search, LayoutGrid, List, SlidersHorizontal, Heart } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
+import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { format } from 'date-fns';
@@ -49,13 +50,16 @@ const FilmCardGrid = ({ film, onViewDetails, isFav, toggleFav }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         
-        {/* Favorite button */}
-        <button
-          onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(film);  }}
-          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-        >
-          <Heart className={`h-5 w-5 ${(isFav && isFav(film._id || film.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-        </button>
+        {/* Favorite & Subscribe buttons */}
+        <div className="absolute top-3 right-3 z-10 flex gap-1.5">
+          <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
+          <button
+            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(film);  }}
+            className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
+          >
+            <Heart className={`h-5 w-5 ${(isFav && isFav(film._id || film.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          </button>
+        </div>
         
         {/* Status Badge */}
         <div className="absolute top-3 left-3">
