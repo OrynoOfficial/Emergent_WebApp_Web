@@ -79,15 +79,32 @@ const StyledInput = ({ id, label, icon: Icon, error, disabled, ...props }) => (
 const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user, onAutoFill }) => {
   const [isTraveler, setIsTraveler] = useState(false);
 
-  const handleIsTravelerChange = (checked) => {
+  const handleIsTravelerChange = async (checked) => {
     setIsTraveler(checked);
-    if (checked && user) {
-      onChange({
-        ...passenger,
-        firstName: user.first_name || user.full_name?.split(' ')[0] || '',
-        lastName: user.last_name || user.full_name?.split(' ').slice(1).join(' ') || '',
-        phoneNumber: user.phone || ''
-      });
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        onChange({
+          ...passenger,
+          firstName: profile.first_name || nameParts[0] || '',
+          lastName: profile.last_name || nameParts.slice(1).join(' ') || '',
+          phoneNumber: profile.phone || ''
+        });
+      } catch {
+        if (user) {
+          const fullName = user.full_name || '';
+          const nameParts = fullName.trim().split(/\s+/);
+          onChange({
+            ...passenger,
+            firstName: user.first_name || nameParts[0] || '',
+            lastName: user.last_name || nameParts.slice(1).join(' ') || '',
+            phoneNumber: user.phone || ''
+          });
+        }
+      }
     } else {
       onChange({ ...passenger, firstName: '', lastName: '', idNumber: '', phoneNumber: '' });
     }

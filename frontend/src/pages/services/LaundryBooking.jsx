@@ -87,11 +87,15 @@ export default function LaundryBooking() {
     pickup_time: '09:00',
     delivery_date: null,
     address: user?.address || '',
+    firstName: '',
+    lastName: '',
+    email: user?.email || '',
     phone: user?.phone || '',
     notes: '',
     express: false
   });
   const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
+  const [isSelf, setIsSelf] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
 

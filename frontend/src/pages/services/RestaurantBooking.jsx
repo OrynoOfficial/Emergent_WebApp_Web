@@ -18,6 +18,7 @@ import PaymentProcessingOverlay from '../../components/common/PaymentProcessingO
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
+import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
 
 // Step indicator for restaurant booking
@@ -66,7 +67,8 @@ export default function RestaurantBooking() {
   const [restaurantCurrentStep, setRestaurantCurrentStep] = useState(1);
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     specialRequests: ''
@@ -101,17 +103,36 @@ export default function RestaurantBooking() {
     }
   }, [navigate, user]);
 
-  const handleSelfChange = (checked) => {
+  const handleSelfChange = async (checked) => {
     setIsSelf(checked);
-    if (checked && user) {
-      setFormData(prev => ({
-        ...prev,
-        name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        setFormData(prev => ({
+          ...prev,
+          firstName: profile.first_name || nameParts[0] || '',
+          lastName: profile.last_name || nameParts.slice(1).join(' ') || '',
+          email: profile.email || prev.email,
+          phone: profile.phone || prev.phone || ''
+        }));
+      } catch {
+        if (user) {
+          const fullName = user.full_name || '';
+          const nameParts = fullName.trim().split(/\s+/);
+          setFormData(prev => ({
+            ...prev,
+            firstName: user.first_name || nameParts[0] || '',
+            lastName: user.last_name || nameParts.slice(1).join(' ') || '',
+            email: user.email || prev.email,
+            phone: user.phone || prev.phone || ''
+          }));
+        }
+      }
     } else {
-      setFormData(prev => ({ ...prev, name: '', phone: '' }));
+      setFormData(prev => ({ ...prev, firstName: '', lastName: '', phone: '' }));
     }
   };
 
@@ -190,7 +211,7 @@ export default function RestaurantBooking() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.firstName || !formData.email || !formData.phone) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -240,7 +261,7 @@ export default function RestaurantBooking() {
   const handleProcessingChange = (isProcessing) => { setShowPaymentOverlay(isProcessing); if (!isProcessing) setPaymentInProgress(false); };
 
   const pricing = calculatePricing();
-  const isFormValid = formData.name && formData.email && formData.phone;
+  const isFormValid = formData.firstName && formData.email && formData.phone;
   const items = orderData?.items || [];
 
   if (isLoading) {
@@ -287,48 +308,32 @@ export default function RestaurantBooking() {
           {/* Left Column - Guest Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Guest Information */}
-            <div className="rounded-2xl shadow-lg bg-white overflow-hidden">
-              <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
+            <BookerInfoSection
+              title="Guest Details"
+              subtitle="Who is making the reservation?"
+              toggleLabel="I'm the Guest"
+              firstName={formData.firstName}
+              lastName={formData.lastName}
+              email={formData.email}
+              phone={formData.phone}
+              onChange={(field, value) => setFormData(p => ({...p, [field]: value}))}
+              user={user}
+              isSelf={isSelf}
+              onSelfChange={handleSelfChange}
+            />
+            {/* Special Requests */}
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
                 <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl"><User className="h-6 w-6" /></div>
+                  <div className="p-2 bg-white/20 rounded-xl"><MessageSquare className="h-6 w-6" /></div>
                   <div>
-                    <h3 className="font-bold text-lg">Guest Details</h3>
-                    <p className="text-sm text-white/70">Who is making the reservation?</p>
+                    <h3 className="font-bold text-lg">Special Requests</h3>
+                    <p className="text-sm text-white/70">Let us know your preferences</p>
                   </div>
                 </div>
               </div>
-              <div className="p-6 space-y-5">
-                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border">
-                  <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
-                  <Label className="text-sm font-medium text-slate-700 cursor-pointer">I am the guest</Label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-slate-700">Full Name *</Label>
-                    <div className="relative mt-1">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} placeholder="John Doe" className="pl-10" disabled={isSelf} />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-slate-700">Email *</Label>
-                    <div className="relative mt-1">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input type="email" value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} placeholder="john@example.com" className="pl-10" disabled={isSelf} />
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-slate-700">Phone *</Label>
-                    <div className="relative mt-1">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input value={formData.phone} onChange={e => setFormData(p => ({...p, phone: e.target.value}))} placeholder="+237 600 000 000" className="pl-10" disabled={isSelf} />
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Special Requests</Label>
-                  <Textarea value={formData.specialRequests} onChange={e => setFormData(p => ({...p, specialRequests: e.target.value}))} placeholder="Dietary requirements, seating preferences..." className="mt-1 min-h-[80px]" />
-                </div>
+              <div className="p-6">
+                <Textarea value={formData.specialRequests} onChange={e => setFormData(p => ({...p, specialRequests: e.target.value}))} placeholder="Dietary requirements, seating preferences..." className="min-h-[80px] rounded-xl border-slate-200" />
               </div>
             </div>
           </div>

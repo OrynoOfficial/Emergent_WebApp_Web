@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { banquetApi } from '@/api/management';
 import api from '@/api/client';
+import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -80,13 +81,30 @@ export default function BanquetBooking() {
     end_time: '18:00',
     addons: [],
     special_requests: '',
-    contact_name: user?.name || '',
+    contact_firstName: '',
+    contact_lastName: '',
     contact_phone: user?.phone || '',
     contact_email: user?.email || ''
   });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isSelf, setIsSelf] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+
+  const handleSelfChange = async (checked) => {
+    setIsSelf(checked);
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        setBooking(prev => ({ ...prev, contact_firstName: profile.first_name || nameParts[0] || '', contact_lastName: profile.last_name || nameParts.slice(1).join(' ') || '', contact_email: profile.email || prev.contact_email, contact_phone: profile.phone || prev.contact_phone || '' }));
+      } catch {
+        if (user) { const fullName = user.full_name || ''; const nameParts = fullName.trim().split(/\s+/); setBooking(prev => ({ ...prev, contact_firstName: user.first_name || nameParts[0] || '', contact_lastName: user.last_name || nameParts.slice(1).join(' ') || '', contact_email: user.email || prev.contact_email, contact_phone: user.phone || prev.contact_phone || '' })); }
+      }
+    } else { setBooking(prev => ({ ...prev, contact_firstName: '', contact_lastName: '', contact_phone: '' })); }
+  };
 
   useEffect(() => {
     loadVenue();
@@ -323,61 +341,22 @@ export default function BanquetBooking() {
             </div>
 
             {/* Contact Information */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <User className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Contact Information</h3>
-                    <p className="text-sm text-white/70">How can we reach you?</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Full Name *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={booking.contact_name}
-                        onChange={(e) => setBooking(prev => ({ ...prev, contact_name: e.target.value }))}
-                        placeholder="John Doe"
-                        className="pl-10 h-12 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Phone *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={booking.contact_phone}
-                        onChange={(e) => setBooking(prev => ({ ...prev, contact_phone: e.target.value }))}
-                        placeholder="+237 6XX XXX XXX"
-                        className="pl-10 h-12 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-slate-700 font-medium">Email *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="email"
-                        value={booking.contact_email}
-                        onChange={(e) => setBooking(prev => ({ ...prev, contact_email: e.target.value }))}
-                        placeholder="john@example.com"
-                        className="pl-10 h-12 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BookerInfoSection
+              title="Contact Information"
+              subtitle="How can we reach you?"
+              toggleLabel="Use my account details"
+              firstName={booking.contact_firstName}
+              lastName={booking.contact_lastName}
+              email={booking.contact_email}
+              phone={booking.contact_phone}
+              onChange={(field, value) => {
+                const map = { firstName: 'contact_firstName', lastName: 'contact_lastName', email: 'contact_email', phone: 'contact_phone' };
+                setBooking(prev => ({ ...prev, [map[field]]: value }));
+              }}
+              user={user}
+              isSelf={isSelf}
+              onSelfChange={handleSelfChange}
+            />
 
             {/* Add-on Services */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">

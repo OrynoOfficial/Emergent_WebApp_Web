@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import api from '@/api/client';
+import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -78,7 +79,8 @@ export default function CinemaBooking() {
   const [currentStep, setCurrentStep] = useState(1);
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: ''
   });
@@ -128,18 +130,19 @@ export default function CinemaBooking() {
     }
   };
 
-  const handleSelfChange = (checked) => {
+  const handleSelfChange = async (checked) => {
     setIsSelf(checked);
-    if (checked && user) {
-      setFormData(prev => ({
-        ...prev,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, name: '', phone: '' }));
-    }
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        setFormData(prev => ({ ...prev, firstName: profile.first_name || nameParts[0] || '', lastName: profile.last_name || nameParts.slice(1).join(' ') || '', email: profile.email || prev.email, phone: profile.phone || prev.phone || '' }));
+      } catch {
+        if (user) { const fullName = user.full_name || ''; const nameParts = fullName.trim().split(/\s+/); setFormData(prev => ({ ...prev, firstName: user.first_name || nameParts[0] || '', lastName: user.last_name || nameParts.slice(1).join(' ') || '', email: user.email || prev.email, phone: user.phone || prev.phone || '' })); }
+      }
+    } else { setFormData(prev => ({ ...prev, firstName: '', lastName: '', phone: '' })); }
   };
 
   const toggleSeat = (seatId) => {
@@ -199,7 +202,7 @@ export default function CinemaBooking() {
       return;
     }
 
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.firstName || !formData.email || !formData.phone) {
       toast.error('Please fill in all contact details');
       return;
     }
@@ -438,73 +441,19 @@ export default function CinemaBooking() {
             </Card>
 
             {/* Contact Information */}
-            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <User className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Contact Information</h3>
-                    <p className="text-sm text-white/70">Where should we send your tickets?</p>
-                  </div>
-                </div>
-              </div>
-              
-              <CardContent className="p-6">
-                <div className="mb-6 p-4 bg-indigo-500/20 rounded-xl border border-indigo-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-indigo-400" />
-                      <span className="font-medium text-white">Use my account details</span>
-                    </div>
-                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-300 font-medium">Full Name *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="John Doe"
-                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                        disabled={isSelf}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-300 font-medium">Email Address *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="john@example.com"
-                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-slate-300 font-medium">Phone Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+237 6XX XXX XXX"
-                        className="pl-10 h-12 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                        disabled={isSelf}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <BookerInfoSection
+              title="Contact Information"
+              subtitle="Where should we send your tickets?"
+              toggleLabel="Use my account details"
+              firstName={formData.firstName}
+              lastName={formData.lastName}
+              email={formData.email}
+              phone={formData.phone}
+              onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+              user={user}
+              isSelf={isSelf}
+              onSelfChange={handleSelfChange}
+            />
 
             {/* Payment Section */}
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">

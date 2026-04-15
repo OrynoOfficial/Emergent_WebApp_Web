@@ -277,24 +277,19 @@ export default function HotelBooking() {
   const handleIsSenderChange = async (checked) => {
     setIsSender(checked);
     if (checked) {
-      // Fetch latest user profile from API (same as Settings page Basic Information)
       try {
         const res = await api.get('/auth/me');
         const profile = res.data;
         const fullName = profile.full_name || '';
         const nameParts = fullName.trim().split(/\s+/);
-        const firstName = profile.first_name || nameParts[0] || '';
-        const lastName = profile.last_name || nameParts.slice(1).join(' ') || '';
-        
         setFormData(prev => ({
           ...prev,
-          firstName,
-          lastName,
+          firstName: profile.first_name || nameParts[0] || '',
+          lastName: profile.last_name || nameParts.slice(1).join(' ') || '',
           email: profile.email || prev.email,
-          phone: profile.phone || ''
+          phone: profile.phone || prev.phone || ''
         }));
       } catch {
-        // Fallback to cached user object
         if (user) {
           const fullName = user.full_name || '';
           const nameParts = fullName.trim().split(/\s+/);
@@ -303,17 +298,12 @@ export default function HotelBooking() {
             firstName: user.first_name || nameParts[0] || '',
             lastName: user.last_name || nameParts.slice(1).join(' ') || '',
             email: user.email || prev.email,
-            phone: user.phone || ''
+            phone: user.phone || prev.phone || ''
           }));
         }
       }
     } else {
-      setFormData(prev => ({
-        ...prev,
-        firstName: '',
-        lastName: '',
-        phone: ''
-      }));
+      setFormData(prev => ({ ...prev, firstName: '', lastName: '', phone: '' }));
     }
   };
 

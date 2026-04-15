@@ -18,6 +18,7 @@ import PaymentProcessingOverlay from '../../components/common/PaymentProcessingO
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
+import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
 
 const EXTRAS = [
@@ -78,7 +79,8 @@ export default function CarRentalBooking() {
   const [orderId, setOrderId] = useState(null);
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     licenseNumber: '',
@@ -91,7 +93,7 @@ export default function CarRentalBooking() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   // Check if driver info is complete
-  const isDriverInfoComplete = formData.name && formData.email && formData.phone && formData.licenseNumber;
+  const isDriverInfoComplete = formData.firstName && formData.email && formData.phone && formData.licenseNumber;
   
   // Check if all mandatory sections are complete
   const canSelectPayment = extrasConfirmed && isDriverInfoComplete;
@@ -132,18 +134,19 @@ export default function CarRentalBooking() {
     loadData();
   }, [navigate, user]);
 
-  const handleSelfChange = (checked) => {
+  const handleSelfChange = async (checked) => {
     setIsSelf(checked);
-    if (checked && user) {
-      setFormData(prev => ({
-        ...prev,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, name: '', phone: '' }));
-    }
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        setFormData(prev => ({ ...prev, firstName: profile.first_name || nameParts[0] || '', lastName: profile.last_name || nameParts.slice(1).join(' ') || '', email: profile.email || prev.email, phone: profile.phone || prev.phone || '' }));
+      } catch {
+        if (user) { const fullName = user.full_name || ''; const nameParts = fullName.trim().split(/\s+/); setFormData(prev => ({ ...prev, firstName: user.first_name || nameParts[0] || '', lastName: user.last_name || nameParts.slice(1).join(' ') || '', email: user.email || prev.email, phone: user.phone || prev.phone || '' })); }
+      }
+    } else { setFormData(prev => ({ ...prev, firstName: '', lastName: '', phone: '' })); }
   };
 
   const toggleExtra = (extraId) => {

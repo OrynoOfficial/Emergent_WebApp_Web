@@ -127,15 +127,28 @@ export default function PackageBooking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
 
-  const handleSenderSelfChange = (checked) => {
+  const handleSenderSelfChange = async (checked) => {
     setIsSenderSelf(checked);
-    if (checked && user) {
-      setBooking(prev => ({
-        ...prev,
-        sender_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        sender_phone: user.phone || '',
-        sender_email: user.email || ''
-      }));
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        setBooking(prev => ({
+          ...prev,
+          sender_name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+          sender_phone: profile.phone || '',
+          sender_email: profile.email || prev.sender_email
+        }));
+      } catch {
+        if (user) {
+          setBooking(prev => ({
+            ...prev,
+            sender_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            sender_phone: user.phone || '',
+            sender_email: user.email || prev.sender_email
+          }));
+        }
+      }
     } else {
       setBooking(prev => ({ ...prev, sender_name: '', sender_phone: '' }));
     }

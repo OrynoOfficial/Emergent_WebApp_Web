@@ -18,6 +18,7 @@ import PaymentProcessingOverlay from '../../components/common/PaymentProcessingO
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
+import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
 
 const TICKET_TYPES = [
@@ -73,7 +74,8 @@ export default function EventBooking() {
   const [orderId, setOrderId] = useState(null);
   
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: ''
   });
@@ -104,18 +106,19 @@ export default function EventBooking() {
     loadData();
   }, [navigate, user]);
 
-  const handleSelfChange = (checked) => {
+  const handleSelfChange = async (checked) => {
     setIsSelf(checked);
-    if (checked && user) {
-      setFormData(prev => ({
-        ...prev,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, name: '', phone: '' }));
-    }
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const nameParts = fullName.trim().split(/\s+/);
+        setFormData(prev => ({ ...prev, firstName: profile.first_name || nameParts[0] || '', lastName: profile.last_name || nameParts.slice(1).join(' ') || '', email: profile.email || prev.email, phone: profile.phone || prev.phone || '' }));
+      } catch {
+        if (user) { const fullName = user.full_name || ''; const nameParts = fullName.trim().split(/\s+/); setFormData(prev => ({ ...prev, firstName: user.first_name || nameParts[0] || '', lastName: user.last_name || nameParts.slice(1).join(' ') || '', email: user.email || prev.email, phone: user.phone || prev.phone || '' })); }
+      }
+    } else { setFormData(prev => ({ ...prev, firstName: '', lastName: '', phone: '' })); }
   };
 
   const calculatePricing = () => {
@@ -164,7 +167,7 @@ export default function EventBooking() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.firstName || !formData.email || !formData.phone) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -335,73 +338,19 @@ export default function EventBooking() {
             </div>
 
             {/* Contact Information */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl">
-                    <User className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Contact Information</h3>
-                    <p className="text-sm text-white/70">Where should we send your tickets?</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <div className="mb-6 p-4 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-pink-600" />
-                      <span className="font-medium text-slate-700">Use my account details</span>
-                    </div>
-                    <Switch checked={isSelf} onCheckedChange={handleSelfChange} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Full Name *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="John Doe"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-700 font-medium">Email Address *</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="john@example.com"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-slate-700 font-medium">Phone Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="+237 6XX XXX XXX"
-                        className="pl-10 h-12 bg-slate-50 border-slate-200"
-                        disabled={isSelf}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <BookerInfoSection
+              title="Contact Information"
+              subtitle="Where should we send your tickets?"
+              toggleLabel="Use my account details"
+              firstName={formData.firstName}
+              lastName={formData.lastName}
+              email={formData.email}
+              phone={formData.phone}
+              onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+              user={user}
+              isSelf={isSelf}
+              onSelfChange={handleSelfChange}
+            />
 
             {/* Payment Section */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
