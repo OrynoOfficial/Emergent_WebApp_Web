@@ -68,6 +68,7 @@ from routes.employee_scopes import router as employee_scopes_router
 from routes.customer_location import router as customer_location_router
 from routes.communications import router as communications_router
 from routes.favourites import router as favourites_router
+from routes.reports import router as reports_router
 from routes.seat_ws import router as seat_ws_router
 from routes.invitations import router as invitations_router
 from routes.management_dashboard import router as management_dashboard_router
@@ -298,6 +299,7 @@ app.include_router(seat_ws_router)  # WebSocket for real-time seat updates
 app.include_router(invitations_router)  # Email invitation system
 app.include_router(management_dashboard_router)  # Real operator-scoped dashboard stats
 app.include_router(subscriptions_router)  # User-to-operator subscriptions & promotions
+app.include_router(reports_router)  # Report generation with operator scoping
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")
