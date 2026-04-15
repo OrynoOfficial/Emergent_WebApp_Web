@@ -571,8 +571,16 @@ async def get_tickets(
     # Build query
     query = {}
     
-    # For non-admin users, show only their tickets
-    if current_user.get("role") not in ["admin", "super_admin", "employee"]:
+    # Role-based scoping
+    role = current_user.get("role")
+    if role == "operator":
+        # Operators see tickets related to their operator
+        op_id = current_user.get("operator_context", {}).get("operator_id") or current_user.get("operator_id")
+        if op_id:
+            query["$or"] = [{"operator_id": op_id}, {"customer_id": current_user["_id"]}]
+        else:
+            query["customer_id"] = current_user["_id"]
+    elif role not in ("admin", "super_admin", "employee"):
         query["customer_id"] = current_user["_id"]
     
     # Handle multiple statuses (for sub-tabs)
@@ -661,42 +669,52 @@ async def get_ticket_stats(
     """Get ticket statistics for dashboard"""
     db = get_database()
     
+    # Build base query for operator scoping
+    base_query = {}
+    role = current_user.get("role")
+    if role == "operator":
+        op_id = current_user.get("operator_context", {}).get("operator_id") or current_user.get("operator_id")
+        if op_id:
+            base_query["$or"] = [{"operator_id": op_id}, {"customer_id": current_user["_id"]}]
+        else:
+            base_query["customer_id"] = current_user["_id"]
+    
     # Overall stats
-    total = await db.support_tickets.count_documents({})
-    open_count = await db.support_tickets.count_documents({"status": "open"})
-    pending_count = await db.support_tickets.count_documents({"status": "pending"})
-    in_progress_count = await db.support_tickets.count_documents({"status": "in_progress"})
-    resolved_count = await db.support_tickets.count_documents({"status": "resolved"})
-    closed_count = await db.support_tickets.count_documents({"status": "closed"})
+    total = await db.support_tickets.count_documents(base_query)
+    open_count = await db.support_tickets.count_documents({**base_query, "status": "open"})
+    pending_count = await db.support_tickets.count_documents({**base_query, "status": "pending"})
+    in_progress_count = await db.support_tickets.count_documents({**base_query, "status": "in_progress"})
+    resolved_count = await db.support_tickets.count_documents({**base_query, "status": "resolved"})
+    closed_count = await db.support_tickets.count_documents({**base_query, "status": "closed"})
     
     # Unassigned tickets
-    unassigned_count = await db.support_tickets.count_documents({"assigned_to": None, "status": {"$nin": ["resolved", "closed"]}})
+    unassigned_count = await db.support_tickets.count_documents({**base_query, "assigned_to": None, "status": {"$nin": ["resolved", "closed"]}})
     
     # Priority breakdown
-    urgent_count = await db.support_tickets.count_documents({"priority": "urgent", "status": {"$nin": ["resolved", "closed"]}})
-    high_count = await db.support_tickets.count_documents({"priority": "high", "status": {"$nin": ["resolved", "closed"]}})
+    urgent_count = await db.support_tickets.count_documents({**base_query, "priority": "urgent", "status": {"$nin": ["resolved", "closed"]}})
+    high_count = await db.support_tickets.count_documents({**base_query, "priority": "high", "status": {"$nin": ["resolved", "closed"]}})
     
     # User type breakdown
-    customer_tickets = await db.support_tickets.count_documents({"user_type": "customer"})
-    operator_tickets = await db.support_tickets.count_documents({"user_type": "operator"})
+    customer_tickets = await db.support_tickets.count_documents({**base_query, "user_type": "customer"})
+    operator_tickets = await db.support_tickets.count_documents({**base_query, "user_type": "operator"})
     
     # Category breakdown
     categories = ["booking", "payment", "refund", "technical", "complaint", "inquiry", "operator", "general"]
     category_stats = {}
     for cat in categories:
-        category_stats[cat] = await db.support_tickets.count_documents({"category": cat})
+        category_stats[cat] = await db.support_tickets.count_documents({**base_query, "category": cat})
     
     # Recent activity - tickets created in last 7 days
     week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-    recent_count = await db.support_tickets.count_documents({"created_at": {"$gte": week_ago}})
+    recent_count = await db.support_tickets.count_documents({**base_query, "created_at": {"$gte": week_ago}})
     
     # Today's tickets
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    today_count = await db.support_tickets.count_documents({"created_at": {"$gte": today_start}})
+    today_count = await db.support_tickets.count_documents({**base_query, "created_at": {"$gte": today_start}})
     
     # Get team members with assigned ticket counts
     pipeline = [
-        {"$match": {"assigned_to": {"$ne": None}}},
+        {"$match": {**base_query, "assigned_to": {"$ne": None}}},
         {"$group": {"_id": "$assigned_to", "name": {"$first": "$assigned_to_name"}, "count": {"$sum": 1}}}
     ]
     team_stats = await db.support_tickets.aggregate(pipeline).to_list(100)
@@ -731,12 +749,22 @@ async def get_detailed_stats(
     """Get detailed ticket statistics with team workload breakdown"""
     db = get_database()
     
-    if current_user.get("role") not in ["admin", "super_admin", "employee"]:
+    if current_user.get("role") not in ["admin", "super_admin", "employee", "operator"]:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Build base query for operator scoping
+    base_query = {}
+    role = current_user.get("role")
+    if role == "operator":
+        op_id = current_user.get("operator_context", {}).get("operator_id") or current_user.get("operator_id")
+        if op_id:
+            base_query["$or"] = [{"operator_id": op_id}, {"customer_id": current_user["_id"]}]
+        else:
+            base_query["customer_id"] = current_user["_id"]
     
     # Team workload with status breakdown
     team_pipeline = [
-        {"$match": {"assigned_to": {"$ne": None}}},
+        {"$match": {**base_query, "assigned_to": {"$ne": None}}},
         {"$group": {
             "_id": {"assignee": "$assigned_to", "status": "$status"},
             "name": {"$first": "$assigned_to_name"},
@@ -762,7 +790,7 @@ async def get_detailed_stats(
     
     # Customer tickets breakdown by category
     cust_pipeline = [
-        {"$match": {"user_type": "customer"}},
+        {"$match": {**base_query, "user_type": "customer"}},
         {"$group": {"_id": "$category", "count": {"$sum": 1},
                     "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
                     "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
@@ -772,7 +800,7 @@ async def get_detailed_stats(
     
     # Operator tickets breakdown by category
     op_pipeline = [
-        {"$match": {"user_type": "operator"}},
+        {"$match": {**base_query, "user_type": "operator"}},
         {"$group": {"_id": "$category", "count": {"$sum": 1},
                     "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
                     "resolved": {"$sum": {"$cond": [{"$in": ["$status", ["resolved", "closed"]]}, 1, 0]}}
@@ -782,6 +810,7 @@ async def get_detailed_stats(
     
     # Priority breakdown with status
     priority_pipeline = [
+        {"$match": base_query},
         {"$group": {"_id": "$priority", "count": {"$sum": 1},
                     "open": {"$sum": {"$cond": [{"$in": ["$status", ["open", "pending"]]}, 1, 0]}},
                     "in_progress": {"$sum": {"$cond": [{"$eq": ["$status", "in_progress"]}, 1, 0]}},
@@ -790,9 +819,9 @@ async def get_detailed_stats(
     ]
     by_priority = await db.support_tickets.aggregate(priority_pipeline).to_list(10)
     
-    total = await db.support_tickets.count_documents({})
-    customer_total = await db.support_tickets.count_documents({"user_type": "customer"})
-    operator_total = await db.support_tickets.count_documents({"user_type": "operator"})
+    total = await db.support_tickets.count_documents(base_query)
+    customer_total = await db.support_tickets.count_documents({**base_query, "user_type": "customer"})
+    operator_total = await db.support_tickets.count_documents({**base_query, "user_type": "operator"})
     
     return {
         "total": total,
@@ -1046,9 +1075,14 @@ async def get_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
-    # Check permission - only owner or support staff can view
-    if current_user.get("role") not in ["admin", "super_admin", "employee"]:
-        if ticket.get("customer_id") != current_user["_id"]:
+    # Check permission - owner, support staff, or related operator can view
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "employee"):
+        if role == "operator":
+            op_id = current_user.get("operator_context", {}).get("operator_id") or current_user.get("operator_id")
+            if ticket.get("operator_id") != op_id and ticket.get("customer_id") != current_user["_id"]:
+                raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
+        elif ticket.get("customer_id") != current_user["_id"]:
             raise HTTPException(status_code=403, detail="Not authorized to view this ticket")
     
     ticket["id"] = str(ticket.pop("_id", ""))

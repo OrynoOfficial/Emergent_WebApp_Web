@@ -229,7 +229,11 @@ async def delete_promo_code(
     """Delete a promo code - requires promo.delete permission"""
     db = get_database()
     
-    result = await db.promo_codes.delete_one({"code": code.upper()})
+    query = {"code": code.upper()}
+    if current_user["role"] == "operator":
+        query["operator_id"] = current_user.get("operator_id")
+    
+    result = await db.promo_codes.delete_one(query)
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Promo code not found")
