@@ -102,10 +102,13 @@ async def get_events(
                 else:
                     query = {"$and": [query, {"$or": conditions}]}
     
-    events = await db.events.find(query).skip(skip).limit(limit).to_list(limit)
+    events_list = await db.events.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.events.count_documents(query)
     
-    return {"events": events, "total": total}
+    for e in events_list:
+        e["id"] = str(e.pop("_id", ""))
+    
+    return {"events": events_list, "total": total}
 
 @router.get("/{event_id}")
 async def get_event(event_id: str):

@@ -7,35 +7,30 @@
 
 ## Completed Features (Latest First)
 
-**Apr 2026 - Event Full Fields + Restaurant Menu Images & Ingredients**
-- Events: Added doors_open, end_date, ticket_price, contact_email, contact_phone, cover_image to Create/Update models
-- Events form now includes all fields; Results cards display date, time, price, contact info, cover image
-- Restaurant Menu: Added ingredients array field to MenuItemCreate/Update models
-- Menu Item Form has ingredients textarea (comma-separated)
-- Restaurant Menu page shows dish images + expandable ingredients badges
+**Apr 2026 - Cinema Film CRUD + Event Booking Layout + Restaurant Menu**
+- Cinema: Film create/update with poster_url, cover image upload in Add Movie form, films list returns id field
+- Cinema Results: Film poster displayed as cover image
+- Events Results: Displays event_date, ticket_price, contact_email, contact_phone, cover_image
+- Events API: GET /events/ now returns 'id' instead of '_id'
+- Event Booking: Payment Method moved to right column under Order Summary (like Travel Booking)
+- Restaurant Menu: Images on menu cards, expandable ingredients badges
 
-**Apr 2026 - Seat Selection, Event Creation, Cinema Management Fixes**
-- Seat Selection: Optimistic UI updates, instant swap
-- Event Creation: Fixed field mapping (venue_name→venue, start_date→event_date, etc.)
-- Cinema Management: Fixed permission names (cinema.*), API paths (/cinema/), films endpoint
+**Apr 2026 - Event Full Fields + Restaurant Menu Ingredients**
+- Events: doors_open, end_date, ticket_price, contact_email, contact_phone, cover_image in Create/Update
+- Restaurant Menu: ingredients[] field in menu items, comma-separated input in form
 
-**Apr 2026 - Operators Access Filter Fix**
-- Fixed admin in pod with no operators getting __no_access__
+**Apr 2026 - Seat Selection, Cinema Permissions, Operators Fix, Laundry Fix**
 
-**Apr 2026 - Laundry Management Blank Screen Fix**
-- Fixed services array handling (objects vs strings)
-
-**Apr 2026 - Mock Data Removal, Unified Booking, Reports, Tabs, Refactoring**
-
-**Earlier:** Audit Logs, Ticket Scanner, Operator fixes, Loyalty, Notifications, Stripe, AI chatbot
+**Earlier:** Mock data removal, Unified Booking, Reports, Tabs, Refactoring, Audit Logs, Loyalty, Stripe
 
 ## Backlog
 - P2: Date range filters for Admin/Operator reports
 
 ## Key Technical Notes
-- Backend EventCreate requires: name, event_type, venue, city, country, event_date, start_time, end_time, ticket_price, total_seats (+ optional: doors_open, end_date, cover_image, contact_email, contact_phone)
-- Backend MenuItemCreate accepts: name, category, price, description, image, ingredients[], available, popular
 - Cinema API: /api/cinema/ (singular), permissions: cinema.* (singular)
+- Film CRUD uses query params (POST/PUT /cinema/films?title=X&poster_url=Y)
+- Backend EventCreate: name, event_type, venue, city, country, event_date, start_time, end_time, ticket_price, total_seats + optional fields
+- Restaurant MenuItemCreate: name, category, price, image, ingredients[], available, popular
 - operator_id is UUID string, NOT BSON ObjectId
 
 ## Test Credentials
