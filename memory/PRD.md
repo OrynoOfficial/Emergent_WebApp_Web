@@ -7,25 +7,24 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Operator Scoping for Support Tickets & Promo Codes**
+- Support Tickets: GET /, stats, stats/detailed, GET /{id} now scope by operator_id OR customer_id for operators
+- Promo Codes: DELETE /{code} now scoped by operator_id for operators
+- Communications/Alerts: Already had operator scoping (no changes needed)
+- Admin/Super Admin see all data; Operators see only their own
+
 **Apr 2026 - Reports with Real Data & Operator Scoping**
-- 8 report types pulling real data from MongoDB (bookings, revenue, financial, customer insights, operational, service performance, satisfaction, analytics)
-- Operator scoping: admins/super_admins can scope per operator or all. Operators see own data only. Customers blocked (403)
-- Visual view with Recharts (pie, bar, line charts + KPI cards)
-- Data view with tables and detailed breakdowns
-- Download dropdown: Visual (JSON) and Data (CSV) export
-- Backend: /api/reports/generate, /api/reports/operators-list
+- 8 report types pulling real data from MongoDB
+- Operator scoping for reports. Customers blocked.
 
-**Apr 2026 - Unified Tab Styling (Commission Pattern)**
-- Full-width grid tabs across all pages + sub-tabs (Validation, Customer Service)
-
-**Apr 2026 - Sidebar Restructure & UI Polish**
-- System menu, Reports standalone page, Database removed
-- Grid cards with priority borders, default views, welcome text reduced
+**Apr 2026 - Unified Tab Styling + Sidebar Restructure**
+- Full-width grid tabs, System menu, Reports page, Database removed
 
 **Earlier:** Audit Logs, Ticket Scanner, Operator fixes, Loyalty, Notifications, Stripe, AI chatbot
 
 ## Backlog
 - P1: "Airline-Style" Live Seat Selection UI enhancement
+- Minor: Operator missing promo.view permission in role config
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
