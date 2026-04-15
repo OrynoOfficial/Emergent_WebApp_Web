@@ -263,6 +263,19 @@ async def get_user_effective_permissions(user_id: str, db) -> set:
         ]
         permissions.update(admin_default_perms)
     
+    # Default permissions for operator role
+    if user_role == "operator":
+        operator_default_perms = [
+            "orders.view",
+            "receipts.view",
+            "ratings.view",
+            "activity.view",
+            "analytics.view_dashboard",
+            "promo.view", "promo.create", "promo.edit", "promo.delete",
+            "support.view_tickets",
+        ]
+        permissions.update(operator_default_perms)
+    
     # Add custom permissions directly assigned to user
     custom_perms = user.get("custom_permissions", [])
     if custom_perms:
