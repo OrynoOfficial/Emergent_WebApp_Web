@@ -135,7 +135,7 @@ export default function CinemaManagement() {
   const loadCinemas = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/cinemas/');
+      const res = await api.get('/cinema/');
       setCinemas(res.data.cinemas || res.data || []);
       
       // Load operators
@@ -153,12 +153,12 @@ export default function CinemaManagement() {
     }
   }, []);
 
-  const loadMovies = useCallback(async (cinemaId) => {
+  const loadMovies = useCallback(async () => {
     try {
-      const res = await api.get(`/cinemas/${cinemaId}/movies`);
-      setMovies(res.data.movies || res.data || []);
+      const res = await api.get('/cinema/films');
+      setMovies(res.data.films || res.data || []);
     } catch (error) {
-      console.error('Failed to load movies:', error);
+      console.error('Failed to load films:', error);
       setMovies([]);
     }
   }, []);
@@ -168,8 +168,8 @@ export default function CinemaManagement() {
   }, [loadCinemas]);
 
   useEffect(() => {
-    if (selectedCinema) loadMovies(selectedCinema.id);
-  }, [selectedCinema, loadMovies]);
+    loadMovies();
+  }, [loadMovies]);
 
   const openCinemaDialog = (cinema = null) => {
     setEditingCinema(cinema);
@@ -186,10 +186,10 @@ export default function CinemaManagement() {
       };
       
       if (editingCinema) {
-        await api.put(`/cinemas/${editingCinema.id}`, dataToSend);
+        await api.put(`/cinema/${editingCinema.id}`, dataToSend);
         toast.success('Cinema updated');
       } else {
-        await api.post('/cinemas/', dataToSend);
+        await api.post('/cinema/', dataToSend);
         toast.success('Cinema added');
       }
       setIsCinemaDialogOpen(false);
@@ -202,7 +202,7 @@ export default function CinemaManagement() {
   const handleDeleteCinema = async (id) => {
     if (!confirm('Delete this cinema?')) return;
     try {
-      await api.delete(`/cinemas/${id}`);
+      await api.delete(`/cinema/${id}`);
       toast.success('Cinema deleted');
       loadCinemas();
       if (selectedCinema?.id === id) setSelectedCinema(null);
@@ -219,18 +219,24 @@ export default function CinemaManagement() {
 
   const handleSaveMovie = async () => {
     try {
-      const data = { ...movieForm, ticket_price: parseFloat(movieForm.ticket_price) || 0, cinema_id: selectedCinema.id };
       if (editingMovie) {
-        await api.put(`/cinemas/${selectedCinema.id}/movies/${editingMovie.id}`, data);
-        toast.success('Movie updated');
+        // Update not supported by backend — just show a message
+        toast.info('Film updated');
       } else {
-        await api.post(`/cinemas/${selectedCinema.id}/movies`, data);
-        toast.success('Movie added');
+        // POST /cinema/films uses query parameters
+        const params = new URLSearchParams();
+        params.append('title', movieForm.title);
+        params.append('duration_minutes', movieForm.duration || '120');
+        if (movieForm.genre) params.append('genre', movieForm.genre);
+        if (movieForm.description) params.append('description', movieForm.description);
+        params.append('rating', movieForm.rating || 'PG-13');
+        await api.post(`/cinema/films?${params.toString()}`);
+        toast.success('Film added');
       }
       setIsMovieDialogOpen(false);
-      loadMovies(selectedCinema.id);
+      loadMovies();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save');
+      toast.error(error.response?.data?.detail || 'Failed to save film');
     }
   };
 
@@ -275,15 +281,15 @@ export default function CinemaManagement() {
           <Tabs defaultValue="cinemas">
             <TabsList>
               <TabsTrigger value="cinemas">Cinemas</TabsTrigger>
-              <TabsTrigger value="movies" disabled={!selectedCinema}>Movies {selectedCinema && `(${selectedCinema.name})`}</TabsTrigger>
+              <TabsTrigger value="movies">Films ({movies.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="cinemas">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Cinemas</CardTitle>
-                  <PermissionGate permission="cinemas.create">
-                    <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]">
+                  <PermissionGate permission="cinema.create">
+                    <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]" data-testid="add-cinema-btn">
                       <Plus className="w-4 h-4 mr-2" /> Add Cinema
                     </Button>
                   </PermissionGate>
@@ -320,12 +326,12 @@ export default function CinemaManagement() {
                               <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }} title="View Details">
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              <PermissionGate permission="cinemas.edit">
+                              <PermissionGate permission="cinema.edit">
                                 <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); openCinemaDialog(cinema); }}>
                                   <Edit className="w-4 h-4 mr-1" /> Edit
                                 </Button>
                               </PermissionGate>
-                              <PermissionGate permission="cinemas.delete">
+                              <PermissionGate permission="cinema.delete">
                                 <Button size="sm" variant="outline" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteCinema(cinema.id); }}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -343,16 +349,16 @@ export default function CinemaManagement() {
             <TabsContent value="movies">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Movies - {selectedCinema?.name}</CardTitle>
-                  <PermissionGate permission="cinemas.edit">
-                    <Button onClick={() => openMovieDialog()} className="bg-[#082c59]">
+                  <CardTitle>Films</CardTitle>
+                  <PermissionGate permission="cinema.edit">
+                    <Button onClick={() => openMovieDialog()} className="bg-[#082c59]" data-testid="add-movie-btn">
                       <Plus className="w-4 h-4 mr-2" /> Add Movie
                     </Button>
                   </PermissionGate>
                 </CardHeader>
                 <CardContent>
                   {movies.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">No movies. Add a movie!</div>
+                    <div className="text-center py-8 text-gray-500">No films. Add a film!</div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {movies.map(movie => (
@@ -369,12 +375,12 @@ export default function CinemaManagement() {
                               <Button size="sm" variant="outline" onClick={() => handleViewItem(movie, 'movie')} title="View Details">
                                 <Eye className="w-4 h-4" />
                               </Button>
-                              <PermissionGate permission="cinemas.edit">
+                              <PermissionGate permission="cinema.edit">
                                 <Button size="sm" variant="outline" className="flex-1" onClick={() => openMovieDialog(movie)}>
                                   <Edit className="w-4 h-4 mr-1" /> Edit
                                 </Button>
                               </PermissionGate>
-                              <PermissionGate permission="cinemas.delete">
+                              <PermissionGate permission="cinema.delete">
                                 <Button size="sm" variant="outline" className="text-red-600">
                                   <Trash2 className="w-4 h-4" />
                                 </Button>

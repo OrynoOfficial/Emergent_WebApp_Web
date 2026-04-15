@@ -121,26 +121,49 @@ export default function EventsManagement() {
     try {
       // Find operator name if only ID is set
       const operator = operators.find(op => (op._id || op.id) === eventForm.operator_id);
-      const data = { 
-        ...eventForm, 
-        total_capacity: parseInt(eventForm.total_capacity) || 100,
-        operator_name: operator?.name || eventForm.operator_name || ''
-      };
-      // Remove old field names
-      delete data.venue;
-      delete data.total_seats;
-      delete data.ticket_price;
-      delete data.event_date;
-      delete data.start_time;
-      delete data.end_time;
-      delete data.country;
       
       const eventId = editingEvent?._id || editingEvent?.id;
+      
       if (editingEvent) {
-        await api.put(`/events/${eventId}`, data);
+        // For updates, send only changed fields (EventUpdate model is all optional)
+        const updateData = {
+          name: eventForm.name,
+          event_type: eventForm.event_type,
+          description: eventForm.description,
+          venue: eventForm.venue_name || eventForm.venue || '',
+          city: eventForm.city,
+          country: eventForm.country || 'CM',
+          total_seats: parseInt(eventForm.total_capacity) || 100,
+          cover_image: eventForm.cover_image || '',
+          images: eventForm.images || [],
+          operator_id: eventForm.operator_id || '',
+          operator_name: operator?.name || eventForm.operator_name || ''
+        };
+        if (eventForm.start_date) updateData.event_date = eventForm.start_date;
+        if (eventForm.doors_open) updateData.start_time = eventForm.doors_open;
+        
+        await api.put(`/events/${eventId}`, updateData);
         toast.success('Event updated');
       } else {
-        await api.post('/events/', data);
+        // For creation, map frontend fields to backend EventCreate model
+        const createData = {
+          name: eventForm.name,
+          event_type: eventForm.event_type,
+          description: eventForm.description || '',
+          venue: eventForm.venue_name || '',
+          city: eventForm.city || '',
+          country: eventForm.country || 'CM',
+          event_date: eventForm.start_date ? new Date(eventForm.start_date).toISOString() : new Date().toISOString(),
+          start_time: eventForm.doors_open || '18:00',
+          end_time: eventForm.end_date ? '23:00' : '22:00',
+          ticket_price: 0,
+          total_seats: parseInt(eventForm.total_capacity) || 100,
+          cover_image: eventForm.cover_image || '',
+          images: eventForm.images || [],
+          operator_id: eventForm.operator_id || '',
+          operator_name: operator?.name || eventForm.operator_name || ''
+        };
+        await api.post('/events/', createData);
         toast.success('Event created');
       }
       setIsEventDialogOpen(false);

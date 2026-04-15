@@ -254,7 +254,7 @@ export default function LiveSeatMap({
     return () => { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); };
   }, [countdown, fetchSeatsHttp]);
 
-  // Handle seat click
+  // Handle seat click — optimistic UI update first, API call in background
   const handleSeatClick = async (seat) => {
     if (seat.status === 'booked' || seat.status === 'blocked') return;
     if ((seat.status === 'pending' || seat.status === 'reserved') && !reservedBookingIds.has(seat.seat_number)) {
@@ -266,57 +266,70 @@ export default function LiveSeatMap({
     const isSelected = selectedSeats.includes(seatNumber);
 
     if (isSelected) {
-      try {
-        await api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] } });
-      } catch { /* ignore */ }
+      // Optimistic: immediately deselect
       const updatedSeats = selectedSeats.filter(s => s !== seatNumber);
       onSeatsChange(updatedSeats, Array.from(reservedBookingIds.values()));
       setReservedBookingIds(prev => { const next = new Map(prev); next.delete(seatNumber); return next; });
-      toast.success(`Seat ${seatNumber} released`);
       if (updatedSeats.length === 0) setCountdown(null);
+      // Background API release
+      api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] } }).catch(() => {});
+    } else if (selectedSeats.length >= maxSeats && allowSeatSwapping) {
+      // Swap: optimistic UI — remove oldest, add new
+      const oldestSeat = selectedSeats[0];
+      const updatedSeats = [...selectedSeats.slice(1), seatNumber];
+      const nextIds = new Map(reservedBookingIds);
+      nextIds.delete(oldestSeat);
+      nextIds.set(seatNumber, `booking-${seatNumber}`);
+      setReservedBookingIds(nextIds);
+      onSeatsChange(updatedSeats, Array.from(nextIds.values()));
+      setCountdown(new Date(Date.now() + 3 * 60 * 1000));
+      // Background: release old + reserve new in parallel
+      Promise.all([
+        api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(oldestSeat)] } }).catch(() => {}),
+        api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] })
+          .then(({ data }) => {
+            const next = new Map(reservedBookingIds);
+            next.delete(oldestSeat);
+            next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
+            setReservedBookingIds(next);
+            if (data.expires_at) setCountdown(new Date(data.expires_at));
+          })
+          .catch((err) => {
+            if (err.response?.status === 400) {
+              // Seat was taken — revert
+              toast.error(err.response?.data?.detail || 'Seat already taken');
+              onSeatsChange(selectedSeats.filter(s => s !== seatNumber), Array.from(reservedBookingIds.values()));
+              fetchSeatsHttp(true);
+            }
+          })
+      ]);
+    } else if (selectedSeats.length >= maxSeats) {
+      toast.error(`You can only select up to ${maxSeats} seat(s)`);
     } else {
-      if (selectedSeats.length >= maxSeats) {
-        if (!allowSeatSwapping) { toast.error(`You can only select up to ${maxSeats} seat(s)`); return; }
-        const oldestSeat = selectedSeats[0];
-        try {
-          await api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(oldestSeat)] } });
-          const { data } = await api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] });
-          const updatedSeats = [...selectedSeats.slice(1), seatNumber];
-          const next = new Map(reservedBookingIds); next.delete(oldestSeat); next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
+      // Select: optimistic UI
+      const updatedSeats = [...selectedSeats, seatNumber];
+      const nextIds = new Map(reservedBookingIds);
+      nextIds.set(seatNumber, `booking-${seatNumber}`);
+      setReservedBookingIds(nextIds);
+      onSeatsChange(updatedSeats, Array.from(nextIds.values()));
+      setCountdown(new Date(Date.now() + 3 * 60 * 1000));
+      // Background reserve
+      api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] })
+        .then(({ data }) => {
+          const next = new Map(reservedBookingIds);
+          next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
           setReservedBookingIds(next);
-          onSeatsChange(updatedSeats, Array.from(next.values()));
-          const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + 3 * 60 * 1000);
-          setCountdown(expiry);
-          toast.success(`Seat swapped: ${oldestSeat} → ${seatNumber}`);
-        } catch (err) {
-          const updatedSeats = [...selectedSeats.slice(1), seatNumber];
-          const next = new Map(reservedBookingIds); next.delete(oldestSeat); next.set(seatNumber, `booking-${seatNumber}`);
-          setReservedBookingIds(next);
-          onSeatsChange(updatedSeats, Array.from(next.values()));
-          setCountdown(new Date(Date.now() + 3 * 60 * 1000));
-          toast.success(`Seat swapped: ${oldestSeat} → ${seatNumber}`);
-        }
-      } else {
-        try {
-          const { data } = await api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] });
-          const updatedSeats = [...selectedSeats, seatNumber];
-          const next = new Map(reservedBookingIds); next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
-          setReservedBookingIds(next);
-          onSeatsChange(updatedSeats, Array.from(next.values()));
           const timeoutMinutes = data.timeout_minutes || 3;
           const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + timeoutMinutes * 60 * 1000);
           setCountdown(expiry);
-          toast.success(`Seat ${seatNumber} reserved for ${timeoutMinutes} minutes`);
-        } catch (err) {
-          if (err.response?.status === 400) { toast.error(err.response?.data?.detail || 'Seat already taken'); fetchSeatsHttp(true); return; }
-          const updatedSeats = [...selectedSeats, seatNumber];
-          const next = new Map(reservedBookingIds); next.set(seatNumber, `booking-${seatNumber}`);
-          setReservedBookingIds(next);
-          onSeatsChange(updatedSeats, Array.from(next.values()));
-          setCountdown(new Date(Date.now() + 3 * 60 * 1000));
-          toast.success(`Seat ${seatNumber} reserved for 3 minutes`);
-        }
-      }
+        })
+        .catch((err) => {
+          if (err.response?.status === 400) {
+            toast.error(err.response?.data?.detail || 'Seat already taken');
+            onSeatsChange(selectedSeats, Array.from(reservedBookingIds.values()));
+            fetchSeatsHttp(true);
+          }
+        });
     }
   };
 
