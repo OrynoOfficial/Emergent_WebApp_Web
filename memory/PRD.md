@@ -7,11 +7,22 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Laundry Management Blank Screen Fix**
+- Root cause: `services` array in DB contains objects `{name, type, price}`, not strings. Calling `.replace()` on objects crashed the component.
+- Fix: Added `typeof` checks before calling `.replace()` on service items in LaundryManagement.jsx (lines 254, 346, 425)
+- Also fixed duplicate `isFav`/`toggleFav` JSX props in 5 result pages (Laundry, Cinema, Events, Packages, Banquet)
+
+**Apr 2026 - Mock Data Removal & Result Page Fixes**
+- Removed all `MOCK_EVENTS`, `MOCK_SERVICES`, `MOCK_FILMS` from result pages
+- All result pages now strictly fetch from backend APIs
+- Cinema `/films` API route reordered before `/{cinema_id}` to prevent conflicts
+- Event cover image upload added to EventsManagement.jsx
+- Subscribe button moved to result page cards (all 9 service types)
+
 **Apr 2026 - Unified Booking Guest Info Component**
 - Created shared `BookerInfoSection` at `/components/booking/BookerInfoSection.jsx`
-- Identical template across all booking pages: gradient navy header, self-fill toggle, 4 fields (First Name, Last Name, Email, Phone)
-- Self-fill toggle fetches latest profile from `/api/auth/me` (full_name, email, phone)
-- Applied to: Hotel, Restaurant, Cinema, Event, CarRental, Banquet, Travel, Package booking pages
+- Identical template across all booking pages: gradient navy header, self-fill toggle, 4 fields
+- Self-fill toggle fetches latest profile from `/api/auth/me`
 
 **Apr 2026 - Reports with Real Data & Operator Scoping**
 - 8 report types pulling real MongoDB data, operator scoping, Visual/Data/Download
@@ -28,7 +39,14 @@
 **Earlier:** Audit Logs, Ticket Scanner, Operator fixes, Loyalty, Notifications, Stripe, AI chatbot
 
 ## Backlog
-- P1: "Airline-Style" Live Seat Selection UI enhancement
+- P1: "Airline-Style" Live Seat Selection UI enhancement (WebSocket-based graphical seat map)
+- P2: Date range filters for Admin/Operator reports
+
+## Key Technical Notes
+- `operator_id` is stored as UUID string, NOT BSON ObjectId
+- Pressing services in DB are objects `{name, type, price}`, not plain strings
+- Login response uses `access_token` field (not `token`)
+- Tabs use Shadcn `<Tabs>` components (not native HTML)
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
