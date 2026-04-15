@@ -24,14 +24,6 @@ const PACKAGE_SIZES = {
   XXL: { dimensions: '100×80×60 cm', maxWeight: '50 kg' }
 };
 
-const MOCK_SERVICES = [
-  { id: '1', service_name: 'Express Courier', operator_name: 'SpeedPost Cameroon', pickup_location: 'Yaoundé', delivery_location: 'Douala', service_type: 'express', delivery_time: '4-6 hours', dispatch_time: '09:00 AM', rating: 4.8, total_bookings: 245, prices_by_size: { S: 5000, M: 8000, L: 12000, XL: 18000, XXL: 30000 } },
-  { id: '2', service_name: 'Standard Delivery', operator_name: 'CamPost', pickup_location: 'Yaoundé', delivery_location: 'Douala', service_type: 'standard', delivery_time: '24-48 hours', dispatch_time: '08:00 AM', rating: 4.5, total_bookings: 523, prices_by_size: { S: 2500, M: 4000, L: 6000, XL: 10000, XXL: 18000 } },
-  { id: '3', service_name: 'Same Day Rush', operator_name: 'QuickShip', pickup_location: 'Yaoundé', delivery_location: 'Douala', service_type: 'same-day', delivery_time: '6-8 hours', dispatch_time: '07:00 AM', rating: 4.9, total_bookings: 189, prices_by_size: { S: 7500, M: 12000, L: 18000, XL: 25000, XXL: 40000 } },
-  { id: '4', service_name: 'Overnight Delivery', operator_name: 'NightExpress', pickup_location: 'Yaoundé', delivery_location: 'Douala', service_type: 'overnight', delivery_time: 'Next morning by 10 AM', dispatch_time: '06:00 PM', rating: 4.7, total_bookings: 312, prices_by_size: { S: 6000, M: 9500, L: 14000, XL: 20000, XXL: 35000 } },
-  { id: '5', service_name: 'Economy Shipping', operator_name: 'BudgetCargo', pickup_location: 'Yaoundé', delivery_location: 'Douala', service_type: 'standard', delivery_time: '3-5 days', dispatch_time: '10:00 AM', rating: 4.2, total_bookings: 892, prices_by_size: { S: 1500, M: 2500, L: 4000, XL: 7000, XXL: 12000 } }
-];
-
 const SERVICE_TYPE_COLORS = {
   express: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white',
   standard: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white',
@@ -227,13 +219,10 @@ export default function PackagesResults() {
     setLoading(true);
     try {
       const res = await packageApi.searchRoutes({ from, to });
-      if (res.data.services?.length > 0) {
-        setServices(res.data.services);
-      } else {
-        setServices(MOCK_SERVICES);
-      }
+      setServices(res.data.services || res.data.packages || []);
     } catch (error) {
-      setServices(MOCK_SERVICES);
+      console.error('Failed to load packages:', error);
+      setServices([]);
     } finally {
       setLoading(false);
     }

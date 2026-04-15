@@ -24,7 +24,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://operator-promo.preview.emergentagent.com"
+    BASE_URL = "https://unified-booking-hub-2.preview.emergentagent.com"
 
 FUTURE_DATE = "2026-03-15"  # Far future date to avoid conflicts
 

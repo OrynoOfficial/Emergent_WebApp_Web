@@ -38,6 +38,7 @@ const DEFAULT_EVENT_FORM = {
   doors_open: '',
   total_capacity: 100,
   ticket_types: [],
+  cover_image: '',
   images: [],
   tags: [],
   age_restriction: null,
@@ -281,6 +282,34 @@ export default function EventsManagement() {
             <div className="col-span-2">
               <Label>Event Name</Label>
               <Input value={eventForm.name} onChange={e => setEventForm(p => ({ ...p, name: e.target.value }))} placeholder="Event name" />
+            </div>
+            <div className="col-span-2">
+              <Label>Cover Image</Label>
+              <div className="mt-1 flex items-center gap-3">
+                {eventForm.cover_image && (
+                  <img src={eventForm.cover_image} alt="Cover" className="h-20 w-32 object-cover rounded-lg border" />
+                )}
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const formData = new FormData();
+                      formData.append('files', file);
+                      formData.append('folder', 'events');
+                      try {
+                        const res = await api.post('/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        const url = res.data.urls?.[0] || res.data.files?.[0]?.url;
+                        if (url) setEventForm(p => ({ ...p, cover_image: url }));
+                      } catch { toast.error('Upload failed'); }
+                    }}
+                    className="h-10"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">Upload a cover image for your event</p>
+                </div>
+              </div>
             </div>
             <div>
               <Label>Type</Label>

@@ -66,6 +66,37 @@ async def get_cinemas(
     
     return {"cinemas": cinemas, "total": total}
 
+@router.get("/films")
+async def get_films(
+    status: Optional[str] = None,
+    genre: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """Get films"""
+    db = get_database()
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if genre:
+        query["genre"] = genre
+    
+    films = await db.films.find(query, {"_id": 0}).sort("title", 1).skip(skip).limit(limit).to_list(limit)
+    total = await db.films.count_documents(query)
+    
+    return {"films": films, "total": total}
+
+@router.get("/films/{film_id}")
+async def get_film(film_id: str):
+    """Get film details"""
+    db = get_database()
+    film = await db.films.find_one({"_id": film_id})
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+    film["id"] = film.pop("_id")
+    return film
+
 @router.get("/{cinema_id}")
 async def get_cinema(cinema_id: str):
     """Get cinema details"""
@@ -166,37 +197,6 @@ async def create_film(
     await db.films.insert_one(film)
     
     return {"message": "Film created", "film_id": film["_id"]}
-
-@router.get("/films")
-async def get_films(
-    status: Optional[str] = None,
-    genre: Optional[str] = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100)
-):
-    """Get films"""
-    db = get_database()
-    
-    query = {}
-    if status:
-        query["status"] = status
-    if genre:
-        query["genre"] = genre
-    
-    films = await db.films.find(query, {"_id": 0}).sort("title", 1).skip(skip).limit(limit).to_list(limit)
-    total = await db.films.count_documents(query)
-    
-    return {"films": films, "total": total}
-
-@router.get("/films/{film_id}")
-async def get_film(film_id: str):
-    """Get film details"""
-    db = get_database()
-    film = await db.films.find_one({"_id": film_id})
-    if not film:
-        raise HTTPException(status_code=404, detail="Film not found")
-    film["id"] = film.pop("_id")
-    return film
 
 # Showtimes
 @router.post("/{cinema_id}/showtimes")

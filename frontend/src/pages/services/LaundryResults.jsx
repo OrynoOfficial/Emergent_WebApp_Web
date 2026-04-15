@@ -12,14 +12,6 @@ import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
-const MOCK_SERVICES = [
-  { id: '1', name: 'Clean & Fresh Laundry', address: 'Avenue Kennedy, Yaoundé', city: 'Yaoundé', rating: 4.8, reviews: 234, services: ['Washing', 'Ironing', 'Dry Cleaning'], delivery: true, express: true, minPrice: 500, image: 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?w=400', description: 'Professional laundry services with same-day delivery option.' },
-  { id: '2', name: 'Premium Pressing', address: 'Rue de la Joie, Yaoundé', city: 'Yaoundé', rating: 4.6, reviews: 189, services: ['Ironing', 'Dry Cleaning', 'Leather Care'], delivery: true, express: false, minPrice: 300, image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=400', description: 'Specialized in delicate fabrics and premium garments.' },
-  { id: '3', name: 'Express Clean', address: 'Boulevard Central, Yaoundé', city: 'Yaoundé', rating: 4.9, reviews: 312, services: ['Washing', 'Ironing', 'Express Service'], delivery: true, express: true, minPrice: 600, image: 'https://images.unsplash.com/photo-1582735689369-4fe89db7114c?w=400', description: 'Fastest turnaround in town - 2 hour express available.' },
-  { id: '4', name: 'Family Laundromat', address: 'Quartier Bastos, Yaoundé', city: 'Yaoundé', rating: 4.5, reviews: 156, services: ['Washing', 'Ironing'], delivery: false, express: false, minPrice: 400, image: 'https://images.unsplash.com/photo-1469504512102-900f29606341?w=400', description: 'Affordable family-friendly laundry services.' },
-  { id: '5', name: 'Deluxe Dry Cleaners', address: 'Avenue Foch, Yaoundé', city: 'Yaoundé', rating: 4.7, reviews: 278, services: ['Dry Cleaning', 'Leather Care', 'Alterations'], delivery: true, express: true, minPrice: 1500, image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400', description: 'Luxury dry cleaning for your finest garments.' }
-];
-
 const getServiceIcon = (service) => {
   const s = service?.toLowerCase();
   if (s?.includes('wash')) return Droplets;
@@ -205,13 +197,10 @@ export default function LaundryResults() {
     setLoading(true);
     try {
       const res = await pressingApi.list({ city });
-      if (res.data.services?.length > 0) {
-        setServices(res.data.services);
-      } else {
-        setServices(MOCK_SERVICES);
-      }
+      setServices(res.data.services || res.data.shops || res.data.pressings || []);
     } catch (error) {
-      setServices(MOCK_SERVICES);
+      console.error('Failed to load laundry services:', error);
+      setServices([]);
     } finally {
       setLoading(false);
     }

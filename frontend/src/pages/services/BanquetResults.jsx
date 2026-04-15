@@ -12,14 +12,6 @@ import SubscribeButton from '@/components/shared/SubscribeButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
-const MOCK_VENUES = [
-  { id: '1', name: 'Grand Palace Hall', city: 'Yaoundé', venue_type: 'wedding', capacity_min: 100, capacity_max: 500, price_per_day: 500000, rating: 4.8, amenities: ['catering', 'decoration', 'sound_system', 'parking'], images: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800'], description: 'Luxurious venue perfect for grand weddings and celebrations.' },
-  { id: '2', name: 'Conference Center Elite', city: 'Douala', venue_type: 'conference', capacity_min: 50, capacity_max: 200, price_per_day: 300000, rating: 4.5, amenities: ['projector', 'wifi', 'catering', 'parking'], images: ['https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=800'], description: 'Modern conference facilities with state-of-the-art technology.' },
-  { id: '3', name: 'Garden Event Space', city: 'Yaoundé', venue_type: 'birthday', capacity_min: 30, capacity_max: 150, price_per_day: 200000, rating: 4.6, amenities: ['outdoor', 'catering', 'decoration'], images: ['https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=800'], description: 'Beautiful outdoor venue surrounded by lush gardens.' },
-  { id: '4', name: 'Royal Banquet Suite', city: 'Douala', venue_type: 'wedding', capacity_min: 200, capacity_max: 800, price_per_day: 750000, rating: 4.9, amenities: ['catering', 'decoration', 'sound_system', 'parking', 'valet'], images: ['https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=800'], description: 'Premium venue for the most exclusive events.' },
-  { id: '5', name: 'Cozy Meeting Room', city: 'Yaoundé', venue_type: 'meeting', capacity_min: 10, capacity_max: 40, price_per_day: 80000, rating: 4.4, amenities: ['projector', 'wifi', 'coffee'], images: ['https://images.unsplash.com/photo-1497366216548-37526070297c?w=800'], description: 'Intimate space for corporate meetings and workshops.' }
-];
-
 const VENUE_TYPE_COLORS = {
   'wedding': 'bg-gradient-to-r from-pink-500 to-rose-500 text-white',
   'conference': 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white',
@@ -228,9 +220,10 @@ export default function BanquetResults() {
         capacity_min: guests
       };
       const res = await banquetApi.list(params);
-      setVenues(res.data.banquets?.length > 0 ? res.data.banquets : MOCK_VENUES);
+      setVenues(res.data.banquets || res.data.venues || []);
     } catch (error) {
-      setVenues(MOCK_VENUES);
+      console.error('Failed to load venues:', error);
+      setVenues([]);
     } finally {
       setLoading(false);
     }

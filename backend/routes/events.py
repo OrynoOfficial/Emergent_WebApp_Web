@@ -24,6 +24,7 @@ class EventCreate(BaseModel):
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
     images: Optional[list] = []
+    cover_image: Optional[str] = None
 
 @router.post("/")
 async def create_event(
@@ -69,6 +70,11 @@ async def get_events(
     db = get_database()
     
     query = {"$or": [{"is_active": True}, {"is_active": {"$exists": False}}, {"is_active": None}]}
+    
+    # Filter out past events for public listing
+    from datetime import datetime, timezone
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    query["$and"] = [{"$or": [{"start_date": {"$gte": today_str}}, {"start_date": {"$exists": False}}, {"start_date": None}]}]
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if event_type:

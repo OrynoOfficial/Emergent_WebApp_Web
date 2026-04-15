@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Get base URL - VITE_API_URL already includes /api
-const API_URL = import.meta.env.VITE_API_URL || 'https://operator-promo.preview.emergentagent.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://unified-booking-hub-2.preview.emergentagent.com/api';
 console.log('API_URL:', API_URL);
 
 const api = axios.create({

@@ -13,14 +13,6 @@ import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { format } from 'date-fns';
 
-const MOCK_FILMS = [
-  { id: '1', title: 'Black Panther: Wakanda Forever', genre: ['Action', 'Sci-Fi'], duration_minutes: 161, rating: 'PG-13', imdb_rating: 7.3, poster_url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=400', status: 'now_showing', description: 'The people of Wakanda fight to protect their home.', price_from: 3500 },
-  { id: '2', title: 'Avatar: The Way of Water', genre: ['Action', 'Adventure', 'Sci-Fi'], duration_minutes: 192, rating: 'PG-13', imdb_rating: 7.6, poster_url: 'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400', status: 'now_showing', description: 'Jake Sully lives with his newfound family.', price_from: 4000 },
-  { id: '3', title: 'The Batman', genre: ['Action', 'Crime', 'Drama'], duration_minutes: 176, rating: 'PG-13', imdb_rating: 7.8, poster_url: 'https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?w=400', status: 'now_showing', description: 'When a sadistic serial killer begins murdering key political figures.', price_from: 3500 },
-  { id: '4', title: 'Top Gun: Maverick', genre: ['Action', 'Drama'], duration_minutes: 130, rating: 'PG-13', imdb_rating: 8.3, poster_url: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=400', status: 'now_showing', description: 'After more than thirty years of service as a Navy pilot.', price_from: 3500 },
-  { id: '5', title: 'Dune: Part Two', genre: ['Action', 'Adventure', 'Drama'], duration_minutes: 166, rating: 'PG-13', imdb_rating: 8.5, poster_url: 'https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?w=400', status: 'coming_soon', description: 'Paul Atreides unites with Chani and the Fremen.', price_from: 4500 },
-];
-
 const GENRE_COLORS = {
   'Action': 'bg-red-500 text-white',
   'Comedy': 'bg-yellow-500 text-white',
@@ -204,14 +196,11 @@ export default function CinemaResults() {
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const res = await cinemaApi.listFilms({ city });
-      if (res.data.films?.length > 0) {
-        setFilms(res.data.films);
-      } else {
-        setFilms(MOCK_FILMS);
-      }
+      const res = await cinemaApi.getFilms({ city });
+      setFilms(res.data.films || res.data || []);
     } catch (error) {
-      setFilms(MOCK_FILMS);
+      console.error('Failed to load films:', error);
+      setFilms([]);
     } finally {
       setLoading(false);
     }
