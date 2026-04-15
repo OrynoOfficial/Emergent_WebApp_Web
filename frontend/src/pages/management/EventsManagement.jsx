@@ -37,6 +37,7 @@ const DEFAULT_EVENT_FORM = {
   end_date: '',
   doors_open: '',
   total_capacity: 100,
+  ticket_price: '',
   ticket_types: [],
   cover_image: '',
   images: [],
@@ -104,10 +105,15 @@ export default function EventsManagement() {
         ...event,
         venue_name: event.venue_name || event.venue || '',
         venue_address: event.venue_address || '',
-        start_date: event.start_date ? event.start_date.split('T')[0] : '',
-        end_date: event.end_date ? event.end_date.split('T')[0] : '',
+        start_date: event.start_date || (event.event_date ? event.event_date.split('T')[0] : ''),
+        end_date: event.end_date || '',
+        doors_open: event.doors_open || event.start_time || '',
         total_capacity: event.total_capacity || event.total_seats || 100,
+        ticket_price: event.ticket_price ?? '',
         ticket_types: event.ticket_types || [],
+        cover_image: event.cover_image || '',
+        contact_email: event.contact_email || '',
+        contact_phone: event.contact_phone || '',
         operator_id: event.operator_id || '',
         operator_name: event.operator_name || ''
       });
@@ -119,13 +125,10 @@ export default function EventsManagement() {
 
   const handleSaveEvent = async () => {
     try {
-      // Find operator name if only ID is set
       const operator = operators.find(op => (op._id || op.id) === eventForm.operator_id);
-      
       const eventId = editingEvent?._id || editingEvent?.id;
       
       if (editingEvent) {
-        // For updates, send only changed fields (EventUpdate model is all optional)
         const updateData = {
           name: eventForm.name,
           event_type: eventForm.event_type,
@@ -134,18 +137,22 @@ export default function EventsManagement() {
           city: eventForm.city,
           country: eventForm.country || 'CM',
           total_seats: parseInt(eventForm.total_capacity) || 100,
-          cover_image: eventForm.cover_image || '',
+          ticket_price: parseFloat(eventForm.ticket_price) || 0,
+          cover_image: eventForm.cover_image || null,
           images: eventForm.images || [],
+          contact_email: eventForm.contact_email || null,
+          contact_phone: eventForm.contact_phone || null,
+          doors_open: eventForm.doors_open || null,
+          end_date: eventForm.end_date || null,
           operator_id: eventForm.operator_id || '',
           operator_name: operator?.name || eventForm.operator_name || ''
         };
-        if (eventForm.start_date) updateData.event_date = eventForm.start_date;
+        if (eventForm.start_date) updateData.event_date = new Date(eventForm.start_date).toISOString();
         if (eventForm.doors_open) updateData.start_time = eventForm.doors_open;
         
         await api.put(`/events/${eventId}`, updateData);
         toast.success('Event updated');
       } else {
-        // For creation, map frontend fields to backend EventCreate model
         const createData = {
           name: eventForm.name,
           event_type: eventForm.event_type,
@@ -155,11 +162,15 @@ export default function EventsManagement() {
           country: eventForm.country || 'CM',
           event_date: eventForm.start_date ? new Date(eventForm.start_date).toISOString() : new Date().toISOString(),
           start_time: eventForm.doors_open || '18:00',
-          end_time: eventForm.end_date ? '23:00' : '22:00',
-          ticket_price: 0,
+          end_time: '23:00',
+          doors_open: eventForm.doors_open || null,
+          end_date: eventForm.end_date || null,
+          ticket_price: parseFloat(eventForm.ticket_price) || 0,
           total_seats: parseInt(eventForm.total_capacity) || 100,
-          cover_image: eventForm.cover_image || '',
+          cover_image: eventForm.cover_image || null,
           images: eventForm.images || [],
+          contact_email: eventForm.contact_email || null,
+          contact_phone: eventForm.contact_phone || null,
           operator_id: eventForm.operator_id || '',
           operator_name: operator?.name || eventForm.operator_name || ''
         };
@@ -366,6 +377,10 @@ export default function EventsManagement() {
             <div>
               <Label>Doors Open Time</Label>
               <Input type="time" value={eventForm.doors_open} onChange={e => setEventForm(p => ({ ...p, doors_open: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Ticket Price (FCFA)</Label>
+              <Input type="number" value={eventForm.ticket_price} onChange={e => setEventForm(p => ({ ...p, ticket_price: e.target.value }))} placeholder="5000" />
             </div>
             <div>
               <Label>Total Capacity</Label>

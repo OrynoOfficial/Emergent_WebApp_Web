@@ -116,6 +116,22 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
           onChange={(url) => updateForm('image', url)}
         />
       </div>
+
+      <div>
+        <Label>Ingredients</Label>
+        <p className="text-xs text-slate-500 mb-1">Enter ingredients separated by commas</p>
+        <Textarea
+          value={(form.ingredients || []).join(', ')}
+          onChange={(e) => {
+            const val = e.target.value;
+            const arr = val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
+            updateForm('ingredients', arr);
+          }}
+          placeholder="e.g., Chicken, Tomatoes, Onions, Garlic, Palm Oil"
+          rows={2}
+          className="mt-1"
+        />
+      </div>
       
       <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
         <div>

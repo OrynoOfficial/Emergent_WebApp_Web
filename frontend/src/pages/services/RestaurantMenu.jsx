@@ -204,43 +204,70 @@ export default function RestaurantMenu() {
               {/* Menu Items */}
               <div className="p-4 space-y-2">
                 {filteredItems.map(item => (
-                  <div
-                    key={item.id}
-                    className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${
-                      cart[item.id] 
-                        ? 'bg-[#082c59]/5 border border-[#082c59]/20' 
-                        : 'bg-slate-50 border border-transparent hover:border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex-1 mr-3">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-slate-900 text-sm">{item.name}</h4>
-                        {item.popular && (
-                          <span className="flex items-center gap-0.5 px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-semibold rounded-full">
-                            <Flame className="w-3 h-3" /> Popular
-                          </span>
+                  <div key={item.id}>
+                    <div
+                      className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${
+                        cart[item.id] 
+                          ? 'bg-[#082c59]/5 border border-[#082c59]/20' 
+                          : 'bg-slate-50 border border-transparent hover:border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {/* Image thumbnail */}
+                      {item.image && (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 mr-3">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                        </div>
+                      )}
+                      <div className="flex-1 mr-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-slate-900 text-sm">{item.name}</h4>
+                          {item.popular && (
+                            <span className="flex items-center gap-0.5 px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-semibold rounded-full">
+                              <Flame className="w-3 h-3" /> Popular
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.description}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="font-bold text-[#082c59] text-sm">{formatFCFA(item.price)}</p>
+                          {item.ingredients?.length > 0 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); const el = document.getElementById(`ing-${item.id}`); if(el) el.classList.toggle('hidden'); }}
+                              className="text-[10px] text-slate-400 hover:text-[#082c59] underline"
+                            >
+                              Ingredients
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {cart[item.id] ? (
+                          <div className="flex items-center gap-1.5 bg-white rounded-lg border border-slate-200 p-0.5">
+                            <button onClick={() => removeFromCart(item.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
+                              <Minus className="h-3.5 w-3.5 text-slate-600" />
+                            </button>
+                            <span className="w-6 text-center font-bold text-sm text-[#082c59]">{cart[item.id]}</span>
+                            <button onClick={() => addToCart(item)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
+                              <Plus className="h-3.5 w-3.5 text-slate-600" />
+                            </button>
+                          </div>
+                        ) : (
+                          <Button size="sm" onClick={() => addToCart(item)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-8 px-3 text-xs">
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                          </Button>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.description}</p>
-                      <p className="font-bold text-[#082c59] text-sm mt-1">{formatFCFA(item.price)}</p>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {cart[item.id] ? (
-                        <div className="flex items-center gap-1.5 bg-white rounded-lg border border-slate-200 p-0.5">
-                          <button onClick={() => removeFromCart(item.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
-                            <Minus className="h-3.5 w-3.5 text-slate-600" />
-                          </button>
-                          <span className="w-6 text-center font-bold text-sm text-[#082c59]">{cart[item.id]}</span>
-                          <button onClick={() => addToCart(item)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
-                            <Plus className="h-3.5 w-3.5 text-slate-600" />
-                          </button>
+                    {/* Expandable ingredients */}
+                    {item.ingredients?.length > 0 && (
+                      <div id={`ing-${item.id}`} className="hidden px-4 pb-2 pt-1">
+                        <div className="flex flex-wrap gap-1">
+                          {item.ingredients.map((ing, idx) => (
+                            <Badge key={idx} variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">{ing}</Badge>
+                          ))}
                         </div>
-                      ) : (
-                        <Button size="sm" onClick={() => addToCart(item)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-8 px-3 text-xs">
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                        </Button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

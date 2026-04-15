@@ -39,12 +39,14 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
     ...rawEvent,
     type: rawEvent.type || rawEvent.event_type,
     venue: rawEvent.venue || rawEvent.venue_name,
-    date: rawEvent.date || rawEvent.start_date,
-    time: rawEvent.time || rawEvent.doors_open,
-    priceFrom: rawEvent.priceFrom || (rawEvent.ticket_types?.[0]?.price) || 0,
-    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : 999),
+    date: rawEvent.date || rawEvent.start_date || rawEvent.event_date,
+    time: rawEvent.time || rawEvent.doors_open || rawEvent.start_time,
+    priceFrom: rawEvent.priceFrom || rawEvent.ticket_price || (rawEvent.ticket_types?.[0]?.price) || 0,
+    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : (rawEvent.available_seats ?? 999)),
     image: rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
     rating: rawEvent.rating || 4.5,
+    contact_email: rawEvent.contact_email,
+    contact_phone: rawEvent.contact_phone,
   };
   // Favourites handled by parent via isFav/toggleFav props
   const EventIcon = getEventIcon(event.type);
@@ -120,13 +122,21 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1">
               <Calendar className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
-              <span>{format(new Date(event.date), 'MMM dd')}</span>
+              <span>{event.date ? format(new Date(event.date), 'MMM dd, yyyy') : 'TBD'}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <Clock className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
-              <span>{event.time}</span>
-            </div>
+            {event.time && (
+              <div className="flex items-center gap-1">
+                <Clock className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
+                <span>{event.time}</span>
+              </div>
+            )}
           </div>
+          {(event.contact_email || event.contact_phone) && (
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              {event.contact_phone && <span>{event.contact_phone}</span>}
+              {event.contact_email && <span>{event.contact_email}</span>}
+            </div>
+          )}
         </div>
         
         {/* Price & CTA */}
@@ -156,10 +166,10 @@ const EventCardList = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
     ...rawEvent,
     type: rawEvent.type || rawEvent.event_type,
     venue: rawEvent.venue || rawEvent.venue_name,
-    date: rawEvent.date || rawEvent.start_date,
-    time: rawEvent.time || rawEvent.doors_open,
-    priceFrom: rawEvent.priceFrom || (rawEvent.ticket_types?.[0]?.price) || 0,
-    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : 999),
+    date: rawEvent.date || rawEvent.start_date || rawEvent.event_date,
+    time: rawEvent.time || rawEvent.doors_open || rawEvent.start_time,
+    priceFrom: rawEvent.priceFrom || rawEvent.ticket_price || (rawEvent.ticket_types?.[0]?.price) || 0,
+    ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : (rawEvent.available_seats ?? 999)),
     image: rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
     rating: rawEvent.rating || 4.5,
   };

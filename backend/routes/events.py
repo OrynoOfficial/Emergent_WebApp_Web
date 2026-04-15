@@ -19,12 +19,16 @@ class EventCreate(BaseModel):
     event_date: datetime
     start_time: str
     end_time: str
+    doors_open: Optional[str] = None
+    end_date: Optional[str] = None
     ticket_price: float
     total_seats: int
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
     images: Optional[list] = []
     cover_image: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
 
 @router.post("/")
 async def create_event(
@@ -123,9 +127,14 @@ class EventUpdate(BaseModel):
     event_date: Optional[datetime] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    doors_open: Optional[str] = None
+    end_date: Optional[str] = None
     ticket_price: Optional[float] = None
     total_seats: Optional[int] = None
     images: Optional[list] = None
+    cover_image: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
 
 
 @router.put("/{event_id}")

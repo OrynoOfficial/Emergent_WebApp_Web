@@ -28,6 +28,7 @@ class MenuItemCreate(BaseModel):
     category: str
     price: float
     image: Optional[str] = None
+    ingredients: Optional[list] = []
     available: bool = True
     popular: bool = False
 
@@ -160,6 +161,7 @@ async def get_restaurant_menu(restaurant_id: str):
             "price": item.get("price", 0),
             "description": item.get("description", ""),
             "image": item.get("image", ""),
+            "ingredients": item.get("ingredients", []),
             "is_available": item.get("is_available", True),
             "available": item.get("is_available", True),
             "popular": item.get("popular", False)
@@ -296,6 +298,7 @@ class MenuItemUpdate(BaseModel):
     category: Optional[str] = None
     price: Optional[float] = None
     image: Optional[str] = None
+    ingredients: Optional[list] = None
     available: Optional[bool] = None
     is_available: Optional[bool] = None
     popular: Optional[bool] = None
