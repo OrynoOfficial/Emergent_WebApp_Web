@@ -3,737 +3,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Check, X, RefreshCw, Loader2, CreditCard, Ticket, Package,
   Bus, Car, Hotel as HotelIcon, Utensils, Calendar, MapPin,
-  Clock, Users, ChevronDown, ChevronUp, AlertTriangle, XCircle, CheckCircle,
-  Tag, ArrowRight, CircleDot, Mail, Phone, Search, Filter, Megaphone,
-  LayoutGrid, List, History, Eye, EyeOff, ShieldCheck
+  Clock, Users, Tag, Mail, Phone, Megaphone, History, ShieldCheck,
+  CheckCircle, XCircle
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { formatFCFA } from '@/utils/currency';
-import { activityLogger } from '@/utils/activityLogger';
 import { formatDate, formatDateTime } from '@/utils/dateUtils';
 
-// Status Tag System - matching original validation workflow
-const STATUS_TAGS = {
-  // Order/Ticket Statuses
-  pending: { label: 'Pending', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: CircleDot },
-  confirmed: { label: 'Confirmed', color: 'bg-green-100 text-green-800 border-green-300', icon: CheckCircle },
-  not_confirmed: { label: 'Rejected', color: 'bg-red-100 text-red-800 border-red-300', icon: XCircle },
-  cancel_pending: { label: 'Cancellation Pending', color: 'bg-orange-100 text-orange-800 border-orange-300', icon: AlertTriangle },
-  cancel_confirmed: { label: 'Cancellation Approved', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: Check },
-  money_refunded: { label: 'Refunded', color: 'bg-purple-100 text-purple-800 border-purple-300', icon: CreditCard },
-  completed: { label: 'Completed', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', icon: CheckCircle },
-  
-  // Service Statuses
-  active: { label: 'Active', color: 'bg-green-100 text-green-800 border-green-300', icon: CheckCircle },
-  inactive: { label: 'Inactive', color: 'bg-gray-100 text-gray-800 border-gray-300', icon: CircleDot },
-  rejected: { label: 'Rejected', color: 'bg-red-100 text-red-800 border-red-300', icon: XCircle },
-  suspended: { label: 'Suspended', color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: AlertTriangle },
-};
-
-// Status Tag Component
-const StatusTag = ({ status, size = 'default' }) => {
-  const statusInfo = STATUS_TAGS[status] || STATUS_TAGS.pending;
-  const Icon = statusInfo.icon;
-  const sizeClasses = size === 'small' ? 'text-xs px-2 py-0.5' : 'text-sm px-3 py-1';
-  
-  return (
-    <Badge className={`${statusInfo.color} border ${sizeClasses} flex items-center gap-1.5 font-medium`}>
-      <Icon className={size === 'small' ? 'h-3 w-3' : 'h-4 w-4'} />
-      {statusInfo.label}
-    </Badge>
-  );
-};
-
-// Status Flow Indicator
-const StatusFlowIndicator = ({ currentStatus, type = 'ticket' }) => {
-  const ticketFlow = ['pending', 'confirmed', 'completed'];
-  const cancellationFlow = ['cancel_pending', 'cancel_confirmed', 'money_refunded'];
-  const serviceFlow = ['pending', 'active'];
-  
-  const flow = type === 'cancellation' ? cancellationFlow : 
-               type === 'service' ? serviceFlow : ticketFlow;
-  
-  const currentIndex = flow.indexOf(currentStatus);
-  
-  return (
-    <div className="flex items-center gap-1 text-xs text-slate-500">
-      {flow.map((status, idx) => {
-        const isActive = idx <= currentIndex;
-        const isCurrent = status === currentStatus;
-        const statusInfo = STATUS_TAGS[status];
-        
-        return (
-          <React.Fragment key={status}>
-            <span className={`px-2 py-0.5 rounded ${isActive ? statusInfo.color : 'bg-slate-100 text-slate-400'} ${isCurrent ? 'ring-2 ring-offset-1 ring-slate-400' : ''}`}>
-              {statusInfo.label}
-            </span>
-            {idx < flow.length - 1 && (
-              <ArrowRight className={`h-3 w-3 ${isActive ? 'text-slate-600' : 'text-slate-300'}`} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-};
-
-// formatDate is now imported from dateUtils as formatDate
-// formatDateTime is now imported from dateUtils as formatDateTime
-
-// Status History Component - shows the journey of an item
-const StatusHistory = ({ ticket }) => {
-  const history = [];
-  
-  if (ticket.created_at) {
-    history.push({ status: 'pending', date: ticket.created_at, actor: 'Customer', action: 'Created' });
-  }
-  
-  if (ticket.status === 'confirmed' || ticket.status === 'completed') {
-    history.push({ status: 'confirmed', date: ticket.updated_at, actor: 'Admin', action: 'Approved' });
-  }
-  
-  if (ticket.status === 'not_confirmed' && ticket.rejection_details) {
-    history.push({ 
-      status: 'not_confirmed', 
-      date: ticket.rejection_details.rejected_at, 
-      actor: ticket.rejection_details.rejected_by_name || 'Admin',
-      action: 'Rejected',
-      reason: ticket.rejection_details.reason
-    });
-  }
-  
-  if (ticket.cancellation_details?.approved_at) {
-    history.push({
-      status: 'cancel_confirmed',
-      date: ticket.cancellation_details.approved_at,
-      actor: ticket.cancellation_details.approved_by_name || 'Admin',
-      action: 'Cancellation Approved'
-    });
-  }
-  
-  if (ticket.cancellation_details?.refund_approved_at) {
-    history.push({
-      status: 'money_refunded',
-      date: ticket.cancellation_details.refund_approved_at,
-      actor: ticket.cancellation_details.refund_approved_by_name || 'Admin',
-      action: 'Refund Processed'
-    });
-  }
-  
-  if (history.length === 0) return null;
-  
-  return (
-    <div className="mt-3 border-t pt-3">
-      <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
-        <Tag className="h-3 w-3" /> Status History
-      </p>
-      <div className="space-y-1">
-        {history.map((item, idx) => (
-          <div key={idx} className="flex items-center gap-2 text-xs">
-            <StatusTag status={item.status} size="small" />
-            <span className="text-slate-500">by {item.actor}</span>
-            <span className="text-slate-400">• {formatDateTime(item.date)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Ticket Approval Card Component
-const TicketApprovalCard = ({ ticket, onApprove, onReject, isProcessing }) => {
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionInput, setShowRejectionInput] = useState(false);
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
-
-  const handleRejectClick = () => setShowRejectionInput(true);
-
-  const handleConfirmReject = () => {
-    if (rejectionReason.trim()) {
-      onReject(ticket.id, rejectionReason, ticket.customer_id);
-      setShowRejectionInput(false);
-      setRejectionReason('');
-    }
-  };
-
-  const handleCancelReject = () => {
-    setShowRejectionInput(false);
-    setRejectionReason('');
-  };
-
-  const getPaymentStatusColor = (status) => {
-    const colors = {
-      paid: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      failed: 'bg-red-100 text-red-800',
-      refunded: 'bg-blue-100 text-blue-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getCategoryIcon = (cat) => {
-    const c = (cat || '').toLowerCase();
-    if (c.includes('travel')) return <Bus className="h-5 w-5 text-blue-600" />;
-    if (c.includes('car')) return <Car className="h-5 w-5 text-green-500" />;
-    if (c.includes('hotel')) return <HotelIcon className="h-5 w-5 text-purple-500" />;
-    if (c.includes('restaurant')) return <Utensils className="h-5 w-5 text-orange-500" />;
-    if (c.includes('package')) return <Package className="h-5 w-5 text-indigo-500" />;
-    if (c.includes('event')) return <Calendar className="h-5 w-5 text-rose-500" />;
-    return <Ticket className="h-5 w-5 text-blue-600" />;
-  };
-
-  const isCancellation = ticket.status === 'cancel_pending';
-  const isRefund = ticket.status === 'cancel_confirmed';
-
-  // Determine flow type for status indicator
-  const getFlowType = () => {
-    if (isCancellation || isRefund || ticket.status === 'money_refunded') return 'cancellation';
-    return 'ticket';
-  };
-
-  return (
-    <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="flex items-center gap-3 text-lg">
-              {getCategoryIcon(ticket.service_category)}
-              <span className="font-bold truncate">
-                {ticket.service_title || ticket.service_category?.replace('_', ' ') || 'Ticket'}
-              </span>
-            </CardTitle>
-            <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2">
-              <span className="font-medium">Order:</span>
-              <span className="font-mono">{ticket.order_number}</span>
-              <span>•</span>
-              <span>{formatDateTime(ticket.booking_date || ticket.created_at)}</span>
-            </div>
-          </div>
-          <StatusTag status={ticket.status} />
-        </div>
-        
-        {/* Status Flow Indicator */}
-        <div className="mt-3">
-          <StatusFlowIndicator currentStatus={ticket.status} type={getFlowType()} />
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {/* Customer Info */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-slate-500" />
-            <div>
-              <div className="font-medium">{ticket.customer_name || 'Customer'}</div>
-              <div className="text-xs text-slate-500">Customer</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-500" />
-            <div>
-              <div className="font-medium">{formatDate(ticket.service_date || ticket.booking_date)}</div>
-              <div className="text-xs text-slate-500">Service Date</div>
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Expandable Details */}
-        <div>
-          <button
-            onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
-            className="bg-slate-100 p-3 rounded-lg w-full flex items-center justify-between hover:bg-slate-200 transition-colors"
-          >
-            <span className="font-medium text-slate-700 text-sm">Booking Details</span>
-            {isDetailsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-
-          {isDetailsExpanded && ticket.booking_details && (
-            <div className="mt-3 bg-slate-50 rounded-lg p-3 text-sm space-y-2">
-              {Object.entries(ticket.booking_details).map(([key, value]) => (
-                <div key={key} className="flex justify-between">
-                  <span className="capitalize text-slate-600">{key.replace(/_/g, ' ')}:</span>
-                  <span className="font-medium">{String(value)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Payment & Amount */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <div className="text-xs text-slate-500 mb-1">Category</div>
-            <Badge variant="outline" className="capitalize">
-              {ticket.service_category?.replace('_', ' ') || 'N/A'}
-            </Badge>
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 mb-1">Payment</div>
-            <Badge className={getPaymentStatusColor(ticket.payment_status)}>
-              {ticket.payment_status || 'pending'}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Amount */}
-        <div className="bg-slate-50 rounded-lg p-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-xs text-slate-500">Amount</div>
-              <div className="font-bold text-slate-900">{formatFCFA(ticket.amount || ticket.total_amount)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-500">Final Amount</div>
-              <div className="font-bold text-emerald-600">{formatFCFA(ticket.final_amount || ticket.total_amount)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Operator */}
-        {ticket.operator_name && (
-          <div className="text-xs text-slate-500">
-            Operator: <span className="font-medium text-slate-700">{ticket.operator_name}</span>
-          </div>
-        )}
-        
-        {/* Status History */}
-        <StatusHistory ticket={ticket} />
-      </CardContent>
-
-      <CardFooter className="bg-slate-50 p-4 flex flex-col items-stretch gap-3">
-        {showRejectionInput ? (
-          <div className="w-full">
-            <Textarea
-              placeholder="Please provide a reason for rejection..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="mb-2"
-              rows={3}
-            />
-            <div className="flex gap-2">
-              <Button
-                onClick={handleConfirmReject}
-                disabled={!rejectionReason.trim() || isProcessing}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Confirm Rejection
-              </Button>
-              <Button variant="outline" onClick={handleCancelReject}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              onClick={() => onApprove(ticket.id, ticket.customer_id)}
-              className="w-full bg-green-600 hover:bg-green-700"
-              disabled={isProcessing}
-            >
-              <Check className="mr-2 h-4 w-4" />
-              {isCancellation ? 'Approve Cancellation' : isRefund ? 'Approve Refund' : 'Approve'}
-            </Button>
-            <Button
-              onClick={handleRejectClick}
-              className="w-full bg-red-600 hover:bg-red-700"
-              variant="destructive"
-              disabled={isProcessing}
-            >
-              <X className="mr-2 h-4 w-4" />
-              Reject
-            </Button>
-          </div>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Service Approval Card Component
-const ServiceApprovalCard = ({ service, serviceType, onApprove, onReject, isProcessing }) => {
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionInput, setShowRejectionInput] = useState(false);
-
-  const handleRejectClick = () => setShowRejectionInput(true);
-  const handleConfirmReject = () => {
-    if (rejectionReason.trim()) {
-      onReject(service.id, rejectionReason, service.operator_id, serviceType);
-      setShowRejectionInput(false);
-      setRejectionReason('');
-    }
-  };
-  const handleCancelReject = () => {
-    setShowRejectionInput(false);
-    setRejectionReason('');
-  };
-
-  const getServiceIcon = () => {
-    switch (serviceType) {
-      case 'travel_route': return <Bus className="h-5 w-5 text-blue-500" />;
-      case 'car_rental': return <Car className="h-5 w-5 text-green-500" />;
-      case 'restaurant': return <Utensils className="h-5 w-5 text-orange-500" />;
-      case 'hotel': return <HotelIcon className="h-5 w-5 text-purple-500" />;
-      case 'package': return <Package className="h-5 w-5 text-indigo-500" />;
-      case 'event': return <Calendar className="h-5 w-5 text-rose-500" />;
-      default: return <Package className="h-5 w-5 text-slate-500" />;
-    }
-  };
-
-  const getServiceName = () => {
-    return service.name || service.service_name || service.title || 
-           (serviceType === 'travel_route' ? `${service.from_city} → ${service.to_city}` : 'Service');
-  };
-
-  return (
-    <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            {getServiceIcon()}
-            <span className="font-bold truncate">{getServiceName()}</span>
-          </CardTitle>
-          <div className="flex flex-col items-end gap-2">
-            <Badge className="bg-purple-100 text-purple-800 capitalize">
-              {serviceType.replace('_', ' ')}
-            </Badge>
-            <StatusTag status={service.status || 'pending'} size="small" />
-          </div>
-        </div>
-        {service.operator_name && (
-          <p className="text-xs text-slate-500 mt-1">Operator: {service.operator_name}</p>
-        )}
-        
-        {/* Service Status Flow */}
-        <div className="mt-3">
-          <StatusFlowIndicator currentStatus={service.status || 'pending'} type="service" />
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        {/* Service specific details */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {serviceType === 'travel_route' && (
-            <>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-slate-500" />
-                <span>{service.from_city} → {service.to_city}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-slate-500" />
-                <span>{service.departure_time} - {service.arrival_time}</span>
-              </div>
-            </>
-          )}
-          {(serviceType === 'hotel' || serviceType === 'restaurant') && (
-            <>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-slate-500" />
-                <span>{service.city}</span>
-              </div>
-              {service.address && (
-                <div className="text-slate-600 text-xs col-span-2">{service.address}</div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Price */}
-        {(service.price || service.base_price || service.price_per_night) && (
-          <div className="bg-slate-50 rounded-lg p-3">
-            <div className="text-xs text-slate-500">Price</div>
-            <div className="font-bold text-emerald-600">
-              {formatFCFA(service.price || service.base_price || service.price_per_night)}
-              {serviceType === 'hotel' && '/night'}
-              {serviceType === 'car_rental' && '/day'}
-            </div>
-          </div>
-        )}
-
-        {/* Created date */}
-        <div className="text-xs text-slate-500">
-          Submitted: {formatDateTime(service.created_at || service.created_date)}
-        </div>
-      </CardContent>
-
-      <CardFooter className="bg-slate-50 p-4 flex flex-col items-stretch gap-3">
-        {showRejectionInput ? (
-          <div className="w-full">
-            <Textarea
-              placeholder="Please provide a reason for rejection..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="mb-2"
-              rows={3}
-            />
-            <div className="flex gap-2">
-              <Button
-                onClick={handleConfirmReject}
-                disabled={!rejectionReason.trim() || isProcessing}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Confirm Rejection
-              </Button>
-              <Button variant="outline" onClick={handleCancelReject}>Cancel</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            <Button
-              onClick={() => onApprove(service.id, service.operator_id, serviceType)}
-              className="w-full bg-green-600 hover:bg-green-700"
-              disabled={isProcessing}
-            >
-              <Check className="mr-2 h-4 w-4" /> Approve
-            </Button>
-            <Button
-              onClick={handleRejectClick}
-              className="w-full bg-red-600 hover:bg-red-700"
-              variant="destructive"
-              disabled={isProcessing}
-            >
-              <X className="mr-2 h-4 w-4" /> Reject
-            </Button>
-          </div>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Operator Approval Card Component (super_admin only)
-const OperatorApprovalCard = ({ operator, onApprove, onReject, isProcessing }) => {
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [showRejectionInput, setShowRejectionInput] = useState(false);
-
-  const handleRejectClick = () => setShowRejectionInput(true);
-  const handleConfirmReject = () => {
-    if (rejectionReason.trim()) {
-      onReject(operator.id, rejectionReason);
-      setShowRejectionInput(false);
-      setRejectionReason('');
-    }
-  };
-  const handleCancelReject = () => {
-    setShowRejectionInput(false);
-    setRejectionReason('');
-  };
-
-  return (
-    <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm hover:shadow-xl transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <Users className="h-5 w-5 text-indigo-500" />
-            <span className="font-bold truncate">{operator.name || operator.business_name}</span>
-          </CardTitle>
-          <div className="flex flex-col items-end gap-2">
-            <Badge className="bg-indigo-100 text-indigo-800 capitalize">
-              {operator.operator_type || 'Operator'}
-            </Badge>
-            <StatusTag status="pending" size="small" />
-          </div>
-        </div>
-        {operator.created_by_name && (
-          <p className="text-xs text-slate-500 mt-1">
-            Created by: {operator.created_by_name} ({operator.created_by_role || 'admin'})
-          </p>
-        )}
-      </CardHeader>
-
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-slate-500" />
-            <span>{operator.email || 'N/A'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-slate-500" />
-            <span>{operator.phone || 'N/A'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-slate-500" />
-            <span>{operator.city || operator.address || 'N/A'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-slate-500" />
-            <span>{formatDate(operator.created_at)}</span>
-          </div>
-        </div>
-        
-        {operator.service_types && operator.service_types.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {operator.service_types.map(service => (
-              <Badge key={service} variant="outline" className="text-xs">
-                {service}
-              </Badge>
-            ))}
-          </div>
-        )}
-        
-        {operator.description && (
-          <p className="text-sm text-slate-600 line-clamp-2">{operator.description}</p>
-        )}
-      </CardContent>
-
-      <CardFooter className="bg-slate-50 border-t p-4 flex flex-col gap-3">
-        {showRejectionInput ? (
-          <div className="w-full space-y-3">
-            <Textarea
-              placeholder="Reason for rejection..."
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              className="w-full text-sm"
-            />
-            <div className="flex gap-2">
-              <Button 
-                variant="destructive" 
-                onClick={handleConfirmReject}
-                disabled={!rejectionReason.trim() || isProcessing}
-                className="flex-1"
-              >
-                Confirm Rejection
-              </Button>
-              <Button variant="outline" onClick={handleCancelReject}>Cancel</Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex gap-3 w-full">
-            <Button
-              onClick={() => onApprove(operator.id)}
-              className="w-full bg-green-600 hover:bg-green-700"
-              disabled={isProcessing}
-            >
-              <Check className="mr-2 h-4 w-4" /> Approve Operator
-            </Button>
-            <Button
-              onClick={handleRejectClick}
-              className="w-full bg-red-600 hover:bg-red-700"
-              variant="destructive"
-              disabled={isProcessing}
-            >
-              <X className="mr-2 h-4 w-4" /> Reject
-            </Button>
-          </div>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
-
-// Main Component
-// --- Reusable SubPage Component: search, filters, list/grid, pagination, bulk ---
-const ITEMS_PER_PAGE = 8;
-
-function ValidationSubPage({ items, renderCard, renderListRow, emptyIcon, emptyText, onBulkApprove, onBulkReject, showBulk = true }) {
-  const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState(new Set());
-
-  const filtered = useMemo(() => {
-    if (!search) return items;
-    const s = search.toLowerCase();
-    return items.filter(item => {
-      const text = [item.service_name, item.order_number, item.customer_name, item.user_email, item.name, item.title, item.operator_name, item.service_category, item.type, item.item_name, item.performed_by_name].filter(Boolean).join(' ').toLowerCase();
-      return text.includes(s);
-    });
-  }, [items, search]);
-
-  const paginated = useMemo(() => filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE), [filtered, page]);
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-
-  const toggleSelect = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const selectAll = (checked) => setSelected(checked ? new Set(paginated.map(i => i.id)) : new Set());
-
-  useEffect(() => { setPage(1); }, [search]);
-
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-        {emptyIcon || <CheckCircle className="h-14 w-14 mb-3 text-green-300" />}
-        <p className="font-medium text-slate-600">{emptyText || 'No items'}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Search + View Toggle */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." className="pl-10 bg-white h-9" />
-        </div>
-        <div className="flex border rounded-lg overflow-hidden">
-          <button onClick={() => setViewMode('list')} className={`px-2 py-1.5 ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="list-view-btn"><List className="h-4 w-4" /></button>
-          <button onClick={() => setViewMode('grid')} className={`px-2 py-1.5 ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="grid-view-btn"><LayoutGrid className="h-4 w-4" /></button>
-        </div>
-      </div>
-
-      {/* Bulk Actions */}
-      {showBulk && selected.size > 0 && (
-        <Card className="bg-[#082c59] text-white border-0">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm">{selected.size} selected</span>
-            <div className="flex gap-2">
-              {onBulkApprove && <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white h-7" onClick={() => { onBulkApprove(Array.from(selected)); setSelected(new Set()); }}><CheckCircle className="h-3 w-3 mr-1" />Approve All</Button>}
-              {onBulkReject && <Button size="sm" variant="destructive" className="h-7" onClick={() => { onBulkReject(Array.from(selected)); setSelected(new Set()); }}><XCircle className="h-3 w-3 mr-1" />Reject All</Button>}
-              <Button size="sm" variant="ghost" className="text-white hover:bg-white/20 h-7" onClick={() => setSelected(new Set())}><X className="h-3 w-3" /></Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Select All */}
-      {showBulk && (
-        <div className="flex items-center gap-2 px-1">
-          <Checkbox checked={paginated.length > 0 && selected.size >= paginated.length} onCheckedChange={selectAll} />
-          <span className="text-xs text-slate-500">{filtered.length} item{filtered.length !== 1 ? 's' : ''}</span>
-        </div>
-      )}
-
-      {/* Items */}
-      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-        {paginated.map(item => (
-          <div key={item.id || item._id || Math.random()} className="relative">
-            {showBulk && (
-              <div className="absolute top-3 left-3 z-10">
-                <Checkbox checked={selected.has(item.id)} onCheckedChange={() => toggleSelect(item.id)} />
-              </div>
-            )}
-            {viewMode === 'grid' ? renderCard(item) : (renderListRow ? renderListRow(item) : renderCard(item))}
-          </div>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-slate-500">Page {page} of {totalPages} ({filtered.length} items)</span>
-          <div className="flex gap-1">
-            {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => (
-              <button key={i} onClick={() => setPage(i + 1)} className={`w-7 h-7 rounded text-xs font-medium ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 border hover:bg-slate-50'}`}>{i + 1}</button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
+// Extracted sub-components
+import { StatusTag, StatusFlowIndicator } from './validation/StatusComponents';
+import { StatusHistory } from './validation/StatusHistory';
+import { ValidationSubPage } from './validation/ValidationSubPage';
 
 export default function ValidationManagement() {
   const { user } = useAuth();
@@ -847,6 +134,7 @@ export default function ValidationManagement() {
     return <div className="p-8 flex justify-center items-center min-h-[60vh]"><Loader2 className="animate-spin h-10 w-10 text-[#082c59]" /></div>;
   }
 
+  // ========== RENDER CARD FUNCTIONS ==========
   const renderPaymentCard = (order) => {
     const details = typeof order.booking_details === 'string' ? {} : (order.booking_details || {});
     return (
@@ -861,11 +149,11 @@ export default function ValidationManagement() {
         </div>
         <h3 className="font-semibold text-sm text-slate-900 mb-2">{order.service_name || 'Order'}</h3>
         <div className="space-y-1.5 text-xs text-slate-600">
-          <div className="flex items-center gap-1.5"><Users className="h-3 w-3 text-slate-400" /><span>{order.customer_name || order.user_email || order.user_id?.slice(0, 8) || 'Customer'}</span></div>
+          <div className="flex items-center gap-1.5"><Users className="h-3 w-3 text-slate-400" /><span>{order.customer_name || order.user_email || 'Customer'}</span></div>
           {order.operator_name && <div className="flex items-center gap-1.5"><Tag className="h-3 w-3 text-slate-400" /><span>Operator: <span className="font-medium text-slate-800">{order.operator_name}</span></span></div>}
-          {(details.travel_date || details.check_in) && <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3 text-slate-400" /><span>{details.travel_date || details.check_in}{details.check_out ? ` → ${details.check_out}` : ''}</span></div>}
+          {(details.travel_date || details.check_in) && <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3 text-slate-400" /><span>{details.travel_date || details.check_in}{details.check_out ? ` \u2192 ${details.check_out}` : ''}</span></div>}
           {details.seats && <div className="flex items-center gap-1.5"><Ticket className="h-3 w-3 text-slate-400" /><span>Seats: {Array.isArray(details.seats) ? details.seats.join(', ') : details.seats}</span></div>}
-          {(details.origin || details.from_city) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-400" /><span>{details.origin || details.from_city} → {details.destination || details.to_city}</span></div>}
+          {(details.origin || details.from_city) && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-400" /><span>{details.origin || details.from_city} \u2192 {details.destination || details.to_city}</span></div>}
           {order.customer_phone && <div className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /><span>{order.customer_phone}</span></div>}
           {order.customer_email && <div className="flex items-center gap-1.5"><Mail className="h-3 w-3 text-slate-400" /><span>{order.customer_email}</span></div>}
           <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 text-slate-400" /><span>Created: {formatDateTime(order.created_at)}</span></div>
@@ -886,7 +174,6 @@ export default function ValidationManagement() {
 
   const renderTicketCard = (ticket) => {
     const isCancellation = ticket.status === 'cancel_pending' || ticket.status === 'cancel_confirmed';
-    const cancDetails = ticket.cancellation_details || {};
     return (
     <Card className={`bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 ${isCancellation ? 'border-l-orange-400' : 'border-l-blue-400'}`}>
       <CardContent className="p-4 pl-5">
@@ -903,10 +190,10 @@ export default function ValidationManagement() {
           {ticket.operator_name && <div className="flex items-center gap-1.5"><Tag className="h-3 w-3 text-slate-400" /><span>Operator: <span className="font-medium">{ticket.operator_name}</span></span></div>}
           {ticket.payment_method && <div className="flex items-center gap-1.5"><CreditCard className="h-3 w-3 text-slate-400" /><span>Payment: {ticket.payment_method} ({ticket.payment_status})</span></div>}
           <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 text-slate-400" /><span>Created: {formatDateTime(ticket.created_at)}</span></div>
-          {isCancellation && cancDetails.reason && (
+          {isCancellation && ticket.cancellation_details?.reason && (
             <div className="mt-2 p-2 bg-orange-50 rounded-lg border border-orange-200">
               <p className="text-[10px] font-medium text-orange-800">Cancellation reason:</p>
-              <p className="text-[11px] text-orange-700">{cancDetails.reason}</p>
+              <p className="text-[11px] text-orange-700">{ticket.cancellation_details.reason}</p>
             </div>
           )}
         </div>
@@ -921,10 +208,7 @@ export default function ValidationManagement() {
     </Card>
   )};
 
-  const renderServiceCard = (service) => {
-    const isTravel = service.type === 'travel_route';
-    const isHotel = service.type === 'hotel';
-    return (
+  const renderServiceCard = (service) => (
     <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-purple-400">
       <CardContent className="p-4 pl-5">
         <div className="flex items-center justify-between mb-3">
@@ -935,16 +219,14 @@ export default function ValidationManagement() {
           <span className="text-[10px] text-slate-400">{formatDate(service.created_at)}</span>
         </div>
         <h3 className="font-semibold text-sm text-slate-900 mb-2">
-          {isTravel ? `${service.from_city} → ${service.to_city}` : (service.name || service.title || 'Service')}
+          {service.type === 'travel_route' ? `${service.from_city} \u2192 ${service.to_city}` : (service.name || service.title || 'Service')}
         </h3>
         <div className="space-y-1.5 text-xs text-slate-600">
           {service.operator_name && <div className="flex items-center gap-1.5"><Tag className="h-3 w-3 text-slate-400" /><span>Operator: <span className="font-medium">{service.operator_name}</span></span></div>}
-          {isTravel && service.departure_time && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 text-slate-400" /><span>Departure: {service.departure_time} → Arrival: {service.arrival_time}</span></div>}
-          {isTravel && <div className="flex items-center gap-1.5"><Bus className="h-3 w-3 text-slate-400" /><span>Vehicle: {service.vehicle_name || 'N/A'} ({service.vehicle_type}) &middot; {service.total_seats} seats</span></div>}
-          {isHotel && service.city && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-400" /><span>{service.city}{service.address ? `, ${service.address}` : ''}</span></div>}
-          {isHotel && service.star_rating && <div className="flex items-center gap-1.5"><span className="text-amber-500">{'★'.repeat(service.star_rating)}</span></div>}
+          {service.type === 'travel_route' && service.departure_time && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 text-slate-400" /><span>Departure: {service.departure_time} \u2192 Arrival: {service.arrival_time}</span></div>}
+          {service.type === 'travel_route' && <div className="flex items-center gap-1.5"><Bus className="h-3 w-3 text-slate-400" /><span>Vehicle: {service.vehicle_name || 'N/A'} ({service.vehicle_type}) &middot; {service.total_seats} seats</span></div>}
+          {(service.type === 'hotel' || service.type === 'restaurant') && service.city && <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-400" /><span>{service.city}{service.address ? `, ${service.address}` : ''}</span></div>}
           {service.description && <p className="text-slate-500 line-clamp-2 mt-1">{service.description}</p>}
-          {service.amenities?.length > 0 && <div className="flex flex-wrap gap-1 mt-1">{service.amenities.slice(0, 5).map(a => <Badge key={a} variant="outline" className="text-[9px] px-1 py-0">{a}</Badge>)}</div>}
         </div>
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
           {service.price ? <p className="font-bold text-emerald-700">{formatFCFA(service.price)}</p> : <span />}
@@ -955,7 +237,7 @@ export default function ValidationManagement() {
         </div>
       </CardContent>
     </Card>
-  )};
+  );
 
   const renderPromotionCard = (promo) => (
     <Card className="bg-white shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-violet-400">
@@ -973,8 +255,6 @@ export default function ValidationManagement() {
           <div className="flex items-center gap-1.5"><Tag className="h-3 w-3 text-slate-400" /><span>Operator: <span className="font-medium text-slate-800">{promo.operator_name}</span></span></div>
           <div className="flex items-center gap-1.5"><Users className="h-3 w-3 text-slate-400" /><span>Submitted by: {promo.created_by_name}</span></div>
           {promo.discount_value && <div className="flex items-center gap-1.5"><CreditCard className="h-3 w-3 text-slate-400" /><span>Discount: <span className="font-bold text-emerald-700">{promo.discount_value}</span></span></div>}
-          {promo.valid_until && <div className="flex items-center gap-1.5"><Clock className="h-3 w-3 text-slate-400" /><span>Valid until: {formatDate(promo.valid_until)}</span></div>}
-          {promo.service_type && <div className="flex items-center gap-1.5"><Package className="h-3 w-3 text-slate-400" /><span>Service: {promo.service_type}</span></div>}
         </div>
         <div className="flex gap-1.5 mt-3 pt-3 border-t border-slate-100">
           <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 h-7 text-[11px]" onClick={() => handleApprove('promotion', promo.id, promo.title)} disabled={isProcessing}><CheckCircle className="h-3 w-3 mr-1" />Approve & Send</Button>
@@ -1002,13 +282,10 @@ export default function ValidationManagement() {
             <div className="flex items-center gap-1.5"><Users className="h-3 w-3 text-slate-400" /><span>By: <span className="font-medium">{entry.performed_by_name}</span> <span className="text-slate-400">({entry.performed_by_role})</span></span></div>
             {entry.operator_name && <div className="flex items-center gap-1.5"><Tag className="h-3 w-3 text-slate-400" /><span>Operator: {entry.operator_name}</span></div>}
             {entry.amount && <div className="flex items-center gap-1.5"><CreditCard className="h-3 w-3 text-slate-400" /><span className="font-medium text-emerald-700">{formatFCFA(entry.amount)}</span></div>}
-            {entry.subscribers_notified && <div className="flex items-center gap-1.5"><Mail className="h-3 w-3 text-slate-400" /><span>Notified {entry.subscribers_notified} subscribers</span></div>}
           </div>
           {entry.reason && (
             <div className={`mt-3 p-2.5 rounded-lg text-xs ${isRejected ? 'bg-red-50 border border-red-200' : 'bg-slate-50 border border-slate-200'}`}>
-              <p className={`font-medium text-[10px] mb-0.5 ${isRejected ? 'text-red-700' : 'text-slate-700'}`}>
-                {isRejected ? 'Rejection Reason:' : 'Note:'}
-              </p>
+              <p className={`font-medium text-[10px] mb-0.5 ${isRejected ? 'text-red-700' : 'text-slate-700'}`}>{isRejected ? 'Rejection Reason:' : 'Note:'}</p>
               <p className={isRejected ? 'text-red-600' : 'text-slate-600'}>{entry.reason}</p>
             </div>
           )}
@@ -1038,7 +315,6 @@ export default function ValidationManagement() {
             <ShieldCheck className="h-4 w-4" /> Validated {totalValidated > 0 && <Badge variant="outline" className="text-[10px] ml-1">{totalValidated}</Badge>}
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value="pending">
           <Tabs value={pendingTab} onValueChange={setPendingTab}>
             <TabsList className="grid w-full grid-cols-4 mb-4 bg-slate-100">
@@ -1053,7 +329,6 @@ export default function ValidationManagement() {
             <TabsContent value="promotions"><ValidationSubPage items={data.pending_promotions || []} renderCard={renderPromotionCard} emptyText="No pending promotions" /></TabsContent>
           </Tabs>
         </TabsContent>
-
         <TabsContent value="validated">
           <Tabs value={validatedTab} onValueChange={setValidatedTab}>
             <TabsList className="grid w-full grid-cols-4 mb-4 bg-slate-100">
