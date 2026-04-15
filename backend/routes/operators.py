@@ -44,12 +44,14 @@ async def get_operator_access_filter(current_user: dict, db) -> dict:
     
     # Add operators from pod assignment
     pod_membership = auth_context.get("pod_membership")
+    pod_has_operators = False
     if pod_membership:
         pod_id = pod_membership.get("pod_id")
         if pod_id:
             pod = await db.pods.find_one({"id": pod_id})
             if pod and pod.get("assigned_operator_ids"):
                 accessible_operator_ids.update(pod["assigned_operator_ids"])
+                pod_has_operators = True
     
     # Add operators from access scopes
     user_id = str(current_user.get("_id") or current_user.get("id"))
@@ -104,9 +106,9 @@ async def get_operator_access_filter(current_user: dict, db) -> dict:
     if accessible_operator_ids:
         return {"_id": {"$in": list(accessible_operator_ids)}}
     
-    # If no scopes and no pod, check if admin role has default access
-    # For backwards compatibility, admins without specific scopes see all
-    if user_role == "admin" and not scope_assignments and not pod_membership:
+    # If no scopes and no pod with operators, check if admin role has default access
+    # For backwards compatibility, admins without specific scopes/operator assignments see all
+    if user_role == "admin" and not scope_assignments and (not pod_membership or not pod_has_operators):
         return {}  # Legacy admin behavior - sees all
     
     # No access
