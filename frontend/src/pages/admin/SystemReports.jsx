@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import {
   Search, BarChart3, TrendingUp, Download, Eye, ChevronDown,
   Truck, DollarSign, Users, Target, Shield, MessageSquare, Activity, User,
-  FileText, Loader2, X
+  FileText, Loader2, X, Calendar
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -233,7 +233,7 @@ function downloadJSON(data, filename) {
 }
 
 // ========== Report Modal ==========
-function ReportModal({ open, onClose, report, operatorId }) {
+function ReportModal({ open, onClose, report, operatorId, dateFrom, dateTo }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('visual');
@@ -247,9 +247,11 @@ function ReportModal({ open, onClose, report, operatorId }) {
       setViewMode('visual');
       const params = new URLSearchParams({ report_id: report.id });
       if (operatorId) params.append('operator_id', operatorId);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
       api.get(`/reports/generate?${params}`).then(r => setData(r.data)).catch(() => toast.error('Failed to generate report')).finally(() => setLoading(false));
     }
-  }, [open, report, operatorId]);
+  }, [open, report, operatorId, dateFrom, dateTo]);
 
   useEffect(() => {
     const handleClick = (e) => { if (dlRef.current && !dlRef.current.contains(e.target)) setShowDownloadMenu(false); };
@@ -323,6 +325,8 @@ export default function SystemReports() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeReport, setActiveReport] = useState(null);
   const [modalMode, setModalMode] = useState('visual');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
@@ -377,7 +381,7 @@ export default function SystemReports() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input placeholder="Search reports..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-white" data-testid="reports-search-input" />
@@ -393,7 +397,28 @@ export default function SystemReports() {
                 ))}
               </SelectContent>
             </Select>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-white text-sm" placeholder="From" data-testid="reports-date-from" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-white text-sm" placeholder="To" data-testid="reports-date-to" />
+              </div>
+            </div>
           </div>
+          {(dateFrom || dateTo) && (
+            <div className="flex items-center gap-2 mt-3 text-xs text-slate-500">
+              <Badge variant="outline" className="text-xs">
+                <Calendar className="w-3 h-3 mr-1" />
+                {dateFrom || 'Start'} → {dateTo || 'Now'}
+              </Badge>
+              <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-red-500 hover:text-red-700 underline text-xs" data-testid="clear-date-filter">Clear dates</button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -439,7 +464,7 @@ export default function SystemReports() {
       </div>
 
       {/* Report Modal */}
-      <ReportModal open={modalOpen} onClose={() => setModalOpen(false)} report={activeReport} operatorId={selectedOperator !== 'all' ? selectedOperator : isOperator ? 'self' : null} />
+      <ReportModal open={modalOpen} onClose={() => setModalOpen(false)} report={activeReport} operatorId={selectedOperator !== 'all' ? selectedOperator : isOperator ? 'self' : null} dateFrom={dateFrom} dateTo={dateTo} />
     </div>
   );
 }
