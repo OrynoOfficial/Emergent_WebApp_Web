@@ -7,20 +7,19 @@
 
 ## Completed Features (Latest First)
 
-**Apr 2026 - Communications Hub Operator Filter Fix**
-- ServiceCommunicationsHub now accepts operatorId prop
-- All 9 management pages pass scopeOperatorId to Communications tab
-- Support tickets, ratings, and promotions API calls include operator_id filter
+**Apr 2026 - Dashboard Hook Operator Filter**
+- useRealDashboardData hook accepts operatorId as 3rd param
+- Backend /api/management/dashboard-stats accepts operator_id query param for admin scoping
+- All 9 management pages pass scopeOperatorId to the dashboard hook
+- Dashboard, Management, and Communications tabs all filter by selected operator
+
+**Apr 2026 - Communications Hub Operator Filter**
+- ServiceCommunicationsHub accepts operatorId prop, passes to API calls
 
 **Apr 2026 - Operator Scope Filter on All Management Pages**
-- Shared OperatorScopeFilter component with service-type filtering
-- GET /api/operators/by-service?service_type=X returns relevant operators
-- All 10 management pages wired up with operator_id backend filtering
+- Shared OperatorScopeFilter with service-type filtering, backend operator_id on all endpoints
 
-**Apr 2026 - Reports Date Range Filters**
-**Apr 2026 - Cinema Film CRUD + Event Booking Layout + Restaurant Menu**
-**Apr 2026 - Event Full Fields, Seat Selection, Cinema Permissions, Operators Fix, Laundry Fix**
-**Earlier:** Mock data removal, Unified Booking, Reports, Tabs, Refactoring, Audit Logs, Loyalty, Stripe
+**Earlier:** Reports date filters, Cinema CRUD, Event Booking layout, Restaurant Menu, Event fields, Seat Selection, Cinema Permissions, Operators fix, Laundry fix, Mock data removal, Unified Booking, Reports, Tabs, Refactoring
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
