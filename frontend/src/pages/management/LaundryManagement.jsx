@@ -110,7 +110,7 @@ export default function LaundryManagement() {
 
   // Use the laundry dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('laundry');
+  const dashboardData = useRealDashboardData('laundry', '30days', scopeOperatorId);
 
   const handleViewPressing = (pressing) => {
     setViewingPressing(pressing);

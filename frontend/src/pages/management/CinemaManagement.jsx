@@ -128,7 +128,7 @@ export default function CinemaManagement() {
 
   // Use the cinema dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('cinema');
+  const dashboardData = useRealDashboardData('cinema', '30days', scopeOperatorId);
 
   const handleViewItem = (item, type) => {
     setViewingItem(item);

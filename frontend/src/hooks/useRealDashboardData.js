@@ -4,8 +4,11 @@ import api from '@/api/client';
 /**
  * Hook to fetch real operator-scoped dashboard stats from the backend.
  * Replaces all mock/derived data generators in management pages.
+ * @param {string} serviceType - e.g. 'hotels', 'travel', 'restaurants'
+ * @param {string} period - '7days', '30days', '90days', '1year'
+ * @param {string} operatorId - optional operator ID for admin scoping
  */
-export function useRealDashboardData(serviceType, period = '30days') {
+export function useRealDashboardData(serviceType, period = '30days', operatorId = '') {
   const [data, setData] = useState({
     stats: {
       totalItems: 0, activeItems: 0, totalBookings: 0, totalRevenue: 0,
@@ -22,14 +25,15 @@ export function useRealDashboardData(serviceType, period = '30days') {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/management/dashboard-stats?service_type=${serviceType}&period=${period}`);
+      const opParam = operatorId ? `&operator_id=${operatorId}` : '';
+      const res = await api.get(`/management/dashboard-stats?service_type=${serviceType}&period=${period}${opParam}`);
       setData(res.data);
     } catch (err) {
       console.error('Failed to load dashboard stats:', err);
     } finally {
       setLoading(false);
     }
-  }, [serviceType, period]);
+  }, [serviceType, period, operatorId]);
 
   useEffect(() => {
     fetchData();

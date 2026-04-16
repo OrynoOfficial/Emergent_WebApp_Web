@@ -4,6 +4,7 @@ for all service management pages (Hotels, Travel, Restaurants, etc.)
 Pulls from orders, ratings collections — no mock data.
 """
 from fastapi import APIRouter, Depends, Query
+from typing import Optional
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from datetime import datetime, timezone, timedelta
@@ -32,6 +33,7 @@ def get_categories_for_service(service_type: str) -> list:
 async def get_dashboard_stats(
     service_type: str = Query(..., description="Service type: hotels, travel, restaurants, etc."),
     period: str = Query("30days", description="Time period: 7days, 30days, 90days"),
+    operator_id: Optional[str] = Query(None, description="Filter by operator ID (admin only)"),
     current_user: dict = Depends(get_current_active_user),
 ):
     """Get real operator-scoped dashboard stats for a service management page."""
@@ -43,16 +45,18 @@ async def get_dashboard_stats(
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Build operator filter
-    operator_id = None
-    if current_user.get("role") == "operator":
-        operator_id = current_user.get("operator_id")
+    resolved_operator_id = None
+    if current_user.get("role") in ("admin", "super_admin") and operator_id:
+        resolved_operator_id = operator_id
+    elif current_user.get("role") == "operator":
+        resolved_operator_id = current_user.get("operator_id")
 
     categories = get_categories_for_service(service_type)
 
     # Base query for orders
     order_query = {"service_category": {"$in": categories}}
-    if operator_id:
-        order_query["operator_id"] = operator_id
+    if resolved_operator_id:
+        order_query["operator_id"] = resolved_operator_id
 
     # --- Fetch orders ---
     all_orders = await db.orders.find(order_query).to_list(10000)
@@ -80,8 +84,8 @@ async def get_dashboard_stats(
 
     # --- Average rating ---
     rating_query = {"entity_type": {"$in": categories}}
-    if operator_id:
-        rating_query["operator_id"] = operator_id
+    if resolved_operator_id:
+        rating_query["operator_id"] = resolved_operator_id
     ratings = await db.ratings.find(rating_query).to_list(10000)
     avg_rating = round(sum(r.get("rating", 0) for r in ratings) / len(ratings), 1) if ratings else 0
 
@@ -118,8 +122,8 @@ async def get_dashboard_stats(
 
     if primary_col:
         item_query = {}
-        if operator_id:
-            item_query["operator_id"] = operator_id
+        if resolved_operator_id:
+            item_query["operator_id"] = resolved_operator_id
         item_count = await db[primary_col].count_documents(item_query)
         active_query = {**item_query}
         # Try status-based active count
@@ -129,8 +133,8 @@ async def get_dashboard_stats(
 
     if secondary_col:
         sec_query = {}
-        if operator_id:
-            sec_query["operator_id"] = operator_id
+        if resolved_operator_id:
+            sec_query["operator_id"] = resolved_operator_id
         secondary_count = await db[secondary_col].count_documents(sec_query)
 
     # --- Daily trend (last 7 days) ---

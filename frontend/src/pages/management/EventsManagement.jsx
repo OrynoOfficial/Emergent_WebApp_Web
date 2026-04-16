@@ -66,7 +66,7 @@ export default function EventsManagement() {
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
   const [scopeOperatorId, setScopeOperatorId] = useState('');
 
-  const dashboardData = useRealDashboardData('events');
+  const dashboardData = useRealDashboardData('events', '30days', scopeOperatorId);
 
   const handleViewEvent = (event) => {
     setViewingEvent(event);

@@ -410,7 +410,7 @@ export default function TravelManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
-  const dashboardData = useRealDashboardData('travel');
+  const dashboardData = useRealDashboardData('travel', '30days', scopeOperatorId);
 
   // Filtered data
   const filteredRoutes = useMemo(() => {

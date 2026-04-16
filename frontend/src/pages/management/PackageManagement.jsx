@@ -114,7 +114,7 @@ export default function PackageManagement() {
 
   // Use the package dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('packages');
+  const dashboardData = useRealDashboardData('packages', '30days', scopeOperatorId);
 
   const handleViewPackage = (pkg) => {
     setViewingPackage(pkg);

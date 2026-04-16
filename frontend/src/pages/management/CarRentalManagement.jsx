@@ -292,7 +292,7 @@ export default function CarRentalManagement() {
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('car_rental');
+  const dashboardData = useRealDashboardData('car_rental', '30days', scopeOperatorId);
 
   // Filtered cars
   const filteredCars = useMemo(() => {

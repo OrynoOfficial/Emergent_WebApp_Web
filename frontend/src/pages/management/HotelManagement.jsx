@@ -91,7 +91,7 @@ export default function HotelManagement() {
   const [saving, setSaving] = useState(false);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('hotels');
+  const dashboardData = useRealDashboardData('hotels', '30days', scopeOperatorId);
 
   // Filtered hotels
   const filteredHotels = useMemo(() => {

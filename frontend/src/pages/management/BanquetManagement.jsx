@@ -111,7 +111,7 @@ export default function BanquetManagement() {
 
   // Use the banquet dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const dashboardData = useRealDashboardData('banquets');
+  const dashboardData = useRealDashboardData('banquets', '30days', scopeOperatorId);
 
   const handleViewBanquet = (banquet) => {
     setViewingBanquet(banquet);

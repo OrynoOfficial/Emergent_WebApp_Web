@@ -260,7 +260,7 @@ export default function RestaurantManagement() {
   const [saving, setSaving] = useState(false);
   const [scopeOperatorId, setScopeOperatorId] = useState('');
 
-  const dashboardData = useRealDashboardData('restaurants');
+  const dashboardData = useRealDashboardData('restaurants', '30days', scopeOperatorId);
 
   // Load restaurants
   const loadRestaurants = useCallback(async () => {
