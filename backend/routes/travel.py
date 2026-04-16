@@ -86,6 +86,7 @@ async def create_travel_route(
 @router.get("/routes/management")
 async def get_travel_routes_management(
     current_user: dict = Depends(get_current_active_user),
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 100
 ):
@@ -95,16 +96,17 @@ async def get_travel_routes_management(
     # Build query based on user role
     query = {}
     
-    # Operators can only see routes they created or are assigned to
-    if current_user["role"] == "operator":
-        operator_id = current_user.get("operator_id")
-        if operator_id:
+    # Admin/SuperAdmin can filter by operator_id
+    if current_user["role"] in ("admin", "super_admin") and operator_id:
+        query["operator_id"] = operator_id
+    elif current_user["role"] == "operator":
+        op_id = current_user.get("operator_id")
+        if op_id:
             query["$or"] = [
-                {"operator_id": operator_id},
+                {"operator_id": op_id},
                 {"created_by": current_user["_id"]}
             ]
         else:
-            # If no operator_id, only show routes they created
             query["created_by"] = current_user["_id"]
     
     routes = await db.travel_routes.find(query).skip(skip).limit(limit).to_list(limit)
@@ -199,6 +201,7 @@ async def get_my_travel_routes(
     search: Optional[str] = None,
     origin: Optional[str] = None,
     destination: Optional[str] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
     current_user: dict = Depends(get_current_active_user)
@@ -212,8 +215,11 @@ async def get_my_travel_routes(
     
     db = get_database()
     
-    # Build base query with operator filter
-    query = get_operator_filter(current_user)
+    # Admin/SuperAdmin can filter by specific operator
+    if current_user["role"] in ("admin", "super_admin") and operator_id:
+        query = {"operator_id": operator_id}
+    else:
+        query = get_operator_filter(current_user)
     
     # Add optional filters
     if search:

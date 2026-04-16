@@ -65,6 +65,7 @@ async def get_hotels(
     city: Optional[str] = None,
     country: Optional[str] = None,
     min_rating: Optional[float] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
@@ -72,6 +73,8 @@ async def get_hotels(
     db = get_database()
     
     query = {"is_active": True}
+    if operator_id:
+        query["operator_id"] = operator_id
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if country:

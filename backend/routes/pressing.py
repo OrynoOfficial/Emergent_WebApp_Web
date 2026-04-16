@@ -42,6 +42,7 @@ async def get_pressings(
     country: Optional[str] = None,
     delivery_available: Optional[bool] = None,
     express_available: Optional[bool] = None,
+    operator_id: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
@@ -50,6 +51,8 @@ async def get_pressings(
     
     query = {"status": LaundryStatus.ACTIVE}
     
+    if operator_id:
+        query["operator_id"] = operator_id
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if delivery_available is not None:

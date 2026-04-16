@@ -87,6 +87,7 @@ async def get_restaurants(
     city: Optional[str] = None,
     country: Optional[str] = None,
     cuisine: Optional[str] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
@@ -94,6 +95,8 @@ async def get_restaurants(
     db = get_database()
     
     query = {"is_active": True}
+    if operator_id:
+        query["operator_id"] = operator_id
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     if cuisine:

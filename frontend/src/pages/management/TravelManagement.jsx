@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 
 // Service components
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -406,6 +407,7 @@ export default function TravelManagement() {
   const [vehicleForm, setVehicleForm] = useState(DEFAULT_VEHICLE_FORM);
   const [selectedOperator, setSelectedOperator] = useState({ id: '', name: '' });
 
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
   const dashboardData = useRealDashboardData('travel');
@@ -434,8 +436,9 @@ export default function TravelManagement() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const routeParams = scopeOperatorId ? { operator_id: scopeOperatorId } : {};
       const [routesRes, vehiclesRes] = await Promise.all([
-        travelRouteApi.list(),
+        travelRouteApi.list(routeParams),
         vehicleApi.list()
       ]);
       setRoutes(routesRes.data.routes || []);
@@ -452,7 +455,7 @@ export default function TravelManagement() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, scopeOperatorId]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -601,10 +604,13 @@ export default function TravelManagement() {
                 <p className="text-slate-500">Manage routes, vehicles, and communications</p>
               </div>
             </div>
-            <Button onClick={loadData} variant="outline" disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />
+              <Button onClick={loadData} variant="outline" disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
       </div>

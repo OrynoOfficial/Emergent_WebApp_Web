@@ -229,6 +229,36 @@ async def create_operator(
     
     return result
 
+
+@router.get("/by-service")
+async def get_operators_by_service(
+    service_type: Optional[str] = Query(None, description="Filter by service type: travel, restaurant, cinema, hotel, pressing, banquet, packages, car_rental, events"),
+    current_user: dict = Depends(require_any_permission(["operators.view", "operators.view_all"]))
+):
+    """Get operators filtered by service type for admin scope selectors."""
+    db = get_database()
+    query = {"status": "active"}
+    
+    if service_type and service_type != "all":
+        # Match operators that have this service in their service_types array
+        # OR whose operator_type matches, OR multi-service operators
+        query["$or"] = [
+            {"service_types": service_type},
+            {"operator_type": service_type},
+            {"operator_type": "multi"},
+        ]
+    
+    operators = []
+    async for op in db.operators.find(query).sort("name", 1):
+        operators.append({
+            "id": str(op["_id"]),
+            "name": op.get("name", "Unknown"),
+            "operator_type": op.get("operator_type", ""),
+            "service_types": op.get("service_types", []),
+        })
+    return {"operators": operators}
+
+
 @router.get("/")
 async def get_operators(
     op_status: Optional[str] = None,

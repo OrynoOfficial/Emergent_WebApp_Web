@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -63,8 +64,8 @@ export default function EventsManagement() {
   const [viewingEvent, setViewingEvent] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
 
-  // Use the events dashboard data hook
   const dashboardData = useRealDashboardData('events');
 
   const handleViewEvent = (event) => {
@@ -76,7 +77,8 @@ export default function EventsManagement() {
   const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/events/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/events/${params}`);
       setEvents(res.data.events || res.data || []);
       
       // Load operators
@@ -92,7 +94,7 @@ export default function EventsManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   useEffect(() => {
     loadEvents();
@@ -206,15 +208,18 @@ export default function EventsManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#082c59]">Events Management Center</h1>
           <p className="text-gray-600">Manage events, tickets, and communications</p>
         </div>
-        <Button onClick={loadEvents} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <OperatorScopeFilter serviceType="events" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadEvents} variant="outline" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

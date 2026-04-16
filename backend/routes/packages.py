@@ -46,6 +46,7 @@ async def get_packages(
     max_price: Optional[float] = None,
     duration_days: Optional[int] = None,
     featured: Optional[bool] = None,
+    operator_id: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
@@ -54,6 +55,8 @@ async def get_packages(
     
     query = {"status": PackageStatus.ACTIVE}
     
+    if operator_id:
+        query["operator_id"] = operator_id
     if destination:
         query["destination"] = {"$regex": destination, "$options": "i"}
     if package_type:

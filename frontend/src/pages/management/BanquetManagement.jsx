@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -109,6 +110,7 @@ export default function BanquetManagement() {
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
 
   // Use the banquet dashboard data hook
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const dashboardData = useRealDashboardData('banquets');
 
   const handleViewBanquet = (banquet) => {
@@ -120,7 +122,8 @@ export default function BanquetManagement() {
   const loadBanquets = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/banquets/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/banquets/${params}`);
       setBanquets(res.data.banquets || res.data || []);
       
       // Load operators
@@ -136,7 +139,7 @@ export default function BanquetManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   useEffect(() => {
     loadBanquets();
@@ -195,10 +198,13 @@ export default function BanquetManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]">Banquet Hall Management</h1>
           <p className="text-gray-600">Manage halls, events, analytics, and communications</p>
         </div>
-        <Button onClick={loadBanquets} variant="outline" disabled={loading}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadBanquets} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

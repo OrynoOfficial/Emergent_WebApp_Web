@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -126,6 +127,7 @@ export default function CinemaManagement() {
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
 
   // Use the cinema dashboard data hook
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const dashboardData = useRealDashboardData('cinema');
 
   const handleViewItem = (item, type) => {
@@ -138,10 +140,10 @@ export default function CinemaManagement() {
   const loadCinemas = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/cinema/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/cinema/${params}`);
       setCinemas(res.data.cinemas || res.data || []);
       
-      // Load operators
       try {
         const opRes = await api.get('/operators/');
         setOperators(opRes.data.operators || opRes.data || []);
@@ -154,7 +156,7 @@ export default function CinemaManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   const loadMovies = useCallback(async () => {
     try {
@@ -263,15 +265,18 @@ export default function CinemaManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#082c59]">Cinema Management Center</h1>
           <p className="text-gray-600">Manage cinemas, movies, analytics, and communications</p>
         </div>
-        <Button onClick={loadCinemas} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <OperatorScopeFilter serviceType="cinema" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadCinemas} variant="outline" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

@@ -67,6 +67,7 @@ async def get_events(
     city: Optional[str] = None,
     country: Optional[str] = None,
     event_type: Optional[str] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
@@ -74,6 +75,9 @@ async def get_events(
     db = get_database()
     
     query = {"$or": [{"is_active": True}, {"is_active": {"$exists": False}}, {"is_active": None}]}
+    
+    if operator_id:
+        query["operator_id"] = operator_id
     
     # Filter out past events for public listing
     from datetime import datetime, timezone

@@ -15,6 +15,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 
 // Shared components
@@ -257,6 +258,7 @@ export default function RestaurantManagement() {
   const [editingRestaurant, setEditingRestaurant] = useState(null);
   const [editingMenuItem, setEditingMenuItem] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
 
   const dashboardData = useRealDashboardData('restaurants');
 
@@ -264,7 +266,8 @@ export default function RestaurantManagement() {
   const loadRestaurants = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/restaurants/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/restaurants/${params}`);
       setRestaurants(res.data.restaurants || res.data || []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);
@@ -272,7 +275,7 @@ export default function RestaurantManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   // Load menu for selected restaurant
   const loadMenu = useCallback(async (restaurantId) => {
@@ -474,7 +477,8 @@ export default function RestaurantManagement() {
                 <p className="text-slate-500">Manage restaurants, menus, and reservations</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />
               <Button variant="outline" onClick={loadRestaurants} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh

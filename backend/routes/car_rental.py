@@ -64,6 +64,7 @@ async def get_cars(
     vehicle_type: Optional[str] = None,
     transmission: Optional[str] = None,
     country: Optional[str] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
@@ -71,6 +72,8 @@ async def get_cars(
     db = get_database()
     
     query = {"is_available": True}
+    if operator_id:
+        query["operator_id"] = operator_id
     if vehicle_type:
         query["vehicle_type"] = vehicle_type
     if transmission:

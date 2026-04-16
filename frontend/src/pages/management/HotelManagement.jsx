@@ -15,6 +15,7 @@ import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
@@ -89,6 +90,7 @@ export default function HotelManagement() {
   const [editingRoom, setEditingRoom] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const dashboardData = useRealDashboardData('hotels');
 
   // Filtered hotels
@@ -139,7 +141,8 @@ export default function HotelManagement() {
   const loadHotels = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/hotels/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/hotels/${params}`);
       setHotels(res.data.hotels || res.data || []);
       try { 
         const opRes = await api.get('/operators/'); 
@@ -147,7 +150,7 @@ export default function HotelManagement() {
       } catch { /* ignore operators fetch error */ }
     } catch { setHotels([]); }
     finally { setLoading(false); }
-  }, []);
+  }, [scopeOperatorId]);
 
   const loadRooms = useCallback(async (hotelId) => {
     try { 
@@ -308,10 +311,13 @@ export default function HotelManagement() {
                 <p className="text-slate-500">Manage hotels, rooms, and communications</p>
               </div>
             </div>
-            <Button variant="outline" onClick={loadHotels} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <OperatorScopeFilter serviceType="hotel" value={scopeOperatorId} onChange={setScopeOperatorId} />
+              <Button variant="outline" onClick={loadHotels} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
         </div>
       </div>

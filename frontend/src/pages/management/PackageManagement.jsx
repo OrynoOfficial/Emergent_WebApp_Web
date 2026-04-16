@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -112,6 +113,7 @@ export default function PackageManagement() {
   const [packageForm, setPackageForm] = useState(DEFAULT_PACKAGE_FORM);
 
   // Use the package dashboard data hook
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const dashboardData = useRealDashboardData('packages');
 
   const handleViewPackage = (pkg) => {
@@ -123,7 +125,8 @@ export default function PackageManagement() {
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/packages/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/packages/${params}`);
       setPackages(res.data.packages || res.data || []);
       
       // Load operators
@@ -139,7 +142,7 @@ export default function PackageManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   useEffect(() => {
     loadPackages();
@@ -200,10 +203,13 @@ export default function PackageManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]">Travel Package Management</h1>
           <p className="text-gray-600">Manage packages, bookings, analytics, and communications</p>
         </div>
-        <Button onClick={loadPackages} variant="outline" disabled={loading}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <OperatorScopeFilter serviceType="packages" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadPackages} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
-        </Button>
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

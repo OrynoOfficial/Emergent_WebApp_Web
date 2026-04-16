@@ -18,6 +18,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -108,6 +109,7 @@ export default function LaundryManagement() {
   const [pressingForm, setPressingForm] = useState(DEFAULT_PRESSING_FORM);
 
   // Use the laundry dashboard data hook
+  const [scopeOperatorId, setScopeOperatorId] = useState('');
   const dashboardData = useRealDashboardData('laundry');
 
   const handleViewPressing = (pressing) => {
@@ -119,7 +121,8 @@ export default function LaundryManagement() {
   const loadPressings = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/pressing/');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/pressing/${params}`);
       setPressings(res.data.pressings || res.data || []);
       
       // Load operators
@@ -135,7 +138,7 @@ export default function LaundryManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   useEffect(() => {
     loadPressings();
@@ -192,10 +195,13 @@ export default function LaundryManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]">Laundry & Pressing Management</h1>
           <p className="text-gray-600">Manage shops, orders, analytics, and communications</p>
         </div>
-        <Button onClick={loadPressings} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadPressings} variant="outline" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
