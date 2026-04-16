@@ -427,6 +427,7 @@ export default function CinemaManagement() {
           <ServiceCommunicationsHub
             serviceType="Cinema"
             serviceTag="cinema"
+            operatorId={scopeOperatorId}
             serviceIcon={<Film className="h-5 w-5 text-red-600" />}
             primaryColor="red"
           />

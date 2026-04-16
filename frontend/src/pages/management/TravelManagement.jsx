@@ -770,6 +770,7 @@ export default function TravelManagement() {
             <ServiceCommunicationsHub
               serviceType="Travel"
               serviceTag="travel"
+              operatorId={scopeOperatorId}
               serviceIcon={<Bus className="h-5 w-5 text-blue-600" />}
               primaryColor="blue"
             />

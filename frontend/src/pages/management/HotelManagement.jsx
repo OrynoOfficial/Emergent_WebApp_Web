@@ -723,6 +723,7 @@ export default function HotelManagement() {
             <ServiceCommunicationsHub 
               serviceType="Hotels" 
               serviceTag="hotels"
+              operatorId={scopeOperatorId}
               serviceIcon={<Hotel className="h-5 w-5" />}
               primaryColor="blue"
             />

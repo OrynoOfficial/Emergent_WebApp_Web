@@ -301,6 +301,7 @@ export default function PackageManagement() {
           <ServiceCommunicationsHub
             serviceType="Packages"
             serviceTag="packages"
+            operatorId={scopeOperatorId}
             serviceIcon={<Package className="h-5 w-5 text-blue-600" />}
             primaryColor="blue"
           />

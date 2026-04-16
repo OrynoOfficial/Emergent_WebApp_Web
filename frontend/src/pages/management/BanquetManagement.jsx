@@ -295,6 +295,7 @@ export default function BanquetManagement() {
           <ServiceCommunicationsHub
             serviceType="Banquet"
             serviceTag="banquets"
+            operatorId={scopeOperatorId}
             serviceIcon={<UtensilsCrossed className="h-5 w-5 text-pink-600" />}
             primaryColor="pink"
           />

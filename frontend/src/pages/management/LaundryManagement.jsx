@@ -291,6 +291,7 @@ export default function LaundryManagement() {
           <ServiceCommunicationsHub
             serviceType="Laundry"
             serviceTag="pressing"
+            operatorId={scopeOperatorId}
             serviceIcon={<Shirt className="h-5 w-5 text-cyan-600" />}
             primaryColor="teal"
           />

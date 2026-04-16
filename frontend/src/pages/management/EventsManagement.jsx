@@ -306,6 +306,7 @@ export default function EventsManagement() {
           <ServiceCommunicationsHub
             serviceType="Events"
             serviceTag="events"
+            operatorId={scopeOperatorId}
             serviceIcon={<Calendar className="h-5 w-5 text-purple-600" />}
             primaryColor="purple"
           />

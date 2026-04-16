@@ -23,6 +23,7 @@ export default function ServiceCommunicationsHub({
   serviceTag = "general",
   serviceIcon = <MessageSquare className="h-5 w-5" />,
   primaryColor = "blue",
+  operatorId: propOperatorId = '',
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -41,28 +42,30 @@ export default function ServiceCommunicationsHub({
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
-  const operatorId = user?.operator_id;
+  // Use prop operator ID (from scope filter) or fall back to user's own operator_id
+  const operatorId = propOperatorId || user?.operator_id;
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Load support tickets for this operator
-      const ticketRes = await api.get(`/support-tickets/?limit=5`).catch(() => ({ data: { tickets: [] } }));
+      // Build operator filter param
+      const opParam = operatorId ? `&operator_id=${operatorId}` : '';
+      
+      // Load support tickets
+      const ticketRes = await api.get(`/support-tickets/?limit=5${opParam}`).catch(() => ({ data: { tickets: [] } }));
       const tickets = (ticketRes.data?.tickets || []).slice(0, 5);
       setSupportTickets(tickets);
 
-      // Load recent reviews for operator's services
-      if (operatorId) {
-        const ratingRes = await api.get(`/ratings/?entity_type=${serviceTag}&limit=5`).catch(() => ({ data: { ratings: [] } }));
-        setRecentReviews(ratingRes.data?.ratings || []);
-      }
+      // Load recent reviews
+      const ratingRes = await api.get(`/ratings/?entity_type=${serviceTag}&limit=5${opParam}`).catch(() => ({ data: { ratings: [] } }));
+      setRecentReviews(ratingRes.data?.ratings || []);
 
       // Load subscriber count
       const subRes = await api.get('/subscriptions/operator-count').catch(() => ({ data: { count: 0 } }));
       setSubscriberCount(subRes.data?.count || 0);
 
       // Load promotions
-      const promoRes = await api.get('/subscriptions/promotions?limit=10').catch(() => ({ data: { promotions: [], pending_approval_count: 0 } }));
+      const promoRes = await api.get(`/subscriptions/promotions?limit=10${opParam}`).catch(() => ({ data: { promotions: [], pending_approval_count: 0 } }));
       setPromotions(promoRes.data?.promotions || []);
       setPendingApprovalCount(promoRes.data?.pending_approval_count || 0);
     } catch (err) {

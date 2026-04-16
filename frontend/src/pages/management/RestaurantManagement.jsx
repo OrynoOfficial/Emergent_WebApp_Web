@@ -699,7 +699,7 @@ export default function RestaurantManagement() {
 
           {/* Communications Tab */}
           <TabsContent value="communications">
-            <ServiceCommunicationsHub serviceType="Restaurants" serviceIcon={<Utensils className="h-6 w-6" />} />
+            <ServiceCommunicationsHub serviceType="Restaurants" operatorId={scopeOperatorId} serviceIcon={<Utensils className="h-6 w-6" />} />
           </TabsContent>
         </Tabs>
       </div>

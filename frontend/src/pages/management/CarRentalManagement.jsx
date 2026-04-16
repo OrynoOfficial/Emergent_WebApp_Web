@@ -503,6 +503,7 @@ export default function CarRentalManagement() {
             <ServiceCommunicationsHub
               serviceType="Car Rental"
               serviceTag="car_rental"
+              operatorId={scopeOperatorId}
               serviceIcon={<Car className="h-5 w-5 text-emerald-600" />}
               primaryColor="green"
             />
