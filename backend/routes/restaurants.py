@@ -31,7 +31,6 @@ class MenuItemCreate(BaseModel):
     images: Optional[list] = []
     ingredients: Optional[list] = []
     available: bool = True
-    popular: bool = False
 
 class OrderItem(BaseModel):
     item_id: str
@@ -149,15 +148,36 @@ async def get_restaurant(restaurant_id: str):
 
 @router.get("/{restaurant_id}/menu")
 async def get_restaurant_menu(restaurant_id: str):
-    """Get restaurant menu"""
+    """Get restaurant menu with auto-derived popularity"""
     db = get_database()
     menu_items = await db.restaurant_menu.find(
         {"restaurant_id": restaurant_id, "is_available": {"$ne": False}}
     ).to_list(100)
     
+    # Auto-derive popularity from order data
+    # Count how often each item name appears in completed/confirmed orders
+    popular_item_names = set()
+    try:
+        pipeline = [
+            {"$match": {
+                "restaurant_id": restaurant_id,
+                "status": {"$in": ["confirmed", "completed", "delivered", "pending"]}
+            }},
+            {"$unwind": "$items"},
+            {"$group": {"_id": "$items.name", "order_count": {"$sum": "$items.quantity"}}},
+            {"$sort": {"order_count": -1}},
+            {"$limit": 5}
+        ]
+        top_items = await db.orders.aggregate(pipeline).to_list(5)
+        # Items ordered 2+ times are popular
+        popular_item_names = {item["_id"] for item in top_items if item.get("order_count", 0) >= 2}
+    except Exception:
+        pass
+    
     # Transform for frontend
     items = []
     for item in menu_items:
+        item_name = item.get("name", "")
         # Build images array: use explicit images field, fall back to single image
         images_list = item.get("images") or []
         single_image = item.get("image", "")
@@ -165,7 +185,7 @@ async def get_restaurant_menu(restaurant_id: str):
             images_list = [single_image] + images_list
         items.append({
             "id": str(item.get("_id", item.get("id", ""))),
-            "name": item.get("name"),
+            "name": item_name,
             "category": item.get("category", "mains"),
             "price": item.get("price", 0),
             "description": item.get("description", ""),
@@ -174,15 +194,16 @@ async def get_restaurant_menu(restaurant_id: str):
             "ingredients": item.get("ingredients", []),
             "is_available": item.get("is_available", True),
             "available": item.get("is_available", True),
-            "popular": item.get("popular", False)
+            "popular": item_name in popular_item_names
         })
     
     # If no menu items, return demo data with ingredients for View Ingredients feature
+    # For demo data, mark items with highest price as popular (simulating system-derived popularity)
     if not items:
-        items = [
-            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "images": [], "ingredients": ["Bitter leaves", "Peanuts", "Crayfish", "Palm oil", "Plantains"], "is_available": True, "available": True, "popular": True},
-            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "images": [], "ingredients": ["Tilapia", "Tomatoes", "Onions", "Pepper", "Plantains"], "is_available": True, "available": True, "popular": True},
-            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "images": [], "ingredients": ["Chicken", "Plantains", "Tomatoes", "Carrots", "Green beans"], "is_available": True, "available": True, "popular": True},
+        demo_items = [
+            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "images": [], "ingredients": ["Bitter leaves", "Peanuts", "Crayfish", "Palm oil", "Plantains"], "is_available": True, "available": True},
+            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "images": [], "ingredients": ["Tilapia", "Tomatoes", "Onions", "Pepper", "Plantains"], "is_available": True, "available": True},
+            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "images": [], "ingredients": ["Chicken", "Plantains", "Tomatoes", "Carrots", "Green beans"], "is_available": True, "available": True},
             {"id": "4", "name": "Eru Soup", "category": "mains", "price": 6000, "description": "Spinach-like vegetable soup with waterleaf", "image": "", "images": [], "ingredients": ["Eru leaves", "Waterleaf", "Crayfish", "Palm oil"], "is_available": True, "available": True},
             {"id": "5", "name": "Koki Beans", "category": "starters", "price": 2500, "description": "Steamed bean cake wrapped in banana leaves", "image": "", "images": [], "ingredients": ["Black-eyed beans", "Palm oil", "Banana leaves"], "is_available": True, "available": True},
             {"id": "6", "name": "Accra Banana", "category": "starters", "price": 1500, "description": "Fried ripe banana fritters", "image": "", "images": [], "ingredients": ["Ripe bananas", "Flour", "Sugar"], "is_available": True, "available": True},
@@ -190,9 +211,15 @@ async def get_restaurant_menu(restaurant_id: str):
             {"id": "8", "name": "Gâteau de Manioc", "category": "desserts", "price": 2500, "description": "Traditional cassava cake", "image": "", "images": [], "ingredients": ["Cassava", "Coconut", "Sugar", "Eggs"], "is_available": True, "available": True},
             {"id": "9", "name": "Fresh Juice", "category": "drinks", "price": 1500, "description": "Orange, pineapple, or passion fruit", "image": "", "images": [], "ingredients": [], "is_available": True, "available": True},
             {"id": "10", "name": "Bissap (Hibiscus)", "category": "drinks", "price": 1000, "description": "Refreshing hibiscus drink", "image": "", "images": [], "ingredients": ["Hibiscus flowers", "Sugar", "Ginger"], "is_available": True, "available": True},
-            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "images": [], "ingredients": [], "is_available": True, "available": True, "popular": True},
+            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "images": [], "ingredients": [], "is_available": True, "available": True},
             {"id": "12", "name": "Suya Skewers", "category": "starters", "price": 3000, "description": "Spiced grilled meat skewers", "image": "", "images": [], "ingredients": ["Beef", "Suya spice", "Onions", "Tomatoes"], "is_available": True, "available": True}
         ]
+        # For demo: mark top 3 highest-priced items as popular
+        sorted_by_price = sorted(demo_items, key=lambda x: x["price"], reverse=True)
+        top_names = {item["name"] for item in sorted_by_price[:3]}
+        for item in demo_items:
+            item["popular"] = item["name"] in top_names
+        items = demo_items
     
     return {"items": items}
 
@@ -312,7 +339,6 @@ class MenuItemUpdate(BaseModel):
     ingredients: Optional[list] = None
     available: Optional[bool] = None
     is_available: Optional[bool] = None
-    popular: Optional[bool] = None
 
 
 @router.put("/{restaurant_id}")

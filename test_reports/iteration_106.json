@@ -1,0 +1,101 @@
+{
+  "summary": "Iteration 106: Menu Item Bug Fixes and Popular Flag Auto-Derivation - All features verified. 9/9 backend tests passed, 5/5 frontend UI tests passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Add Menu Item dialog",
+        "issues": ["Modal overlay sometimes intercepts clicks - use force=True for button clicks"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration106_menu_item_fixes.py",
+    "/app/test_reports/pytest/pytest_results_iteration106.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "MenuItemForm.jsx correctly uses local state for ingredients text with onBlur commit - allows typing commas/periods freely",
+    "handleImagesChange does single onChange call to avoid stale closure bug",
+    "Popular Item toggle is REMOVED from MenuItemForm - operators cannot set it",
+    "handleSaveMenuItem strips popular field before API call: const { popular, ...rest } = menuForm",
+    "Backend MenuItemCreate and MenuItemUpdate schemas do not include popular field",
+    "Backend get_restaurant_menu auto-derives popularity from order aggregation pipeline",
+    "Demo data marks top 3 highest-priced items as popular (system-derived)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration106_menu_item_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% - 9/9 tests passed",
+    "frontend": "100% - 5/5 UI tests passed"
+  },
+  "test_credentials": "admin@test.com / testpassword123",
+  "seed_data_creation": "Created TEST_Spicy Chicken Wings menu item during UI testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Menu item bug fixes verified: 1) Images field persists correctly after upload, 2) Ingredients field allows commas and periods (uses local state with onBlur commit), 3) Popular toggle removed from form, 4) Backend auto-derives popular flag from order counts. Frontend required restart to clear cached version showing old Popular toggle.",
+  "verified_features": {
+    "bug_fix_images_field": {
+      "status": "VERIFIED",
+      "details": "Images array persists correctly when saving menu items. handleImagesChange uses single onChange call to avoid stale closure."
+    },
+    "bug_fix_ingredients_field": {
+      "status": "VERIFIED",
+      "details": "Ingredients textarea allows typing commas and periods freely. Uses local state (ingredientsText) with onBlur commit to parse into array."
+    },
+    "feature_popular_toggle_removed": {
+      "status": "VERIFIED",
+      "details": "Popular Item toggle is removed from MenuItemForm. Operators cannot manually set popular flag."
+    },
+    "feature_popular_auto_derived": {
+      "status": "VERIFIED",
+      "details": "Backend auto-derives popular flag from order aggregation. Items ordered 2+ times are marked popular. Demo data marks top 3 highest-priced items as popular."
+    },
+    "backend_api_images_ingredients": {
+      "status": "VERIFIED",
+      "details": "POST and PUT /api/restaurants/{id}/menu accept images array and ingredients array"
+    },
+    "frontend_multi_image_uploader": {
+      "status": "VERIFIED",
+      "details": "MultiImageUploader component supports up to 3 images with upload/remove functionality"
+    },
+    "management_save_strips_popular": {
+      "status": "VERIFIED",
+      "details": "handleSaveMenuItem strips popular field before API call: const { popular, ...rest } = menuForm"
+    }
+  },
+  "backend_test_results": {
+    "total_tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "tests": [
+      "test_create_menu_item_with_images_array: PASS",
+      "test_update_menu_item_images: PASS",
+      "test_create_menu_item_with_ingredients_array: PASS",
+      "test_update_menu_item_ingredients: PASS",
+      "test_menu_item_create_ignores_popular_field: PASS",
+      "test_demo_data_popular_items_are_highest_priced: PASS",
+      "test_menu_response_includes_popular_field: PASS",
+      "test_update_menu_item_without_popular: PASS",
+      "test_create_menu_item_schema_fields: PASS"
+    ]
+  },
+  "frontend_test_results": {
+    "total_tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "tests": [
+      "login_and_navigate: PASS",
+      "popular_toggle_removed: PASS",
+      "ingredients_allows_commas_periods: PASS",
+      "menu_item_save: PASS",
+      "images_field_exists: PASS"
+    ]
+  }
+}

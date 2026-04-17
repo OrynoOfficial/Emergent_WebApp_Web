@@ -48,7 +48,7 @@ const DEFAULT_RESTAURANT_FORM = {
 };
 
 const DEFAULT_MENU_ITEM = {
-  name: '', description: '', category: '', price: '', is_available: true, image: '', popular: false, ingredients: []
+  name: '', description: '', category: '', price: '', is_available: true, image: '', images: [], ingredients: []
 };
 
 // Dashboard data generator
@@ -421,7 +421,8 @@ export default function RestaurantManagement() {
     
     try {
       setSaving(true);
-      const data = { ...menuForm, price: parseFloat(menuForm.price) || 0 };
+      const { popular, ...rest } = menuForm;
+      const data = { ...rest, price: parseFloat(menuForm.price) || 0 };
       if (editingMenuItem) {
         await api.put(`/restaurants/${selectedRestaurant.id}/menu/${editingMenuItem.id}`, data);
         toast.success('Menu item updated');

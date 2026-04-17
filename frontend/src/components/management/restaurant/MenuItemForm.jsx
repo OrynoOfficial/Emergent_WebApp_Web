@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Upload, X, Loader2, ImagePlus } from 'lucide-react';
+import { X, Loader2, ImagePlus } from 'lucide-react';
 import api from '@/api/client';
 
 const MENU_CATEGORIES = [
@@ -77,6 +77,15 @@ function MultiImageUploader({ images = [], onChange }) {
 }
 
 export function MenuItemForm({ form, onChange, isEditing = false }) {
+  // Local state for raw ingredients text so commas/periods are not eaten
+  const [ingredientsText, setIngredientsText] = useState('');
+
+  // Sync ingredientsText from form on mount or when form.ingredients changes externally
+  useEffect(() => {
+    const arr = form.ingredients || [];
+    setIngredientsText(arr.join(', '));
+  }, [form.ingredients?.length]);
+
   const updateForm = (field, value) => {
     onChange({ ...form, [field]: value });
   };
@@ -89,9 +98,16 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
       : [];
 
   const handleImagesChange = (newImages) => {
-    updateForm('images', newImages);
-    // Keep single image field in sync (first image)
-    updateForm('image', newImages[0] || '');
+    // Single onChange call to avoid stale closure bug
+    onChange({ ...form, images: newImages, image: newImages[0] || '' });
+  };
+
+  // Parse ingredients text to array (called on blur to persist)
+  const commitIngredients = () => {
+    const arr = ingredientsText
+      ? ingredientsText.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    updateForm('ingredients', arr);
   };
 
   return (
@@ -156,12 +172,9 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
         <Label>Ingredients</Label>
         <p className="text-xs text-slate-500 mb-1">Enter ingredients separated by commas</p>
         <Textarea
-          value={(form.ingredients || []).join(', ')}
-          onChange={(e) => {
-            const val = e.target.value;
-            const arr = val ? val.split(',').map(s => s.trim()).filter(Boolean) : [];
-            updateForm('ingredients', arr);
-          }}
+          value={ingredientsText}
+          onChange={(e) => setIngredientsText(e.target.value)}
+          onBlur={commitIngredients}
           placeholder="e.g., Chicken, Tomatoes, Onions, Garlic, Palm Oil"
           rows={2}
           className="mt-1"
@@ -176,17 +189,6 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
         <Switch
           checked={form.is_available !== false}
           onCheckedChange={(checked) => updateForm('is_available', checked)}
-        />
-      </div>
-      
-      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-        <div>
-          <Label className="cursor-pointer">Popular Item</Label>
-          <p className="text-sm text-slate-500">Mark as a popular/featured item</p>
-        </div>
-        <Switch
-          checked={form.popular === true}
-          onCheckedChange={(checked) => updateForm('popular', checked)}
         />
       </div>
     </div>
