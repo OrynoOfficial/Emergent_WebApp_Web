@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,11 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import useEmblaCarousel from 'embla-carousel-react';
 import { 
   ArrowLeft, ShoppingCart, Plus, Minus, Trash2, 
   Calendar as CalendarIcon, Clock, Users, MapPin,
-  Utensils, Star, CheckCircle, Loader2, Search, Flame
+  Utensils, Star, CheckCircle, Loader2, Search, Flame,
+  ChevronLeft, ChevronRight, Leaf, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
@@ -31,19 +34,109 @@ const formatOpeningHours = (openingHours) => {
   return 'Hours vary';
 };
 
+// ── Tiny swipeable image carousel for a menu item ──
+function ItemImageCarousel({ images = [] }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false });
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIdx(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on('select', onSelect);
+    return () => emblaApi.off('select', onSelect);
+  }, [emblaApi, onSelect]);
+
+  if (!images.length) {
+    return (
+      <div className="w-28 h-28 md:w-36 md:h-36 flex-shrink-0 rounded-xl bg-[#F4F1EC] flex items-center justify-center">
+        <Utensils className="w-8 h-8 text-[#C5A880]/50" />
+      </div>
+    );
+  }
+
+  if (images.length === 1) {
+    return (
+      <div className="w-28 h-28 md:w-36 md:h-36 flex-shrink-0 rounded-xl overflow-hidden shadow-sm">
+        <img src={images[0]} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-28 h-28 md:w-36 md:h-36 flex-shrink-0 relative rounded-xl overflow-hidden shadow-sm">
+      <div ref={emblaRef} className="overflow-hidden w-full h-full">
+        <div className="flex h-full">
+          {images.slice(0, 3).map((img, i) => (
+            <div key={i} className="flex-[0_0_100%] min-w-0 h-full">
+              <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Dots */}
+      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1" data-testid="carousel-dots">
+        {images.slice(0, 3).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => emblaApi?.scrollTo(i)}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${i === selectedIdx ? 'bg-white w-3' : 'bg-white/50'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Ingredients Modal ──
+function IngredientsModal({ open, onClose, itemName, ingredients = [] }) {
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-white max-w-sm rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-lg text-[#082c59] flex items-center gap-2">
+            <Leaf className="w-4 h-4 text-[#C5A880]" />
+            {itemName}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2">
+          <p className="text-xs text-[#64748B] uppercase tracking-wider mb-3 font-sans">Ingredients</p>
+          <div className="flex flex-wrap gap-2">
+            {ingredients.map((ing, idx) => (
+              <Badge
+                key={idx}
+                variant="outline"
+                className="bg-[#F9F9F7] text-[#1A1D20] border-[#E2E8F0] font-sans text-sm px-3 py-1"
+              >
+                {ing}
+              </Badge>
+            ))}
+          </div>
+          {ingredients.length === 0 && (
+            <p className="text-sm text-[#64748B] italic">No ingredients listed for this item.</p>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const MOCK_MENU_ITEMS = [
-  { id: '1', name: 'Ndole with Plantains', category: 'mains', price: 5500, description: 'Traditional Cameroonian dish with bitter leaves and peanuts', image: '', available: true, popular: true },
-  { id: '2', name: 'Grilled Fish (Braise)', category: 'mains', price: 8000, description: 'Fresh tilapia grilled with spices and plantains', image: '', available: true, popular: true },
-  { id: '3', name: 'Poulet DG', category: 'mains', price: 7500, description: 'Chicken with plantains in a rich tomato sauce', image: '', available: true, popular: true },
-  { id: '4', name: 'Eru Soup', category: 'mains', price: 6000, description: 'Spinach-like vegetable soup with waterleaf', image: '', available: true },
-  { id: '5', name: 'Koki Beans', category: 'starters', price: 2500, description: 'Steamed bean cake wrapped in banana leaves', image: '', available: true },
-  { id: '6', name: 'Accra Banana', category: 'starters', price: 1500, description: 'Fried ripe banana fritters', image: '', available: true },
-  { id: '7', name: 'Fresh Fruit Salad', category: 'desserts', price: 2000, description: 'Seasonal tropical fruits', image: '', available: true },
-  { id: '8', name: 'Gateau de Manioc', category: 'desserts', price: 2500, description: 'Traditional cassava cake', image: '', available: true },
-  { id: '9', name: 'Fresh Juice', category: 'drinks', price: 1500, description: 'Orange, pineapple, or passion fruit', image: '', available: true },
-  { id: '10', name: 'Bissap (Hibiscus)', category: 'drinks', price: 1000, description: 'Refreshing hibiscus drink', image: '', available: true },
-  { id: '11', name: "Chef's Special Platter", category: 'specials', price: 15000, description: 'Assortment of our best dishes for 2', image: '', available: true, popular: true },
-  { id: '12', name: 'Suya Skewers', category: 'starters', price: 3000, description: 'Spiced grilled meat skewers', image: '', available: true }
+  { id: '1', name: 'Ndole with Plantains', category: 'mains', price: 5500, description: 'Traditional Cameroonian dish with bitter leaves and peanuts', image: '', images: [], available: true, popular: true, ingredients: ['Bitter leaves', 'Peanuts', 'Crayfish', 'Palm oil', 'Plantains'] },
+  { id: '2', name: 'Grilled Fish (Braise)', category: 'mains', price: 8000, description: 'Fresh tilapia grilled with spices and plantains', image: '', images: [], available: true, popular: true, ingredients: ['Tilapia', 'Tomatoes', 'Onions', 'Pepper', 'Plantains'] },
+  { id: '3', name: 'Poulet DG', category: 'mains', price: 7500, description: 'Chicken with plantains in a rich tomato sauce', image: '', images: [], available: true, popular: true, ingredients: ['Chicken', 'Plantains', 'Tomatoes', 'Carrots', 'Green beans'] },
+  { id: '4', name: 'Eru Soup', category: 'mains', price: 6000, description: 'Spinach-like vegetable soup with waterleaf', image: '', images: [], available: true, ingredients: ['Eru leaves', 'Waterleaf', 'Crayfish', 'Palm oil'] },
+  { id: '5', name: 'Koki Beans', category: 'starters', price: 2500, description: 'Steamed bean cake wrapped in banana leaves', image: '', images: [], available: true, ingredients: ['Black-eyed beans', 'Palm oil', 'Banana leaves'] },
+  { id: '6', name: 'Accra Banana', category: 'starters', price: 1500, description: 'Fried ripe banana fritters', image: '', images: [], available: true, ingredients: ['Ripe bananas', 'Flour', 'Sugar'] },
+  { id: '7', name: 'Fresh Fruit Salad', category: 'desserts', price: 2000, description: 'Seasonal tropical fruits', image: '', images: [], available: true, ingredients: ['Mango', 'Pineapple', 'Papaya', 'Passion fruit'] },
+  { id: '8', name: 'Gateau de Manioc', category: 'desserts', price: 2500, description: 'Traditional cassava cake', image: '', images: [], available: true, ingredients: ['Cassava', 'Coconut', 'Sugar', 'Eggs'] },
+  { id: '9', name: 'Fresh Juice', category: 'drinks', price: 1500, description: 'Orange, pineapple, or passion fruit', image: '', images: [], available: true },
+  { id: '10', name: 'Bissap (Hibiscus)', category: 'drinks', price: 1000, description: 'Refreshing hibiscus drink', image: '', images: [], available: true, ingredients: ['Hibiscus flowers', 'Sugar', 'Ginger'] },
+  { id: '11', name: "Chef's Special Platter", category: 'specials', price: 15000, description: 'Assortment of our best dishes for 2', image: '', images: [], available: true, popular: true },
+  { id: '12', name: 'Suya Skewers', category: 'starters', price: 3000, description: 'Spiced grilled meat skewers', image: '', images: [], available: true, ingredients: ['Beef', 'Suya spice', 'Onions', 'Tomatoes'] }
 ];
 
 const MOCK_RESTAURANT = {
@@ -76,6 +169,9 @@ export default function RestaurantMenu() {
   const [guests, setGuests] = useState(2);
   const [specialRequests, setSpecialRequests] = useState('');
   const [isReservationDateOpen, setIsReservationDateOpen] = useState(false);
+
+  // Ingredients modal state
+  const [ingredientsModal, setIngredientsModal] = useState({ open: false, itemName: '', ingredients: [] });
 
   useEffect(() => {
     if (restaurantId) loadRestaurantData();
@@ -139,294 +235,367 @@ export default function RestaurantMenu() {
     navigate('/services/restaurants/booking');
   };
 
+  const heroImageUrl = restaurant.images?.[0] || 'https://images.unsplash.com/photo-1744776411214-31209006a0f6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxwcmVtaXVtJTIwcmVzdGF1cmFudCUyMGludGVyaW9yfGVufDB8fHx8MTc3NjQ2NjY1Nnww&ixlib=rb-4.1.0&q=85';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#082c59] via-[#0a3a75] to-[#082c59] text-white">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10 rounded-full">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold tracking-tight">{restaurant.name}</h1>
-              <div className="flex items-center gap-4 text-sm text-white/70 mt-1">
-                <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {restaurant.city}</span>
-                <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-400" /> {restaurant.average_rating || restaurant.rating || 'N/A'}</span>
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatOpeningHours(restaurant.opening_hours)}</span>
+    <div className="min-h-screen bg-[#F9F9F7] font-sans">
+      {/* ── Premium Hero Header ── */}
+      <div className="relative w-full" style={{ minHeight: '280px' }} data-testid="restaurant-hero-header">
+        <div className="absolute inset-0">
+          <img
+            src={heroImageUrl}
+            alt={restaurant.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#082c59]/90 via-[#082c59]/50 to-[#082c59]/30" />
+        </div>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-8 flex flex-col justify-end" style={{ minHeight: '280px' }}>
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="absolute top-6 left-4 sm:left-6 text-white/80 hover:text-white hover:bg-white/10 rounded-full"
+            data-testid="back-button"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+
+          <div className="mt-auto">
+            <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-white font-bold tracking-tight leading-tight" data-testid="restaurant-name">
+              {restaurant.name}
+            </h1>
+            {restaurant.cuisine_type?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2 mb-4">
+                {restaurant.cuisine_type.map(c => (
+                  <Badge key={c} className="bg-white/15 text-white/90 border-white/20 capitalize text-xs font-sans backdrop-blur-sm">
+                    {c}
+                  </Badge>
+                ))}
               </div>
+            )}
+            {/* Key info pills */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className="flex items-center gap-1.5 text-white/90" data-testid="restaurant-location">
+                <MapPin className="h-4 w-4 text-[#C5A880]" />
+                <span className="text-sm font-medium">{restaurant.address ? `${restaurant.address}, ` : ''}{restaurant.city}</span>
+              </div>
+              <div className="flex items-center gap-1.5" data-testid="restaurant-rating">
+                <Star className="h-4 w-4 text-[#C5A880] fill-[#C5A880]" />
+                <span className="text-sm font-medium text-white">{restaurant.average_rating || restaurant.rating || 'N/A'}</span>
+                {restaurant.total_ratings > 0 && <span className="text-xs text-white/60">({restaurant.total_ratings})</span>}
+              </div>
+              <div className="flex items-center gap-1.5 text-white/90" data-testid="restaurant-hours">
+                <Clock className="h-4 w-4 text-[#C5A880]" />
+                <span className="text-sm font-medium">{formatOpeningHours(restaurant.opening_hours)}</span>
+              </div>
+              {restaurant.phone && (
+                <div className="flex items-center gap-1.5 text-white/60">
+                  <span className="text-xs">{restaurant.phone}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Menu */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              {/* Menu Header */}
-              <div className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 p-5 border-b border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-[#082c59] flex items-center gap-2">
-                    <Utensils className="h-5 w-5" /> Menu
-                  </h2>
-                  <Badge className="bg-[#082c59]/10 text-[#082c59] border-0">{filteredItems.length} items</Badge>
-                </div>
-                
-                {/* Search */}
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search dishes..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-white border-slate-200 rounded-xl"
-                  />
-                </div>
-
-                {/* Category Pills */}
-                <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-                  <TabsList className="flex flex-wrap gap-1.5 h-auto bg-transparent p-0">
-                    {MENU_CATEGORIES.map(cat => (
-                      <TabsTrigger
-                        key={cat}
-                        value={cat}
-                        className="capitalize rounded-full px-4 py-1.5 text-xs font-medium data-[state=active]:bg-[#082c59] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:text-slate-600 border border-slate-200 data-[state=active]:border-[#082c59]"
-                      >
-                        {cat}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
+      {/* ── Main Content ── */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-12 gap-8">
+          {/* ── Left: Menu (8 cols) ── */}
+          <div className="col-span-12 lg:col-span-8" data-testid="menu-section">
+            {/* Search & Filter Bar */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <h2 className="font-serif text-2xl text-[#082c59] font-semibold tracking-tight">Menu</h2>
+                <Badge className="bg-[#082c59]/8 text-[#082c59] border-0 font-sans text-xs">{filteredItems.length} items</Badge>
+              </div>
+              
+              {/* Search */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
+                <Input
+                  placeholder="Search dishes..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white border-[#E2E8F0] rounded-xl h-11 font-sans text-sm"
+                  data-testid="menu-search-input"
+                />
               </div>
 
-              {/* Menu Items */}
-              <div className="p-4 space-y-2">
-                {filteredItems.map(item => (
-                  <div key={item.id}>
-                    <div
-                      className={`flex items-center justify-between p-3.5 rounded-xl transition-all ${
-                        cart[item.id] 
-                          ? 'bg-[#082c59]/5 border border-[#082c59]/20' 
-                          : 'bg-slate-50 border border-transparent hover:border-slate-200 hover:bg-slate-100'
-                      }`}
+              {/* Category Pills */}
+              <Tabs value={activeCategory} onValueChange={setActiveCategory}>
+                <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent p-0" data-testid="category-tabs">
+                  {MENU_CATEGORIES.map(cat => (
+                    <TabsTrigger
+                      key={cat}
+                      value={cat}
+                      data-testid={`category-tab-${cat}`}
+                      className="capitalize rounded-full px-5 py-2 text-xs font-medium font-sans
+                        data-[state=active]:bg-[#082c59] data-[state=active]:text-white data-[state=active]:border-[#082c59] data-[state=active]:shadow-sm
+                        data-[state=inactive]:bg-white data-[state=inactive]:text-[#64748B] border border-[#E2E8F0]
+                        transition-all"
                     >
-                      {/* Image thumbnail */}
-                      {item.image && (
-                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 mr-3">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
-                        </div>
-                      )}
-                      <div className="flex-1 mr-3">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-slate-900 text-sm">{item.name}</h4>
-                          {item.popular && (
-                            <span className="flex items-center gap-0.5 px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-semibold rounded-full">
-                              <Flame className="w-3 h-3" /> Popular
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{item.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="font-bold text-[#082c59] text-sm">{formatFCFA(item.price)}</p>
-                          {item.ingredients?.length > 0 && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); const el = document.getElementById(`ing-${item.id}`); if(el) el.classList.toggle('hidden'); }}
-                              className="text-[10px] text-slate-400 hover:text-[#082c59] underline"
-                            >
-                              Ingredients
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {cart[item.id] ? (
-                          <div className="flex items-center gap-1.5 bg-white rounded-lg border border-slate-200 p-0.5">
-                            <button onClick={() => removeFromCart(item.id)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
-                              <Minus className="h-3.5 w-3.5 text-slate-600" />
-                            </button>
-                            <span className="w-6 text-center font-bold text-sm text-[#082c59]">{cart[item.id]}</span>
-                            <button onClick={() => addToCart(item)} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
-                              <Plus className="h-3.5 w-3.5 text-slate-600" />
-                            </button>
+                      {cat}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Menu Items */}
+            <div className="space-y-0" data-testid="menu-items-list">
+              {filteredItems.map((item, idx) => {
+                const itemImages = item.images?.length > 0 ? item.images : (item.image ? [item.image] : []);
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-start gap-5 py-6 ${idx < filteredItems.length - 1 ? 'border-b border-[#E2E8F0]' : ''}`}
+                    data-testid={`menu-item-${item.id}`}
+                  >
+                    {/* Image Carousel */}
+                    <ItemImageCarousel images={itemImages} />
+
+                    {/* Item Info */}
+                    <div className="flex-1 min-w-0 pt-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-serif text-base sm:text-lg font-semibold text-[#1A1D20] leading-snug">{item.name}</h3>
+                            {item.popular && (
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-orange-50 text-orange-600 text-[10px] font-semibold rounded-full border border-orange-200" data-testid={`popular-badge-${item.id}`}>
+                                <Flame className="w-2.5 h-2.5" /> Popular
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <Button size="sm" onClick={() => addToCart(item)} className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-8 px-3 text-xs">
-                            <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                          </Button>
-                        )}
+                          <p className="text-sm text-[#64748B] mt-1 leading-relaxed line-clamp-2 font-sans">{item.description}</p>
+                          
+                          {/* Price + Ingredients link */}
+                          <div className="flex items-center gap-3 mt-2.5">
+                            <span className="font-sans font-bold text-[#082c59] text-base">{formatFCFA(item.price)}</span>
+                            {item.ingredients?.length > 0 && (
+                              <button
+                                onClick={() => setIngredientsModal({ open: true, itemName: item.name, ingredients: item.ingredients })}
+                                className="text-xs text-[#C5A880] hover:text-[#082c59] underline underline-offset-4 font-sans transition-colors"
+                                data-testid={`view-ingredients-${item.id}`}
+                              >
+                                View Ingredients
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Add to cart */}
+                        <div className="flex-shrink-0 pt-1">
+                          {cart[item.id] ? (
+                            <div className="flex items-center gap-1 bg-white rounded-full border border-[#E2E8F0] p-1 shadow-sm" data-testid={`cart-controls-${item.id}`}>
+                              <button
+                                onClick={() => removeFromCart(item.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+                                data-testid={`decrease-qty-${item.id}`}
+                              >
+                                <Minus className="h-3.5 w-3.5 text-[#64748B]" />
+                              </button>
+                              <span className="w-6 text-center font-bold text-sm text-[#082c59] font-sans">{cart[item.id]}</span>
+                              <button
+                                onClick={() => addToCart(item)}
+                                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+                                data-testid={`increase-qty-${item.id}`}
+                              >
+                                <Plus className="h-3.5 w-3.5 text-[#64748B]" />
+                              </button>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => addToCart(item)}
+                              className="bg-[#082c59] hover:bg-[#051A35] rounded-full h-9 px-4 text-xs font-sans font-medium shadow-sm"
+                              data-testid={`add-to-cart-${item.id}`}
+                            >
+                              <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {/* Expandable ingredients */}
-                    {item.ingredients?.length > 0 && (
-                      <div id={`ing-${item.id}`} className="hidden px-4 pb-2 pt-1">
-                        <div className="flex flex-wrap gap-1">
-                          {item.ingredients.map((ing, idx) => (
-                            <Badge key={idx} variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">{ing}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                ))}
-              </div>
+                );
+              })}
+              
+              {filteredItems.length === 0 && (
+                <div className="text-center py-16">
+                  <Utensils className="w-10 h-10 text-[#C5A880]/40 mx-auto mb-3" />
+                  <p className="font-sans text-[#64748B] text-sm">No dishes found</p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right: Cart & Reservation */}
-          <div className="space-y-5">
-            {/* Cart Summary */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-4">
-                <div className="flex items-center justify-between text-white">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
-                      <ShoppingCart className="h-5 w-5" />
+          {/* ── Right: Cart & Reservation (4 cols, sticky) ── */}
+          <div className="col-span-12 lg:col-span-4" data-testid="sidebar-section">
+            <div className="lg:sticky lg:top-8 space-y-5">
+              {/* Cart Summary */}
+              <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(8,44,89,0.06)] border border-[#E2E8F0]/50 overflow-hidden" data-testid="cart-summary">
+                <div className="p-5 border-b border-[#E2E8F0]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <ShoppingCart className="h-4 w-4 text-[#082c59]" />
+                      <h3 className="font-serif text-base font-semibold text-[#082c59]">Your Order</h3>
                     </div>
-                    <h3 className="font-bold">Your Order</h3>
+                    {cartCount > 0 && (
+                      <Badge className="bg-[#082c59] text-white border-0 text-[10px] font-sans px-2">{cartCount}</Badge>
+                    )}
                   </div>
-                  {cartCount > 0 && (
-                    <Badge className="bg-white/20 text-white border-0 text-xs">{cartCount} items</Badge>
+                </div>
+                
+                <div className="p-5">
+                  {cartCount === 0 ? (
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 bg-[#F9F9F7] rounded-full flex items-center justify-center mx-auto mb-2">
+                        <ShoppingCart className="w-5 h-5 text-[#C5A880]/60" />
+                      </div>
+                      <p className="text-sm text-[#64748B] font-sans">Your cart is empty</p>
+                      <p className="text-xs text-[#64748B]/60 mt-0.5">Browse the menu to add items</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {getCartItems().map(item => (
+                        <div key={item.id} className="flex items-center justify-between py-2 border-b border-[#E2E8F0] last:border-0" data-testid={`cart-item-${item.id}`}>
+                          <div className="flex-1 mr-2 min-w-0">
+                            <p className="font-sans font-medium text-sm text-[#1A1D20] truncate">{item.name}</p>
+                            <p className="text-xs text-[#64748B] font-sans">{item.quantity} x {formatFCFA(item.price)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="font-sans font-bold text-sm text-[#082c59]">{formatFCFA(item.price * item.quantity)}</span>
+                            <button onClick={() => clearItem(item.id)} className="p-1 hover:bg-red-50 rounded-full transition-colors" data-testid={`remove-cart-item-${item.id}`}>
+                              <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-3 mt-1">
+                        <div className="flex justify-between items-center">
+                          <span className="font-sans font-bold text-[#1A1D20]">Total</span>
+                          <span className="font-serif text-xl font-bold text-[#082c59]">{formatFCFA(subtotal)}</span>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-              
-              <div className="p-4">
-                {cartCount === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <ShoppingCart className="w-6 h-6 text-slate-400" />
-                    </div>
-                    <p className="text-sm text-slate-500">Your cart is empty</p>
-                    <p className="text-xs text-slate-400 mt-1">Add items from the menu</p>
+
+              {/* Reservation Details - Compact */}
+              <div className="bg-white rounded-2xl shadow-[0_8px_32px_rgba(8,44,89,0.06)] border border-[#E2E8F0]/50 overflow-hidden" data-testid="reservation-section">
+                <div className="p-5 border-b border-[#E2E8F0]">
+                  <h3 className="font-serif text-base font-semibold text-[#082c59]">Reservation</h3>
+                </div>
+                <div className="p-5 space-y-3">
+                  {/* Order Type */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider font-sans">Order Type</label>
+                    <Select value={orderType} onValueChange={setOrderType}>
+                      <SelectTrigger className="mt-1 bg-[#F9F9F7] border-[#E2E8F0] rounded-xl h-9 text-sm font-sans" data-testid="order-type-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="dine-in">Dine-in</SelectItem>
+                        <SelectItem value="takeout">Takeout</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ) : (
-                  <div className="space-y-2.5">
-                    {getCartItems().map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg">
-                        <div className="flex-1 mr-2">
-                          <p className="font-medium text-sm text-slate-900">{item.name}</p>
-                          <p className="text-xs text-slate-500">{item.quantity} x {formatFCFA(item.price)}</p>
+
+                  {orderType === 'dine-in' && (
+                    <>
+                      {/* Date & Time side by side */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider font-sans">Date</label>
+                          <Button 
+                            variant="outline" 
+                            className="w-full justify-start mt-1 bg-[#F9F9F7] border-[#E2E8F0] rounded-xl h-9 text-xs font-sans hover:bg-white"
+                            onClick={() => setIsReservationDateOpen(true)}
+                            data-testid="reservation-date-btn"
+                          >
+                            <CalendarIcon className="mr-1.5 h-3 w-3 text-[#C5A880]" />
+                            {format(reservationDate, 'MMM d')}
+                          </Button>
+                          <DatePickerModal
+                            isOpen={isReservationDateOpen}
+                            onClose={() => setIsReservationDateOpen(false)}
+                            onSelect={setReservationDate}
+                            selectedDate={reservationDate}
+                            title="Select Reservation Date"
+                            minDate={new Date()}
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-[#082c59]">{formatFCFA(item.price * item.quantity)}</span>
-                          <button onClick={() => clearItem(item.id)} className="p-1 hover:bg-red-50 rounded transition-colors">
-                            <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600" />
-                          </button>
+                        <div>
+                          <label className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider font-sans">Time</label>
+                          <Select value={reservationTime} onValueChange={setReservationTime}>
+                            <SelectTrigger className="mt-1 bg-[#F9F9F7] border-[#E2E8F0] rounded-xl h-9 text-xs font-sans" data-testid="reservation-time-select">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {['11:00', '12:00', '13:00', '18:00', '19:00', '20:00', '21:00'].map(t => (
+                                <SelectItem key={t} value={t}>{t}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
-                    ))}
-                    <div className="border-t border-slate-200 pt-3 mt-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-900">Total</span>
-                        <span className="text-xl font-bold text-[#082c59]">{formatFCFA(subtotal)}</span>
+                      <div>
+                        <label className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider font-sans">Guests</label>
+                        <Select value={String(guests)} onValueChange={v => setGuests(Number(v))}>
+                          <SelectTrigger className="mt-1 bg-[#F9F9F7] border-[#E2E8F0] rounded-xl h-9 text-sm font-sans" data-testid="guests-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                              <SelectItem key={n} value={String(n)}>{n} {n === 1 ? 'Guest' : 'Guests'}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-[#64748B] uppercase tracking-wider font-sans">Special Requests</label>
+                    <Textarea
+                      value={specialRequests}
+                      onChange={e => setSpecialRequests(e.target.value)}
+                      placeholder="Allergies, preferences..."
+                      className="mt-1 bg-[#F9F9F7] border-[#E2E8F0] rounded-xl min-h-[48px] text-xs font-sans resize-none"
+                      rows={2}
+                      data-testid="special-requests-textarea"
+                    />
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Reservation Details */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 p-4 border-b border-slate-200">
-                <h3 className="font-bold text-[#082c59] text-sm">Reservation Details</h3>
-              </div>
-              <div className="p-4 space-y-3.5">
-                {/* Order Type */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Order Type</label>
-                  <Select value={orderType} onValueChange={setOrderType}>
-                    <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="dine-in">Dine-in Reservation</SelectItem>
-                      <SelectItem value="takeout">Takeout</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {orderType === 'dine-in' && (
-                  <>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Date</label>
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start mt-1.5 bg-slate-50 border-slate-200 rounded-xl hover:bg-slate-100"
-                        onClick={() => setIsReservationDateOpen(true)}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4 text-[#082c59]" />
-                        {format(reservationDate, 'PPP')}
-                      </Button>
-                      <DatePickerModal
-                        isOpen={isReservationDateOpen}
-                        onClose={() => setIsReservationDateOpen(false)}
-                        onSelect={setReservationDate}
-                        selectedDate={reservationDate}
-                        title="Select Reservation Date"
-                        minDate={new Date()}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Time</label>
-                      <Select value={reservationTime} onValueChange={setReservationTime}>
-                        <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {['11:00', '12:00', '13:00', '18:00', '19:00', '20:00', '21:00'].map(t => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Guests</label>
-                      <Select value={String(guests)} onValueChange={v => setGuests(Number(v))}>
-                        <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n} {n === 1 ? 'Guest' : 'Guests'}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Special Requests</label>
-                  <Textarea
-                    value={specialRequests}
-                    onChange={e => setSpecialRequests(e.target.value)}
-                    placeholder="Allergies, preferences, etc."
-                    className="mt-1.5 bg-slate-50 border-slate-200 rounded-xl min-h-[60px] text-sm"
-                    rows={2}
-                  />
                 </div>
               </div>
-            </div>
 
-            {/* Proceed Button */}
-            <div className="space-y-2">
+              {/* Proceed Button */}
               <Button 
                 onClick={handleProceed}
                 disabled={cartCount === 0} 
-                className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 rounded-xl text-base font-bold shadow-lg"
+                className="w-full bg-[#C5A880] hover:bg-[#A98E64] text-[#1A1D20] h-12 rounded-full text-sm font-bold font-sans shadow-lg disabled:opacity-40 transition-colors"
                 data-testid="proceed-to-booking-btn"
               >
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Final Step
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Proceed to Booking
               </Button>
-              <p className="text-center text-xs text-slate-500">You will not be charged yet</p>
+              <p className="text-center text-[10px] text-[#64748B] font-sans">You will not be charged yet</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Ingredients Modal */}
+      <IngredientsModal
+        open={ingredientsModal.open}
+        onClose={() => setIngredientsModal({ open: false, itemName: '', ingredients: [] })}
+        itemName={ingredientsModal.itemName}
+        ingredients={ingredientsModal.ingredients}
+      />
     </div>
   );
 }

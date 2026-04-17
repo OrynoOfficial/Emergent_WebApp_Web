@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, X, Loader2, ImagePlus } from 'lucide-react';
 import api from '@/api/client';
 
 const MENU_CATEGORIES = [
@@ -16,8 +16,12 @@ const MENU_CATEGORIES = [
   { value: 'sides', label: 'Sides' }
 ];
 
-function MenuImageUploader({ image, onChange }) {
+const MAX_IMAGES = 3;
+
+function MultiImageUploader({ images = [], onChange }) {
   const [uploading, setUploading] = useState(false);
+
+  const getUrl = (img) => img?.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img;
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -28,28 +32,46 @@ function MenuImageUploader({ image, onChange }) {
       formData.append('file', file);
       formData.append('folder', 'menu-items');
       const res = await api.post('/uploads/', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (res.data?.file_url) onChange(res.data.file_url);
+      if (res.data?.file_url) {
+        onChange([...images, res.data.file_url].slice(0, MAX_IMAGES));
+      }
     } catch { /* skip */ }
     setUploading(false);
     e.target.value = '';
   };
 
-  const getUrl = (img) => img?.startsWith('/api') ? `${import.meta.env.VITE_BACKEND_URL || ''}${img}` : img;
+  const removeImage = (idx) => {
+    onChange(images.filter((_, i) => i !== idx));
+  };
 
   return (
-    <div className="mt-1">
-      {image ? (
-        <div className="relative w-32 h-24 rounded-lg overflow-hidden border group">
-          <img src={getUrl(image)} alt="" className="w-full h-full object-cover" />
-          <button onClick={() => onChange('')} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
-        </div>
-      ) : (
-        <label className="inline-flex items-center gap-2 px-3 py-2 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : <Upload className="w-4 h-4 text-slate-400" />}
-          <span className="text-sm text-slate-500">{uploading ? 'Uploading...' : 'Upload image'}</span>
-          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
-        </label>
-      )}
+    <div className="mt-1 space-y-2">
+      <div className="flex gap-2 flex-wrap">
+        {images.map((img, idx) => (
+          <div key={idx} className="relative w-24 h-20 rounded-lg overflow-hidden border group">
+            <img src={getUrl(img)} alt="" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => removeImage(idx)}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="w-3 h-3" />
+            </button>
+            <span className="absolute bottom-0.5 left-0.5 bg-black/50 text-white text-[9px] px-1 rounded">{idx + 1}/{MAX_IMAGES}</span>
+          </div>
+        ))}
+        {images.length < MAX_IMAGES && (
+          <label className="w-24 h-20 inline-flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-slate-400 hover:bg-slate-50 transition-colors">
+            {uploading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            ) : (
+              <ImagePlus className="w-5 h-5 text-slate-400" />
+            )}
+            <span className="text-[10px] text-slate-500 mt-1">{uploading ? 'Uploading...' : `Add (${images.length}/${MAX_IMAGES})`}</span>
+            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+          </label>
+        )}
+      </div>
     </div>
   );
 }
@@ -57,6 +79,19 @@ function MenuImageUploader({ image, onChange }) {
 export function MenuItemForm({ form, onChange, isEditing = false }) {
   const updateForm = (field, value) => {
     onChange({ ...form, [field]: value });
+  };
+
+  // Build images array from both old `image` field and new `images` field
+  const currentImages = form.images?.length > 0
+    ? form.images
+    : form.image
+      ? [form.image]
+      : [];
+
+  const handleImagesChange = (newImages) => {
+    updateForm('images', newImages);
+    // Keep single image field in sync (first image)
+    updateForm('image', newImages[0] || '');
   };
 
   return (
@@ -110,10 +145,10 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
       </div>
       
       <div>
-        <Label>Image</Label>
-        <MenuImageUploader
-          image={form.image || ''}
-          onChange={(url) => updateForm('image', url)}
+        <Label>Images (up to {MAX_IMAGES})</Label>
+        <MultiImageUploader
+          images={currentImages}
+          onChange={handleImagesChange}
         />
       </div>
 
