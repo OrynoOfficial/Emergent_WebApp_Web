@@ -1,0 +1,99 @@
+{
+  "theme": "light",
+  "archetype": "5 (Jewel & Luxury - Light Variant)",
+  "colors": {
+    "primary": "#082c59",
+    "primary_hover": "#051A35",
+    "accent": "#C5A880",
+    "accent_hover": "#A98E64",
+    "background": "#F9F9F7",
+    "surface": "#FFFFFF",
+    "text": "#1A1D20",
+    "text_muted": "#64748B",
+    "border": "#E2E8F0"
+  },
+  "typography": {
+    "heading_font": "Playfair Display",
+    "body_font": "Manrope",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-tight font-serif",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight leading-tight font-serif",
+      "h3": "text-xl sm:text-2xl tracking-tight font-serif",
+      "h4": "text-lg sm:text-xl font-semibold font-sans",
+      "body": "text-base leading-relaxed text-[#1A1D20] font-sans",
+      "small": "text-sm text-[#64748B] tracking-wide font-sans"
+    }
+  },
+  "layout": {
+    "spacing_scale": "Generous (p-6, p-8, p-12)",
+    "structure": "2-column bento style grid on desktop (lg:grid-cols-12 gap-8)",
+    "left_column": "col-span-12 lg:col-span-8 (Menu Items, Filters, Search)",
+    "right_column": "col-span-12 lg:col-span-4 (Reservation form + Cart Sidebar, sticky on desktop)"
+  },
+  "components": {
+    "header": {
+      "type": "Hero Image Overlay",
+      "style": "Full width, 40vh height minimum. Background image of premium restaurant interior. Overlay bg-[#082c59]/60 for crisp contrast.",
+      "content": "Restaurant Name, Location, Rating (Gold stars #C5A880), Operating Hours",
+      "font": "Playfair Display for name, bright white text."
+    },
+    "menu_item": {
+      "type": "Horizontal Cardless Row",
+      "style": "Flex container, items-start. Border-b border-[#E2E8F0] pb-8 mb-8. Generous gap-6.",
+      "image_carousel": "w-32 h-32 md:w-40 md:h-40 flex-shrink-0 rounded-xl overflow-hidden shadow-sm",
+      "interactions": "Swipeable images (max 3). 'View Ingredients' link text-sm text-[#C5A880] underline underline-offset-4 hover:text-[#082c59] cursor-pointer"
+    },
+    "reservation_section": {
+      "type": "Neumorphic / Solid Surface Card",
+      "style": "bg-white p-6 rounded-2xl shadow-[0_8px_32px_rgba(8,44,89,0.06)] border border-[#E2E8F0]/50",
+      "sizing": "Compact. Uses minimal padding for inputs, 2-column grid for date/time/guests.",
+      "button": "bg-[#082c59] text-white hover:bg-[#051A35] rounded-full px-6 py-3 w-full transition-colors"
+    },
+    "cart_summary": {
+      "type": "Compact list within right column",
+      "style": "bg-[#F9F9F7] p-6 rounded-2xl border border-[#E2E8F0] mt-6",
+      "button": "bg-[#C5A880] text-[#1A1D20] hover:bg-[#A98E64] rounded-full font-bold px-6 py-3 w-full"
+    },
+    "tabs": {
+      "type": "Pill-style filters",
+      "style": "Horizontal scroll, hide scrollbar. Active: bg-[#082c59] text-white. Inactive: bg-white text-[#64748B] border border-[#E2E8F0]"
+    }
+  },
+  "motion": {
+    "hover_states": "translate-y-[-2px] shadow-md transition-all duration-300",
+    "click_states": "scale-[0.98]",
+    "carousel_transition": "ease-in-out duration-300"
+  },
+  "icons": "lucide-react",
+  "media": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1744776411214-31209006a0f6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxwcmVtaXVtJTIwcmVzdGF1cmFudCUyMGludGVyaW9yfGVufDB8fHx8MTc3NjQ2NjY1Nnww&ixlib=rb-4.1.0&q=85",
+      "description": "Premium restaurant interior view"
+    },
+    "menu_items": [
+      {
+        "url": "https://images.unsplash.com/photo-1765100778802-f684a4b7fd20?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwzfHxnb3VybWV0JTIwcGFzdGElMjBwbGF0ZXxlbnwwfHx8fDE3NzY0NjY2NTZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Gourmet pasta plate"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1676300185579-ed2b14891d82?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxnb3VybWV0JTIwc3RlYWslMjBkaXNofGVufDB8fHx8MTc3NjQ2NjY1Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Gourmet steak dish"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1595850331210-2b3a4bf9e508?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwzfHxlbGVnYW50JTIwc2FsYWQlMjBib3dsfGVufDB8fHx8MTc3NjQ2NjY1Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Elegant salad bowl"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install 'lucide-react' for icons and a carousel library (like 'embla-carousel-react' via shadcn) for the swipeable image carousel in menu items.",
+    "Ensure 'Playfair Display' (serif) and 'Manrope' (sans) fonts are imported via Google Fonts in the main index.css and configured in tailwind.config.js.",
+    "Implement a responsive 2-column layout (lg:grid-cols-12 gap-8), where the left menu column is col-span-8 and the right cart/reservation column is col-span-4.",
+    "Make the right column sticky (e.g., sticky top-8) so Cart and Reservation remain visible as the user scrolls the menu on desktop.",
+    "Instead of a modal, render the Reservation form as a compact inline card in the right column. This saves space and provides an elegant feel. (Optionally use floating labels or dense shadcn inputs).",
+    "For the Menu item image carousel, allow max 3 images. Show pagination dots within the carousel.",
+    "Use Shadcn Dialog (Modal) for the 'Ingredients' modal triggered by clicking 'View Ingredients'.",
+    "Ensure the price is formatted elegantly, explicitly showing 'FCFA'.",
+    "Include 'data-testid' on all interactive elements (buttons, inputs, tabs, modals, carousel arrows)."
+  ]
+}

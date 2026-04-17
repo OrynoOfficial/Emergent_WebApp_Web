@@ -44,7 +44,7 @@
       "status": "VERIFIED",
       "endpoints_tested": [
         "GET /api/management/dashboard-stats?service_type=travel&period=30days - returns all operators (Items=13)",
-        "GET /api/management/dashboard-stats?service_type=travel&period=30days&operator_id=30c487d8-f8ef-4e80-8b14-1a68866071c8 - returns Musango only (Items=2)",
+        "GET /api/management/dashboard-stats?service_type=travel&period=30days&operator_id=management-scope-v1 - returns Musango only (Items=2)",
         "Different periods (7days, 30days, 90days) work correctly",
         "Different service types (hotels, travel, restaurants, car_rental) work correctly",
         "Operator user gets own data only (operator_id param ignored for operator role)",

@@ -35,7 +35,7 @@
   "seed_data_creation": "None - used existing operators: Musango (travel), Oryno (multi), West Region Tours (travel)",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Operator Scope Filter feature fully implemented. OperatorScopeFilter component is integrated in 9 management pages (Travel, Restaurant, Cinema, Events, Laundry, Banquet, Package, Hotel, CarRental). The component calls /api/operators/by-service?service_type=X to get relevant operators. When user selects an operator, the management page re-fetches data with operator_id param. Default 'all' shows cumulative data. Known operator IDs: Musango=30c487d8-f8ef-4e80-8b14-1a68866071c8 (travel), Oryno=0f899b9d-1e7f-42a8-861f-5a0c9fe68ade (multi), West Region=f6a076d3-da3a-46de-a096-dc91418afd16 (travel).",
+  "context_for_next_testing_agent": "Operator Scope Filter feature fully implemented. OperatorScopeFilter component is integrated in 9 management pages (Travel, Restaurant, Cinema, Events, Laundry, Banquet, Package, Hotel, CarRental). The component calls /api/operators/by-service?service_type=X to get relevant operators. When user selects an operator, the management page re-fetches data with operator_id param. Default 'all' shows cumulative data. Known operator IDs: Musango=management-scope-v1 (travel), Oryno=management-scope-v1 (multi), West Region=management-scope-v1 (travel).",
   "verified_features": {
     "backend_api": {
       "status": "VERIFIED",
