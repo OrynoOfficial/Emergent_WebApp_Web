@@ -34,7 +34,7 @@ from config.database import connect_to_mongo, close_mongo_connection, get_databa
 # Import new management routes
 from routes.vehicles import router as vehicles_router
 from routes.operators import router as operators_router
-from routes.seat_bookings import router as seat_bookings_router
+from routes.seat_bookings import router as seat_bookings_router, seat_ws_router
 from routes.rooms import router as rooms_router
 from routes.commission import router as commission_router
 from routes.loyalty import router as loyalty_router
@@ -69,7 +69,7 @@ from routes.customer_location import router as customer_location_router
 from routes.communications import router as communications_router
 from routes.favourites import router as favourites_router
 from routes.reports import router as reports_router
-from routes.seat_ws import router as seat_ws_router
+# seat_ws is now integrated into seat_bookings.py
 from routes.invitations import router as invitations_router
 from routes.management_dashboard import router as management_dashboard_router
 from routes.subscriptions import router as subscriptions_router

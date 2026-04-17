@@ -7,40 +7,45 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import api from '@/api/client';
 
-const SEAT_STATUS_COLORS = {
-  available: 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-500 text-emerald-700',
-  selected: 'bg-blue-500 border-blue-600 text-white shadow-lg ring-2 ring-blue-300',
-  booked: 'bg-red-50 border-red-300 text-red-400 cursor-not-allowed',
-  pending: 'bg-amber-50 border-amber-300 text-amber-400 cursor-not-allowed',
-  reserved: 'bg-amber-50 border-amber-300 text-amber-400 cursor-not-allowed',
-  blocked: 'bg-slate-200 border-slate-400 text-slate-400 cursor-not-allowed'
+const STATUS_STYLES = {
+  available: 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-500 text-emerald-700 cursor-pointer',
+  selected:  'bg-blue-500 border-blue-600 text-white shadow-lg ring-2 ring-blue-300 cursor-pointer',
+  booked:    'bg-red-50 border-red-300 text-red-400 cursor-not-allowed opacity-70',
+  reserved:  'bg-amber-100 border-amber-400 text-amber-600 cursor-not-allowed',
+  blocked:   'bg-slate-200 border-slate-400 text-slate-400 cursor-not-allowed',
+  own_reserved: 'bg-blue-500 border-blue-600 text-white shadow-lg ring-2 ring-blue-300 cursor-pointer',
 };
 
-export default function LiveSeatMap({ 
-  routeId, 
-  departureDate, 
+const STATUS_ICONS = {
+  selected:  Armchair,
+  own_reserved: Armchair,
+  booked:    User,
+  reserved:  Clock,
+  blocked:   Lock,
+  available: Armchair,
+};
+
+export default function LiveSeatMap({
+  routeId,
+  departureDate,
   maxSeats = 1,
   selectedSeats = [],
   onSeatsChange,
   autoRefresh = true,
   refreshInterval = 10000,
-  allowSeatSwapping = true,
-  className 
+  className
 }) {
   const [seatData, setSeatData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [reservedBookingIds, setReservedBookingIds] = useState(new Map());
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [syncing, setSyncing] = useState(false);
   const [countdown, setCountdown] = useState(null);
   const [wsConnected, setWsConnected] = useState(false);
   const refreshTimerRef = useRef(null);
   const countdownTimerRef = useRef(null);
   const wsRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
-  const sessionId = useRef(`session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   const currentUserId = useRef(null);
 
-  // Try to get current user id
+  // Get current user id from token
   useEffect(() => {
     try {
       const token = localStorage.getItem('access_token');
@@ -51,302 +56,183 @@ export default function LiveSeatMap({
     } catch { /* ignore */ }
   }, []);
 
-  // Generate mock seat data as fallback
-  const generateMockSeatData = useCallback(() => {
-    const totalSeats = 45;
-    const bookedSeats = [3, 7, 12, 18, 24, 31, 38];
-    const pendingSeats = [5, 22];
-    const seat_map = [];
-    for (let i = 1; i <= totalSeats; i++) {
-      let status = 'available';
-      if (bookedSeats.includes(i)) status = 'booked';
-      if (pendingSeats.includes(i)) status = 'pending';
-      if (selectedSeats.includes(i)) status = 'selected';
-      seat_map.push({ seat_number: i, status, user_id: null });
-    }
-    return {
-      type: 'seat_update',
-      seat_map,
-      statistics: {
-        available: totalSeats - bookedSeats.length - pendingSeats.length - selectedSeats.length,
-        booked: bookedSeats.length,
-        pending: pendingSeats.length,
-        total: totalSeats
-      },
-      layout: { rows: 5, columns: 9 }
-    };
-  }, [selectedSeats]);
-
-  // Apply a seat_update message to state
-  const applySeatUpdate = useCallback((data) => {
-    if (data.type !== 'seat_update' || !data.seat_map) return;
-
-    // Mark user's own selected seats
-    const updatedMap = data.seat_map.map(seat => {
-      if (selectedSeats.includes(seat.seat_number)) {
-        return { ...seat, status: 'selected' };
-      }
-      // Seats reserved by current user should show as selected
-      if ((seat.status === 'reserved' || seat.status === 'pending') && seat.user_id === currentUserId.current) {
-        return { ...seat, status: 'selected' };
-      }
-      return seat;
-    });
-
-    setSeatData({
-      ...data,
-      seat_map: updatedMap,
-    });
-    setLastRefresh(new Date());
-  }, [selectedSeats]);
-
-  // ── WebSocket connection ──
-  const connectWs = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-
+  // ---- Fetch seat map from server ----
+  const fetchSeats = useCallback(async (silent = false) => {
+    if (!routeId || !departureDate) return;
+    if (!silent) setLoading(true);
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || window.location.origin;
-      const wsProtocol = backendUrl.startsWith('https') ? 'wss' : 'ws';
-      const wsHost = backendUrl.replace(/^https?:\/\//, '');
-      const wsUrl = `${wsProtocol}://${wsHost}/api/ws/seats/${routeId}/${departureDate}`;
+      const { data } = await api.get('/seat-bookings/', { params: { route_id: routeId, travel_date: departureDate } });
+      setSeatData(data);
 
-      const ws = new WebSocket(wsUrl);
+      // Reconcile: find seats this user has reserved on the server
+      if (data.seat_map && currentUserId.current) {
+        const myReserved = data.seat_map
+          .filter(s => s.status === 'reserved' && s.user_id === currentUserId.current)
+          .map(s => String(s.seat_number));
 
-      ws.onopen = () => {
-        setWsConnected(true);
-        // Stop HTTP polling when WS is connected
-        if (refreshTimerRef.current) {
-          clearInterval(refreshTimerRef.current);
-          refreshTimerRef.current = null;
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'seat_update') {
-            applySeatUpdate(data);
+        // If server state differs from local, update local to match
+        const localSet = new Set(selectedSeats.map(String));
+        const serverSet = new Set(myReserved);
+        if (localSet.size !== serverSet.size || ![...localSet].every(s => serverSet.has(s))) {
+          onSeatsChange(myReserved);
+          if (myReserved.length > 0) {
+            // Find expiry from server data
+            // We don't have it in seat_map, so set a default
+            setCountdown(new Date(Date.now() + 5 * 60 * 1000));
+          } else {
+            setCountdown(null);
           }
-        } catch { /* ignore bad messages */ }
-      };
-
-      ws.onclose = () => {
-        setWsConnected(false);
-        wsRef.current = null;
-        // Reconnect after 3 seconds
-        reconnectTimerRef.current = setTimeout(() => connectWs(), 3000);
-        // Re-enable HTTP polling as fallback
-        if (autoRefresh && !refreshTimerRef.current) {
-          refreshTimerRef.current = setInterval(() => fetchSeatsHttp(true), refreshInterval);
         }
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
-
-      wsRef.current = ws;
-    } catch {
-      setWsConnected(false);
-    }
-  }, [routeId, departureDate, applySeatUpdate, autoRefresh, refreshInterval]);
-
-  // ── HTTP fetch (fallback) ──
-  const fetchSeatsHttp = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoading(true);
-      try {
-        const { data } = await api.get('/seat-bookings/availability', {
-          params: { route_id: routeId, travel_date: departureDate }
-        });
-        const totalSeats = data.total_seats || 45;
-        const bookedSeats = data.booked_seats || {};
-        const seat_map = [];
-        for (let i = 1; i <= totalSeats; i++) {
-          const sn = String(i);
-          let status = 'available';
-          if (bookedSeats[sn] === 'booked') status = 'booked';
-          else if (bookedSeats[sn] === 'reserved') status = 'pending';
-          if (selectedSeats.includes(i)) status = 'selected';
-          seat_map.push({ seat_number: i, status, user_id: null });
-        }
-        setSeatData({
-          type: 'seat_update',
-          seat_map,
-          statistics: {
-            available: data.available_count || totalSeats - Object.keys(bookedSeats).length,
-            booked: Object.values(bookedSeats).filter(s => s === 'booked').length,
-            pending: Object.values(bookedSeats).filter(s => s === 'reserved').length,
-            total: totalSeats
-          },
-          layout: data.seat_layout || { rows: 5, columns: 9 },
-        });
-        setLastRefresh(new Date());
-        return;
-      } catch {
-        // Fallback to mock
       }
-      const mockData = generateMockSeatData();
-      setSeatData(mockData);
-      setLastRefresh(new Date());
-    } catch {
-      toast.error('Failed to load seat availability');
+    } catch (err) {
+      if (!silent) {
+        console.error('Failed to load seats:', err);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [routeId, departureDate, generateMockSeatData, selectedSeats]);
-
-  // Store selectedSeats in ref for cleanup
-  const selectedSeatsRef = useRef(selectedSeats);
-  useEffect(() => { selectedSeatsRef.current = selectedSeats; }, [selectedSeats]);
-
-  // Release seats on unmount
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const seats = selectedSeatsRef.current;
-      if (seats.length > 0) {
-        try {
-          const token = localStorage.getItem('access_token');
-          if (token) {
-            navigator.sendBeacon(
-              `${import.meta.env.VITE_API_URL}/seat-bookings/release-beacon`,
-              JSON.stringify({ route_id: routeId, travel_date: departureDate, seat_numbers: seats.map(String), token })
-            );
-          }
-        } catch { /* ignore */ }
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      const seats = selectedSeatsRef.current;
-      if (seats.length > 0) {
-        api.post('/seat-bookings/release', null, {
-          params: { route_id: routeId, travel_date: departureDate, seat_numbers: seats.map(String) }
-        }).catch(() => {});
-      }
-      // Close WS
-      if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-    };
   }, [routeId, departureDate]);
 
-  // Initial load + WebSocket connect
-  useEffect(() => {
-    fetchSeatsHttp();
-    connectWs();
-  }, [fetchSeatsHttp, connectWs]);
+  // ---- Sync desired seats with server (single smart call) ----
+  const syncSeats = useCallback(async (desiredSeats) => {
+    if (!routeId || !departureDate) return false;
+    setSyncing(true);
+    try {
+      const { data } = await api.post('/seat-bookings/sync', {
+        route_id: routeId,
+        travel_date: departureDate,
+        desired_seats: desiredSeats.map(String),
+      });
+      // Update countdown from server response
+      if (data.expires_at && desiredSeats.length > 0) {
+        setCountdown(new Date(data.expires_at));
+      } else if (desiredSeats.length === 0) {
+        setCountdown(null);
+      }
+      // Refresh the seat map to get the real state
+      await fetchSeats(true);
+      return true;
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      if (err.response?.status === 409) {
+        toast.error(detail || 'Some seats were just taken by another user');
+      } else {
+        toast.error(detail || 'Failed to update seats');
+      }
+      // Refresh to get the real state
+      await fetchSeats(true);
+      return false;
+    } finally {
+      setSyncing(false);
+    }
+  }, [routeId, departureDate, fetchSeats]);
 
-  // HTTP polling fallback (only if WS is not connected)
+  // ---- WebSocket for live updates ----
+  const connectWs = useCallback(() => {
+    if (!routeId || !departureDate) return;
+    try {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const ws = new WebSocket(`${proto}//${host}/ws/seats/${routeId}/${departureDate}`);
+      ws.onopen = () => setWsConnected(true);
+      ws.onmessage = () => fetchSeats(true);
+      ws.onclose = () => {
+        setWsConnected(false);
+        // Reconnect after 3s
+        setTimeout(() => connectWs(), 3000);
+      };
+      ws.onerror = () => ws.close();
+      wsRef.current = ws;
+    } catch { /* ignore */ }
+  }, [routeId, departureDate, fetchSeats]);
+
+  // Initial load + WS connect
+  useEffect(() => {
+    fetchSeats();
+    connectWs();
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+    };
+  }, [fetchSeats, connectWs]);
+
+  // HTTP polling fallback
   useEffect(() => {
     if (wsConnected || !autoRefresh) return;
-    refreshTimerRef.current = setInterval(() => fetchSeatsHttp(true), refreshInterval);
+    refreshTimerRef.current = setInterval(() => fetchSeats(true), refreshInterval);
     return () => { if (refreshTimerRef.current) clearInterval(refreshTimerRef.current); };
-  }, [wsConnected, autoRefresh, refreshInterval, fetchSeatsHttp]);
+  }, [wsConnected, autoRefresh, refreshInterval, fetchSeats]);
 
   // Countdown timer
   useEffect(() => {
     if (!countdown) { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); return; }
     countdownTimerRef.current = setInterval(() => {
-      if (countdown <= new Date()) { setCountdown(null); toast.warning('Your seat reservation has expired'); fetchSeatsHttp(true); }
+      if (countdown <= new Date()) {
+        setCountdown(null);
+        toast.warning('Your seat reservation has expired');
+        fetchSeats(true);
+      }
     }, 1000);
     return () => { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); };
-  }, [countdown, fetchSeatsHttp]);
+  }, [countdown, fetchSeats]);
 
-  // Handle seat click — optimistic UI update first, API call in background
+  // Release on page unload
+  useEffect(() => {
+    const handleUnload = () => {
+      if (selectedSeats.length > 0 && routeId && departureDate && currentUserId.current) {
+        const params = new URLSearchParams({ route_id: routeId, travel_date: departureDate, user_id: currentUserId.current });
+        navigator.sendBeacon?.(`${api.defaults.baseURL}/seat-bookings/release-beacon?${params}`);
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [selectedSeats, routeId, departureDate]);
+
+  // ---- Handle seat click ----
   const handleSeatClick = async (seat) => {
     if (seat.status === 'booked' || seat.status === 'blocked') return;
-    if ((seat.status === 'pending' || seat.status === 'reserved') && !reservedBookingIds.has(seat.seat_number)) {
-      toast.error('This seat is being reserved by another customer');
+    if (syncing) return;
+
+    const seatNum = String(seat.seat_number);
+    const isMyReservation = seat.user_id === currentUserId.current;
+    const isSelected = selectedSeats.map(String).includes(seatNum);
+
+    // Can't click seats reserved by others
+    if ((seat.status === 'reserved') && !isMyReservation && !isSelected) {
+      toast.error('This seat is held by another user');
       return;
     }
 
-    const seatNumber = seat.seat_number;
-    const isSelected = selectedSeats.includes(seatNumber);
-
-    if (isSelected) {
-      // Optimistic: immediately deselect
-      const updatedSeats = selectedSeats.filter(s => s !== seatNumber);
-      onSeatsChange(updatedSeats, Array.from(reservedBookingIds.values()));
-      setReservedBookingIds(prev => { const next = new Map(prev); next.delete(seatNumber); return next; });
-      if (updatedSeats.length === 0) setCountdown(null);
-      // Background API release
-      api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] } }).catch(() => {});
-    } else if (selectedSeats.length >= maxSeats && allowSeatSwapping) {
-      // Swap: optimistic UI — remove oldest, add new
-      const oldestSeat = selectedSeats[0];
-      const updatedSeats = [...selectedSeats.slice(1), seatNumber];
-      const nextIds = new Map(reservedBookingIds);
-      nextIds.delete(oldestSeat);
-      nextIds.set(seatNumber, `booking-${seatNumber}`);
-      setReservedBookingIds(nextIds);
-      onSeatsChange(updatedSeats, Array.from(nextIds.values()));
-      setCountdown(new Date(Date.now() + 3 * 60 * 1000));
-      // Background: release old + reserve new in parallel
-      Promise.all([
-        api.post('/seat-bookings/release', null, { params: { route_id: routeId, travel_date: departureDate, seat_numbers: [String(oldestSeat)] } }).catch(() => {}),
-        api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] })
-          .then(({ data }) => {
-            const next = new Map(reservedBookingIds);
-            next.delete(oldestSeat);
-            next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
-            setReservedBookingIds(next);
-            if (data.expires_at) setCountdown(new Date(data.expires_at));
-          })
-          .catch((err) => {
-            if (err.response?.status === 400) {
-              // Seat was taken — revert
-              toast.error(err.response?.data?.detail || 'Seat already taken');
-              onSeatsChange(selectedSeats.filter(s => s !== seatNumber), Array.from(reservedBookingIds.values()));
-              fetchSeatsHttp(true);
-            }
-          })
-      ]);
+    let newSeats;
+    if (isSelected || isMyReservation) {
+      // Deselect
+      newSeats = selectedSeats.map(String).filter(s => s !== seatNum);
     } else if (selectedSeats.length >= maxSeats) {
-      toast.error(`You can only select up to ${maxSeats} seat(s)`);
+      // Swap: remove oldest, add new
+      newSeats = [...selectedSeats.map(String).slice(1), seatNum];
     } else {
-      // Select: optimistic UI
-      const updatedSeats = [...selectedSeats, seatNumber];
-      const nextIds = new Map(reservedBookingIds);
-      nextIds.set(seatNumber, `booking-${seatNumber}`);
-      setReservedBookingIds(nextIds);
-      onSeatsChange(updatedSeats, Array.from(nextIds.values()));
-      setCountdown(new Date(Date.now() + 3 * 60 * 1000));
-      // Background reserve
-      api.post('/seat-bookings/reserve', { route_id: routeId, travel_date: departureDate, seat_numbers: [String(seatNumber)] })
-        .then(({ data }) => {
-          const next = new Map(reservedBookingIds);
-          next.set(seatNumber, data.reservation_id || `booking-${seatNumber}`);
-          setReservedBookingIds(next);
-          const timeoutMinutes = data.timeout_minutes || 3;
-          const expiry = data.expires_at ? new Date(data.expires_at) : new Date(Date.now() + timeoutMinutes * 60 * 1000);
-          setCountdown(expiry);
-        })
-        .catch((err) => {
-          if (err.response?.status === 400) {
-            toast.error(err.response?.data?.detail || 'Seat already taken');
-            onSeatsChange(selectedSeats, Array.from(reservedBookingIds.values()));
-            fetchSeatsHttp(true);
-          }
-        });
+      // Add
+      newSeats = [...selectedSeats.map(String), seatNum];
+    }
+
+    // Optimistic UI update
+    onSeatsChange(newSeats);
+
+    // Sync with server
+    const ok = await syncSeats(newSeats);
+    if (!ok) {
+      // Server rejected — fetchSeats already reconciled the state
     }
   };
 
-  const getSeatStatus = (seat) => {
-    if (selectedSeats.includes(seat.seat_number)) return 'selected';
-    if (seat.status === 'reserved') return 'pending';
+  // ---- Determine visual status for each seat ----
+  const getVisualStatus = (seat) => {
+    const seatNum = String(seat.seat_number);
+    const isSelected = selectedSeats.map(String).includes(seatNum);
+    if (isSelected) return 'selected';
+    if (seat.status === 'reserved' && seat.user_id === currentUserId.current) return 'own_reserved';
+    if (seat.status === 'reserved') return 'reserved';
     return seat.status;
-  };
-
-  const renderSeatIcon = (status) => {
-    switch (status) {
-      case 'selected': return <Armchair className="w-4 h-4" />;
-      case 'booked': return <User className="w-4 h-4" />;
-      case 'pending': return <Clock className="w-4 h-4" />;
-      case 'blocked': return <Lock className="w-4 h-4" />;
-      default: return <Armchair className="w-4 h-4" />;
-    }
   };
 
   const formatCountdown = () => {
@@ -358,6 +244,7 @@ export default function LiveSeatMap({
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // ---- Render states ----
   if (loading && !seatData) {
     return (
       <Card className={className}>
@@ -375,7 +262,7 @@ export default function LiveSeatMap({
         <CardContent className="p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-slate-600">Unable to load seat map</p>
-          <Button onClick={() => fetchSeatsHttp()} className="mt-4 bg-[#082c59]">Retry</Button>
+          <Button onClick={() => fetchSeats()} className="mt-4 bg-[#082c59]">Retry</Button>
         </CardContent>
       </Card>
     );
@@ -389,13 +276,12 @@ export default function LiveSeatMap({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Armchair className="h-5 w-5 text-[#082c59]" />
-            Live Seat Selection
+            Seat Selection
           </CardTitle>
           <div className="flex items-center gap-2">
-            {/* WebSocket indicator */}
             <Badge variant="outline" className={cn(
               "text-[10px] px-2 py-0.5",
-              wsConnected ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-slate-50 text-slate-500 border-slate-200"
+              wsConnected ? "bg-emerald-50 text-emerald-700 border-emerald-300" : "bg-slate-50 text-slate-500"
             )}>
               {wsConnected ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
               {wsConnected ? 'Live' : 'Polling'}
@@ -406,113 +292,80 @@ export default function LiveSeatMap({
                 {formatCountdown()}
               </Badge>
             )}
-            <Button variant="ghost" size="sm" onClick={() => fetchSeatsHttp()} className="h-8 w-8 p-0" title="Refresh">
-              <RefreshCw className="h-4 w-4" />
+            <Button variant="ghost" size="sm" onClick={() => fetchSeats()} className="h-8 w-8 p-0" title="Refresh" disabled={syncing}>
+              <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
             </Button>
           </div>
         </div>
-        <div className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-slate-500 mt-1">
           {selectedSeats.length}/{maxSeats} selected
-          {allowSeatSwapping && selectedSeats.length >= maxSeats && (
+          {selectedSeats.length >= maxSeats && maxSeats > 0 && (
             <span className="text-blue-600 ml-2">Click another seat to swap</span>
           )}
-        </div>
+          {syncing && <span className="text-amber-600 ml-2">Updating...</span>}
+        </p>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        {/* Statistics */}
-        <div className="grid grid-cols-4 gap-2 text-xs">
-          <div className="text-center p-2 bg-emerald-50 rounded-lg border border-emerald-200">
-            <div className="font-bold text-emerald-700">{statistics.available}</div>
-            <div className="text-slate-600">Available</div>
-          </div>
-          <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="font-bold text-blue-700">{selectedSeats.length}</div>
-            <div className="text-slate-600">Selected</div>
-          </div>
-          <div className="text-center p-2 bg-red-50 rounded-lg border border-red-200">
-            <div className="font-bold text-red-700">{statistics.booked}</div>
-            <div className="text-slate-600">Booked</div>
-          </div>
-          <div className="text-center p-2 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="font-bold text-amber-700">{statistics.pending}</div>
-            <div className="text-slate-600">Pending</div>
-          </div>
-        </div>
-
-        {/* Seat Map */}
-        <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-          <div className="bg-slate-300 h-12 rounded-t-full mb-6 flex items-center justify-center shadow-sm">
-            <span className="text-sm font-medium text-slate-700">Driver</span>
-          </div>
-
-          <div className="max-w-md mx-auto">
-            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${layout?.columns || 9}, 1fr)` }}>
-              {seat_map.map((seat) => {
-                const status = getSeatStatus(seat);
-                const isClickable = status === 'available' || status === 'selected';
-                return (
-                  <button
-                    key={seat.seat_number}
-                    onClick={() => handleSeatClick(seat)}
-                    disabled={!isClickable}
-                    className={cn(
-                      'h-12 rounded-lg border-2 flex flex-col items-center justify-center transition-all duration-200 text-xs font-medium relative',
-                      SEAT_STATUS_COLORS[status],
-                      isClickable && 'cursor-pointer transform hover:scale-110 active:scale-95'
-                    )}
-                    title={
-                      status === 'booked' ? 'Booked' :
-                      status === 'pending' ? 'Reserved by another user' :
-                      status === 'blocked' ? 'Blocked' :
-                      status === 'selected' ? 'Click to deselect' :
-                      'Click to select'
-                    }
-                  >
-                    <div className="absolute top-1 right-1">{renderSeatIcon(status)}</div>
-                    <span className="text-sm font-bold mt-1">{seat.seat_number}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
+      <CardContent>
         {/* Legend */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs pt-2 border-t">
+        <div className="flex flex-wrap gap-3 mb-4 text-xs">
           {[
-            { status: 'available', label: 'Available', icon: Armchair, bg: 'bg-emerald-50 border-emerald-300', color: 'text-emerald-600' },
-            { status: 'selected', label: 'Selected', icon: Armchair, bg: 'bg-blue-500 border-blue-600', color: 'text-white' },
-            { status: 'booked', label: 'Booked', icon: User, bg: 'bg-red-50 border-red-300', color: 'text-red-400' },
-            { status: 'pending', label: 'Pending', icon: Clock, bg: 'bg-amber-50 border-amber-300', color: 'text-amber-600' },
-            { status: 'blocked', label: 'Blocked', icon: Lock, bg: 'bg-slate-200 border-slate-400', color: 'text-slate-600' },
+            { label: 'Available', style: 'bg-emerald-50 border-emerald-300' },
+            { label: 'Your Selection', style: 'bg-blue-500 border-blue-600 text-white' },
+            { label: 'Reserved', style: 'bg-amber-100 border-amber-400' },
+            { label: 'Booked', style: 'bg-red-50 border-red-300' },
           ].map(item => (
-            <div key={item.status} className="flex items-center gap-2">
-              <div className={`w-6 h-6 rounded border-2 ${item.bg} flex items-center justify-center`}>
-                <item.icon className={`w-3 h-3 ${item.color}`} />
-              </div>
-              <span className="text-slate-700">{item.label}</span>
+            <div key={item.label} className="flex items-center gap-1.5">
+              <div className={`w-5 h-5 rounded border ${item.style}`} />
+              <span className="text-slate-600">{item.label}</span>
             </div>
           ))}
         </div>
 
-        {/* Reservation warning */}
-        {countdown && selectedSeats.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3 shadow-sm">
-            <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm flex-1">
-              <p className="font-semibold text-amber-900">Seats reserved for {formatCountdown()}</p>
-              <p className="text-amber-700 text-xs mt-1">Complete your booking before the timer expires.</p>
-            </div>
+        {/* Bus front */}
+        <div className="text-center mb-3">
+          <div className="inline-block bg-slate-100 text-slate-500 text-xs font-medium px-4 py-1.5 rounded-t-xl border border-b-0 border-slate-200">
+            FRONT
           </div>
-        )}
+        </div>
 
-        {/* Connection status */}
-        <div className="text-xs text-slate-500 text-center bg-slate-100 py-2 px-3 rounded-lg">
-          <span className="flex items-center justify-center gap-2">
-            {wsConnected ? <Wifi className="h-3 w-3 text-emerald-500" /> : <RefreshCw className="h-3 w-3" />}
-            {wsConnected ? 'Real-time updates active' : `Last updated: ${lastRefresh.toLocaleTimeString()} · Polling every ${refreshInterval / 1000}s`}
-          </span>
+        {/* Seat grid */}
+        <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${layout?.columns || 4}, 1fr)` }}>
+            {seat_map.map((seat, idx) => {
+              const visualStatus = getVisualStatus(seat);
+              const isAisle = layout?.aisle_after && ((idx % (layout.columns || 4)) === layout.aisle_after - 1);
+              const SeatIcon = STATUS_ICONS[visualStatus] || Armchair;
+              const isClickable = visualStatus === 'available' || visualStatus === 'selected' || visualStatus === 'own_reserved';
+
+              return (
+                <React.Fragment key={seat.seat_number}>
+                  <button
+                    onClick={() => handleSeatClick(seat)}
+                    disabled={!isClickable || syncing}
+                    className={cn(
+                      "relative flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all text-xs font-bold min-h-[48px]",
+                      STATUS_STYLES[visualStatus] || STATUS_STYLES.available,
+                      syncing && isClickable && "opacity-60"
+                    )}
+                    title={`Seat ${seat.seat_number} — ${visualStatus}`}
+                    data-testid={`seat-${seat.seat_number}`}
+                  >
+                    <SeatIcon className="w-4 h-4 mb-0.5" />
+                    {seat.seat_number}
+                  </button>
+                  {isAisle && <div className="col-span-0 w-0" />}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex justify-between mt-4 text-xs text-slate-500">
+          <span>{statistics?.available || 0} available</span>
+          <span>{statistics?.booked || 0} booked</span>
+          <span>{statistics?.reserved || 0} held</span>
         </div>
       </CardContent>
     </Card>

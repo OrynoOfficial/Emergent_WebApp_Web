@@ -243,14 +243,12 @@ export default function TravelBooking() {
     setPassengers(prev => prev.map((p, i) => i === index ? data : p));
   };
 
-  const handleSeatsChange = useCallback((seats, bookingIds) => {
+  const handleSeatsChange = useCallback((seats) => {
     setSelectedSeats(seats);
-    setSeatBookingIds(bookingIds);
   }, []);
 
-  const handleReturnSeatsChange = useCallback((seats, bookingIds) => {
+  const handleReturnSeatsChange = useCallback((seats) => {
     setReturnSelectedSeats(seats);
-    setReturnSeatBookingIds(bookingIds);
   }, []);
 
   const calculatePricing = () => {

@@ -1,268 +1,283 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, WebSocket, WebSocketDisconnect
+from typing import Optional, List
+from pydantic import BaseModel
 from config.database import get_database
 from middleware.auth import get_current_active_user
-from models.seat_booking import SeatReservationRequest, SeatBookingConfirm, SeatStatus
-from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from enum import Enum
 import uuid
+import asyncio
 
 router = APIRouter(prefix="/api/seat-bookings", tags=["Seat Bookings"])
 
-RESERVATION_TIMEOUT_MINUTES = 3  # Seats are held for 3 minutes
+RESERVATION_TIMEOUT_MINUTES = 5
 
+class SeatStatus(str, Enum):
+    RESERVED = "reserved"
+    BOOKED = "booked"
+
+class SeatSyncRequest(BaseModel):
+    route_id: str
+    travel_date: str
+    desired_seats: List[str]  # The FULL list of seats the user wants
+
+# WebSocket connections registry
+_ws_connections: dict = {}
 
 async def _notify_seat_change(route_id: str, travel_date: str):
-    """Broadcast seat change to all WebSocket clients."""
-    try:
-        from routes.seat_ws import broadcast_seat_change
-        await broadcast_seat_change(route_id, travel_date)
-    except Exception:
-        pass  # Non-blocking – WS is best-effort
+    key = f"{route_id}:{travel_date}"
+    for ws in list(_ws_connections.get(key, [])):
+        try:
+            await ws.send_json({"type": "seat_update", "route_id": route_id, "travel_date": travel_date})
+        except Exception:
+            _ws_connections.get(key, set()).discard(ws)
 
-@router.get("/availability")
-async def get_seat_availability(
-    route_id: str,
-    travel_date: str,
-    current_user: dict = Depends(get_current_active_user)
+# =========== GET seat map ===========
+@router.get("/")
+async def get_seat_map(
+    route_id: str = Query(...),
+    travel_date: str = Query(...)
 ):
-    """Get seat availability for a route on a specific date"""
+    """Get the live seat map for a route on a date."""
     db = get_database()
-    
-    # Get route details with seat layout - support both id and _id
+
     route = await db.travel_routes.find_one({"$or": [{"_id": route_id}, {"id": route_id}]})
     if not route:
         raise HTTPException(status_code=404, detail="Route not found")
-    
-    # Clean up expired reservations
+
+    total_seats = route.get("total_seats", 45)
+
+    # Clean expired reservations
     await db.seat_bookings.delete_many({
         "route_id": route_id,
         "travel_date": travel_date,
         "status": SeatStatus.RESERVED,
-        "reservation_expires": {"$lt": datetime.utcnow()}
+        "reservation_expires": {"$lt": datetime.now(timezone.utc)}
     })
-    
-    # Get all booked/reserved seats
-    booked_seats = await db.seat_bookings.find(
-        {
-            "route_id": route_id,
-            "travel_date": travel_date,
-            "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
-        },
-        {"_id": 0, "seat_number": 1, "status": 1, "user_id": 1}
-    ).to_list(1000)
-    
-    booked_seat_numbers = {s["seat_number"]: s["status"] for s in booked_seats}
-    
+
+    # Fetch all active seat bookings
+    bookings = await db.seat_bookings.find(
+        {"route_id": route_id, "travel_date": travel_date, "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}},
+        {"_id": 0, "seat_number": 1, "status": 1, "user_id": 1, "reservation_id": 1}
+    ).to_list(200)
+
+    booked_map = {}
+    for b in bookings:
+        booked_map[b["seat_number"]] = {"status": b["status"], "user_id": b.get("user_id"), "reservation_id": b.get("reservation_id")}
+
+    seat_map = []
+    for i in range(1, total_seats + 1):
+        sn = str(i)
+        info = booked_map.get(sn)
+        seat_map.append({
+            "seat_number": i,
+            "row": chr(65 + (i - 1) // 4),
+            "position": ((i - 1) % 4) + 1,
+            "status": info["status"] if info else "available",
+            "user_id": info.get("user_id") if info else None,
+            "reservation_id": info.get("reservation_id") if info else None,
+        })
+
+    booked_count = sum(1 for s in seat_map if s["status"] == "booked")
+    reserved_count = sum(1 for s in seat_map if s["status"] == "reserved")
+
     return {
-        "route_id": route_id,
-        "travel_date": travel_date,
-        "seat_layout": route.get("seat_layout"),
-        "total_seats": route.get("total_seats", 45),
-        "booked_seats": booked_seat_numbers,
-        "available_count": route.get("total_seats", 45) - len(booked_seats),
-        "route_details": {
-            "departure_city": route.get("departure_city"),
-            "arrival_city": route.get("arrival_city"),
-            "departure_time": route.get("departure_time"),
-            "price": route.get("price")
-        }
+        "seat_map": seat_map,
+        "statistics": {
+            "total": total_seats,
+            "available": total_seats - booked_count - reserved_count,
+            "booked": booked_count,
+            "reserved": reserved_count,
+        },
+        "layout": {"columns": 4, "rows": (total_seats + 3) // 4, "aisle_after": 2},
     }
+
+
+# =========== SYNC seats (the single smart endpoint) ===========
+@router.post("/sync")
+async def sync_seats(
+    req: SeatSyncRequest,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Sync the user's seat selection. Accepts the FULL desired seat list.
+    - Releases any seats the user held that are NOT in the new list.
+    - Reserves any new seats that are in the list but not yet held.
+    - Idempotent: calling with the same list twice is a no-op.
+    """
+    db = get_database()
+    user_id = current_user["_id"]
+
+    route = await db.travel_routes.find_one({"$or": [{"_id": req.route_id}, {"id": req.route_id}]})
+    if not route:
+        raise HTTPException(status_code=404, detail="Route not found")
+
+    total_seats = route.get("total_seats", 45)
+
+    # Validate seat numbers
+    for sn in req.desired_seats:
+        n = int(sn) if sn.isdigit() else 0
+        if n < 1 or n > total_seats:
+            raise HTTPException(status_code=400, detail=f"Seat {sn} out of range (1-{total_seats})")
+
+    # Clean expired reservations for ALL users
+    await db.seat_bookings.delete_many({
+        "route_id": req.route_id,
+        "travel_date": req.travel_date,
+        "status": SeatStatus.RESERVED,
+        "reservation_expires": {"$lt": datetime.now(timezone.utc)}
+    })
+
+    # Get this user's current reservations
+    user_current = await db.seat_bookings.find(
+        {"route_id": req.route_id, "travel_date": req.travel_date, "user_id": user_id, "status": SeatStatus.RESERVED}
+    ).to_list(100)
+    user_current_seats = {b["seat_number"] for b in user_current}
+
+    desired_set = set(req.desired_seats)
+    to_release = user_current_seats - desired_set
+    to_reserve = desired_set - user_current_seats
+
+    # Check if new seats are available (not held by others)
+    if to_reserve:
+        conflicts = await db.seat_bookings.find(
+            {
+                "route_id": req.route_id,
+                "travel_date": req.travel_date,
+                "seat_number": {"$in": list(to_reserve)},
+                "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]},
+                "user_id": {"$ne": user_id},
+            }
+        ).to_list(100)
+        if conflicts:
+            taken = [c["seat_number"] for c in conflicts]
+            raise HTTPException(status_code=409, detail=f"Seats already taken: {', '.join(taken)}")
+
+    # Release old seats
+    if to_release:
+        await db.seat_bookings.delete_many({
+            "route_id": req.route_id,
+            "travel_date": req.travel_date,
+            "seat_number": {"$in": list(to_release)},
+            "user_id": user_id,
+            "status": SeatStatus.RESERVED,
+        })
+
+    # Reserve new seats
+    expiry = datetime.now(timezone.utc) + timedelta(minutes=RESERVATION_TIMEOUT_MINUTES)
+    # Reuse existing reservation_id if user already has one, else create new
+    existing_res_id = user_current[0]["reservation_id"] if user_current else str(uuid.uuid4())
+
+    if to_reserve:
+        price_per_seat = route.get("price", route.get("base_price", 0))
+        new_docs = []
+        for sn in to_reserve:
+            new_docs.append({
+                "_id": str(uuid.uuid4()),
+                "reservation_id": existing_res_id,
+                "route_id": req.route_id,
+                "vehicle_id": route.get("vehicle_id"),
+                "travel_date": req.travel_date,
+                "seat_number": sn,
+                "status": SeatStatus.RESERVED,
+                "payment_status": "pending",
+                "user_id": user_id,
+                "reserved_at": datetime.now(timezone.utc),
+                "reservation_expires": expiry,
+                "price": price_per_seat,
+                "created_at": datetime.now(timezone.utc),
+            })
+        await db.seat_bookings.insert_many(new_docs)
+
+    # Extend expiry on kept seats
+    kept = desired_set & user_current_seats
+    if kept:
+        await db.seat_bookings.update_many(
+            {"route_id": req.route_id, "travel_date": req.travel_date, "seat_number": {"$in": list(kept)}, "user_id": user_id, "status": SeatStatus.RESERVED},
+            {"$set": {"reservation_expires": expiry}}
+        )
+
+    await _notify_seat_change(req.route_id, req.travel_date)
+
+    return {
+        "message": "Seats synced",
+        "reservation_id": existing_res_id,
+        "seats": list(desired_set),
+        "released": list(to_release),
+        "newly_reserved": list(to_reserve),
+        "expires_at": expiry.isoformat(),
+        "timeout_minutes": RESERVATION_TIMEOUT_MINUTES,
+    }
+
+
+# =========== Legacy release endpoint (for page unload) ===========
+@router.post("/release")
+async def release_seats(
+    route_id: str = Query(...),
+    travel_date: str = Query(...),
+    seat_numbers: List[str] = Query(default=[]),
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Release reserved seats."""
+    db = get_database()
+    query = {"route_id": route_id, "travel_date": travel_date, "user_id": current_user["_id"], "status": SeatStatus.RESERVED}
+    if seat_numbers:
+        query["seat_number"] = {"$in": seat_numbers}
+    result = await db.seat_bookings.delete_many(query)
+    await _notify_seat_change(route_id, travel_date)
+    return {"message": f"Released {result.deleted_count} seats"}
+
+
+# =========== Legacy reserve endpoint (for backward compat) ===========
+class SeatReservationRequest(BaseModel):
+    route_id: str
+    travel_date: str
+    seat_numbers: List[str]
 
 @router.post("/reserve")
 async def reserve_seats(
     reservation: SeatReservationRequest,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Temporarily reserve seats (3 minute hold)"""
+    """Reserve seats — redirects to sync internally."""
+    req = SeatSyncRequest(route_id=reservation.route_id, travel_date=reservation.travel_date, desired_seats=reservation.seat_numbers)
+    return await sync_seats(req, current_user)
+
+
+# =========== Counts for search results ===========
+@router.get("/available-counts")
+async def get_available_seat_counts(
+    route_ids: str = Query(...),
+    travel_date: str = Query(...)
+):
+    """Get available seat counts for multiple routes."""
     db = get_database()
-    
-    # Check route exists - support both id and _id
-    route = await db.travel_routes.find_one({"$or": [{"_id": reservation.route_id}, {"id": reservation.route_id}]})
-    if not route:
-        raise HTTPException(status_code=404, detail="Route not found")
-    
-    # Clean up expired reservations first
+    ids = [rid.strip() for rid in route_ids.split(",") if rid.strip()]
+
     await db.seat_bookings.delete_many({
-        "route_id": reservation.route_id,
-        "travel_date": reservation.travel_date,
-        "status": SeatStatus.RESERVED,
-        "reservation_expires": {"$lt": datetime.utcnow()}
-    })
-    
-    # Check if any seats are already taken
-    existing = await db.seat_bookings.find(
-        {
-            "route_id": reservation.route_id,
-            "travel_date": reservation.travel_date,
-            "seat_number": {"$in": reservation.seat_numbers},
-            "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
-        }
-    ).to_list(100)
-    
-    if existing:
-        taken_seats = [s["seat_number"] for s in existing]
-        raise HTTPException(
-            status_code=400,
-            detail=f"Seats already taken: {', '.join(taken_seats)}"
-        )
-    
-    # Validate total seat availability — prevent over-reservation
-    total_seats = route.get("total_seats", 45)
-    all_booked_count = await db.seat_bookings.count_documents({
-        "route_id": reservation.route_id,
-        "travel_date": reservation.travel_date,
-        "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
-    })
-    available_count = total_seats - all_booked_count
-    requested_count = len(reservation.seat_numbers)
-    
-    if requested_count > available_count:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Only {available_count} seat(s) available, but {requested_count} requested"
-        )
-    
-    # Validate seat numbers are within range
-    for seat_num in reservation.seat_numbers:
-        seat_n = int(seat_num) if seat_num.isdigit() else 0
-        if seat_n < 1 or seat_n > total_seats:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Seat {seat_num} is out of range (1-{total_seats})"
-            )
-    
-    # Create reservations
-    reservation_id = str(uuid.uuid4())
-    order_id = str(uuid.uuid4())
-    expiry = datetime.utcnow() + timedelta(minutes=RESERVATION_TIMEOUT_MINUTES)
-    
-    # Calculate total price
-    price_per_seat = route.get("price", 0)
-    total_price = price_per_seat * len(reservation.seat_numbers)
-    
-    # Generate order number
-    order_count = await db.orders.count_documents({"service_category": "travel"})
-    order_number = f"TRV-{order_count + 1:06d}"
-    
-    seat_bookings = []
-    for seat_num in reservation.seat_numbers:
-        seat_bookings.append({
-            "_id": str(uuid.uuid4()),
-            "reservation_id": reservation_id,
-            "order_id": order_id,  # Link to central order
-            "route_id": reservation.route_id,
-            "vehicle_id": route.get("vehicle_id"),
-            "travel_date": reservation.travel_date,
-            "seat_number": seat_num,
-            "status": SeatStatus.RESERVED,
-            "payment_status": "pending",
-            "user_id": current_user["_id"],
-            "reserved_at": datetime.utcnow(),
-            "reservation_expires": expiry,
-            "price": price_per_seat,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        })
-    
-    await db.seat_bookings.insert_many(seat_bookings)
-    
-    # Create central order record
-    order = {
-        "_id": order_id,
-        "order_number": order_number,
-        "service_category": "travel",
-        "service_booking_id": reservation_id,
-        "service_name": f"Travel - {route.get('origin', '')} to {route.get('destination', '')}",
-        "service_id": reservation.route_id,
-        "user_id": current_user["_id"],
-        "operator_id": route.get("operator_id"),
-        "operator_name": route.get("operator_name"),
-        "total_amount": total_price,
-        "currency": "XAF",
-        "status": "pending",
-        "payment_status": "pending",
-        "booking_details": {
-            "travel_date": reservation.travel_date,
-            "seats": reservation.seat_numbers,
-            "origin": route.get("origin"),
-            "destination": route.get("destination"),
-            "departure_time": route.get("departure_time")
-        },
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
-    }
-    
-    await db.orders.insert_one(order)
-
-    # Broadcast real-time update to all connected WebSocket clients
-    await _notify_seat_change(reservation.route_id, reservation.travel_date)
-    
-    return {
-        "message": "Seats reserved",
-        "reservation_id": reservation_id,
-        "order_id": order_id,
-        "order_number": order_number,
-        "seats": reservation.seat_numbers,
-        "total_price": total_price,
-        "expires_at": expiry.isoformat(),
-        "timeout_minutes": RESERVATION_TIMEOUT_MINUTES
-    }
-
-@router.post("/confirm")
-async def confirm_booking(
-    booking: SeatBookingConfirm,
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Confirm seat booking after payment"""
-    db = get_database()
-    
-    # Update reservations to booked status
-    for passenger in booking.passengers:
-        await db.seat_bookings.update_one(
-            {
-                "route_id": booking.route_id,
-                "travel_date": booking.travel_date,
-                "seat_number": passenger["seat_number"],
-                "user_id": current_user["_id"],
-                "status": SeatStatus.RESERVED
-            },
-            {
-                "$set": {
-                    "status": SeatStatus.BOOKED,
-                    "order_id": booking.order_id,
-                    "passenger_name": passenger.get("name"),
-                    "passenger_id_number": passenger.get("id_number"),
-                    "passenger_phone": passenger.get("phone"),
-                    "booked_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
-                }
-            }
-        )
-    
-    await _notify_seat_change(booking.route_id, booking.travel_date)
-    return {"message": "Booking confirmed", "order_id": booking.order_id}
-
-@router.post("/release")
-async def release_seats(
-    route_id: str = Query(...),
-    travel_date: str = Query(...),
-    seat_numbers: List[str] = Query(...),
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Release reserved seats (before payment)"""
-    db = get_database()
-    
-    result = await db.seat_bookings.delete_many({
-        "route_id": route_id,
-        "travel_date": travel_date,
-        "seat_number": {"$in": seat_numbers},
-        "user_id": current_user["_id"],
-        "status": SeatStatus.RESERVED
+        "travel_date": travel_date, "status": SeatStatus.RESERVED,
+        "reservation_expires": {"$lt": datetime.now(timezone.utc)}
     })
 
-    await _notify_seat_change(route_id, travel_date)
-    return {"message": f"Released {result.deleted_count} seats"}
+    pipeline = [
+        {"$match": {"route_id": {"$in": ids}, "travel_date": travel_date, "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}}},
+        {"$group": {"_id": "$route_id", "booked": {"$sum": 1}}}
+    ]
+    counts = {}
+    async for doc in db.seat_bookings.aggregate(pipeline):
+        counts[doc["_id"]] = doc["booked"]
 
+    result = {}
+    for rid in ids:
+        route = await db.travel_routes.find_one({"$or": [{"_id": rid}, {"id": rid}]}, {"total_seats": 1})
+        total = route.get("total_seats", 45) if route else 45
+        booked = counts.get(rid, 0)
+        result[rid] = {"total": total, "booked": booked, "available": total - booked}
+
+    return {"counts": result}
+
+
+# =========== User bookings ===========
 @router.get("/my-bookings")
 async def get_my_bookings(
     booking_status: Optional[str] = None,
@@ -270,107 +285,45 @@ async def get_my_bookings(
     limit: int = Query(20, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get user's seat bookings"""
     db = get_database()
-    
     query = {"user_id": current_user["_id"]}
     if booking_status:
         query["status"] = booking_status
-    
     bookings = await db.seat_bookings.find(query, {"_id": 0}).sort("travel_date", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.seat_bookings.count_documents(query)
-    
     return {"bookings": bookings, "total": total}
-
-
-@router.get("/available-counts")
-async def get_available_seat_counts(
-    route_ids: str = Query(..., description="Comma-separated route IDs"),
-    travel_date: str = Query(..., description="Travel date YYYY-MM-DD")
-):
-    """Get available seat counts for multiple routes on a date. Public endpoint for search results."""
-    db = get_database()
-    
-    ids = [rid.strip() for rid in route_ids.split(",") if rid.strip()]
-    
-    # Clean up expired reservations
-    await db.seat_bookings.delete_many({
-        "travel_date": travel_date,
-        "status": SeatStatus.RESERVED,
-        "reservation_expires": {"$lt": datetime.utcnow()}
-    })
-    
-    # Aggregate booked+reserved counts per route
-    pipeline = [
-        {"$match": {
-            "route_id": {"$in": ids},
-            "travel_date": travel_date,
-            "status": {"$in": [SeatStatus.RESERVED, SeatStatus.BOOKED]}
-        }},
-        {"$group": {"_id": "$route_id", "taken": {"$sum": 1}}}
-    ]
-    taken_counts = {doc["_id"]: doc["taken"] for doc in await db.seat_bookings.aggregate(pipeline).to_list(100)}
-    
-    # Get total seats per route
-    routes = await db.travel_routes.find(
-        {"$or": [{"_id": {"$in": ids}}, {"id": {"$in": ids}}]},
-        {"_id": 1, "id": 1, "total_seats": 1}
-    ).to_list(100)
-    
-    result = {}
-    for r in routes:
-        rid = str(r.get("_id") or r.get("id"))
-        total = r.get("total_seats", 45)
-        taken = taken_counts.get(rid, 0)
-        result[rid] = {"total": total, "taken": taken, "available": max(0, total - taken)}
-    
-    return {"counts": result, "travel_date": travel_date}
 
 
 @router.post("/release-beacon")
 async def release_seats_beacon(
-    data: dict
+    route_id: str = Query(...),
+    travel_date: str = Query(...),
+    user_id: str = Query(...)
 ):
-    """Release reserved seats via beacon (for page unload)"""
+    """Release reserved seats via beacon (page unload)."""
     db = get_database()
-    
-    # Verify token
-    token = data.get("token")
-    if not token:
-        return {"message": "No token provided"}
-    
-    try:
-        # Decode token to get user_id
-        import jwt
-        import os
-        
-        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "your-secret-key"), algorithms=["HS256"])
-        user_id = payload.get("user_id") or payload.get("sub")
-        
-        if not user_id:
-            return {"message": "Invalid token"}
-        
-        route_id = data.get("route_id")
-        travel_date = data.get("travel_date")
-        seat_numbers = data.get("seat_numbers", [])
-        
-        if not route_id or not travel_date or not seat_numbers:
-            return {"message": "Missing required fields"}
-        
-        result = await db.seat_bookings.delete_many({
-            "route_id": route_id,
-            "travel_date": travel_date,
-            "seat_number": {"$in": seat_numbers},
-            "user_id": user_id,
-            "status": SeatStatus.RESERVED
-        })
-        
-        return {"message": f"Released {result.deleted_count} seats"}
-        
-    except jwt.ExpiredSignatureError:
-        return {"message": "Token expired"}
-    except jwt.InvalidTokenError:
-        return {"message": "Invalid token"}
-    except Exception as e:
-        return {"message": str(e)}
+    result = await db.seat_bookings.delete_many({
+        "route_id": route_id, "travel_date": travel_date,
+        "user_id": user_id, "status": SeatStatus.RESERVED
+    })
+    await _notify_seat_change(route_id, travel_date)
+    return {"message": f"Released {result.deleted_count} seats"}
 
+
+# =========== WebSocket for live updates ===========
+seat_ws_router = APIRouter()
+
+@seat_ws_router.websocket("/ws/seats/{route_id}/{travel_date}")
+async def seat_websocket(websocket: WebSocket, route_id: str, travel_date: str):
+    await websocket.accept()
+    key = f"{route_id}:{travel_date}"
+    if key not in _ws_connections:
+        _ws_connections[key] = set()
+    _ws_connections[key].add(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        _ws_connections.get(key, set()).discard(websocket)
+    except Exception:
+        _ws_connections.get(key, set()).discard(websocket)
