@@ -348,11 +348,25 @@ export default function Layout({ children }) {
 
   // State for flyout menus
   const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [submenuPosition, setSubmenuPosition] = useState({ top: 120 });
   const submenuTimeoutRef = useRef(null);
 
-  const handleSubmenuEnter = (key) => {
+  const handleSubmenuEnter = (key, event) => {
     if (submenuTimeoutRef.current) {
       clearTimeout(submenuTimeoutRef.current);
+    }
+    // Calculate position from the trigger element
+    if (event?.currentTarget) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      // Position flyout next to the trigger, clamped to viewport
+      let top = rect.top;
+      // If it would overflow the bottom, shift it up
+      const flyoutHeight = 320; // approximate
+      if (top + flyoutHeight > viewportHeight - 20) {
+        top = Math.max(20, viewportHeight - flyoutHeight - 20);
+      }
+      setSubmenuPosition({ top });
     }
     setActiveSubmenu(key);
   };
@@ -360,7 +374,7 @@ export default function Layout({ children }) {
   const handleSubmenuLeave = () => {
     submenuTimeoutRef.current = setTimeout(() => {
       setActiveSubmenu(null);
-    }, 150);
+    }, 250);
   };
 
   const renderNavItem = (item) => {
@@ -374,11 +388,11 @@ export default function Layout({ children }) {
         <div 
           key={item.key} 
           className="mb-1 relative group/menu"
-          onMouseEnter={() => handleSubmenuEnter(item.key)}
+          onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
           onMouseLeave={handleSubmenuLeave}
         >
           <button
-            onClick={() => setActiveSubmenu(isSubmenuOpen ? null : item.key)}
+            onClick={(e) => { handleSubmenuEnter(item.key, e); setActiveSubmenu(isSubmenuOpen ? null : item.key); }}
             className={`
               w-full flex items-center justify-between px-4 py-3 rounded-lg
               transition-all duration-200 ease-out
@@ -396,17 +410,28 @@ export default function Layout({ children }) {
             <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-90' : ''}`} />
           </button>
           
-          {/* Flyout Submenu - positioned fixed to escape overflow */}
+          {/* Hover bridge — invisible zone connecting sidebar to flyout */}
+          {isSubmenuOpen && (
+            <div 
+              className="fixed z-[9998] w-4"
+              style={{ left: '272px', top: `${submenuPosition.top - 20}px`, height: '360px' }}
+              onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
+              onMouseLeave={handleSubmenuLeave}
+            />
+          )}
+          
+          {/* Flyout Submenu - positioned dynamically next to trigger */}
           {isSubmenuOpen && (
             <div 
               className="fixed z-[9999] min-w-[280px] max-h-[80vh] overflow-y-auto
                          bg-gradient-to-br from-[#0a3566] to-[#082c59] rounded-xl shadow-2xl 
-                         border border-white/20 backdrop-blur-sm"
+                         border border-white/20 backdrop-blur-sm
+                         animate-in fade-in slide-in-from-left-2 duration-150"
               style={{ 
-                left: '290px', 
-                top: '120px'
+                left: '286px', 
+                top: `${submenuPosition.top}px`
               }}
-              onMouseEnter={() => handleSubmenuEnter(item.key)}
+              onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
               onMouseLeave={handleSubmenuLeave}
             >
               {/* Submenu header */}
