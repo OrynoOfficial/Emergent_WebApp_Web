@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, ChevronDown } from 'lucide-react';
+import { MapPin, ChevronDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import api from '@/api/client';
 
-// All available locations in Cameroon
-const ALL_LOCATIONS = [
+// Fallback only if API fails
+const FALLBACK_LOCATIONS = [
   'Yaoundé', 'Douala', 'Bafoussam', 'Bamenda', 'Garoua',
   'Maroua', 'Ngaoundéré', 'Bertoua', 'Kribi', 'Limbe',
   'Buea', 'Ebolowa', 'Edéa', 'Kumba', 'Nkongsamba'
 ];
+const FALLBACK_POPULAR = ['Yaoundé', 'Douala', 'Bafoussam'];
 
-// Popular locations (shown by default)
-const POPULAR_LOCATIONS = ['Yaoundé', 'Douala', 'Bafoussam'];
+// Cache per service type to avoid redundant API calls
+const locationCache = {};
 
-// Reusable Location Input Component with popular options
-function LocationInput({ 
-  value, 
-  onChange, 
+function LocationInput({
+  value,
+  onChange,
   placeholder = "Search city...",
   label,
   iconColor = "text-slate-400",
@@ -25,20 +26,49 @@ function LocationInput({
   error,
   required = false,
   shake = false,
-  locations = ALL_LOCATIONS,
-  popularLocations = POPULAR_LOCATIONS
+  serviceType = null,
+  locations: propLocations,
+  popularLocations: propPopular,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [allLocations, setAllLocations] = useState(propLocations || FALLBACK_LOCATIONS);
+  const [popular, setPopular] = useState(propPopular || FALLBACK_POPULAR);
+  const [counts, setCounts] = useState({});
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Filter locations based on search and exclude value
+  // Fetch dynamic locations from API
+  useEffect(() => {
+    if (propLocations) return; // skip if provided via props
+    const cacheKey = serviceType || '__all__';
+    if (locationCache[cacheKey]) {
+      const c = locationCache[cacheKey];
+      setAllLocations(c.all);
+      setPopular(c.popular);
+      setCounts(c.counts);
+      return;
+    }
+    const params = serviceType ? `?service_type=${serviceType}` : '';
+    api.get(`/suggestions/popular-locations${params}`)
+      .then(res => {
+        const data = res.data;
+        const all = data.all_locations || FALLBACK_LOCATIONS;
+        const pop = data.popular || FALLBACK_POPULAR;
+        const cnt = data.counts || {};
+        locationCache[cacheKey] = { all, popular: pop, counts: cnt };
+        setAllLocations(all);
+        setPopular(pop);
+        setCounts(cnt);
+      })
+      .catch(() => {});
+  }, [serviceType, propLocations]);
+
   const filteredLocations = searchTerm
-    ? locations.filter(loc => 
+    ? allLocations.filter(loc =>
         loc.toLowerCase().includes(searchTerm.toLowerCase()) && loc !== excludeValue
       )
-    : popularLocations.filter(loc => loc !== excludeValue && locations.includes(loc));
+    : popular.filter(loc => loc !== excludeValue && allLocations.includes(loc));
 
   const showAllLocations = searchTerm.length > 0;
 
@@ -58,6 +88,11 @@ function LocationInput({
     setSearchTerm('');
     setIsOpen(false);
   };
+
+  // Also show remaining locations after popular
+  const remainingLocations = !showAllLocations
+    ? allLocations.filter(loc => !popular.includes(loc) && loc !== excludeValue)
+    : [];
 
   return (
     <div className="relative">
@@ -84,49 +119,101 @@ function LocationInput({
             error && "border-red-500 focus:border-red-500 focus:ring-red-500/20",
             shake && "animate-shake"
           )}
+          data-testid="location-input"
         />
         <ChevronDown className={cn(
           "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform",
           isOpen && "rotate-180"
         )} />
       </div>
-      
+
       {isOpen && (
-        <div 
+        <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-64 overflow-auto"
+          data-testid="location-dropdown"
         >
+          {/* Popular section */}
           {!showAllLocations && filteredLocations.length > 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-b font-medium">
-              Popular destinations
-            </div>
+            <>
+              <div className="px-3 py-2 text-[10px] text-slate-400 bg-slate-50 border-b font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingUp className="w-3 h-3" /> Popular destinations
+              </div>
+              {filteredLocations.map((location) => (
+                <button
+                  key={location}
+                  type="button"
+                  onClick={() => handleSelect(location)}
+                  className={cn(
+                    "w-full px-3 py-2.5 text-left hover:bg-[#082c59]/5 transition-colors flex items-center gap-2",
+                    value === location && "bg-[#082c59]/10 font-medium text-[#082c59]"
+                  )}
+                  data-testid={`location-option-${location}`}
+                >
+                  <MapPin className="w-4 h-4 text-[#082c59]/40" />
+                  <span className="flex-1">{location}</span>
+                  {counts[location] && (
+                    <span className="text-[10px] text-[#082c59] bg-[#082c59]/10 px-1.5 py-0.5 rounded font-medium">
+                      {counts[location]} listings
+                    </span>
+                  )}
+                </button>
+              ))}
+              {/* Other locations */}
+              {remainingLocations.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-[10px] text-slate-400 bg-slate-50 border-t border-b font-bold uppercase tracking-wider">
+                    Other locations
+                  </div>
+                  {remainingLocations.map((location) => (
+                    <button
+                      key={location}
+                      type="button"
+                      onClick={() => handleSelect(location)}
+                      className={cn(
+                        "w-full px-3 py-2.5 text-left hover:bg-[#082c59]/5 transition-colors flex items-center gap-2 text-slate-600",
+                        value === location && "bg-[#082c59]/10 font-medium text-[#082c59]"
+                      )}
+                    >
+                      <MapPin className="w-4 h-4 text-slate-300" />
+                      <span>{location}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
-          {filteredLocations.length > 0 ? (
+
+          {/* Search results */}
+          {showAllLocations && filteredLocations.length > 0 && (
             filteredLocations.map((location) => (
               <button
                 key={location}
                 type="button"
                 onClick={() => handleSelect(location)}
                 className={cn(
-                  "w-full px-3 py-3 text-left hover:bg-[#082c59]/5 transition-colors flex items-center gap-2",
+                  "w-full px-3 py-2.5 text-left hover:bg-[#082c59]/5 transition-colors flex items-center gap-2",
                   value === location && "bg-[#082c59]/10 font-medium text-[#082c59]"
                 )}
               >
                 <MapPin className="w-4 h-4 text-slate-400" />
                 <span>{location}</span>
-                {popularLocations.includes(location) && !showAllLocations && (
-                  <span className="ml-auto text-xs text-[#082c59] bg-[#082c59]/10 px-2 py-0.5 rounded">Popular</span>
+                {counts[location] && (
+                  <span className="text-[10px] text-slate-500 ml-auto">{counts[location]}</span>
                 )}
               </button>
             ))
-          ) : (
+          )}
+
+          {filteredLocations.length === 0 && (
             <div className="px-3 py-4 text-center text-slate-500 text-sm">
               No locations found
             </div>
           )}
-          {!showAllLocations && filteredLocations.length > 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-t">
-              Type to search more locations...
+
+          {!showAllLocations && (
+            <div className="px-3 py-2 text-xs text-slate-400 bg-slate-50 border-t text-center">
+              Type to search more locations
             </div>
           )}
         </div>
@@ -136,5 +223,5 @@ function LocationInput({
   );
 }
 
-export { ALL_LOCATIONS, POPULAR_LOCATIONS };
+export { FALLBACK_LOCATIONS as ALL_LOCATIONS, FALLBACK_POPULAR as POPULAR_LOCATIONS };
 export default LocationInput;

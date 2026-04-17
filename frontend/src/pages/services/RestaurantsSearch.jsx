@@ -93,6 +93,7 @@ export default function RestaurantsSearch() {
                     }}
                     placeholder="Search city..."
                     required
+                    serviceType="restaurant"
                     error={errors.city}
                     shake={shakeFields.city}
                     iconColor="text-orange-500"

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
+import LocationInput from '@/components/shared/LocationInput';
 import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
 import api from '../../api/client';
@@ -606,20 +607,23 @@ export default function TravelResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">From</label>
-                    <Input 
-                      value={editFrom} 
-                      onChange={(e) => setEditFrom(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    <LocationInput
+                      value={editFrom}
+                      onChange={setEditFrom}
+                      serviceType="travel"
                       placeholder="Departure city"
+                      iconColor="text-white/40"
                     />
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">To</label>
-                    <Input 
-                      value={editTo} 
-                      onChange={(e) => setEditTo(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    <LocationInput
+                      value={editTo}
+                      onChange={setEditTo}
+                      serviceType="travel"
+                      excludeValue={editFrom}
                       placeholder="Destination city"
+                      iconColor="text-white/40"
                     />
                   </div>
                   <div>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import LocationInput from '@/components/shared/LocationInput';
 
 // Package sizes with dimensions and weight limits
 const PACKAGE_SIZES = {
@@ -20,130 +21,6 @@ const PACKAGE_SIZES = {
   L: { dimensions: '60×40×30 cm', maxWeight: '10 kg', description: 'Large packages, electronics' },
   XL: { dimensions: '80×60×40 cm', maxWeight: '20 kg', description: 'Extra large packages, furniture' },
   XXL: { dimensions: '100×80×60 cm', maxWeight: '50 kg', description: 'Oversized packages, appliances' }
-};
-
-// All available locations
-const ALL_LOCATIONS = [
-  'Yaoundé', 'Douala', 'Bafoussam', 'Bamenda', 'Garoua',
-  'Maroua', 'Ngaoundéré', 'Bertoua', 'Kribi', 'Limbe',
-  'Buea', 'Ebolowa', 'Edéa', 'Kumba', 'Nkongsamba'
-];
-
-// Popular locations (shown by default)
-const POPULAR_LOCATIONS = ['Yaoundé', 'Douala', 'Bafoussam'];
-
-// Searchable Location Input Component
-const LocationInput = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  label, 
-  icon: Icon,
-  iconColor,
-  excludeValue,
-  error
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const inputRef = useRef(null);
-  const dropdownRef = useRef(null);
-
-  // Filter locations based on search and exclude value
-  const filteredLocations = searchTerm
-    ? ALL_LOCATIONS.filter(loc => 
-        loc.toLowerCase().includes(searchTerm.toLowerCase()) && loc !== excludeValue
-      )
-    : POPULAR_LOCATIONS.filter(loc => loc !== excludeValue);
-
-  const showAllLocations = searchTerm.length > 0;
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-          inputRef.current && !inputRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSelect = (location) => {
-    onChange(location);
-    setSearchTerm('');
-    setIsOpen(false);
-  };
-
-  return (
-    <div className="relative">
-      <Label className="text-sm font-medium text-slate-700">{label}</Label>
-      <div className="relative mt-1">
-        <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${iconColor} pointer-events-none z-10`} />
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder={placeholder}
-          value={isOpen ? searchTerm : value}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            if (!isOpen) setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          className={cn(
-            "pl-10 pr-10 h-12 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59] transition-all",
-            value && !isOpen && "font-medium text-slate-900",
-            error && "border-red-500"
-          )}
-        />
-        <ChevronDown className={cn(
-          "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform",
-          isOpen && "rotate-180"
-        )} />
-      </div>
-      
-      {isOpen && (
-        <div 
-          ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl max-h-60 overflow-auto"
-        >
-          {!showAllLocations && (
-            <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-b">
-              Popular destinations
-            </div>
-          )}
-          {filteredLocations.length > 0 ? (
-            filteredLocations.map((location) => (
-              <button
-                key={location}
-                type="button"
-                onClick={() => handleSelect(location)}
-                className={cn(
-                  "w-full px-3 py-3 text-left hover:bg-[#082c59]/5 transition-colors flex items-center gap-2",
-                  value === location && "bg-[#082c59]/10 font-medium text-[#082c59]"
-                )}
-              >
-                <MapPin className="w-4 h-4 text-slate-400" />
-                <span>{location}</span>
-                {POPULAR_LOCATIONS.includes(location) && !showAllLocations && (
-                  <span className="ml-auto text-xs text-[#082c59] bg-[#082c59]/10 px-2 py-0.5 rounded">Popular</span>
-                )}
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-4 text-center text-slate-500 text-sm">
-              No locations found
-            </div>
-          )}
-          {!showAllLocations && (
-            <div className="px-3 py-2 text-xs text-slate-500 bg-slate-50 border-t">
-              Type to search more locations...
-            </div>
-          )}
-        </div>
-      )}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-    </div>
-  );
 };
 
 export default function PackagesSearch() {
@@ -205,7 +82,7 @@ export default function PackagesSearch() {
                   }}
                   placeholder="Search pickup city..."
                   label="Pickup Location"
-                  icon={MapPin}
+                  serviceType="packages"
                   iconColor="text-green-600"
                   excludeValue={searchParams.delivery_location}
                   error={errors.pickup_location}
@@ -220,7 +97,7 @@ export default function PackagesSearch() {
                   }}
                   placeholder="Search delivery city..."
                   label="Delivery Location"
-                  icon={MapPin}
+                  serviceType="packages"
                   iconColor="text-red-600"
                   excludeValue={searchParams.pickup_location}
                   error={errors.delivery_location}

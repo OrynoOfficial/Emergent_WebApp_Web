@@ -73,6 +73,7 @@ from routes.seat_ws import router as seat_ws_router
 from routes.invitations import router as invitations_router
 from routes.management_dashboard import router as management_dashboard_router
 from routes.subscriptions import router as subscriptions_router
+from routes.suggestions import router as suggestions_router
 
 # Create the main app
 app = FastAPI(
@@ -300,6 +301,7 @@ app.include_router(invitations_router)  # Email invitation system
 app.include_router(management_dashboard_router)  # Real operator-scoped dashboard stats
 app.include_router(subscriptions_router)  # User-to-operator subscriptions & promotions
 app.include_router(reports_router)  # Report generation with operator scoping
+app.include_router(suggestions_router)  # Dynamic popular locations & items
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")

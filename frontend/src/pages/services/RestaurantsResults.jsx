@@ -15,6 +15,7 @@ import {
   LayoutGrid, List, Wifi, Car, Music, Wine, Leaf, Coffee, Calendar, Edit2, Check
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import LocationInput from '@/components/shared/LocationInput';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
@@ -441,11 +442,12 @@ export default function RestaurantsResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">City</label>
-                    <Input 
-                      value={editCity} 
-                      onChange={(e) => setEditCity(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    <LocationInput
+                      value={editCity}
+                      onChange={setEditCity}
+                      serviceType="restaurant"
                       placeholder="Enter city"
+                      iconColor="text-white/40"
                     />
                   </div>
                   <div>

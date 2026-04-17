@@ -16,6 +16,7 @@ import {
   LayoutGrid, List, Heart, Coffee, Sparkles, Check, Users, Edit2, Hotel
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import LocationInput from '@/components/shared/LocationInput';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
@@ -702,11 +703,12 @@ export default function HotelsResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">Destination</label>
-                    <Input 
-                      value={editDestination} 
-                      onChange={(e) => setEditDestination(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                    <LocationInput
+                      value={editDestination}
+                      onChange={setEditDestination}
+                      serviceType="hotel"
                       placeholder="Enter city"
+                      iconColor="text-white/40"
                     />
                   </div>
                   <div>
