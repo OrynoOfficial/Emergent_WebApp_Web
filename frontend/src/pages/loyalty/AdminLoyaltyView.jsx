@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import DatePickerField from '@/components/shared/DatePickerField';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -670,10 +671,10 @@ export default function AdminLoyaltyView() {
           <AdminModal.Section title="Availability & Limits" icon={<Clock className="w-4 h-4" />}>
             <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50/40 rounded-xl border border-blue-100">
               <FormField label="Valid From" hint="Leave empty for no start date">
-                <StyledInput type="date" value={rewardForm.valid_from} onChange={(e) => setRewardForm({...rewardForm, valid_from: e.target.value})} />
+                <DatePickerField value={rewardForm.valid_from} onChange={(v) => setRewardForm({...rewardForm, valid_from: v})} placeholder="Start date" title="Valid From" minDate={null} />
               </FormField>
               <FormField label="Valid To" hint="Leave empty for no expiry">
-                <StyledInput type="date" value={rewardForm.valid_to} onChange={(e) => setRewardForm({...rewardForm, valid_to: e.target.value})} />
+                <DatePickerField value={rewardForm.valid_to} onChange={(v) => setRewardForm({...rewardForm, valid_to: v})} placeholder="End date" title="Valid To" minDate={rewardForm.valid_from ? new Date(rewardForm.valid_from) : null} />
               </FormField>
               <FormField label="Max Redemptions per User" hint="Leave empty for unlimited">
                 <StyledInput type="number" value={rewardForm.max_redemptions} onChange={(e) => setRewardForm({...rewardForm, max_redemptions: e.target.value})} placeholder="5" />

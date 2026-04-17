@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import DatePickerField from '@/components/shared/DatePickerField';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -478,11 +479,11 @@ export default function OperatorsManagement() {
             </div>
             <div className="min-w-[150px]">
               <Label className="text-xs text-slate-500 mb-1 block">Joined From</Label>
-              <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-white h-9 text-sm" data-testid="date-from-filter" />
+              <DatePickerField value={dateFrom} onChange={setDateFrom} placeholder="From" title="Joined From" minDate={null} className="h-9 text-sm" data-testid="date-from-filter" />
             </div>
             <div className="min-w-[150px]">
               <Label className="text-xs text-slate-500 mb-1 block">Joined To</Label>
-              <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-white h-9 text-sm" data-testid="date-to-filter" />
+              <DatePickerField value={dateTo} onChange={setDateTo} placeholder="To" title="Joined To" minDate={dateFrom ? new Date(dateFrom) : null} className="h-9 text-sm" data-testid="date-to-filter" />
             </div>
           </div>
         )}

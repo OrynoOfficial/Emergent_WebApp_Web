@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { carRentalAPI } from '../../api/client';
 import { formatCurrency } from '../../utils/currency';
 import { Search, MapPin, Calendar, Users, ArrowRight, Car, Fuel, Settings, Star } from 'lucide-react';
+import DatePickerField from '@/components/shared/DatePickerField';
 
 const CAR_TYPES = ['All', 'Sedan', 'SUV', 'Luxury', 'Sports', 'Electric', 'Van'];
 
@@ -100,19 +101,20 @@ export default function CarRental() {
               />
             </div>
             <div>
-              <input
-                type="date"
-                className="input w-full"
+              <DatePickerField
                 value={filters.pickupDate}
-                onChange={(e) => setFilters({ ...filters, pickupDate: e.target.value })}
+                onChange={(v) => setFilters({ ...filters, pickupDate: v })}
+                placeholder="Pickup date"
+                title="Pickup Date"
               />
             </div>
             <div>
-              <input
-                type="date"
-                className="input w-full"
+              <DatePickerField
                 value={filters.returnDate}
-                onChange={(e) => setFilters({ ...filters, returnDate: e.target.value })}
+                onChange={(v) => setFilters({ ...filters, returnDate: v })}
+                placeholder="Return date"
+                title="Return Date"
+                minDate={filters.pickupDate ? new Date(filters.pickupDate) : new Date()}
               />
             </div>
             <button type="submit" className="btn btn-primary">

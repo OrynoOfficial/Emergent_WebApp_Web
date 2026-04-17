@@ -19,6 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import DatePickerField from '@/components/shared/DatePickerField';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -374,11 +375,11 @@ export default function EventsManagement() {
             </div>
             <div>
               <Label>Start Date</Label>
-              <Input type="date" value={eventForm.start_date} onChange={e => setEventForm(p => ({ ...p, start_date: e.target.value }))} />
+              <DatePickerField value={eventForm.start_date} onChange={(v) => setEventForm(p => ({ ...p, start_date: v }))} placeholder="Start date" title="Event Start Date" minDate={null} />
             </div>
             <div>
               <Label>End Date</Label>
-              <Input type="date" value={eventForm.end_date} onChange={e => setEventForm(p => ({ ...p, end_date: e.target.value }))} />
+              <DatePickerField value={eventForm.end_date} onChange={(v) => setEventForm(p => ({ ...p, end_date: v }))} placeholder="End date" title="Event End Date" minDate={eventForm.start_date ? new Date(eventForm.start_date) : null} />
             </div>
             <div>
               <Label>Doors Open Time</Label>

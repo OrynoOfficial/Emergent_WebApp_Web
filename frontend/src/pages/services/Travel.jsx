@@ -4,6 +4,7 @@ import { travelAPI } from '../../api/client';
 import { formatCurrency } from '../../utils/currency';
 import { isPast, formatDate } from '../../utils/dateUtils';
 import { Search, MapPin, Clock, Users, ArrowRight, Calendar, Bus, AlertCircle } from 'lucide-react';
+import DatePickerField from '@/components/shared/DatePickerField';
 
 export default function Travel() {
   const [routes, setRoutes] = useState([]);
@@ -114,11 +115,11 @@ export default function Travel() {
             </div>
             <div>
               <label className="block text-sm text-blue-100 mb-1">Date</label>
-              <input
-                type="date"
-                className="input w-full bg-white/20 border-white/30 text-white"
+              <DatePickerField
                 value={filters.date}
-                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                onChange={(v) => setFilters({ ...filters, date: v })}
+                placeholder="Travel date"
+                title="Travel Date"
               />
             </div>
             <div>

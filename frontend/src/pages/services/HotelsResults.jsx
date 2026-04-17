@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
@@ -713,20 +714,21 @@ export default function HotelsResults() {
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">Check-in</label>
-                    <Input 
-                      type="date"
-                      value={editCheckIn} 
-                      onChange={(e) => setEditCheckIn(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white"
+                    <DatePickerField
+                      value={editCheckIn}
+                      onChange={setEditCheckIn}
+                      placeholder="Check-in"
+                      title="Check-in Date"
                     />
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">Check-out</label>
-                    <Input 
-                      type="date"
-                      value={editCheckOut} 
-                      onChange={(e) => setEditCheckOut(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white"
+                    <DatePickerField
+                      value={editCheckOut}
+                      onChange={setEditCheckOut}
+                      placeholder="Check-out"
+                      title="Check-out Date"
+                      minDate={editCheckIn ? new Date(editCheckIn) : new Date()}
                     />
                   </div>
                   <div>

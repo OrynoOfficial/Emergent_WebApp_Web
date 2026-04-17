@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
@@ -452,11 +453,11 @@ export default function RestaurantsResults() {
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">Date</label>
-                    <Input 
-                      type="date"
-                      value={editDate} 
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white"
+                    <DatePickerField
+                      value={editDate}
+                      onChange={setEditDate}
+                      placeholder="Reservation date"
+                      title="Reservation Date"
                     />
                   </div>
                   <div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { eventsAPI } from '../../api/client';
 import { isPast } from '../../utils/dateUtils';
 import { Search, MapPin, Calendar, Clock, Users, ArrowRight, Ticket, Filter, AlertCircle } from 'lucide-react';
+import DatePickerField from '@/components/shared/DatePickerField';
 
 const EVENT_CATEGORIES = ['All', 'Concerts', 'Sports', 'Theater', 'Comedy', 'Festivals', 'Conferences'];
 
@@ -117,11 +118,12 @@ export default function Events() {
                 onChange={(e) => setFilters({ ...filters, city: e.target.value })}
               />
             </div>
-            <input
-              type="date"
-              className="input w-full bg-white/20 border-white/30 text-white"
+            <DatePickerField
               value={filters.date}
-              onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+              onChange={(v) => setFilters({ ...filters, date: v })}
+              placeholder="Event date"
+              title="Event Date"
+              minDate={null}
             />
             <button type="submit" className="btn bg-white text-purple-600 hover:bg-purple-50">
               <Search className="h-4 w-4 mr-2" />

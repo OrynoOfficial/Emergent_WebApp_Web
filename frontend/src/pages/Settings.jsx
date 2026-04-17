@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import DatePickerField from '@/components/shared/DatePickerField';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -645,12 +646,12 @@ export default function Settings() {
                 </div>
                 <div>
                   <Label htmlFor="dob">Date of Birth {isCustomer && <span className="text-xs text-slate-400">(read-only)</span>}</Label>
-                  <Input
-                    id="dob"
-                    type="date"
+                  <DatePickerField
                     value={profileData.date_of_birth}
-                    onChange={(e) => setProfileData({ ...profileData, date_of_birth: e.target.value })}
-                    className={`mt-1 ${isCustomer ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                    onChange={(v) => setProfileData({ ...profileData, date_of_birth: v })}
+                    placeholder="Date of birth"
+                    title="Date of Birth"
+                    minDate={null}
                     disabled={isCustomer}
                   />
                 </div>

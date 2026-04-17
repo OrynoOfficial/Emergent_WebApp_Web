@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { hotelsAPI } from '../../api/client';
 import { formatCurrency } from '../../utils/currency';
 import { Search, MapPin, Star, Users, Calendar, Wifi, Car, Coffee, ArrowRight, Filter, X, SlidersHorizontal } from 'lucide-react';
+import DatePickerField from '@/components/shared/DatePickerField';
 
 export default function Hotels() {
   const [hotels, setHotels] = useState([]);
@@ -111,21 +112,20 @@ export default function Hotels() {
               />
             </div>
             <div>
-              <input
-                type="date"
-                className="input w-full"
+              <DatePickerField
                 value={filters.checkIn}
-                onChange={(e) => setFilters({ ...filters, checkIn: e.target.value })}
+                onChange={(v) => setFilters({ ...filters, checkIn: v })}
                 placeholder="Check-in"
+                title="Check-in Date"
               />
             </div>
             <div>
-              <input
-                type="date"
-                className="input w-full"
+              <DatePickerField
                 value={filters.checkOut}
-                onChange={(e) => setFilters({ ...filters, checkOut: e.target.value })}
+                onChange={(v) => setFilters({ ...filters, checkOut: v })}
                 placeholder="Check-out"
+                title="Check-out Date"
+                minDate={filters.checkIn ? new Date(filters.checkIn) : new Date()}
               />
             </div>
             <div className="relative">

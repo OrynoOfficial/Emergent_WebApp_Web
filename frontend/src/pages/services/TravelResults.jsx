@@ -16,6 +16,7 @@ import {
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import DatePickerField from '@/components/shared/DatePickerField';
 import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
 import api from '../../api/client';
@@ -628,11 +629,11 @@ export default function TravelResults() {
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">Date</label>
-                    <Input 
-                      type="date"
-                      value={editDate} 
-                      onChange={(e) => setEditDate(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white"
+                    <DatePickerField
+                      value={editDate}
+                      onChange={setEditDate}
+                      placeholder="Travel date"
+                      title="Travel Date"
                     />
                   </div>
                   <div>
