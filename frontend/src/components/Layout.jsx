@@ -345,37 +345,18 @@ export default function Layout({ children }) {
 
   const getIconColor = (key) => ICON_COLORS[key] || '#94a3b8';
 
-
-  // State for flyout menus
+  // State for accordion submenus
   const [activeSubmenu, setActiveSubmenu] = useState(null);
-  const [submenuPosition, setSubmenuPosition] = useState({ top: 120 });
-  const submenuTimeoutRef = useRef(null);
 
-  const handleSubmenuEnter = (key, event) => {
-    if (submenuTimeoutRef.current) {
-      clearTimeout(submenuTimeoutRef.current);
-    }
-    // Calculate position from the trigger element
-    if (event?.currentTarget) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      // Position flyout next to the trigger, clamped to viewport
-      let top = rect.top;
-      // If it would overflow the bottom, shift it up
-      const flyoutHeight = 320; // approximate
-      if (top + flyoutHeight > viewportHeight - 20) {
-        top = Math.max(20, viewportHeight - flyoutHeight - 20);
+  // Auto-expand submenu containing the active route
+  useEffect(() => {
+    for (const item of navigationItems) {
+      if (item.isDropdown && item.submenu?.some(sub => location.pathname === sub.path)) {
+        setActiveSubmenu(item.key);
+        break;
       }
-      setSubmenuPosition({ top });
     }
-    setActiveSubmenu(key);
-  };
-
-  const handleSubmenuLeave = () => {
-    submenuTimeoutRef.current = setTimeout(() => {
-      setActiveSubmenu(null);
-    }, 250);
-  };
+  }, [location.pathname, navigationItems]);
 
   const renderNavItem = (item) => {
     const isActive = item.path && location.pathname === item.path;
@@ -385,14 +366,9 @@ export default function Layout({ children }) {
 
     if (item.isDropdown) {
       return (
-        <div 
-          key={item.key} 
-          className="mb-1 relative group/menu"
-          onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
-          onMouseLeave={handleSubmenuLeave}
-        >
+        <div key={item.key} className="mb-1">
           <button
-            onClick={(e) => { handleSubmenuEnter(item.key, e); setActiveSubmenu(isSubmenuOpen ? null : item.key); }}
+            onClick={() => setActiveSubmenu(isSubmenuOpen ? null : item.key)}
             className={`
               w-full flex items-center justify-between px-4 py-3 rounded-lg
               transition-all duration-200 ease-out
@@ -407,97 +383,43 @@ export default function Layout({ children }) {
               <item.icon className="h-5 w-5 transition-transform duration-200" style={{ color: iconColor }} />
               <span className="font-medium text-slate-200">{item.label}</span>
             </div>
-            <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-90' : ''}`} />
+            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180' : ''}`} />
           </button>
           
-          {/* Hover bridge — invisible zone connecting sidebar to flyout */}
-          {isSubmenuOpen && (
-            <div 
-              className="fixed z-[9998] w-4"
-              style={{ left: '272px', top: `${submenuPosition.top - 20}px`, height: '360px' }}
-              onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
-              onMouseLeave={handleSubmenuLeave}
-            />
-          )}
-          
-          {/* Flyout Submenu - positioned dynamically next to trigger */}
-          {isSubmenuOpen && (
-            <div 
-              className="fixed z-[9999] min-w-[280px] max-h-[80vh] overflow-y-auto
-                         bg-gradient-to-br from-[#0a3566] to-[#082c59] rounded-xl shadow-2xl 
-                         border border-white/20 backdrop-blur-sm
-                         animate-in fade-in slide-in-from-left-2 duration-150"
-              style={{ 
-                left: '286px', 
-                top: `${submenuPosition.top}px`
-              }}
-              onMouseEnter={(e) => handleSubmenuEnter(item.key, e)}
-              onMouseLeave={handleSubmenuLeave}
-            >
-              {/* Submenu header */}
-              <div className="px-4 py-3 border-b border-white/10 bg-gradient-to-r from-white/10 to-transparent sticky top-0 backdrop-blur-sm rounded-t-xl">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-white/10 rounded-lg">
-                    <item.icon className="h-4 w-4" style={{ color: iconColor }} />
-                  </div>
-                  <span className="font-semibold text-white">{item.label}</span>
-                </div>
-              </div>
-            
-                {/* Submenu items */}
-                <div className="py-2 px-2">
-                  {item.submenu.map((sub, idx) => {
-                    if (sub.isDivider) {
-                      return (
-                        <div key={sub.key || idx} className="px-3 py-2 mt-2 text-xs text-slate-400 font-semibold uppercase tracking-wider border-t border-white/5 pt-3">
-                          {sub.label}
-                        </div>
-                      );
-                    }
-                    const subIconColor = getIconColor(sub.key);
-                    const isSubActive = location.pathname === sub.path;
-                    return (
-                      <Link
-                        key={sub.key}
-                        to={sub.path}
-                        onClick={() => {
-                          setSidebarOpen(false);
-                          setActiveSubmenu(null);
-                        }}
-                        className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1
-                          transition-all duration-150 ease-out
-                          ${isSubActive
-                            ? 'bg-[#4D96FF]/25 text-white border-l-2 border-l-[#4D96FF]'
-                            : 'text-slate-300 hover:text-white hover:bg-white/10'
-                          }
-                          group
-                        `}
-                      >
-                        <div className={`
-                          p-1.5 rounded-lg transition-all duration-150
-                          ${isSubActive ? 'bg-white/15' : 'bg-white/5 group-hover:bg-white/10'}
-                        `}>
-                          <sub.icon className="h-4 w-4" style={{ color: subIconColor }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium block truncate">{sub.label}</span>
-                          {sub.description && (
-                            <span className="text-xs text-slate-500 block truncate">{sub.description}</span>
-                          )}
-                        </div>
-                        <ArrowRight className={`
-                          h-3.5 w-3.5 text-slate-500 
-                          transition-all duration-150
-                          opacity-0 -translate-x-2
-                          group-hover:opacity-100 group-hover:translate-x-0
-                        `} />
-                      </Link>
-                    );
-                  })}
-                </div>
+          {/* Inline accordion submenu */}
+          <div className={`overflow-hidden transition-all duration-200 ease-out ${isSubmenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="ml-4 mt-1 pl-3 border-l border-white/10 space-y-0.5">
+              {item.submenu.map((sub, idx) => {
+                if (sub.isDivider) {
+                  return (
+                    <div key={sub.key || idx} className="px-2 py-1.5 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                      {sub.label}
+                    </div>
+                  );
+                }
+                const subIconColor = getIconColor(sub.key);
+                const isSubActive = location.pathname === sub.path;
+                return (
+                  <Link
+                    key={sub.key}
+                    to={sub.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`
+                      flex items-center gap-2.5 px-3 py-2 rounded-lg
+                      transition-all duration-150 ease-out text-sm
+                      ${isSubActive
+                        ? 'bg-[#4D96FF]/20 text-white'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }
+                    `}
+                  >
+                    <sub.icon className="h-4 w-4 flex-shrink-0" style={{ color: isSubActive ? '#4D96FF' : subIconColor }} />
+                    <span className="truncate">{sub.label}</span>
+                  </Link>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
       );
     }
