@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import useEmblaCarousel from 'embla-carousel-react';
 import { 
@@ -101,6 +101,7 @@ function IngredientsModal({ open, onClose, itemName, ingredients = [] }) {
             <Leaf className="w-4 h-4 text-[#C5A880]" />
             {itemName}
           </DialogTitle>
+          <DialogDescription className="sr-only">Ingredients used in {itemName}</DialogDescription>
         </DialogHeader>
         <div className="py-2">
           <p className="text-xs text-[#64748B] uppercase tracking-wider mb-3 font-sans">Ingredients</p>
