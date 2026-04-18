@@ -7,30 +7,29 @@
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Sidebar Right-Side Flyout Submenus**
+- Replaced inline accordion submenus with click-triggered right-side flyout panels
+- Flyout positioned at left: 288px (to the right of the sidebar) with smart vertical positioning
+- Bottom items (Admin Config, System) use upward positioning (bottom-aligned) to stay within viewport
+- Click outside, route change, or toggle closes the flyout; only one open at a time
+- Flyout has header with parent icon/name, active route highlighting, z-index: 60
+
 **Apr 2026 - Menu Item Bug Fixes & Auto-Derived Popularity**
-- Fixed: Images field was lost on save due to stale closure in handleImagesChange (now single onChange call)
-- Fixed: Ingredients textarea now uses local state with onBlur commit, allowing commas/periods/free typing
-- Removed: "Popular Item" toggle from operator MenuItemForm - operators cannot manually set popularity
-- Added: Backend auto-derives popularity from order aggregation pipeline (items ordered 2+ times are popular)
-- Demo data marks top 3 highest-priced items as popular (system-derived, no operator influence)
+- Fixed: Images field lost on save (stale closure in handleImagesChange)
+- Fixed: Ingredients textarea allows commas/periods (local state with onBlur commit)
+- Removed: Popular Item toggle from operator MenuItemForm
+- Added: Backend auto-derives popularity from order aggregation pipeline
 
 **Apr 2026 - Restaurant Menu Premium Revamp**
-- Rebuilt RestaurantMenu.jsx with premium hero image header (Playfair Display + Manrope fonts)
-- Restaurant name, location, rating, hours, cuisine badges displayed prominently in hero overlay
-- Menu items with swipeable image carousel (max 3 images per item via embla-carousel)
-- Ingredients modal (Shadcn Dialog) opens on "View Ingredients" click, shows ingredient badges
-- Compact reservation sidebar with date/time grid layout, champagne gold accent (#C5A880)
-- Multi-image upload (max 3) in management MenuItemForm for menu item images
-- Backend MenuItemCreate/MenuItemUpdate models updated with `images` array field
+- Premium hero image header (Playfair Display + Manrope fonts, champagne gold #C5A880)
+- Swipeable image carousel (max 3 images via embla-carousel), Ingredients modal
+- Compact reservation sidebar, multi-image upload in management
 
 **Apr 2026 - Dynamic Popular Locations & Suggestions**
-- Backend: GET /api/suggestions/popular-locations?service_type=X aggregates cities from DB
-- Shared LocationInput fetches from API with per-serviceType caching
-
-**Apr 2026 - Reports Page Redesign, Dropdown Animations Removed, Sidebar Accordion**
+**Apr 2026 - Reports Page Redesign, Dropdown Animations Removed**
 **Apr 2026 - Dashboard/Communications/Management Operator Scoping**  
-**Apr 2026 - Cinema Film CRUD, Event fields, Restaurant Menu, Seat Selection**
-**Earlier:** Mock data removal, Unified Booking, Reports, Tabs, Refactoring, Stripe, AI chatbot
+**Apr 2026 - Cinema Film CRUD, Event fields, Seat Selection**
+**Earlier:** Mock data removal, Unified Booking, Stripe, AI chatbot
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
@@ -45,7 +44,8 @@
 - P3: Ingredient-based search/filter for customers
 
 ## Key Technical Notes
-- **NO ANIMATIONS ON DROPDOWNS**: All fly-in, slide, zoom, fade animations removed
+- **SIDEBAR FLYOUTS**: Submenus open as right-side flyout panels (not inline accordions). Bottom items position upward. Uses `data-submenu-trigger` and `data-submenu-flyout` attributes for click detection.
+- **NO ANIMATIONS ON DROPDOWNS**: All fly-in, slide, zoom, fade animations removed from Shadcn UI
 - **NATIVE DATE INPUTS**: Always use DatePickerField component
 - **OPERATOR SCOPING**: All management pages use OperatorScopeFilter
 - **FONTS**: Playfair Display (serif headings), Manrope (sans body)
