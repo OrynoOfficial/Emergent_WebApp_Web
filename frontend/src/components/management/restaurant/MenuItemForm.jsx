@@ -4,7 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { X, Loader2, ImagePlus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { X, Loader2, ImagePlus, AlertTriangle } from 'lucide-react';
 import api from '@/api/client';
 
 const MENU_CATEGORIES = [
@@ -17,6 +18,24 @@ const MENU_CATEGORIES = [
 ];
 
 const MAX_IMAGES = 3;
+
+const COMMON_ALLERGENS = [
+  'Peanuts', 'Tree Nuts', 'Dairy', 'Eggs', 'Gluten',
+  'Fish', 'Shellfish', 'Soy', 'Sesame', 'Celery'
+];
+
+const ALLERGEN_COLORS = {
+  Peanuts: 'bg-amber-100 text-amber-700 border-amber-300',
+  'Tree Nuts': 'bg-orange-100 text-orange-700 border-orange-300',
+  Dairy: 'bg-blue-100 text-blue-700 border-blue-300',
+  Eggs: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  Gluten: 'bg-rose-100 text-rose-700 border-rose-300',
+  Fish: 'bg-cyan-100 text-cyan-700 border-cyan-300',
+  Shellfish: 'bg-teal-100 text-teal-700 border-teal-300',
+  Soy: 'bg-lime-100 text-lime-700 border-lime-300',
+  Sesame: 'bg-stone-100 text-stone-700 border-stone-300',
+  Celery: 'bg-green-100 text-green-700 border-green-300',
+};
 
 function MultiImageUploader({ images = [], onChange }) {
   const [uploading, setUploading] = useState(false);
@@ -179,6 +198,52 @@ export function MenuItemForm({ form, onChange, isEditing = false }) {
           rows={2}
           className="mt-1"
         />
+      </div>
+
+      <div>
+        <Label className="flex items-center gap-1.5">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+          Allergens
+        </Label>
+        <p className="text-xs text-slate-500 mb-2">Select allergens present in this dish</p>
+        <div className="flex flex-wrap gap-1.5">
+          {COMMON_ALLERGENS.map(allergen => {
+            const isSelected = (form.allergens || []).includes(allergen);
+            const colorClass = ALLERGEN_COLORS[allergen] || 'bg-slate-100 text-slate-700 border-slate-300';
+            return (
+              <button
+                key={allergen}
+                type="button"
+                onClick={() => {
+                  const current = form.allergens || [];
+                  const updated = isSelected
+                    ? current.filter(a => a !== allergen)
+                    : [...current, allergen];
+                  updateForm('allergens', updated);
+                }}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                  isSelected
+                    ? `${colorClass} ring-1 ring-offset-1 ring-current`
+                    : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {allergen}
+              </button>
+            );
+          })}
+        </div>
+        {(form.allergens || []).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {(form.allergens || []).map(a => (
+              <Badge key={a} variant="outline" className={`text-[10px] ${ALLERGEN_COLORS[a] || 'bg-slate-100 text-slate-700 border-slate-300'}`}>
+                {a}
+                <button type="button" onClick={() => updateForm('allergens', (form.allergens || []).filter(x => x !== a))} className="ml-1 hover:text-red-500">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">

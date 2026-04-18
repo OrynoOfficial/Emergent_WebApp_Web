@@ -13,13 +13,36 @@ import {
   ArrowLeft, ShoppingCart, Plus, Minus, Trash2, 
   Calendar as CalendarIcon, Clock, Users, MapPin,
   Utensils, Star, CheckCircle, Loader2, Search, Flame,
-  ChevronLeft, ChevronRight, Leaf, X
+  ChevronLeft, ChevronRight, Leaf, X, AlertTriangle, Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 
 const MENU_CATEGORIES = ['all', 'starters', 'mains', 'desserts', 'drinks', 'specials'];
+
+const DIETARY_FILTERS = [
+  { key: 'Peanuts', label: 'No Peanuts', color: 'amber' },
+  { key: 'Gluten', label: 'Gluten-Free', color: 'rose' },
+  { key: 'Dairy', label: 'No Dairy', color: 'blue' },
+  { key: 'Eggs', label: 'No Eggs', color: 'yellow' },
+  { key: 'Fish', label: 'No Fish', color: 'cyan' },
+  { key: 'Shellfish', label: 'No Shellfish', color: 'teal' },
+  { key: 'Soy', label: 'No Soy', color: 'lime' },
+];
+
+const ALLERGEN_BADGE_COLORS = {
+  Peanuts: 'bg-amber-50 text-amber-700 border-amber-200',
+  'Tree Nuts': 'bg-orange-50 text-orange-700 border-orange-200',
+  Dairy: 'bg-blue-50 text-blue-700 border-blue-200',
+  Eggs: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  Gluten: 'bg-rose-50 text-rose-700 border-rose-200',
+  Fish: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  Shellfish: 'bg-teal-50 text-teal-700 border-teal-200',
+  Soy: 'bg-lime-50 text-lime-700 border-lime-200',
+  Sesame: 'bg-stone-50 text-stone-700 border-stone-200',
+  Celery: 'bg-green-50 text-green-700 border-green-200',
+};
 
 const formatOpeningHours = (openingHours) => {
   if (!openingHours) return 'Hours not available';
@@ -92,7 +115,7 @@ function ItemImageCarousel({ images = [] }) {
 }
 
 // ── Ingredients Modal ──
-function IngredientsModal({ open, onClose, itemName, ingredients = [] }) {
+function IngredientsModal({ open, onClose, itemName, ingredients = [], allergens = [] }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-white max-w-sm rounded-2xl">
@@ -103,21 +126,41 @@ function IngredientsModal({ open, onClose, itemName, ingredients = [] }) {
           </DialogTitle>
           <DialogDescription className="sr-only">Ingredients used in {itemName}</DialogDescription>
         </DialogHeader>
-        <div className="py-2">
-          <p className="text-xs text-[#64748B] uppercase tracking-wider mb-3 font-sans">Ingredients</p>
-          <div className="flex flex-wrap gap-2">
-            {ingredients.map((ing, idx) => (
-              <Badge
-                key={idx}
-                variant="outline"
-                className="bg-[#F9F9F7] text-[#1A1D20] border-[#E2E8F0] font-sans text-sm px-3 py-1"
-              >
-                {ing}
-              </Badge>
-            ))}
+        <div className="py-2 space-y-4">
+          <div>
+            <p className="text-xs text-[#64748B] uppercase tracking-wider mb-3 font-sans">Ingredients</p>
+            <div className="flex flex-wrap gap-2">
+              {ingredients.map((ing, idx) => (
+                <Badge
+                  key={idx}
+                  variant="outline"
+                  className="bg-[#F9F9F7] text-[#1A1D20] border-[#E2E8F0] font-sans text-sm px-3 py-1"
+                >
+                  {ing}
+                </Badge>
+              ))}
+            </div>
+            {ingredients.length === 0 && (
+              <p className="text-sm text-[#64748B] italic">No ingredients listed for this item.</p>
+            )}
           </div>
-          {ingredients.length === 0 && (
-            <p className="text-sm text-[#64748B] italic">No ingredients listed for this item.</p>
+          {allergens.length > 0 && (
+            <div>
+              <p className="text-xs text-red-500 uppercase tracking-wider mb-2 font-sans flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" /> Allergens
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {allergens.map((a, idx) => (
+                  <Badge
+                    key={idx}
+                    variant="outline"
+                    className={`font-sans text-xs px-2.5 py-1 ${ALLERGEN_BADGE_COLORS[a] || 'bg-red-50 text-red-700 border-red-200'}`}
+                  >
+                    {a}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </DialogContent>
@@ -126,18 +169,18 @@ function IngredientsModal({ open, onClose, itemName, ingredients = [] }) {
 }
 
 const MOCK_MENU_ITEMS = [
-  { id: '1', name: 'Ndole with Plantains', category: 'mains', price: 5500, description: 'Traditional Cameroonian dish with bitter leaves and peanuts', image: '', images: [], available: true, popular: true, ingredients: ['Bitter leaves', 'Peanuts', 'Crayfish', 'Palm oil', 'Plantains'] },
-  { id: '2', name: 'Grilled Fish (Braise)', category: 'mains', price: 8000, description: 'Fresh tilapia grilled with spices and plantains', image: '', images: [], available: true, popular: true, ingredients: ['Tilapia', 'Tomatoes', 'Onions', 'Pepper', 'Plantains'] },
-  { id: '3', name: 'Poulet DG', category: 'mains', price: 7500, description: 'Chicken with plantains in a rich tomato sauce', image: '', images: [], available: true, popular: true, ingredients: ['Chicken', 'Plantains', 'Tomatoes', 'Carrots', 'Green beans'] },
-  { id: '4', name: 'Eru Soup', category: 'mains', price: 6000, description: 'Spinach-like vegetable soup with waterleaf', image: '', images: [], available: true, ingredients: ['Eru leaves', 'Waterleaf', 'Crayfish', 'Palm oil'] },
-  { id: '5', name: 'Koki Beans', category: 'starters', price: 2500, description: 'Steamed bean cake wrapped in banana leaves', image: '', images: [], available: true, ingredients: ['Black-eyed beans', 'Palm oil', 'Banana leaves'] },
-  { id: '6', name: 'Accra Banana', category: 'starters', price: 1500, description: 'Fried ripe banana fritters', image: '', images: [], available: true, ingredients: ['Ripe bananas', 'Flour', 'Sugar'] },
-  { id: '7', name: 'Fresh Fruit Salad', category: 'desserts', price: 2000, description: 'Seasonal tropical fruits', image: '', images: [], available: true, ingredients: ['Mango', 'Pineapple', 'Papaya', 'Passion fruit'] },
-  { id: '8', name: 'Gateau de Manioc', category: 'desserts', price: 2500, description: 'Traditional cassava cake', image: '', images: [], available: true, ingredients: ['Cassava', 'Coconut', 'Sugar', 'Eggs'] },
-  { id: '9', name: 'Fresh Juice', category: 'drinks', price: 1500, description: 'Orange, pineapple, or passion fruit', image: '', images: [], available: true },
-  { id: '10', name: 'Bissap (Hibiscus)', category: 'drinks', price: 1000, description: 'Refreshing hibiscus drink', image: '', images: [], available: true, ingredients: ['Hibiscus flowers', 'Sugar', 'Ginger'] },
-  { id: '11', name: "Chef's Special Platter", category: 'specials', price: 15000, description: 'Assortment of our best dishes for 2', image: '', images: [], available: true, popular: true },
-  { id: '12', name: 'Suya Skewers', category: 'starters', price: 3000, description: 'Spiced grilled meat skewers', image: '', images: [], available: true, ingredients: ['Beef', 'Suya spice', 'Onions', 'Tomatoes'] }
+  { id: '1', name: 'Ndole with Plantains', category: 'mains', price: 5500, description: 'Traditional Cameroonian dish with bitter leaves and peanuts', image: '', images: [], available: true, popular: true, ingredients: ['Bitter leaves', 'Peanuts', 'Crayfish', 'Palm oil', 'Plantains'], allergens: ['Peanuts', 'Shellfish'] },
+  { id: '2', name: 'Grilled Fish (Braise)', category: 'mains', price: 8000, description: 'Fresh tilapia grilled with spices and plantains', image: '', images: [], available: true, popular: true, ingredients: ['Tilapia', 'Tomatoes', 'Onions', 'Pepper', 'Plantains'], allergens: ['Fish'] },
+  { id: '3', name: 'Poulet DG', category: 'mains', price: 7500, description: 'Chicken with plantains in a rich tomato sauce', image: '', images: [], available: true, popular: true, ingredients: ['Chicken', 'Plantains', 'Tomatoes', 'Carrots', 'Green beans'], allergens: [] },
+  { id: '4', name: 'Eru Soup', category: 'mains', price: 6000, description: 'Spinach-like vegetable soup with waterleaf', image: '', images: [], available: true, ingredients: ['Eru leaves', 'Waterleaf', 'Crayfish', 'Palm oil'], allergens: ['Shellfish'] },
+  { id: '5', name: 'Koki Beans', category: 'starters', price: 2500, description: 'Steamed bean cake wrapped in banana leaves', image: '', images: [], available: true, ingredients: ['Black-eyed beans', 'Palm oil', 'Banana leaves'], allergens: [] },
+  { id: '6', name: 'Accra Banana', category: 'starters', price: 1500, description: 'Fried ripe banana fritters', image: '', images: [], available: true, ingredients: ['Ripe bananas', 'Flour', 'Sugar'], allergens: ['Gluten'] },
+  { id: '7', name: 'Fresh Fruit Salad', category: 'desserts', price: 2000, description: 'Seasonal tropical fruits', image: '', images: [], available: true, ingredients: ['Mango', 'Pineapple', 'Papaya', 'Passion fruit'], allergens: [] },
+  { id: '8', name: 'Gateau de Manioc', category: 'desserts', price: 2500, description: 'Traditional cassava cake', image: '', images: [], available: true, ingredients: ['Cassava', 'Coconut', 'Sugar', 'Eggs'], allergens: ['Eggs'] },
+  { id: '9', name: 'Fresh Juice', category: 'drinks', price: 1500, description: 'Orange, pineapple, or passion fruit', image: '', images: [], available: true, allergens: [] },
+  { id: '10', name: 'Bissap (Hibiscus)', category: 'drinks', price: 1000, description: 'Refreshing hibiscus drink', image: '', images: [], available: true, ingredients: ['Hibiscus flowers', 'Sugar', 'Ginger'], allergens: [] },
+  { id: '11', name: "Chef's Special Platter", category: 'specials', price: 15000, description: 'Assortment of our best dishes for 2', image: '', images: [], available: true, popular: true, allergens: ['Peanuts', 'Fish', 'Shellfish'] },
+  { id: '12', name: 'Suya Skewers', category: 'starters', price: 3000, description: 'Spiced grilled meat skewers', image: '', images: [], available: true, ingredients: ['Beef', 'Suya spice', 'Onions', 'Tomatoes'], allergens: ['Peanuts'] }
 ];
 
 const MOCK_RESTAURANT = {
@@ -161,6 +204,7 @@ export default function RestaurantMenu() {
   const [loading, setLoading] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [excludedAllergens, setExcludedAllergens] = useState([]);
   
   const [cart, setCart] = useState({});
   const [orderType, setOrderType] = useState('dine-in');
@@ -172,7 +216,7 @@ export default function RestaurantMenu() {
   const [isReservationDateOpen, setIsReservationDateOpen] = useState(false);
 
   // Ingredients modal state
-  const [ingredientsModal, setIngredientsModal] = useState({ open: false, itemName: '', ingredients: [] });
+  const [ingredientsModal, setIngredientsModal] = useState({ open: false, itemName: '', ingredients: [], allergens: [] });
 
   useEffect(() => {
     if (restaurantId) loadRestaurantData();
@@ -196,9 +240,22 @@ export default function RestaurantMenu() {
 
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
-    const matchesSearch = !searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+    // Search matches dish name OR ingredient name
+    const queryLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery
+      || item.name.toLowerCase().includes(queryLower)
+      || (item.ingredients || []).some(ing => ing.toLowerCase().includes(queryLower));
+    // Allergen filter: exclude items containing any excluded allergen
+    const matchesDiet = excludedAllergens.length === 0
+      || !excludedAllergens.some(ea => (item.allergens || []).map(a => a.toLowerCase()).includes(ea.toLowerCase()));
+    return matchesCategory && matchesSearch && matchesDiet;
   });
+
+  const toggleAllergenFilter = (allergenKey) => {
+    setExcludedAllergens(prev =>
+      prev.includes(allergenKey) ? prev.filter(a => a !== allergenKey) : [...prev, allergenKey]
+    );
+  };
 
   const addToCart = (item) => setCart(prev => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
   const removeFromCart = (itemId) => {
@@ -317,7 +374,7 @@ export default function RestaurantMenu() {
               <div className="relative mb-4">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#64748B]" />
                 <Input
-                  placeholder="Search dishes..."
+                  placeholder="Search dishes or ingredients..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="pl-10 bg-white border-[#E2E8F0] rounded-xl h-11 font-sans text-sm"
@@ -343,6 +400,40 @@ export default function RestaurantMenu() {
                   ))}
                 </TabsList>
               </Tabs>
+
+              {/* Dietary Filters */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap" data-testid="dietary-filters">
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B] uppercase tracking-wider">
+                  <AlertTriangle className="w-3 h-3" /> Dietary
+                </span>
+                {DIETARY_FILTERS.map(df => {
+                  const isActive = excludedAllergens.includes(df.key);
+                  return (
+                    <button
+                      key={df.key}
+                      onClick={() => toggleAllergenFilter(df.key)}
+                      data-testid={`dietary-filter-${df.key.toLowerCase().replace(/\s/g,'-')}`}
+                      className={`px-3 py-1 rounded-full text-[11px] font-medium border transition-all font-sans ${
+                        isActive
+                          ? `bg-${df.color}-100 text-${df.color}-700 border-${df.color}-300 ring-1 ring-${df.color}-300`
+                          : 'bg-white text-[#64748B] border-[#E2E8F0] hover:bg-slate-50'
+                      }`}
+                      style={isActive ? { backgroundColor: `var(--${df.color}-100, #fef3c7)` } : {}}
+                    >
+                      {df.label}
+                    </button>
+                  );
+                })}
+                {excludedAllergens.length > 0 && (
+                  <button
+                    onClick={() => setExcludedAllergens([])}
+                    className="px-2 py-1 text-[10px] text-red-500 hover:text-red-700 font-medium font-sans"
+                    data-testid="clear-dietary-filters"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Menu Items */}
@@ -377,7 +468,7 @@ export default function RestaurantMenu() {
                             <span className="font-sans font-bold text-[#082c59] text-base">{formatFCFA(item.price)}</span>
                             {item.ingredients?.length > 0 && (
                               <button
-                                onClick={() => setIngredientsModal({ open: true, itemName: item.name, ingredients: item.ingredients })}
+                                onClick={() => setIngredientsModal({ open: true, itemName: item.name, ingredients: item.ingredients, allergens: item.allergens || [] })}
                                 className="text-xs text-[#C5A880] hover:text-[#082c59] underline underline-offset-4 font-sans transition-colors"
                                 data-testid={`view-ingredients-${item.id}`}
                               >
@@ -385,6 +476,17 @@ export default function RestaurantMenu() {
                               </button>
                             )}
                           </div>
+                          {/* Allergen tags */}
+                          {item.allergens?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2" data-testid={`allergens-${item.id}`}>
+                              {item.allergens.map(a => (
+                                <span key={a} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold border font-sans ${ALLERGEN_BADGE_COLORS[a] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                  <AlertTriangle className="w-2 h-2" />
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Add to cart */}
@@ -593,9 +695,10 @@ export default function RestaurantMenu() {
       {/* Ingredients Modal */}
       <IngredientsModal
         open={ingredientsModal.open}
-        onClose={() => setIngredientsModal({ open: false, itemName: '', ingredients: [] })}
+        onClose={() => setIngredientsModal({ open: false, itemName: '', ingredients: [], allergens: [] })}
         itemName={ingredientsModal.itemName}
         ingredients={ingredientsModal.ingredients}
+        allergens={ingredientsModal.allergens}
       />
     </div>
   );

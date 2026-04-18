@@ -30,6 +30,7 @@ class MenuItemCreate(BaseModel):
     image: Optional[str] = None
     images: Optional[list] = []
     ingredients: Optional[list] = []
+    allergens: Optional[list] = []
     available: bool = True
 
 class OrderItem(BaseModel):
@@ -147,8 +148,8 @@ async def get_restaurant(restaurant_id: str):
     return restaurant
 
 @router.get("/{restaurant_id}/menu")
-async def get_restaurant_menu(restaurant_id: str):
-    """Get restaurant menu with auto-derived popularity"""
+async def get_restaurant_menu(restaurant_id: str, exclude_allergens: Optional[str] = None, ingredient: Optional[str] = None):
+    """Get restaurant menu with auto-derived popularity and optional dietary filters"""
     db = get_database()
     menu_items = await db.restaurant_menu.find(
         {"restaurant_id": restaurant_id, "is_available": {"$ne": False}}
@@ -192,34 +193,46 @@ async def get_restaurant_menu(restaurant_id: str):
             "image": single_image or (images_list[0] if images_list else ""),
             "images": images_list[:3],
             "ingredients": item.get("ingredients", []),
+            "allergens": item.get("allergens", []),
             "is_available": item.get("is_available", True),
             "available": item.get("is_available", True),
             "popular": item_name in popular_item_names
         })
     
-    # If no menu items, return demo data with ingredients for View Ingredients feature
-    # For demo data, mark items with highest price as popular (simulating system-derived popularity)
+    # If no menu items, return demo data with ingredients and allergens
     if not items:
         demo_items = [
-            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "images": [], "ingredients": ["Bitter leaves", "Peanuts", "Crayfish", "Palm oil", "Plantains"], "is_available": True, "available": True},
-            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "images": [], "ingredients": ["Tilapia", "Tomatoes", "Onions", "Pepper", "Plantains"], "is_available": True, "available": True},
-            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "images": [], "ingredients": ["Chicken", "Plantains", "Tomatoes", "Carrots", "Green beans"], "is_available": True, "available": True},
-            {"id": "4", "name": "Eru Soup", "category": "mains", "price": 6000, "description": "Spinach-like vegetable soup with waterleaf", "image": "", "images": [], "ingredients": ["Eru leaves", "Waterleaf", "Crayfish", "Palm oil"], "is_available": True, "available": True},
-            {"id": "5", "name": "Koki Beans", "category": "starters", "price": 2500, "description": "Steamed bean cake wrapped in banana leaves", "image": "", "images": [], "ingredients": ["Black-eyed beans", "Palm oil", "Banana leaves"], "is_available": True, "available": True},
-            {"id": "6", "name": "Accra Banana", "category": "starters", "price": 1500, "description": "Fried ripe banana fritters", "image": "", "images": [], "ingredients": ["Ripe bananas", "Flour", "Sugar"], "is_available": True, "available": True},
-            {"id": "7", "name": "Fresh Fruit Salad", "category": "desserts", "price": 2000, "description": "Seasonal tropical fruits", "image": "", "images": [], "ingredients": ["Mango", "Pineapple", "Papaya", "Passion fruit"], "is_available": True, "available": True},
-            {"id": "8", "name": "Gâteau de Manioc", "category": "desserts", "price": 2500, "description": "Traditional cassava cake", "image": "", "images": [], "ingredients": ["Cassava", "Coconut", "Sugar", "Eggs"], "is_available": True, "available": True},
-            {"id": "9", "name": "Fresh Juice", "category": "drinks", "price": 1500, "description": "Orange, pineapple, or passion fruit", "image": "", "images": [], "ingredients": [], "is_available": True, "available": True},
-            {"id": "10", "name": "Bissap (Hibiscus)", "category": "drinks", "price": 1000, "description": "Refreshing hibiscus drink", "image": "", "images": [], "ingredients": ["Hibiscus flowers", "Sugar", "Ginger"], "is_available": True, "available": True},
-            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "images": [], "ingredients": [], "is_available": True, "available": True},
-            {"id": "12", "name": "Suya Skewers", "category": "starters", "price": 3000, "description": "Spiced grilled meat skewers", "image": "", "images": [], "ingredients": ["Beef", "Suya spice", "Onions", "Tomatoes"], "is_available": True, "available": True}
+            {"id": "1", "name": "Ndolé with Plantains", "category": "mains", "price": 5500, "description": "Traditional Cameroonian dish with bitter leaves and peanuts", "image": "", "images": [], "ingredients": ["Bitter leaves", "Peanuts", "Crayfish", "Palm oil", "Plantains"], "allergens": ["Peanuts", "Shellfish"], "is_available": True, "available": True},
+            {"id": "2", "name": "Grilled Fish (Braise)", "category": "mains", "price": 8000, "description": "Fresh tilapia grilled with spices and plantains", "image": "", "images": [], "ingredients": ["Tilapia", "Tomatoes", "Onions", "Pepper", "Plantains"], "allergens": ["Fish"], "is_available": True, "available": True},
+            {"id": "3", "name": "Poulet DG", "category": "mains", "price": 7500, "description": "Chicken with plantains in a rich tomato sauce", "image": "", "images": [], "ingredients": ["Chicken", "Plantains", "Tomatoes", "Carrots", "Green beans"], "allergens": [], "is_available": True, "available": True},
+            {"id": "4", "name": "Eru Soup", "category": "mains", "price": 6000, "description": "Spinach-like vegetable soup with waterleaf", "image": "", "images": [], "ingredients": ["Eru leaves", "Waterleaf", "Crayfish", "Palm oil"], "allergens": ["Shellfish"], "is_available": True, "available": True},
+            {"id": "5", "name": "Koki Beans", "category": "starters", "price": 2500, "description": "Steamed bean cake wrapped in banana leaves", "image": "", "images": [], "ingredients": ["Black-eyed beans", "Palm oil", "Banana leaves"], "allergens": [], "is_available": True, "available": True},
+            {"id": "6", "name": "Accra Banana", "category": "starters", "price": 1500, "description": "Fried ripe banana fritters", "image": "", "images": [], "ingredients": ["Ripe bananas", "Flour", "Sugar"], "allergens": ["Gluten"], "is_available": True, "available": True},
+            {"id": "7", "name": "Fresh Fruit Salad", "category": "desserts", "price": 2000, "description": "Seasonal tropical fruits", "image": "", "images": [], "ingredients": ["Mango", "Pineapple", "Papaya", "Passion fruit"], "allergens": [], "is_available": True, "available": True},
+            {"id": "8", "name": "Gâteau de Manioc", "category": "desserts", "price": 2500, "description": "Traditional cassava cake", "image": "", "images": [], "ingredients": ["Cassava", "Coconut", "Sugar", "Eggs"], "allergens": ["Eggs"], "is_available": True, "available": True},
+            {"id": "9", "name": "Fresh Juice", "category": "drinks", "price": 1500, "description": "Orange, pineapple, or passion fruit", "image": "", "images": [], "ingredients": [], "allergens": [], "is_available": True, "available": True},
+            {"id": "10", "name": "Bissap (Hibiscus)", "category": "drinks", "price": 1000, "description": "Refreshing hibiscus drink", "image": "", "images": [], "ingredients": ["Hibiscus flowers", "Sugar", "Ginger"], "allergens": [], "is_available": True, "available": True},
+            {"id": "11", "name": "Chef's Special Platter", "category": "specials", "price": 15000, "description": "Assortment of our best dishes for 2", "image": "", "images": [], "ingredients": [], "allergens": ["Peanuts", "Fish", "Shellfish"], "is_available": True, "available": True},
+            {"id": "12", "name": "Suya Skewers", "category": "starters", "price": 3000, "description": "Spiced grilled meat skewers", "image": "", "images": [], "ingredients": ["Beef", "Suya spice", "Onions", "Tomatoes"], "allergens": ["Peanuts"], "is_available": True, "available": True}
         ]
-        # For demo: mark top 3 highest-priced items as popular
         sorted_by_price = sorted(demo_items, key=lambda x: x["price"], reverse=True)
         top_names = {item["name"] for item in sorted_by_price[:3]}
         for item in demo_items:
             item["popular"] = item["name"] in top_names
         items = demo_items
+    
+    # Apply dietary filters
+    if exclude_allergens:
+        excluded = [a.strip().lower() for a in exclude_allergens.split(",") if a.strip()]
+        items = [item for item in items if not any(
+            a.lower() in excluded for a in item.get("allergens", [])
+        )]
+    
+    if ingredient:
+        ingredient_lower = ingredient.strip().lower()
+        items = [item for item in items if any(
+            ingredient_lower in ing.lower() for ing in item.get("ingredients", [])
+        )]
     
     return {"items": items}
 
@@ -337,6 +350,7 @@ class MenuItemUpdate(BaseModel):
     image: Optional[str] = None
     images: Optional[list] = None
     ingredients: Optional[list] = None
+    allergens: Optional[list] = None
     available: Optional[bool] = None
     is_available: Optional[bool] = None
 

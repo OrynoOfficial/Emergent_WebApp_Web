@@ -48,7 +48,7 @@ const DEFAULT_RESTAURANT_FORM = {
 };
 
 const DEFAULT_MENU_ITEM = {
-  name: '', description: '', category: '', price: '', is_available: true, image: '', images: [], ingredients: []
+  name: '', description: '', category: '', price: '', is_available: true, image: '', images: [], ingredients: [], allergens: []
 };
 
 // Dashboard data generator
