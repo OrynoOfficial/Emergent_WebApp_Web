@@ -550,31 +550,8 @@ export default function HotelDetails() {
     return lines.slice(0, maxLines).join('\n') + '...';
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-slate-900"></div>
-      </div>
-    );
-  }
-
-  if (error || !hotel) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white p-4 text-center">
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Error loading hotel</h2>
-          <Button onClick={() => navigate(-1)}>Go Back</Button>
-        </div>
-      </div>
-    );
-  }
-
-  const checkInTime = extractPolicyTime(hotel?.policies, 'check-in');
-  const checkOutTime = extractPolicyTime(hotel?.policies, 'check-out');
-  const isDescriptionLong = hotel?.description && hotel.description.split('\n').length > 3;
-  
   // Map coordinates
-  const hasLocation = hotel.location?.lat && hotel.location?.lon;
+  const hasLocation = hotel?.location?.lat && hotel?.location?.lon;
   const mapCenter = hasLocation ? [hotel.location.lat, hotel.location.lon] : null;
 
   // Fetch nearby services when filter is selected
@@ -590,7 +567,6 @@ export default function HotelDetails() {
         if (!endpoint) return;
         const res = await api.get(`/${endpoint}/`, { params: { city: hotel.city, limit: 6 } });
         const items = res.data?.[endpoint === 'restaurants' ? 'restaurants' : endpoint === 'events' ? 'events' : 'items'] || res.data?.results || [];
-        // Generate nearby pins with slight random offset from hotel location
         const pins = items.slice(0, 6).map((item, i) => {
           const lat = (hotel.location?.lat || 4.05) + (Math.random() - 0.5) * 0.02;
           const lon = (hotel.location?.lon || 9.7) + (Math.random() - 0.5) * 0.02;
@@ -598,7 +574,6 @@ export default function HotelDetails() {
         });
         setNearbyPins(pins);
       } catch {
-        // Generate mock pins around hotel location
         const mockPins = Array.from({ length: 4 }, (_, i) => ({
           id: `mock-${i}`,
           name: `${nearbyServiceFilter.replace('-', ' ')} ${i + 1}`,
@@ -624,6 +599,28 @@ export default function HotelDetails() {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-slate-900"></div>
+      </div>
+    );
+  }
+
+  if (error || !hotel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white p-4 text-center">
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Error loading hotel</h2>
+          <Button onClick={() => navigate(-1)}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const checkInTime = extractPolicyTime(hotel?.policies, 'check-in');
+  const checkOutTime = extractPolicyTime(hotel?.policies, 'check-out');
+  const isDescriptionLong = hotel?.description && hotel.description.split('\n').length > 3;
 
   return (
     <div className="bg-slate-100 min-h-screen">
