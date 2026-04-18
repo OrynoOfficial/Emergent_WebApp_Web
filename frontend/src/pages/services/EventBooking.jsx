@@ -429,7 +429,7 @@ export default function EventBooking() {
 
                   {/* Payment Method — right under Order Summary */}
                   <div>
-                    <div className="bg-slate-400 -mx-5 px-5 py-3 mb-4">
+                    <div className="bg-[#082c59] -mx-5 px-5 py-3 mb-4">
                       <h4 className="font-bold text-white flex items-center gap-2">
                         <CreditCard className="w-4 h-4" />
                         Select Payment Method

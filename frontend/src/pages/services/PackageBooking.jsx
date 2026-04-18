@@ -599,7 +599,7 @@ export default function PackageBooking() {
 
             {/* Payment Section */}
             <Card className="shadow-lg overflow-hidden">
-              <div className="bg-slate-400 p-5">
+              <div className="bg-[#082c59] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <CreditCard className="h-6 w-6" />

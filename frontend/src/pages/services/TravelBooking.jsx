@@ -743,76 +743,80 @@ export default function TravelBooking() {
                   <div className="bg-gradient-to-b from-slate-50 to-white p-5 space-y-4">
                     {/* Outbound Trip */}
                     <div className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-white" />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
+                            <Bus className="w-3.5 h-3.5 text-white" />
+                          </div>
+                          <h4 className="font-bold text-slate-800 text-sm">Outbound</h4>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-sm">Outbound</h4>
+                        <span className="text-[#082c59] font-bold text-sm">{formatCurrency(pricing.outboundPrice)}</span>
                       </div>
-                      <div className="space-y-2 text-sm pl-8">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Bus className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="font-semibold">{outbound.operator_name}</span>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-3 p-2.5 bg-blue-50/50 rounded-lg">
+                          <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
+                          <span className="font-semibold text-slate-800">{outbound.from_city} → {outbound.to_city}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>{outbound.from_city} → {outbound.to_city}</span>
+                        <div className="grid grid-cols-2 gap-2 text-slate-600">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-xs">{format(outboundDate, 'EEE, MMM d')}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-xs">{outbound.departure_time} – {outbound.arrival_time}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>{format(outboundDate, 'EEE, MMM d, yyyy')}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span>{outbound.departure_time} – {outbound.arrival_time}</span>
+                        <div className="flex items-center gap-2 text-slate-500 text-xs">
+                          <Bus className="w-3 h-3 shrink-0" />
+                          <span>{outbound.operator_name}{outbound.vehicle_type ? ` · ${outbound.vehicle_type}` : ''}</span>
                         </div>
                         {showSeatSelection && selectedSeats.length > 0 && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Armchair className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span className="font-medium">Seats: {selectedSeats.join(', ')}</span>
+                          <div className="flex items-center gap-2 text-xs">
+                            <Armchair className="w-3 h-3 text-blue-500 shrink-0" />
+                            <span className="font-medium text-slate-700">Seats: {selectedSeats.join(', ')}</span>
                           </div>
                         )}
-                        <div className="pt-1.5 mt-1.5 border-t border-blue-50">
-                          <span className="text-[#082c59] font-bold">{formatCurrency(pricing.outboundPrice)}</span>
-                        </div>
                       </div>
                     </div>
 
                     {/* Return Trip */}
                     {isRoundTrip && returnTrip && (
                       <div className="p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
-                            <div className="w-2 h-2 rounded-full bg-white" />
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center">
+                              <Bus className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <h4 className="font-bold text-slate-800 text-sm">Return</h4>
                           </div>
-                          <h4 className="font-bold text-slate-800 text-sm">Return</h4>
+                          <span className="text-emerald-700 font-bold text-sm">{formatCurrency(pricing.returnPrice)}</span>
                         </div>
-                        <div className="space-y-2 text-sm pl-8">
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Bus className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span className="font-semibold">{returnTrip.operator_name}</span>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-3 p-2.5 bg-emerald-50/50 rounded-lg">
+                            <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
+                            <span className="font-semibold text-slate-800">{returnTrip.from_city} → {returnTrip.to_city}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span>{returnTrip.from_city} → {returnTrip.to_city}</span>
+                          <div className="grid grid-cols-2 gap-2 text-slate-600">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <span className="text-xs">{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'EEE, MMM d') : 'TBD'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <span className="text-xs">{returnTrip.departure_time} – {returnTrip.arrival_time}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Calendar className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span>{bookingData.returnDate ? format(new Date(bookingData.returnDate), 'EEE, MMM d, yyyy') : 'Date TBD'}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span>{returnTrip.departure_time} – {returnTrip.arrival_time}</span>
+                          <div className="flex items-center gap-2 text-slate-500 text-xs">
+                            <Bus className="w-3 h-3 shrink-0" />
+                            <span>{returnTrip.operator_name}{returnTrip.vehicle_type ? ` · ${returnTrip.vehicle_type}` : ''}</span>
                           </div>
                           {showSeatSelection && returnSelectedSeats.length > 0 && (
-                            <div className="flex items-center gap-2 text-slate-600">
-                              <Armchair className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              <span className="font-medium">Seats: {returnSelectedSeats.join(', ')}</span>
+                            <div className="flex items-center gap-2 text-xs">
+                              <Armchair className="w-3 h-3 text-emerald-500 shrink-0" />
+                              <span className="font-medium text-slate-700">Seats: {returnSelectedSeats.join(', ')}</span>
                             </div>
                           )}
-                          <div className="pt-1.5 mt-1.5 border-t border-emerald-50">
-                            <span className="text-emerald-700 font-bold">{formatCurrency(pricing.returnPrice)}</span>
-                          </div>
                         </div>
                       </div>
                     )}
@@ -832,16 +836,23 @@ export default function TravelBooking() {
 
                 {/* Price Breakdown Card */}
                 <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-                  <div className="bg-gradient-to-b from-slate-50 to-white p-5">
-                    <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-[#082c59] p-4">
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
                       Price Breakdown
                     </h4>
+                  </div>
+                  <div className="bg-white p-5">
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between text-slate-600">
-                        <span>Trip Fare</span>
+                        <span>Trip Fare ({passengers.length} passenger{passengers.length > 1 ? 's' : ''})</span>
                         <span className="font-medium text-slate-800">{formatCurrency(pricing.base)}</span>
                       </div>
+                      {passengers.length > 1 && (
+                        <div className="flex justify-between text-xs text-slate-400 pl-3">
+                          <span>{formatCurrency(Math.round(pricing.base / passengers.length))} per passenger</span>
+                        </div>
+                      )}
                       {pricing.extras > 0 && (
                         <div className="flex justify-between text-slate-600">
                           <span>Extra Luggage</span>
@@ -910,7 +921,7 @@ export default function TravelBooking() {
                     </div>
                   </div>
 
-                  <div className="bg-slate-400 border-t border-slate-200 p-4">
+                  <div className="bg-[#082c59] border-t border-slate-200 p-4">
                     <h4 className="font-bold text-white flex items-center gap-2">
                       <CreditCard className="w-4 h-4" />
                       Select Payment Method

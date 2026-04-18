@@ -403,11 +403,13 @@ export default function RestaurantBooking() {
 
               {/* Price Breakdown & Payment */}
               <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-                <div className="bg-white p-5">
-                  <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-orange-600" />
+                <div className="bg-[#082c59] p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
                     Price Breakdown
                   </h4>
+                </div>
+                <div className="bg-white p-5">
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between text-slate-600">
                       <span>Items Total</span>
@@ -456,7 +458,7 @@ export default function RestaurantBooking() {
                 </div>
 
                 {/* Payment */}
-                <div className="bg-slate-400 border-t border-slate-200 p-4">
+                <div className="bg-[#082c59] border-t border-slate-200 p-4">
                   <h4 className="font-bold text-white flex items-center gap-2">
                     <CreditCard className="w-4 h-4" />
                     Payment Method

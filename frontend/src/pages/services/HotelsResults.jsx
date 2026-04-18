@@ -465,7 +465,10 @@ export default function HotelsResults() {
   const [selectedStars, setSelectedStars] = useState([]);
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState('grid');
+  const [freeCancellation, setFreeCancellation] = useState(false);
+  const [breakfastIncluded, setBreakfastIncluded] = useState(false);
+  const [minGuestRating, setMinGuestRating] = useState(0);
   
   // Editable search state
   const [isEditingSearch, setIsEditingSearch] = useState(false);
@@ -626,6 +629,18 @@ export default function HotelsResults() {
       );
     }
 
+    if (freeCancellation) {
+      result = result.filter(h => h.free_cancellation);
+    }
+
+    if (breakfastIncluded) {
+      result = result.filter(h => h.breakfast_included);
+    }
+
+    if (minGuestRating > 0) {
+      result = result.filter(h => (h.guest_rating || 0) >= minGuestRating);
+    }
+
     switch (sortBy) {
       case 'price':
         result.sort((a, b) => a.price_per_night - b.price_per_night);
@@ -644,7 +659,7 @@ export default function HotelsResults() {
     }
 
     return result;
-  }, [hotels, searchTerm, priceRange, selectedStars, selectedAmenities, sortBy]);
+  }, [hotels, searchTerm, priceRange, selectedStars, selectedAmenities, sortBy, freeCancellation, breakfastIncluded, minGuestRating]);
 
   const handleViewDetails = (hotel) => {
     navigate(`/services/hotels/details/${hotel.id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`);
@@ -667,10 +682,14 @@ export default function HotelsResults() {
     setPriceRange([0, 500000]);
     setSelectedStars([]);
     setSelectedAmenities([]);
+    setFreeCancellation(false);
+    setBreakfastIncluded(false);
+    setMinGuestRating(0);
   };
 
   const activeFiltersCount = selectedStars.length + selectedAmenities.length + 
-    (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0);
+    (priceRange[0] > 0 || priceRange[1] < 500000 ? 1 : 0) +
+    (freeCancellation ? 1 : 0) + (breakfastIncluded ? 1 : 0) + (minGuestRating > 0 ? 1 : 0);
 
   if (isLoading) {
     return (
@@ -697,13 +716,13 @@ export default function HotelsResults() {
             </Button>
           </div>
           
-          {/* Highlighted Search Criteria Header - Like TravelResults */}
+          {/* Highlighted Search Criteria Header - Compact */}
           <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a4a8f] text-white mb-4">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               {isEditingSearch ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div>
-                    <label className="text-xs text-white/70 mb-1 block">Destination</label>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Destination</label>
                     <LocationInput
                       value={editDestination}
                       onChange={setEditDestination}
@@ -713,7 +732,7 @@ export default function HotelsResults() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/70 mb-1 block">Check-in</label>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Check-in</label>
                     <DatePickerField
                       value={editCheckIn}
                       onChange={setEditCheckIn}
@@ -722,7 +741,7 @@ export default function HotelsResults() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/70 mb-1 block">Check-out</label>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Check-out</label>
                     <DatePickerField
                       value={editCheckOut}
                       onChange={setEditCheckOut}
@@ -732,19 +751,19 @@ export default function HotelsResults() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-white/70 mb-1 block">Guests</label>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Guests</label>
                     <div className="flex gap-2">
                       <Input 
                         type="number"
                         min="1"
                         value={editGuests} 
                         onChange={(e) => setEditGuests(parseInt(e.target.value) || 1)}
-                        className="bg-white/10 border-white/20 text-white flex-1"
+                        className="bg-white/10 border-white/20 text-white flex-1 h-9 text-sm"
                       />
-                      <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-[#082c59] hover:bg-white/90">
+                      <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-[#082c59] hover:bg-white/90 h-9">
                         <Check className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10">
+                      <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10 h-9">
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
@@ -752,44 +771,44 @@ export default function HotelsResults() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                        <Hotel className="w-6 h-6" />
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center">
+                        <Hotel className="w-5 h-5" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">Hotels in {destination || 'All Cities'}</h2>
-                        <div className="flex items-center gap-2 text-white/80 text-sm mt-0.5">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>{filteredAndSortedHotels.length} properties found</span>
+                        <h2 className="text-base font-bold leading-tight">Hotels in {destination || 'All Cities'}</h2>
+                        <div className="flex items-center gap-1.5 text-white/70 text-xs mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          <span>{filteredAndSortedHotels.length} found</span>
                         </div>
                       </div>
                     </div>
-                    <div className="hidden md:flex items-center gap-4 pl-6 border-l border-white/20">
+                    <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/20 text-xs">
                       {checkIn && checkOut && (
-                        <div className="flex items-center gap-2">
-                          <CalendarDays className="w-4 h-4 text-white/70" />
-                          <span className="text-sm">{format(new Date(checkIn), 'MMM d')} - {format(new Date(checkOut), 'MMM d')}</span>
-                        </div>
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="w-3.5 h-3.5 text-white/60" />
+                          {format(new Date(checkIn), 'MMM d')} - {format(new Date(checkOut), 'MMM d')}
+                        </span>
                       )}
                       {nights > 0 && (
-                        <Badge className="bg-white/20 text-white border-0">
-                          {nights} night{nights > 1 ? 's' : ''}
+                        <Badge className="bg-white/20 text-white border-0 text-[10px] px-2 py-0.5">
+                          {nights}N
                         </Badge>
                       )}
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-white/70" />
-                        <span className="text-sm">{guests} guest{guests > 1 ? 's' : ''}</span>
-                      </div>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-white/60" />
+                        {guests}
+                      </span>
                     </div>
                   </div>
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => setIsEditingSearch(true)}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 h-8 text-xs"
                   >
-                    <Edit2 className="w-4 h-4 mr-1" /> Edit
+                    <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
                   </Button>
                 </div>
               )}
@@ -921,6 +940,47 @@ export default function HotelsResults() {
                             </div>
                           </label>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Guest Rating */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 mb-4">Minimum Guest Rating</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {[0, 7, 8, 8.5, 9].map((rating) => (
+                          <Button
+                            key={rating}
+                            variant={minGuestRating === rating ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setMinGuestRating(rating)}
+                            className={`rounded-full ${minGuestRating === rating ? 'bg-[#082c59]' : ''}`}
+                          >
+                            {rating === 0 ? 'Any' : `${rating}+`}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Deals & Policies */}
+                    <div>
+                      <h4 className="font-semibold text-slate-900 mb-4">Deals & Policies</h4>
+                      <div className="space-y-3">
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <Checkbox
+                            checked={freeCancellation}
+                            onCheckedChange={setFreeCancellation}
+                            className="rounded"
+                          />
+                          <span className="text-slate-700 group-hover:text-slate-900">Free Cancellation</span>
+                        </label>
+                        <label className="flex items-center space-x-3 cursor-pointer group">
+                          <Checkbox
+                            checked={breakfastIncluded}
+                            onCheckedChange={setBreakfastIncluded}
+                            className="rounded"
+                          />
+                          <span className="text-slate-700 group-hover:text-slate-900">Breakfast Included</span>
+                        </label>
                       </div>
                     </div>
 

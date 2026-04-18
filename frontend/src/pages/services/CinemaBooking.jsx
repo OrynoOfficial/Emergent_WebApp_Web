@@ -457,7 +457,7 @@ export default function CinemaBooking() {
 
             {/* Payment Section */}
             <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm overflow-hidden">
-              <div className="bg-slate-400 p-5">
+              <div className="bg-[#082c59] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <CreditCard className="h-6 w-6" />

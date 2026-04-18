@@ -742,7 +742,7 @@ export default function HotelBooking() {
 
             {/* Booking Summary Card */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-slate-400 p-5">
+              <div className="bg-[#082c59] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <Calendar className="h-6 w-6" />
@@ -890,7 +890,7 @@ export default function HotelBooking() {
 
             {/* Payment Card */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
-              <div className="bg-slate-400 p-4">
+              <div className="bg-[#082c59] p-4">
                 <h3 className="font-bold text-white flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   {t('paymentInfo')}

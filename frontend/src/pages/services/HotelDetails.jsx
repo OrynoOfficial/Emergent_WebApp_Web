@@ -415,6 +415,7 @@ export default function HotelDetails() {
   const [roomViewMode, setRoomViewMode] = useState('list');
   const [policiesExpanded, setPoliciesExpanded] = useState(false);
   const [nearbyServiceFilter, setNearbyServiceFilter] = useState(null);
+  const [nearbyPins, setNearbyPins] = useState([]);
   
   const nights = differenceInDays(bookingParams.checkOut, bookingParams.checkIn) || 1;
   
@@ -575,6 +576,54 @@ export default function HotelDetails() {
   // Map coordinates
   const hasLocation = hotel.location?.lat && hotel.location?.lon;
   const mapCenter = hasLocation ? [hotel.location.lat, hotel.location.lon] : null;
+
+  // Fetch nearby services when filter is selected
+  useEffect(() => {
+    if (!nearbyServiceFilter || !hotel?.city) {
+      setNearbyPins([]);
+      return;
+    }
+    const fetchNearby = async () => {
+      try {
+        const serviceMap = { 'restaurants': 'restaurants', 'car-rental': 'car-rental', 'cinemas': 'cinemas', 'events': 'events' };
+        const endpoint = serviceMap[nearbyServiceFilter];
+        if (!endpoint) return;
+        const res = await api.get(`/${endpoint}/`, { params: { city: hotel.city, limit: 6 } });
+        const items = res.data?.[endpoint === 'restaurants' ? 'restaurants' : endpoint === 'events' ? 'events' : 'items'] || res.data?.results || [];
+        // Generate nearby pins with slight random offset from hotel location
+        const pins = items.slice(0, 6).map((item, i) => {
+          const lat = (hotel.location?.lat || 4.05) + (Math.random() - 0.5) * 0.02;
+          const lon = (hotel.location?.lon || 9.7) + (Math.random() - 0.5) * 0.02;
+          return { id: item.id || item._id || i, name: item.name || item.title || 'Service', lat, lon, type: nearbyServiceFilter };
+        });
+        setNearbyPins(pins);
+      } catch {
+        // Generate mock pins around hotel location
+        const mockPins = Array.from({ length: 4 }, (_, i) => ({
+          id: `mock-${i}`,
+          name: `${nearbyServiceFilter.replace('-', ' ')} ${i + 1}`,
+          lat: (hotel.location?.lat || 4.05) + (Math.random() - 0.5) * 0.015,
+          lon: (hotel.location?.lon || 9.7) + (Math.random() - 0.5) * 0.015,
+          type: nearbyServiceFilter
+        }));
+        setNearbyPins(mockPins);
+      }
+    };
+    fetchNearby();
+  }, [nearbyServiceFilter, hotel?.city]);
+
+  // Custom colored marker icons for nearby services
+  const getServiceIcon = (type) => {
+    const colors = { 'restaurants': '#F59E0B', 'car-rental': '#3B82F6', 'cinemas': '#8B5CF6', 'events': '#EC4899' };
+    const color = colors[type] || '#6B7280';
+    return L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="width:24px;height:24px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+  };
+
 
   return (
     <div className="bg-slate-100 min-h-screen">
@@ -769,14 +818,19 @@ export default function HotelDetails() {
                   </h3>
                   <div className="aspect-[16/10] rounded-xl overflow-hidden mb-4 bg-slate-100 border border-slate-200">
                     {mapCenter ? (
-                      <MapContainer center={mapCenter} zoom={15} style={{ width: '100%', height: '100%' }} scrollWheelZoom={false}>
+                      <MapContainer center={mapCenter} zoom={14} style={{ width: '100%', height: '100%' }} scrollWheelZoom={false}>
                         <TileLayer
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
                         <Marker position={mapCenter}>
-                          <Popup>{hotel.name}<br />{hotel.address}</Popup>
+                          <Popup><b>{hotel.name}</b><br />{hotel.address}</Popup>
                         </Marker>
+                        {nearbyPins.map(pin => (
+                          <Marker key={pin.id} position={[pin.lat, pin.lon]} icon={getServiceIcon(pin.type)}>
+                            <Popup>{pin.name}</Popup>
+                          </Marker>
+                        ))}
                       </MapContainer>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-400">
