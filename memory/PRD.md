@@ -1,32 +1,32 @@
 # Oryno Platform - Product Requirements Document
 
 ## Core Architecture
-- **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI + Recharts
+- **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI + Recharts + Leaflet
 - **Backend:** FastAPI + MongoDB (Motor async driver), DB: oryno_webapp
 - **Auth:** Custom JWT-based auth with 2FA
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Hotel Results, Hotel Details Map, Booking Headings, Travel Summary**
+- Hotel Results: Compact search criteria header, Grid/List view toggle, expanded filters (Guest Rating, Free Cancellation, Breakfast Included)
+- Hotel Details: Live Leaflet map with nearby service pins (Restaurants, Car Rentals, Cinemas, Events) using colored markers
+- Hotel Details: Policies toggle — check-in/check-out visible by default, additional policies hidden behind toggle
+- All Booking Pages: Price Breakdown and Payment Method headings now use strong navy bg-[#082c59] with white text
+- Travel Booking: Improved trip summary cards with route/date/time grid layout, bus icon circles, price per passenger for 2+ passengers
+
 **Apr 2026 - Allergen Tags & Ingredient-Based Search/Filter**
-- Backend: `allergens` field added to MenuItemCreate/MenuItemUpdate models
-- Backend: `GET /api/restaurants/{id}/menu?exclude_allergens=peanuts,fish` filters items by allergens
-- Backend: `GET /api/restaurants/{id}/menu?ingredient=Chicken` searches by ingredient name
-- Frontend Menu: Dietary filter chips (No Peanuts, Gluten-Free, No Dairy, No Eggs, No Fish, No Shellfish, No Soy)
-- Frontend Menu: Allergen warning badges on items, allergen section in ingredients modal
-- Frontend Menu: Search now matches both dish names AND ingredient names
-- Management: MenuItemForm has clickable allergen chip selector (10 common allergens)
+- allergens field on menu items, dietary filter chips, ingredient search, allergen badges
 
 **Apr 2026 - Sidebar Right-Side Flyout Submenus**
-- Click-triggered right-side flyout panels, smart vertical positioning for bottom items
+- Click-triggered right-side flyout panels with smart vertical positioning
 
 **Apr 2026 - Menu Item Bug Fixes & Auto-Derived Popularity**
-- Fixed stale closure, ingredients text, removed Popular toggle, auto-derived popularity
+- Fixed image save, ingredients text, removed Popular toggle, auto-derived popularity
 
 **Apr 2026 - Restaurant Menu Premium Revamp**
 - Hero image header, swipeable carousel, Ingredients modal, compact sidebar
 
-**Apr 2026 - Dynamic Locations, Reports, Animations, Operator Scoping, Seat Selection**
-**Earlier:** Mock data removal, Unified Booking, Stripe, AI chatbot
+**Earlier:** Dynamic Locations, Reports, Animations, Operator Scoping, Seat Selection, Stripe, AI chatbot
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
@@ -39,7 +39,8 @@
 - P3: Scheduled/automated report emails (weekly/monthly)
 
 ## Key Technical Notes
-- **ALLERGENS**: 10 common allergens (Peanuts, Tree Nuts, Dairy, Eggs, Gluten, Fish, Shellfish, Soy, Sesame, Celery). Stored as array on menu items. Customer menu filters client-side; API also supports server-side filtering.
+- **NEARBY SERVICE PINS**: HotelDetails uses L.divIcon for colored markers. Fetches from API or generates mock pins around hotel location.
+- **BOOKING HEADINGS**: All booking pages use bg-[#082c59] for Price Breakdown and Payment headers.
 - **SIDEBAR FLYOUTS**: Right-side click flyouts, bottom items position upward
 - **NO ANIMATIONS ON DROPDOWNS**: Shadcn UI animations stripped
 - **POPULARITY**: Auto-derived from order aggregation, NOT operator-settable
