@@ -345,18 +345,47 @@ export default function Layout({ children }) {
 
   const getIconColor = (key) => ICON_COLORS[key] || '#94a3b8';
 
-  // State for accordion submenus
+  // State for flyout submenus
   const [activeSubmenu, setActiveSubmenu] = useState(null);
+  const [flyoutStyle, setFlyoutStyle] = useState({});
+  const submenuButtonRefs = useRef({});
 
-  // Auto-expand submenu containing the active route
+  // Close flyout when clicking outside
   useEffect(() => {
-    for (const item of navigationItems) {
-      if (item.isDropdown && item.submenu?.some(sub => location.pathname === sub.path)) {
-        setActiveSubmenu(item.key);
-        break;
+    const handleClickOutside = (e) => {
+      if (activeSubmenu && !e.target.closest('[data-submenu-flyout]') && !e.target.closest('[data-submenu-trigger]')) {
+        setActiveSubmenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeSubmenu]);
+
+  // Close flyout on route change
+  useEffect(() => {
+    setActiveSubmenu(null);
+  }, [location.pathname]);
+
+  const openFlyout = (key) => {
+    if (activeSubmenu === key) {
+      setActiveSubmenu(null);
+      return;
+    }
+    const btn = submenuButtonRefs.current[key];
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const flyoutMaxH = 400;
+      // If the button is in the bottom half, position the flyout above (bottom-aligned)
+      const isNearBottom = rect.bottom > viewportH - flyoutMaxH;
+      if (isNearBottom) {
+        setFlyoutStyle({ bottom: `${viewportH - rect.bottom}px`, top: 'auto', left: '288px' });
+      } else {
+        setFlyoutStyle({ top: `${rect.top}px`, bottom: 'auto', left: '288px' });
       }
     }
-  }, [location.pathname, navigationItems]);
+    setActiveSubmenu(key);
+  };
 
   const renderNavItem = (item) => {
     const isActive = item.path && location.pathname === item.path;
@@ -366,9 +395,11 @@ export default function Layout({ children }) {
 
     if (item.isDropdown) {
       return (
-        <div key={item.key} className="mb-1">
+        <div key={item.key} className="mb-1 relative">
           <button
-            onClick={() => setActiveSubmenu(isSubmenuOpen ? null : item.key)}
+            ref={el => submenuButtonRefs.current[item.key] = el}
+            data-submenu-trigger={item.key}
+            onClick={() => openFlyout(item.key)}
             className={`
               w-full flex items-center justify-between px-4 py-3 rounded-lg
               transition-all duration-200 ease-out
@@ -383,43 +414,8 @@ export default function Layout({ children }) {
               <item.icon className="h-5 w-5 transition-transform duration-200" style={{ color: iconColor }} />
               <span className="font-medium text-slate-200">{item.label}</span>
             </div>
-            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180' : ''}`} />
+            <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'text-white' : ''}`} />
           </button>
-          
-          {/* Inline accordion submenu */}
-          <div className={`overflow-hidden transition-all duration-200 ease-out ${isSubmenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="ml-4 mt-1 pl-3 border-l border-white/10 space-y-0.5">
-              {item.submenu.map((sub, idx) => {
-                if (sub.isDivider) {
-                  return (
-                    <div key={sub.key || idx} className="px-2 py-1.5 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-                      {sub.label}
-                    </div>
-                  );
-                }
-                const subIconColor = getIconColor(sub.key);
-                const isSubActive = location.pathname === sub.path;
-                return (
-                  <Link
-                    key={sub.key}
-                    to={sub.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`
-                      flex items-center gap-2.5 px-3 py-2 rounded-lg
-                      transition-all duration-150 ease-out text-sm
-                      ${isSubActive
-                        ? 'bg-[#4D96FF]/20 text-white'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                      }
-                    `}
-                  >
-                    <sub.icon className="h-4 w-4 flex-shrink-0" style={{ color: isSubActive ? '#4D96FF' : subIconColor }} />
-                    <span className="truncate">{sub.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
         </div>
       );
     }
@@ -445,6 +441,60 @@ export default function Layout({ children }) {
         />
         <span className="font-medium">{item.label}</span>
       </Link>
+    );
+  };
+
+  // Render the flyout panel (portal-like, fixed position to the right of sidebar)
+  const renderFlyout = () => {
+    if (!activeSubmenu) return null;
+    const item = navigationItems.find(n => n.key === activeSubmenu);
+    if (!item || !item.submenu) return null;
+    const iconColor = getIconColor(item.key);
+
+    return (
+      <div
+        data-submenu-flyout
+        className="fixed z-[60] w-56 bg-[#0a3468] rounded-xl shadow-2xl border border-white/10 overflow-hidden"
+        style={flyoutStyle}
+      >
+        {/* Flyout header */}
+        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
+          <item.icon className="h-4 w-4" style={{ color: iconColor }} />
+          <span className="text-sm font-semibold text-white">{item.label}</span>
+        </div>
+        {/* Flyout links */}
+        <div className="py-1.5 max-h-[340px] overflow-y-auto sidebar-scroll">
+          {item.submenu.map((sub, idx) => {
+            if (sub.isDivider) {
+              return (
+                <div key={sub.key || idx} className="px-4 py-1.5 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                  {sub.label}
+                </div>
+              );
+            }
+            const subIconColor = getIconColor(sub.key);
+            const isSubActive = location.pathname === sub.path;
+            return (
+              <Link
+                key={sub.key}
+                to={sub.path}
+                onClick={() => { setActiveSubmenu(null); setSidebarOpen(false); }}
+                className={`
+                  flex items-center gap-2.5 mx-1.5 px-3 py-2 rounded-lg
+                  transition-all duration-150 ease-out text-sm
+                  ${isSubActive
+                    ? 'bg-[#4D96FF]/20 text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/8'
+                  }
+                `}
+              >
+                <sub.icon className="h-4 w-4 flex-shrink-0" style={{ color: isSubActive ? '#4D96FF' : subIconColor }} />
+                <span className="truncate">{sub.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
@@ -512,6 +562,9 @@ export default function Layout({ children }) {
           </div>
         </div>
       </aside>
+
+      {/* Submenu flyout (rendered outside sidebar for proper positioning) */}
+      {renderFlyout()}
 
       {/* Main content */}
       <div className="flex-1 lg:ml-72">
