@@ -819,52 +819,52 @@ export default function HotelsResults() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Search & Filters Bar */}
-        <div className="bg-white rounded-2xl shadow-md p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="bg-white rounded-xl shadow-sm p-3 mb-5">
+          <div className="flex flex-col lg:flex-row gap-3">
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search hotels by name or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                className="pl-9 h-9 text-sm rounded-lg border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
               />
             </div>
             
             {/* Controls */}
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {/* Sort Dropdown */}
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-44 h-12 rounded-xl border-slate-200">
+                <SelectTrigger className="w-36 h-9 text-xs rounded-lg border-slate-200">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl">
-                  <SelectItem value="rating">Top Rated</SelectItem>
-                  <SelectItem value="price">Price: Low to High</SelectItem>
-                  <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                  <SelectItem value="stars">Star Rating</SelectItem>
+                <SelectContent className="bg-white rounded-lg">
+                  <SelectItem value="rating" className="text-xs">Top Rated</SelectItem>
+                  <SelectItem value="price" className="text-xs">Price: Low to High</SelectItem>
+                  <SelectItem value="price-desc" className="text-xs">Price: High to Low</SelectItem>
+                  <SelectItem value="stars" className="text-xs">Star Rating</SelectItem>
                 </SelectContent>
               </Select>
               
               {/* View Toggle */}
-              <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`px-4 h-12 flex items-center gap-2 transition-colors ${
+                  className={`px-3 h-9 flex items-center gap-1.5 text-xs transition-colors ${
                     viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <LayoutGrid className="h-5 w-5" />
+                  <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Grid</span>
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-4 h-12 flex items-center gap-2 transition-colors ${
+                  className={`px-3 h-9 flex items-center gap-1.5 text-xs transition-colors ${
                     viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <List className="h-5 w-5" />
+                  <List className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">List</span>
                 </button>
               </div>
@@ -872,11 +872,11 @@ export default function HotelsResults() {
               {/* Filter Button */}
               <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" className="h-12 rounded-xl px-5 relative">
-                    <SlidersHorizontal className="mr-2 h-5 w-5" />
+                  <Button variant="outline" className="h-9 rounded-lg px-3 text-xs relative">
+                    <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
                     Filters
                     {activeFiltersCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-[#082c59] text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                      <span className="absolute -top-1.5 -right-1.5 bg-[#082c59] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                         {activeFiltersCount}
                       </span>
                     )}

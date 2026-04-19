@@ -181,9 +181,9 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
               <span className={`text-sm font-medium ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name || trip.operator_name}</span>
             </div>
             {trip.plate_number && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isTripPast ? 'bg-slate-200 text-slate-500' : 'bg-[#082c59]/10 text-[#082c59]'}`} data-testid={`plate-number-${tripId}`}>
+              <Badge variant="outline" className={`text-xs font-bold ${isTripPast ? 'bg-slate-200 text-slate-500 border-slate-300' : 'bg-[#082c59]/10 text-[#082c59] border-[#082c59]/20'}`} data-testid={`plate-number-${tripId}`}>
                 {trip.plate_number}
-              </span>
+              </Badge>
             )}
           </div>
           {!isTripPast && trip.vehicle_images?.length > 0 && (
@@ -314,9 +314,9 @@ const TripCardList = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
                 <span className={`text-sm font-semibold ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name || trip.operator_name}</span>
               </div>
               {trip.plate_number && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isTripPast ? 'bg-slate-200 text-slate-500' : 'bg-[#082c59]/10 text-[#082c59]'}`}>
+                <Badge variant="outline" className={`text-xs font-bold ${isTripPast ? 'bg-slate-200 text-slate-500 border-slate-300' : 'bg-[#082c59]/10 text-[#082c59] border-[#082c59]/20'}`}>
                   {trip.plate_number}
-                </span>
+                </Badge>
               )}
             </div>
             {!isTripPast && trip.vehicle_images?.length > 0 && (

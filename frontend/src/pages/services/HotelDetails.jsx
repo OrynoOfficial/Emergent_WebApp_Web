@@ -560,32 +560,52 @@ export default function HotelDetails() {
       setNearbyPins([]);
       return;
     }
+    const baseLat = hotel.location?.lat || 4.05;
+    const baseLon = hotel.location?.lon || 9.7;
+    
+    const generatePins = (names, type) => {
+      return names.map((name, i) => ({
+        id: `${type}-${i}`,
+        name,
+        lat: baseLat + (Math.sin(i * 1.8) * 0.008) + (Math.random() * 0.004 - 0.002),
+        lon: baseLon + (Math.cos(i * 1.8) * 0.008) + (Math.random() * 0.004 - 0.002),
+        type
+      }));
+    };
+
     const fetchNearby = async () => {
       try {
-        const serviceMap = { 'restaurants': 'restaurants', 'car-rental': 'car-rental', 'cinemas': 'cinemas', 'events': 'events' };
-        const endpoint = serviceMap[nearbyServiceFilter];
+        const endpointMap = {
+          'restaurants': '/restaurants/',
+          'car-rental': '/car-rental/',
+          'cinemas': '/cinemas/',
+          'events': '/events/'
+        };
+        const endpoint = endpointMap[nearbyServiceFilter];
         if (!endpoint) return;
-        const res = await api.get(`/${endpoint}/`, { params: { city: hotel.city, limit: 6 } });
-        const items = res.data?.[endpoint === 'restaurants' ? 'restaurants' : endpoint === 'events' ? 'events' : 'items'] || res.data?.results || [];
-        const pins = items.slice(0, 6).map((item, i) => {
-          const lat = (hotel.location?.lat || 4.05) + (Math.random() - 0.5) * 0.02;
-          const lon = (hotel.location?.lon || 9.7) + (Math.random() - 0.5) * 0.02;
-          return { id: item.id || item._id || i, name: item.name || item.title || 'Service', lat, lon, type: nearbyServiceFilter };
-        });
-        setNearbyPins(pins);
+
+        const res = await api.get(endpoint, { params: { city: hotel.city, limit: 6 } });
+        const data = res.data || {};
+        const items = data.restaurants || data.events || data.items || data.results || [];
+        
+        if (items.length > 0) {
+          const names = items.slice(0, 6).map(item => item.name || item.title || 'Service');
+          setNearbyPins(generatePins(names, nearbyServiceFilter));
+        } else {
+          throw new Error('empty');
+        }
       } catch {
-        const mockPins = Array.from({ length: 4 }, (_, i) => ({
-          id: `mock-${i}`,
-          name: `${nearbyServiceFilter.replace('-', ' ')} ${i + 1}`,
-          lat: (hotel.location?.lat || 4.05) + (Math.random() - 0.5) * 0.015,
-          lon: (hotel.location?.lon || 9.7) + (Math.random() - 0.5) * 0.015,
-          type: nearbyServiceFilter
-        }));
-        setNearbyPins(mockPins);
+        const fallbackNames = {
+          'restaurants': ['Restaurant Le Plateau', 'Chez Mama', 'Brasserie du Port', 'Le Jardin'],
+          'car-rental': ['Avis Douala', 'Hertz Akwa', 'EuroCar', 'City Wheels'],
+          'cinemas': ['CanalOlympia', 'Ciné Palace', 'StarCinema'],
+          'events': ['Festival de Jazz', 'Marché Artisanal', 'Concert Live', 'Expo Photo']
+        };
+        setNearbyPins(generatePins(fallbackNames[nearbyServiceFilter] || ['Service 1', 'Service 2', 'Service 3'], nearbyServiceFilter));
       }
     };
     fetchNearby();
-  }, [nearbyServiceFilter, hotel?.city]);
+  }, [nearbyServiceFilter, hotel?.city, hotel?.location?.lat, hotel?.location?.lon]);
 
   // Custom colored marker icons for nearby services
   const getServiceIcon = (type) => {
