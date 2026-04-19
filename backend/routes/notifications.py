@@ -2,8 +2,12 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from models.notification import NotificationCreate, NotificationType
+from utils.notifications import (
+    create_notification as create_notification_helper,
+    dedupe_existing_notifications,
+)
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
@@ -13,22 +17,28 @@ async def create_notification(
     notification_data: NotificationCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a notification (admin/system only)"""
+    """Create a notification (admin/system only). Supports dedupe_key via data.dedupe_key."""
     db = get_database()
-    
+
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
-    
-    notification = {
-        "_id": str(uuid.uuid4()),
-        **notification_data.dict(),
-        "is_read": False,
-        "created_at": datetime.utcnow()
-    }
-    
-    await db.notifications.insert_one(notification)
-    
-    return {"message": "Notification created", "notification_id": notification["_id"]}
+
+    payload = notification_data.dict()
+    data = payload.get("data") or {}
+    dedupe_key = data.pop("dedupe_key", None) if isinstance(data, dict) else None
+    nid = await create_notification_helper(
+        db,
+        user_id=payload["user_id"],
+        title=payload["title"],
+        message=payload["message"],
+        notification_type=payload.get("notification_type", "info"),
+        data=data,
+        action_url=payload.get("action_url"),
+        dedupe_key=dedupe_key,
+        channel=payload.get("channel", "in_app"),
+    )
+
+    return {"message": "Notification created", "notification_id": nid}
 
 @router.get("/")
 async def get_notifications(
@@ -68,15 +78,15 @@ async def mark_as_read(
 ):
     """Mark notification as read"""
     db = get_database()
-    
+
     result = await db.notifications.update_one(
         {"_id": notification_id, "user_id": current_user["_id"]},
-        {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
+        {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc)}}
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     return {"message": "Notification marked as read"}
 
 @router.put("/read-all")
@@ -85,12 +95,12 @@ async def mark_all_as_read(
 ):
     """Mark all notifications as read"""
     db = get_database()
-    
+
     await db.notifications.update_many(
         {"user_id": current_user["_id"], "is_read": False},
-        {"$set": {"is_read": True, "read_at": datetime.utcnow()}}
+        {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc)}}
     )
-    
+
     return {"message": "All notifications marked as read"}
 
 @router.delete("/clear-all")
@@ -123,6 +133,18 @@ async def delete_notification(
         raise HTTPException(status_code=404, detail="Notification not found")
     
     return {"message": "Notification deleted"}
+
+
+@router.post("/dedupe")
+async def dedupe_notifications_admin(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Admin utility: collapse duplicate notifications in the DB (one-shot)."""
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    db = get_database()
+    stats = await dedupe_existing_notifications(db)
+    return {"message": "Notifications deduplicated", **stats}
 
 # Support Chat
 @router.post("/support")

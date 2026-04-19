@@ -11,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   UtensilsCrossed, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Calendar, PartyPopper, Sparkles, Eye
+  Bell, Send, Calendar, PartyPopper, Sparkles, Eye, Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -200,6 +202,13 @@ export default function BanquetManagement() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button
+            onClick={() => setIsWalkInOpen(true)}
+            className="bg-[#082c59] hover:bg-[#0a366d]"
+            data-testid="open-walkin-booking-btn"
+          >
+            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+          </Button>
           <Button onClick={loadBanquets} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -208,9 +217,10 @@ export default function BanquetManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><UtensilsCrossed className="h-4 w-4 mr-2" />Management</TabsTrigger>
+          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -289,6 +299,10 @@ export default function BanquetManagement() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bookings" className="mt-6">
+          <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
@@ -466,6 +480,17 @@ export default function BanquetManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="banquet"
+        services={banquets.map((b) => ({ id: b.id, name: b.name, price: b.price_per_person }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
+      />
     </div>
   );
 }

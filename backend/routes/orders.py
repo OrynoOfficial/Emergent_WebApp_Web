@@ -133,6 +133,28 @@ async def create_direct_order(
             if svc:
                 operator_id = svc.get("operator_id")
                 operator_name = operator_name or svc.get("operator_name", "")
+
+    # Enrich travel bookings with vehicle info so the customer ticket can display it
+    if order_data.service_type == "travel" and order_data.service_id:
+        try:
+            route = await db.travel_routes.find_one(
+                {"$or": [{"_id": order_data.service_id}, {"id": order_data.service_id}]},
+                {"vehicle_id": 1, "from_city": 1, "to_city": 1, "departure_time": 1, "arrival_time": 1},
+            )
+            if route and route.get("vehicle_id"):
+                vehicle = await db.vehicles.find_one(
+                    {"$or": [{"_id": route["vehicle_id"]}, {"id": route["vehicle_id"]}]},
+                    {"_id": 0, "plate_number": 1, "vehicle_name": 1, "model": 1,
+                     "manufacturer": 1, "images": 1, "vehicle_type": 1, "year": 1},
+                )
+                if vehicle:
+                    booking_details["vehicle_info"] = vehicle
+                    booking_details.setdefault("from_city", route.get("from_city"))
+                    booking_details.setdefault("to_city", route.get("to_city"))
+                    booking_details.setdefault("departure_time", route.get("departure_time"))
+                    booking_details.setdefault("arrival_time", route.get("arrival_time"))
+        except Exception:
+            pass
     
     if is_round_trip:
         # Create 2 separate orders (tickets) for round trip

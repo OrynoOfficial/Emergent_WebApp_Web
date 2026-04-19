@@ -11,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Package, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Calendar, Plane, Hotel, Camera, Eye
+  Bell, Send, Calendar, Plane, Hotel, Camera, Eye, Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -114,6 +116,8 @@ export default function PackageManagement() {
 
   // Use the package dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const dashboardData = useRealDashboardData('packages', '30days', scopeOperatorId);
 
   const handleViewPackage = (pkg) => {
@@ -205,6 +209,13 @@ export default function PackageManagement() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <OperatorScopeFilter serviceType="packages" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button
+            onClick={() => setIsWalkInOpen(true)}
+            className="bg-[#082c59] hover:bg-[#0a366d]"
+            data-testid="open-walkin-booking-btn"
+          >
+            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+          </Button>
           <Button onClick={loadPackages} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -213,9 +224,10 @@ export default function PackageManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><Package className="h-4 w-4 mr-2" />Management</TabsTrigger>
+          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -473,6 +485,17 @@ export default function PackageManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="package"
+        services={packages.map((p) => ({ id: p.id, name: p.name || p.title, price: p.price }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
+      />
     </div>
   );
 }

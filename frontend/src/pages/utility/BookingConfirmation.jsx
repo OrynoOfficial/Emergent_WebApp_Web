@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   CheckCircle, Download, Share2, Printer, Home,
   Calendar, MapPin, User, CreditCard, Clock,
-  Ticket, Hotel, Car, Utensils, QrCode
+  Ticket, Hotel, Car, Utensils, QrCode, Bus, Hash, Armchair
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 
@@ -136,6 +136,54 @@ export default function BookingConfirmation() {
                 </div>
               </div>
             </div>
+
+            {/* Vehicle Info — for travel */}
+            {booking.service_type === 'travel' && (booking.vehicle || booking.details?.vehicle_info) && (() => {
+              const v = booking.vehicle || booking.details?.vehicle_info || {};
+              const img = (v.images && v.images[0]) || v.image_url;
+              return (
+                <div className="mb-6 rounded-xl border-2 border-[#082c59]/10 bg-gradient-to-br from-[#082c59]/5 to-white p-4" data-testid="confirmation-vehicle-info">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-[#082c59]" /> Your Vehicle
+                  </h3>
+                  <div className="flex gap-4 items-start">
+                    {img ? (
+                      <img src={img} alt={v.vehicle_name || 'Vehicle'} className="w-32 h-24 rounded-lg object-cover border flex-shrink-0" />
+                    ) : (
+                      <div className="w-32 h-24 rounded-lg bg-[#082c59]/10 flex items-center justify-center flex-shrink-0">
+                        <Bus className="h-10 w-10 text-[#082c59]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      {v.vehicle_name && <p className="font-bold">{v.vehicle_name}</p>}
+                      {(v.manufacturer || v.model) && (
+                        <p className="text-sm text-slate-600">
+                          {[v.manufacturer, v.model].filter(Boolean).join(' ')}
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {v.plate_number && (
+                          <Badge className="bg-[#082c59] text-white font-mono text-xs gap-1" data-testid="confirmation-plate-number">
+                            <Hash className="h-3 w-3" /> {v.plate_number}
+                          </Badge>
+                        )}
+                        {v.vehicle_type && (
+                          <Badge variant="outline" className="text-xs capitalize">{v.vehicle_type.replace('_', ' ')}</Badge>
+                        )}
+                        {booking.details?.seat_numbers && (
+                          <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs gap-1">
+                            <Armchair className="h-3 w-3" /> Seat{String(booking.details.seat_numbers).includes(',') ? 's' : ''} {booking.details.seat_numbers}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500 italic">
+                    Show this plate number to the agent at boarding to find your vehicle.
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* QR Code */}
             <div className="flex items-center justify-center gap-6 p-6 bg-white border-2 border-dashed border-gray-200 rounded-lg mb-6">

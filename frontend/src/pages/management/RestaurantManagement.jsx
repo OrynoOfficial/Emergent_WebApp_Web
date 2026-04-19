@@ -8,8 +8,10 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Utensils, Plus, LayoutDashboard, MessageSquare, RefreshCw, MapPin, Star, 
   Clock, Phone, Mail, Save, Trash2, Edit, Eye, ChevronRight, X, Menu, 
-  DollarSign, ChevronLeft, Building2
+  DollarSign, ChevronLeft, Building2, Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -259,6 +261,8 @@ export default function RestaurantManagement() {
   const [editingMenuItem, setEditingMenuItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
 
   const dashboardData = useRealDashboardData('restaurants', '30days', scopeOperatorId);
 
@@ -480,6 +484,13 @@ export default function RestaurantManagement() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />
+              <Button
+                onClick={() => setIsWalkInOpen(true)}
+                className="bg-[#082c59] hover:bg-[#0a366d]"
+                data-testid="open-walkin-booking-btn"
+              >
+                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+              </Button>
               <Button variant="outline" onClick={loadRestaurants} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -497,12 +508,15 @@ export default function RestaurantManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
             <TabsTrigger value="management">
               <Utensils className="h-4 w-4 mr-2" /> Management
+            </TabsTrigger>
+            <TabsTrigger value="bookings" data-testid="tab-bookings">
+              <Receipt className="h-4 w-4 mr-2" /> Bookings
             </TabsTrigger>
             <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
@@ -698,6 +712,11 @@ export default function RestaurantManagement() {
             </div>
           </TabsContent>
 
+          {/* Bookings Tab */}
+          <TabsContent value="bookings">
+            <OperatorBookingsList serviceType="restaurant" refreshKey={bookingsRefreshKey} />
+          </TabsContent>
+
           {/* Communications Tab */}
           <TabsContent value="communications">
             <ServiceCommunicationsHub serviceType="Restaurants" operatorId={scopeOperatorId} serviceIcon={<Utensils className="h-6 w-6" />} />
@@ -851,6 +870,17 @@ export default function RestaurantManagement() {
         warningMessage={deleteTarget?.type === 'restaurant' ? 'All menu items will also be deleted.' : undefined}
         onConfirm={deleteTarget?.type === 'restaurant' ? handleDeleteRestaurant : handleDeleteMenuItem}
         isSubmitting={saving}
+      />
+
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="restaurant"
+        services={restaurants.map((r) => ({ id: r.id || r._id, name: r.name, price: r.average_price || r.base_price }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
       />
     </div>
   );

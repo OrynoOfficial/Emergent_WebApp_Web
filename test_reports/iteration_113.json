@@ -1,0 +1,54 @@
+{
+  "summary": "Backend-only testing for Iteration 113 (Walk-in Bookings + Notifications dedupe + Travel vehicle_info enrichment). 9/9 pytest tests pass against public REACT_APP_BACKEND_URL.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/notifications/",
+        "issue": "notification_type is a strict enum ('order','booking','payment','system','promo','reminder') — the internal helper defaults to 'info' which works at the DB level but will 422 if an admin calls POST /api/notifications/ with notification_type='info'. Consider either (a) accepting 'info' as an alias or (b) updating the helper's default to a valid enum value for admin-visible flows."
+      },
+      {
+        "endpoint": "GET /api/operator/manual-bookings/?channel=on_site",
+        "issue": "Works correctly; however /api/hotels exposes all hotels unauthenticated (used here to verify foreign-operator 403). Not a bug for this feature, just noting the public surface."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration113_walkin_notif_vehicle.py",
+    "/app/test_reports/pytest/iter113.xml"
+  ],
+  "action_items": [
+    "Optional: make /api/notifications/ POST accept 'info' as an alias (or document valid enum values) — helper's default of 'info' works internally but will reject direct admin POSTs."
+  ],
+  "critical_code_review_comments": [
+    "manual_bookings.py: _find_linked_customer does case-insensitive email match via $regex — safe, but does NOT escape user input, so a malicious email containing regex metacharacters could cause wider matches. Use re.escape(email) before building the regex.",
+    "manual_bookings.py: the non-travel service_id lookup is {'$or':[{'_id': id},{'id': id}]} — good, but operator_id scope is only checked on the service doc, not on the seat_bookings write path. OK here because seats are scoped by route_id which was already validated.",
+    "manual_bookings.py POST has both @router.post('') and @router.post('/') decorators on the same function — works but generates duplicate OpenAPI entries; consider using only one.",
+    "utils/notifications.py dedupe_existing_notifications does NOT handle Pass 2 (dedupe by user_id+title+message for records without dedupe_key) even though the docstring describes it. Either implement Pass 2 or remove from the docstring.",
+    "routes/notifications.py POST / forces notification_type into a strict enum via NotificationCreate model, but the helper accepts any string. This creates an inconsistency between internal callers (subscriptions.py, manual_bookings.py) and the admin endpoint."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration113_walkin_notif_vehicle.py"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "not tested (per request)"},
+  "test_credentials": "operator@test.com / admin@test.com / customer@test.com / superadmin@test.com (all 'testpassword123')",
+  "seed_data_creation": "Created 1 TEST travel walk-in order (TRV-*) on future date 2030-06-15 + 1 travel order on 2030-07-20 via /api/orders/create. Both use ephemeral seat IDs (random hex) so they do not collide with real data. Also created 1 TEST_iter113_* notification via dedupe_key.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Test file: /app/backend/tests/test_iteration113_walkin_notif_vehicle.py. Operator login payload exposes operator_id via user.operator_context.operator_id (NOT user.operator_id). Notification POST enum is ['order','booking','payment','system','promo','reminder'] — use 'system' in future tests. The manual-bookings POST accepts both '' and '/'. Seat booking uses booking_details.seat_numbers (list) + booking_details.travel_date (string 'YYYY-MM-DD').",
+  "feature_verdict": {
+    "walkin_bookings_POST_travel_seat_lock_409": "PASS",
+    "walkin_bookings_list_by_channel": "PASS",
+    "walkin_bookings_lookup_customer_by_email": "PASS",
+    "walkin_bookings_foreign_operator_403": "PASS",
+    "notifications_dedupe_admin_idempotent": "PASS",
+    "notifications_dedupe_requires_admin": "PASS",
+    "notifications_upsert_preserves_is_read": "PASS",
+    "travel_order_vehicle_info_enrichment": "PASS"
+  }
+}

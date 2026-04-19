@@ -11,8 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Users, Droplets, Eye
+  Bell, Send, Users, Droplets, Eye, Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,6 +112,8 @@ export default function LaundryManagement() {
 
   // Use the laundry dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const dashboardData = useRealDashboardData('laundry', '30days', scopeOperatorId);
 
   const handleViewPressing = (pressing) => {
@@ -197,6 +201,13 @@ export default function LaundryManagement() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button
+            onClick={() => setIsWalkInOpen(true)}
+            className="bg-[#082c59] hover:bg-[#0a366d]"
+            data-testid="open-walkin-booking-btn"
+          >
+            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+          </Button>
           <Button onClick={loadPressings} variant="outline" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -205,9 +216,10 @@ export default function LaundryManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><Shirt className="h-4 w-4 mr-2" />Management</TabsTrigger>
+          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -285,6 +297,10 @@ export default function LaundryManagement() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bookings" className="mt-6">
+          <OperatorBookingsList serviceType="laundry" refreshKey={bookingsRefreshKey} />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
@@ -451,6 +467,17 @@ export default function LaundryManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="laundry"
+        services={pressings.map((p) => ({ id: p.id, name: p.name, price: p.starting_price }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
+      />
     </div>
   );
 }

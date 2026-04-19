@@ -26,6 +26,10 @@ import {
   XCircle,
   AlertCircle,
   Truck,
+  Bus,
+  Hash,
+  Armchair,
+  Users as UsersIcon,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 
@@ -281,6 +285,66 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               )}
             </div>
           </div>
+
+          {/* Vehicle Info — for travel bookings */}
+          {(order.service_type === 'travel' || order.service_category === 'travel') && (
+            (() => {
+              const v = order.booking_details?.vehicle_info || {};
+              const plate = v.plate_number || order.booking_details?.plate_number;
+              const vName = v.vehicle_name || v.name || order.booking_details?.vehicle_name;
+              const model = [v.manufacturer, v.model].filter(Boolean).join(' ') || order.booking_details?.vehicle_model;
+              const images = v.images || order.booking_details?.vehicle_images || [];
+              const vType = v.vehicle_type || order.booking_details?.vehicle_type;
+              const seats = order.booking_details?.seat_numbers || order.booking_details?.selected_seats || [];
+              if (!plate && !vName && !model && images.length === 0 && !vType) return null;
+              return (
+                <div data-testid="order-vehicle-info">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Bus className="h-4 w-4 text-[#082c59]" /> Your Vehicle
+                  </h3>
+                  <div className="rounded-xl border-2 border-[#082c59]/10 bg-gradient-to-br from-[#082c59]/5 to-white p-4">
+                    <div className="flex gap-4 items-start">
+                      {images.length > 0 ? (
+                        <img
+                          src={images[0]}
+                          alt={vName || 'Vehicle'}
+                          className="w-28 h-20 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-28 h-20 rounded-lg bg-[#082c59]/10 flex items-center justify-center flex-shrink-0">
+                          <Bus className="h-8 w-8 text-[#082c59]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        {vName && <p className="font-bold text-slate-900">{vName}</p>}
+                        {model && <p className="text-sm text-slate-600">{model}</p>}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {plate && (
+                            <Badge className="bg-[#082c59] text-white font-mono text-xs gap-1" data-testid="ticket-plate-number">
+                              <Hash className="h-3 w-3" /> {plate}
+                            </Badge>
+                          )}
+                          {vType && (
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {vType.replace('_', ' ')}
+                            </Badge>
+                          )}
+                          {seats.length > 0 && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs gap-1">
+                              <Armchair className="h-3 w-3" /> Seat{seats.length > 1 ? 's' : ''} {seats.join(', ')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 italic">
+                      Show this ticket and the plate number to the agent at boarding.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()
+          )}
 
           {/* Customer Info */}
           <div>

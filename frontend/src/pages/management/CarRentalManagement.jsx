@@ -11,8 +11,11 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
   LayoutDashboard, MessageSquare, TrendingUp, RefreshCw,
-  Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2
+  Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2,
+  Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -292,6 +295,8 @@ export default function CarRentalManagement() {
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const dashboardData = useRealDashboardData('car_rental', '30days', scopeOperatorId);
 
   // Filtered cars
@@ -409,6 +414,13 @@ export default function CarRentalManagement() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <OperatorScopeFilter serviceType="car_rental" value={scopeOperatorId} onChange={setScopeOperatorId} />
+              <Button
+                onClick={() => setIsWalkInOpen(true)}
+                className="bg-[#082c59] hover:bg-[#0a366d]"
+                data-testid="open-walkin-booking-btn"
+              >
+                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+              </Button>
               <Button onClick={loadCars} variant="outline" disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -421,12 +433,15 @@ export default function CarRentalManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
             <TabsTrigger value="management">
               <Car className="h-4 w-4 mr-2" /> Fleet Management
+            </TabsTrigger>
+            <TabsTrigger value="bookings" data-testid="tab-bookings">
+              <Receipt className="h-4 w-4 mr-2" /> Bookings
             </TabsTrigger>
             <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
@@ -497,6 +512,10 @@ export default function CarRentalManagement() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="bookings" className="mt-6">
+            <OperatorBookingsList serviceType="car_rental" refreshKey={bookingsRefreshKey} />
           </TabsContent>
 
           <TabsContent value="communications" className="mt-6">
@@ -745,6 +764,21 @@ export default function CarRentalManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="car_rental"
+        services={cars.map((c) => ({
+          id: c._id || c.id,
+          name: `${c.brand || ''} ${c.model || ''}`.trim() || c.name,
+          price: c.price_per_day,
+        }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
+      />
     </div>
   );
 }

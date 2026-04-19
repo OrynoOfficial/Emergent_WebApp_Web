@@ -5,6 +5,7 @@ Operators can see subscriber counts. Promotions push to subscribed users.
 from fastapi import APIRouter, HTTPException, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.notifications import create_notification, bulk_create_notifications
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
@@ -219,49 +220,43 @@ async def create_alert(
     }
     await db.promotions.insert_one(alert)
 
-    # Send notifications immediately
-    notifications = []
+    # Send notifications immediately — with dedupe_key so the same alert never re-notifies
+    notified_count = 0
     if data.target_type == "specific_user" and data.target_user_id:
-        notifications.append({
-            "_id": str(uuid.uuid4()),
-            "user_id": data.target_user_id,
-            "title": f"Alert from {operator_name}: {data.title}",
-            "message": data.message,
-            "type": "operator_alert",
-            "source": "operator_alert",
-            "operator_id": operator_id,
-            "operator_name": operator_name,
-            "alert_id": alert_id,
-            "action_url": f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
-            "is_read": False,
-            "created_at": datetime.now(timezone.utc),
-        })
+        await create_notification(
+            db,
+            user_id=data.target_user_id,
+            title=f"Alert from {operator_name}: {data.title}",
+            message=data.message,
+            notification_type="operator_alert",
+            source="operator_alert",
+            dedupe_key=f"alert:{alert_id}",
+            action_url=f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
+            operator_id=operator_id,
+            operator_name=operator_name,
+            alert_id=alert_id,
+        )
+        notified_count = 1
     else:
         subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
-        for sub in subscribers:
-            notif_id = str(uuid.uuid4())
-            notifications.append({
-                "_id": notif_id,
-                "user_id": sub["user_id"],
-                "title": f"Alert from {operator_name}: {data.title}",
-                "message": data.message,
-                "type": "operator_alert",
-                "source": "operator_alert",
-                "operator_id": operator_id,
-                "operator_name": operator_name,
-                "alert_id": alert_id,
-                "action_url": f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
-                "is_read": False,
-                "created_at": datetime.now(timezone.utc),
-            })
-
-    if notifications:
-        await db.notifications.insert_many(notifications)
+        notified_count = await bulk_create_notifications(
+            db,
+            recipients=[s["user_id"] for s in subscribers],
+            title=f"Alert from {operator_name}: {data.title}",
+            message=data.message,
+            notification_type="operator_alert",
+            source="operator_alert",
+            dedupe_key_prefix=f"alert:{alert_id}",
+            action_url=f"/ratings?tab=messages&subtab=alerts&id={alert_id}",
+            operator_id=operator_id,
+            operator_name=operator_name,
+            alert_id=alert_id,
+        )
 
     return {
-        "message": f"Alert sent to {len(notifications)} user(s)",
+        "message": f"Alert sent to {notified_count} user(s)",
         "alert_id": alert_id,
-        "notified_count": len(notifications),
+        "notified_count": notified_count,
     }
 
 
@@ -309,28 +304,23 @@ async def create_promotion(
     }
     await db.promotions.insert_one(promotion)
 
-    # Notify all admin/super_admin users about the pending approval
+    # Notify all admin/super_admin users about the pending approval — with dedupe
     admin_users = await db.users.find(
         {"role": {"$in": ["admin", "super_admin"]}, "status": "active"},
         {"_id": 1}
     ).to_list(100)
-    admin_notifications = []
-    for admin in admin_users:
-        admin_notifications.append({
-            "_id": str(uuid.uuid4()),
-            "user_id": admin["_id"],
-            "title": "Promotion Pending Approval",
-            "message": f"{operator_name} submitted a promotion: \"{data.title}\". Review it in the Validation page.",
-            "type": "promotion_pending",
-            "source": "promotion_approval",
-            "promotion_id": promo_id,
-            "operator_id": operator_id,
-            "action_url": "/admin/validation",
-            "is_read": False,
-            "created_at": datetime.now(timezone.utc),
-        })
-    if admin_notifications:
-        await db.notifications.insert_many(admin_notifications)
+    await bulk_create_notifications(
+        db,
+        recipients=[a["_id"] for a in admin_users],
+        title="Promotion Pending Approval",
+        message=f"{operator_name} submitted a promotion: \"{data.title}\". Review it in the Validation page.",
+        notification_type="promotion_pending",
+        source="promotion_approval",
+        dedupe_key_prefix=f"promotion_pending:{promo_id}",
+        action_url="/admin/validation",
+        promotion_id=promo_id,
+        operator_id=operator_id,
+    )
 
     return {
         "message": "Promotion submitted for approval",
@@ -366,34 +356,28 @@ async def approve_promotion(
         }}
     )
 
-    # Send notifications to subscribers
+    # Send notifications to subscribers — with dedupe_key so approvals don't double-notify
     operator_id = promo.get("operator_id")
     operator_name = promo.get("operator_name", "Operator")
     subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
 
-    notifications = []
-    for sub in subscribers:
-        notifications.append({
-            "_id": str(uuid.uuid4()),
-            "user_id": sub["user_id"],
-            "title": f"New from {operator_name}: {promo['title']}",
-            "message": promo.get("message", ""),
-            "type": "promotion",
-            "source": "operator_promotion",
-            "promotion_id": promotion_id,
-            "operator_id": operator_id,
-            "operator_name": operator_name,
-            "action_url": f"/ratings?tab=messages&subtab=notifications&id={promotion_id}",
-            "is_read": False,
-            "created_at": datetime.now(timezone.utc),
-        })
-
-    if notifications:
-        await db.notifications.insert_many(notifications)
+    notified = await bulk_create_notifications(
+        db,
+        recipients=[s["user_id"] for s in subscribers],
+        title=f"New from {operator_name}: {promo['title']}",
+        message=promo.get("message", ""),
+        notification_type="promotion",
+        source="operator_promotion",
+        dedupe_key_prefix=f"promotion:{promotion_id}",
+        action_url=f"/ratings?tab=messages&subtab=notifications&id={promotion_id}",
+        promotion_id=promotion_id,
+        operator_id=operator_id,
+        operator_name=operator_name,
+    )
 
     return {
-        "message": f"Promotion approved and sent to {len(subscribers)} subscribers",
-        "notified_count": len(subscribers),
+        "message": f"Promotion approved and sent to {notified} subscribers",
+        "notified_count": notified,
     }
 
 

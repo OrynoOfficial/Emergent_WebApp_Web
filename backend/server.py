@@ -74,6 +74,7 @@ from routes.invitations import router as invitations_router
 from routes.management_dashboard import router as management_dashboard_router
 from routes.subscriptions import router as subscriptions_router
 from routes.suggestions import router as suggestions_router
+from routes.manual_bookings import router as manual_bookings_router
 
 # Create the main app
 app = FastAPI(
@@ -119,6 +120,17 @@ async def startup_event():
     """Connect to MongoDB on startup and seed test users"""
     await connect_to_mongo()
     await seed_test_users()
+    # Bootstrap notification indexes + one-shot dedupe (safe on every restart)
+    try:
+        from utils.notifications import ensure_notification_indexes, dedupe_existing_notifications
+        db = get_database()
+        if db is not None:
+            await ensure_notification_indexes(db)
+            stats = await dedupe_existing_notifications(db)
+            if stats.get("duplicates_removed"):
+                logger.info("Notifications deduped: %s", stats)
+    except Exception as e:
+        logger.warning("Notification bootstrap skipped: %s", e)
     logger.info("Application started successfully")
 
 async def seed_test_users():
@@ -302,6 +314,7 @@ app.include_router(management_dashboard_router)  # Real operator-scoped dashboar
 app.include_router(subscriptions_router)  # User-to-operator subscriptions & promotions
 app.include_router(reports_router)  # Report generation with operator scoping
 app.include_router(suggestions_router)  # Dynamic popular locations & items
+app.include_router(manual_bookings_router)  # Operator walk-in / cash bookings
 
 # Legacy API endpoint for backwards compatibility
 @app.get("/api/")

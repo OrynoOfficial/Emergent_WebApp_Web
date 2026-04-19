@@ -9,8 +9,11 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
   MapPin, Clock, Users, ArrowRight, Eye, CheckCircle, Search, Filter, TrendingUp,
-  DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight
+  DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight,
+  Receipt, Banknote
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import { travelRouteApi, vehicleApi, operatorApi } from '@/api/management';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -408,6 +411,8 @@ export default function TravelManagement() {
   const [selectedOperator, setSelectedOperator] = useState({ id: '', name: '' });
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
   const dashboardData = useRealDashboardData('travel', '30days', scopeOperatorId);
@@ -606,6 +611,13 @@ export default function TravelManagement() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />
+              <Button
+                onClick={() => setIsWalkInOpen(true)}
+                className="bg-[#082c59] hover:bg-[#0a366d]"
+                data-testid="open-walkin-booking-btn"
+              >
+                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
+              </Button>
               <Button onClick={loadData} variant="outline" disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -618,12 +630,15 @@ export default function TravelManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
             <TabsTrigger value="management">
               <Bus className="h-4 w-4 mr-2" /> Management
+            </TabsTrigger>
+            <TabsTrigger value="bookings" data-testid="tab-bookings">
+              <Receipt className="h-4 w-4 mr-2" /> Bookings
             </TabsTrigger>
             <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
@@ -765,6 +780,11 @@ export default function TravelManagement() {
             </Tabs>
           </TabsContent>
 
+          {/* Bookings Tab */}
+          <TabsContent value="bookings" className="mt-6">
+            <OperatorBookingsList serviceType="travel" refreshKey={bookingsRefreshKey} />
+          </TabsContent>
+
           {/* Communications Tab */}
           <TabsContent value="communications" className="mt-6">
             <ServiceCommunicationsHub
@@ -848,6 +868,24 @@ export default function TravelManagement() {
         item={viewingItem}
         type={viewingType}
         onEdit={(item) => viewingType === 'route' ? openRouteDialog(item) : openVehicleDialog(item)}
+      />
+
+      {/* Walk-in Booking Modal */}
+      <WalkInBookingModal
+        open={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        serviceType="travel"
+        services={routes.map((r) => ({
+          id: r.id,
+          _id: r.id,
+          name: `${r.from_city || ''} → ${r.to_city || ''}`.trim(),
+          price: r.price,
+          total_seats: r.total_seats,
+        }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          setActiveTab('bookings');
+        }}
       />
     </div>
   );
