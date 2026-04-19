@@ -61,9 +61,12 @@ class ManualBookingCreate(BaseModel):
 
 async def _find_linked_customer(db, phone: Optional[str], email: Optional[str]) -> Optional[dict]:
     """Find an existing platform user by phone/email (case-insensitive) to link the booking."""
+    import re
     query_terms = []
     if email:
-        query_terms.append({"email": {"$regex": f"^{email.strip()}$", "$options": "i"}})
+        # Escape user input to prevent regex metacharacter exploitation
+        safe_email = re.escape(email.strip())
+        query_terms.append({"email": {"$regex": f"^{safe_email}$", "$options": "i"}})
     if phone:
         cleaned = phone.strip().replace(" ", "")
         query_terms.append({"phone": cleaned})
@@ -123,7 +126,6 @@ async def _lock_travel_seats(db, service_id: str, travel_date: str, seats: List[
         await db.seat_bookings.insert_many(docs)
 
 
-@router.post("")
 @router.post("/")
 async def create_manual_booking(
     data: ManualBookingCreate,
@@ -279,7 +281,6 @@ async def create_manual_booking(
     }
 
 
-@router.get("")
 @router.get("/")
 async def list_operator_bookings(
     service_type: Optional[str] = Query(None),

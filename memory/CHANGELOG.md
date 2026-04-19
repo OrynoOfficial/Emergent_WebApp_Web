@@ -25,3 +25,39 @@
 ### Testing
 - 25/25 backend tests passed
 - 100% frontend verified (iteration_72)
+
+## Apr 19, 2026 — Walk-in Bookings, Robust Notifications, Travel Ticket Vehicle Info
+
+### Feature C: Operator Walk-in / Cash Bookings (all services)
+- NEW backend: `/app/backend/routes/manual_bookings.py` exposing:
+  - `POST /api/operator/manual-bookings/` — records a walk-in booking for any service (travel, hotel, car_rental, restaurant, event, package, cinema, laundry, banquet)
+  - `GET /api/operator/manual-bookings/?channel=all|online|on_site` — unified list with counts
+  - `GET /api/operator/manual-bookings/lookup-customer` — links walk-in to existing platform user via phone/email (case-insensitive, regex-escaped)
+- Walk-in orders stored in `orders` collection with `channel="on_site"`, `is_manual=true`, `created_by_operator_user_id`, `payment_method`, `guest_customer{...}`
+- For travel, seats are atomically locked in `seat_bookings` (409 on conflict)
+- Optional linkage auto-fills from existing customer by phone/email
+- NEW frontend: `WalkInBookingModal.jsx`, `OperatorBookingsList.jsx` (reusable, channel filter All/Online/Walk-in)
+- Wired into all 9 management pages with "Walk-in Booking" button + new "Bookings" tab
+
+### Feature B: Robust Notifications (no more re-popping)
+- Root cause: 20+ routes inserted notifications directly; nothing prevented duplicates, so repeated triggers re-appeared as unread after read
+- NEW helper: `/app/backend/utils/notifications.py`
+  - `create_notification(...)` with optional `dedupe_key` → upsert preserves `is_read` state
+  - `bulk_create_notifications(...)` for multi-recipient fan-out
+  - `ensure_notification_indexes(...)` creates partial-unique index `(user_id, dedupe_key)`
+  - `dedupe_existing_notifications(...)` one-shot migration at startup
+- Updated: `subscriptions.py` (alerts + promotions), `notifications.py` (admin POST uses helper)
+- Startup hook in `server.py` bootstraps indexes + dedupes on every restart
+- Expanded `NotificationType` enum with info/success/warning/error/operator_alert/promotion/promotion_pending
+
+### Feature A: Vehicle Info on Travel Tickets
+- Backend: `POST /api/orders/create` auto-enriches travel bookings with `booking_details.vehicle_info` from the `vehicles` collection (plate_number, model, manufacturer, images, vehicle_type, year)
+- Frontend: "Your Vehicle" card added to:
+  - `OrderDetailModal.jsx` — prominent plate number badge (`data-testid=ticket-plate-number`), model, image, seat badge
+  - `BookingConfirmation.jsx` — same premium card on post-checkout confirmation
+- Walk-in travel bookings also persist vehicle_info so customers always see which bus they booked
+
+### Testing — Iteration 113
+- 8/8 backend feature verdicts PASS (walk-in create/list/lookup/403, notifications dedupe, travel enrichment)
+- Frontend smoke: "Walk-in Booking" button + Bookings tab visible on Travel management
+

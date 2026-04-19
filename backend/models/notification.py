@@ -4,12 +4,19 @@ from datetime import datetime
 from enum import Enum
 
 class NotificationType(str, Enum):
+    INFO = "info"
+    SUCCESS = "success"
+    WARNING = "warning"
+    ERROR = "error"
     ORDER = "order"
     BOOKING = "booking"
     PAYMENT = "payment"
     SYSTEM = "system"
     PROMO = "promo"
     REMINDER = "reminder"
+    OPERATOR_ALERT = "operator_alert"
+    PROMOTION = "promotion"
+    PROMOTION_PENDING = "promotion_pending"
 
 class NotificationChannel(str, Enum):
     IN_APP = "in_app"

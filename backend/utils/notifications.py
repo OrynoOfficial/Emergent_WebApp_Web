@@ -165,18 +165,12 @@ async def ensure_notification_indexes(db) -> None:
 
 async def dedupe_existing_notifications(db) -> Dict[str, int]:
     """
-    One-shot migration: collapse duplicate notifications.
-    Two passes:
-      1. Records with an explicit `dedupe_key`: keep the most recently-updated one,
-         OR'ing is_read so any single read marks it read.
-      2. Records without `dedupe_key`: collapse by (user_id, title, message, type)
-         within a 24-hour window using the oldest id, preserving is_read=True if
-         any duplicate was read.
+    One-shot migration: collapse duplicate notifications with the same dedupe_key.
+    Keeps the most recently-created one and OR's is_read across the group, so if
+    the user already read any of the duplicates the surviving record stays read.
     """
     total_dedup = 0
     total_merged_read = 0
-
-    # Pass 1: explicit dedupe_key duplicates
     pipeline = [
         {"$match": {"dedupe_key": {"$exists": True, "$ne": None}}},
         {"$group": {
