@@ -87,9 +87,17 @@ async def get_travel_routes(
     routes = await db.travel_routes.find(query).sort("departure_time", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.travel_routes.count_documents(query)
     
-    # Transform _id to id for each route
+    # Transform _id to id and enrich with vehicle info
     for route in routes:
         route["id"] = str(route.pop("_id", ""))
+        vehicle_id = route.get("vehicle_id")
+        if vehicle_id:
+            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1, "plate_number": 1, "vehicle_name": 1, "name": 1})
+            if vehicle:
+                route["vehicle_images"] = vehicle.get("images", [])[:2]
+                route["plate_number"] = vehicle.get("plate_number", "")
+                if not route.get("vehicle_name"):
+                    route["vehicle_name"] = vehicle.get("vehicle_name", vehicle.get("name", ""))
     
     return {"routes": routes, "total": total, "skip": skip, "limit": limit}
 

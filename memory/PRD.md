@@ -4,41 +4,40 @@
 - **Frontend:** React + Vite + Tailwind CSS + Shadcn/UI + Recharts + Leaflet
 - **Backend:** FastAPI + MongoDB (Motor async driver), DB: oryno_webapp
 - **Auth:** Custom JWT-based auth with 2FA
+- **IMPORTANT**: Two travel route files exist - `travel_routes.py` (primary, loaded first by FastAPI) and `travel.py` (secondary). Always edit `travel_routes.py` for public route endpoints.
 
 ## Completed Features (Latest First)
 
+**Apr 2026 - Critical Data & Backend Routing Fixes**
+- ROOT CAUSE: `travel_routes.py` handles GET /api/travel/routes (not `travel.py`). Vehicle enrichment (plate_number, vehicle_images) added to correct file.
+- Seeded hotels with GPS coordinates (lat/lon for Leaflet map) and 9 real policies each
+- Set all 13 travel routes to is_active=True (12 were missing the field)
+- Added bus images (2 per vehicle) to all 8 vehicles
+
 **Apr 2026 - Travel Results: Bus Plate Number & Thumbnails**
-- Backend enriches travel routes with `plate_number` and `vehicle_images` (max 2) from vehicles collection
-- Trip cards show plate number badge + 2 swipeable bus thumbnail images
-- Management VehicleForm already supports plate_number input and multi-image upload
+- Trip cards show plate number badge + 2 bus thumbnail images
+- Backend enriches routes from vehicles collection
 
 **Apr 2026 - Hotel Details Map, Policies, Hotel Results Filters, Booking Headings**
-- Hotel Details: Live Leaflet map in Explore area with nearby service colored pins (Restaurants, Car Rentals, Cinemas, Events)
-- Hotel Details: Policies section - check-in/check-out visible by default, additional policies behind toggle
-- Hotel Results: Compact search header, Grid/List toggle, extended filters (Guest Rating, Free Cancellation, Breakfast Included)
-- All 9 Booking Pages: Navy bg-[#082c59] headings for Price Breakdown and Payment Method
-- Travel Booking: Improved trip summary cards, price per passenger for 2+ passengers
-- CRITICAL FIX: React hooks order violation in HotelDetails (useEffect before early returns)
+- Hotel Details: Live Leaflet map with nearby service pins
+- Hotel Details: Policies toggle (check-in/out visible, additional behind toggle)
+- Hotel Results: Compact header, Grid/List, extended filters
+- All Booking Pages: Navy headings
+- Travel Booking: Per passenger pricing
 
-**Apr 2026 - Allergen Tags & Ingredient-Based Search/Filter**
-**Apr 2026 - Sidebar Right-Side Flyout Submenus**
-**Apr 2026 - Restaurant Menu Premium Revamp + Bug Fixes**
-**Earlier:** Dynamic Locations, Reports, Operator Scoping, Seat Selection, Stripe, AI chatbot
+**Earlier:** Allergens, Sidebar Flyouts, Restaurant Menu Revamp, Dynamic Locations, Reports, Operator Scoping
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
 - Super Admin: superadmin@test.com / testpassword123
 - Customer: customer@test.com / testpassword123
-- Operator: operator@test.com / testpassword123 (Musango Bus Service)
+- Operator: operator@test.com / testpassword123
 
 ## Upcoming Tasks
-- P2: Operator comparison dashboard (side-by-side performance metrics)
-- P3: Scheduled/automated report emails (weekly/monthly)
+- P2: Operator comparison dashboard
+- P3: Scheduled/automated report emails
 
 ## Key Technical Notes
-- **TRAVEL VEHICLE ENRICHMENT**: Routes are enriched with `plate_number`, `vehicle_images` (max 2), `vehicle_name` from vehicles collection
-- **NEARBY SERVICE PINS**: HotelDetails uses L.divIcon for colored markers. Generated from API or mock data around hotel location.
-- **BOOKING HEADINGS**: All booking pages use bg-[#082c59] for Price/Payment headers
-- **REACT HOOKS**: All useEffect/useState MUST come before any early returns in components
-- **SIDEBAR FLYOUTS**: Right-side click flyouts, bottom items position upward
-- **NO ANIMATIONS ON DROPDOWNS**: Shadcn UI animations stripped
+- **TWO TRAVEL FILES**: `routes/travel_routes.py` is loaded FIRST and handles GET /routes. `routes/travel.py` has duplicate endpoints that are NEVER reached. Always modify `travel_routes.py`.
+- **HOTEL DATA**: Hotels MUST have `location: {lat, lon}` for map to render. Without it, shows MapPin placeholder.
+- **HOTEL POLICIES**: Must be a string array. First two items should be "Check-in: HH:MM" and "Check-out: HH:MM". Rest are additional policies shown behind toggle.
