@@ -9,8 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Hotel, Plus, LayoutDashboard, MessageSquare, RefreshCw, Bed,
-  MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save, Building2
+  MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save, Building2,
+  Banknote, Receipt
 } from 'lucide-react';
+import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
+import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
