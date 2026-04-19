@@ -71,12 +71,35 @@ async def get_travel_routes(
     """Get travel routes with optional filters"""
     db = get_database()
     
+    import unicodedata, re
+    
+    def accent_insensitive_regex(s):
+        """Build regex that matches both accented and non-accented characters"""
+        accent_map = {
+            'a': '[aàáâãäå]', 'e': '[eèéêë]', 'i': '[iìíîï]',
+            'o': '[oòóôõö]', 'u': '[uùúûü]', 'c': '[cç]', 'n': '[nñ]'
+        }
+        pattern = ''
+        for ch in s:
+            lower = ch.lower()
+            if lower in accent_map:
+                pattern += accent_map[lower]
+            else:
+                pattern += re.escape(ch)
+        return pattern
+    
     query = {}
+    and_clauses = []
     
     if from_city:
-        query["from_city"] = {"$regex": from_city, "$options": "i"}
+        pattern = accent_insensitive_regex(from_city)
+        and_clauses.append({"from_city": {"$regex": pattern, "$options": "i"}})
     if to_city:
-        query["to_city"] = {"$regex": to_city, "$options": "i"}
+        pattern = accent_insensitive_regex(to_city)
+        and_clauses.append({"to_city": {"$regex": pattern, "$options": "i"}})
+    
+    if and_clauses:
+        query["$and"] = and_clauses
     if operator_id:
         query["operator_id"] = operator_id
     if status:
