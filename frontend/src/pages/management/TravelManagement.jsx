@@ -878,9 +878,10 @@ export default function TravelManagement() {
         services={routes.map((r) => ({
           id: r.id,
           _id: r.id,
-          name: `${r.from_city || ''} → ${r.to_city || ''}`.trim(),
+          name: `${r.from_city || ''} → ${r.to_city || ''}${r.departure_time ? ` · ${r.departure_time}` : ''}`.trim(),
           price: r.price,
           total_seats: r.total_seats,
+          departure_time: r.departure_time,
         }))}
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);

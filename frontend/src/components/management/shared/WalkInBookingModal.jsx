@@ -47,6 +47,8 @@ export default function WalkInBookingModal({
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [notes, setNotes] = useState('');
   const [serviceDate, setServiceDate] = useState('');
+  const [serviceTime, setServiceTime] = useState('');
+  const [passengers, setPassengers] = useState(1);
   const [bookingDetails, setBookingDetails] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,17 +67,22 @@ export default function WalkInBookingModal({
       setPaymentMethod('cash');
       setNotes('');
       setServiceDate('');
+      setServiceTime('');
+      setPassengers(1);
       setBookingDetails({});
     }
   }, [open]);
 
-  // Auto-fill price when a service is picked
+  // Auto-fill price and scheduled time when a service is picked
   useEffect(() => {
-    if (selectedService && !amount) {
-      const p = selectedService.price || selectedService.base_price || selectedService.amount;
-      if (p) setAmount(String(p));
-    }
-  }, [selectedService, amount]);
+    if (!selectedService) return;
+    const p = selectedService.price || selectedService.base_price || selectedService.amount;
+    if (p && !amount) setAmount(String(p));
+    // Schedule: HH:MM
+    const t = selectedService.departure_time || selectedService.time || selectedService.scheduled_time;
+    if (t && !serviceTime) setServiceTime(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedService]);
 
   // Debounced customer lookup
   useEffect(() => {
@@ -111,7 +118,7 @@ export default function WalkInBookingModal({
     !!serviceId &&
     Number(amount) > 0 &&
     !!paymentMethod &&
-    (serviceType !== 'travel' || (!!serviceDate && (bookingDetails.seat_numbers?.length > 0)));
+    (serviceType !== 'travel' || !!serviceDate);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) {
@@ -132,9 +139,10 @@ export default function WalkInBookingModal({
           phone: customer.phone.trim() || null,
           email: customer.email.trim() || null,
         },
-        booking_details: bookingDetails,
+        booking_details: { ...bookingDetails, passengers: Number(passengers) || 1 },
         notes: notes.trim() || null,
         service_date: serviceDate || null,
+        service_time: serviceTime || null,
       };
       const res = await api.post('/operator/manual-bookings/', payload);
       toast.success(
@@ -149,7 +157,7 @@ export default function WalkInBookingModal({
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, serviceType, serviceId, selectedService, amount, paymentMethod, customer, bookingDetails, notes, serviceDate, onSuccess, onClose]);
+  }, [canSubmit, serviceType, serviceId, selectedService, amount, paymentMethod, customer, bookingDetails, notes, serviceDate, serviceTime, passengers, onSuccess, onClose]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -243,37 +251,74 @@ export default function WalkInBookingModal({
             </Select>
           </div>
 
-          {/* Service date */}
-          <div>
-            <Label className="text-sm font-semibold">
-              Service Date {serviceType === 'travel' ? '*' : ''}
-            </Label>
-            <Input
-              type="date"
-              value={serviceDate}
-              onChange={(e) => setServiceDate(e.target.value)}
-              data-testid="walkin-service-date"
-            />
+          {/* Service date & time */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-sm font-semibold">
+                Service Date {serviceType === 'travel' ? '*' : ''}
+              </Label>
+              <Input
+                type="date"
+                value={serviceDate}
+                onChange={(e) => setServiceDate(e.target.value)}
+                data-testid="walkin-service-date"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-semibold">
+                Service Time
+                {serviceType === 'travel' && selectedService?.departure_time && (
+                  <span className="ml-1 text-xs font-normal text-slate-500">
+                    (auto-filled from route)
+                  </span>
+                )}
+              </Label>
+              <Input
+                type="time"
+                value={serviceTime}
+                onChange={(e) => setServiceTime(e.target.value)}
+                data-testid="walkin-service-time"
+              />
+            </div>
           </div>
 
           {/* Service-specific fields */}
           {serviceType === 'travel' && (
-            <div>
-              <Label className="text-sm font-semibold">Seats * <span className="text-xs font-normal text-slate-500">(comma-separated numbers)</span></Label>
-              <Input
-                placeholder="e.g., 12, 13"
-                value={(bookingDetails.seat_numbers || []).join(', ')}
-                onChange={(e) => {
-                  const seats = e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                  setBookingDetails({ ...bookingDetails, seat_numbers: seats });
-                }}
-                data-testid="walkin-seat-numbers"
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-semibold">Passengers *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={passengers}
+                    onChange={(e) => setPassengers(e.target.value)}
+                    data-testid="walkin-passengers"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">
+                    Seat Numbers <span className="text-xs font-normal text-slate-500">(optional)</span>
+                  </Label>
+                  <Input
+                    placeholder="e.g., 12, 13 — leave blank for unassigned"
+                    value={(bookingDetails.seat_numbers || []).join(', ')}
+                    onChange={(e) => {
+                      const seats = e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean);
+                      setBookingDetails({ ...bookingDetails, seat_numbers: seats });
+                    }}
+                    data-testid="walkin-seat-numbers"
+                  />
+                </div>
+              </div>
               {selectedService?.total_seats && (
-                <p className="text-xs text-slate-400 mt-1">Vehicle capacity: {selectedService.total_seats} seats</p>
+                <p className="text-xs text-slate-400">
+                  Vehicle capacity: {selectedService.total_seats} seats · Leave seat numbers blank to record a ticket without seat assignment.
+                </p>
               )}
             </div>
           )}

@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 115 backend + lightweight frontend smoke. Backend: 12 passed / 1 skipped — all iteration 113 regressions PASS and all new iteration 115 behaviors (service_time persisted on order, travel seats optional, travel_time auto-fill from route.departure_time, user-provided service_time wins, 409 on seat overlap) PASS. Frontend smoke: /transactions fully works (all 6 data-testids + list/grid/details switching); /receipts shows all 3 testids; /orders and /admin/bills did not expose testids in one run despite source wiring them correctly — likely a loading/render timing issue worth a spot-check. Walk-in modal testids confirmed in source; runtime open-click attempt failed to locate the Walk-in button in one run.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/operator/manual-bookings/",
+        "issue": "Router is declared with prefix='/api/operator/manual-bookings' and the POST decorator uses '/', which works (trailing-slash required). There is no longer a dual @router.post('') entry, so callers MUST include the trailing slash or will hit 307."
+      },
+      {
+        "endpoint": "POST /api/operator/manual-bookings/ (travel, no seats)",
+        "issue": "When seats are omitted, booking_details.seats_assigned=false and seat_numbers=[] as required, but seat_bookings collection is (correctly) not written. Consumers that read from seat_bookings won't see headcount-only walk-ins — make sure reports/occupancy pull both seat_bookings and order.booking_details.passengers for on_site bookings."
+      },
+      {
+        "endpoint": "POST /api/operator/manual-bookings/ (travel)",
+        "issue": "booking_details stores both travel_time and departure_time set to the same resolved value. Ticket/enrichment consumers should prefer travel_time (user-provided wins) to avoid stale route.departure_time when an operator overrides the time."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Admin /orders and /admin/bills page load",
+        "issue": "In the runtime smoke check, data-testids [quick-date-range-trigger], [view-mode-toggle], [operator-scope-filter] were NOT found on /orders or /admin/bills even after 4s wait, while /transactions and /receipts rendered them correctly. Source code in Orders.jsx and BillsManagement.jsx wires these components unconditionally — this looks like a page-level render/loading issue (possibly error during initial fetch). Main agent should open /orders and /admin/bills as admin and confirm the toolbar renders even when no data is returned.",
+        "affected_selectors": ["[data-testid='quick-date-range-trigger']", "[data-testid='view-mode-toggle']", "[data-testid='operator-scope-filter']"]
+      },
+      {
+        "flow": "Walk-in modal open on /management/travel (admin)",
+        "issue": "Automated click could not locate the 'Walk-in Booking' button on /management/travel during smoke. Source TravelManagement.jsx line 615 has onClick->setIsWalkInOpen(true) with a 'Walk-in Booking' label so the button does exist. The page may gate the button behind a services tab/operator role check — please re-verify manually. Modal testids are present in source: walkin-service-time, walkin-passengers, walkin-seat-numbers, walkin-submit-btn.",
+        "affected_selectors": ["button:has-text('Walk-in Booking')", "[data-testid='walkin-service-time']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration115_walkin_service_time.py",
+    "/app/backend/tests/test_iteration113_walkin_notif_vehicle.py",
+    "/app/test_reports/pytest/iter115.xml"
+  ],
+  "action_items": [
+    "Verify /orders (admin role) and /admin/bills render the QuickDateRangeFilter + ViewModeToggle + OperatorScopeFilter toolbar on first load — smoke failed to find testids despite correct source wiring; likely a render/loading timing or JS-error issue.",
+    "Confirm the 'Walk-in Booking' button on /management/travel is visible for admin role (not only operator). Consider adding a data-testid on the button itself (e.g. data-testid='open-walkin-modal') to make the flow easier to automate.",
+    "Consider fixing the submit button testid spelling: iteration 115 request names it 'walkin-submit' but source uses 'walkin-submit-btn' — align between docs, tests, and code.",
+    "Optional: update WalkIn submit docs to note that seats are optional and travel_time auto-fills; the backend behavior is verified."
+  ],
+  "critical_code_review_comments": [
+    "manual_bookings.py POST: when seats are omitted for travel, no row is written to seat_bookings and order.booking_details.seats_assigned=false — correct per spec, but any seat-map/availability UI that renders from seat_bookings alone will UNDERCOUNT walk-in headcount-only bookings. Please make sure availability calculations include order.booking_details.passengers for channel=='on_site' travel orders.",
+    "manual_bookings.py: scheduled_time precedence is `data.service_time OR booking_details.travel_time OR svc.departure_time` — this matches the spec (user wins over route default). booking_details.departure_time is also set to the same resolved value which can mislead readers into thinking it reflects the route's canonical schedule. Prefer only travel_time on the order (or rename to avoid confusion).",
+    "_find_linked_customer now uses re.escape(email) — good fix, resolves the regex-injection issue flagged in iteration 113.",
+    "Travel walk-in flow still does not set customer_linked / notify behavior when seats are omitted — it does, but only because the linked_user_id path runs regardless of seats, which is correct. Just confirming no regression.",
+    "Orders.jsx / BillsManagement.jsx / Receipts.jsx / Transactions.jsx: shared filter components are imported identically, but Orders.jsx has `operator-scope-filter` rendered only inside `{isAllOrdersView && ...}` while the spec states 'Operator filter visible only for admin' — this will ALSO hide it for admin viewing their personal /orders (not /admin/orders). Confirm that admin users land on `isAllOrdersView=true` when visiting /orders, or document the two admin routes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration115_walkin_service_time.py"
+  ],
+  "success_rate": {"backend": "100% (12/12 executed, 1 skipped for missing operator-owned non-travel service)", "frontend": "partial smoke — /transactions PASS, /receipts PASS, /orders and /admin/bills inconclusive, walk-in modal not opened"},
+  "test_credentials": "admin@test.com / operator@test.com / customer@test.com / superadmin@test.com (all 'testpassword123')",
+  "seed_data_creation": "Created TEST travel walk-in orders on 2030-06-15, 2030-08-10 (no seats), 2030-08-11 (auto-time), 2030-08-12 (seats+time). All orders use random seat prefixes (T/V/I + 4 hex) and far-future dates so they never collide with real data. Also created dedupe notification TEST_iter113_* via regression test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Use /app/backend/tests/test_iteration115_walkin_service_time.py + test_iteration113_walkin_notif_vehicle.py for regression. Both files use session-scoped fixtures and operator's own travel route. operator_id must be read from user.operator_id OR user.operator_context.operator_id. Walk-in POST requires trailing slash (/api/operator/manual-bookings/). Walk-in modal testids: walkin-service-time, walkin-passengers, walkin-seat-numbers, walkin-submit-btn (NOT walkin-submit). Shared toolbar testids live in components/common/{QuickDateRangeFilter,ViewModeToggle,OperatorScopeFilter}.jsx — Orders.jsx hides OperatorScopeFilter behind isAllOrdersView.",
+  "feature_verdict": {
+    "iter113_regression_walkin_bookings_POST": "PASS",
+    "iter113_regression_seat_lock_409": "PASS",
+    "iter113_regression_list_by_channel": "PASS",
+    "iter113_regression_lookup_customer": "PASS",
+    "iter113_regression_foreign_operator_403": "PASS",
+    "iter113_regression_notifications_dedupe": "PASS",
+    "iter113_regression_travel_vehicle_info": "PASS",
+    "iter115_travel_walkin_without_seats": "PASS (order_id returned, seats_assigned=false, seat_numbers=[], passengers preserved)",
+    "iter115_service_time_persisted_on_order": "PASS (order.service_time='08:45' / '14:30' persisted)",
+    "iter115_service_time_autofills_from_route": "PASS (travel_time == route.departure_time when omitted)",
+    "iter115_user_service_time_wins": "PASS (user-provided 08:45 overrides route default)",
+    "iter115_seat_conflict_still_409": "PASS",
+    "iter115_non_travel_service_time_persist": "SKIPPED (operator owns no restaurant/hotel in seed)",
+    "frontend_transactions_page": "PASS (all 6 testids + view-mode list/grid/details switching works)",
+    "frontend_receipts_page": "PASS (quick-date + view-mode + operator-scope testids present)",
+    "frontend_orders_page": "INCONCLUSIVE (testids not found at runtime despite correct source wiring)",
+    "frontend_admin_bills_page": "INCONCLUSIVE (testids not found at runtime despite correct source wiring)",
+    "frontend_walkin_modal_open": "INCONCLUSIVE (modal not opened in automation; testids confirmed in source)"
+  }
+}

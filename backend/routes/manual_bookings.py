@@ -57,6 +57,7 @@ class ManualBookingCreate(BaseModel):
     booking_details: Dict[str, Any] = {}
     notes: Optional[str] = None
     service_date: Optional[str] = None
+    service_time: Optional[str] = Field(None, description="HH:MM — departure/check-in time; defaults to the service's schedule")
 
 
 async def _find_linked_customer(db, phone: Optional[str], email: Optional[str]) -> Optional[dict]:
@@ -172,29 +173,39 @@ async def create_manual_booking(
 
     service_name = data.service_name or svc.get("name") or svc.get("service_name") or svc.get("vehicle_name") or "Service"
 
-    # Travel-specific seat locking
+    # Travel-specific: optional seat locking. If seats are provided, lock them; otherwise record an
+    # unassigned headcount booking against the specific (route, date, time) slot.
     if data.service_type == "travel":
         seats = data.booking_details.get("seat_numbers") or data.booking_details.get("seats") or []
         if not isinstance(seats, list):
             seats = [s.strip() for s in str(seats).split(",") if s.strip()]
+        seats = [s for s in seats if str(s).strip()]
         travel_date = data.service_date or data.booking_details.get("travel_date")
         if not travel_date:
             raise HTTPException(status_code=400, detail="travel_date is required for travel bookings")
-        if not seats:
-            raise HTTPException(status_code=400, detail="At least one seat must be selected")
+        passengers = int(data.booking_details.get("passengers") or len(seats) or 1)
 
-        price_per_seat = data.total_amount / max(len(seats), 1)
-        await _lock_travel_seats(
-            db,
-            service_id=data.service_id,
-            travel_date=travel_date,
-            seats=seats,
-            reservation_id=order_id,
-            operator_user_id=operator_user_id,
-            price_per_seat=price_per_seat,
-            linked_user_id=linked_user_id,
+        # Resolve time from the route if not explicitly passed
+        scheduled_time = (
+            data.service_time
+            or data.booking_details.get("travel_time")
+            or svc.get("departure_time")
         )
-        # Enrich booking_details with canonical vehicle info for the ticket
+
+        if seats:
+            price_per_seat = data.total_amount / max(len(seats), 1)
+            await _lock_travel_seats(
+                db,
+                service_id=data.service_id,
+                travel_date=travel_date,
+                seats=seats,
+                reservation_id=order_id,
+                operator_user_id=operator_user_id,
+                price_per_seat=price_per_seat,
+                linked_user_id=linked_user_id,
+            )
+
+        # Enrich booking_details with canonical vehicle + schedule info for the ticket
         vehicle_id = svc.get("vehicle_id")
         vehicle = None
         if vehicle_id:
@@ -205,10 +216,14 @@ async def create_manual_booking(
         data.booking_details = {
             **data.booking_details,
             "seat_numbers": list(map(str, seats)),
+            "seats_assigned": bool(seats),
+            "passengers": passengers,
             "travel_date": travel_date,
+            "travel_time": scheduled_time,
+            "departure_time": scheduled_time,
             "from_city": svc.get("from_city"),
             "to_city": svc.get("to_city"),
-            "departure_time": svc.get("departure_time"),
+            "arrival_time": svc.get("arrival_time"),
             "vehicle_info": vehicle or {},
         }
 
@@ -233,6 +248,8 @@ async def create_manual_booking(
         "payment_status": "paid",
         "payment_method": data.payment_method,
         "paid_at": now,
+        "service_date": data.service_date,
+        "service_time": data.service_time,
         "booking_details": data.booking_details,
         # Walk-in / manual booking markers
         "channel": "on_site",
