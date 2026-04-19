@@ -7,26 +7,23 @@
 
 ## Completed Features (Latest First)
 
-**Apr 2026 - Hotel Results, Hotel Details Map, Booking Headings, Travel Summary**
-- Hotel Results: Compact search criteria header, Grid/List view toggle, expanded filters (Guest Rating, Free Cancellation, Breakfast Included)
-- Hotel Details: Live Leaflet map with nearby service pins (Restaurants, Car Rentals, Cinemas, Events) using colored markers
-- Hotel Details: Policies toggle — check-in/check-out visible by default, additional policies hidden behind toggle
-- All Booking Pages: Price Breakdown and Payment Method headings now use strong navy bg-[#082c59] with white text
-- Travel Booking: Improved trip summary cards with route/date/time grid layout, bus icon circles, price per passenger for 2+ passengers
+**Apr 2026 - Travel Results: Bus Plate Number & Thumbnails**
+- Backend enriches travel routes with `plate_number` and `vehicle_images` (max 2) from vehicles collection
+- Trip cards show plate number badge + 2 swipeable bus thumbnail images
+- Management VehicleForm already supports plate_number input and multi-image upload
+
+**Apr 2026 - Hotel Details Map, Policies, Hotel Results Filters, Booking Headings**
+- Hotel Details: Live Leaflet map in Explore area with nearby service colored pins (Restaurants, Car Rentals, Cinemas, Events)
+- Hotel Details: Policies section - check-in/check-out visible by default, additional policies behind toggle
+- Hotel Results: Compact search header, Grid/List toggle, extended filters (Guest Rating, Free Cancellation, Breakfast Included)
+- All 9 Booking Pages: Navy bg-[#082c59] headings for Price Breakdown and Payment Method
+- Travel Booking: Improved trip summary cards, price per passenger for 2+ passengers
+- CRITICAL FIX: React hooks order violation in HotelDetails (useEffect before early returns)
 
 **Apr 2026 - Allergen Tags & Ingredient-Based Search/Filter**
-- allergens field on menu items, dietary filter chips, ingredient search, allergen badges
-
 **Apr 2026 - Sidebar Right-Side Flyout Submenus**
-- Click-triggered right-side flyout panels with smart vertical positioning
-
-**Apr 2026 - Menu Item Bug Fixes & Auto-Derived Popularity**
-- Fixed image save, ingredients text, removed Popular toggle, auto-derived popularity
-
-**Apr 2026 - Restaurant Menu Premium Revamp**
-- Hero image header, swipeable carousel, Ingredients modal, compact sidebar
-
-**Earlier:** Dynamic Locations, Reports, Animations, Operator Scoping, Seat Selection, Stripe, AI chatbot
+**Apr 2026 - Restaurant Menu Premium Revamp + Bug Fixes**
+**Earlier:** Dynamic Locations, Reports, Operator Scoping, Seat Selection, Stripe, AI chatbot
 
 ## Test Credentials
 - Admin: admin@test.com / testpassword123
@@ -39,9 +36,9 @@
 - P3: Scheduled/automated report emails (weekly/monthly)
 
 ## Key Technical Notes
-- **NEARBY SERVICE PINS**: HotelDetails uses L.divIcon for colored markers. Fetches from API or generates mock pins around hotel location.
-- **BOOKING HEADINGS**: All booking pages use bg-[#082c59] for Price Breakdown and Payment headers.
+- **TRAVEL VEHICLE ENRICHMENT**: Routes are enriched with `plate_number`, `vehicle_images` (max 2), `vehicle_name` from vehicles collection
+- **NEARBY SERVICE PINS**: HotelDetails uses L.divIcon for colored markers. Generated from API or mock data around hotel location.
+- **BOOKING HEADINGS**: All booking pages use bg-[#082c59] for Price/Payment headers
+- **REACT HOOKS**: All useEffect/useState MUST come before any early returns in components
 - **SIDEBAR FLYOUTS**: Right-side click flyouts, bottom items position upward
 - **NO ANIMATIONS ON DROPDOWNS**: Shadcn UI animations stripped
-- **POPULARITY**: Auto-derived from order aggregation, NOT operator-settable
-- **FONTS**: Playfair Display (serif), Manrope (sans). Primary #082c59, Champagne #C5A880
