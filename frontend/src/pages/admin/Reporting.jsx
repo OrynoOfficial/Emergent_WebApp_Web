@@ -15,6 +15,8 @@ import {
   Clock, CheckCircle, Eye, Printer, Mail, RefreshCw
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import QuickDateRangeFilter from '@/components/common/QuickDateRangeFilter';
 
 const REPORT_TYPES = [
   { id: 'bookings', name: 'Bookings Report', icon: FileText, description: 'All bookings with status and details' },
@@ -41,7 +43,8 @@ const SCHEDULED_REPORTS = [
 
 export default function Reporting() {
   const [selectedReportType, setSelectedReportType] = useState(null);
-  const [dateRange, setDateRange] = useState({ from: null, to: null });
+  const [dateRange, setDateRange] = useState({ preset: 'last_30_days', from: null, to: null });
+  const [operatorFilter, setOperatorFilter] = useState('');
   const [generating, setGenerating] = useState(false);
 
   const handleGenerateReport = async () => {
@@ -105,40 +108,17 @@ export default function Reporting() {
                 <CardTitle>Report Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <Label>Date Range</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start">
-                            <CalendarIcon className="w-4 h-4 mr-2" />
-                            {dateRange.from ? format(dateRange.from, 'PP') : 'Start date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white">
-                          <Calendar
-                            mode="single"
-                            selected={dateRange.from}
-                            onSelect={(d) => setDateRange(p => ({ ...p, from: d }))}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start">
-                            <CalendarIcon className="w-4 h-4 mr-2" />
-                            {dateRange.to ? format(dateRange.to, 'PP') : 'End date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-white">
-                          <Calendar
-                            mode="single"
-                            selected={dateRange.to}
-                            onSelect={(d) => setDateRange(p => ({ ...p, to: d }))}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <div className="mt-2">
+                      <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Operator</Label>
+                    <div className="mt-2">
+                      <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
                     </div>
                   </div>
                   <div>

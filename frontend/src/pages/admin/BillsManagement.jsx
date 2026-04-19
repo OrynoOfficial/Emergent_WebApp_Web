@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   Receipt, Search, Download, Eye, Printer, Filter,
   Calendar, DollarSign, CheckCircle, Clock, XCircle,
-  FileText, CreditCard, Smartphone, Building
+  FileText, CreditCard, Smartphone, Building, Building2, User, Mail
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import QuickDateRangeFilter, { inRange } from '@/components/common/QuickDateRangeFilter';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 
 const BILL_STATUS = ['all', 'paid', 'pending', 'overdue', 'cancelled'];
 const PAYMENT_METHODS = ['all', 'mtn_momo', 'orange_money', 'card', 'bank_transfer', 'cash'];
@@ -22,6 +25,9 @@ export default function BillsManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [operatorFilter, setOperatorFilter] = useState('');
+  const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
+  const [viewMode, setViewMode] = useState('list'); // list | grid | details
   const [selectedBill, setSelectedBill] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
@@ -54,14 +60,16 @@ export default function BillsManagement() {
     { id: 'INV-2025-008', customer_name: 'Claire Mvondo', customer_email: 'claire@example.com', service_type: 'laundry', description: 'Premium Laundry Service', amount: 15000, tax: 1500, total: 16500, status: 'pending', payment_method: null, created_at: '2025-12-21', paid_at: null }
   ];
 
-  const filteredBills = bills.filter(bill => {
+  const filteredBills = useMemo(() => bills.filter(bill => {
     const matchesSearch = bill.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bill.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bill.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
     const matchesPayment = paymentFilter === 'all' || bill.payment_method === paymentFilter;
-    return matchesSearch && matchesStatus && matchesPayment;
-  });
+    const matchesOperator = !operatorFilter || bill.operator_id === operatorFilter;
+    const matchesDate = inRange(bill.created_at, dateRange.from, dateRange.to);
+    return matchesSearch && matchesStatus && matchesPayment && matchesOperator && matchesDate;
+  }), [bills, searchQuery, statusFilter, paymentFilter, operatorFilter, dateRange]);
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -99,12 +107,20 @@ export default function BillsManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#082c59]">All Bills</h1>
           <p className="text-gray-600">Manage customer bills and payment records</p>
         </div>
-        <Button className="bg-[#082c59]"><FileText className="w-4 h-4 mr-2" /> Export All</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          <Button className="bg-[#082c59]"><FileText className="w-4 h-4 mr-2" /> Export All</Button>
+        </div>
+      </div>
+
+      <div className="flex">
+        <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
       </div>
 
       {/* Stats */}
@@ -157,8 +173,113 @@ export default function BillsManagement() {
         </CardContent>
       </Card>
 
-      {/* Bills Table */}
-      <Card>
+      {/* Bills */}
+      {loading ? (
+        <Card><CardContent className="py-16 text-center text-slate-500">Loading bills...</CardContent></Card>
+      ) : filteredBills.length === 0 ? (
+        <Card><CardContent className="py-16 text-center text-slate-500">No bills found</CardContent></Card>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="bills-grid-view">
+          {filteredBills.map(bill => (
+            <Card key={bill.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <span className="font-mono text-xs font-bold text-[#082c59] truncate">{bill.id}</span>
+                  {getStatusBadge(bill.status)}
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium truncate">{bill.customer_name}</p>
+                  <p className="text-xs text-gray-500 truncate">{bill.customer_email}</p>
+                </div>
+                {bill.service_type && <Badge variant="outline" className="capitalize text-xs">{bill.service_type.replace('_', ' ')}</Badge>}
+                <p className="text-sm text-slate-600 line-clamp-2">{bill.description}</p>
+                <div className="pt-2 border-t">
+                  <p className="text-[10px] uppercase text-slate-400">Total</p>
+                  <p className="text-xl font-bold text-[#082c59]">{formatFCFA(bill.total)}</p>
+                </div>
+                {bill.payment_method && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    {getPaymentIcon(bill.payment_method)}
+                    <span className="capitalize">{bill.payment_method.replace('_', ' ')}</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }}><Eye className="w-3.5 h-3.5 mr-1" /> View</Button>
+                  <Button size="sm" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]"><Download className="w-3.5 h-3.5 mr-1" /> PDF</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : viewMode === 'details' ? (
+        <div className="space-y-3" data-testid="bills-details-view">
+          {filteredBills.map(bill => (
+            <Card key={bill.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-[#082c59]">{bill.id}</span>
+                  {getStatusBadge(bill.status)}
+                  {bill.service_type && <Badge variant="outline" className="capitalize text-xs">{bill.service_type.replace('_', ' ')}</Badge>}
+                </div>
+                <h3 className="font-semibold text-slate-900">{bill.description}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <p className="text-slate-400 uppercase tracking-wide">Customer</p>
+                    <p className="text-slate-700 font-medium flex items-center gap-1"><User className="h-3 w-3" /> {bill.customer_name}</p>
+                  </div>
+                  {bill.customer_email && (
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide">Email</p>
+                      <p className="text-slate-700 font-medium flex items-center gap-1"><Mail className="h-3 w-3" /> {bill.customer_email}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-slate-400 uppercase tracking-wide">Created</p>
+                    <p className="text-slate-700 font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> {bill.created_at}</p>
+                  </div>
+                  {bill.paid_at && (
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide">Paid On</p>
+                      <p className="text-slate-700 font-medium">{bill.paid_at}</p>
+                    </div>
+                  )}
+                  {bill.operator_name && (
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide">Operator</p>
+                      <p className="text-slate-700 font-medium flex items-center gap-1"><Building2 className="h-3 w-3" /> {bill.operator_name}</p>
+                    </div>
+                  )}
+                  {bill.payment_method && (
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide">Payment</p>
+                      <p className="text-slate-700 font-medium flex items-center gap-1 capitalize">{getPaymentIcon(bill.payment_method)}{bill.payment_method.replace('_', ' ')}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-slate-400 uppercase tracking-wide">Subtotal</p>
+                    <p className="text-slate-700 font-medium">{formatFCFA(bill.amount)}</p>
+                  </div>
+                  {bill.tax > 0 && (
+                    <div>
+                      <p className="text-slate-400 uppercase tracking-wide">Tax</p>
+                      <p className="text-slate-700 font-medium">{formatFCFA(bill.tax)}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(bill.total)}</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }}><Eye className="w-4 h-4 mr-1" /> View</Button>
+                    <Button size="sm" className="bg-[#082c59] hover:bg-[#0a3a75]"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                    <Button variant="outline" size="sm"><Printer className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+      <Card data-testid="bills-list-view">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -175,12 +296,7 @@ export default function BillsManagement() {
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
-                  <tr><td colSpan="8" className="text-center py-8">Loading...</td></tr>
-                ) : filteredBills.length === 0 ? (
-                  <tr><td colSpan="8" className="text-center py-8 text-gray-500">No bills found</td></tr>
-                ) : (
-                  filteredBills.map(bill => (
+                {filteredBills.map(bill => (
                     <tr key={bill.id} className="border-b hover:bg-slate-50">
                       <td className="p-4 font-mono text-sm">{bill.id}</td>
                       <td className="p-4">
@@ -214,13 +330,13 @@ export default function BillsManagement() {
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Bill Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>

@@ -25,6 +25,7 @@ import Services from './pages/Services';
 import BrowseServices from './pages/BrowseServices';
 import Orders from './pages/Orders';
 import Receipts from './pages/Receipts';
+import Transactions from './pages/Transactions';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
 import Ratings from './pages/Ratings';
@@ -181,6 +182,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Orders />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedRoute>
+                <Transactions />
               </ProtectedRoute>
             }
           />

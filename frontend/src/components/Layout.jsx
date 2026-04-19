@@ -153,6 +153,7 @@ export default function Layout({ children }) {
     { type: 'page', label: 'Dashboard', description: 'Overview & statistics', path: '/dashboard', icon: 'LayoutDashboard', color: '#4D96FF', keywords: ['home', 'overview', 'stats'] },
     { type: 'page', label: 'My Orders', description: 'View your orders', path: '/orders', icon: 'Ticket', color: '#9575CD', keywords: ['bookings', 'purchases', 'history'] },
     { type: 'page', label: 'Receipts', description: 'View your receipts', path: '/receipts', icon: 'Receipt', color: '#2962FF', keywords: ['invoice', 'payment', 'bill'] },
+    { type: 'page', label: 'Transactions', description: 'Payment transactions history', path: '/transactions', icon: 'CreditCard', color: '#EC4899', keywords: ['payments', 'momo', 'card', 'history'] },
     { type: 'page', label: 'Loyalty', description: 'Loyalty rewards & points', path: '/loyalty', icon: 'Award', color: '#AB47BC', keywords: ['points', 'rewards', 'benefits'] },
     { type: 'page', label: 'My Ratings', description: 'Your reviews & ratings', path: '/ratings', icon: 'Star', color: '#FBBF24', keywords: ['review', 'feedback'] },
     { type: 'page', label: 'Support', description: 'Get help & support', path: '/support', icon: 'HelpCircle', color: '#22C55E', keywords: ['help', 'chat', 'contact', 'assistance'] },

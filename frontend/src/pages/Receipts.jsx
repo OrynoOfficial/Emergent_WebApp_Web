@@ -9,11 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { 
     Download, FileText, Calendar, Eye, Loader2, Search, 
     Filter, ChevronLeft, ChevronRight, Receipt, X, 
-    SlidersHorizontal, ArrowUpDown, Tag, User, Hash
+    SlidersHorizontal, ArrowUpDown, Tag, User, Hash, CreditCard, Mail, Building2
 } from 'lucide-react';
 import { ordersAPI } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/currency';
+import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
+import QuickDateRangeFilter, { inRange } from '../components/common/QuickDateRangeFilter';
+import ViewModeToggle from '../components/common/ViewModeToggle';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -63,6 +66,9 @@ export default function Receipts() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('date_desc');
     const [showFilters, setShowFilters] = useState(false);
+    const [operatorFilter, setOperatorFilter] = useState('');
+    const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
+    const [viewMode, setViewMode] = useState('list'); // list | grid | details
     
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -74,7 +80,7 @@ export default function Receipts() {
     // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, serviceFilter, statusFilter, sortBy]);
+    }, [searchQuery, serviceFilter, statusFilter, sortBy, operatorFilter, dateRange]);
 
     const loadData = async () => {
         try {
@@ -103,7 +109,11 @@ export default function Receipts() {
                 due_date: order.due_date,
                 currency: 'FCFA',
                 tags: order.tags || [order.service_type || order.service_category].filter(Boolean),
+                operator_id: order.operator_id || '',
                 operator_name: order.operator_name || '',
+                payment_method: order.payment_method || '',
+                channel: order.channel || 'online',
+                service_name: order.service_name || order.service_title || '',
             }));
             
             setBills(formattedBills);
@@ -136,6 +146,16 @@ export default function Receipts() {
             result = result.filter(bill => bill.service_type === serviceFilter);
         }
         
+        // Operator filter (admin only)
+        if (operatorFilter) {
+            result = result.filter(bill => bill.operator_id === operatorFilter);
+        }
+
+        // Date range filter
+        if (dateRange.from || dateRange.to) {
+            result = result.filter(bill => inRange(bill.created_date, dateRange.from, dateRange.to));
+        }
+        
         // Status filter
         if (statusFilter !== 'all') {
             result = result.filter(bill => 
@@ -160,7 +180,7 @@ export default function Receipts() {
         });
         
         return result;
-    }, [bills, searchQuery, serviceFilter, statusFilter, sortBy]);
+    }, [bills, searchQuery, serviceFilter, statusFilter, sortBy, operatorFilter, dateRange]);
 
     // Pagination logic
     const totalPages = Math.ceil(filteredAndSortedBills.length / ITEMS_PER_PAGE);
@@ -269,9 +289,11 @@ export default function Receipts() {
         setServiceFilter('all');
         setStatusFilter('all');
         setSortBy('date_desc');
+        setOperatorFilter('');
+        setDateRange({ preset: 'all', from: null, to: null });
     };
 
-    const hasActiveFilters = searchQuery || serviceFilter !== 'all' || statusFilter !== 'all' || sortBy !== 'date_desc';
+    const hasActiveFilters = searchQuery || serviceFilter !== 'all' || statusFilter !== 'all' || sortBy !== 'date_desc' || operatorFilter || dateRange.preset !== 'all';
 
     return (
         <div className="space-y-6">
@@ -292,7 +314,18 @@ export default function Receipts() {
                             : 'View and download your payment receipts'}
                     </p>
                 </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                    <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+                    <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                </div>
             </div>
+
+            {/* Admin operator filter */}
+            {isAllReceiptsView && (
+                <div className="flex">
+                    <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -556,7 +589,109 @@ export default function Receipts() {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="space-y-3">
+                viewMode === 'grid' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="receipts-grid-view">
+                        {paginatedBills.map((bill) => (
+                            <Card
+                                key={bill.id}
+                                className="group bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                            >
+                                <div className={`h-1.5 ${getServiceIcon(bill.service_type)}`} />
+                                <CardContent className="p-4 space-y-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <span className="font-mono text-xs font-bold text-[#082c59] truncate">#{bill.bill_number}</span>
+                                        <Badge variant="outline" className={`text-[10px] ${getStatusColor(bill.status)}`}>{bill.status}</Badge>
+                                    </div>
+                                    <div className="text-sm text-slate-500 flex items-center gap-1.5 truncate">
+                                        <User className="h-3.5 w-3.5 flex-shrink-0" /> {bill.customer_name}
+                                    </div>
+                                    <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                                        <Calendar className="h-3 w-3" /> {formatDate(bill.created_date)}
+                                    </div>
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <p className="text-[10px] uppercase text-slate-400">Amount</p>
+                                        <p className="text-xl font-bold text-[#082c59]">{formatCurrency(bill.amount)}</p>
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <Button onClick={() => { setSelectedBill(bill); setShowInvoice(true); }} variant="outline" size="sm" className="flex-1">
+                                            <Eye className="h-3.5 w-3.5 mr-1" /> View
+                                        </Button>
+                                        <Button onClick={() => downloadPDF(bill)} size="sm" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]">
+                                            <Download className="h-3.5 w-3.5 mr-1" /> PDF
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : viewMode === 'details' ? (
+                    <div className="space-y-3" data-testid="receipts-details-view">
+                        {paginatedBills.map((bill) => (
+                            <Card key={bill.id} className="bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-md transition-all">
+                                <CardContent className="p-0">
+                                    <div className="flex items-stretch">
+                                        <div className={`w-1.5 ${getServiceIcon(bill.service_type)}`} />
+                                        <div className="flex-1 p-5 space-y-3">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="font-mono text-sm font-bold text-[#082c59]">#{bill.bill_number}</span>
+                                                <Badge variant="outline" className={`text-xs ${getStatusColor(bill.status)}`}>{bill.status}</Badge>
+                                                {bill.service_type && bill.service_type !== 'general' && (
+                                                    <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 capitalize">{bill.service_type.replace('_', ' ')}</Badge>
+                                                )}
+                                                {bill.channel === 'on_site' && (
+                                                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">Walk-in</Badge>
+                                                )}
+                                            </div>
+                                            {bill.service_name && (
+                                                <p className="text-sm font-medium text-slate-800">{bill.service_name}</p>
+                                            )}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                                                <div>
+                                                    <p className="text-slate-400 uppercase tracking-wide">Customer</p>
+                                                    <p className="text-slate-700 font-medium flex items-center gap-1"><User className="h-3 w-3" /> {bill.customer_name}</p>
+                                                </div>
+                                                {bill.customer_email && (
+                                                    <div>
+                                                        <p className="text-slate-400 uppercase tracking-wide">Email</p>
+                                                        <p className="text-slate-700 font-medium flex items-center gap-1"><Mail className="h-3 w-3" /> {bill.customer_email}</p>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="text-slate-400 uppercase tracking-wide">Date</p>
+                                                    <p className="text-slate-700 font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(bill.created_date)}</p>
+                                                </div>
+                                                {bill.operator_name && (
+                                                    <div>
+                                                        <p className="text-slate-400 uppercase tracking-wide">Operator</p>
+                                                        <p className="text-slate-700 font-medium flex items-center gap-1"><Building2 className="h-3 w-3" /> {bill.operator_name}</p>
+                                                    </div>
+                                                )}
+                                                {bill.payment_method && (
+                                                    <div>
+                                                        <p className="text-slate-400 uppercase tracking-wide">Payment</p>
+                                                        <p className="text-slate-700 font-medium flex items-center gap-1 capitalize"><CreditCard className="h-3 w-3" /> {bill.payment_method.replace('_', ' ')}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                                <p className="text-2xl font-bold text-[#082c59]">{formatCurrency(bill.amount)}</p>
+                                                <div className="flex gap-2">
+                                                    <Button onClick={() => { setSelectedBill(bill); setShowInvoice(true); }} variant="outline" size="sm">
+                                                        <Eye className="h-4 w-4 mr-1" /> View
+                                                    </Button>
+                                                    <Button onClick={() => downloadPDF(bill)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75]">
+                                                        <Download className="h-4 w-4 mr-1" /> Download
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                <div className="space-y-3" data-testid="receipts-list-view">
                     {paginatedBills.map((bill, index) => (
                         <Card 
                             key={bill.id} 
@@ -635,6 +770,7 @@ export default function Receipts() {
                         </Card>
                     ))}
                 </div>
+                )
             )}
 
             {/* Pagination */}

@@ -5,6 +5,8 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 
 ## Latest Changes (Apr 2026)
+- **Tri-view mode + Quick Date filter + Operator scope** on Receipts / Orders / Bills / Transactions / Reports — reusable `QuickDateRangeFilter` (Today, Last 3/7/30 days, This/Last Month, This Year, Custom) and `ViewModeToggle` (List / Grid / Details)
+- **New page**: `/transactions` — unified payment transactions view with search, status/method/operator/date filters and 3 view modes
 - **Walk-in / Cash Bookings**: Operators can record on-site bookings for ALL services via `POST /api/operator/manual-bookings/`. Unified channel filter (Online/Walk-in) on every management page's new "Bookings" tab. Optional linking of walk-in to existing customer by phone/email.
 - **Robust Notifications**: New `utils/notifications.py` helper with `dedupe_key`-based upsert. Partial-unique index `(user_id, dedupe_key)` + one-shot migration at startup. Reading a notification once truly keeps it read — no more re-popping on login.
 - **Travel Ticket Vehicle Info**: Travel orders auto-enrich with `booking_details.vehicle_info` (plate, model, image). "Your Vehicle" card on OrderDetailModal + BookingConfirmation.

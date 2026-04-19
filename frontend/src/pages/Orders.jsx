@@ -34,6 +34,9 @@ import {
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import { activityLogger } from '../utils/activityLogger';
 import { formatFCFA } from '../utils/currency';
+import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
+import QuickDateRangeFilter, { inRange } from '../components/common/QuickDateRangeFilter';
+import ViewModeToggle from '../components/common/ViewModeToggle';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -81,6 +84,9 @@ export default function Orders() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [operatorFilter, setOperatorFilter] = useState('');
+  const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
+  const [viewMode, setViewMode] = useState('list'); // list | grid | details
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -170,6 +176,16 @@ export default function Orders() {
       );
     }
 
+    // Operator filter (admin only)
+    if (operatorFilter) {
+      result = result.filter(order => order.operator_id === operatorFilter);
+    }
+
+    // Date range filter
+    if (dateRange.from || dateRange.to) {
+      result = result.filter(order => inRange(order.created_at, dateRange.from, dateRange.to));
+    }
+
     // Sorting
     result.sort((a, b) => {
       switch (sortBy) {
@@ -185,7 +201,7 @@ export default function Orders() {
     });
 
     return result;
-  }, [orders, searchQuery, statusFilter, categoryFilter, sortBy]);
+  }, [orders, searchQuery, statusFilter, categoryFilter, sortBy, operatorFilter, dateRange]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredAndSortedOrders.length / ITEMS_PER_PAGE);
@@ -245,9 +261,11 @@ export default function Orders() {
     setStatusFilter('all');
     setCategoryFilter('all');
     setSortBy('newest');
+    setOperatorFilter('');
+    setDateRange({ preset: 'all', from: null, to: null });
   };
 
-  const hasActiveFilters = searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || sortBy !== 'newest';
+  const hasActiveFilters = searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || sortBy !== 'newest' || operatorFilter || dateRange.preset !== 'all';
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -281,15 +299,26 @@ export default function Orders() {
               : 'Track and manage your bookings'}
           </p>
         </div>
-        {!isAllOrdersView && !isOperator && (
-          <Link to="/services">
-            <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
-              <Plus className="h-4 w-4 mr-2" />
-              Book New Service
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          {!isAllOrdersView && !isOperator && (
+            <Link to="/services">
+              <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
+                <Plus className="h-4 w-4 mr-2" />
+                Book New Service
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
+
+      {/* Admin operator filter */}
+      {isAllOrdersView && (
+        <div className="flex">
+          <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -570,7 +599,135 @@ export default function Orders() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="orders-grid-view">
+            {paginatedOrders.map((order) => (
+              <Card
+                key={order.id || order._id}
+                className="group bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-lg transition-all duration-200 overflow-hidden"
+              >
+                <div className={`h-1.5 ${getCategoryColor(order.service_category || order.service_type)}`} />
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-lg shrink-0">
+                        {getCategoryIcon(order.service_category || order.service_type)}
+                      </div>
+                      <span className="font-mono text-xs font-bold text-[#082c59] truncate">#{order.order_number}</span>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] ${getStatusColor(order.status)}`}>{order.status}</Badge>
+                  </div>
+                  <h3 className="font-semibold text-slate-900 truncate">{order.service_name || order.service_title || 'Service'}</h3>
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3" /> {formatDate(order.created_at)}
+                  </div>
+                  <div className="pt-2 border-t border-slate-100">
+                    <p className="text-[10px] uppercase text-slate-400">Total</p>
+                    <p className="text-xl font-bold text-[#082c59]">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="flex-1">
+                      <Eye className="h-3.5 w-3.5 mr-1" /> View
+                    </Button>
+                    {order.status === 'pending' && (
+                      <Button
+                        onClick={() => handleCancelOrder(order.id || order._id)}
+                        variant="outline" size="sm"
+                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : viewMode === 'details' ? (
+          <div className="space-y-3" data-testid="orders-details-view">
+            {paginatedOrders.map((order) => (
+              <Card key={order.id || order._id} className="bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-md transition-all">
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    <div className={`w-1.5 ${getCategoryColor(order.service_category || order.service_type)}`} />
+                    <div className="flex-1 p-5 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-[#082c59]">#{order.order_number}</span>
+                        <Badge variant="outline" className={`text-xs ${getStatusColor(order.status)}`}>{order.status}</Badge>
+                        {(order.service_category || order.service_type) && (
+                          <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 capitalize">{(order.service_category || order.service_type).replace('_', ' ')}</Badge>
+                        )}
+                        {order.channel === 'on_site' && (
+                          <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">Walk-in</Badge>
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-slate-900">{order.service_name || order.service_title || 'Service'}</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div>
+                          <p className="text-slate-400 uppercase tracking-wide">Date</p>
+                          <p className="text-slate-700 font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(order.created_at)}</p>
+                        </div>
+                        {order.customer_name && (
+                          <div>
+                            <p className="text-slate-400 uppercase tracking-wide">Customer</p>
+                            <p className="text-slate-700 font-medium flex items-center gap-1"><User className="h-3 w-3" /> {order.customer_name}</p>
+                          </div>
+                        )}
+                        {order.operator_name && (
+                          <div>
+                            <p className="text-slate-400 uppercase tracking-wide">Operator</p>
+                            <p className="text-slate-700 font-medium flex items-center gap-1"><Building2 className="h-3 w-3" /> {order.operator_name}</p>
+                          </div>
+                        )}
+                        {order.payment_method && (
+                          <div>
+                            <p className="text-slate-400 uppercase tracking-wide">Payment</p>
+                            <p className="text-slate-700 font-medium capitalize">{order.payment_method.replace('_', ' ')}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-slate-400 uppercase tracking-wide">Subtotal</p>
+                          <p className="text-slate-700 font-medium">{formatFCFA(order.subtotal || order.total_amount || 0)}</p>
+                        </div>
+                        {order.tax > 0 && (
+                          <div>
+                            <p className="text-slate-400 uppercase tracking-wide">Tax</p>
+                            <p className="text-slate-700 font-medium">{formatFCFA(order.tax)}</p>
+                          </div>
+                        )}
+                        {(order.discount > 0 || order.promo_discount > 0) && (
+                          <div>
+                            <p className="text-slate-400 uppercase tracking-wide">Discount</p>
+                            <p className="text-emerald-600 font-medium">-{formatFCFA(order.discount || order.promo_discount)}</p>
+                          </div>
+                        )}
+                      </div>
+                      {order.customer_notes && (
+                        <div className="p-2 bg-slate-50 rounded-lg border-l-2 border-slate-300">
+                          <p className="text-sm text-slate-600 italic">&ldquo;{order.customer_notes}&rdquo;</p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
+                        <div className="flex gap-2">
+                          <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm">
+                            <Eye className="h-4 w-4 mr-1" /> View
+                          </Button>
+                          {order.status === 'pending' && (
+                            <Button onClick={() => handleCancelOrder(order.id || order._id)} variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
+                              <XCircle className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+        <div className="space-y-3" data-testid="orders-list-view">
           {paginatedOrders.map((order) => (
             <Card
               key={order.id || order._id}
@@ -698,6 +855,7 @@ export default function Orders() {
             </Card>
           ))}
         </div>
+        )
       )}
 
       {/* Pagination */}
