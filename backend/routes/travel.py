@@ -119,8 +119,9 @@ async def get_travel_routes_management(
         if route.get("vehicle_id"):
             vehicle = await db.vehicles.find_one({"_id": route["vehicle_id"]})
             if vehicle:
-                route["vehicle_images"] = vehicle.get("images", [])
+                route["vehicle_images"] = vehicle.get("images", [])[:2]
                 route["vehicle_name"] = vehicle.get("vehicle_name", vehicle.get("name", ""))
+                route["plate_number"] = vehicle.get("plate_number", "")
     
     return {
         "routes": routes, 
@@ -180,9 +181,10 @@ async def get_travel_routes(
         route["id"] = str(route.pop("_id", route.get("id", "")))
         vehicle_id = route.get("vehicle_id")
         if vehicle_id:
-            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1})
+            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1, "plate_number": 1})
             if vehicle:
-                route["vehicle_images"] = vehicle.get("images", [])
+                route["vehicle_images"] = vehicle.get("images", [])[:2]
+                route["plate_number"] = vehicle.get("plate_number", "")
     
     return {"routes": routes, "total": total}
 
@@ -241,10 +243,10 @@ async def get_my_travel_routes(
         route["id"] = str(route.pop("_id", ""))
         vehicle_id = route.get("vehicle_id")
         if vehicle_id:
-            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1})
+            vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1, "plate_number": 1})
             if vehicle:
-                route["vehicle_images"] = vehicle.get("images", [])
-    
+                route["vehicle_images"] = vehicle.get("images", [])[:2]
+                route["plate_number"] = vehicle.get("plate_number", "")    
     return {
         "routes": routes, 
         "total": total,

@@ -63,17 +63,18 @@ const getVehicleTypeStyle = (vehicleType) => {
 const VehicleImageThumbnails = ({ images, vehicleName, onImageClick }) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
-  const displayImages = (images || []).slice(0, 4);
+  const displayImages = (images || []).slice(0, 2);
   
   if (!displayImages.length) return null;
   
   return (
-    <div className="flex gap-1 mt-2">
+    <div className="flex gap-1.5 mt-2">
       {displayImages.map((img, idx) => (
         <button 
           key={idx}
           onClick={(e) => { e.stopPropagation(); onImageClick(img, vehicleName); }}
-          className="w-10 h-8 rounded overflow-hidden bg-slate-100 hover:ring-2 hover:ring-blue-400 transition-all"
+          className="w-14 h-10 rounded-lg overflow-hidden bg-slate-100 hover:ring-2 hover:ring-blue-400 transition-all shadow-sm"
+          data-testid={`bus-thumbnail-${idx}`}
         >
           <img 
             src={getImageUrl(img)} 
@@ -82,11 +83,6 @@ const VehicleImageThumbnails = ({ images, vehicleName, onImageClick }) => {
           />
         </button>
       ))}
-      {(images || []).length > 4 && (
-        <div className="w-10 h-8 rounded bg-slate-200 flex items-center justify-center text-xs text-slate-600">
-          +{images.length - 4}
-        </div>
-      )}
     </div>
   );
 };
@@ -177,22 +173,27 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
           )}
         </div>
 
-        {/* Vehicle Name & Images */}
-        {trip.vehicle_name && (
-          <div className={`rounded-lg p-2.5 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-blue-50'}`}>
+        {/* Vehicle Info, Plate Number & Images */}
+        <div className={`rounded-xl p-3 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-blue-50/70 border border-blue-100'}`}>
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bus className={`w-4 h-4 ${isTripPast ? 'text-slate-400' : 'text-blue-600'}`} />
-              <span className={`text-sm font-medium ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name}</span>
+              <span className={`text-sm font-medium ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name || trip.operator_name}</span>
             </div>
-            {!isTripPast && trip.vehicle_images?.length > 0 && (
-              <VehicleImageThumbnails 
-                images={trip.vehicle_images} 
-                vehicleName={trip.vehicle_name}
-                onImageClick={onImageClick}
-              />
+            {trip.plate_number && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isTripPast ? 'bg-slate-200 text-slate-500' : 'bg-[#082c59]/10 text-[#082c59]'}`} data-testid={`plate-number-${tripId}`}>
+                {trip.plate_number}
+              </span>
             )}
           </div>
-        )}
+          {!isTripPast && trip.vehicle_images?.length > 0 && (
+            <VehicleImageThumbnails 
+              images={trip.vehicle_images} 
+              vehicleName={trip.vehicle_name || trip.operator_name}
+              onImageClick={onImageClick}
+            />
+          )}
+        </div>
 
         {/* Amenities */}
         <div className="flex flex-wrap gap-1.5 mb-4">
@@ -305,22 +306,27 @@ const TripCardList = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
             </div>
           </div>
 
-          {/* Vehicle Name & Images */}
-          {trip.vehicle_name && (
-            <div className={`rounded-lg p-3 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-blue-50'}`}>
+          {/* Vehicle Info, Plate Number & Images */}
+          <div className={`rounded-xl p-3 mb-3 ${isTripPast ? 'bg-slate-100' : 'bg-blue-50/70 border border-blue-100'}`}>
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bus className={`w-4 h-4 ${isTripPast ? 'text-slate-400' : 'text-blue-600'}`} />
-                <span className={`text-sm font-semibold ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name}</span>
+                <span className={`text-sm font-semibold ${isTripPast ? 'text-slate-500' : 'text-blue-800'}`}>{trip.vehicle_name || trip.operator_name}</span>
               </div>
-              {!isTripPast && trip.vehicle_images?.length > 0 && (
-                <VehicleImageThumbnails 
-                  images={trip.vehicle_images} 
-                  vehicleName={trip.vehicle_name}
-                  onImageClick={onImageClick}
-                />
+              {trip.plate_number && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${isTripPast ? 'bg-slate-200 text-slate-500' : 'bg-[#082c59]/10 text-[#082c59]'}`}>
+                  {trip.plate_number}
+                </span>
               )}
             </div>
-          )}
+            {!isTripPast && trip.vehicle_images?.length > 0 && (
+              <VehicleImageThumbnails 
+                images={trip.vehicle_images} 
+                vehicleName={trip.vehicle_name || trip.operator_name}
+                onImageClick={onImageClick}
+              />
+            )}
+          </div>
 
           {/* Amenities */}
           <div className="flex flex-wrap gap-2">
