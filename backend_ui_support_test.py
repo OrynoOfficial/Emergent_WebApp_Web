@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 class UIBackendSupportTester:
-    def __init__(self, base_url="https://management-scope-v1.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://booking-revamp-hub.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tokens = {}
         self.tests_run = 0
