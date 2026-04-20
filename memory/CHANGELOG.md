@@ -1,5 +1,15 @@
 # Oryno Platform — Changelog
 
+
+## Apr 20, 2026 — Admin Bookings Data Fetch Fix + support_tickets Cleanup
+- **Fix**: `/admin/bookings` page was returning 0 records — root cause was the frontend passing `limit=500` while the backend capped at `le=200`, causing a silent 422 error. Raised cap to `le=1000` in `backend/routes/manual_bookings.py` (GET `/api/operator/manual-bookings/`).
+- **Verified**: Admin now sees 163 bookings, Super Admin 163, Operator correctly scoped to 26.
+- **Cleanup**: Removed duplicate team endpoint definitions (`/team/members`, `/team/available`, `/team/add`, `/team/{id}`) from the bottom of `backend/routes/support_tickets.py`. The active `/team-members` endpoints (used by frontend CustomerServiceManagement) remain untouched.
+- **Test credentials fix**: Corrected Super Admin email in `memory/test_credentials.md` from `superadmin@test.com` → `superadmin@oryno.com`.
+- **UX polish**: Added stable fallback `key` props to all three list renderers in `admin/Bookings.jsx` to silence React key warnings.
+- Files changed: `backend/routes/manual_bookings.py`, `backend/routes/support_tickets.py`, `frontend/src/pages/admin/Bookings.jsx`, `memory/test_credentials.md`.
+- Testing: iteration_116.json — backend 9/9 PASS, frontend PASS (163/154/9 counts render with all 3 toolbar filters).
+
 ## Mar 10, 2026 — Real Dashboard Data, Communications Revamp & Subscription System
 
 ### Phase 1: Real Operator-Scoped Dashboard Data

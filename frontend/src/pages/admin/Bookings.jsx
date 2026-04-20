@@ -215,11 +215,11 @@ export default function AdminBookings() {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-bookings-grid">
-          {filtered.map(b => {
+          {filtered.map((b, idx) => {
             const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
             const Ch = CHANNEL_META[chKey];
             return (
-              <Card key={b.order_number} className="hover:shadow-lg transition-shadow">
+              <Card key={b.order_number || b.id || `grid-${idx}`} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-mono text-xs font-bold text-[#082c59] truncate">{b.order_number}</span>
@@ -254,11 +254,11 @@ export default function AdminBookings() {
         </div>
       ) : viewMode === 'details' ? (
         <div className="space-y-3" data-testid="admin-bookings-details">
-          {filtered.map(b => {
+          {filtered.map((b, idx) => {
             const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
             const Ch = CHANNEL_META[chKey];
             return (
-              <Card key={b.order_number} className="hover:shadow-md transition-shadow">
+              <Card key={b.order_number || b.id || `details-${idx}`} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-5 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm font-bold text-[#082c59]">{b.order_number}</span>
@@ -338,11 +338,11 @@ export default function AdminBookings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map(b => {
+                {filtered.map((b, idx) => {
                   const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
                   const Ch = CHANNEL_META[chKey];
                   return (
-                    <tr key={b.order_number} className="hover:bg-slate-50">
+                    <tr key={b.order_number || b.id || `row-${idx}`} className="hover:bg-slate-50">
                       <td className="p-3">
                         <p className="font-mono text-xs font-semibold text-[#082c59]">{b.order_number}</p>
                         <p className="text-xs text-slate-400">{formatDate(b.created_at)}</p>
