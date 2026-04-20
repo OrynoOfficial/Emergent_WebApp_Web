@@ -59,6 +59,7 @@ from routes.momo_checkout import router as momo_checkout_router
 from routes.operator_users import router as operator_users_router
 from routes.system_settings import router as system_settings_router
 from routes.operator_roles import router as operator_roles_router
+from routes.resource_reassignments import router as resource_reassignments_router
 from routes.document_templates import router as document_templates_router
 from routes.database_management import router as database_management_router
 from routes.otp import router as otp_router
@@ -273,6 +274,7 @@ app.include_router(analytics_router)
 
 # Include new management routers
 app.include_router(vehicles_router)
+app.include_router(resource_reassignments_router)
 app.include_router(operators_router)
 app.include_router(seat_bookings_router)
 app.include_router(rooms_router)

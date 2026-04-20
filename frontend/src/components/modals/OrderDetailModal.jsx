@@ -30,6 +30,8 @@ import {
   Hash,
   Armchair,
   Users as UsersIcon,
+  RefreshCw,
+  Info,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 
@@ -175,6 +177,43 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               <p className="text-sm font-medium">{formatDate(order.created_at, true)}</p>
             </div>
           </div>
+
+          {/* Reassignment banner — shows when the resource attached to this booking has been swapped */}
+          {Array.isArray(order.reassignment_history) && order.reassignment_history.length > 0 && (() => {
+            const latest = order.reassignment_history[order.reassignment_history.length - 1];
+            const fromLabel = latest?.from?.plate_number || latest?.from?.vehicle_name || latest?.from?.name || '—';
+            const toLabel = latest?.to?.plate_number || latest?.to?.vehicle_name || latest?.to?.name || '—';
+            const reasonLabel = latest?.reason_note || (latest?.reason ? latest.reason.charAt(0).toUpperCase() + latest.reason.slice(1) : 'Updated');
+            const at = latest?.at ? formatDate(latest.at, true) : '';
+            return (
+              <div
+                data-testid="reassignment-banner"
+                className="rounded-xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 flex gap-3"
+              >
+                <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <RefreshCw className="h-4 w-4 text-amber-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Your {order.service_type === 'travel' ? 'bus' : 'resource'} was changed
+                  </p>
+                  <p className="text-sm text-amber-800 mt-0.5">
+                    <span className="font-mono text-xs bg-white/60 border border-amber-200 px-1.5 py-0.5 rounded">{fromLabel}</span>
+                    <span className="mx-1.5">→</span>
+                    <span className="font-mono text-xs bg-white border border-amber-300 px-1.5 py-0.5 rounded font-bold">{toLabel}</span>
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                    <Info className="h-3 w-3" /> {reasonLabel}{at ? ` · ${at}` : ''}
+                  </p>
+                  {order.reassignment_history.length > 1 && (
+                    <p className="text-[11px] text-amber-600 mt-1">
+                      {order.reassignment_history.length} changes recorded for this booking.
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <Separator />
 

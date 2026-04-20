@@ -149,6 +149,7 @@ async def create_direct_order(
                 )
                 if vehicle:
                     booking_details["vehicle_info"] = vehicle
+                    booking_details["vehicle_id"] = route["vehicle_id"]
                     booking_details.setdefault("from_city", route.get("from_city"))
                     booking_details.setdefault("to_city", route.get("to_city"))
                     booking_details.setdefault("departure_time", route.get("departure_time"))

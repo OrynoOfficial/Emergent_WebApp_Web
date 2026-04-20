@@ -1,0 +1,50 @@
+{
+  "summary": "Iteration 117 — Resource Reassignment (Travel/Vehicle). Backend 11/12 pytest PASS (dry_run, commit+notifications, reason validation, same-id rejection, auth, 404 missing vehicle, customer-forbidden, admin/customer list scoping, order history persistence). 1 backend BUG in GET /api/operator/resources/reassignments. Frontend blocker: Replace icon button does NOT render on VehicleCard — DOM lookup for [data-testid^='replace-vehicle-btn-'] returned 0, even though Edit+Delete (same travel.edit permission) do render. ReplaceVehicleModal + OrderDetailModal banner flow cannot be exercised end-to-end until the button renders.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/operator/resources/reassignments", "issue": "Response strips every field except `id`. Each event returns only {id: '<uuid>'} — operator_id, service_type, from, to, reason, reason_note, affected_count, created_at, notifications_sent, triggered_by, affected_order_ids are all missing. Root cause (routes/resource_reassignments.py L477): db.find(..., {'_id': 0, 'id': '$_id'}).sort(...) — `'id': '$_id'` is aggregation-only syntax; in find() projection it silently excludes every other field. Fix: use projection {'_id': 0} and add a post-loop `it['id'] = it.pop('_id', None)` OR switch to db.aggregate([{'$match':...},{'$addFields':{'id':'$_id'}},{'$project':{'_id':0}},{'$sort':{'created_at':-1}}]).", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TravelManagement → VehicleCard (Management tab → Vehicles sub-tab)", "issue": "Replace icon button not rendered on any vehicle card. page.locator('[data-testid^=\"replace-vehicle-btn-\"]').count() = 0 on the Vehicles sub-tab for operator@test.com, even though sibling Edit/Delete buttons (same PermissionGate permission='travel.edit') DO render. Likely causes: (1) lucide-react `Replace` import: grep of lucide-react v0.x dist .d.ts shows export list is enormous — confirm exact named export `Replace` exists in the installed version (it may be exported as `ReplaceIcon` / need aliasing); (2) a silent render error swallowed by React error boundary; (3) state check on vehicle blocks the button. Because the button is not in the DOM, the full UI flow — ReplaceVehicleModal (form → preview → done) — cannot be tested.", "selector": "[data-testid^='replace-vehicle-btn-']", "priority": "CRITICAL"},
+      {"component": "AdminAnalytics (post-login landing page for operator)", "issue": "2× 500 errors: 'Failed to load dashboard stats: AxiosError'. Not in scope of iter117 but surfaces on every operator/admin login and pollutes console — may indicate a broken analytics endpoint.", "selector": "/admin/analytics (dashboard stats call)", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Operator → Travel Management → Vehicles → Replace", "issue": "Blocked by UI bug above. Cannot reach ReplaceVehicleModal from the UI; only verified at the API layer.", "affected_selectors": ["[data-testid^='replace-vehicle-btn-']", "[data-testid='replace-vehicle-modal']"]},
+      {"flow": "OrderDetailModal reassignment banner", "issue": "Not exercised end-to-end in the UI this iteration because the previous blocker prevented a clean UI-driven reassignment. Backend persistence of reassignment_history IS verified (test_orders_have_reassignment_history_after_commit PASS). Banner render logic should be retested once the Replace button is fixed."}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration117_resource_reassignment.py",
+    "/app/test_reports/pytest/iter117.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix GET /api/operator/resources/reassignments projection — replace {'_id':0,'id':'$_id'} with {'_id':0} and remap `_id`→`id` in the Python loop. Currently the endpoint is functionally broken for any consumer.",
+    "CRITICAL: Investigate why [data-testid^='replace-vehicle-btn-'] is not in the DOM on Travel Management → Vehicles sub-tab. Check (a) whether lucide-react version used actually exports `Replace` (if not, use `Replace as ReplaceIcon` or switch to RefreshCw/Repeat), (b) whether PermissionGate condition differs from Edit button, (c) any runtime error thrown while rendering <Replace/> that unmounts the wrapping PermissionGate.",
+    "Re-run full UI flow (open modal → preview → confirm → OrderDetailModal banner assertion) after the Replace button is visible.",
+    "Optional: fix dashboard stats 500 error on /admin/analytics (unrelated to iter117)."
+  ],
+  "critical_code_review_comments": [
+    "routes/resource_reassignments.py L477: invalid find() projection ({'_id':0,'id':'$_id'}) strips ALL event fields from list response — the history list UI will appear empty even though events are persisted. HIGH priority fix.",
+    "routes/resource_reassignments.py L202-L210: operator_users lookup uses role filter `{'$in': ['operator']}` which is equivalent to `== 'operator'`; consider including staff/team-member roles if team notifications are meant for more than owner operators.",
+    "Notification dedupe: dedupe_key uses fresh event_id per call, so two successive identical reassigns DO create new notifications — that is expected here, but the task description called out 'running the same reassign event id twice does NOT double-insert'. Dedupe only protects within a single event fan-out, not across events. Clarify wording.",
+    "ReplaceVehicleModal.jsx: candidates filter excludes vehicles where maintenance_status='retired' but NOT 'out_of_service' or inactive — consider broadening.",
+    "TravelManagement.jsx line 371: Replace button uses same `permission='travel.edit'` as Edit button, but only Edit renders — likely not a perm issue. Root cause is either a missing lucide export or runtime error."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration117_resource_reassignment.py"
+  ],
+  "success_rate": {
+    "backend": "92% (11/12 pass; 1 failure exposed real bug in list endpoint projection)",
+    "frontend": "BLOCKED — Replace button not rendered; UI flow untestable end-to-end"
+  },
+  "test_credentials": "operator@test.com / admin@test.com / superadmin@oryno.com / customer@test.com — all testpassword123",
+  "seed_data_creation": "Pytest called the reassign commit endpoint twice (maintenance + upgrade) against operator's 2 vehicles. This populates reassignment_history entries on ~11 travel orders and creates 2-3 new resource_reassignments event docs + associated notifications. Idempotent swap (A↔B↔A) so the baseline vehicle mapping is preserved.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Backend list-endpoint bug: `projection {'_id': 0, 'id': '$_id'}` in db.orders equivalents is invalid for find() — mongo silently returns only the explicit aggregation-value field. This pattern likely exists elsewhere — grep for `'$_id'` in routes/. (2) UI: the first browser run captured a full screenshot of the Vehicles sub-tab showing RE-999-XX and CE-456-CD cards, each with only View + Edit (pencil) + Delete (trash) buttons — Replace icon missing. Test file /app/backend/tests/test_iteration117_resource_reassignment.py uses REACT_APP_BACKEND_URL fallback that reads /app/frontend/.env if the env var is not set (pytest run without supervisor env needed this).",
+  "rca of the issue": "Backend list bug: MongoDB find() projection values must be 0/1/boolean; a string like '$_id' is valid only in aggregation $project stages. pymongo accepts it but treats it as 'exclude everything else and include only this field with no renaming logic executed'. Hence events returned contain only `id` (which is the literal string '$_id' being coerced? no — after test inspection the value IS the actual uuid, suggesting pymongo DID substitute). Either way, all other fields vanish. Fix: remove the rename, project {'_id':0,...all_real_fields:1} OR do {'_id':1,...} then rename in Python. Frontend Replace button: not yet RCA'd — recommend the main agent add a temporary console.log or check browser console for error to confirm whether lucide-react `Replace` export exists in the installed version."
+}

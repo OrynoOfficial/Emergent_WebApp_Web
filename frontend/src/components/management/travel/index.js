@@ -5,3 +5,4 @@ export { RouteForm } from './RouteForm';
 export { VehicleForm } from './VehicleForm';
 export { ViewDetailsDialog } from './ViewDetailsDialog';
 export { BusinessAnalytics } from './BusinessAnalytics';
+export { default as ReplaceVehicleModal } from './ReplaceVehicleModal';

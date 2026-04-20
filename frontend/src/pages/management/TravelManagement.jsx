@@ -10,7 +10,7 @@ import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
   MapPin, Clock, Users, ArrowRight, Eye, CheckCircle, Search, Filter, TrendingUp,
   DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight,
-  Receipt, Banknote
+  Receipt, Banknote, Replace
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
@@ -30,7 +30,7 @@ import SeatLayoutEditor from '@/components/travel/SeatLayoutEditor';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 
 // Travel-specific components
-import { RouteForm, VehicleForm, ViewDetailsDialog } from '@/components/management/travel';
+import { RouteForm, VehicleForm, ViewDetailsDialog, ReplaceVehicleModal } from '@/components/management/travel';
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -261,7 +261,7 @@ const RouteCard = ({ route, onView, onEdit, onDelete, onApprove, isAdmin }) => {
 };
 
 // Modern Vehicle Card Component with Images
-const VehicleCard = ({ vehicle, onView, onEdit, onDelete }) => {
+const VehicleCard = ({ vehicle, onView, onEdit, onDelete, onReplace }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
@@ -368,6 +368,11 @@ const VehicleCard = ({ vehicle, onView, onEdit, onDelete }) => {
             <Eye className="w-4 h-4 mr-1" /> View
           </Button>
           <PermissionGate permission="travel.edit">
+            <Button size="sm" variant="outline" onClick={() => onReplace?.(vehicle)} title="Replace on all active bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-vehicle-btn-${vehicle.id}`}>
+              <Replace className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="travel.edit">
             <Button size="sm" variant="outline" onClick={() => onEdit(vehicle)}>
               <Edit className="w-4 h-4" />
             </Button>
@@ -413,6 +418,7 @@ export default function TravelManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [replaceVehicle, setReplaceVehicle] = useState(null);
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
   const dashboardData = useRealDashboardData('travel', '30days', scopeOperatorId);
@@ -772,6 +778,7 @@ export default function TravelManagement() {
                         onView={(v) => handleViewItem(v, 'vehicle')}
                         onEdit={openVehicleDialog}
                         onDelete={handleDeleteVehicle}
+                        onReplace={setReplaceVehicle}
                       />
                     ))}
                   </div>
@@ -886,6 +893,18 @@ export default function TravelManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      {/* Replace Vehicle Modal */}
+      <ReplaceVehicleModal
+        open={!!replaceVehicle}
+        onClose={() => setReplaceVehicle(null)}
+        oldVehicle={replaceVehicle}
+        allVehicles={vehicles}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadData?.();
         }}
       />
     </div>
