@@ -276,6 +276,29 @@ def test_list_reassignments_admin_sees_all(admin_token):
     assert isinstance(body["events"], list)
 
 
+def test_list_reassignments_returns_full_event_docs(op_token):
+    """Iter118 retest: GET /reassignments must return full event docs, not just {id}."""
+    r = requests.get(
+        f"{API}/operator/resources/reassignments?service_type=travel",
+        headers={"Authorization": f"Bearer {op_token}"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    events = body.get("events", [])
+    assert len(events) >= 1, "Expected at least one reassignment event from prior tests"
+    ev = events[0]
+    # Must have these fields populated (the bug returned only {id})
+    expected_keys = ["id", "operator_id", "service_type", "from", "to",
+                     "reason", "affected_count", "notifications_sent",
+                     "affected_order_ids", "created_at"]
+    missing = [k for k in expected_keys if k not in ev]
+    assert not missing, f"Missing fields in event response: {missing}. Got keys: {list(ev.keys())}"
+    assert ev["service_type"] == "travel"
+    assert isinstance(ev["from"], dict)
+    assert isinstance(ev["to"], dict)
+    assert isinstance(ev["affected_count"], int)
+
+
 def test_list_reassignments_customer_forbidden(customer_token):
     r = requests.get(
         f"{API}/operator/resources/reassignments",

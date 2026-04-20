@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 118 retest of iter117 fixes — BOTH BLOCKERS RESOLVED. (A) GET /api/operator/resources/reassignments now returns full event docs with id, operator_id, service_type, from, to, reason, affected_count, notifications_sent, affected_order_ids, created_at — verified by new pytest test_list_reassignments_returns_full_event_docs (PASS) and live API call (returned event with affected_count=11, customers=6, operator_users=1, admins=2). (B) Replace icon button now renders on VehicleCard — page.locator('[data-testid^=replace-vehicle-btn-]').count()=2 for operator@test.com on /management/travel → Management → Vehicles. Full UI flow exercised end-to-end: button click → ReplaceVehicleModal opens (Replace Vehicle title, BEING REPLACED card, Replacement vehicle dropdown listing CE-456-CD with 25 seats, reason pills with Breakdown pre-selected, Note textarea) → select replacement → click Preview impact → modal advances to Step 2 with from→to summary and 'X active booking(s) will be updated' → click 'Confirm & notify N booking(s)' → success Step 3 'Reassignment complete' with notification counts. NO React console errors related to ReplaceIcon import. The lucide-react `Replace as ReplaceIcon` alias works correctly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "OrderDetailModal reassignment-banner UI render", "issue": "Could not click into a specific booking row on /admin/bookings to assert [data-testid='reassignment-banner'] in this run — the bookings list uses div-based rows (not <tr>) and clicking the order-number text did not open the OrderDetailModal in the headless browser (no [role=dialog] appeared). Backend persistence of reassignment_history IS confirmed (live swap returned 11 affected orders; affected_order_ids include TRV-20260419-AE866203). The banner DOM logic should be functionally correct given the data is now persisted, but a UI-level visual confirmation of the amber banner with from→to plate numbers was not captured this iteration. Recommend a quick self-test by main agent: navigate to /admin/bookings, click the eye/details icon on TRV-20260419-AE866203, and verify the amber [data-testid='reassignment-banner'] renders showing CE-456-CD → RE-999-XX with reason 'breakdown'.", "affected_selectors": ["[data-testid='reassignment-banner']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration117_resource_reassignment.py",
+    "/app/test_reports/pytest/iter118.xml"
+  ],
+  "action_items": [
+    "Optional: Main agent self-test the OrderDetailModal amber banner by opening any TRV-20260419-* order in /admin/bookings (e.g. AE866203, 299CCA24, 2149D8A9 — all have fresh reassignment_history from this iteration's swap from CE-456-CD → RE-999-XX). The data is confirmed persisted; only a quick visual click-through is needed.",
+    "Optional (unrelated): /admin/analytics dashboard stats endpoint still returns 500 — present since iter117, not in iter118 scope."
+  ],
+  "critical_code_review_comments": [
+    "routes/resource_reassignments.py L477-485: fix is clean and correct — find() with {} projection then post-loop _id→id remap and datetime ISO serialization. Good defensive pattern.",
+    "TravelManagement.jsx line 13: `Replace as ReplaceIcon` aliasing is the right call — avoids any DOM/transpile naming collision with the global Replace identifier. Render verified."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration117_resource_reassignment.py"],
+  "success_rate": {"backend": "100% (4/4 list-endpoint tests + iter117 baseline 11/11)", "frontend": "~90% — full Replace flow verified (button → modal → preview → confirm → success); only OrderDetailModal banner visual click-through deferred"},
+  "test_credentials": "operator@test.com / admin@test.com / superadmin@oryno.com — all testpassword123",
+  "seed_data_creation": "Performed one live API reassign during testing: vehicle CE-456-CD → RE-999-XX (reason=breakdown, note='iter118 banner verification swap'). Result: affected_count=11 orders, 6 customer notifications, 1 operator_user, 2 admin notifications. Affected orders include TRV-20260419-AE866203, TRV-20260419-299CCA24, TRV-20260419-2149D8A9. These orders now have reassignment_history entries pointing CE-456-CD → RE-999-XX. UI commit also exercised but with 0-affected (state was already swapped at that moment).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iter117 blockers are CLOSED. Backend list endpoint fixed and asserted. Replace button + modal flow render and complete end-to-end. The only piece NOT visually confirmed in this iteration is the amber reassignment-banner inside OrderDetailModal — but the underlying reassignment_history data was freshly written to ~11 travel orders during this run, so a 30-second main-agent self-test on TRV-20260419-AE866203 in /admin/bookings should confirm. Bookings list rows are div-based (not <tr>), so use the rightmost eye/details icon button per row, not row-text click.",
+  "rca of the issue": "iter117 bug A: pymongo find() projection cannot use aggregation expressions ($_id rename) — silently strips fields. Fix in iter118 uses plain {'_id': 0} project then Python remap. iter117 bug B: lucide-react `Replace` import — fixed by aliasing as ReplaceIcon to avoid any transpile-time name conflict with browser globals; button now renders for both vehicle cards with correct data-testids."
+}

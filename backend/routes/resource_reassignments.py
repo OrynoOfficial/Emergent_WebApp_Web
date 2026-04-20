@@ -474,11 +474,12 @@ async def list_reassignments(
         query["service_type"] = service_type
 
     limit = max(1, min(limit, 200))
-    cursor = db.resource_reassignments.find(query, {"_id": 0, "id": "$_id"}).sort(
-        "created_at", -1
-    ).limit(limit)
+    # Motor's find() does not support aggregation expressions in projection, so use a
+    # plain {"_id": 0} and remap in Python.
+    cursor = db.resource_reassignments.find(query).sort("created_at", -1).limit(limit)
     items = await cursor.to_list(limit)
     for it in items:
+        it["id"] = it.pop("_id", None)
         if isinstance(it.get("created_at"), datetime):
             it["created_at"] = it["created_at"].isoformat()
     return {"events": items, "total": len(items)}

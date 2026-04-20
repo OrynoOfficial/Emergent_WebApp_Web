@@ -10,7 +10,7 @@ import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
   MapPin, Clock, Users, ArrowRight, Eye, CheckCircle, Search, Filter, TrendingUp,
   DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight,
-  Receipt, Banknote, Replace
+  Receipt, Banknote, Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
@@ -369,7 +369,7 @@ const VehicleCard = ({ vehicle, onView, onEdit, onDelete, onReplace }) => {
           </Button>
           <PermissionGate permission="travel.edit">
             <Button size="sm" variant="outline" onClick={() => onReplace?.(vehicle)} title="Replace on all active bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-vehicle-btn-${vehicle.id}`}>
-              <Replace className="w-4 h-4" />
+              <ReplaceIcon className="w-4 h-4" />
             </Button>
           </PermissionGate>
           <PermissionGate permission="travel.edit">
