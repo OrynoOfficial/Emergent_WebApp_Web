@@ -1,17 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap');
 
-/* Preview: Inter for A/B testing on Orders + TravelManagement */
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
-@import '@fontsource/inter/600.css';
-@import '@fontsource/inter/700.css';
-
-/* Opt-in utility: wraps a page/section with Inter font */
-.font-preview, .font-preview * {
-  font-family: 'Inter', system-ui, sans-serif !important;
-  font-feature-settings: 'cv11', 'ss01', 'ss03'; /* Inter's refined variants */
-}
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
