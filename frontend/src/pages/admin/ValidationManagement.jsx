@@ -21,6 +21,7 @@ import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import { StatusTag, StatusFlowIndicator } from './validation/StatusComponents';
 import { StatusHistory } from './validation/StatusHistory';
 import { ValidationSubPage } from './validation/ValidationSubPage';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 
 export default function ValidationManagement() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export default function ValidationManagement() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [operatorFilter, setOperatorFilter] = useState('');
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isSuperAdmin = user?.role === 'super_admin';
@@ -114,6 +116,22 @@ export default function ValidationManagement() {
     ...data.services.banquets.map(s => ({ ...s, type: 'banquet' })),
     ...(isSuperAdmin ? (data.pending_operators || []).map(s => ({ ...s, type: 'operator' })) : []),
   ], [data, isSuperAdmin]);
+
+  // Operator scope filter — if an operator is selected, filter all collections by operator_id
+  const byOperator = useCallback((arr) => {
+    if (!operatorFilter) return arr;
+    return arr.filter(x => (x.operator_id || x.raw?.operator_id) === operatorFilter);
+  }, [operatorFilter]);
+
+  const filteredPayments = useMemo(() => byOperator(data.pending_payments || []), [data.pending_payments, byOperator]);
+  const filteredTickets = useMemo(() => byOperator(allTickets), [allTickets, byOperator]);
+  const filteredServices = useMemo(() => byOperator(allServices), [allServices, byOperator]);
+  const filteredPromotions = useMemo(() => byOperator(data.pending_promotions || []), [data.pending_promotions, byOperator]);
+  const filteredHistory = useMemo(() => {
+    const entries = (history.entries || []);
+    return operatorFilter ? entries.filter(e => e.operator_id === operatorFilter) : entries;
+  }, [history.entries, operatorFilter]);
+  const filteredHistoryByType = useCallback((type) => filteredHistory.filter(e => e.item_type === type), [filteredHistory]);
 
   const pendingCounts = {
     payments: data.counts.pending_payments || 0,
@@ -297,12 +315,15 @@ export default function ValidationManagement() {
   return (
     <div className="bg-slate-50 min-h-screen p-4 sm:p-6 lg:p-8" data-testid="validation-page">
       <div className="bg-white mb-6 p-5 rounded-xl shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-[#082c59]">Service Validation Center</h1>
             <p className="text-slate-500 text-sm mt-1">Review, approve, and track validations</p>
           </div>
-          <Button onClick={loadData} variant="outline" disabled={isLoading}><RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+            <Button onClick={loadData} variant="outline" disabled={isLoading}><RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</Button>
+          </div>
         </div>
       </div>
 
@@ -323,10 +344,10 @@ export default function ValidationManagement() {
               <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Package className="h-3.5 w-3.5" />Services {pendingCounts.services > 0 && <Badge className="bg-purple-500 text-white text-[9px] px-1">{pendingCounts.services}</Badge>}</TabsTrigger>
               <TabsTrigger value="promotions" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Megaphone className="h-3.5 w-3.5" />Promotions {pendingCounts.promotions > 0 && <Badge className="bg-violet-500 text-white text-[9px] px-1">{pendingCounts.promotions}</Badge>}</TabsTrigger>
             </TabsList>
-            <TabsContent value="payments"><ValidationSubPage items={data.pending_payments} renderCard={renderPaymentCard} emptyText="No pending payments" /></TabsContent>
-            <TabsContent value="tickets"><ValidationSubPage items={allTickets} renderCard={renderTicketCard} emptyText="No pending tickets" /></TabsContent>
-            <TabsContent value="services"><ValidationSubPage items={allServices} renderCard={renderServiceCard} emptyText="No pending services" /></TabsContent>
-            <TabsContent value="promotions"><ValidationSubPage items={data.pending_promotions || []} renderCard={renderPromotionCard} emptyText="No pending promotions" /></TabsContent>
+            <TabsContent value="payments"><ValidationSubPage items={filteredPayments} renderCard={renderPaymentCard} emptyText="No pending payments" /></TabsContent>
+            <TabsContent value="tickets"><ValidationSubPage items={filteredTickets} renderCard={renderTicketCard} emptyText="No pending tickets" /></TabsContent>
+            <TabsContent value="services"><ValidationSubPage items={filteredServices} renderCard={renderServiceCard} emptyText="No pending services" /></TabsContent>
+            <TabsContent value="promotions"><ValidationSubPage items={filteredPromotions} renderCard={renderPromotionCard} emptyText="No pending promotions" /></TabsContent>
           </Tabs>
         </TabsContent>
         <TabsContent value="validated">
@@ -337,10 +358,10 @@ export default function ValidationManagement() {
               <TabsTrigger value="services" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Package className="h-3.5 w-3.5" />Services <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.service || 0}</Badge></TabsTrigger>
               <TabsTrigger value="promotions" className="flex items-center gap-1.5 text-xs data-[state=active]:bg-[#082c59] data-[state=active]:text-white"><Megaphone className="h-3.5 w-3.5" />Promotions <Badge variant="outline" className="text-[9px] px-1 ml-1">{validatedCounts.promotion || 0}</Badge></TabsTrigger>
             </TabsList>
-            <TabsContent value="payments"><ValidationSubPage items={historyByType('payment')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated payments yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
-            <TabsContent value="tickets"><ValidationSubPage items={historyByType('ticket')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated tickets yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
-            <TabsContent value="services"><ValidationSubPage items={historyByType('service')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated services yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
-            <TabsContent value="promotions"><ValidationSubPage items={historyByType('promotion')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated promotions yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="payments"><ValidationSubPage items={filteredHistoryByType('payment')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated payments yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="tickets"><ValidationSubPage items={filteredHistoryByType('ticket')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated tickets yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="services"><ValidationSubPage items={filteredHistoryByType('service')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated services yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
+            <TabsContent value="promotions"><ValidationSubPage items={filteredHistoryByType('promotion')} renderCard={renderHistoryCard} showBulk={false} emptyText="No validated promotions yet" emptyIcon={<History className="h-14 w-14 mb-3 text-slate-300" />} /></TabsContent>
           </Tabs>
         </TabsContent>
       </Tabs>

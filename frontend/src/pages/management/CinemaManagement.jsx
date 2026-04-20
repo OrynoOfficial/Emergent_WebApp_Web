@@ -429,7 +429,7 @@ export default function CinemaManagement() {
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="cinema" refreshKey={bookingsRefreshKey} />
+          <OperatorBookingsList serviceType="cinema" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

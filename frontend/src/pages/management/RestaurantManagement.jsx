@@ -714,7 +714,7 @@ export default function RestaurantManagement() {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings">
-            <OperatorBookingsList serviceType="restaurant" refreshKey={bookingsRefreshKey} />
+            <OperatorBookingsList serviceType="restaurant" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
           </TabsContent>
 
           {/* Communications Tab */}

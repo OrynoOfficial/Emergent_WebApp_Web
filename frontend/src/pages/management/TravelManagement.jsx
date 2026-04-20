@@ -782,7 +782,7 @@ export default function TravelManagement() {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="mt-6">
-            <OperatorBookingsList serviceType="travel" refreshKey={bookingsRefreshKey} />
+            <OperatorBookingsList serviceType="travel" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
           </TabsContent>
 
           {/* Communications Tab */}

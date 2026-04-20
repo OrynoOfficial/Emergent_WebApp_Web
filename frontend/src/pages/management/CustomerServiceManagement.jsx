@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -870,6 +871,8 @@ export default function CustomerServiceManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [chatBotOpen, setChatBotOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
+  const [operatorFilter, setOperatorFilter] = useState('');
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   const getSubTabStatuses = useCallback(() => {
     switch (ticketSubTab) {
@@ -888,13 +891,14 @@ export default function CustomerServiceManagement() {
       const params = new URLSearchParams();
       getSubTabStatuses().forEach(s => params.append('status', s));
       if (searchTerm) params.append('search', searchTerm);
+      if (operatorFilter) params.append('operator_id', operatorFilter);
       params.append('sort_by', sortBy); params.append('sort_order', sortOrder);
       params.append('skip', String((currentPage - 1) * 8)); params.append('limit', '8');
       const r = await api.get(`/support-tickets/?${params.toString()}`);
       setTickets(r.data.tickets || []); setTotal(r.data.total || 0); setTotalPages(r.data.pages || 1);
     } catch { toast.error('Failed to load tickets'); }
     finally { setLoading(false); }
-  }, [searchTerm, sortBy, sortOrder, currentPage, getSubTabStatuses]);
+  }, [searchTerm, sortBy, sortOrder, currentPage, getSubTabStatuses, operatorFilter]);
 
   const loadStats = useCallback(async () => { try { const r = await api.get('/support-tickets/stats'); setStats(r.data); } catch {} }, []);
   const loadTeamMembers = useCallback(async () => { try { const r = await api.get('/support-tickets/team-members'); setTeamMembers(r.data.team_members || []); } catch {} }, []);
@@ -980,6 +984,9 @@ export default function CustomerServiceManagement() {
             <h1 className="text-2xl font-bold text-slate-900">Customer Service Center</h1>
             <p className="text-slate-500 text-sm mt-0.5">Manage support tickets and team</p>
           </div>
+          {isAdmin && (
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+          )}
         </div>
 
         {/* Tabs */}

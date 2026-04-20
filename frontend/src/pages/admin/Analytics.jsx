@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import api from '../../api/client';
+import OperatorScopeFilter from '../../components/common/OperatorScopeFilter';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Area, AreaChart } from 'recharts';
 
 const SERVICE_COLORS = {
@@ -116,20 +117,26 @@ export default function Analytics() {
   const [dataAnalytics, setDataAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState('6months');
+  const [operatorFilter, setOperatorFilter] = useState('');
   
   // Get user context to personalize analytics for operators
   const { user, isOperatorUser, operatorContext, operatorServiceTypes } = useAuth();
   const isOperator = isOperatorUser || user?.role === 'operator';
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   useEffect(() => {
     fetchAnalytics();
-  }, [timeFilter]);
+  }, [timeFilter, operatorFilter]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
       // Build params based on user role
       const params = { period: timeFilter };
+      // Admin-selected operator scope
+      if (isAdmin && operatorFilter) {
+        params.operator_id = operatorFilter;
+      }
       
       // If operator, filter by their services
       if (isOperator && operatorContext?.operator_id) {
@@ -327,18 +334,23 @@ export default function Analytics() {
               : 'Comprehensive business intelligence dashboard'}
           </p>
         </div>
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-40" data-testid="time-filter-select">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7days">Last 7 Days</SelectItem>
-            <SelectItem value="30days">Last 30 Days</SelectItem>
-            <SelectItem value="3months">Last 3 Months</SelectItem>
-            <SelectItem value="6months">Last 6 Months</SelectItem>
-            <SelectItem value="1year">Last Year</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && (
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+          )}
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-40" data-testid="time-filter-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="3months">Last 3 Months</SelectItem>
+              <SelectItem value="6months">Last 6 Months</SelectItem>
+              <SelectItem value="1year">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Extended Summary Stats (from Data Analytics) */}

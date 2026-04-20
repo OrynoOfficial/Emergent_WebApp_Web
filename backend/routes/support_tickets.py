@@ -556,6 +556,7 @@ async def get_tickets(
     user_type: Optional[str] = None,  # customer or operator
     assigned_to: Optional[str] = None,
     unassigned: Optional[bool] = None,
+    operator_id: Optional[str] = None,  # Admin-only filter
     search: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
@@ -582,6 +583,9 @@ async def get_tickets(
             query["customer_id"] = current_user["_id"]
     elif role not in ("admin", "super_admin", "employee"):
         query["customer_id"] = current_user["_id"]
+    elif role in ("admin", "super_admin") and operator_id:
+        # Admin-selected operator scope
+        query["operator_id"] = operator_id
     
     # Handle multiple statuses (for sub-tabs)
     if status:
@@ -1530,150 +1534,3 @@ async def delete_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     
     return {"message": "Ticket deleted successfully"}
-
-
-# ==================== TEAM MANAGEMENT ENDPOINTS ====================
-
-@router.get("/team/members")
-async def get_team_members(
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Get all current support team members"""
-    if current_user.get("role") not in ["admin", "super_admin", "employee"]:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    db = get_database()
-    
-    # Get team members from support_team collection
-    team = await db.support_team.find({}).to_list(100)
-    
-    # Enrich with user details
-    members = []
-    for t in team:
-        user = await db.users.find_one({"_id": t.get("user_id")}, {"password_hash": 0})
-        if user:
-            members.append({
-                "id": t.get("_id") or t.get("user_id"),
-                "user_id": t.get("user_id"),
-                "name": user.get("full_name", "Unknown"),
-                "email": user.get("email", ""),
-                "role": user.get("role", "employee"),
-                "department": t.get("department", "General"),
-                "status": t.get("status", "active"),
-                "joined_at": t.get("joined_at")
-            })
-    
-    return {"members": members}
-
-
-@router.get("/team/available")
-async def get_available_team_members(
-    search: Optional[str] = None,
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Get users who can be added to the support team (not already members)"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    db = get_database()
-    
-    # Get current team member user IDs
-    team = await db.support_team.find({}, {"user_id": 1}).to_list(500)
-    existing_member_ids = [t.get("user_id") for t in team]
-    
-    # Find eligible users not in team (admins, employees)
-    query = {
-        "_id": {"$nin": existing_member_ids},
-        "role": {"$in": ["admin", "super_admin", "employee"]},
-        "status": "active"
-    }
-    
-    if search:
-        query["$or"] = [
-            {"full_name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}}
-        ]
-    
-    users = await db.users.find(query, {"password_hash": 0}).limit(50).to_list(50)
-    
-    available = []
-    for user in users:
-        available.append({
-            "id": user.get("_id"),
-            "name": user.get("full_name", "Unknown"),
-            "email": user.get("email", ""),
-            "role": user.get("role", "employee"),
-            "department": user.get("department", "General"),
-            "is_existing_member": False
-        })
-    
-    return {"available": available, "existing_member_ids": existing_member_ids}
-
-
-@router.post("/team/add")
-async def add_team_member(
-    member_data: dict,
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Add a user to the support team"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    db = get_database()
-    
-    user_id = member_data.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
-    
-    # Check if already a team member
-    existing = await db.support_team.find_one({"user_id": user_id})
-    if existing:
-        raise HTTPException(status_code=400, detail="User is already a team member")
-    
-    # Verify user exists
-    user = await db.users.find_one({"_id": user_id})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Add to team
-    team_member = {
-        "_id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "department": member_data.get("department", "General"),
-        "status": "active",
-        "added_by": current_user["_id"],
-        "joined_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    await db.support_team.insert_one(team_member)
-    
-    return {
-        "message": f"{user.get('full_name', 'User')} added to support team",
-        "member": {
-            "id": team_member["_id"],
-            "user_id": user_id,
-            "name": user.get("full_name", "Unknown"),
-            "email": user.get("email", ""),
-            "department": team_member["department"]
-        }
-    }
-
-
-@router.delete("/team/{member_id}")
-async def remove_team_member(
-    member_id: str,
-    current_user: dict = Depends(get_current_active_user)
-):
-    """Remove a user from the support team"""
-    if current_user.get("role") not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    db = get_database()
-    
-    # Try to find by _id or user_id
-    result = await db.support_team.delete_one({"$or": [{"_id": member_id}, {"user_id": member_id}]})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Team member not found")
-    
-    return {"message": "Team member removed successfully"}

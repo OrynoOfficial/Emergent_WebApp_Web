@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import { toast } from 'sonner';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '@/components/common/QuickDateRangeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -38,27 +39,111 @@ export default function BillsManagement() {
   const loadBills = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/orders/');
-      const data = res.data.orders || res.data || [];
-      setBills(data.length > 0 ? data : mockBills);
+      const res = await api.get('/operator/manual-bookings/', {
+        params: { channel: 'all', limit: 500 },
+      });
+      const orders = res.data?.bookings || [];
+      // Map orders → bill shape that the UI expects
+      const mapped = orders.map(o => ({
+        id: o.order_number || o.id || o._id,
+        order_id: o.id || o._id,
+        customer_name: o.guest_customer?.name || o.customer_name || o.user_email || 'Customer',
+        customer_email: o.guest_customer?.email || o.customer_email || o.user_email || '',
+        service_type: o.service_type || o.service_category || 'general',
+        description: o.service_name || o.service_title || `${o.service_type || 'Service'} booking`,
+        amount: o.subtotal ?? o.total_amount ?? 0,
+        tax: o.tax || 0,
+        total: o.total_amount || o.final_amount || 0,
+        status: (o.payment_status || o.status || 'pending'),
+        payment_method: o.payment_method || null,
+        operator_id: o.operator_id || '',
+        operator_name: o.operator_name || '',
+        channel: o.channel || 'online',
+        created_at: o.created_at ? new Date(o.created_at).toLocaleDateString() : '',
+        paid_at: o.paid_at ? new Date(o.paid_at).toLocaleDateString() : null,
+        raw: o,
+      }));
+      setBills(mapped);
     } catch (error) {
       console.error('Failed to load bills:', error);
-      setBills(mockBills);
+      toast.error('Failed to load bills');
+      setBills([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const mockBills = [
-    { id: 'INV-2025-001', customer_name: 'Jean Mbarga', customer_email: 'jean@example.com', service_type: 'hotels', description: 'Hilton Yaounde - 3 nights', amount: 255000, tax: 25500, total: 280500, status: 'paid', payment_method: 'mtn_momo', created_at: '2025-12-20', paid_at: '2025-12-20' },
-    { id: 'INV-2025-002', customer_name: 'Marie Ngo', customer_email: 'marie@example.com', service_type: 'travel', description: 'Yaounde to Douala - 2 tickets', amount: 12000, tax: 1200, total: 13200, status: 'paid', payment_method: 'orange_money', created_at: '2025-12-19', paid_at: '2025-12-19' },
-    { id: 'INV-2025-003', customer_name: 'Paul Fotso', customer_email: 'paul@example.com', service_type: 'car_rental', description: 'Mercedes C-Class - 5 days', amount: 475000, tax: 47500, total: 522500, status: 'pending', payment_method: null, created_at: '2025-12-18', paid_at: null },
-    { id: 'INV-2025-004', customer_name: 'Aminata Diallo', customer_email: 'aminata@example.com', service_type: 'restaurants', description: 'La Belle Epoque - Dinner for 4', amount: 85000, tax: 8500, total: 93500, status: 'paid', payment_method: 'card', created_at: '2025-12-17', paid_at: '2025-12-17' },
-    { id: 'INV-2025-005', customer_name: 'Emmanuel Tchamba', customer_email: 'emmanuel@example.com', service_type: 'events', description: 'Concert Ticket x2', amount: 30000, tax: 3000, total: 33000, status: 'overdue', payment_method: null, created_at: '2025-12-10', paid_at: null },
-    { id: 'INV-2025-006', customer_name: 'Sylvie Kamga', customer_email: 'sylvie@example.com', service_type: 'packages', description: 'Kribi Beach Escape - 2 persons', amount: 300000, tax: 30000, total: 330000, status: 'cancelled', payment_method: null, created_at: '2025-12-15', paid_at: null },
-    { id: 'INV-2025-007', customer_name: 'Bruno Essomba', customer_email: 'bruno@example.com', service_type: 'hotels', description: 'Mont Febe Hotel - 2 nights', amount: 180000, tax: 18000, total: 198000, status: 'paid', payment_method: 'bank_transfer', created_at: '2025-12-16', paid_at: '2025-12-17' },
-    { id: 'INV-2025-008', customer_name: 'Claire Mvondo', customer_email: 'claire@example.com', service_type: 'laundry', description: 'Premium Laundry Service', amount: 15000, tax: 1500, total: 16500, status: 'pending', payment_method: null, created_at: '2025-12-21', paid_at: null }
-  ];
+  const handleDownload = (bill) => {
+    try {
+      const text = `INVOICE ${bill.id}\n` +
+        `Date: ${bill.created_at}\n` +
+        `Customer: ${bill.customer_name}${bill.customer_email ? ` <${bill.customer_email}>` : ''}\n` +
+        `Service: ${bill.service_type}\n` +
+        `Description: ${bill.description}\n` +
+        `Subtotal: ${bill.amount}\n` +
+        `Tax: ${bill.tax}\n` +
+        `Total: ${bill.total}\n` +
+        `Payment: ${bill.payment_method || '—'} (${bill.status})\n` +
+        (bill.operator_name ? `Operator: ${bill.operator_name}\n` : '');
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${bill.id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Bill downloaded');
+    } catch {
+      toast.error('Download failed');
+    }
+  };
+
+  const handlePrint = (bill) => {
+    const w = window.open('', '_blank');
+    if (!w) return toast.error('Popup blocked');
+    w.document.write(`<!DOCTYPE html><html><head><title>Invoice ${bill.id}</title>
+      <style>body{font-family:sans-serif;padding:40px;} h1{color:#082c59} .row{margin:6px 0} .right{text-align:right} table{width:100%;border-collapse:collapse;margin-top:16px} th,td{padding:8px;border-bottom:1px solid #eee;text-align:left} .total{font-size:18px;font-weight:bold;color:#082c59}</style>
+      </head><body>
+      <h1>Invoice</h1>
+      <div class="row"><strong>${bill.id}</strong> · ${bill.created_at}</div>
+      <div class="row">Customer: <strong>${bill.customer_name}</strong></div>
+      ${bill.customer_email ? `<div class="row">Email: ${bill.customer_email}</div>` : ''}
+      ${bill.operator_name ? `<div class="row">Operator: ${bill.operator_name}</div>` : ''}
+      <table>
+        <thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
+        <tbody>
+          <tr><td>${bill.description}</td><td class="right">${bill.amount}</td></tr>
+          <tr><td>Tax</td><td class="right">${bill.tax}</td></tr>
+          <tr><td class="total">Total</td><td class="right total">${bill.total}</td></tr>
+        </tbody>
+      </table>
+      <div class="row">Status: <strong>${bill.status}</strong></div>
+      <div class="row">Payment method: ${bill.payment_method || '—'}</div>
+      <script>window.onload=()=>{window.print();}</script>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const handleExportAll = () => {
+    try {
+      const header = ['Invoice', 'Customer', 'Email', 'Service', 'Description', 'Amount', 'Tax', 'Total', 'Status', 'Payment', 'Operator', 'Channel', 'Date'];
+      const rows = filteredBills.map(b => [
+        b.id, b.customer_name, b.customer_email, b.service_type, b.description,
+        b.amount, b.tax, b.total, b.status, b.payment_method || '', b.operator_name || '', b.channel, b.created_at
+      ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+      const csv = [header.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bills-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${filteredBills.length} bills`);
+    } catch {
+      toast.error('Export failed');
+    }
+  };
 
   const filteredBills = useMemo(() => bills.filter(bill => {
     const matchesSearch = bill.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -115,7 +200,7 @@ export default function BillsManagement() {
         <div className="flex items-center gap-2 flex-wrap">
           <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button className="bg-[#082c59]"><FileText className="w-4 h-4 mr-2" /> Export All</Button>
+          <Button className="bg-[#082c59]" onClick={handleExportAll}><FileText className="w-4 h-4 mr-2" /> Export All</Button>
         </div>
       </div>
 
@@ -205,7 +290,7 @@ export default function BillsManagement() {
                 )}
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }}><Eye className="w-3.5 h-3.5 mr-1" /> View</Button>
-                  <Button size="sm" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]"><Download className="w-3.5 h-3.5 mr-1" /> PDF</Button>
+                  <Button size="sm" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75]" onClick={() => handleDownload(bill)}><Download className="w-3.5 h-3.5 mr-1" /> PDF</Button>
                 </div>
               </CardContent>
             </Card>
@@ -270,8 +355,8 @@ export default function BillsManagement() {
                   <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(bill.total)}</p>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }}><Eye className="w-4 h-4 mr-1" /> View</Button>
-                    <Button size="sm" className="bg-[#082c59] hover:bg-[#0a3a75]"><Download className="w-4 h-4 mr-1" /> PDF</Button>
-                    <Button variant="outline" size="sm"><Printer className="w-4 h-4" /></Button>
+                    <Button size="sm" className="bg-[#082c59] hover:bg-[#0a3a75]" onClick={() => handleDownload(bill)}><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                    <Button variant="outline" size="sm" onClick={() => handlePrint(bill)}><Printer className="w-4 h-4" /></Button>
                   </div>
                 </div>
               </CardContent>
@@ -324,9 +409,9 @@ export default function BillsManagement() {
                       <td className="p-4 text-sm text-gray-500">{bill.created_at}</td>
                       <td className="p-4">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }}><Eye className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="sm"><Download className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="sm"><Printer className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedBill(bill); setIsDetailOpen(true); }} title="View"><Eye className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDownload(bill)} title="Download"><Download className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handlePrint(bill)} title="Print"><Printer className="w-4 h-4" /></Button>
                         </div>
                       </td>
                     </tr>

@@ -316,7 +316,7 @@ export default function EventsManagement() {
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="event" refreshKey={bookingsRefreshKey} />
+          <OperatorBookingsList serviceType="event" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

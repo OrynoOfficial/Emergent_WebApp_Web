@@ -305,7 +305,7 @@ async def list_operator_bookings(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=1000),
     current_user: dict = Depends(get_current_active_user),
 ):
     """List bookings for the operator, optionally filtered by channel/service_type."""

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Globe2, Store, Filter, RefreshCw, Phone, Mail, User, Banknote,
-  CreditCard, Calendar, Receipt, Loader2
+  CreditCard, Calendar, Receipt, Loader2, ArrowRight
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -33,8 +34,10 @@ const PAYMENT_LABELS = {
  * Props:
  *  - serviceType: filter by service (e.g., 'travel')
  *  - refreshKey?: bump this to force refetch
+ *  - compact?: when true, shows only recent 5 without tabs/search + a "View all →" link
+ *  - viewAllHref?: custom href for the View all link (default '/orders')
  */
-export default function OperatorBookingsList({ serviceType, refreshKey = 0 }) {
+export default function OperatorBookingsList({ serviceType, refreshKey = 0, compact = false, viewAllHref = '/orders' }) {
   const [bookings, setBookings] = useState([]);
   const [counts, setCounts] = useState({ total: 0, on_site_count: 0, online_count: 0 });
   const [loading, setLoading] = useState(false);
@@ -45,7 +48,7 @@ export default function OperatorBookingsList({ serviceType, refreshKey = 0 }) {
     try {
       setLoading(true);
       const res = await api.get('/operator/manual-bookings/', {
-        params: { service_type: serviceType, channel, limit: 100 },
+        params: { service_type: serviceType, channel: compact ? 'all' : channel, limit: compact ? 5 : 100 },
       });
       setBookings(res.data?.bookings || []);
       setCounts({
@@ -58,7 +61,7 @@ export default function OperatorBookingsList({ serviceType, refreshKey = 0 }) {
     } finally {
       setLoading(false);
     }
-  }, [serviceType, channel]);
+  }, [serviceType, channel, compact]);
 
   useEffect(() => {
     fetchBookings();
@@ -77,6 +80,7 @@ export default function OperatorBookingsList({ serviceType, refreshKey = 0 }) {
 
   return (
     <div className="space-y-4">
+      {!compact && (
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
         <Tabs value={channel} onValueChange={setChannel}>
           <TabsList className="bg-slate-100">
@@ -104,6 +108,25 @@ export default function OperatorBookingsList({ serviceType, refreshKey = 0 }) {
           </Button>
         </div>
       </div>
+      )}
+
+      {compact && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-semibold text-slate-700">Recent Bookings</h3>
+            <Badge variant="outline" className="text-xs">
+              {counts.total} total · {counts.on_site_count} walk-in
+            </Badge>
+          </div>
+          <Link
+            to={viewAllHref}
+            className="inline-flex items-center gap-1 text-sm font-medium text-[#082c59] hover:text-[#0a3a75] hover:underline"
+            data-testid="view-all-bookings-link"
+          >
+            View all bookings <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">

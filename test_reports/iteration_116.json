@@ -1,0 +1,71 @@
+{
+  "summary": "Iteration 116 — Verified Admin Bookings fix (limit cap raise from 200 -> 1000) + support_tickets team-members endpoints after duplicate cleanup. Backend: 9/9 pytest tests PASS. Frontend smoke: /admin/bookings now loads with All=163, Online=154, Walk-in=9 for admin (matches task spec exactly); all three toolbar filters (operator-scope, quick-date-range, view-mode) render; booking rows visible in list view.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/operator/manual-bookings/",
+        "issue": "Frontend sends limit=500; backend now caps at le=1000 (was le=200 causing 422). Fix verified. Recommend frontend align by either lowering to 200 or keeping 500 explicitly documented."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminBookings (/admin/bookings)",
+        "issue": "React console warning: 'Each child in a list should have a unique key prop. Check the render method of AdminBookings.' Non-blocking but should be fixed by adding stable key={booking.id || booking.order_id} to the mapped list.",
+        "selector": "AdminBookings list map",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Admin login pre-flight",
+        "issue": "2x 422 errors logged in console during login page init (before credentials entered). Not related to this iteration but worth a look — likely a pre-auth API call firing with missing params on the splash screen.",
+        "affected_selectors": ["/login (pre-submit)"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration116_admin_bookings.py",
+    "/app/test_reports/pytest/iter116.xml"
+  ],
+  "action_items": [
+    "Optional: add stable `key` prop in AdminBookings list render to clear the React key warning.",
+    "Optional: investigate the 2x 422 errors on /login splash (fires before login submit) — unrelated to this iteration but present in console."
+  ],
+  "critical_code_review_comments": [
+    "manual_bookings.py line 308: limit Query(50, ge=1, le=1000) — correct. Matches frontend's limit=500 call with headroom.",
+    "support_tickets.py: duplicates cleanup verified — only ONE definition each of get_team_members (L841), add_team_member (L1015), remove_team_member (L1050). File length 1536 lines, `grep -c 'def get_team_members|def add_team_member|def remove_team_member'` returns 3. No shadowing risk.",
+    "support_tickets.py add_team_member requires `department` and `type` fields (employee/admin/user) — frontend CustomerServiceManagement.jsx should ensure both are provided in POST payload.",
+    "Bookings.jsx limit=500 — acceptable given the 1000 cap. If bookings volume grows >1000, pagination on frontend becomes necessary (currently single-shot fetch).",
+    "No changes needed to other iterations (113/115) — regressions not re-run but scope is isolated to the two files edited."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration116_admin_bookings.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9)",
+    "frontend": "PASS — /admin/bookings page loads 163 bookings with all toolbar filters; one non-blocking React key warning"
+  },
+  "test_credentials": "admin@test.com / superadmin@oryno.com / operator@test.com / customer@test.com — all testpassword123",
+  "seed_data_creation": "Created/deleted 1 TEST_iter116_* support team member per test run (clean teardown within test_add_and_remove_team_member).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file /app/backend/tests/test_iteration116_admin_bookings.py covers: (1) GET /api/operator/manual-bookings/ with limit=500/1000/1001 for admin/super_admin/operator, channel filter on_site/online, and (2) full CRUD on /api/support-tickets/team-members. Admin sees 163 bookings, operator sees 26 (scoped), super_admin sees 163 — matches task spec. SupportTeamMemberAdd model requires id, name, email, role, department, type.",
+  "feature_verdict": {
+    "admin_bookings_limit_500_no_422": "PASS",
+    "admin_bookings_limit_1000_accepted": "PASS",
+    "admin_bookings_limit_1001_rejected_422": "PASS",
+    "admin_sees_all_163_bookings": "PASS",
+    "super_admin_sees_all_163_bookings": "PASS",
+    "operator_scoped_to_own_26_bookings": "PASS",
+    "channel_filter_on_site": "PASS",
+    "channel_filter_online": "PASS",
+    "team_members_GET": "PASS",
+    "team_members_POST_and_DELETE": "PASS (after providing required department+type)",
+    "frontend_admin_bookings_renders": "PASS (163/154/9 counts shown, all 3 toolbar filters present, list rows visible)"
+  },
+  "rca of the issue": "Root cause: GET /api/operator/manual-bookings/ had limit capped at le=200 via Pydantic Query validator (manual_bookings.py:308), while frontend Bookings.jsx line 67 calls with limit=500. This caused FastAPI to return 422 'Input should be less than or equal to 200', aborting the fetch and leaving the page showing 0 records. Fix: raised cap to le=1000. Verified: admin=163, operator=26 (scoped), super_admin=163 records returned successfully; page renders list rows and stats chips (All 163 / Online 154 / Walk-in 9)."
+}

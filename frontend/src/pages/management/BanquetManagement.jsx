@@ -302,7 +302,7 @@ export default function BanquetManagement() {
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} />
+          <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

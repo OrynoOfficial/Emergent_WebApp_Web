@@ -22,6 +22,7 @@ import {
 import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 import { toast } from 'sonner';
 import MessagesTab from './loyalty/MessagesTab';
+import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend
@@ -2269,6 +2270,7 @@ export default function Ratings() {
   const { user, isOperatorUser } = useAuth();
   const [activeTab, setActiveTab] = useState('ratings');
   const [searchParams] = useSearchParams();
+  const [operatorFilter, setOperatorFilter] = useState('');
   
   const isOperator = user?.role === 'operator' || isOperatorUser;
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
@@ -2295,6 +2297,9 @@ export default function Ratings() {
               : 'Reviews you\'ve left for services you\'ve used'}
           </p>
         </div>
+        {isAdmin && (
+          <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+        )}
       </div>
 
       {/* Admin View with Tabs */}

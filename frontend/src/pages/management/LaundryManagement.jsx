@@ -300,7 +300,7 @@ export default function LaundryManagement() {
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="laundry" refreshKey={bookingsRefreshKey} />
+          <OperatorBookingsList serviceType="laundry" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

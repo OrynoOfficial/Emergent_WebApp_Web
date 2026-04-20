@@ -735,7 +735,7 @@ export default function HotelManagement() {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings">
-            <OperatorBookingsList serviceType="hotel" refreshKey={bookingsRefreshKey} />
+            <OperatorBookingsList serviceType="hotel" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
           </TabsContent>
 
           {/* Communications Tab */}

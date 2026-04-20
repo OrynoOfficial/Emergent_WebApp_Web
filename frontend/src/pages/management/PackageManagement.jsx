@@ -309,6 +309,10 @@ export default function PackageManagement() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="bookings" className="mt-6">
+          <OperatorBookingsList serviceType="package" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
+        </TabsContent>
+
         <TabsContent value="communications" className="mt-6">
           <ServiceCommunicationsHub
             serviceType="Packages"
