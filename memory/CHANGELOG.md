@@ -1,6 +1,23 @@
 # Oryno Platform — Changelog
 
 
+## Apr 20, 2026 — Resource Reassignment (Travel/Vehicle) — Reference Implementation
+- **Feature**: Generic "Replace Resource" service. Operators replace a broken-down bus → all active bookings atomically updated + customer/operator/admin notifications fired.
+- **Backend** (`backend/routes/resource_reassignments.py`, NEW):
+  - `POST /api/operator/resources/reassign` with `dry_run` preview (shows affected count + sample orders) then commit.
+  - `GET /api/operator/resources/reassignments` lists logged events (operator-scoped for operators).
+  - SERVICE_SPECS registry — adding new services (hotels, car rental, etc.) is a one-entry config change.
+  - Atomic update of `booking_details.vehicle_id`, `booking_details.vehicle_info` snapshot, mirror fields (`plate_number`, `vehicle_images`, etc.), and `$push` to `reassignment_history` audit trail.
+  - Notifications via `utils/notifications.py` with strict dedupe_keys (`reassign:{event_id}:{order}:customer` etc.) — idempotent on retry.
+  - `orders.py` now sets `booking_details.vehicle_id` at creation (future orders directly matchable).
+- **Frontend**:
+  - `frontend/src/components/management/travel/ReplaceVehicleModal.jsx` (NEW) — 3-step flow: form (pick replacement + reason pills + optional note), preview (dry-run impact), confirm (commits + success screen with counts).
+  - `frontend/src/pages/management/TravelManagement.jsx` — Replace icon button on every VehicleCard (aliased `Replace as ReplaceIcon` to avoid import conflicts).
+  - `frontend/src/components/modals/OrderDetailModal.jsx` — amber `reassignment-banner` showing from→to plate numbers, reason, timestamp, and change count.
+- **Testing**: iter117 identified 2 bugs (projection + button render) — both FIXED and re-verified in iter118 (backend 100%, frontend end-to-end flow verified including banner render showing "CE-456-CD → RE-999-XX").
+- Extensible to all 9 services by registering a new SERVICE_SPECS entry (no code changes to endpoint or notification logic).
+
+
 ## Apr 20, 2026 — Admin Bookings Data Fetch Fix + support_tickets Cleanup
 - **Fix**: `/admin/bookings` page was returning 0 records — root cause was the frontend passing `limit=500` while the backend capped at `le=200`, causing a silent 422 error. Raised cap to `le=1000` in `backend/routes/manual_bookings.py` (GET `/api/operator/manual-bookings/`).
 - **Verified**: Admin now sees 163 bookings, Super Admin 163, Operator correctly scoped to 26.
