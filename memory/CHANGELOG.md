@@ -1,6 +1,17 @@
 # Oryno Platform — Changelog
 
 
+## Apr 20, 2026 — Reassignment: 5-min Undo Window + Multi-service Rollout (Car Rental, Hotel)
+- **Undo** (`POST /api/operator/resources/reassignments/{event_id}/revert`): reverts within 5 min; creates reverse event with `is_revert_of`, swaps orders back, re-notifies stakeholders, marks original as reverted. Double-revert → 400, expired (>5min) → 400, unknown event → 404.
+- **List endpoint** (`GET /api/operator/resources/reassignments`) now returns `revertable`, `age_seconds`, and `revert_window_minutes=5` on each event.
+- **SERVICE_SPECS expanded**: `car_rental` (collection `car_rentals`, snapshot incl. make/model/plate_number) and `hotel` (collection `rooms`; authorization resolves `operator_id` via `hotel_id→hotels.operator_id`; both rooms must share the same hotel).
+- **Order creation enrichment**: hotel orders now persist `booking_details.room_id` + `room_info` snapshot; car_rental orders persist `booking_details.car_id` + `car_info`. Future orders are matchable directly by resource_id.
+- **Generic frontend modal** (`frontend/src/components/management/shared/ReplaceResourceModal.jsx`) replaces the old travel-only modal. Adapts icon/labels/candidate-filter via `serviceType` prop. Success screen shows live **5-minute countdown** + amber "Undo this reassignment" button.
+- **Replace buttons wired up**: TravelManagement (VehicleCard), CarRentalManagement (CarCard), HotelManagement (RoomCard). All use `data-testid="replace-*-btn-<id>"` pattern.
+- **Testing**: iter119 — 12/12 new backend tests PASS (undo happy path, double-revert, expired, 404, list-envelope, restoration), modal visually confirmed.
+- **Deferred (P3)**: Cinema/Banquet/Events (venue/section swap) + Laundry/Package (slot swap) — data models need an audit before SERVICE_SPECS entries can be written reliably.
+
+
 ## Apr 20, 2026 — Resource Reassignment (Travel/Vehicle) — Reference Implementation
 - **Feature**: Generic "Replace Resource" service. Operators replace a broken-down bus → all active bookings atomically updated + customer/operator/admin notifications fired.
 - **Backend** (`backend/routes/resource_reassignments.py`, NEW):
