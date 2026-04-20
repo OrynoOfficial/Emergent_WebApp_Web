@@ -30,7 +30,8 @@ import SeatLayoutEditor from '@/components/travel/SeatLayoutEditor';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 
 // Travel-specific components
-import { RouteForm, VehicleForm, ViewDetailsDialog, ReplaceVehicleModal } from '@/components/management/travel';
+import { RouteForm, VehicleForm, ViewDetailsDialog } from '@/components/management/travel';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -896,12 +897,13 @@ export default function TravelManagement() {
         }}
       />
 
-      {/* Replace Vehicle Modal */}
-      <ReplaceVehicleModal
+      {/* Replace Resource Modal */}
+      <ReplaceResourceModal
         open={!!replaceVehicle}
         onClose={() => setReplaceVehicle(null)}
-        oldVehicle={replaceVehicle}
-        allVehicles={vehicles}
+        serviceType="travel"
+        oldResource={replaceVehicle}
+        allResources={vehicles}
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           loadData?.();

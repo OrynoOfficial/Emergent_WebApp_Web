@@ -66,11 +66,57 @@ SERVICE_SPECS: Dict[str, Dict[str, Any]] = {
         # Compatibility check — both must match operator_id at minimum.
         "compat_fields": ["operator_id"],
     },
+    "car_rental": {
+        "resource_type": "car",
+        "resource_collection": "car_rentals",
+        "order_resource_id_path": "booking_details.car_id",
+        "order_snapshot_path": "booking_details.car_info",
+        "extra_order_mirrors": {
+            "booking_details.car_name": "car_name",
+            "booking_details.car_images": "images",
+            "booking_details.car_model": "model",
+        },
+        "snapshot_fields": [
+            "car_name", "make", "model", "year", "plate_number",
+            "license_plate", "images", "vehicle_type", "transmission",
+            "fuel_type", "seats", "doors",
+        ],
+        "noun_singular": "car",
+        "noun_singular_title": "Car",
+        "booking_noun": "car",
+        # Cars may not always have plate_number; make/model is the reliable label.
+        "label_field": "plate_number",
+        "secondary_label_field": "model",
+        "compat_fields": ["operator_id"],
+    },
+    "hotel": {
+        "resource_type": "room",
+        "resource_collection": "rooms",
+        "order_resource_id_path": "booking_details.room_id",
+        "order_snapshot_path": "booking_details.room_info",
+        "extra_order_mirrors": {
+            "booking_details.room_name": "room_name",
+            "booking_details.room_type": "room_type",
+            "booking_details.room_images": "images",
+        },
+        "snapshot_fields": [
+            "room_name", "room_number", "room_type", "floor", "capacity",
+            "beds", "bed_type", "amenities", "images", "base_price",
+        ],
+        "noun_singular": "room",
+        "noun_singular_title": "Room",
+        "booking_noun": "room",
+        "label_field": "room_name",
+        "secondary_label_field": "room_type",
+        # Rooms belong to a hotel (hotel_id), not directly to operator_id — check both.
+        "compat_fields": ["hotel_id"],
+    },
 }
 
 
 ALLOWED_STATUSES_DEFAULT = ["pending", "confirmed", "paid"]
 ALLOWED_REASONS = {"breakdown", "maintenance", "upgrade", "overbooking", "weather", "other"}
+REVERT_WINDOW_MINUTES = 5
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +167,20 @@ def _label(resource: dict, spec: Dict[str, Any]) -> str:
     )
 
 
+async def _resolve_operator_id(db, resource: dict, spec: Dict[str, Any]) -> Optional[str]:
+    """Resolve the operator_id for a resource, following hotel_id if needed."""
+    if resource.get("operator_id"):
+        return resource["operator_id"]
+    # Hotel rooms: resolve via hotel_id → hotels.operator_id
+    if spec.get("resource_type") == "room" and resource.get("hotel_id"):
+        hotel = await db.hotels.find_one(
+            {"_id": resource["hotel_id"]}, {"operator_id": 1}
+        )
+        if hotel:
+            return hotel.get("operator_id")
+    return None
+
+
 async def _get_affected_orders(
     db, spec: Dict[str, Any], service_type: str,
     old_resource_id: str, scope: Optional[ReassignScope],
@@ -143,6 +203,13 @@ async def _get_affected_orders(
         )
         if route_ids:
             or_clauses.append({"service_id": {"$in": route_ids}})
+    elif service_type == "car_rental":
+        # Car bookings sometimes carry `service_id` = car_id directly.
+        or_clauses.append({"service_id": old_resource_id})
+    elif service_type == "hotel":
+        # Legacy hotel bookings may only carry hotel_id — scope to orders
+        # explicitly tagged with the old room_id to avoid moving unrelated bookings.
+        pass  # primary_clause is enough
 
     query: Dict[str, Any] = {
         "service_type": service_type,
@@ -323,9 +390,11 @@ async def reassign_resource(
 
     # Authorization / compatibility
     operator_id_filter: Optional[str] = None
+    old_operator_id = await _resolve_operator_id(db, old_resource, spec)
+    new_operator_id = await _resolve_operator_id(db, new_resource, spec)
     if role == "operator":
         op_id = current_user.get("operator_id")
-        if old_resource.get("operator_id") != op_id or new_resource.get("operator_id") != op_id:
+        if old_operator_id != op_id or new_operator_id != op_id:
             raise HTTPException(
                 status_code=403,
                 detail="Both resources must belong to your operator",
@@ -333,10 +402,18 @@ async def reassign_resource(
         operator_id_filter = op_id
     else:
         # For admins: enforce same operator on both ends by default.
-        if old_resource.get("operator_id") != new_resource.get("operator_id"):
+        if old_operator_id != new_operator_id:
             raise HTTPException(
                 status_code=400,
                 detail="Cross-operator reassignment is not allowed",
+            )
+
+    # Extra compat check for rooms: must belong to the same hotel.
+    if spec.get("resource_type") == "room":
+        if old_resource.get("hotel_id") != new_resource.get("hotel_id"):
+            raise HTTPException(
+                status_code=400,
+                detail="Both rooms must belong to the same hotel",
             )
 
     # Gather affected orders
@@ -360,7 +437,7 @@ async def reassign_resource(
         "reason_note": body.reason_note,
         "triggered_by": current_user.get("_id") or current_user.get("id"),
         "triggered_by_name": current_user.get("full_name") or current_user.get("email"),
-        "operator_id": old_resource.get("operator_id"),
+        "operator_id": old_operator_id,
         "affected_order_ids": [o.get("order_number") or o.get("id") for o in orders],
         "affected_count": len(orders),
         "from": from_snap,
@@ -482,4 +559,168 @@ async def list_reassignments(
         it["id"] = it.pop("_id", None)
         if isinstance(it.get("created_at"), datetime):
             it["created_at"] = it["created_at"].isoformat()
-    return {"events": items, "total": len(items)}
+        # Compute whether this event is still within the revert window.
+        created_at = it.get("created_at")
+        try:
+            created_dt = datetime.fromisoformat(created_at) if isinstance(created_at, str) else created_at
+            if created_dt and created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            age_seconds = (datetime.now(timezone.utc) - created_dt).total_seconds() if created_dt else None
+            it["revertable"] = bool(
+                age_seconds is not None
+                and age_seconds < REVERT_WINDOW_MINUTES * 60
+                and it.get("status") == "completed"
+                and not it.get("reverted_by_event_id")
+            )
+            it["age_seconds"] = age_seconds
+        except Exception:
+            it["revertable"] = False
+    return {"events": items, "total": len(items), "revert_window_minutes": REVERT_WINDOW_MINUTES}
+
+
+@router.post("/reassignments/{event_id}/revert")
+async def revert_reassignment(
+    event_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """
+    Revert a reassignment event within the revert window (5 minutes).
+
+    Creates a new reassignment event that swaps from/to and marks the original
+    event as reverted. Customers and admins are re-notified so they know the
+    previous change was undone.
+    """
+    role = current_user.get("role", "")
+    if role not in ("operator", "admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    db = get_database()
+    original = await db.resource_reassignments.find_one({"_id": event_id})
+    if not original:
+        raise HTTPException(status_code=404, detail="Reassignment event not found")
+
+    # Operator scoping
+    if role == "operator" and original.get("operator_id") != current_user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Not authorized for this event")
+
+    if original.get("status") != "completed":
+        raise HTTPException(status_code=400, detail="Event is not in a revertable state")
+    if original.get("reverted_by_event_id"):
+        raise HTTPException(status_code=400, detail="Event has already been reverted")
+
+    created_at = original.get("created_at")
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at)
+    if created_at and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    if created_at:
+        age = (datetime.now(timezone.utc) - created_at).total_seconds()
+        if age > REVERT_WINDOW_MINUTES * 60:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Revert window of {REVERT_WINDOW_MINUTES} minutes has expired",
+            )
+
+    # Build a reverse reassignment request and execute it in-place.
+    spec = _get_spec(original["service_type"])
+    reverse = ReassignRequest(
+        service_type=original["service_type"],
+        old_resource_id=original["new_resource_id"],
+        new_resource_id=original["old_resource_id"],
+        reason="other",
+        reason_note=f"Reverting event {event_id}"
+                    + (f" — original reason: {original.get('reason_note') or original.get('reason')}" if original.get("reason_note") or original.get("reason") else ""),
+        dry_run=False,
+    )
+    # Re-use reassign() by calling it directly — but we need to emit a marker on the
+    # new event so consumers can tell it's a revert of `event_id`.
+    # The simplest approach: perform the data flip inline (mirroring reassign()).
+    old_resource = await db[spec["resource_collection"]].find_one({"_id": reverse.old_resource_id})
+    new_resource = await db[spec["resource_collection"]].find_one({"_id": reverse.new_resource_id})
+    if not old_resource or not new_resource:
+        raise HTTPException(status_code=404, detail="Underlying resources no longer exist")
+
+    orders = await _get_affected_orders(
+        db, spec, reverse.service_type, reverse.old_resource_id, None,
+        original.get("operator_id"),
+    )
+
+    from_snap = _build_snapshot(old_resource, spec)
+    to_snap = _build_snapshot(new_resource, spec)
+    now = datetime.now(timezone.utc)
+    new_event_id = str(uuid.uuid4())
+
+    new_event = {
+        "_id": new_event_id,
+        "service_type": reverse.service_type,
+        "resource_type": spec["resource_type"],
+        "old_resource_id": reverse.old_resource_id,
+        "new_resource_id": reverse.new_resource_id,
+        "reason": "other",
+        "reason_note": reverse.reason_note,
+        "triggered_by": current_user.get("_id") or current_user.get("id"),
+        "triggered_by_name": current_user.get("full_name") or current_user.get("email"),
+        "operator_id": original.get("operator_id"),
+        "is_revert_of": event_id,
+        "affected_order_ids": [o.get("order_number") or o.get("id") for o in orders],
+        "affected_count": len(orders),
+        "from": from_snap,
+        "to": to_snap,
+        "status": "completed",
+        "created_at": now,
+    }
+
+    set_payload: Dict[str, Any] = {
+        spec["order_resource_id_path"]: reverse.new_resource_id,
+        spec["order_snapshot_path"]: to_snap,
+        "updated_at": now,
+    }
+    for path, res_field in spec["extra_order_mirrors"].items():
+        if res_field in new_resource and new_resource[res_field] is not None:
+            set_payload[path] = new_resource[res_field]
+
+    history_entry = {
+        "event_id": new_event_id,
+        "from": from_snap,
+        "to": to_snap,
+        "reason": "revert",
+        "reason_note": reverse.reason_note,
+        "at": now,
+        "by": new_event["triggered_by_name"] or new_event["triggered_by"],
+        "is_revert_of": event_id,
+    }
+
+    order_numbers = [o.get("order_number") for o in orders if o.get("order_number")]
+    if order_numbers:
+        await db.orders.update_many(
+            {"order_number": {"$in": order_numbers}},
+            {"$set": set_payload, "$push": {"reassignment_history": history_entry}},
+        )
+
+    await db.resource_reassignments.insert_one(new_event)
+    await db.resource_reassignments.update_one(
+        {"_id": event_id},
+        {"$set": {"reverted_by_event_id": new_event_id, "reverted_at": now}},
+    )
+
+    # Notify
+    try:
+        # Override notification title for revert context
+        notif_event = dict(new_event)
+        notif_summary = await _fan_out_notifications(db, orders, notif_event, spec)
+        await db.resource_reassignments.update_one(
+            {"_id": new_event_id},
+            {"$set": {"notifications_sent": notif_summary}},
+        )
+        new_event["notifications_sent"] = notif_summary
+    except Exception as e:
+        logger.exception("Revert notification fan-out failed for %s: %s", new_event_id, e)
+
+    return {
+        "reverted_event_id": event_id,
+        "new_event_id": new_event_id,
+        "affected_count": new_event["affected_count"],
+        "from": from_snap,
+        "to": to_snap,
+        "notifications_sent": new_event.get("notifications_sent", {}),
+    }

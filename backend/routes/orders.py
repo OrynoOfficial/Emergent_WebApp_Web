@@ -156,6 +156,50 @@ async def create_direct_order(
                     booking_details.setdefault("arrival_time", route.get("arrival_time"))
         except Exception:
             pass
+
+    # Enrich hotel bookings with room_id + snapshot so room-swap reassignment works
+    if order_data.service_type == "hotel" and order_data.service_id and not booking_details.get("room_id"):
+        try:
+            # booking_details may carry a chosen room_id directly (preferred),
+            # otherwise fall back to the hotel's first available room.
+            room_id = booking_details.get("room_id")
+            if not room_id:
+                room = await db.rooms.find_one(
+                    {"hotel_id": order_data.service_id,
+                     "status": {"$in": ["available", None]}},
+                    sort=[("base_price", 1)],
+                )
+                if room:
+                    room_id = room.get("_id")
+            if room_id:
+                room = await db.rooms.find_one(
+                    {"_id": room_id},
+                    {"_id": 0, "room_name": 1, "room_number": 1, "room_type": 1,
+                     "floor": 1, "capacity": 1, "beds": 1, "bed_type": 1,
+                     "amenities": 1, "images": 1, "base_price": 1},
+                )
+                if room:
+                    booking_details["room_id"] = room_id
+                    booking_details["room_info"] = room
+        except Exception:
+            pass
+
+    # Enrich car rental bookings with car snapshot
+    if order_data.service_type == "car_rental" and order_data.service_id and not booking_details.get("car_info"):
+        try:
+            car_id = booking_details.get("car_id") or order_data.service_id
+            car = await db.car_rentals.find_one(
+                {"_id": car_id},
+                {"_id": 0, "car_name": 1, "make": 1, "model": 1, "year": 1,
+                 "plate_number": 1, "license_plate": 1, "images": 1,
+                 "vehicle_type": 1, "transmission": 1, "fuel_type": 1,
+                 "seats": 1, "doors": 1},
+            )
+            if car:
+                booking_details["car_id"] = car_id
+                booking_details["car_info"] = car
+        except Exception:
+            pass
     
     if is_round_trip:
         # Create 2 separate orders (tickets) for round trip

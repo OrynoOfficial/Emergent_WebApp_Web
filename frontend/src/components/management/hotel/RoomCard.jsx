@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Bed, Edit, Trash2, ChevronLeft, ChevronRight, Users, Building2, Maximize2
+  Bed, Edit, Trash2, ChevronLeft, ChevronRight, Users, Building2, Maximize2,
+  Replace as ReplaceIcon
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
@@ -51,7 +52,7 @@ function RoomImageCarousel({ images, className = "w-48 h-36", rounded = "rounded
 /**
  * RoomCard - Card component for displaying room information
  */
-export function RoomCard({ room, onEdit, onDelete, viewMode = 'list' }) {
+export function RoomCard({ room, onEdit, onDelete, onReplace, viewMode = 'list' }) {
   const total = room.total_rooms || 1;
   const avail = room.available_rooms ?? total;
   const isLow = avail <= Math.ceil(total * 0.2) && avail > 0;
@@ -208,6 +209,9 @@ export function RoomCard({ room, onEdit, onDelete, viewMode = 'list' }) {
         {/* Actions */}
         <div className="flex flex-col justify-center gap-2 p-4 border-l bg-slate-50/50">
           <PermissionGate permission="hotels.manage_rooms">
+            <Button size="sm" variant="outline" onClick={() => onReplace?.(room)} className="bg-white text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-room-btn-${room.id || room._id}`}>
+              <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
+            </Button>
             <Button size="sm" variant="outline" onClick={() => onEdit(room)} className="bg-white">
               <Edit className="w-4 h-4 mr-1" /> Edit
             </Button>

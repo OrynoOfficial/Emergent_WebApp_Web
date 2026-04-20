@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +61,7 @@ export default function HotelManagement() {
   const [rooms, setRooms] = useState([]);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [replaceRoom, setReplaceRoom] = useState(null);
   
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -702,6 +704,7 @@ export default function HotelManagement() {
                         room={room}
                         onEdit={openRoomDialog}
                         onDelete={confirmDeleteRoom}
+                        onReplace={setReplaceRoom}
                         viewMode="grid"
                       />
                     ))}
@@ -714,6 +717,7 @@ export default function HotelManagement() {
                         room={room}
                         onEdit={openRoomDialog}
                         onDelete={confirmDeleteRoom}
+                        onReplace={setReplaceRoom}
                         viewMode="list"
                       />
                     ))}
@@ -824,6 +828,20 @@ export default function HotelManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceRoom}
+        onClose={() => setReplaceRoom(null)}
+        serviceType="hotel"
+        oldResource={replaceRoom ? { ...replaceRoom, id: replaceRoom.id || replaceRoom._id } : null}
+        allResources={rooms.map(r => ({ ...r, id: r.id || r._id }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          if (selectedHotel) {
+            loadRooms(selectedHotel._id || selectedHotel.id);
+          }
         }}
       />
     </div>

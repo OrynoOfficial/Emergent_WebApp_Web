@@ -12,10 +12,11 @@ import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
   LayoutDashboard, MessageSquare, TrendingUp, RefreshCw,
   Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2,
-  Banknote, Receipt
+  Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,7 +172,7 @@ const CarImageCarousel = ({ images, className = "h-48" }) => {
 };
 
 // Modern Car Card Component
-const CarCard = ({ car, onView, onEdit, onDelete }) => {
+const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImageUrl = (img) => img?.startsWith('/api') ? `${backendUrl}${img}` : img;
   const images = car.images?.filter(img => img) || [];
@@ -265,6 +266,11 @@ const CarCard = ({ car, onView, onEdit, onDelete }) => {
             <Eye className="w-4 h-4 mr-1" /> View
           </Button>
           <PermissionGate permission="car_rental.edit">
+            <Button size="sm" variant="outline" onClick={() => onReplace?.(car)} title="Replace on all active bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-car-btn-${car.id}`}>
+              <ReplaceIcon className="w-4 h-4" />
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="car_rental.edit">
             <Button size="sm" variant="outline" onClick={() => onEdit(car)}>
               <Edit className="w-4 h-4" />
             </Button>
@@ -297,6 +303,7 @@ export default function CarRentalManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [replaceCar, setReplaceCar] = useState(null);
   const dashboardData = useRealDashboardData('car_rental', '30days', scopeOperatorId);
 
   // Filtered cars
@@ -508,6 +515,7 @@ export default function CarRentalManagement() {
                     onView={handleViewCar}
                     onEdit={openCarDialog}
                     onDelete={handleDeleteCar}
+                    onReplace={setReplaceCar}
                   />
                 ))}
               </div>
@@ -777,6 +785,18 @@ export default function CarRentalManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceCar}
+        onClose={() => setReplaceCar(null)}
+        serviceType="car_rental"
+        oldResource={replaceCar ? { ...replaceCar, id: replaceCar._id || replaceCar.id } : null}
+        allResources={cars.map(c => ({ ...c, id: c._id || c.id }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadCars?.();
         }}
       />
     </div>
