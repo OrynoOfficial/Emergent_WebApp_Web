@@ -188,6 +188,7 @@ export default function TravelBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [travelCurrentStep, setTravelCurrentStep] = useState(1);
   
@@ -950,16 +951,17 @@ export default function TravelBooking() {
                       orderId={orderId}
                       onMoMoDialogOpen={handleMoMoDialogOpen}
                       onProcessingChange={handleProcessingChange}
+                      onMethodSelected={setSelectedPaymentMethod}
                     />
                     
                     <Button
                       onClick={handlePayButtonClick}
-                      disabled={!isFormValid || paymentInProgress}
-                      className="w-full h-12 text-base bg-[#082c59] hover:bg-[#0a3a75] text-white mt-4 rounded-xl shadow-lg font-semibold"
+                      disabled={!isFormValid || paymentInProgress || !selectedPaymentMethod}
+                      className="w-full h-12 text-base bg-[#082c59] hover:bg-[#0a3a75] text-white mt-4 rounded-xl shadow-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
                       data-testid="book-trip-btn"
                     >
                       {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bus className="mr-2 h-4 w-4" />}
-                      {paymentInProgress ? 'Processing...' : `Book Trip · ${formatCurrency(pricing.total)}`}
+                      {paymentInProgress ? 'Processing...' : !selectedPaymentMethod ? 'Select a payment method above' : `Book Trip · ${formatCurrency(pricing.total)}`}
                     </Button>
                   </div>
                 </div>

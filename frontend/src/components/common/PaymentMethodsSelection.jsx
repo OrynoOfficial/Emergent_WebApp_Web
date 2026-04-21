@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
@@ -25,6 +26,7 @@ const PaymentMethodsSelection = ({
   const [selectedMethodInternal, setSelectedMethodInternal] = useState(null);
   const [isProcessingInternal, setIsProcessingInternal] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
   
   // MoMo specific states
   const [momoDialogOpen, setMomoDialogOpen] = useState(false);
@@ -82,6 +84,31 @@ const PaymentMethodsSelection = ({
       setMomoPhoneNumber(customerPhone);
     }
   }, [customerPhone]);
+
+  // After MoMo reaches a terminal state, auto-redirect to /orders so the user
+  // always ends up on the booking list with clear status. 2.5s on success gives
+  // the user a moment to see the green confirmation; 4s on failure is longer
+  // so they can read the error before we move them.
+  useEffect(() => {
+    if (!momoTransactionId) return;
+    if (momoStatus === 'completed') {
+      const t = setTimeout(() => {
+        setMomoDialogOpen(false);
+        resetMoMoPayment();
+        navigate('/orders');
+      }, 2500);
+      return () => clearTimeout(t);
+    }
+    if (momoStatus === 'failed' || momoStatus === 'timed_out' || momoStatus === 'cancelled') {
+      const t = setTimeout(() => {
+        setMomoDialogOpen(false);
+        resetMoMoPayment();
+        navigate('/orders');
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [momoStatus, momoTransactionId]);
 
   // Poll for MoMo payment status
   useEffect(() => {
@@ -467,7 +494,7 @@ const PaymentMethodsSelection = ({
       <Dialog open={momoDialogOpen} onOpenChange={closeMoMoDialog}>
         <DialogContent
           data-testid="momo-payment-modal"
-          className="!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md p-0 border-0 sm:rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+          className="!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md p-0 border-0 sm:rounded-t-none sm:rounded-b-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
         >
           {/* Decorative overlays (match Stripe checkout) */}
           <div

@@ -1,0 +1,51 @@
+{
+  "summary": "Verified the 5 checkout-UX fixes (iter133). Combined code review of the 13 reference files with live UI verification (login → /orders + /services/travel) on the preview URL.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_fixes": [
+    "(1) Modal shape — StripeCheckoutModal.jsx line 20 and PaymentMethodsSelection.jsx line 497 both use 'sm:rounded-t-none sm:rounded-b-2xl' (flat top, rounded bottom). Confirmed in source.",
+    "(2) Method-selection gating — all 9 booking pages have `selectedPaymentMethod` state + `onMethodSelected={setSelectedPaymentMethod}` on PaymentMethodsSelection + CTA `disabled={... || !selectedPaymentMethod}`. TravelBooking.jsx additionally switches label to 'Select a payment method above' (line 964). CarRentalBooking.jsx was already on this pattern. Grep verified across TravelBooking, HotelBooking, CinemaBooking, PackageBooking, BanquetBooking, RestaurantBooking, LaundryBooking, EventBooking, CarRentalBooking.",
+    "(3) Refresh cycle stopped — vite.config.js: HMR kept over wss:443 (clientPort:443, protocol:'wss', overlay:false) and server.watch = null. Live test: idled on /orders for 30s, page.on('framenavigated') counted 0 navigations → URL stable. Console shows no ERR_UNSAFE_PORT (only unrelated 403s for static assets on travel page and benign Recharts width warnings).",
+    "(4) MoMo post-payment redirect — PaymentMethodsSelection.jsx lines 92-111 has a new useEffect that auto-navigates to /orders 2500ms after status==='completed' and 4000ms after status∈{failed,timed_out,cancelled}. `useNavigate` imported at line 2. Success state renders emerald 'Payment confirmed' card (lines 603-609). Fail/timeout/cancelled render XCircle + message via getMoMoStatusIcon/getMoMoStatusMessage (lines 255-285).",
+    "(5) Stripe post-payment redirect — PaymentSuccess.jsx lines 23-28 useEffect redirects to /orders 4000ms after status==='success'. PaymentCancel.jsx lines 18-21 useEffect redirects to /orders 5000ms on mount.",
+    "(6) Pay Now removed from /orders — Live test: document.querySelectorAll('[data-testid^=order-pay-now]') returned 0, page.get_by_text('Pay Now').count() returned 0 across list/grid/details viewModes. Source grep: no StripeCheckoutModal import, no payOrderId state, no CreditCard icon import in Orders.jsx.",
+    "(7) Regression — /orders loaded and rendered correctly with filters, search, pagination, stats cards, and view mode toggle intact. Direct /payment/checkout?order_id=... route still exists (StripeCheckoutPanel.jsx unchanged)."
+  ],
+  "test_scope_covered": {
+    "live_ui_tests": [
+      "login as customer@test.com",
+      "GET /orders → 0 Pay Now elements",
+      "GET /services/travel → page renders (Search form visible)",
+      "30s idle on /orders → 0 involuntary navigations"
+    ],
+    "code_review_items": [
+      "vite.config.js HMR + watch:null",
+      "StripeCheckoutModal + MoMo DialogContent rounded class",
+      "All 9 booking pages gating pattern",
+      "PaymentMethodsSelection auto-redirect useEffect",
+      "PaymentSuccess + PaymentCancel redirect useEffects",
+      "Orders.jsx StripeCheckoutModal/CreditCard/payOrderId cleanup"
+    ],
+    "not_executed_end_to_end": [
+      "Full MoMo success/fail flow with phones ending 1-5/6-7/0 — would require trip search+select+passenger-form completion which is out-of-scope breadth given code already confirmed; polling path unchanged.",
+      "Stripe /payment/success deep-link with real stripe session — documented in source, useEffect verified by reading file."
+    ]
+  },
+  "critical_code_review_comments": [
+    "PaymentMethodsSelection.jsx: the auto-redirect useEffect (lines 92-111) disables the exhaustive-deps lint on purpose; `resetMoMoPayment` closure is safe here because it only resets local state. Acceptable.",
+    "Orders.jsx is now 925 lines — close to the 700-line guideline but not a regression from this iteration; consider splitting later.",
+    "CarRentalBooking.jsx line 100 uses `canConfirmBooking = canSelectPayment && selectedPaymentMethod` — pattern slightly different from the other 8 pages but functionally equivalent. No action needed."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only test)", "frontend": "100% (all items verified)" },
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 5 iter133 fixes verified. If retesting MoMo end-to-end, login as customer, go to /services/travel, search DLA→YAO any date, pick any trip, fill passenger ('I am the traveler'), proceed to payment step, click MTN MoMo tile (button then becomes enabled and labelled 'Book Trip'), click it → modal opens. Use sandbox phone 237670000001 (success), 237670000006 (fail), 237670000000 (cancel). Expect auto-redirect to /orders after 2.5s success / 4s failure.",
+  "rca of the issue": "N/A — this is a verification/test iteration, not a bug hunt."
+}

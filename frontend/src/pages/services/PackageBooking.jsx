@@ -82,6 +82,7 @@ export default function PackageBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   
   const [isSenderSelf, setIsSenderSelf] = useState(false);
@@ -618,6 +619,7 @@ export default function PackageBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   onPaymentError={handlePaymentError}
                   triggerPayment={triggerPayment}
+                  onMethodSelected={setSelectedPaymentMethod}
                 />
               </CardContent>
             </Card>
@@ -708,7 +710,7 @@ export default function PackageBooking() {
 
                     <Button 
                       onClick={handleSubmit}
-                      disabled={!isFormValid() || paymentInProgress}
+                      disabled={!isFormValid() || paymentInProgress || !selectedPaymentMethod}
                       className="w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white h-12 font-semibold rounded-xl"
                     >
                       {paymentInProgress ? (

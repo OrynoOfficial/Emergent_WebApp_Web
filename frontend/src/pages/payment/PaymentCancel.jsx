@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { XCircle, Home, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -12,6 +12,13 @@ const PaymentCancel = () => {
   const navigate = useNavigate();
 
   const orderId = searchParams.get('order_id');
+
+  // Auto-redirect to /orders 5s after a cancelled payment — user has time to
+  // read the message; the Retry button still navigates immediately on click.
+  useEffect(() => {
+    const t = setTimeout(() => navigate('/orders'), 5000);
+    return () => clearTimeout(t);
+  }, [navigate]);
 
   const handleRetry = () => {
     // Navigate back to the booking page or orders

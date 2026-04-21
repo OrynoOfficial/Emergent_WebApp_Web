@@ -90,6 +90,7 @@ export default function BanquetBooking() {
   const [isSelf, setIsSelf] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   const handleSelfChange = async (checked) => {
     setIsSelf(checked);
@@ -450,6 +451,7 @@ export default function BanquetBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   onPaymentError={(error) => toast.error(error.message)}
                   triggerPayment={triggerPayment}
+                  onMethodSelected={setSelectedPaymentMethod}
                 />
               </div>
             </div>
@@ -524,7 +526,7 @@ export default function BanquetBooking() {
 
                     <Button 
                       onClick={handleSubmit}
-                      disabled={paymentInProgress}
+                      disabled={!selectedPaymentMethod || paymentInProgress}
                       className="w-full mt-4 bg-purple-500 hover:bg-purple-600 text-white h-12 font-semibold rounded-xl"
                     >
                       {paymentInProgress ? (

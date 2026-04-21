@@ -89,6 +89,7 @@ export default function CinemaBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [booking, setBooking] = useState(false);
 
@@ -476,6 +477,7 @@ export default function CinemaBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   onPaymentError={handlePaymentError}
                   triggerPayment={triggerPayment}
+                  onMethodSelected={setSelectedPaymentMethod}
                 />
               </CardContent>
             </Card>
@@ -563,7 +565,7 @@ export default function CinemaBooking() {
 
                     <Button 
                       onClick={handleSubmit}
-                      disabled={paymentInProgress || getTotalTickets() === 0 || selectedSeats.length !== getTotalTickets()}
+                      disabled={!selectedPaymentMethod || paymentInProgress || getTotalTickets() === 0 || selectedSeats.length !== getTotalTickets()}
                       className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white h-12 font-semibold rounded-xl"
                     >
                       {paymentInProgress ? (

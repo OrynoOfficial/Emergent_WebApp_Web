@@ -98,6 +98,7 @@ export default function LaundryBooking() {
   const [isSelf, setIsSelf] = useState(false);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   useEffect(() => {
     loadService();
@@ -475,6 +476,7 @@ export default function LaundryBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   onPaymentError={(error) => toast.error(error.message)}
                   triggerPayment={triggerPayment}
+                  onMethodSelected={setSelectedPaymentMethod}
                 />
               </div>
             </div>
@@ -567,7 +569,7 @@ export default function LaundryBooking() {
 
                     <Button 
                       onClick={handleSubmit}
-                      disabled={paymentInProgress || getTotalItems() === 0}
+                      disabled={!selectedPaymentMethod || paymentInProgress || getTotalItems() === 0}
                       className="w-full mt-4 bg-[#082c59] hover:bg-[#0a3a75] text-white h-12 font-semibold rounded-xl"
                     >
                       {paymentInProgress ? (

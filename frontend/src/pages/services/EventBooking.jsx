@@ -70,6 +70,7 @@ export default function EventBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [orderId, setOrderId] = useState(null);
   
@@ -442,12 +443,13 @@ export default function EventBooking() {
                       onPaymentInitiated={handlePaymentInitiated}
                       onPaymentError={handlePaymentError}
                       triggerPayment={triggerPayment}
-                    />
+                      onMethodSelected={setSelectedPaymentMethod}
+                />
                   </div>
 
                   <Button 
                     onClick={handleSubmit}
-                    disabled={paymentInProgress}
+                    disabled={!selectedPaymentMethod || paymentInProgress}
                     className="w-full mt-4 bg-pink-500 hover:bg-pink-600 text-white h-12 font-semibold rounded-xl"
                   >
                     {paymentInProgress ? (

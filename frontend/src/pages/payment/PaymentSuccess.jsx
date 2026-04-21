@@ -18,6 +18,15 @@ const PaymentSuccess = () => {
 
   const sessionId = searchParams.get('session_id');
 
+  // Auto-redirect to /orders 4s after a successful payment — gives the user
+  // time to see the green confirmation, then moves them to their booking list.
+  useEffect(() => {
+    if (status === 'success') {
+      const t = setTimeout(() => navigate('/orders'), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [status, navigate]);
+
   useEffect(() => {
     if (!sessionId) {
       setStatus('error');

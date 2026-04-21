@@ -63,6 +63,7 @@ export default function RestaurantBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [restaurantCurrentStep, setRestaurantCurrentStep] = useState(1);
   
@@ -476,17 +477,18 @@ export default function RestaurantBooking() {
                       operator_name: restaurant?.operator_name,
                     }}
                     onPaymentInitiated={handlePaymentInitiated}
-                    disabled={!isFormValid || paymentInProgress}
+                    disabled={!isFormValid || paymentInProgress || !selectedPaymentMethod}
                     triggerPayment={triggerPayment}
                     onTrigger={() => setPaymentInProgress(true)}
                     orderId={orderId}
                     onMoMoDialogOpen={handleMoMoDialogOpen}
                     onProcessingChange={handleProcessingChange}
-                  />
+                    onMethodSelected={setSelectedPaymentMethod}
+                />
                   
                   <Button
                     onClick={handleSubmit}
-                    disabled={!isFormValid || paymentInProgress}
+                    disabled={!isFormValid || paymentInProgress || !selectedPaymentMethod}
                     className="w-full h-12 text-base bg-[#082c59] hover:bg-[#0a3a75] text-white mt-4 rounded-xl shadow-lg font-semibold"
                     data-testid="confirm-reservation-btn"
                   >

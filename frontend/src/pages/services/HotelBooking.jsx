@@ -155,6 +155,7 @@ export default function HotelBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   
@@ -903,17 +904,18 @@ export default function HotelBooking() {
                   customerEmail={formData.email}
                   serviceDetails={serviceDetailsForPayment}
                   onPaymentInitiated={handlePaymentInitiated}
-                  disabled={!isBookingDataComplete || paymentInProgress}
+                  disabled={!isBookingDataComplete || paymentInProgress || !selectedPaymentMethod}
                   triggerPayment={triggerPayment}
                   onTrigger={() => setPaymentInProgress(true)}
                   orderId={orderId}
                   onMoMoDialogOpen={handleMoMoDialogOpen}
                   onProcessingChange={handleProcessingChange}
+                  onMethodSelected={setSelectedPaymentMethod}
                 />
 
                 <Button
                   onClick={handlePayButtonClick}
-                  disabled={!isBookingDataComplete || paymentInProgress}
+                  disabled={!isBookingDataComplete || paymentInProgress || !selectedPaymentMethod}
                   className="w-full bg-[#082c59] hover:bg-[#0a3a75] text-white h-12 text-base rounded-xl shadow-lg mt-4"
                 >
                   {paymentInProgress ? (
