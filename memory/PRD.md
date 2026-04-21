@@ -3,25 +3,24 @@
 ## Architecture
 - React + Vite + Tailwind + Shadcn/UI + Leaflet | FastAPI + MongoDB
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
+- **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (Apr 2026)
-- **Walk-in: Time + Optional Seats** — Walk-in Booking modal now includes a Service Time field (auto-filled from the selected route's `departure_time` for travel). Travel walk-ins with no seat numbers are recorded as headcount-only tickets (booking_details.seats_assigned=false, passengers preserved). Backend stores `service_time` on the order and mirrors to `booking_details.travel_time` (user value wins over route schedule).
-- **Tri-view mode + Quick Date filter + Operator scope** on Receipts / Orders / Bills / Transactions / Reports — reusable `QuickDateRangeFilter` (Today, Last 3/7/30 days, This/Last Month, This Year, Custom) and `ViewModeToggle` (List / Grid / Details)
-- **New page**: `/transactions` — unified payment transactions view with search, status/method/operator/date filters and 3 view modes
-- **Walk-in / Cash Bookings**: Operators can record on-site bookings for ALL services via `POST /api/operator/manual-bookings/`. Unified channel filter (Online/Walk-in) on every management page's new "Bookings" tab. Optional linking of walk-in to existing customer by phone/email.
-- **Robust Notifications**: New `utils/notifications.py` helper with `dedupe_key`-based upsert. Partial-unique index `(user_id, dedupe_key)` + one-shot migration at startup. Reading a notification once truly keeps it read — no more re-popping on login.
-- **Travel Ticket Vehicle Info**: Travel orders auto-enrich with `booking_details.vehicle_info` (plate, model, image). "Your Vehicle" card on OrderDetailModal + BookingConfirmation.
-- **Travel Routes**: Plate number + 2 bus thumbnails on trip cards. Vehicle enrichment in `travel_routes.py`.
-- **Duplicate Router Fix**: Removed all public endpoints from `travel.py`. Only `travel_routes.py` handles GET/POST/PUT/DELETE /routes.
-- **Accent-insensitive Search**: City search now matches accented characters (Yaounde → Yaoundé).
-- **Hotel Data Seeded**: Hotels have GPS coordinates and 9 policies each.
-- **Hotel Results**: Compact controls (h-9), extended filters (Guest Rating, Cancellation, Breakfast).
-- **Hotel Details**: Live Leaflet map with nearby service pins, policies toggle.
-- **All Booking Pages**: Navy bg-[#082c59] Price Breakdown + Payment headings.
-- **Restaurant Menu**: Premium revamp, allergen tags, ingredient search, swipeable images.
+- **Timezone-aware dates across the app** — centralized `dateUtils.js` now formats every date in the user's chosen IANA timezone; `AuthContext` persists `user.timezone` (or browser-detected) into `localStorage.oryno_tz` on login; Settings → Preferences exposes 60+ IANA zones grouped by region + a "Use system timezone" auto-detect button.
+- **Ticket / Order dates fixed** — `OrderDetailModal` shows a clearly-labelled "Booked on" row (date + time + TZ caption) and a new "Service Time" row pulled from `service_time`/`travel_time`/`departure_time`.
+- **Seat booking fixes** — new backend endpoint `POST /api/seat-bookings/confirm` flips RESERVED→BOOKED on payment (idempotent, user-scoped, unsets TTL). `LiveSeatMap` now caps the reconciled selection to `maxSeats` and releases the excess so "book 2 then return to book 1" no longer auto-selects 2 seats.
+- **Banquet Management blank page fix** — added missing `isWalkInOpen` / `bookingsRefreshKey` state in `BanquetManagement.jsx` (page was crashing with a ReferenceError).
+- **User/Operator revamp** — cascade role changes clear `operator_id`; `UserDetailModal` modernized (gradient header, prefilled fields, stat cards, paginated/searchable activity tab); search-only `OperatorPicker`; Create-User / Send-Invitation modals scrollable.
+- **Walk-in: Time + Optional Seats** — Walk-in Booking modal includes Service Time (auto-filled from route `departure_time` for travel). Headcount-only tickets supported.
+- **Tri-view mode + Quick Date filter + Operator scope** on Receipts / Orders / Bills / Transactions / Reports — `QuickDateRangeFilter`, `ViewModeToggle`.
+- **Robust Notifications**: `dedupe_key`-based upsert, partial-unique `(user_id, dedupe_key)` index.
+- **Travel Ticket Vehicle Info**: `booking_details.vehicle_info` enrichment; plate + thumbnails on trip cards.
+- **Duplicate Router Fix**: `travel.py` only for management/analytics; `travel_routes.py` owns public endpoints.
+- **Hotel Data**: Seeded GPS + 9 policies per hotel; Leaflet map with nearby service pins.
+- **Restaurant Menu**: Allergen tags, ingredient search, swipeable images.
 - **Sidebar**: Right-side flyout submenus with smart positioning.
 
-## Credentials
+## Credentials (see /app/memory/test_credentials.md)
 - Admin: admin@test.com / testpassword123
 - Super Admin: superadmin@oryno.com / testpassword123
 - Customer: customer@test.com / testpassword123
@@ -30,3 +29,4 @@
 ## Upcoming
 - P2: Operator comparison dashboard
 - P3: Scheduled report emails
+- Polish (optional, from iter124): migrate Settings timezone dropdown from native `<select>` to shadcn `Select` for visual parity with Language/Currency controls.
