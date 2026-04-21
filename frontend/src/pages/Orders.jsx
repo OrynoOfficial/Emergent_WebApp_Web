@@ -267,18 +267,7 @@ export default function Orders() {
 
   const hasActiveFilters = searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || sortBy !== 'newest' || operatorFilter || dateRange.preset !== 'all';
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    } catch {
-      return 'N/A';
-    }
-  };
+  // NOTE: formatDate is imported from utils/dateUtils (timezone-aware). Do not shadow here.
 
   return (
     <div className="space-y-6">

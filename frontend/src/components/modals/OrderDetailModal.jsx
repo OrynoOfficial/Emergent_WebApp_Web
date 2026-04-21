@@ -242,7 +242,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 <div>
                   <p className="text-xs text-slate-500">Service Date</p>
                   <p className="text-sm font-medium" data-testid="service-date">
-                    {formatDate(order.booking_details?.travel_date || order.booking_details?.check_in || order.service_date || order.created_at)}
+                    {(() => {
+                      const d = order.booking_details?.travel_date
+                        || order.booking_details?.service_date
+                        || order.booking_details?.check_in
+                        || order.service_date;
+                      return d ? formatDate(d) : 'N/A';
+                    })()}
                   </p>
                 </div>
               </div>

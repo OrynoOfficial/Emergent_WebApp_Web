@@ -225,18 +225,7 @@ export default function Receipts() {
         return colors[service] || 'bg-slate-500';
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        } catch {
-            return 'N/A';
-        }
-    };
+    // NOTE: formatDate is imported from utils/dateUtils (timezone-aware). Do not shadow here.
 
     const downloadPDF = (bill) => {
         const logoUrl = 'https://customer-assets.emergentagent.com/job_momobook-app/artifacts/syef01ek_f6726dae0_logo.png';
