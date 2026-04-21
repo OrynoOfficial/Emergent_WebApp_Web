@@ -1,6 +1,20 @@
 # Oryno Platform — Changelog
 
 
+## Apr 21, 2026 — Reassignment P3 Rollout: Event, Package, Laundry, Cinema (Backend)
+- **SERVICE_SPECS expanded to 7 services**: added `event`, `package`, `laundry`, `cinema` on top of the existing `travel`, `car_rental`, `hotel`.
+  - `event`: collection `events`, snapshot (name, event_type, venue_name, start_date, end_date, images). Use case: cancelled show → makeup event, ticket-holders auto-migrated.
+  - `package`: collection `packages`, snapshot (name, destination, duration_days, images, base_price). Use case: cancelled tour → equivalent replacement.
+  - `laundry`: collection `pressing`, snapshot (name, address, city, phone, images). Accepts legacy `service_type='pressing'` alias in order queries.
+  - `cinema`: collection `showtimes` (the bookable unit), snapshot (cinema_name, film_title, screen_name, show_date, show_time, price). Authorization resolves `operator_id` via `showtimes.cinema_id → cinemas.operator_id`. Cross-cinema swap rejected with 400.
+- `_resolve_operator_id` generalized: handles both `hotel_id` (rooms) and `cinema_id` (showtimes) indirection; documented in docstring for future services.
+- **Order creation enrichment** (`orders.py`): new orders for event/package/laundry/cinema/pressing auto-populate the respective `{resource}_id` + `{resource}_info` snapshot fields, making them matchable by the reassignment query.
+- **Cinema UX note**: a "showtime swap" is most useful when a screen has a technical issue and the film has to move to another screen or time slot at the same cinema.
+- **Deferred**: Banquet (empty `banquets` collection; no swappable resource) + Restaurant (no per-table resource in booking_details). These need model work before rollout.
+- **Frontend**: no UI changes this iteration. Backend `POST /api/operator/resources/reassign` now accepts all 7 service_types. Replace buttons on EventsManagement/PackageManagement/LaundryManagement/CinemaManagement pages are a follow-up task.
+- **Testing**: iter120 — 8/8 new + 12/12 regression PASS. No backend issues.
+
+
 ## Apr 20, 2026 — Reassignment: 5-min Undo Window + Multi-service Rollout (Car Rental, Hotel)
 - **Undo** (`POST /api/operator/resources/reassignments/{event_id}/revert`): reverts within 5 min; creates reverse event with `is_revert_of`, swaps orders back, re-notifies stakeholders, marks original as reverted. Double-revert → 400, expired (>5min) → 400, unknown event → 404.
 - **List endpoint** (`GET /api/operator/resources/reassignments`) now returns `revertable`, `age_seconds`, and `revert_window_minutes=5` on each event.
