@@ -217,7 +217,7 @@ function App() {
           <Route
             path="/payment/checkout"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute bare>
                 <StripeCheckoutConfirm />
               </ProtectedRoute>
             }

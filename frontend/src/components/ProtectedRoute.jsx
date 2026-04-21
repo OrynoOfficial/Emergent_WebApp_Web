@@ -23,7 +23,7 @@ const hasAccess = (userRole, requiredRoles) => {
   return requiredRoles.some(role => accessibleRoles.includes(role));
 };
 
-export default function ProtectedRoute({ children, requiredRoles = [] }) {
+export default function ProtectedRoute({ children, requiredRoles = [], bare = false }) {
   const { user, loading, isAuthenticated } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -79,5 +79,5 @@ export default function ProtectedRoute({ children, requiredRoles = [] }) {
     );
   }
 
-  return <Layout>{children}</Layout>;
+  return bare ? <>{children}</> : <Layout>{children}</Layout>;
 }
