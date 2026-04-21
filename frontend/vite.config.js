@@ -14,13 +14,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: true,
+    // HMR over the public preview URL (HTTPS → WSS on 443).
+    // The preview is fronted by TLS, so the browser must connect over wss
+    // on port 443; without this config the HMR client tries port 3000 (not
+    // publicly exposed) and fails silently, requiring a manual frontend
+    // restart after every JSX edit.
     hmr: {
-      // Point the client to an unreachable port so it can never connect
-      // This prevents ALL Vite-triggered page reloads
-      clientPort: 1,
-      host: '127.0.0.1',
+      clientPort: 443,
+      protocol: 'wss',
       overlay: false,
     },
-    watch: null,
   },
 })

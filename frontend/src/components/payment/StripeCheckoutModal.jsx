@@ -17,7 +17,7 @@ export default function StripeCheckoutModal({ open, onClose, orderId }) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose?.(); }}>
       <DialogContent
         data-testid="stripe-checkout-modal"
-        className="!max-w-none w-screen h-screen sm:h-[92vh] sm:w-[96vw] sm:max-w-7xl p-0 border-0 sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+        className="!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-3xl p-0 border-0 sm:rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
       >
         {/* a11y title — visually hidden but required by Radix Dialog */}
         <DialogTitle className="sr-only">Card Payment Checkout</DialogTitle>

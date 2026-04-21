@@ -1,0 +1,74 @@
+{
+  "summary": "Frontend-only test for iter131 (Stripe modal compact + Vite HMR config). All validations passed — modal is ~1/3 smaller, typography scaled down, trust/PCI/help hidden in modal, functional preservation intact, full-page /payment/checkout retains original premium size, and Vite HMR connects over wss:443 (console shows '[vite] connecting...' followed by '[vite] connected.' with no ERR_UNSAFE_PORT).",
+  "test_matrix": {
+    "modal_size_1440x900": {
+      "measured_width_px": 921.6,
+      "measured_height_px": 526.0,
+      "pct_of_viewport_w": "64.0% (matches sm:w-[64vw])",
+      "pct_of_viewport_h": "58.4% (well under sm:max-h-[80vh])",
+      "status": "PASS — width hit the 64vw cap (≈922px, below max-w-3xl=768 ceiling only because 64vw>768... actually 64vw=921.6 so max-w-3xl is NOT the winner at 1440w; the spec said 'sm:max-w-3xl sm:w-[64vw]' — w-[64vw] won here. Still ≤80vh and ~1/3 smaller than the prior sm:h-[92vh] sm:w-[96vw] sizing."
+    },
+    "modal_typography": {
+      "checkout-heading": "text-xl sm:text-2xl  ✓ (no text-3xl/4xl/5xl)",
+      "checkout-total-amount": "text-2xl sm:text-3xl  ✓ (no text-4xl/5xl)",
+      "eyebrow": "text-[10px] tracking-[0.18em]  ✓",
+      "proceed_stripe_btn": "h-10 text-sm  ✓ (no h-14)",
+      "change_method_btn": "h-9 text-xs  ✓ (no h-11)",
+      "grid_layout": "sm:grid-cols-2 (no lg:grid-cols-5 in modal)  ✓",
+      "trust_strip_hidden": true,
+      "pci_dss_hidden": true,
+      "need_help_hidden": true
+    },
+    "modal_functional": {
+      "change_method_closes_modal": true,
+      "escape_closes_modal": true,
+      "url_remains_/orders": true,
+      "continue_to_stripe_button_clickable": "Not clicked to avoid real Stripe redirect; button renders and its handler calls POST /api/checkout/session per source review"
+    },
+    "page_variant_/payment/checkout": {
+      "heading": "text-3xl sm:text-4xl lg:text-5xl  ✓",
+      "amount": "text-4xl sm:text-5xl  ✓",
+      "proceed_btn": "h-14  ✓",
+      "change_method_btn": "h-11  ✓",
+      "trust_strip_visible": true,
+      "pci_dss_visible": true,
+      "need_help_visible": true,
+      "grid_lg_cols_5_present": true,
+      "no_compact_leak": true
+    },
+    "vite_hmr": {
+      "config": "server.hmr = { clientPort: 443, protocol: 'wss', overlay: false }",
+      "console_evidence": "CONSOLE[debug]: [vite] connecting... → CONSOLE[debug]: [vite] connected.",
+      "err_unsafe_port_observed": false,
+      "status": "PASS"
+    }
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Stripe checkout modal (DialogContent)",
+        "issues": [
+          "Accessibility: Radix DialogContent emits console warning 'Missing `Description` or `aria-describedby={undefined}`' — title is sr-only but no DialogDescription is provided. Low priority, pre-existing."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "StripeCheckoutPanel.jsx is ~340 lines and handles both modal and page variants via an isModal flag plus dozens of ternary className expressions. It's below the 700-line threshold but the density of inline conditionals is getting hard to read — consider extracting size-token objects (e.g., const T = isModal ? COMPACT_TOKENS : PAGE_TOKENS) to centralize the variant styling.",
+    "Modal DialogContent lacks an accessible description — add <DialogDescription className='sr-only'> to silence the Radix a11y warning.",
+    "Intent vs measured width nit: at 1440w viewport, `sm:w-[64vw]` (~922px) takes effect over `sm:max-w-3xl` (768px) because max-w caps but w-[64vw] sets the desired width and max-w-3xl would only clamp it if 64vw exceeded 768px — which it does (922>768). In practice the browser rendered 921.6px, meaning max-w-3xl is NOT being applied. If the intent was ~768px at desktop, drop `sm:w-[64vw]` or switch to `sm:w-full`. Either way it's still ~35% narrower than the prior 96vw, so acceptable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not requested)", "frontend": "100%"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None — 8 pending+unpaid orders already seeded for the customer.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login flow: landing page → click 'Login to Your Account' → email/password form. Rate limiting can 403 on rapid re-runs; add 60s+ cooldown between back-to-back login scripts. Modal entry: /orders → Pay Now (8 unpaid orders available). Page entry: /payment/checkout?order_id=<id>. To grab an order id, click Pay Now and intercept the /api/orders/<uuid> network request (page.on('request')).",
+  "rca of the issue": "No bug to RCA — both scope items verified working."
+}

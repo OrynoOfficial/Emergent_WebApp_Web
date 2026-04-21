@@ -25,18 +25,21 @@ const SERVICE_ICONS = {
   banquet: Sparkles,
 };
 
-const PremiumRow = ({ label, value, icon: Icon, testid }) => {
+const PremiumRow = ({ label, value, icon: Icon, testid, compact = false }) => {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-white/5 last:border-b-0" data-testid={testid}>
+    <div
+      className={`flex items-start gap-2.5 border-b border-white/5 last:border-b-0 ${compact ? 'py-1.5' : 'py-3'}`}
+      data-testid={testid}
+    >
       {Icon && (
-        <div className="h-8 w-8 rounded-lg bg-[#c9a74a]/10 border border-[#c9a74a]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Icon className="h-4 w-4 text-[#c9a74a]" />
+        <div className={`rounded-lg bg-[#c9a74a]/10 border border-[#c9a74a]/20 flex items-center justify-center flex-shrink-0 ${compact ? 'h-6 w-6 mt-0' : 'h-8 w-8 mt-0.5'}`}>
+          <Icon className={`text-[#c9a74a] ${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400 font-medium">{label}</p>
-        <p className="text-sm text-white font-semibold mt-0.5 break-words">{value}</p>
+        <p className={`uppercase text-slate-400 font-medium ${compact ? 'text-[9px] tracking-[0.12em]' : 'text-[11px] tracking-[0.14em]'}`}>{label}</p>
+        <p className={`text-white font-semibold break-words ${compact ? 'text-xs mt-0' : 'text-sm mt-0.5'}`}>{value}</p>
       </div>
     </div>
   );
@@ -101,9 +104,11 @@ export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, v
   const formatUSD = (fcfa) => `$${(fcfa * FCFA_TO_USD).toFixed(2)}`;
   const formatEUR = (fcfa) => `€${(fcfa * FCFA_TO_EUR).toFixed(2)}`;
 
-  const outerPadding = variant === 'modal'
-    ? 'px-4 sm:px-6 lg:px-8 py-6 lg:py-8'
+  const isModal = variant === 'modal';
+  const outerPadding = isModal
+    ? 'px-4 sm:px-5 py-4'
     : 'px-4 sm:px-6 lg:px-8 py-8 lg:py-12';
+  const maxW = isModal ? 'max-w-3xl' : 'max-w-6xl';
 
   if (isLoading) {
     return (
@@ -148,120 +153,138 @@ export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, v
       : null;
 
   return (
-    <div className={`max-w-6xl mx-auto ${outerPadding}`}>
+    <div className={`${maxW} mx-auto ${outerPadding}`}>
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-8">
+      <div className={`flex items-center justify-between ${isModal ? 'mb-4' : 'mb-8'}`}>
         <Button
           variant="ghost"
+          size={isModal ? 'sm' : 'default'}
           className="text-white/80 hover:text-white hover:bg-white/10"
           onClick={onBack || (() => window.history.back())}
           data-testid="checkout-back-btn"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <ArrowLeft className={`mr-2 ${isModal ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} /> Back
         </Button>
-        <div className="flex items-center gap-2 text-xs text-white/70">
-          <Lock className="h-3.5 w-3.5 text-[#c9a74a]" />
+        <div className={`flex items-center gap-2 ${isModal ? 'text-[10px]' : 'text-xs'} text-white/70`}>
+          <Lock className={`${isModal ? 'h-3 w-3' : 'h-3.5 w-3.5'} text-[#c9a74a]`} />
           <span className="hidden sm:inline">Secured by Stripe · 256-bit TLS</span>
         </div>
       </div>
 
-      {/* Page heading */}
-      <div className="mb-8 lg:mb-10">
-        <p className="text-xs uppercase tracking-[0.22em] text-[#c9a74a] font-semibold mb-3">Checkout · Card Payment</p>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight" data-testid="checkout-heading">
-          Review & pay<br className="hidden sm:inline" />
-          <span className="text-[#c9a74a]">{formatCurrency(amount)}</span>
-        </h1>
-        <p className="mt-3 text-sm text-slate-300 max-w-xl">
-          You're one step away from confirming <span className="font-semibold text-white">{order.service_name || 'your booking'}</span>.
-          Review the summary below, then continue to Stripe's secure checkout.
+      {/* Heading */}
+      <div className={isModal ? 'mb-4' : 'mb-8 lg:mb-10'}>
+        <p className={`uppercase text-[#c9a74a] font-semibold ${isModal ? 'text-[10px] tracking-[0.18em] mb-1.5' : 'text-xs tracking-[0.22em] mb-3'}`}>
+          Checkout · Card Payment
         </p>
+        <h1
+          className={`font-bold text-white leading-tight ${isModal ? 'text-xl sm:text-2xl' : 'text-3xl sm:text-4xl lg:text-5xl'}`}
+          data-testid="checkout-heading"
+        >
+          Review & pay {isModal ? <span className="text-[#c9a74a]">{formatCurrency(amount)}</span> : (
+            <>
+              <br className="hidden sm:inline" />
+              <span className="text-[#c9a74a]">{formatCurrency(amount)}</span>
+            </>
+          )}
+        </h1>
+        {!isModal && (
+          <p className="mt-3 text-sm text-slate-300 max-w-xl">
+            You're one step away from confirming <span className="font-semibold text-white">{order.service_name || 'your booking'}</span>.
+            Review the summary below, then continue to Stripe's secure checkout.
+          </p>
+        )}
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+      <div className={`grid gap-4 ${isModal ? 'sm:grid-cols-2' : 'lg:grid-cols-5 gap-6 lg:gap-8'}`}>
         {/* Booking Summary */}
-        <div className="lg:col-span-3">
-          <div className="relative rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-            <div className="px-6 sm:px-8 py-6 border-b border-white/10 flex items-start justify-between gap-4">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="h-12 w-12 rounded-2xl bg-[#c9a74a] flex items-center justify-center flex-shrink-0">
-                  <ServiceIcon className="h-6 w-6 text-[#071d3c]" />
+        <div className={isModal ? '' : 'lg:col-span-3'}>
+          <div className="relative rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl overflow-hidden shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)]">
+            <div className={`${isModal ? 'px-4 py-3' : 'px-6 sm:px-8 py-6'} border-b border-white/10 flex items-start justify-between gap-3`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`${isModal ? 'h-9 w-9 rounded-xl' : 'h-12 w-12 rounded-2xl'} bg-[#c9a74a] flex items-center justify-center flex-shrink-0`}>
+                  <ServiceIcon className={`${isModal ? 'h-4 w-4' : 'h-6 w-6'} text-[#071d3c]`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-medium">Booking Summary</p>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white truncate">{order.service_name || 'Your Booking'}</h2>
+                  <p className={`uppercase text-slate-400 font-medium ${isModal ? 'text-[9px] tracking-[0.14em]' : 'text-[11px] tracking-[0.16em]'}`}>Booking Summary</p>
+                  <h2 className={`font-bold text-white truncate ${isModal ? 'text-sm' : 'text-xl sm:text-2xl'}`}>{order.service_name || 'Your Booking'}</h2>
                   {routeSummary && (
-                    <p className="text-sm text-[#c9a74a] font-medium mt-0.5 truncate">{routeSummary}</p>
+                    <p className={`text-[#c9a74a] font-medium mt-0.5 truncate ${isModal ? 'text-[11px]' : 'text-sm'}`}>{routeSummary}</p>
                   )}
                 </div>
               </div>
-              <Badge variant="outline" className="border-[#c9a74a]/40 text-[#c9a74a] bg-[#c9a74a]/10 capitalize flex-shrink-0">
+              <Badge variant="outline" className={`border-[#c9a74a]/40 text-[#c9a74a] bg-[#c9a74a]/10 capitalize flex-shrink-0 ${isModal ? 'text-[10px] px-2 py-0' : ''}`}>
                 {(order.service_category || order.service_type || '').replace('_', ' ')}
               </Badge>
             </div>
 
-            <div className="px-6 sm:px-8 py-4">
-              <PremiumRow label="Order Number" value={order.order_number} icon={CreditCard} testid="summary-order-number" />
-              <PremiumRow label="Route" value={bd.departure_city && bd.destination_city ? `${bd.departure_city}  →  ${bd.destination_city}` : null} icon={MapPin} testid="summary-route" />
-              <PremiumRow label="Travel Date" value={bd.travel_date ? fmtDate(bd.travel_date) : null} icon={Calendar} testid="summary-travel-date" />
-              <PremiumRow label="Departure Time" value={bd.service_time || bd.travel_time || bd.departure_time} icon={Clock} testid="summary-departure-time" />
-              <PremiumRow label="Check-in" value={bd.check_in ? fmtDate(bd.check_in) : null} icon={Calendar} testid="summary-check-in" />
-              <PremiumRow label="Check-out" value={bd.check_out ? fmtDate(bd.check_out) : null} icon={Calendar} testid="summary-check-out" />
-              <PremiumRow label="Travellers" value={bd.passengers?.length ? `${bd.passengers.length} passenger${bd.passengers.length > 1 ? 's' : ''}` : null} icon={Users} testid="summary-passengers" />
-              <PremiumRow label="Operator" value={bd.operator_name} icon={Sparkles} testid="summary-operator" />
+            <div className={isModal ? 'px-4 py-1' : 'px-6 sm:px-8 py-4'}>
+              <PremiumRow label="Order Number" value={order.order_number} icon={CreditCard} testid="summary-order-number" compact={isModal} />
+              <PremiumRow label="Route" value={bd.departure_city && bd.destination_city ? `${bd.departure_city}  →  ${bd.destination_city}` : null} icon={MapPin} testid="summary-route" compact={isModal} />
+              <PremiumRow label="Travel Date" value={bd.travel_date ? fmtDate(bd.travel_date) : null} icon={Calendar} testid="summary-travel-date" compact={isModal} />
+              <PremiumRow label="Departure Time" value={bd.service_time || bd.travel_time || bd.departure_time} icon={Clock} testid="summary-departure-time" compact={isModal} />
+              <PremiumRow label="Check-in" value={bd.check_in ? fmtDate(bd.check_in) : null} icon={Calendar} testid="summary-check-in" compact={isModal} />
+              <PremiumRow label="Check-out" value={bd.check_out ? fmtDate(bd.check_out) : null} icon={Calendar} testid="summary-check-out" compact={isModal} />
+              <PremiumRow label="Travellers" value={bd.passengers?.length ? `${bd.passengers.length} passenger${bd.passengers.length > 1 ? 's' : ''}` : null} icon={Users} testid="summary-passengers" compact={isModal} />
+              <PremiumRow label="Operator" value={bd.operator_name} icon={Sparkles} testid="summary-operator" compact={isModal} />
             </div>
 
-            <div className="px-6 sm:px-8 py-4 border-t border-white/10 bg-white/[0.02] flex flex-wrap items-center gap-x-5 gap-y-2">
-              <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>Instant confirmation</span></div>
-              <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>No hidden fees</span></div>
-              <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>Free cancellation window</span></div>
-            </div>
+            {!isModal && (
+              <div className="px-6 sm:px-8 py-4 border-t border-white/10 bg-white/[0.02] flex flex-wrap items-center gap-x-5 gap-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>Instant confirmation</span></div>
+                <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>No hidden fees</span></div>
+                <div className="flex items-center gap-2 text-xs text-slate-300"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /><span>Free cancellation window</span></div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Payment Amount */}
-        <div className="lg:col-span-2">
-          <div className="sticky top-6 rounded-3xl bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-[0_30px_80px_-20px_rgba(201,167,74,0.35)]">
-            <div className="relative px-6 sm:px-8 pt-8 pb-6 bg-gradient-to-br from-[#082c59] via-[#0a346c] to-[#071d3c] text-white">
+        <div className={isModal ? '' : 'lg:col-span-2'}>
+          <div className={`${isModal ? '' : 'sticky top-6'} rounded-2xl bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-[0_20px_60px_-20px_rgba(201,167,74,0.35)]`}>
+            <div className={`relative ${isModal ? 'px-4 pt-5 pb-4' : 'px-6 sm:px-8 pt-8 pb-6'} bg-gradient-to-br from-[#082c59] via-[#0a346c] to-[#071d3c] text-white`}>
               <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #c9a74a 0%, transparent 40%)' }} />
               <div className="relative">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#c9a74a] font-semibold flex items-center gap-2">
-                  <CreditCard className="h-3.5 w-3.5" />
+                <p className={`uppercase text-[#c9a74a] font-semibold flex items-center gap-2 ${isModal ? 'text-[9px] tracking-[0.16em]' : 'text-[11px] tracking-[0.18em]'}`}>
+                  <CreditCard className={isModal ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
                   Payment Amount
                 </p>
-                <p className="mt-4 text-4xl sm:text-5xl font-bold leading-none" data-testid="checkout-total-amount">
+                <p className={`font-bold leading-none ${isModal ? 'mt-2.5 text-2xl sm:text-3xl' : 'mt-4 text-4xl sm:text-5xl'}`} data-testid="checkout-total-amount">
                   {formatCurrency(amount)}
                 </p>
-                <p className="mt-2 text-xs text-slate-300">Total charged in FCFA (Central African CFA franc)</p>
+                <p className={`text-slate-300 ${isModal ? 'mt-1 text-[10px]' : 'mt-2 text-xs'}`}>
+                  {isModal ? 'FCFA (Central African CFA franc)' : 'Total charged in FCFA (Central African CFA franc)'}
+                </p>
               </div>
             </div>
 
-            <div className="px-6 sm:px-8 py-6 space-y-5">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-medium flex items-center gap-1.5 mb-3">
-                  <Info className="h-3.5 w-3.5" />
-                  Approximate in other currencies
+            <div className={isModal ? 'px-4 py-4 space-y-3' : 'px-6 sm:px-8 py-6 space-y-5'}>
+              <div className={`rounded-xl border border-slate-200 bg-slate-50/50 ${isModal ? 'p-3' : 'p-4'}`}>
+                <p className={`uppercase text-slate-500 font-medium flex items-center gap-1.5 ${isModal ? 'text-[9px] tracking-[0.12em] mb-2' : 'text-[11px] tracking-[0.14em] mb-3'}`}>
+                  <Info className={isModal ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+                  Approx. in other currencies
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center">
-                    <p className="text-lg font-bold text-slate-900">{formatUSD(amount)}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">US Dollar</p>
+                <div className={`grid grid-cols-2 ${isModal ? 'gap-2' : 'gap-3'}`}>
+                  <div className={`rounded-lg border border-slate-200 bg-white text-center ${isModal ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+                    <p className={`font-bold text-slate-900 ${isModal ? 'text-sm' : 'text-lg'}`}>{formatUSD(amount)}</p>
+                    <p className={`uppercase tracking-wider text-slate-500 mt-0.5 ${isModal ? 'text-[9px]' : 'text-[10px]'}`}>US Dollar</p>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center">
-                    <p className="text-lg font-bold text-slate-900">{formatEUR(amount)}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">Euro</p>
+                  <div className={`rounded-lg border border-slate-200 bg-white text-center ${isModal ? 'px-2 py-1.5' : 'px-3 py-2.5'}`}>
+                    <p className={`font-bold text-slate-900 ${isModal ? 'text-sm' : 'text-lg'}`}>{formatEUR(amount)}</p>
+                    <p className={`uppercase tracking-wider text-slate-500 mt-0.5 ${isModal ? 'text-[9px]' : 'text-[10px]'}`}>Euro</p>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
-                  Stripe will charge in USD. The final amount may vary slightly based on the live exchange rate at your bank.
-                </p>
+                {!isModal && (
+                  <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+                    Stripe will charge in USD. The final amount may vary slightly based on the live exchange rate at your bank.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-medium">Accepted cards</p>
-                <div className="flex items-center gap-1.5">
+                <p className={`uppercase text-slate-500 font-medium ${isModal ? 'text-[9px] tracking-[0.12em]' : 'text-[11px] tracking-[0.14em]'}`}>Accepted cards</p>
+                <div className="flex items-center gap-1">
                   {['VISA', 'MC', 'AMEX'].map((b) => (
-                    <span key={b} className="inline-flex items-center justify-center px-2 py-1 rounded-md border border-slate-200 bg-white text-[10px] font-bold tracking-wide text-slate-700">{b}</span>
+                    <span key={b} className={`inline-flex items-center justify-center rounded-md border border-slate-200 bg-white font-bold tracking-wide text-slate-700 ${isModal ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]'}`}>{b}</span>
                   ))}
                 </div>
               </div>
@@ -269,13 +292,13 @@ export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, v
               <Button
                 onClick={handleProceedToStripe}
                 disabled={isProcessing}
-                className="w-full h-14 text-base font-semibold bg-[#082c59] hover:bg-[#0a346c] text-white shadow-lg shadow-[#082c59]/20 transition-all"
+                className={`w-full font-semibold bg-[#082c59] hover:bg-[#0a346c] text-white shadow-lg shadow-[#082c59]/20 transition-all ${isModal ? 'h-10 text-sm' : 'h-14 text-base'}`}
                 data-testid="checkout-proceed-stripe-btn"
               >
                 {isProcessing ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Redirecting to Stripe…</>
+                  <><Loader2 className={`mr-2 animate-spin ${isModal ? 'h-4 w-4' : 'h-5 w-5'}`} /> Redirecting to Stripe…</>
                 ) : (
-                  <>Continue to Stripe <ExternalLink className="ml-2 h-4 w-4" /></>
+                  <>Continue to Stripe <ExternalLink className={`ml-2 ${isModal ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} /></>
                 )}
               </Button>
 
@@ -283,28 +306,32 @@ export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, v
                 type="button"
                 variant="outline"
                 onClick={onChangeMethod || onBack || (() => window.history.back())}
-                className="w-full h-11 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-[#082c59] hover:border-[#082c59]"
+                className={`w-full border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-[#082c59] hover:border-[#082c59] ${isModal ? 'h-9 text-xs' : 'h-11'}`}
                 data-testid="checkout-change-payment-method-btn"
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className={`mr-2 ${isModal ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
                 Choose a different payment method
               </Button>
 
-              <div className="pt-4 border-t border-slate-200 flex items-start gap-2.5">
-                <Shield className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Your payment is processed by <span className="font-semibold text-slate-700">Stripe</span>.
-                  We never see, touch, or store your card details. PCI-DSS Level 1 certified.
-                </p>
-              </div>
+              {!isModal && (
+                <div className="pt-4 border-t border-slate-200 flex items-start gap-2.5">
+                  <Shield className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Your payment is processed by <span className="font-semibold text-slate-700">Stripe</span>.
+                    We never see, touch, or store your card details. PCI-DSS Level 1 certified.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <p className="mt-10 text-center text-xs text-white/50">
-        Need help? Contact support before completing the payment — we're happy to hold your booking.
-      </p>
+      {!isModal && (
+        <p className="mt-10 text-center text-xs text-white/50">
+          Need help? Contact support before completing the payment — we're happy to hold your booking.
+        </p>
+      )}
     </div>
   );
 }
