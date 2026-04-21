@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
+import OperatorPicker from '@/components/shared/OperatorPicker';
 
 const STATUS_STYLES = {
   pending: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: Clock },
@@ -26,7 +27,7 @@ export default function InvitationsManagement() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [sending, setSending] = useState(false);
   const [copiedToken, setCopiedToken] = useState(null);
-  const [form, setForm] = useState({ email: '', role: 'customer', message: '' });
+  const [form, setForm] = useState({ email: '', role: 'customer', message: '', operator_id: '' });
 
   const loadInvitations = async () => {
     setLoading(true);
@@ -44,12 +45,18 @@ export default function InvitationsManagement() {
 
   const handleSend = async () => {
     if (!form.email) { toast.error('Email is required'); return; }
+    if (form.role === 'operator' && !form.operator_id) {
+      toast.error('Pick an operator to assign this user to');
+      return;
+    }
     setSending(true);
     try {
-      const { data } = await api.post('/invitations/send', form);
+      const payload = { ...form };
+      if (form.role !== 'operator') delete payload.operator_id;
+      await api.post('/invitations/send', payload);
       toast.success(`Invitation sent to ${form.email}`);
       setShowSendDialog(false);
-      setForm({ email: '', role: 'customer', message: '' });
+      setForm({ email: '', role: 'customer', message: '', operator_id: '' });
       loadInvitations();
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send invitation');
@@ -195,7 +202,7 @@ export default function InvitationsManagement() {
             </div>
             <div>
               <Label className="text-sm font-medium">Role</Label>
-              <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v }))}>
+              <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v, operator_id: v === 'operator' ? p.operator_id : '' }))}>
                 <SelectTrigger className="mt-1" data-testid="invite-role-select">
                   <SelectValue />
                 </SelectTrigger>
@@ -206,6 +213,18 @@ export default function InvitationsManagement() {
                 </SelectContent>
               </Select>
             </div>
+            {form.role === 'operator' && (
+              <div>
+                <Label className="text-sm font-medium">Assign to operator <span className="text-red-500">*</span></Label>
+                <div className="mt-1">
+                  <OperatorPicker
+                    value={form.operator_id}
+                    onChange={(id) => setForm(p => ({ ...p, operator_id: id }))}
+                    required
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium">Personal Message (optional)</Label>
               <Textarea

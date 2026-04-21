@@ -309,6 +309,157 @@ async def get_showtimes(
     
     return {"showtimes": showtimes}
 
+@router.get("/showtimes/operator")
+async def list_operator_showtimes(
+    cinema_id: Optional[str] = None,
+    date: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """List all showtimes for the current operator (or all if admin). Returns IDs."""
+    if current_user["role"] not in ("operator", "admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_database()
+    cinema_query = {}
+    if current_user["role"] == "operator":
+        cinema_query["operator_id"] = current_user.get("operator_id")
+    if cinema_id:
+        cinema_query["_id"] = cinema_id
+    cinema_ids = await db.cinemas.distinct("_id", cinema_query)
+
+    query = {"cinema_id": {"$in": cinema_ids}}
+    if date:
+        query["show_date"] = date
+    showtimes = await db.showtimes.find(query).sort([("show_date", 1), ("show_time", 1)]).to_list(500)
+    for s in showtimes:
+        s["id"] = s.pop("_id", None)
+    return {"showtimes": showtimes, "total": len(showtimes)}
+
+
+@router.put("/showtimes/{showtime_id}")
+async def update_showtime(
+    showtime_id: str,
+    body: dict,
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
+):
+    """Update an existing showtime (price, time, screen, film, active flag, capacity)."""
+    db = get_database()
+    st = await db.showtimes.find_one({"_id": showtime_id})
+    if not st:
+        raise HTTPException(status_code=404, detail="Showtime not found")
+    cinema = await db.cinemas.find_one({"_id": st["cinema_id"]}, {"operator_id": 1})
+    if (
+        current_user["role"] == "operator"
+        and cinema
+        and cinema.get("operator_id") != current_user.get("operator_id")
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    allowed = {
+        "film_id", "film_title", "screen_name", "screen_type",
+        "show_date", "show_time", "end_time",
+        "price", "vip_price", "total_seats", "is_active",
+    }
+    updates = {k: v for k, v in body.items() if k in allowed and v is not None}
+    if "film_id" in updates and "film_title" not in updates:
+        film = await db.films.find_one({"_id": updates["film_id"]}, {"title": 1})
+        if film:
+            updates["film_title"] = film.get("title")
+    updates["updated_at"] = datetime.utcnow()
+    await db.showtimes.update_one({"_id": showtime_id}, {"$set": updates})
+    return {"message": "Showtime updated", "showtime_id": showtime_id}
+
+
+@router.delete("/showtimes/{showtime_id}")
+async def delete_showtime(
+    showtime_id: str,
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
+):
+    """Soft-delete (deactivate) a showtime. Refuses if there are active bookings — operators should use the Replace flow instead."""
+    db = get_database()
+    st = await db.showtimes.find_one({"_id": showtime_id})
+    if not st:
+        raise HTTPException(status_code=404, detail="Showtime not found")
+    cinema = await db.cinemas.find_one({"_id": st["cinema_id"]}, {"operator_id": 1})
+    if (
+        current_user["role"] == "operator"
+        and cinema
+        and cinema.get("operator_id") != current_user.get("operator_id")
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Guard: refuse if any active bookings reference this showtime.
+    active_bookings = await db.orders.count_documents({
+        "service_type": "cinema",
+        "booking_details.showtime_id": showtime_id,
+        "status": {"$in": ["pending", "confirmed", "paid"]},
+    })
+    if active_bookings > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{active_bookings} active booking(s) reference this showtime. "
+                "Use 'Replace' to migrate them to another showtime first, then delete."
+            ),
+        )
+
+    await db.showtimes.update_one(
+        {"_id": showtime_id},
+        {"$set": {"is_active": False, "deleted_at": datetime.utcnow()}},
+    )
+    return {"message": "Showtime deactivated", "showtime_id": showtime_id}
+
+
+@router.post("/showtimes")
+async def create_showtime_body(
+    body: dict,
+    current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"])),
+):
+    """Body-based showtime creation (preferred over the legacy query-param form).
+
+    Expected body: {cinema_id, film_id, screen_name, show_date, show_time,
+                    end_time, price, screen_type?, vip_price?, total_seats?}
+    """
+    db = get_database()
+    cinema_id = body.get("cinema_id")
+    film_id = body.get("film_id")
+    if not cinema_id or not film_id:
+        raise HTTPException(status_code=400, detail="cinema_id and film_id are required")
+
+    cinema = await db.cinemas.find_one({"_id": cinema_id})
+    if not cinema:
+        raise HTTPException(status_code=404, detail="Cinema not found")
+    if (
+        current_user["role"] == "operator"
+        and cinema.get("operator_id") != current_user.get("operator_id")
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    film = await db.films.find_one({"_id": film_id})
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    total_seats = int(body.get("total_seats", 100))
+    st = {
+        "_id": str(uuid.uuid4()),
+        "cinema_id": cinema_id,
+        "cinema_name": cinema.get("name"),
+        "film_id": film_id,
+        "film_title": film.get("title"),
+        "screen_name": body.get("screen_name"),
+        "screen_type": body.get("screen_type", "2d"),
+        "show_date": body.get("show_date"),
+        "show_time": body.get("show_time"),
+        "end_time": body.get("end_time"),
+        "price": float(body.get("price", 0)),
+        "vip_price": body.get("vip_price"),
+        "total_seats": total_seats,
+        "available_seats": total_seats,
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+    }
+    await db.showtimes.insert_one(st)
+    return {"message": "Showtime created", "showtime_id": st["_id"]}
+
+
 @router.post("/showtimes/{showtime_id}/book")
 async def book_cinema_seats(
     showtime_id: str,

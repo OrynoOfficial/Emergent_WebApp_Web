@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt
+  Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt,
+  Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -114,6 +116,8 @@ export default function CinemaManagement() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cinemas, setCinemas] = useState([]);
   const [movies, setMovies] = useState([]);
+  const [showtimes, setShowtimes] = useState([]);
+  const [replaceShowtime, setReplaceShowtime] = useState(null);
   const [operators, setOperators] = useState([]);
   const [selectedCinema, setSelectedCinema] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -172,9 +176,20 @@ export default function CinemaManagement() {
     }
   }, []);
 
+  const loadShowtimes = useCallback(async () => {
+    try {
+      const res = await api.get('/cinema/showtimes/operator');
+      setShowtimes(res.data.showtimes || []);
+    } catch (error) {
+      console.error('Failed to load showtimes:', error);
+      setShowtimes([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadCinemas();
-  }, [loadCinemas]);
+    loadShowtimes();
+  }, [loadCinemas, loadShowtimes]);
 
   useEffect(() => {
     loadMovies();
@@ -313,6 +328,7 @@ export default function CinemaManagement() {
             <TabsList>
               <TabsTrigger value="cinemas">Cinemas</TabsTrigger>
               <TabsTrigger value="movies">Films ({movies.length})</TabsTrigger>
+              <TabsTrigger value="showtimes" data-testid="tab-showtimes">Showtimes ({showtimes.length})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="cinemas">
@@ -420,6 +436,104 @@ export default function CinemaManagement() {
                           </CardContent>
                         </Card>
                       ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="showtimes" data-testid="content-showtimes">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Showtimes</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={loadShowtimes} variant="outline" size="sm">
+                      <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {showtimes.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 text-sm">
+                      No showtimes yet. Add one from the film detail page or via your scheduling tool.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Film</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Cinema</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Screen</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Date · Time</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Seats</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Price</th>
+                            <th className="py-3 px-4 text-left font-semibold text-slate-600">Status</th>
+                            <th className="py-3 px-4 text-right font-semibold text-slate-600">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {showtimes.map((st) => (
+                            <tr key={st.id} className="hover:bg-slate-50" data-testid={`showtime-row-${st.id}`}>
+                              <td className="py-3 px-4 font-medium text-[#082c59]">{st.film_title || '—'}</td>
+                              <td className="py-3 px-4 text-slate-700">{st.cinema_name || '—'}</td>
+                              <td className="py-3 px-4">
+                                <span className="inline-flex items-center gap-1">
+                                  <Monitor className="h-3.5 w-3.5 text-slate-400" />
+                                  {st.screen_name || '—'}
+                                  {st.screen_type && <span className="text-[10px] uppercase bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{st.screen_type}</span>}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-600">
+                                <span className="block">{st.show_date}</span>
+                                <span className="text-xs text-slate-400">{st.show_time}{st.end_time ? ` – ${st.end_time}` : ''}</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="text-xs">
+                                  <span className="font-semibold">{st.available_seats ?? '—'}</span> / {st.total_seats ?? '—'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-700">
+                                {st.price ? formatFCFA(st.price) : '—'}
+                                {st.vip_price && <span className="block text-xs text-amber-700">VIP {formatFCFA(st.vip_price)}</span>}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${st.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                  {st.is_active !== false ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-1 justify-end">
+                                  <PermissionGate permission="cinema.manage_screenings">
+                                    <Button size="sm" variant="outline" onClick={() => setReplaceShowtime(st)} className="h-8 text-[#082c59]" data-testid={`replace-showtime-btn-${st.id}`}>
+                                      <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
+                                    </Button>
+                                  </PermissionGate>
+                                  <PermissionGate permission="cinema.manage_screenings">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 text-red-600 hover:bg-red-50"
+                                      onClick={async () => {
+                                        if (!window.confirm('Deactivate this showtime?')) return;
+                                        try {
+                                          await api.delete(`/cinema/showtimes/${st.id}`);
+                                          loadShowtimes();
+                                        } catch (err) {
+                                          alert(err.response?.data?.detail || 'Delete failed');
+                                        }
+                                      }}
+                                      data-testid={`delete-showtime-btn-${st.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </PermissionGate>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </CardContent>
@@ -700,6 +814,18 @@ export default function CinemaManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceShowtime}
+        onClose={() => setReplaceShowtime(null)}
+        serviceType="cinema"
+        oldResource={replaceShowtime}
+        allResources={showtimes}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadShowtimes();
         }}
       />
     </div>

@@ -1,0 +1,45 @@
+{
+  "summary": "Iter122 testing complete. Backend: 11/11 pytest cases PASS covering POST /api/users/create operator validation, GET /api/users/ operator_name enrichment, cinema showtimes GET/operator (id field), POST body create, PUT update, DELETE soft-delete + 409 when active booking exists. Frontend: after a frontend restart to pick up new modules, live verification on /admin/users confirmed all new data-testids render correctly (user-view-mode with view-list/grid/details, user-operator-filter, joined-from/joined-to, user-filters, user-operator-cell-<id> populated with 'Musango Bus Service', 'West Region Tours', 'Prestige Pressing' badges). Operator column shows human-readable operator names for operator-role users. Static code review confirms OperatorPicker conditional in both Create User and Invitations modals, Showtimes sub-tab + replace/delete buttons in CinemaManagement.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/users filters row", "issues": ["joined-from/joined-to use the browser's native date input (mm/dd/yyyy) instead of a shadcn Calendar popover. Functional but inconsistent with the rest of the app. Low priority."]},
+      {"screen": "CinemaManagement Showtimes tab", "issues": ["Delete button uses window.confirm + alert on error; 409 message will appear in an ugly native alert rather than a toast. Consider switching to AlertDialog + toast.error for consistency."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration122_users_operator_showtimes.py",
+    "/app/test_reports/pytest/iter122.xml"
+  ],
+  "action_items": [
+    "Optional: swap joined-from/joined-to native date inputs for the shadcn Calendar/Popover pattern used elsewhere.",
+    "Optional: replace window.confirm+alert in delete-showtime handler with AlertDialog + toast so the 409 'active bookings' message is user-friendly."
+  ],
+  "critical_code_review_comments": [
+    "users.py POST /create correctly returns 400 when role=operator lacks operator_id and 404 when operator_id is unknown; persists operator_id + operator_name. GET / enriches operator_name for any user missing it via a single batched $in lookup — efficient.",
+    "cinema.py: POST /showtimes body create correctly validates cinema_id, film_id, enforces operator ownership, generates uuid. PUT /showtimes/{id} only updates whitelisted fields and auto-fills film_title when film_id changes. DELETE /showtimes/{id} counts active bookings (pending|confirmed|paid) and returns 409 before soft-delete — correct guard. GET /showtimes/operator returns id field (strips _id) and scopes to operator's cinemas — verified in live test.",
+    "OperatorPicker: clean implementation with data-testid coverage (operator-picker, operator-picker-search, operator-picker-service, operator-picker-region, operator-option-<id>). Region list is derived from the loaded operators (good).",
+    "Users.jsx: filters, view-mode, pagination, operator column and OperatorPicker in Create User modal all implemented. handleCreateUser blocks submit with toast if role=operator and operator_id empty. operator_id is stripped from payload when role != operator.",
+    "InvitationsManagement.jsx: handleSend blocks with toast 'Pick an operator to assign this user to' when role=operator and operator_id missing. Payload also strips operator_id when role != operator.",
+    "CinemaManagement.jsx: Showtimes sub-tab renders a table with replace-showtime-btn-<id> and delete-showtime-btn-<id>. ReplaceResourceModal is mounted with serviceType='cinema' and refreshes loadShowtimes on success.",
+    "Minor: CinemaManagement delete flow uses window.confirm + alert — inconsistent with the app's toast pattern."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration122_users_operator_showtimes.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11)",
+    "frontend": "100% for data-testid presence + operator column population (live verified)"
+  },
+  "test_credentials": "admin@test.com / testpassword123; operator@test.com / testpassword123 (Musango, 30c487d8-f8ef-4e80-8b14-1a68866071c8)",
+  "seed_data_creation": "Each test run creates a couple of TEST_op_ok_<hash>@example.com operator users (not cleaned up — harmless, prefixed). A short-lived mock order TEST-ITER122-<hash> is inserted directly into mongo and deleted in the finally block of the 409-blocked-delete test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend endpoints are all green. Vite sometimes needs a `sudo supervisorctl restart frontend` for newly-added shared components (OperatorPicker) to appear — noticed in this iter when the first Playwright run showed the old UI on /admin/users; after restart everything rendered correctly. Operator users seeded by my tests: TEST_op_ok_5629b0b5@example.com, TEST_op_ok_7e1edd73@example.com (both under Musango). These are safe to keep.",
+  "rca of the issue": "No real issue. Transient symptom on first Playwright load (old bundle without new data-testids) resolved by a frontend restart so Vite picked up OperatorPicker and the revamped Users.jsx. This may have been a stale HMR state, not a code bug."
+}

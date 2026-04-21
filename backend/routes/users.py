@@ -69,11 +69,19 @@ async def get_users(
     
     users = await db.users.find(query, projection).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.users.count_documents(query)
-    
-    # Transform _id to id
+
+    # Transform _id to id and enrich operator_name for users missing it
+    missing_op_ids = {u.get("operator_id") for u in users if u.get("operator_id") and not u.get("operator_name")}
+    op_name_map = {}
+    if missing_op_ids:
+        async for op in db.operators.find({"_id": {"$in": list(missing_op_ids)}}, {"name": 1}):
+            op_name_map[op["_id"]] = op.get("name")
+
     for user in users:
         user["id"] = str(user.pop("_id", ""))
-    
+        if user.get("operator_id") and not user.get("operator_name"):
+            user["operator_name"] = op_name_map.get(user["operator_id"])
+
     return {"users": users, "total": total, "skip": skip, "limit": limit}
 
 @router.get("/{user_id}")
@@ -368,7 +376,21 @@ async def create_user(
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    
+
+    # For operator role, require & persist operator_id
+    if new_role == "operator":
+        operator_id = user_data.get("operator_id")
+        if not operator_id:
+            raise HTTPException(
+                status_code=400,
+                detail="operator_id is required when creating an operator user",
+            )
+        op = await db.operators.find_one({"_id": operator_id}, {"name": 1})
+        if not op:
+            raise HTTPException(status_code=404, detail="Operator not found")
+        user["operator_id"] = operator_id
+        user["operator_name"] = op.get("name")
+
     await db.users.insert_one(user)
     
     return {"message": "User created successfully", "user_id": user["_id"]}
