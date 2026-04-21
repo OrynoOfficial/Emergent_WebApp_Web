@@ -111,6 +111,92 @@ SERVICE_SPECS: Dict[str, Dict[str, Any]] = {
         # Rooms belong to a hotel (hotel_id), not directly to operator_id — check both.
         "compat_fields": ["hotel_id"],
     },
+    "event": {
+        "resource_type": "event",
+        "resource_collection": "events",
+        "order_resource_id_path": "booking_details.event_id",
+        "order_snapshot_path": "booking_details.event_info",
+        "extra_order_mirrors": {
+            "booking_details.event_name": "name",
+            "booking_details.event_date": "start_date",
+        },
+        "snapshot_fields": [
+            "name", "event_type", "venue_name", "venue_address", "city",
+            "start_date", "end_date", "doors_open", "images",
+        ],
+        "noun_singular": "event",
+        "noun_singular_title": "Event",
+        "booking_noun": "event",
+        "label_field": "name",
+        "secondary_label_field": "venue_name",
+        "compat_fields": ["operator_id"],
+    },
+    "package": {
+        "resource_type": "package",
+        "resource_collection": "packages",
+        "order_resource_id_path": "booking_details.package_id",
+        "order_snapshot_path": "booking_details.package_info",
+        "extra_order_mirrors": {
+            "booking_details.package_name": "name",
+        },
+        "snapshot_fields": [
+            "name", "package_type", "destination", "origin",
+            "duration_days", "duration_nights", "images", "base_price",
+            "inclusions",
+        ],
+        "noun_singular": "package",
+        "noun_singular_title": "Package",
+        "booking_noun": "package",
+        "label_field": "name",
+        "secondary_label_field": "destination",
+        "compat_fields": ["operator_id"],
+    },
+    "laundry": {
+        # service_type in orders is 'pressing' (legacy); we treat them as the same.
+        "resource_type": "pressing",
+        "resource_collection": "pressing",
+        "order_resource_id_path": "booking_details.pressing_id",
+        "order_snapshot_path": "booking_details.pressing_info",
+        "extra_order_mirrors": {
+            "booking_details.pressing_name": "name",
+        },
+        "snapshot_fields": [
+            "name", "address", "city", "phone", "images",
+            "delivery_available", "express_available",
+        ],
+        "noun_singular": "pressing shop",
+        "noun_singular_title": "Pressing Shop",
+        "booking_noun": "pressing shop",
+        "label_field": "name",
+        "secondary_label_field": "city",
+        "compat_fields": ["operator_id"],
+    },
+    "cinema": {
+        # Cinema resource is the showtime (cinema + screen + film + time slot).
+        "resource_type": "showtime",
+        "resource_collection": "showtimes",
+        "order_resource_id_path": "booking_details.showtime_id",
+        "order_snapshot_path": "booking_details.showtime_info",
+        "extra_order_mirrors": {
+            "booking_details.cinema_name": "cinema_name",
+            "booking_details.film_title": "film_title",
+            "booking_details.screen_name": "screen_name",
+            "booking_details.show_date": "show_date",
+            "booking_details.show_time": "show_time",
+        },
+        "snapshot_fields": [
+            "cinema_id", "cinema_name", "film_id", "film_title",
+            "screen_name", "screen_type", "show_date", "show_time",
+            "end_time", "price", "vip_price",
+        ],
+        "noun_singular": "showtime",
+        "noun_singular_title": "Showtime",
+        "booking_noun": "showing",
+        "label_field": "film_title",
+        "secondary_label_field": "cinema_name",
+        # Showtimes belong to a cinema (cinema_id) — resolve operator via cinemas.operator_id.
+        "compat_fields": ["cinema_id"],
+    },
 }
 
 
@@ -168,16 +254,24 @@ def _label(resource: dict, spec: Dict[str, Any]) -> str:
 
 
 async def _resolve_operator_id(db, resource: dict, spec: Dict[str, Any]) -> Optional[str]:
-    """Resolve the operator_id for a resource, following hotel_id if needed."""
+    """Resolve the operator_id for a resource, following indirect links if needed."""
     if resource.get("operator_id"):
         return resource["operator_id"]
+    rtype = spec.get("resource_type")
     # Hotel rooms: resolve via hotel_id → hotels.operator_id
-    if spec.get("resource_type") == "room" and resource.get("hotel_id"):
+    if rtype == "room" and resource.get("hotel_id"):
         hotel = await db.hotels.find_one(
             {"_id": resource["hotel_id"]}, {"operator_id": 1}
         )
         if hotel:
             return hotel.get("operator_id")
+    # Cinema showtimes: resolve via cinema_id → cinemas.operator_id
+    if rtype == "showtime" and resource.get("cinema_id"):
+        cinema = await db.cinemas.find_one(
+            {"_id": resource["cinema_id"]}, {"operator_id": 1}
+        )
+        if cinema:
+            return cinema.get("operator_id")
     return None
 
 
@@ -212,10 +306,14 @@ async def _get_affected_orders(
         pass  # primary_clause is enough
 
     query: Dict[str, Any] = {
-        "service_type": service_type,
         "status": {"$in": statuses},
         "$or": or_clauses,
     }
+    # Legacy alias: some orders may use 'pressing' instead of 'laundry'
+    if service_type == "laundry":
+        query["service_type"] = {"$in": ["laundry", "pressing"]}
+    else:
+        query["service_type"] = service_type
 
     if operator_id:
         query["operator_id"] = operator_id
@@ -414,6 +512,13 @@ async def reassign_resource(
             raise HTTPException(
                 status_code=400,
                 detail="Both rooms must belong to the same hotel",
+            )
+    # Extra compat check for showtimes: must belong to the same cinema.
+    if spec.get("resource_type") == "showtime":
+        if old_resource.get("cinema_id") != new_resource.get("cinema_id"):
+            raise HTTPException(
+                status_code=400,
+                detail="Both showtimes must belong to the same cinema",
             )
 
     # Gather affected orders

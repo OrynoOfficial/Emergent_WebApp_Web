@@ -354,9 +354,10 @@ def test_hotel_cross_hotel_rejected(admin_token):
 
 
 def test_unknown_service_type_rejected(admin_token):
+    # NOTE: cinema is now supported (iter120); use a truly-unknown service_type.
     r = requests.post(
         f"{API}/operator/resources/reassign",
-        json={"service_type": "cinema", "old_resource_id": "x",
+        json={"service_type": "totally_fake_service", "old_resource_id": "x",
               "new_resource_id": "y", "reason": "breakdown", "dry_run": True},
         headers=_auth(admin_token),
     )

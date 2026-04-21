@@ -200,6 +200,71 @@ async def create_direct_order(
                 booking_details["car_info"] = car
         except Exception:
             pass
+
+    # Enrich event bookings with event snapshot
+    if order_data.service_type == "event" and order_data.service_id and not booking_details.get("event_info"):
+        try:
+            event_id = booking_details.get("event_id") or order_data.service_id
+            event = await db.events.find_one(
+                {"_id": event_id},
+                {"_id": 0, "name": 1, "event_type": 1, "venue_name": 1,
+                 "venue_address": 1, "city": 1, "start_date": 1, "end_date": 1,
+                 "doors_open": 1, "images": 1},
+            )
+            if event:
+                booking_details["event_id"] = event_id
+                booking_details["event_info"] = event
+        except Exception:
+            pass
+
+    # Enrich package bookings with package snapshot
+    if order_data.service_type == "package" and order_data.service_id and not booking_details.get("package_info"):
+        try:
+            pkg_id = booking_details.get("package_id") or order_data.service_id
+            pkg = await db.packages.find_one(
+                {"_id": pkg_id},
+                {"_id": 0, "name": 1, "package_type": 1, "destination": 1,
+                 "origin": 1, "duration_days": 1, "duration_nights": 1,
+                 "images": 1, "base_price": 1, "inclusions": 1},
+            )
+            if pkg:
+                booking_details["package_id"] = pkg_id
+                booking_details["package_info"] = pkg
+        except Exception:
+            pass
+
+    # Enrich laundry/pressing bookings with shop snapshot
+    if order_data.service_type in ("laundry", "pressing") and order_data.service_id and not booking_details.get("pressing_info"):
+        try:
+            pressing_id = booking_details.get("pressing_id") or order_data.service_id
+            shop = await db.pressing.find_one(
+                {"_id": pressing_id},
+                {"_id": 0, "name": 1, "address": 1, "city": 1, "phone": 1,
+                 "images": 1, "delivery_available": 1, "express_available": 1},
+            )
+            if shop:
+                booking_details["pressing_id"] = pressing_id
+                booking_details["pressing_info"] = shop
+        except Exception:
+            pass
+
+    # Enrich cinema bookings with showtime snapshot
+    if order_data.service_type == "cinema" and not booking_details.get("showtime_info"):
+        try:
+            st_id = booking_details.get("showtime_id") or order_data.service_id
+            if st_id:
+                st = await db.showtimes.find_one(
+                    {"_id": st_id},
+                    {"_id": 0, "cinema_id": 1, "cinema_name": 1, "film_id": 1,
+                     "film_title": 1, "screen_name": 1, "screen_type": 1,
+                     "show_date": 1, "show_time": 1, "end_time": 1,
+                     "price": 1, "vip_price": 1},
+                )
+                if st:
+                    booking_details["showtime_id"] = st_id
+                    booking_details["showtime_info"] = st
+        except Exception:
+            pass
     
     if is_round_trip:
         # Create 2 separate orders (tickets) for round trip

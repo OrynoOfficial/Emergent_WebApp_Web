@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 120 — Backend-only testing of Resource Reassignment P3 rollout to event, package, laundry(+pressing alias), and cinema services. Created pytest suite with 8 new tests covering dry-run, commit (with seeded mock orders), cross-operator/cross-cinema rejection, legacy pressing alias, cinema operator resolution via cinemas.operator_id, and revert flow. All 8 new tests PASS. Also re-ran iter119 regression (12 tests) — all pass after a minor test-only fix (test_unknown_service_type_rejected used 'cinema' as assumed-unknown; cinema is now supported so switched to 'totally_fake_service').",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration120_reassign_p3_services.py",
+    "/app/test_reports/pytest/iter120.xml"
+  ],
+  "action_items": [
+    "No functional issues found. P3 rollout is working as specified for all 4 new services.",
+    "Optional follow-up for main agent: consider adding a small FE 'Replace/Swap' button on the event/package/pressing/cinema management pages (explicitly deferred this iteration)."
+  ],
+  "critical_code_review_comments": [
+    "_resolve_operator_id cleanly follows the hotel (hotel_id->hotels.operator_id) and cinema (cinema_id->cinemas.operator_id) indirection — good single-source-of-truth pattern in SERVICE_SPECS.",
+    "_get_affected_orders correctly applies $in:[laundry,pressing] alias only when service_type=laundry — prevents cross-contamination.",
+    "orders.py enrichment (lines 204-267) mirrors SERVICE_SPECS.snapshot_fields exactly for event/package/pressing/cinema — good consistency. Cinema block also correctly uses booking_details.showtime_id first before falling back to service_id.",
+    "Minor: iter119 test_unknown_service_type_rejected hard-coded 'cinema' as unsupported — updated to 'totally_fake_service' to prevent future regressions when new service types are added. This is a test-only fix.",
+    "Minor: Showtime-level orders cross-cinema guard returns its 400 BEFORE the authorization check — means a user who doesn't own either cinema will still leak 'same cinema' info. Low-sev but worth flipping if security-strict."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration120_reassign_p3_services.py (new)",
+    "/app/backend/tests/test_iteration119_reassign_undo_multi.py (test-only fix: 'cinema' -> 'totally_fake_service')"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 new + 12/12 regression)",
+    "frontend": "N/A (no UI this iteration)"
+  },
+  "test_credentials": "operator@test.com / testpassword123; admin@test.com / testpassword123 (used for cinema since cinema operator differs)",
+  "seed_data_creation": "Mock orders inserted directly via db.orders.insert_one with order_number prefix TEST-ITER120-* and cleaned up in finally blocks. No permanent seed data created.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "P3 reassignment services (event/package/laundry/cinema) are all green. SERVICE_SPECS has 7 entries now. Tests use seeded IDs: events 7f4c366c../f547ca58.., packages a97f5161../69576b9e.., pressing d0cf8418../2d5158d5.. (all owned by operator 30c487d8..). Cinema showtimes belong to operator 0f899b9d.. (different!), so cinema tests use admin token. Cross-cinema test uses showtime 448db471 in cinema de8417d7. Banquet and restaurant are intentionally deferred (no swappable collection / no orders) — do NOT attempt to test those.",
+  "rca of the issue": "N/A — no issues found. iter119 test_unknown_service_type_rejected regression was root-caused to the test asserting 'cinema' as unsupported; cinema is now part of SERVICE_SPECS so an unknown resource id returns 404 instead of 400. Fixed by switching to a non-existent service_type string."
+}
