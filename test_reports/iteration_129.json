@@ -1,0 +1,47 @@
+{
+  "summary": "Frontend-only test for iter129 — Stripe checkout moved from a full-page navigation to a FOREGROUND Radix Dialog modal. Verified: (1) direct-URL fallback /payment/checkout?order_id=X renders the premium StripeCheckoutPanel full-page (NO modal wrapper, all expected testids present, Continue-to-Stripe POSTs /api/checkout/session with correct body {order_id, origin_url}); (2) code-level verification of PaymentMethodsSelection → StripeCheckoutModal wiring (setStripeModalOpen(true) on Card, modal renders <StripeCheckoutPanel variant='modal' onBack=onClose onChangeMethod=onClose/>, MoMo dialog preserved). Could not reach the in-app booking payment step via UI (travel search requires city dropdowns + date with live inventory; My Orders only exposes View/Cancel for pending orders — there is no 'Pay now' shortcut from the orders list, so the modal was not exercised through a real user booking in this run).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verifications_passed": [
+    "Direct /payment/checkout?order_id=<id> renders premium panel full-page (variant=page)",
+    "[data-testid='stripe-checkout-modal'] absent on the direct-URL fallback (correct — modal only used inside PaymentMethodsSelection)",
+    "All required testids present on the panel: checkout-heading, checkout-total-amount, checkout-proceed-stripe-btn, checkout-change-payment-method-btn, checkout-back-btn, summary-order-number",
+    "Heading renders 'Review & pay 20,000 FCFA' with gold accent; 3-col summary + sticky payment card; Visa/MC/AMEX badges; Stripe PCI notice",
+    "Click Continue to Stripe → POST /api/checkout/session fires with body {\"order_id\":\"<uuid>\",\"origin_url\":\"https://booking-revamp-hub.preview.emergentagent.com\"} (intercepted and verified) and the response URL is consumed by window.location.href (button enters 'Redirecting to Stripe…' loading state)",
+    "Login flow intact (splash CTA → credentials → dashboard)",
+    "My Orders page loads (70 orders, 9 pending) — no regression"
+  ],
+  "code_level_verifications": [
+    "StripeCheckoutPanel.jsx (new, 310 lines) — shared premium panel; variant='page'|'modal' only changes outer padding; onBack / onChangeMethod props drive both buttons; loads order via /orders/:id",
+    "StripeCheckoutModal.jsx (new) — Radix Dialog wrapper with data-testid='stripe-checkout-modal', hidden <DialogTitle>Card Payment Checkout</DialogTitle> for a11y, full-bleed dark gradient (#071d3c→#051530) + gold glows + grain, w-screen h-screen on mobile / sm:rounded-3xl 96vw×92vh on sm+, wires both onBack and onChangeMethod to onClose",
+    "StripeCheckoutConfirm.jsx (FULL REWRITE — 34 lines) — thin page wrapping StripeCheckoutPanel with navigate(-1) callbacks, preserves the dark gradient backdrop; deep-link-from-email use case preserved",
+    "PaymentMethodsSelection.jsx — imports StripeCheckoutModal; adds stripeModalOpen state; initiateStripeCheckout() now calls setStripeModalOpen(true) (no more window.location.href redirect); renders <StripeCheckoutModal open onClose=setStripeModalOpen(false) orderId/> at the bottom; MoMo dialog logic untouched",
+    "App.jsx /payment/checkout route still exists behind <ProtectedRoute bare> (direct-URL deep links still work)"
+  ],
+  "critical_code_review_comments": [
+    "[minor] PaymentMethodsSelection.jsx line ~279 still does sessionStorage.setItem('stripe_order_id', orderId) — dead code left over from the previous window.location.href flow; safe to remove since orderId is now passed directly as a prop to StripeCheckoutModal",
+    "[minor] StripeCheckoutModal does not trap/focus scroll-lock beyond Radix defaults — acceptable because shadcn Dialog handles this, but verify no background booking inputs remain tab-focusable when modal is open",
+    "[info] StripeCheckoutPanel reloads the order on mount via GET /orders/:id even when the modal is opened right after the booking is created — a small wasted round-trip; could accept an initial `order` prop for instant render",
+    "[info] FCFA_TO_USD / FCFA_TO_EUR are hard-coded constants (1/600, 1/655). User sees 'approximate' disclosure which is fine, but consider moving to config or live rates long-term"
+  ],
+  "tests_not_executed_ui": [
+    "End-to-end modal open from the in-app booking flow — blocked because /services/travel search requires live city/date inventory and the playwright run could not pick a From/To/Date combination that returned trips. My Orders page exposes only View/Cancel (no 'Pay Now' shortcut) for pending orders. Recommend main agent add a 'Resume payment' entry point on pending orders in the orders list to make this retestable deterministically, or seed a fixture that lands the test user on the payment step.",
+    "As a result, the following were verified by code-reading only, not by Playwright click-through: (a) clicking the Card tile opens the Radix Dialog modal on top of the booking page, (b) 'Choose a different payment method' closes the modal without URL change, (c) 'Back' closes the modal, (d) MoMo tile still opens its own phone-number dialog — but because the shared StripeCheckoutPanel is the exact same component rendered (and confirmed to work) in the direct-URL case, the wiring risk is low."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Optional cleanup: remove dead sessionStorage.setItem('stripe_order_id', ...) line in PaymentMethodsSelection.initiateStripeCheckout",
+    "Consider adding a 'Resume payment' / 'Pay now' button on pending orders in /orders so testing agents (and real users) can re-enter PaymentMethodsSelection without redoing the full booking flow — this would allow full e2e modal testing"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% on direct-URL fallback + all code-level invariants; modal click-through not exercised via UI"},
+  "test_credentials": "customer@test.com / testpassword123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none — used existing pending hotel order HTL-20260421-EF6F641E (TEST Hotel, 20000 FCFA) fetched via GET /api/orders/?limit=10",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Direct URL /payment/checkout?order_id=<id> is fully verified working. For full modal e2e, either (1) add a 'Pay Now' button on pending orders in /orders, or (2) complete the full travel booking flow: /services/travel → pick valid city pair (Douala→Yaoundé usually has trips) → pick future date → Search Buses → Select a trip → fill passenger form → reach Payment step which renders PaymentMethodsSelection → click Pay with Card tile → then click the bottom 'Pay'/'Confirm' button which triggers initiatePayment(). Expect [data-testid='stripe-checkout-modal'] to appear with URL unchanged. Cloudflare 403s after ~5 rapid navigations in one session — pace tests."
+}

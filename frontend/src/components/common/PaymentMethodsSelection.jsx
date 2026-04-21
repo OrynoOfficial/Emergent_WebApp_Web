@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import StripeCheckoutModal from '../payment/StripeCheckoutModal';
 
 const PaymentMethodsSelection = ({ 
   amount, 
@@ -31,6 +32,9 @@ const PaymentMethodsSelection = ({
   const [momoStatus, setMomoStatus] = useState(null);
   const [momoPollCount, setMomoPollCount] = useState(0);
   const maxPolls = 24; // 2 minutes with 5-second intervals
+
+  // Stripe checkout modal — opens in the foreground instead of navigating away
+  const [stripeModalOpen, setStripeModalOpen] = useState(false);
 
   const paymentMethods = [
     {
@@ -268,17 +272,19 @@ const PaymentMethodsSelection = ({
     setError(null);
 
     try {
-      // Redirect to our custom checkout confirmation page
-      // This page shows FCFA price with USD/EUR conversions before redirecting to Stripe
+      // Open the premium checkout modal in the foreground (no page navigation).
+      // The user can review the booking summary + payment amount and either
+      // continue to Stripe or click "Choose a different payment method" to
+      // come back to the payment options without losing their booking.
       sessionStorage.setItem('stripe_order_id', orderId);
-      
-      if (onPaymentInitiated) {
-        onPaymentInitiated({ redirecting: true, redirectUrl: `/payment/checkout?order_id=${orderId}` });
+      setStripeModalOpen(true);
+      setIsProcessingInternal(false);
+      if (onProcessingChange) {
+        onProcessingChange(false);
       }
-      
-      // Navigate to checkout confirmation page
-      window.location.href = `/payment/checkout?order_id=${orderId}`;
-
+      if (onPaymentInitiated) {
+        onPaymentInitiated({ opening_modal: true, orderId });
+      }
     } catch (err) {
       console.error('Stripe checkout error:', err);
       setError(err.message);
@@ -613,6 +619,13 @@ const PaymentMethodsSelection = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Premium in-foreground Stripe checkout modal (replaces the old /payment/checkout redirect) */}
+      <StripeCheckoutModal
+        open={stripeModalOpen}
+        onClose={() => setStripeModalOpen(false)}
+        orderId={orderId}
+      />
     </div>
   );
 };
