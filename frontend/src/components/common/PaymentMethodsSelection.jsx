@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import StripeCheckoutModal from '../payment/StripeCheckoutModal';
+import { formatCurrency } from '../../utils/currency';
 
 const PaymentMethodsSelection = ({ 
   amount, 
@@ -227,15 +228,15 @@ const PaymentMethodsSelection = ({
   const getMoMoStatusIcon = () => {
     switch (momoStatus) {
       case 'completed':
-        return <CheckCircle className="h-12 w-12 text-green-500" />;
+        return <CheckCircle className="h-10 w-10 text-emerald-400" />;
       case 'failed':
       case 'timed_out':
       case 'cancelled':
-        return <XCircle className="h-12 w-12 text-red-500" />;
+        return <XCircle className="h-10 w-10 text-red-400" />;
       case 'pending':
-        return <Clock className="h-12 w-12 text-yellow-500 animate-pulse" />;
+        return <Clock className="h-10 w-10 text-[#c9a74a] animate-pulse" />;
       default:
-        return <Smartphone className="h-12 w-12 text-yellow-600" />;
+        return <Smartphone className="h-10 w-10 text-[#c9a74a]" />;
     }
   };
 
@@ -457,75 +458,112 @@ const PaymentMethodsSelection = ({
         )}
       </div>
 
-      {/* MTN MoMo Payment Dialog */}
+      {/* ============ MTN MoMo Payment Dialog — Premium Revamp ============ */}
+      {/*
+        Matches the Stripe checkout modal's theme: dark navy gradient backdrop
+        (#071d3c → #051530), champagne-gold #c9a74a accents, glass-morphism
+        cards, compact typography. All state logic below is unchanged.
+      */}
       <Dialog open={momoDialogOpen} onOpenChange={closeMoMoDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-yellow-600" />
-              MTN Mobile Money Payment
-            </DialogTitle>
-            <DialogDescription>
-              Pay securely using your MTN MoMo account
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent
+          data-testid="momo-payment-modal"
+          className="!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md p-0 border-0 sm:rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+        >
+          {/* Decorative overlays (match Stripe checkout) */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }}
+          />
+          <div className="pointer-events-none absolute -top-32 -right-24 h-[380px] w-[380px] rounded-full bg-[#c9a74a]/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-[300px] w-[300px] rounded-full bg-[#082c59]/60 blur-3xl" />
 
-          <div className="space-y-4 py-4">
-            {/* Amount Display */}
-            <div className="bg-yellow-50 rounded-lg p-4 text-center">
-              <p className="text-sm text-yellow-700">Amount to Pay</p>
-              <p className="text-2xl font-bold text-yellow-900">
-                {amount?.toLocaleString()} XAF
+          <div className="relative h-full overflow-y-auto px-4 sm:px-5 py-4">
+            <DialogHeader className="space-y-1.5 mb-4 text-left">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#c9a74a] font-semibold flex items-center gap-2">
+                <Smartphone className="h-3 w-3" />
+                Mobile Money · MTN MoMo
               </p>
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-white leading-tight">
+                Confirm on your phone
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-300">
+                Approve the payment request that's been sent to your MTN MoMo account.
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Amount card — navy gradient band with gold glow */}
+            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#082c59] via-[#0a346c] to-[#071d3c] text-white mb-4 border border-white/10">
+              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #c9a74a 0%, transparent 40%)' }} />
+              <div className="relative px-4 py-4">
+                <p className="text-[9px] uppercase tracking-[0.16em] text-[#c9a74a] font-semibold flex items-center gap-1.5">
+                  <Wallet className="h-3 w-3" />
+                  Amount to Pay
+                </p>
+                <p className="mt-2 text-2xl sm:text-3xl font-bold leading-none" data-testid="momo-amount">
+                  {formatCurrency(amount || 0)}
+                </p>
+                <p className="mt-1 text-[10px] text-slate-300">FCFA (Central African CFA franc)</p>
+              </div>
             </div>
 
-            {/* Payment Form or Status */}
+            {/* Form or Status */}
             {!momoTransactionId ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="momo-phone">Phone Number</Label>
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl p-4">
+                  <Label htmlFor="momo-phone" className="text-[11px] uppercase tracking-[0.14em] text-slate-400 font-medium">
+                    Phone Number
+                  </Label>
                   <Input
                     id="momo-phone"
+                    data-testid="momo-phone-input"
                     type="tel"
-                    placeholder="e.g., 237670000001"
+                    placeholder="237670000001"
                     value={momoPhoneNumber}
                     onChange={(e) => setMomoPhoneNumber(e.target.value)}
                     disabled={isProcessingInternal}
-                    className="text-lg"
+                    className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-[#c9a74a] focus:ring-[#c9a74a]/20"
                   />
-                  <p className="text-xs text-gray-500">
-                    Enter your MTN Mobile Money phone number
+                  <p className="text-[10px] text-slate-400 mt-1.5">
+                    Enter the MTN Mobile Money number registered to your SIM.
                   </p>
                 </div>
 
-                {/* Sandbox Test Info */}
-                <div className="bg-blue-50 rounded-lg p-3 text-xs">
-                  <p className="font-semibold text-blue-800 mb-1">🧪 Sandbox Testing</p>
-                  <ul className="text-blue-700 space-y-1">
-                    <li>• Numbers ending in 1-5: Will succeed</li>
-                    <li>• Numbers ending in 6-7: Will fail</li>
-                    <li>• Numbers ending in 8-9: Will timeout</li>
-                    <li>• Numbers ending in 0: Will be cancelled</li>
+                {/* Sandbox testing hints (kept for developer UX, visually restyled) */}
+                <div className="rounded-2xl border border-[#c9a74a]/20 bg-[#c9a74a]/5 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-[#c9a74a] font-semibold flex items-center gap-1.5 mb-1.5">
+                    <Info className="h-3 w-3" />
+                    Sandbox Testing
+                  </p>
+                  <ul className="text-[11px] text-slate-300 space-y-0.5">
+                    <li>• Ending 1-5 → succeeds</li>
+                    <li>• Ending 6-7 → fails</li>
+                    <li>• Ending 8-9 → times out</li>
+                    <li>• Ending 0 → cancelled</li>
                   </ul>
                 </div>
               </div>
             ) : (
-              <div className="text-center space-y-4">
+              <div className="rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl p-4 text-center space-y-3">
                 <div className="flex justify-center">
                   {getMoMoStatusIcon()}
                 </div>
-                <p className="text-lg font-medium">{getMoMoStatusMessage()}</p>
-                
+                <p className="text-sm font-semibold text-white" data-testid="momo-status-message">
+                  {getMoMoStatusMessage()}
+                </p>
+
                 {momoStatus === 'pending' && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Checking status... ({momoPollCount}/{maxPolls})
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-[11px] text-slate-300">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#c9a74a]" />
+                      Checking status… ({momoPollCount}/{maxPolls})
                     </div>
-                    <div className="bg-yellow-50 rounded-lg p-3 text-sm text-yellow-800">
-                      <p className="font-semibold mb-1">📱 Check your phone!</p>
-                      <ol className="list-decimal list-inside space-y-1 text-left">
-                        <li>Open MTN MoMo app or dial *126#</li>
+                    <div className="rounded-xl border border-[#c9a74a]/20 bg-[#c9a74a]/5 p-3 text-left">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[#c9a74a] font-semibold flex items-center gap-1.5 mb-1.5">
+                        <Smartphone className="h-3 w-3" />
+                        Check your phone
+                      </p>
+                      <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-slate-300">
+                        <li>Open MTN MoMo or dial *126#</li>
                         <li>Approve the payment request</li>
                         <li>Enter your PIN to confirm</li>
                       </ol>
@@ -534,31 +572,37 @@ const PaymentMethodsSelection = ({
                 )}
 
                 {momoStatus === 'completed' && (
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                    <p className="text-green-800 font-medium">Your booking is now confirmed!</p>
+                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3">
+                    <CheckCircle className="h-5 w-5 text-emerald-400 mx-auto mb-1.5" />
+                    <p className="text-sm text-white font-semibold">Payment confirmed</p>
+                    <p className="text-[11px] text-slate-300 mt-0.5">Your booking is now locked in.</p>
                   </div>
                 )}
 
                 {(momoStatus === 'failed' || momoStatus === 'timed_out' || momoStatus === 'cancelled') && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={resetMoMoPayment}
-                    className="w-full"
+                    data-testid="momo-try-again-btn"
+                    className="w-full h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-[#c9a74a]"
                   >
-                    <RefreshCw className="w-4 h-4 mr-2" />
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
                     Try Again
                   </Button>
                 )}
 
                 {momoPollCount >= maxPolls && momoStatus === 'pending' && (
-                  <div className="space-y-3">
-                    <Alert variant="destructive">
-                      <AlertDescription>
+                  <div className="space-y-2">
+                    <Alert variant="destructive" className="bg-red-500/10 border-red-400/30 text-red-200">
+                      <AlertDescription className="text-xs">
                         Payment status check timed out. The payment may still be processing.
                       </AlertDescription>
                     </Alert>
-                    <Button variant="outline" onClick={resetMoMoPayment} className="w-full">
+                    <Button
+                      variant="outline"
+                      onClick={resetMoMoPayment}
+                      className="w-full h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white"
+                    >
                       Start Over
                     </Button>
                   </div>
@@ -567,55 +611,64 @@ const PaymentMethodsSelection = ({
             )}
 
             {error && momoDialogOpen && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="mt-3 bg-red-500/10 border-red-400/30 text-red-200">
+                <AlertDescription className="text-xs">{error}</AlertDescription>
               </Alert>
             )}
-          </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {!momoTransactionId ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setMomoDialogOpen(false)}
-                  disabled={isProcessingInternal}
-                  className="w-full sm:w-auto"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={initiateMoMoPayment}
-                  disabled={isProcessingInternal || !momoPhoneNumber}
-                  className="w-full sm:w-auto bg-yellow-600 hover:bg-yellow-700"
-                >
-                  {isProcessingInternal ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending request...
-                    </>
-                  ) : (
-                    <>
-                      <Smartphone className="w-4 h-4 mr-2" />
-                      Request Payment
-                    </>
-                  )}
-                </Button>
-              </>
-            ) : (
-              momoStatus === 'completed' && (
-                <Button 
-                  onClick={() => {
-                    setMomoDialogOpen(false);
-                    resetMoMoPayment();
-                  }}
-                  className="w-full bg-green-600 hover:bg-green-700"
-                >
-                  Continue
-                </Button>
-              )
+            {/* Footer CTAs (same logic as before, just restyled) */}
+            <div className="mt-4 flex flex-col sm:flex-row gap-2">
+              {!momoTransactionId ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setMomoDialogOpen(false)}
+                    disabled={isProcessingInternal}
+                    data-testid="momo-change-method-btn"
+                    className="w-full sm:w-auto h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-[#c9a74a]"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                    Choose a different payment method
+                  </Button>
+                  <Button
+                    onClick={initiateMoMoPayment}
+                    disabled={isProcessingInternal || !momoPhoneNumber}
+                    data-testid="momo-request-payment-btn"
+                    className="w-full sm:flex-1 h-10 text-sm font-semibold bg-[#082c59] hover:bg-[#0a346c] text-white shadow-lg shadow-[#082c59]/20"
+                  >
+                    {isProcessingInternal ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending request…</>
+                    ) : (
+                      <><Smartphone className="h-4 w-4 mr-2" /> Request Payment</>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                momoStatus === 'completed' && (
+                  <Button
+                    onClick={() => {
+                      setMomoDialogOpen(false);
+                      resetMoMoPayment();
+                    }}
+                    data-testid="momo-continue-btn"
+                    className="w-full h-10 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" /> Continue
+                  </Button>
+                )
+              )}
+            </div>
+
+            {/* Trust footer (small) */}
+            {!momoTransactionId && (
+              <div className="mt-4 pt-3 border-t border-white/10 flex items-start gap-2">
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  MTN MoMo is processed directly on your phone — we never see or store your PIN.
+                </p>
+              </div>
             )}
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

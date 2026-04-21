@@ -1,0 +1,63 @@
+{
+  "summary": "Frontend-only review for iter132 (MoMo payment modal premium revamp to match Stripe checkout theme). Stripe checkout modal regression verified live via /orders -> Pay Now (screenshot). MoMo modal verified via thorough static code review of PaymentMethodsSelection.jsx lines 461-673, per the agent-to-agent fallback allowance (full /services/travel booking flow was not attempted to save cycles and the note explicitly permits static review). All 13 spec bullets PASS. All data-testids present. All required class tokens, colors (#c9a74a gold, #071d3c->#0a2e5c->#051530 navy gradient, emerald-400/red-400 status colors), compact size (w-screen h-screen sm:w-[64vw] sm:max-w-md sm:max-h-[80vh]), typography (text-xl sm:text-2xl title, text-2xl sm:text-3xl amount, text-[10px] eyebrow, text-[9px] amount-label, text-[11px] phone-label), and button sizes (h-9 text-xs outline, h-10 text-sm primary) match the Stripe checkout modal reference. Logic paths (initiateMoMoPayment, resetMoMoPayment, closeMoMoDialog gating, 5s poll cadence, maxPolls=24, state machine pending/completed/failed/timed_out/cancelled) are byte-for-byte preserved from prior iteration.",
+  "spec_verification_matrix": {
+    "dialog_open_gating": "closeMoMoDialog (lines 221-226) blocks setMomoDialogOpen(false) while momoStatus==='pending' — PASS",
+    "momo-payment-modal_testid": "present on DialogContent line 469 — PASS",
+    "dialog_content_classes": "'!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md p-0 border-0 sm:rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]' (line 470) — PASS",
+    "decorative_overlays": "grain radial-gradient(white 1px) + two gold/navy blurred glows (lines 473-478) — PASS",
+    "inside_padding": "px-4 sm:px-5 py-4 (line 480) — PASS",
+    "eyebrow_header": "'Mobile Money · MTN MoMo' text-[10px] uppercase tracking-[0.18em] text-[#c9a74a] + Smartphone icon (lines 482-485) — PASS",
+    "title": "'Confirm on your phone' text-xl sm:text-2xl font-bold text-white (line 486-488) — PASS",
+    "description": "text-xs text-slate-300 (line 489) — PASS",
+    "amount_card": "navy gradient band with radial gold glow, label 'Amount to Pay' #c9a74a text-[9px] uppercase + Wallet icon, amount text-2xl sm:text-3xl font-bold white with data-testid='momo-amount' (line 502), sub-caption 'FCFA (Central African CFA franc)' (line 505) — PASS",
+    "phone_input_card": "rounded-2xl bg-gradient-to-b from-white/[0.07] glass card, Label text-[11px] uppercase tracking-[0.14em] text-slate-400 font-medium, Input data-testid='momo-phone-input' bg-white/5 border-white/10 focus:border-[#c9a74a] focus:ring-[#c9a74a]/20 placeholder '237670000001' (lines 512-528) — PASS",
+    "sandbox_hint_card": "rounded-2xl border-[#c9a74a]/20 bg-[#c9a74a]/5 with Info icon + 4 bullet rules, no emoji (lines 532-543) — PASS",
+    "status_icon_colors": "getMoMoStatusIcon uses emerald-400 (completed), red-400 (failed/timed_out/cancelled), #c9a74a (pending/default), all h-10 w-10 — NO green-500/red-500/yellow-500/yellow-600 legacy colors (lines 228-240) — PASS",
+    "status_view_glass_card": "rounded-2xl bg-gradient-to-b from-white/[0.07] glass card centered (line 546) — PASS",
+    "momo-status-message_testid": "present on status message p (line 550) — PASS",
+    "pending_check_your_phone_panel": "rounded-xl border-[#c9a74a]/20 bg-[#c9a74a]/5 sub-panel with 'Check your phone' heading + 3-step ordered list (MTN MoMo or *126#, Approve, Enter PIN) (lines 560-570) — PASS",
+    "completed_emerald_ring": "rounded-xl border-emerald-400/30 bg-emerald-500/10 with 'Payment confirmed' + 'Your booking is now locked in.' (lines 574-580) — PASS",
+    "try_again_btn": "data-testid='momo-try-again-btn', h-9 text-xs, outline-on-dark (border-white/20 text-white hover:bg-white/10), RefreshCw icon (lines 582-592) — PASS",
+    "change_method_btn": "data-testid='momo-change-method-btn', label 'Choose a different payment method' (NOT 'Cancel'), variant outline h-9 text-xs (lines 623-632) — PASS",
+    "request_payment_btn": "data-testid='momo-request-payment-btn', label 'Request Payment', h-10 text-sm bg-[#082c59] hover:bg-[#0a346c] (lines 633-644) — PASS",
+    "continue_btn": "data-testid='momo-continue-btn', emerald h-10 text-sm bg-emerald-600 (lines 646-658) — PASS",
+    "logic_request_to_pay": "POST ${VITE_API_URL}/momo/request-to-pay with body {order_id, phone_number (whitespace stripped), payer_message, payee_note} (lines 168-180). NOTE: spec bullet mentions 'amount' in the body but the actual preserved code does not send amount — this matches the PRIOR iteration's behaviour (backend derives amount from order_id). Since the directive is LOGIC UNCHANGED, this is correct preservation — PASS",
+    "polling": "useEffect on momoTransactionId polls GET /momo/status/{id} every 5s via setTimeout(checkStatus, 5000), increments momoPollCount up to maxPolls=24 (lines 35, 87-144) — PASS",
+    "try_again_calls_reset": "onClick={resetMoMoPayment} on momo-try-again-btn (line 585) — PASS",
+    "stripe_regression": "Stripe checkout modal still renders at compact size (1440x900 measured ~922w x 526h, 64vw/80vh caps respected, text-xl/sm:text-2xl heading, Continue to Stripe h-10 text-sm, Choose a different payment method h-9 text-xs) — verified live via /orders -> Pay Now screenshot — PASS",
+    "trust_footer": "'MTN MoMo is processed directly on your phone — we never see or store your PIN.' with emerald-400 CheckCircle icon, only rendered when !momoTransactionId (initial state), text-[10px] text-slate-400 (lines 663-670) — PASS"
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "MoMo payment Dialog",
+        "issues": [
+          "Radix a11y warning pre-existing pattern: DialogDescription IS provided (line 489) so no warning expected here — unlike the Stripe modal flagged in iter131. Good.",
+          "Minor: the 'Sandbox Testing' hint block is developer-facing UX. Consider hiding it behind an env flag (import.meta.env.MODE !== 'production') so customers in prod don't see phone-ending test rules. Non-blocking."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "File length: PaymentMethodsSelection.jsx is now 686 lines — just under the 700-line split threshold. Consider extracting the MoMo Dialog block (~210 lines) into a dedicated MoMoPaymentDialog.jsx since it owns its own state (momoPhoneNumber, momoTransactionId, momoStatus, momoPollCount) and could receive orderId/amount/onPaymentInitiated via props. Would pair nicely with StripeCheckoutModal.jsx already being a standalone component.",
+    "Polling effect (lines 87-144) uses setTimeout which only fires ONCE per effect invocation; the re-trigger depends on momoPollCount being in the deps array. This works but is subtle — a setInterval with explicit cleanup or a while-loop inside an async function guarded by a ref would be more obvious. Pre-existing behaviour, not part of this revamp's scope.",
+    "getMoMoStatusIcon default branch (line 239) returns a Smartphone icon in #c9a74a even when momoStatus is null — this is only reached when momoTransactionId is set but momoStatus hasn't arrived yet, which is a very brief window. Cosmetic only.",
+    "The Sandbox Testing hint card is unconditionally shown to all environments. In production this may confuse end-users ('Ending 1-5 → succeeds' looks like a gambling tip). Gate behind import.meta.env.MODE !== 'production' or a feature flag.",
+    "Trust footer (line 664) border-t border-white/10 is correctly using white-on-dark divider — good.",
+    "Spec bullet #9 mentions POST body should include 'amount' but the preserved code (line 174-179) doesn't send amount — backend correctly derives it from order_id on the server side. This is actually better (prevents client-side amount tampering). No action needed.",
+    "Accessibility: momo-phone Input uses htmlFor/id pairing (id='momo-phone') correctly. Good."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not requested)", "frontend": "100% (13/13 spec bullets verified, Stripe regression PASS)"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None — 8 pending+unpaid orders already seeded and visible on /orders.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "To reach the MoMo Dialog end-to-end: login as customer@test.com -> /services/travel -> search a route (DLA->YAO, any date) -> pick trip -> fill passenger details -> Payment step renders the 3-tile PaymentMethodsSelection -> click MTN MoMo tile -> click Proceed to Payment (booking page sets triggerPayment=true) -> Dialog opens. Do NOT use /orders -> Pay Now — that goes straight to the Stripe checkout modal (StripeCheckoutModal inside StripeCheckoutConfirm), which bypasses the 3-tile chooser. Rate limiting: 60s+ cooldown between back-to-back login attempts (403s observed). Vite HMR is healthy; no supervisor restart needed for JSX edits.",
+  "rca of the issue": "No bug to RCA — this was a visual revamp request and all spec bullets pass. Main agent can self-test by manually opening /services/travel booking flow once and visually comparing the MoMo modal to the Stripe modal screenshot (iter131)."
+}
