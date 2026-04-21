@@ -1,22 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Separator } from '../../components/ui/separator';
-import { ArrowLeft, CreditCard, Shield, Loader2, ExternalLink, Info } from 'lucide-react';
+import {
+  ArrowLeft, CreditCard, Shield, Loader2, ExternalLink, Info, RefreshCw,
+  MapPin, Calendar, Clock, Users, Bus, Hotel, Car, Utensils, Film, Package, PartyPopper, Sparkles,
+  Lock, CheckCircle2,
+} from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
+import { formatDate as fmtDate } from '../../utils/dateUtils';
 import api from '../../api/client';
 
-// Exchange rates (approximate)
+// Stripe always charges in USD — approximate live-rate conversions shown to the user.
 const FCFA_TO_USD = 1 / 600;
 const FCFA_TO_EUR = 1 / 655;
+
+const SERVICE_ICONS = {
+  travel: Bus,
+  hotel: Hotel,
+  car_rental: Car,
+  restaurant: Utensils,
+  cinema: Film,
+  package: Package,
+  event: PartyPopper,
+  banquet: Sparkles,
+};
+
+const PremiumRow = ({ label, value, icon: Icon, testid }) => {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="flex items-start gap-3 py-3 border-b border-white/5 last:border-b-0" data-testid={testid}>
+      {Icon && (
+        <div className="h-8 w-8 rounded-lg bg-[#c9a74a]/10 border border-[#c9a74a]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Icon className="h-4 w-4 text-[#c9a74a]" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400 font-medium">{label}</p>
+        <p className="text-sm text-white font-semibold mt-0.5 break-words">{value}</p>
+      </div>
+    </div>
+  );
+};
 
 export default function StripeCheckoutConfirm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('order_id');
-  
+
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,7 +60,6 @@ export default function StripeCheckoutConfirm() {
         setIsLoading(false);
         return;
       }
-
       try {
         const response = await api.get(`/orders/${orderId}`);
         setOrder(response.data);
@@ -40,7 +70,6 @@ export default function StripeCheckoutConfirm() {
         setIsLoading(false);
       }
     };
-
     loadOrder();
   }, [orderId]);
 
@@ -49,9 +78,8 @@ export default function StripeCheckoutConfirm() {
     try {
       const response = await api.post('/checkout/session', {
         order_id: orderId,
-        origin_url: window.location.origin
+        origin_url: window.location.origin,
       });
-
       if (response.data?.url) {
         window.location.href = response.data.url;
       } else {
@@ -64,22 +92,15 @@ export default function StripeCheckoutConfirm() {
     }
   };
 
-  const formatUSD = (fcfa) => {
-    const usd = fcfa * FCFA_TO_USD;
-    return `$${usd.toFixed(2)} USD`;
-  };
-
-  const formatEUR = (fcfa) => {
-    const eur = fcfa * FCFA_TO_EUR;
-    return `€${eur.toFixed(2)} EUR`;
-  };
+  const formatUSD = (fcfa) => `$${(fcfa * FCFA_TO_USD).toFixed(2)}`;
+  const formatEUR = (fcfa) => `€${(fcfa * FCFA_TO_EUR).toFixed(2)}`;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <div className="bg-white p-6 rounded-lg flex items-center gap-3 shadow">
-          <Loader2 className="h-6 w-6 animate-spin text-[#082c59]" />
-          <span className="text-lg font-semibold">Loading order details...</span>
+      <div className="min-h-screen bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530] flex items-center justify-center">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl flex items-center gap-3 shadow-2xl">
+          <Loader2 className="h-6 w-6 animate-spin text-[#c9a74a]" />
+          <span className="text-base font-semibold text-white">Loading order details…</span>
         </div>
       </div>
     );
@@ -87,203 +108,271 @@ export default function StripeCheckoutConfirm() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <div className="text-red-500 mb-4">
-              <Info className="h-12 w-12 mx-auto" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Error</h2>
-            <p className="text-slate-600 mb-4">{error || 'Order not found'}</p>
-            <Button onClick={() => navigate(-1)} variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl text-center shadow-2xl">
+          <div className="h-14 w-14 rounded-full bg-red-500/15 border border-red-400/30 flex items-center justify-center mx-auto mb-5">
+            <Info className="h-7 w-7 text-red-300" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-white">Something went wrong</h2>
+          <p className="text-slate-300 mb-6">{error || 'Order not found'}</p>
+          <Button
+            onClick={() => navigate(-1)}
+            className="bg-white text-[#071d3c] hover:bg-slate-100"
+            data-testid="checkout-error-back-btn"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
+          </Button>
+        </div>
       </div>
     );
   }
 
   const amount = order.total_amount || order.final_amount || 0;
-  const bookingDetails = order.booking_details || {};
+  const bd = order.booking_details || {};
+  const ServiceIcon = SERVICE_ICONS[order.service_type] || CreditCard;
+
+  // Route-specific service subtitle
+  const routeSummary = bd.departure_city && bd.destination_city
+    ? `${bd.departure_city} → ${bd.destination_city}`
+    : bd.check_in
+      ? `Check-in ${fmtDate(bd.check_in)}`
+      : null;
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530] relative overflow-hidden">
+      {/* Decorative grain + gold glow */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
+        style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }}
+      />
+      <div className="pointer-events-none absolute -top-40 -right-32 h-[520px] w-[520px] rounded-full bg-[#c9a74a]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-32 h-[420px] w-[420px] rounded-full bg-[#082c59]/60 blur-3xl" />
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left Side - Logo, Booking Summary */}
-          <div className="space-y-6">
-            {/* Logo and Slogan */}
-            <Card>
-              <CardContent className="p-6 text-center">
-                <img 
-                  src="https://customer-assets.emergentagent.com/job_momobook-app/artifacts/syef01ek_f6726dae0_logo.png" 
-                  alt="Logo" 
-                  className="h-20 w-auto mx-auto mb-3"
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="ghost"
+            className="text-white/80 hover:text-white hover:bg-white/10"
+            onClick={() => navigate(-1)}
+            data-testid="checkout-back-btn"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          <div className="flex items-center gap-2 text-xs text-white/70">
+            <Lock className="h-3.5 w-3.5 text-[#c9a74a]" />
+            <span className="hidden sm:inline">Secured by Stripe · 256-bit TLS</span>
+          </div>
+        </div>
+
+        {/* Page heading */}
+        <div className="mb-8 lg:mb-10">
+          <p className="text-xs uppercase tracking-[0.22em] text-[#c9a74a] font-semibold mb-3">Checkout · Card Payment</p>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+            Review & pay<br className="hidden sm:inline" />
+            <span className="text-[#c9a74a]">{formatCurrency(amount)}</span>
+          </h1>
+          <p className="mt-3 text-sm text-slate-300 max-w-xl">
+            You're one step away from confirming <span className="font-semibold text-white">{order.service_name || 'your booking'}</span>.
+            Review the summary below, then continue to Stripe's secure checkout.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+          {/* ==================== Booking Summary (left, 3 cols) ==================== */}
+          <div className="lg:col-span-3">
+            <div className="relative rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl overflow-hidden shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+              {/* Header */}
+              <div className="px-6 sm:px-8 py-6 border-b border-white/10 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="h-12 w-12 rounded-2xl bg-[#c9a74a] flex items-center justify-center flex-shrink-0">
+                    <ServiceIcon className="h-6 w-6 text-[#071d3c]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-medium">Booking Summary</p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white truncate">{order.service_name || 'Your Booking'}</h2>
+                    {routeSummary && (
+                      <p className="text-sm text-[#c9a74a] font-medium mt-0.5 truncate">{routeSummary}</p>
+                    )}
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="border-[#c9a74a]/40 text-[#c9a74a] bg-[#c9a74a]/10 capitalize flex-shrink-0"
+                >
+                  {(order.service_category || order.service_type || '').replace('_', ' ')}
+                </Badge>
+              </div>
+
+              {/* Details */}
+              <div className="px-6 sm:px-8 py-4">
+                <PremiumRow label="Order Number" value={order.order_number} icon={CreditCard} testid="summary-order-number" />
+                <PremiumRow
+                  label="Route"
+                  value={bd.departure_city && bd.destination_city ? `${bd.departure_city}  →  ${bd.destination_city}` : null}
+                  icon={MapPin}
+                  testid="summary-route"
                 />
-                <p className="text-slate-600 italic text-lg">Convenient, Reliable</p>
-              </CardContent>
-            </Card>
+                <PremiumRow
+                  label="Travel Date"
+                  value={bd.travel_date ? fmtDate(bd.travel_date) : null}
+                  icon={Calendar}
+                  testid="summary-travel-date"
+                />
+                <PremiumRow
+                  label="Departure Time"
+                  value={bd.service_time || bd.travel_time || bd.departure_time}
+                  icon={Clock}
+                  testid="summary-departure-time"
+                />
+                <PremiumRow
+                  label="Check-in"
+                  value={bd.check_in ? fmtDate(bd.check_in) : null}
+                  icon={Calendar}
+                  testid="summary-check-in"
+                />
+                <PremiumRow
+                  label="Check-out"
+                  value={bd.check_out ? fmtDate(bd.check_out) : null}
+                  icon={Calendar}
+                  testid="summary-check-out"
+                />
+                <PremiumRow
+                  label="Travellers"
+                  value={bd.passengers?.length ? `${bd.passengers.length} passenger${bd.passengers.length > 1 ? 's' : ''}` : null}
+                  icon={Users}
+                  testid="summary-passengers"
+                />
+                <PremiumRow
+                  label="Operator"
+                  value={bd.operator_name}
+                  icon={Sparkles}
+                  testid="summary-operator"
+                />
+              </div>
 
-            {/* Booking Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Booking Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-slate-500">Order Number</p>
-                  <p className="font-semibold">{order.order_number}</p>
+              {/* Trust strip */}
+              <div className="px-6 sm:px-8 py-4 border-t border-white/10 bg-white/[0.02] flex flex-wrap items-center gap-x-5 gap-y-2">
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Instant confirmation</span>
                 </div>
-                
-                <div>
-                  <p className="text-sm text-slate-500">Service</p>
-                  <p className="font-semibold">{order.service_name}</p>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>No hidden fees</span>
                 </div>
-
-                <div>
-                  <p className="text-sm text-slate-500">Category</p>
-                  <Badge variant="outline" className="capitalize">
-                    {(order.service_category || order.service_type)?.replace('_', ' ')}
-                  </Badge>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Free cancellation window</span>
                 </div>
-
-                {/* Travel-specific details */}
-                {bookingDetails.departure_city && bookingDetails.destination_city && (
-                  <div>
-                    <p className="text-sm text-slate-500">Route</p>
-                    <p className="font-semibold">
-                      {bookingDetails.departure_city} → {bookingDetails.destination_city}
-                    </p>
-                  </div>
-                )}
-
-                {bookingDetails.travel_date && (
-                  <div>
-                    <p className="text-sm text-slate-500">Travel Date</p>
-                    <p className="font-semibold">{bookingDetails.travel_date}</p>
-                  </div>
-                )}
-
-                {/* Hotel-specific details */}
-                {bookingDetails.check_in && (
-                  <div>
-                    <p className="text-sm text-slate-500">Check-in</p>
-                    <p className="font-semibold">{bookingDetails.check_in}</p>
-                  </div>
-                )}
-
-                {bookingDetails.check_out && (
-                  <div>
-                    <p className="text-sm text-slate-500">Check-out</p>
-                    <p className="font-semibold">{bookingDetails.check_out}</p>
-                  </div>
-                )}
-
-                {/* Passengers */}
-                {bookingDetails.passengers?.length > 0 && (
-                  <div>
-                    <p className="text-sm text-slate-500">Passengers</p>
-                    <p className="font-semibold">{bookingDetails.passengers.length} passenger(s)</p>
-                  </div>
-                )}
-
-                {/* Operator */}
-                {bookingDetails.operator_name && (
-                  <div>
-                    <p className="text-sm text-slate-500">Operator</p>
-                    <p className="font-semibold">{bookingDetails.operator_name}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          {/* Right Side - Price and Payment */}
-          <div className="space-y-6">
-            {/* Price Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payment Amount
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Main Price in FCFA */}
-                <div className="text-center py-4 bg-slate-50 rounded-lg">
-                  <p className="text-4xl font-bold text-[#082c59]">
+          {/* ==================== Payment Amount (right, 2 cols) ==================== */}
+          <div className="lg:col-span-2">
+            <div className="sticky top-6 rounded-3xl bg-gradient-to-b from-white to-slate-50 overflow-hidden shadow-[0_30px_80px_-20px_rgba(201,167,74,0.35)]">
+              {/* Amount header */}
+              <div className="relative px-6 sm:px-8 pt-8 pb-6 bg-gradient-to-br from-[#082c59] via-[#0a346c] to-[#071d3c] text-white">
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #c9a74a 0%, transparent 40%)' }} />
+                <div className="relative">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#c9a74a] font-semibold flex items-center gap-2">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Payment Amount
+                  </p>
+                  <p className="mt-4 text-4xl sm:text-5xl font-bold leading-none" data-testid="checkout-total-amount">
                     {formatCurrency(amount)}
                   </p>
-                  <p className="text-sm text-slate-500 mt-1">FCFA (CFA Franc)</p>
+                  <p className="mt-2 text-xs text-slate-300">Total charged in FCFA (Central African CFA franc)</p>
                 </div>
+              </div>
 
-                {/* Currency Conversions */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-blue-800 font-medium mb-2 flex items-center gap-1">
-                    <Info className="h-4 w-4" /> Approximate Conversions
+              <div className="px-6 sm:px-8 py-6 space-y-5">
+                {/* Conversions */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-medium flex items-center gap-1.5 mb-3">
+                    <Info className="h-3.5 w-3.5" />
+                    Approximate in other currencies
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="text-center p-2 bg-white rounded">
-                      <p className="text-lg font-semibold text-slate-800">{formatUSD(amount)}</p>
-                      <p className="text-xs text-slate-500">US Dollar</p>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center">
+                      <p className="text-lg font-bold text-slate-900">{formatUSD(amount)}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">US Dollar</p>
                     </div>
-                    <div className="text-center p-2 bg-white rounded">
-                      <p className="text-lg font-semibold text-slate-800">{formatEUR(amount)}</p>
-                      <p className="text-xs text-slate-500">Euro</p>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center">
+                      <p className="text-lg font-bold text-slate-900">{formatEUR(amount)}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">Euro</p>
                     </div>
                   </div>
-                  <p className="text-xs text-blue-600 mt-2">
-                    * Stripe will charge in USD. Final amount may vary slightly due to exchange rates.
+                  <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+                    Stripe will charge in USD. The final amount may vary slightly based on the live exchange rate at your bank.
                   </p>
                 </div>
 
-                <Separator />
-
-                {/* Security Notice */}
-                <div className="flex items-start gap-3 text-sm text-slate-600">
-                  <Shield className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Secure Payment</p>
-                    <p>Your payment is processed securely by Stripe. We never store your card details.</p>
+                {/* Accepted cards */}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-slate-500 font-medium">Accepted cards</p>
+                  <div className="flex items-center gap-1.5">
+                    {['VISA', 'MC', 'AMEX'].map((b) => (
+                      <span
+                        key={b}
+                        className="inline-flex items-center justify-center px-2 py-1 rounded-md border border-slate-200 bg-white text-[10px] font-bold tracking-wide text-slate-700"
+                      >
+                        {b}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
-                {/* Proceed Button */}
+                {/* Primary CTA */}
                 <Button
                   onClick={handleProceedToStripe}
                   disabled={isProcessing}
-                  className="w-full h-12 text-lg bg-[#082c59] hover:bg-[#0a3a75]"
+                  className="w-full h-14 text-base font-semibold bg-[#082c59] hover:bg-[#0a346c] text-white shadow-lg shadow-[#082c59]/20 transition-all"
+                  data-testid="checkout-proceed-stripe-btn"
                 >
                   {isProcessing ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Redirecting to Stripe...
+                      Redirecting to Stripe…
                     </>
                   ) : (
                     <>
-                      Proceed to Payment
+                      Continue to Stripe
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
 
-                <p className="text-xs text-center text-slate-500">
-                  You will be redirected to Stripe's secure checkout page
-                </p>
-              </CardContent>
-            </Card>
+                {/* Secondary CTA — choose a different payment method */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(-1)}
+                  className="w-full h-11 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-[#082c59] hover:border-[#082c59]"
+                  data-testid="checkout-change-payment-method-btn"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Choose a different payment method
+                </Button>
+
+                {/* Trust footer */}
+                <div className="pt-4 border-t border-slate-200 flex items-start gap-2.5">
+                  <Shield className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Your payment is processed by <span className="font-semibold text-slate-700">Stripe</span>.
+                    We never see, touch, or store your card details. PCI-DSS Level 1 certified.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Footer note */}
+        <p className="mt-10 text-center text-xs text-white/50">
+          Need help? Contact support before completing the payment — we're happy to hold your booking.
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,66 @@
+{
+  "summary": "Frontend-only revamp verification of /payment/checkout (StripeCheckoutConfirm). Initial load rendered the OLD plain-white card layout because Vite had a stale bundle cached for this page. After `sudo supervisorctl restart frontend`, the new PREMIUM design loaded correctly: dark navy gradient (#071d3c → #0a2e5c → #051530), champagne-gold (#c9a74a) accents, glass-morphism cards, 'Review & pay 4,000 FCFA' heading with gold amount, service-type icon chip, gold-chip premium rows, trust strip with 3 green checkmarks, sticky payment card with navy gradient header + radial gold glow, USD/EUR conversion panel, VISA/MC/AMEX pills, 'Continue to Stripe' primary CTA, and the new 'Choose a different payment method' outline secondary CTA. All 9 applicable testids present on a travel order; summary-operator correctly hidden (PremiumRow early-returns for null/empty). POST /api/checkout/session fires with correct payload {order_id, origin_url} and redirects via window.location.href. Remaining flows (change-payment navigate(-1), error path without order_id, hotel order hides travel_date / shows check-in/out) could not be re-verified in-browser because the preview domain started returning Cloudflare 403 'Performing security verification' pages after several rapid navigations from the automation runner — but the code paths are straightforward and correct on review.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/payment/checkout", "issues": ["Checkout page renders inside the customer DashboardLayout (left sidebar + top welcome bar), so the premium full-bleed dark-navy background is visually constrained to the content column. The revamp looks premium but the effect would read stronger as a chromeless checkout. Consider wrapping the route in a bare <Outlet/> layout if the intent was a true full-screen checkout (spec did not mandate this, flagging as UX observation only)."]}
+    ]
+  },
+  "verified_observations": {
+    "testids_present_on_travel_order": {
+      "checkout-back-btn": 1,
+      "checkout-proceed-stripe-btn": 1,
+      "checkout-change-payment-method-btn": 1,
+      "checkout-total-amount": 1,
+      "summary-order-number": 1,
+      "summary-route": 1,
+      "summary-travel-date": 1,
+      "summary-departure-time": 1,
+      "summary-passengers": 1,
+      "summary-operator": "0 (expected - null-suppressed by PremiumRow early-return since order has no operator_name)"
+    },
+    "cta_labels": {"primary": "Continue to Stripe", "secondary": "Choose a different payment method"},
+    "total_amount_rendered": "4,000 FCFA (matches order.total_amount=4000)",
+    "heading": "'Review & pay' + gold '4,000 FCFA' - confirmed visually",
+    "background": "linear-gradient dark-navy confirmed via getComputedStyle on .min-h-screen",
+    "badges": ["VISA", "MC", "AMEX"],
+    "trust_strip_items": ["Instant confirmation", "No hidden fees", "Free cancellation window"],
+    "secured_caption": "'Secured by Stripe' present (1)",
+    "route_subtitle": "Booking Summary header shows route 'CUSTOM_CITY_KEEPME → CUSTOM_DEST' for travel order",
+    "checkout_session_network_call": {
+      "method": "POST",
+      "url": "/api/checkout/session",
+      "payload": "{\"order_id\":\"01645b13-6844-4c22-8c12-c84307b0cc64\",\"origin_url\":\"https://booking-revamp-hub.preview.emergentagent.com\"}",
+      "redirect_behavior": "window.location.href assigned to response.data.url (confirmed — browser left preview domain when stubbed URL returned)"
+    }
+  },
+  "not_directly_re_verified_due_to_cloudflare_rate_limit": [
+    "Click 'Choose a different payment method' navigates back to /orders (navigate(-1))",
+    "GET /payment/checkout without order_id renders Something went wrong + checkout-error-back-btn",
+    "Hotel order hides summary-travel-date and shows summary-check-in / summary-check-out",
+    "Back button also calls navigate(-1)"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "No functional fix required for this iteration. The stale bundle issue is already documented in the request and is resolved by restarting the frontend supervisor.",
+    "(Optional) If a chromeless premium checkout is desired, route /payment/checkout outside the customer DashboardLayout so the dark navy gradient spans the full viewport width.",
+    "(Nice-to-have) Consider adding a data-testid on the 'Review & pay' H1 (e.g., data-testid=\"checkout-heading\") for easier automated assertions, since the DashboardLayout also injects an H1 'Welcome back, …' that shadows a plain h1 selector."
+  ],
+  "critical_code_review_comments": [
+    "StripeCheckoutConfirm.jsx cleanly splits the PremiumRow sub-component; null/empty value early-return is the correct pattern and is what makes the optional rows (travel_date for hotels, operator when missing) disappear gracefully — matches the spec's 'component early-returns when value is null/empty'.",
+    "FCFA_TO_USD (1/600) and FCFA_TO_EUR (1/655) are hard-coded constants. This is acceptable for an 'approximate' disclaimer but will drift over time — consider moving the rates into a small /utils/fx.js so they can be updated in one place or fetched from a lightweight rate endpoint.",
+    "window.location.href = response.data.url with no URL validation — Stripe returns checkout.stripe.com URLs so this is safe in practice, but a defensive guard (url.startsWith('https://')) would protect against an accidental backend bug returning relative or malformed URLs.",
+    "The route subtitle logic (`bd.departure_city && bd.destination_city ? ... : bd.check_in ? ...`) could be extended for restaurant/cinema service types so their header subtitle is meaningful — currently non-travel non-hotel orders show no subtitle under the service name.",
+    "No retry or error-reset for the Stripe session creation — once `error` is set, the user must click 'Go Back' and re-enter. Consider keeping the normal layout and showing an inline toast instead of wiping the page, so the CTA stays usable after a transient failure."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (no backend changes this iteration)", "frontend": "~90% of the revamp spec directly verified in-browser; remaining ~10% (nav(-1) flows, error path, hotel-specific rows) verified via code review only due to Cloudflare 403 rate-limit interference"},
+  "test_credentials": "customer@test.com / testpassword123 — valid, has travel + hotel orders pre-seeded",
+  "seed_data_creation": "none — used existing orders 01645b13-…b0cc64 (travel, 4000 FCFA) and ee3a2a3f-…defb46 (hotel, 20000 FCFA)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The preview domain sits behind Cloudflare and will start returning 403 'Performing security verification' pages after ~3-5 back-to-back navigations from a single Playwright session. Pace your tests: prefer fewer, longer sessions over many short goto() calls, and add `await page.wait_for_timeout(3000)` between full page navigations. To verify the new premium bundle is actually being served (not the old plain-white one), the fastest sanity check is `await page.locator('[data-testid=\"checkout-change-payment-method-btn\"]').count() === 1`. If 0, run `sudo supervisorctl restart frontend` and retry. The /payment/checkout route is wrapped by the customer DashboardLayout, so the page has TWO h1s (layout welcome + checkout 'Review & pay') — target the gold amount by text 'Review & pay' instead of by `h1` selector.",
+  "rca of the issue": "No bug — on first load the browser served a stale Vite-cached bundle that still had the old plain-white card design. A single `sudo supervisorctl restart frontend` invalidated the Vite module graph and the new premium StripeCheckoutConfirm.jsx then compiled/served correctly. The problem statement itself pre-warned about this: 'If the Vite bundle serves a stale StripeCheckoutConfirm module, run `sudo supervisorctl restart frontend`.' — applied and the premium revamp rendered exactly per spec."
+}
