@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Package, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Calendar, Plane, Hotel, Camera, Eye, Banknote, Receipt
+  Bell, Send, Calendar, Plane, Hotel, Camera, Eye, Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,6 +107,7 @@ export default function PackageManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [packages, setPackages] = useState([]);
+  const [replacePackage, setReplacePackage] = useState(null);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isPackageDialogOpen, setIsPackageDialogOpen] = useState(false);
@@ -289,6 +291,11 @@ export default function PackageManagement() {
                           <Button size="sm" variant="outline" onClick={() => handleViewPackage(pkg)} title="View Details">
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <PermissionGate permission="packages.edit">
+                            <Button size="sm" variant="outline" onClick={() => setReplacePackage(pkg)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-package-btn-${pkg.id}`}>
+                              <ReplaceIcon className="w-4 h-4" />
+                            </Button>
+                          </PermissionGate>
                           <PermissionGate permission="packages.edit">
                             <Button size="sm" variant="outline" className="flex-1" onClick={() => openPackageDialog(pkg)}>
                               <Edit className="w-4 h-4 mr-1" /> Edit
@@ -498,6 +505,18 @@ export default function PackageManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replacePackage}
+        onClose={() => setReplacePackage(null)}
+        serviceType="package"
+        oldResource={replacePackage}
+        allResources={packages}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadPackages?.();
         }}
       />
     </div>

@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Users, Droplets, Eye, Banknote, Receipt
+  Bell, Send, Users, Droplets, Eye, Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -102,6 +103,7 @@ export default function LaundryManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pressings, setPressings] = useState([]);
+  const [replacePressing, setReplacePressing] = useState(null);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isPressingDialogOpen, setIsPressingDialogOpen] = useState(false);
@@ -279,6 +281,11 @@ export default function LaundryManagement() {
                           <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details">
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <PermissionGate permission="pressing.edit">
+                            <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-pressing-btn-${pressing.id}`}>
+                              <ReplaceIcon className="w-4 h-4" />
+                            </Button>
+                          </PermissionGate>
                           <PermissionGate permission="pressing.edit">
                             <Button size="sm" variant="outline" className="flex-1" onClick={() => openPressingDialog(pressing)}>
                               <Edit className="w-4 h-4 mr-1" /> Edit
@@ -476,6 +483,18 @@ export default function LaundryManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replacePressing}
+        onClose={() => setReplacePressing(null)}
+        serviceType="laundry"
+        oldResource={replacePressing}
+        allResources={pressings}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadPressings?.();
         }}
       />
     </div>

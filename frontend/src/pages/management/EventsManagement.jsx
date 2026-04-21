@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Calendar, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
   LayoutDashboard, MessageSquare, RefreshCw,
-  Bell, Send, Ticket, Music, Mic, Eye, Banknote, Receipt
+  Bell, Send, Ticket, Music, Mic, Eye, Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -60,6 +61,7 @@ export default function EventsManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
+  const [replaceEvent, setReplaceEvent] = useState(null);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
@@ -296,6 +298,11 @@ export default function EventsManagement() {
                             <Eye className="w-4 h-4" />
                           </Button>
                           <PermissionGate permission="events.edit">
+                            <Button size="sm" variant="outline" onClick={() => setReplaceEvent(event)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-event-btn-${event._id || event.id}`}>
+                              <ReplaceIcon className="w-4 h-4" />
+                            </Button>
+                          </PermissionGate>
+                          <PermissionGate permission="events.edit">
                             <Button size="sm" variant="outline" className="flex-1" onClick={() => openEventDialog(event)}>
                               <Edit className="w-4 h-4 mr-1" /> Edit
                             </Button>
@@ -525,6 +532,18 @@ export default function EventsManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceEvent}
+        onClose={() => setReplaceEvent(null)}
+        serviceType="event"
+        oldResource={replaceEvent ? { ...replaceEvent, id: replaceEvent._id || replaceEvent.id } : null}
+        allResources={events.map(e => ({ ...e, id: e._id || e.id }))}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadEvents?.();
         }}
       />
     </div>

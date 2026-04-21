@@ -11,7 +11,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  AlertTriangle, ArrowRight, Loader2, Users, CheckCircle2, Undo2, Bus, Building2, Car,
+  AlertTriangle, ArrowRight, Loader2, Users, CheckCircle2, Undo2,
+  Bus, Building2, Car, CalendarDays, Package as PackageIcon, Shirt, Clapperboard,
 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
@@ -53,6 +54,42 @@ const SERVICE_PRESETS = {
     meta: (v) => `${v.capacity || '—'} guests · ${v.beds || '—'} bed(s)`,
     // Rooms must share the same hotel_id to be swappable.
     candidateFilter: (v, old) => v.hotel_id === old.hotel_id && v.status !== 'maintenance',
+  },
+  event: {
+    icon: CalendarDays,
+    noun: 'Event',
+    bookingNoun: 'event',
+    label: (v) => v.name || v.title,
+    subtitle: (v) => v.venue_name || v.event_type || 'Event',
+    meta: (v) => v.start_date ? String(v.start_date).slice(0, 10) : (v.city || '—'),
+    candidateFilter: (v, old) => v.operator_id === old.operator_id,
+  },
+  package: {
+    icon: PackageIcon,
+    noun: 'Package',
+    bookingNoun: 'package',
+    label: (v) => v.name || v.title,
+    subtitle: (v) => v.destination ? `${v.origin || ''} → ${v.destination}`.trim() : (v.package_type || 'Package'),
+    meta: (v) => `${v.duration_days || '—'}d/${v.duration_nights || '—'}n`,
+    candidateFilter: (v, old) => v.operator_id === old.operator_id,
+  },
+  laundry: {
+    icon: Shirt,
+    noun: 'Pressing Shop',
+    bookingNoun: 'pressing shop',
+    label: (v) => v.name,
+    subtitle: (v) => v.address || v.city || 'Shop',
+    meta: (v) => v.city || '—',
+    candidateFilter: (v, old) => v.operator_id === old.operator_id,
+  },
+  cinema: {
+    icon: Clapperboard,
+    noun: 'Showtime',
+    bookingNoun: 'showing',
+    label: (v) => v.film_title || v.screen_name,
+    subtitle: (v) => `${v.cinema_name || 'Cinema'} · ${v.screen_name || '—'}`,
+    meta: (v) => `${v.show_date || ''} ${v.show_time || ''}`.trim() || '—',
+    candidateFilter: (v, old) => v.cinema_id === old.cinema_id && v.is_active !== false,
   },
 };
 
@@ -237,14 +274,14 @@ export default function ReplaceResourceModal({
               <CardContent className="p-4 flex items-center gap-3 text-sm">
                 <div className="flex-1 text-right">
                   <p className="text-xs uppercase text-slate-500">From</p>
-                  <p className="font-bold">{preview.from?.vehicle_name || preview.from?.car_name || preview.from?.room_name || '—'}</p>
-                  <p className="font-mono text-xs text-slate-500">{preview.from?.plate_number || preview.from?.room_number || preview.from?.model || '—'}</p>
+                  <p className="font-bold">{preview.from?.vehicle_name || preview.from?.car_name || preview.from?.room_name || preview.from?.name || preview.from?.film_title || '—'}</p>
+                  <p className="font-mono text-xs text-slate-500">{preview.from?.plate_number || preview.from?.room_number || preview.from?.model || preview.from?.venue_name || preview.from?.destination || preview.from?.city || preview.from?.show_date || '—'}</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-[#082c59]" />
                 <div className="flex-1">
                   <p className="text-xs uppercase text-emerald-600">To</p>
-                  <p className="font-bold">{preview.to?.vehicle_name || preview.to?.car_name || preview.to?.room_name || '—'}</p>
-                  <p className="font-mono text-xs text-slate-500">{preview.to?.plate_number || preview.to?.room_number || preview.to?.model || '—'}</p>
+                  <p className="font-bold">{preview.to?.vehicle_name || preview.to?.car_name || preview.to?.room_name || preview.to?.name || preview.to?.film_title || '—'}</p>
+                  <p className="font-mono text-xs text-slate-500">{preview.to?.plate_number || preview.to?.room_number || preview.to?.model || preview.to?.venue_name || preview.to?.destination || preview.to?.city || preview.to?.show_date || '—'}</p>
                 </div>
               </CardContent>
             </Card>

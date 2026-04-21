@@ -1,0 +1,34 @@
+{
+  "summary": "Verified iter121 frontend rollout: static code review of Replace UI for Events/Packages/Laundry. Live E2E blocked by unrelated 403s from /events/, /packages/, /pressing/ and /permissions endpoints (no items load for either admin@test.com or operator@test.com). Code changes look correct and match the spec.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/api/events/, /api/packages/, /api/pressing/", "issue": "Return 403 when logged in as admin@test.com AND operator@test.com in preview env. Permissions endpoint also 403s, so PermissionsContext fails and PermissionGate hides Edit/Replace/Delete. This blocks live verification of the new Replace buttons.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Investigate why /api/events/, /api/packages/, /api/pressing/ and /api/permissions return 403 for admin@test.com in preview env (blocks dynamic testing of new Replace UI and many other flows). Check seed script and role→permission mapping; suspected regression.",
+    "Once 403 is resolved, rerun the Replace modal flow for events/packages/laundry (pick candidate → Preview impact → Confirm → Undo)."
+  ],
+  "critical_code_review_comments": [
+    "Static review PASS: ReplaceResourceModal.jsx SERVICE_PRESETS has event (CalendarDays, name/venue_name, operator_id filter), package (PackageIcon, origin→destination, operator_id filter), laundry (Shirt, name/city, operator_id filter), cinema (Clapperboard, cinema_id filter). Preview from/to labels include name/film_title/venue_name/destination/city/show_date fallbacks as spec requires.",
+    "EventsManagement.jsx: replaceEvent state + ReplaceIcon button (data-testid=replace-event-btn-<id>) placed between View and Edit inside PermissionGate 'events.edit'; ReplaceResourceModal mounted with serviceType='event' and id mapped from _id||id. Correct.",
+    "PackageManagement.jsx: replacePackage state + button (data-testid=replace-package-btn-<id>) inside PermissionGate 'packages.edit'; modal mounted with serviceType='package'. Correct.",
+    "LaundryManagement.jsx: replacePressing state + button (data-testid=replace-pressing-btn-<id>) inside PermissionGate 'pressing.edit'; modal mounted with serviceType='laundry'. Correct.",
+    "Note: because the Replace button is gated by <PermissionGate permission='<service>.edit'>, if the permissions API fails or user lacks that permission, the Replace button will not render. This is expected and acceptable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not tested this iteration)", "frontend": "code-review PASS; live E2E BLOCKED by env 403s"},
+  "test_credentials": "admin@test.com / testpassword123 (redirects to /admin/admin-dashboard but /events,/packages,/pressing 403). operator@test.com / testpassword123 (redirects to /admin/analytics, same 403s).",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The Replace UI code (ReplaceResourceModal SERVICE_PRESETS for event/package/laundry/cinema + the 3 management pages with replace buttons and modal mounts) is implemented correctly per spec. Dynamic testing was blocked because the management APIs (/events, /packages, /pressing) and /permissions return 403 for admin@test.com in the preview environment, so the resource lists never load and PermissionGate hides the Edit/Replace/Delete buttons. Main agent should first diagnose the 403 regression (likely seed data or RBAC permission assignment) before re-verifying Replace flow. Once APIs work, look for data-testid='replace-event-btn-<id>', 'replace-package-btn-<id>', 'replace-pressing-btn-<id>' on each card's Management tab; click → modal opens with title 'Replace Event' / 'Replace Package' / 'Replace Pressing Shop'; dropdown 'replace-resource-select' lists only same-operator candidates; 'replace-preview-btn' → 'replace-resource-preview' with affected-count (likely 0); 'replace-confirm-btn' → success screen with 'replace-undo-btn' and 5-min countdown.",
+  "rca of the issue": "Not the target feature's fault — the 403 on /events,/packages,/pressing,/permissions is pre-existing in the preview env and blocks all management-page interactions regardless of this iteration's changes. Likely root cause is missing role→permission mapping or seed inconsistency after recent RBAC changes."
+}
