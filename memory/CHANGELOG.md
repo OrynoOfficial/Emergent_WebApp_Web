@@ -1,6 +1,24 @@
 # Oryno Platform — Changelog
 
 
+## Apr 21, 2026 — Showtimes Mgmt Tab + User-Operator Assignment + Users Page Revamp
+- **Cinema: Showtimes sub-tab** added to CinemaManagement → Management. Table with film/cinema/screen/date-time/seats/price/status + Replace and Delete actions per row.
+- **Backend cinema**: new `GET /api/cinema/showtimes/operator` (returns showtimes with `id` field, operator-scoped), `POST /api/cinema/showtimes` (body-based), `PUT /api/cinema/showtimes/{id}`, `DELETE /api/cinema/showtimes/{id}` (refuses 409 if active bookings reference the showtime — forces Replace flow).
+- **User creation with operator assignment**: `POST /api/users/create` now requires `operator_id` when `role='operator'`, validates against `operators` collection, persists `operator_id` + `operator_name` on user.
+- **User listing enrichment**: `GET /api/users/` on-the-fly populates missing `operator_name` for operator-role users.
+- **Reusable `OperatorPicker`** component (`frontend/src/components/shared/OperatorPicker.jsx`) — search + service filter + region filter + scrollable selectable list.
+- **Invite User modal**: OperatorPicker shown conditionally when role=operator; submit blocked without pick.
+- **Create User modal (admin/users)**: same conditional OperatorPicker.
+- **Admin → Users page revamp**:
+  - New **Operator** column (`data-testid="user-operator-cell-<id>"`) shows operator badge with name for operator-role users.
+  - View mode toggle: list / grid / details (`data-testid="user-view-mode"` with `view-list|view-grid|view-details`).
+  - Client-side **pagination** (12 per page grid, 20 per page list/details, prev/next).
+  - Extended filters: status, operator, date-joined range (`joined-from` / `joined-to`).
+  - Search now also matches `operator_name`.
+- **Delete showtime**: native `window.confirm`/`alert` replaced with toast feedback for consistency.
+- **Testing**: iter122 — 11/11 backend pytest PASS, frontend live verification PASS (view modes, operator column populated, pagination, new filters all rendering).
+
+
 ## Apr 21, 2026 — Replace/Reassign UI Rollout: Events, Packages, Laundry
 - **Replace icon button** added to card action row on:
   - `EventsManagement.jsx` → `data-testid="replace-event-btn-<id>"` (between View and Edit)

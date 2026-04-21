@@ -515,12 +515,12 @@ export default function CinemaManagement() {
                                       variant="outline"
                                       className="h-8 text-red-600 hover:bg-red-50"
                                       onClick={async () => {
-                                        if (!window.confirm('Deactivate this showtime?')) return;
                                         try {
                                           await api.delete(`/cinema/showtimes/${st.id}`);
+                                          toast.success('Showtime deactivated');
                                           loadShowtimes();
                                         } catch (err) {
-                                          alert(err.response?.data?.detail || 'Delete failed');
+                                          toast.error(err.response?.data?.detail || 'Delete failed');
                                         }
                                       }}
                                       data-testid={`delete-showtime-btn-${st.id}`}
