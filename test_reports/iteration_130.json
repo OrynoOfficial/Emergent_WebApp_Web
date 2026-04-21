@@ -1,0 +1,40 @@
+{
+  "summary": "Iter130 — Pay Now entry point on /orders + foreground Stripe checkout modal fully verified end-to-end via Playwright. After a `sudo supervisorctl restart frontend` (Vite HMR appeared to be holding a stale bundle without the new code; once restarted the new Orders.jsx loaded fine), 8 Pay Now buttons render across 9 pending+unpaid customer orders. Clicking Pay Now opens [data-testid=stripe-checkout-modal] as a Radix Dialog overlay, URL stays at /orders, premium navy gradient panel renders with 'Review & pay 20,000 FCFA' heading, 20,000 FCFA total, order # HTL-20260421-EF6F641E, Continue to Stripe and Choose a different payment method buttons. Change-method closes the modal cleanly, Escape closes it, and Continue → POST /api/checkout/session with body {order_id:'ee3a2a3f-...', origin_url:'https://booking-revamp-hub.preview.emergentagent.com'} (intercepted, status 200). All 3 view modes (list, grid, details) show Pay Now alongside View+Cancel for pending unpaid orders; confirmed/paid orders show only View.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verifications_passed": [
+    "Pay Now buttons render in list view: 8 buttons (Cancel + View + Pay Now per pending+unpaid order)",
+    "Pay Now buttons render in grid view: 8 with data-testid='order-pay-now-<id>' (orders-grid-view present)",
+    "Pay Now buttons render in details view (no testid required by spec for list/details, only grid)",
+    "Pay Now hidden for confirmed/paid orders (e.g. TRV-20260421-DD7FBB28 confirmed/paid shows only View)",
+    "Click Pay Now → [data-testid=stripe-checkout-modal] appears, URL stays /orders",
+    "Modal contents: checkout-heading='Review & pay 20,000 FCFA', checkout-total-amount='20,000 FCFA', summary-order-number='HTL-20260421-EF6F641E', checkout-proceed-stripe-btn='Continue to Stripe', checkout-change-payment-method-btn='Choose a different payment method'",
+    "Choose a different payment method → modal closes, URL still /orders, Pay Now still available (8 buttons)",
+    "Escape key → modal closes",
+    "Continue to Stripe → POST /api/checkout/session intercepted with body {order_id, origin_url} matching expected schema",
+    "Login splash CTA flow intact (Login to Your Account → form → dashboard)",
+    "Premium navy-gradient backdrop (#082c59/70 + blur), gold accent, Stripe PCI notice, Visa/MC/AMEX badges, FCFA→USD/EUR approximate currencies all rendering"
+  ],
+  "critical_code_review_comments": [
+    "[high — root cause of previous flaky test] Vite was serving a stale bundle that did NOT include the new Pay Now buttons even though /app/frontend/src/pages/Orders.jsx on disk was correct. Required a manual `sudo supervisorctl restart frontend` to pick up. Either Vite HMR is mis-firing on this preview environment or there is a service-worker / CDN cache. Main agent should verify whether the production deploy pipeline does a clean build — otherwise users on the preview URL between iterations may see old code until the next supervisor restart.",
+    "[low] List view (line 821) and Details view (line 719) Pay Now buttons do NOT have data-testid='order-pay-now-<id>' — only the grid view does. Spec says 'Present in ALL 3 view modes (data-testid=order-pay-now-<id>)'. Recommend adding the same data-testid to the list and details buttons for full testability parity.",
+    "[low] 'Select Your Location' modal (an unrelated splash) intercepts pointer events on /orders for first-time users and blocks Radix Select dropdowns. Not a regression from this iter, but worth dismissing automatically once the user has any orders."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Investigate why a supervisorctl restart of frontend was required to pick up the new Orders.jsx — Vite HMR is silently failing on the preview env (the WS endpoint logs 'wss://127.0.0.1:1 ERR_UNSAFE_PORT', so HMR is fully broken; manual restart is required after every code change).",
+    "Add data-testid='order-pay-now-<id>' to the list-view Pay Now button (line ~822) and details-view Pay Now button (line ~720) so all three view modes are testable as the spec requires."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% — all 9 spec items verified after frontend restart"},
+  "test_credentials": "customer@test.com / testpassword123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "none — used existing pending hotel order HTL-20260421-EF6F641E (TEST Hotel, 20,000 FCFA, payment_status=pending) plus 8 other pending unpaid travel orders",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "If Pay Now buttons appear missing or any /orders Pay Now flow looks broken, FIRST do `sudo supervisorctl restart frontend` then wait ~10s. Vite HMR is broken on this preview env (wss://127.0.0.1:1 ERR_UNSAFE_PORT in console) so JSX edits after the last frontend start are NOT picked up until restart. Also, dismiss the 'Select Your Location' splash modal that blocks dropdowns — click 'Skip for Now' first.",
+  "rca of the issue": "Initial Playwright run found 0 Pay Now buttons rendered despite (a) Orders.jsx on disk having the new conditional Button blocks at lines 625-634/719-727/821-833, and (b) the API confirming 9 customer orders matching status==='pending' && payment_status!=='paid'. Root cause: Vite dev server's HMR websocket on this preview environment is broken (browser console: 'wss://127.0.0.1:1 ERR_UNSAFE_PORT'), so the file change made by the main agent never propagated to the served bundle. After `sudo supervisorctl restart frontend && sleep 8`, the next page load showed all 8 Pay Now buttons across all view modes, the modal opened in-page (URL unchanged), and Continue to Stripe POSTed correctly. Mitigation: main agent should restart frontend after every JSX edit on this env, or fix Vite HMR config (vite.config server.hmr.clientPort/host) so port 1 ERR_UNSAFE_PORT goes away."
+}

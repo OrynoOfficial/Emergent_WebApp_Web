@@ -276,7 +276,6 @@ const PaymentMethodsSelection = ({
       // The user can review the booking summary + payment amount and either
       // continue to Stripe or click "Choose a different payment method" to
       // come back to the payment options without losing their booking.
-      sessionStorage.setItem('stripe_order_id', orderId);
       setStripeModalOpen(true);
       setIsProcessingInternal(false);
       if (onProcessingChange) {

@@ -29,9 +29,11 @@ import {
   User,
   SlidersHorizontal,
   Plus,
-  Building2
+  Building2,
+  CreditCard
 } from 'lucide-react';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
+import StripeCheckoutModal from '../components/payment/StripeCheckoutModal';
 import { activityLogger } from '../utils/activityLogger';
 import { formatFCFA } from '../utils/currency';
 import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
@@ -71,6 +73,8 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // "Pay now" entry point for pending orders → opens the premium Stripe modal
+  const [payOrderId, setPayOrderId] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Determine view mode based on user role
@@ -615,9 +619,19 @@ export default function Orders() {
                     <p className="text-xl font-bold text-[#082c59]">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="flex-1">
+                    <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="flex-1" data-testid={`order-view-${order.id || order._id}`}>
                       <Eye className="h-3.5 w-3.5 mr-1" /> View
                     </Button>
+                    {order.status === 'pending' && order.payment_status !== 'paid' && (
+                      <Button
+                        onClick={() => setPayOrderId(order.id || order._id)}
+                        size="sm"
+                        className="flex-1 bg-[#082c59] hover:bg-[#0a346c] text-white"
+                        data-testid={`order-pay-now-${order.id || order._id}`}
+                      >
+                        <CreditCard className="h-3.5 w-3.5 mr-1" /> Pay Now
+                      </Button>
+                    )}
                     {order.status === 'pending' && (
                       <Button
                         onClick={() => handleCancelOrder(order.id || order._id)}
@@ -702,6 +716,15 @@ export default function Orders() {
                           <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm">
                             <Eye className="h-4 w-4 mr-1" /> View
                           </Button>
+                          {order.status === 'pending' && order.payment_status !== 'paid' && (
+                            <Button
+                              onClick={() => setPayOrderId(order.id || order._id)}
+                              size="sm"
+                              className="bg-[#082c59] hover:bg-[#0a346c] text-white"
+                            >
+                              <CreditCard className="h-4 w-4 mr-1" /> Pay Now
+                            </Button>
+                          )}
                           {order.status === 'pending' && (
                             <Button onClick={() => handleCancelOrder(order.id || order._id)} variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
                               <XCircle className="h-4 w-4 mr-1" /> Cancel
@@ -795,6 +818,19 @@ export default function Orders() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {order.status === 'pending' && order.payment_status !== 'paid' && (
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPayOrderId(order.id || order._id);
+                              }}
+                              size="sm"
+                              className="bg-[#082c59] hover:bg-[#0a346c] text-white"
+                            >
+                              <CreditCard className="h-4 w-4 sm:mr-1.5" />
+                              <span className="hidden sm:inline">Pay Now</span>
+                            </Button>
+                          )}
                           {order.status === 'pending' && (
                             <Button
                               onClick={(e) => {
@@ -919,6 +955,13 @@ export default function Orders() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseModal}
         onCancel={handleCancelOrder}
+      />
+
+      {/* Premium foreground checkout — opens when a user clicks Pay Now on a pending order */}
+      <StripeCheckoutModal
+        open={!!payOrderId}
+        onClose={() => setPayOrderId(null)}
+        orderId={payOrderId}
       />
     </div>
   );
