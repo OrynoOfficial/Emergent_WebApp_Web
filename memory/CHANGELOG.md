@@ -1,6 +1,17 @@
 # Oryno Platform — Changelog
 
 
+## Apr 21, 2026 — Replace/Reassign UI Rollout: Events, Packages, Laundry
+- **Replace icon button** added to card action row on:
+  - `EventsManagement.jsx` → `data-testid="replace-event-btn-<id>"` (between View and Edit)
+  - `PackageManagement.jsx` → `data-testid="replace-package-btn-<id>"`
+  - `LaundryManagement.jsx` → `data-testid="replace-pressing-btn-<id>"`
+- **ReplaceResourceModal SERVICE_PRESETS** extended with icons/labels/candidateFilter for `event` (CalendarDays), `package` (Package), `laundry` (Shirt), and `cinema` (Clapperboard — preset ready for future Showtimes UI).
+- **Preview fallbacks**: preview card now falls back through `name/film_title/venue_name/destination/city/show_date` so all 7 service types render correctly.
+- **Deferred**: **Cinema UI** — CinemaManagement has no Showtimes tab yet; cinema reassignment operates on showtimes, not cinemas. Backend still fully supports cinema reassignment via API. Adding a Showtimes management tab + Replace button is a next-task.
+- **Testing**: iter121 — code review PASS, live E2E blocked by Cloudflare bot-challenge in preview env (unrelated to code). Backend endpoints (/api/events/, /api/packages/, /api/pressing/) confirmed working via curl (200 OK for both admin and operator).
+
+
 ## Apr 21, 2026 — Reassignment P3 Rollout: Event, Package, Laundry, Cinema (Backend)
 - **SERVICE_SPECS expanded to 7 services**: added `event`, `package`, `laundry`, `cinema` on top of the existing `travel`, `car_rental`, `hotel`.
   - `event`: collection `events`, snapshot (name, event_type, venue_name, start_date, end_date, images). Use case: cancelled show → makeup event, ticket-holders auto-migrated.
