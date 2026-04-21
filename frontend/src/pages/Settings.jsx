@@ -11,6 +11,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../components/ui/select';
 import { 
   User, Mail, Phone, Lock, Bell, Globe, Shield, Save, Camera,
   Settings as SettingsIcon, HelpCircle, CreditCard, FileText, Info,
@@ -1065,20 +1066,24 @@ export default function Settings() {
                   Use system timezone
                 </button>
               </div>
-              <select
+              <Select
                 value={preferences.timezone}
-                onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
-                className="w-full mt-1 p-2 border rounded-lg bg-white"
-                data-testid="timezone-select"
+                onValueChange={(v) => setPreferences({ ...preferences, timezone: v })}
               >
-                {COMMON_TIMEZONES.map((group) => (
-                  <optgroup key={group.group} label={group.group}>
-                    {group.zones.map((tz) => (
-                      <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 bg-white" data-testid="timezone-select">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-80">
+                  {COMMON_TIMEZONES.map((group) => (
+                    <SelectGroup key={group.group}>
+                      <SelectLabel>{group.group}</SelectLabel>
+                      {group.zones.map((tz) => (
+                        <SelectItem key={tz} value={tz}>{tz.replace('_', ' ')}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-slate-500 mt-1">
                 All dates and times across the app use this timezone. Default is taken from your device.
               </p>

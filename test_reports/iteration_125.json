@@ -1,0 +1,30 @@
+{
+  "summary": "Iter125 — validated the two iter125 changes. Backend (pytest 5/5 PASS in /app/backend/tests/test_iteration125_tz_and_id_prefill.py): (1) PUT /api/users/me/preferences with {timezone:'Europe/Paris'} persists and is read back via /api/auth/me; (2) PUT /api/users/me/preferences timezone can be reset to 'Africa/Douala'; (3) self PUT /api/users/{id} with {id_document_number:'CM-ID-998877'} succeeds via customer token (allowed_self_fields); (4) /api/auth/me returns id_document_number='CM-ID-998877'; (5) /api/auth/me exposes full_name used for prefill fallback. Frontend live-verified on the preview URL after a supervisorctl restart frontend (first run had a stale Vite module cache that served the previous iteration's native <select>): (a) Settings → Preferences timezone-select is now a shadcn Select — data-testid='timezone-select' resolves to <button role='combobox' aria-controls='radix-...' data-state='closed' class='flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border...'> (Radix SelectPrimitive.Trigger), NOT a native <select>. Region group labels (Africa/Americas/Europe/Asia/Oceania/UTC) render as SelectLabel headers when the listbox opens. (b) detect-timezone-btn still exists in the DOM. (c) Travel Booking prefill: seeded customer@test.com profile with id_document_number='CM-ID-998877', seeded selectedTrip in sessionStorage, navigated to /services/travel/booking, clicked #is-traveler-1 → firstName='Customer', idNumber='CM-ID-998877' (EXACT match with seed), phoneNumber='+237 677251682' all auto-filled with the 'Auto-filled' badges visible. lastName rendered empty because the customer's full_name in the DB is the single word 'Customer' (nameParts.slice(1).join(' ') === '') — this is a data artifact, not a regression (profile.last_name is simply unset for this seed user).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration125_tz_and_id_prefill.py",
+    "/app/test_reports/pytest/iter125.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Settings.jsx — shadcn Select migration is clean: imports Select/SelectContent/SelectGroup/SelectItem/SelectLabel/SelectTrigger/SelectValue; COMMON_TIMEZONES array is shaped [{group, zones:[IANA...]}] and iterated with SelectGroup/SelectLabel headers; SelectContent has max-h-80 so the long list is scrollable; data-testid='timezone-select' correctly lives on SelectTrigger so existing Playwright tests that target it still work.",
+    "TravelBooking.jsx PassengerForm.handleIsTravelerChange — correct fallback chain: profile.id_document_number → profile.national_id → profile.passport_number. Uses /auth/me (not /users/me which is gated by users.view). onUncheck clears firstName/lastName/idNumber/phoneNumber which is the expected toggle-off behavior.",
+    "Minor: when the customer has a single-word full_name and no first_name/last_name fields, lastName stays empty after auto-fill. Not a blocker for this iteration (out of scope), but consider defaulting lastName to '-' or leaving the field optional so validation doesn't block checkout.",
+    "Hot-reload caveat — Vite occasionally serves a stale module after file edits; a supervisorctl restart frontend made the shadcn Select visible. If future iterations verify immediately after edits, do a hard reload or restart frontend to avoid false negatives."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration125_tz_and_id_prefill.py (new — 5 tests, all pass)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% — timezone-select is shadcn (BUTTON role=combobox); prefill idNumber='CM-ID-998877' exact match; detect-timezone-btn present; phone & firstName also prefilled."},
+  "test_credentials": "admin@test.com / testpassword123; customer@test.com / testpassword123 (seeded id_document_number='CM-ID-998877')",
+  "seed_data_creation": "customer@test.com profile now has id_document_number='CM-ID-998877' (seeded by the backend test via PUT /api/users/{id} using the customer's own token — allowed_self_fields includes id_document_number). Also temporarily set customer timezone to Europe/Paris then back to Africa/Douala during the test run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "If a UI testid resolves but the DOM tagName looks wrong after a code edit (e.g. still <select> when source says <SelectTrigger>), restart the frontend with 'sudo supervisorctl restart frontend' — Vite served a stale module in this run. Customer customer@test.com now carries id_document_number='CM-ID-998877' in the DB; reuse it or reseed via PUT /api/users/{id} with the customer token. To exercise Travel Booking without going through the search UI, seed sessionStorage.selectedTrip with {outbound:{id,from_city,to_city,tripDate,price,departure_time,arrival_time,operator_id,operator_name,vehicle_type,total_seats},passengers:1,isRoundTrip:false,from,to,date} then navigate to /services/travel/booking. The 'I am the traveler' checkbox is #is-traveler-1 (shadcn Checkbox button[role=checkbox]). Inputs are #firstName-1, #lastName-1, #idNumber-1, #phoneNumber-1.",
+  "rca of the issue": "Both iter125 items verified as fixed. (1) The shadcn Select migration in Settings.jsx is live — data-testid still exposed on SelectTrigger, region groups (SelectLabel) render as sticky headers inside the listbox. (2) TravelBooking.jsx PassengerForm.handleIsTravelerChange now reads profile.id_document_number || profile.national_id || profile.passport_number so idNumber is prefilled along with firstName/lastName/phoneNumber when 'I am the traveler' is checked. Verified end-to-end: customer with id_document_number='CM-ID-998877' sees exactly that value in the ID/Passport field."
+}

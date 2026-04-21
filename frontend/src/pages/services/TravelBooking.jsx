@@ -90,6 +90,7 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
           ...passenger,
           firstName: profile.first_name || nameParts[0] || '',
           lastName: profile.last_name || nameParts.slice(1).join(' ') || '',
+          idNumber: profile.id_document_number || profile.national_id || profile.passport_number || '',
           phoneNumber: profile.phone || ''
         });
       } catch {
@@ -100,6 +101,7 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
             ...passenger,
             firstName: user.first_name || nameParts[0] || '',
             lastName: user.last_name || nameParts.slice(1).join(' ') || '',
+            idNumber: user.id_document_number || user.national_id || user.passport_number || '',
             phoneNumber: user.phone || ''
           });
         }
