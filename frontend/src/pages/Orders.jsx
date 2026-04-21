@@ -721,6 +721,7 @@ export default function Orders() {
                               onClick={() => setPayOrderId(order.id || order._id)}
                               size="sm"
                               className="bg-[#082c59] hover:bg-[#0a346c] text-white"
+                              data-testid={`order-pay-now-${order.id || order._id}`}
                             >
                               <CreditCard className="h-4 w-4 mr-1" /> Pay Now
                             </Button>
@@ -826,6 +827,7 @@ export default function Orders() {
                               }}
                               size="sm"
                               className="bg-[#082c59] hover:bg-[#0a346c] text-white"
+                              data-testid={`order-pay-now-${order.id || order._id}`}
                             >
                               <CreditCard className="h-4 w-4 sm:mr-1.5" />
                               <span className="hidden sm:inline">Pay Now</span>
