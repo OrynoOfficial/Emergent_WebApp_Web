@@ -47,6 +47,14 @@ const toDate = (input) => {
     const [y, m, d] = input.split('-').map(Number);
     return new Date(y, m - 1, d);
   }
+  // Naive ISO datetime (no timezone offset) — backend uses datetime.utcnow(),
+  // which Pydantic serializes WITHOUT a trailing 'Z' or '+00:00'.  JavaScript
+  // would otherwise parse those strings as local time and shift the value by
+  // the browser's UTC offset.  Assume UTC in that case.
+  if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(input)) {
+    const d = new Date(input + 'Z');
+    return isNaN(d.getTime()) ? null : d;
+  }
   const d = new Date(input);
   return isNaN(d.getTime()) ? null : d;
 };

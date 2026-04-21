@@ -10,6 +10,74 @@ import uuid
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
+
+async def _enrich_order_with_route(order: dict, db) -> dict:
+    """Backfill missing route-derived fields on a travel order at read time.
+
+    Older orders were persisted without ``booking_details.travel_date``,
+    ``departure_city``/``destination_city`` or ``departure_time``, which caused
+    the Order Details modal to show "N/A" or a blank "Service Info" row. This
+    helper fetches the originating route (``service_id``) and fills any
+    missing aliases so the ticket always matches what was booked.
+    """
+    if not isinstance(order, dict):
+        return order
+    if order.get("service_type") != "travel":
+        return order
+
+    bd = order.get("booking_details") or {}
+    service_id = order.get("service_id")
+    if not service_id:
+        order["booking_details"] = bd
+        return order
+
+    # Only hit the DB if at least one field is actually missing
+    needs_enrichment = any(bd.get(k) in (None, "") for k in (
+        "travel_date", "departure_time", "arrival_time",
+        "departure_city", "destination_city",
+    ))
+    if not needs_enrichment:
+        order["booking_details"] = bd
+        return order
+
+    route = await db.travel_routes.find_one(
+        {"$or": [{"_id": service_id}, {"id": service_id}]},
+        {"_id": 0, "departure_time": 1, "arrival_time": 1,
+         "from_city": 1, "to_city": 1, "operator_id": 1, "operator_name": 1,
+         "date": 1},
+    )
+    if not route:
+        order["booking_details"] = bd
+        return order
+
+    # Fill only the gaps — never overwrite an existing value
+    if not bd.get("departure_time") and route.get("departure_time"):
+        bd["departure_time"] = route["departure_time"]
+    if not bd.get("arrival_time") and route.get("arrival_time"):
+        bd["arrival_time"] = route["arrival_time"]
+    if not bd.get("departure_city") and route.get("from_city"):
+        bd["departure_city"] = route["from_city"]
+    if not bd.get("destination_city") and route.get("to_city"):
+        bd["destination_city"] = route["to_city"]
+    if not bd.get("operator_name") and route.get("operator_name"):
+        bd["operator_name"] = route["operator_name"]
+
+    # Service Time aliases used by the Order Details modal
+    svc_time = bd.get("service_time") or bd.get("travel_time") or bd.get("departure_time")
+    if svc_time:
+        bd.setdefault("service_time", svc_time)
+        bd.setdefault("travel_time", svc_time)
+
+    # Service Date alias: if travel_date missing but the route ships on a fixed date, use it
+    if not bd.get("travel_date") and route.get("date"):
+        bd["travel_date"] = route["date"]
+    if bd.get("travel_date") and not bd.get("service_date"):
+        bd["service_date"] = bd["travel_date"]
+
+    order["booking_details"] = bd
+    return order
+
+
 @router.post("/", response_model=dict)
 async def create_order(
     order_data: OrderCreate,
@@ -456,6 +524,10 @@ async def get_user_orders(
                 processed_order["customer_name"] = customer.get("full_name", "Unknown")
                 processed_order["customer_email"] = customer.get("email", "")
         
+        # Backfill missing route-derived fields so the ticket always reflects
+        # what the customer actually booked (older orders had nulls).
+        processed_order = await _enrich_order_with_route(processed_order, db)
+
         processed_orders.append(processed_order)
     
     return {
@@ -487,6 +559,11 @@ async def get_order(
             detail="Not authorized to view this order"
         )
     
+    # Normalize id and drop raw _id; backfill route-derived fields.
+    order_id_val = order.get("id") or str(order.get("_id", "")) or order.get("order_number")
+    order = {k: v for k, v in order.items() if k != "_id"}
+    order["id"] = order_id_val
+    order = await _enrich_order_with_route(order, db)
     return order
 
 @router.put("/{order_id}/cancel")
