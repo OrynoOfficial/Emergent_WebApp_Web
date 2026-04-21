@@ -1,0 +1,42 @@
+{
+  "summary": "Iter123 — user/operator assignment flow + UserDetailModal revamp. Backend: 11/11 pytest cases PASS (create-customer ignores operator_id, create-operator persists, PUT rejects operator_id on non-operator, PUT operator_id=null clears, role-change cascade unsets operator, invitation requires operator_id for role=operator + drops for customer, /stats shape, /activity with search+date filters, /operators ?search= regex, DB cleanup verified: 0 stale records). Frontend: live verified on /admin/users — Create User dialog has max-h-[92vh] overflow-y-auto; OperatorPicker empty by default (NO /api/operators call on mount, 0 cards, 'Start typing…' hint), and ?search=mus triggers a single /api/operators/?limit=50&search=mus request returning 1 matching card. UserDetailModal opens with gradient header, prefilled name/email/phone/city/region, 4 stat cards populated from /users/{id}/stats, Profile/Activity tabs, and for operator-role users shows operator-assignment-section with Musango chip + Clear (remove) button and an inline OperatorPicker for reassignment. Activity tab debounces and calls /users/{id}/activity?search=login correctly. NOTE: first Playwright run showed stale bundle (pre-restart OperatorPicker pre-fetched and rendered 3 cards on mount). After `sudo supervisorctl restart frontend` all behaviors matched spec — consistent with iter122 observation.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/users user row actions column", "issues": ["Eye/edit/block/delete action buttons in the last td of each user-row have NO data-testid attributes (view-user-btn, edit-user-btn, etc.). Tests had to rely on td:last-child button:nth-of-type(1). Low priority but would improve stability."]},
+      {"screen": "UserDetailModal Activity tab pagination", "issues": ["data-testid 'activity-pagination', 'page-prev', 'page-next' are absent when total activities <= page size. If spec requires the testids always exist (hidden/disabled), render the pagination shell unconditionally. Currently they only appear when there is more than one page."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration123_operator_assignment.py",
+    "/app/test_reports/pytest/iter123.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: add data-testid='view-user-btn-<id>'/'edit-user-btn-<id>'/'block-user-btn-<id>'/'delete-user-btn-<id>' to the action icons in Users.jsx user rows.",
+    "OPTIONAL: always render activity-pagination shell in UserDetailModal (even when total <= limit) so tests can assert its presence.",
+    "OPTIONAL (iter122 follow-up carried forward): swap joined-from/joined-to native date inputs for shadcn Calendar popover for visual consistency."
+  ],
+  "critical_code_review_comments": [
+    "users.py PUT /{user_id} correctly validates operator_id can only be set on role=operator and supports explicit null to clear (sets operator_name=null too).",
+    "users.py PUT /{user_id}/role cascade uses $unset{operator_id,operator_name} when role moves away from operator; response includes operator_cleared flag. Good.",
+    "users.py GET /{user_id}/stats aggregates orders by user_id OR user_email; returns all seven expected keys with proper int/numeric types.",
+    "users.py GET /{user_id}/activity supports search (regex across action/details/resource_name), date_from/date_to, skip, limit. Merges activity_logs + audit_logs. Pagination shape correct.",
+    "invitations.py POST /send enforces operator_id when role=operator (400) and silently drops it for non-operator roles (line 60).",
+    "operators.py GET / adds ?search param with regex across name/city/email/operator_type when len >= 2. Clean.",
+    "OperatorPicker.jsx useEffect gates fetching on hasActiveQuery (search>=2 OR service!=all OR region!=all) and otherwise sets operators=[] — matches spec. selectedMeta fetch by id ensures assigned-chip still renders when list is empty.",
+    "UserDetailModal.jsx renders operator-assignment-section ONLY when user.role==='operator' — matches spec. Clear/Remove button calls PUT /users/{id} with operator_id=null.",
+    "Users.jsx Create User dialog has data-testid='create-user-dialog' with classes 'max-w-lg max-h-[92vh] overflow-y-auto' — confirmed.",
+    "Users.jsx strips operator_id from payload when role != operator in both handleCreateUser and the role-change handler.",
+    "Minor: actions column in the user table has no data-testid on the individual icon buttons — purely a testability gap."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration123_operator_assignment.py (new)"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% of specified flows live-verified"},
+  "test_credentials": "admin@test.com / testpassword123; operator@test.com / testpassword123 (Musango 30c487d8-f8ef-4e80-8b14-1a68866071c8)",
+  "seed_data_creation": "A handful of TEST_iter123_*@example.com users are created per run (customer/operator variants). They are prefixed and safe to keep.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Important: Vite/HMR can keep serving a stale OperatorPicker bundle after large frontend edits. If the picker appears to auto-fetch operators on mount, run `sudo supervisorctl restart frontend` and re-test — same symptom as iter122. The login page is a splash; click 'Login to Your Account' CTA before filling credentials. Actions column icon buttons have no data-testid; use td:last-child fallback. UserDetailModal is at /app/frontend/src/components/modals/UserDetailModal.jsx.",
+  "rca of the issue": "No functional defect. Transient stale bundle after hot-reload caused the first run to see OperatorPicker pre-fetching and showing 3 cards on mount. After a frontend restart Vite rebuilt the module and the gated hasActiveQuery useEffect behaved correctly — matching the shipped source. Recommend adding a lightweight version probe / cache-busting on OperatorPicker or a note in the dev README."
+}

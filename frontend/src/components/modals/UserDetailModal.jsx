@@ -1,458 +1,392 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  User,
-  Mail,
-  Phone,
-  Calendar,
-  Shield,
-  ShoppingBag,
-  Activity,
-  Save,
-  Ban,
-  CheckCircle,
-  Loader2,
-  Clock,
-  Globe,
-  LogIn,
-  MousePointer,
-  FileText,
-  Settings,
-  Eye,
-  Edit,
-  Trash2
+  Mail, Phone, User as UserIcon, Calendar, Shield, Package, CheckCircle, XCircle,
+  CreditCard, MapPin, Activity, Save, Edit2, Search, Building2, UserX, Loader2,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import api from '../../api/client';
+import OperatorPicker from '../shared/OperatorPicker';
+import { toast } from 'sonner';
+import { formatDate } from '../../utils/dateUtils';
 
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } catch {
-    return 'Invalid Date';
-  }
-};
+const roleTone = (r) => ({
+  super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
+  admin: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  operator: 'bg-amber-100 text-amber-700 border-amber-200',
+  employee: 'bg-teal-100 text-teal-700 border-teal-200',
+  customer: 'bg-blue-100 text-blue-700 border-blue-200',
+}[r] || 'bg-slate-100 text-slate-700 border-slate-200');
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return 'N/A';
-  try {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch {
-    return 'Invalid Date';
-  }
-};
+const fmtFCFA = (n) => `${Number(n || 0).toLocaleString()} FCFA`;
 
-const getRoleBadgeColor = (role) => {
-  const colors = {
-    admin: 'bg-red-100 text-red-700 border-red-200',
-    super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
-    operator: 'bg-amber-100 text-amber-700 border-amber-200',
-    customer: 'bg-green-100 text-green-700 border-green-200',
-  };
-  return colors[role] || 'bg-slate-100 text-slate-700 border-slate-200';
-};
-
-const getStatusBadgeColor = (status) => {
-  const colors = {
-    active: 'bg-green-100 text-green-700',
-    suspended: 'bg-red-100 text-red-700',
-    pending: 'bg-amber-100 text-amber-700',
-  };
-  return colors[status] || 'bg-slate-100 text-slate-700';
-};
-
-const getActivityIcon = (action) => {
-  const icons = {
-    'login': LogIn,
-    'page_view': Eye,
-    'create': FileText,
-    'update': Edit,
-    'delete': Trash2,
-    'settings': Settings,
-    'click': MousePointer
-  };
-  
-  // Match by keyword
-  const actionLower = (action || '').toLowerCase();
-  if (actionLower.includes('login') || actionLower.includes('logout')) return LogIn;
-  if (actionLower.includes('view') || actionLower.includes('page')) return Eye;
-  if (actionLower.includes('create') || actionLower.includes('add')) return FileText;
-  if (actionLower.includes('update') || actionLower.includes('edit')) return Edit;
-  if (actionLower.includes('delete') || actionLower.includes('remove')) return Trash2;
-  if (actionLower.includes('setting')) return Settings;
-  
-  return Activity;
-};
-
-const getActivityColor = (action) => {
-  const actionLower = (action || '').toLowerCase();
-  if (actionLower.includes('login')) return 'bg-green-100 text-green-600';
-  if (actionLower.includes('logout')) return 'bg-slate-100 text-slate-600';
-  if (actionLower.includes('create') || actionLower.includes('add')) return 'bg-blue-100 text-blue-600';
-  if (actionLower.includes('update') || actionLower.includes('edit')) return 'bg-amber-100 text-amber-600';
-  if (actionLower.includes('delete') || actionLower.includes('remove')) return 'bg-red-100 text-red-600';
-  if (actionLower.includes('view') || actionLower.includes('page')) return 'bg-purple-100 text-purple-600';
-  return 'bg-slate-100 text-slate-600';
-};
-
-export default function UserDetailModal({ user, isOpen, onClose, onSave, onSuspend, isAdmin }) {
+export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
   const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState({
-    full_name: user?.full_name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    role: user?.role || 'customer',
-  });
-  const [activities, setActivities] = useState([]);
-  const [loadingActivities, setLoadingActivities] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityDateFrom, setActivityDateFrom] = useState('');
+  const [activityDateTo, setActivityDateTo] = useState('');
+  const [activityPage, setActivityPage] = useState(1);
+  const PAGE_SIZE = 15;
 
+  // Prefill whenever the user prop changes
   useEffect(() => {
-    if (isOpen && user?.id && activeTab === 'activity') {
-      fetchUserActivity();
-    }
-  }, [isOpen, user?.id, activeTab]);
+    if (!user) return;
+    setForm({
+      full_name: user.full_name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      city: user.city || '',
+      region: user.region || '',
+      operator_id: user.operator_id || '',
+      status: user.status || 'active',
+    });
+    setEditMode(false);
+    setStats(null);
+    setActivity([]);
+    setActivityPage(1);
+    setActivitySearch('');
+    setActivityDateFrom('');
+    setActivityDateTo('');
+  }, [user]);
 
-  const fetchUserActivity = async () => {
+  // Load real stats when opened
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/users/${user.id}/stats`);
+        if (!cancelled) setStats(data);
+      } catch {
+        if (!cancelled) setStats(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, user?.id]);
+
+  // Debounced activity fetch
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setActivityLoading(true);
+      try {
+        const params = { skip: (activityPage - 1) * PAGE_SIZE, limit: PAGE_SIZE };
+        if (activitySearch.trim().length >= 2) params.search = activitySearch.trim();
+        if (activityDateFrom) params.date_from = activityDateFrom;
+        if (activityDateTo) params.date_to = activityDateTo;
+        const { data } = await api.get(`/users/${user.id}/activity`, { params });
+        if (cancelled) return;
+        // Backend returns combined `activities` array + `total`.
+        const logs = data.activities || [...(data.audit_logs || []), ...(data.activity_logs || [])]
+          .sort((a, b) => new Date(b.created_at || b.timestamp) - new Date(a.created_at || a.timestamp));
+        setActivity(logs);
+        setActivityTotal(data.total || data.totals?.total || logs.length);
+      } catch {
+        if (!cancelled) { setActivity([]); setActivityTotal(0); }
+      } finally {
+        if (!cancelled) setActivityLoading(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [isOpen, user?.id, activitySearch, activityDateFrom, activityDateTo, activityPage]);
+
+  const handleSave = async () => {
     if (!user?.id) return;
-    
-    setLoadingActivities(true);
+    setSaving(true);
     try {
-      const response = await api.get(`/users/${user.id}/activity`);
-      setActivities(response.data?.activities || []);
-    } catch (error) {
-      console.error('Failed to fetch user activity:', error);
-      // Mock data for demo
-      setActivities([
-        {
-          id: '1',
-          type: 'audit',
-          action: 'login',
-          description: 'User logged in',
-          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          ip_address: '192.168.1.100'
-        },
-        {
-          id: '2',
-          type: 'activity',
-          action: 'page_view',
-          description: 'Viewed Dashboard',
-          page: 'Dashboard',
-          path: '/dashboard',
-          created_at: new Date(Date.now() - 1000 * 60 * 25).toISOString()
-        },
-        {
-          id: '3',
-          type: 'activity',
-          action: 'page_view',
-          description: 'Viewed Hotels',
-          page: 'Hotels',
-          path: '/services/hotels',
-          created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString()
-        },
-        {
-          id: '4',
-          type: 'audit',
-          action: 'create_booking',
-          description: 'Created a hotel booking',
-          resource_type: 'order',
-          created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString()
-        },
-        {
-          id: '5',
-          type: 'audit',
-          action: 'update_profile',
-          description: 'Updated profile information',
-          created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
-        }
-      ]);
+      const payload = {
+        full_name: form.full_name,
+        email: form.email,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        region: form.region,
+        status: form.status,
+      };
+      // Only include operator_id if the user is currently an operator (or being kept as one).
+      if (user.role === 'operator') {
+        payload.operator_id = form.operator_id || null;
+      }
+      await api.put(`/users/${user.id}`, payload);
+      toast.success('User updated');
+      setEditMode(false);
+      onUpdate?.();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Update failed');
     } finally {
-      setLoadingActivities(false);
+      setSaving(false);
     }
   };
+
+  const handleRemoveOperator = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/users/${user.id}`, { operator_id: null });
+      toast.success('Operator assignment removed');
+      setForm(f => ({ ...f, operator_id: '' }));
+      onUpdate?.();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to remove');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(activityTotal / PAGE_SIZE));
+
+  const statCards = useMemo(() => ([
+    { label: 'Total Orders', value: stats?.total_orders ?? (user?.orders_count ?? 0), icon: Package, tone: 'bg-blue-50 text-blue-700' },
+    { label: 'Total Spent', value: fmtFCFA(stats?.total_spent ?? user?.total_spent ?? 0), icon: CreditCard, tone: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Completed', value: stats?.completed_orders ?? 0, icon: CheckCircle, tone: 'bg-indigo-50 text-indigo-700' },
+    { label: 'Cancelled', value: stats?.cancelled_orders ?? 0, icon: XCircle, tone: 'bg-red-50 text-red-700' },
+  ]), [stats, user]);
 
   if (!user) return null;
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(user.id, formData);
-    }
-    setEditMode(false);
-  };
-
-  const handleSuspend = () => {
-    if (confirm(`Are you sure you want to ${user.status === 'active' ? 'suspend' : 'activate'} this user?`)) {
-      if (onSuspend) {
-        onSuspend(user.id, user.status === 'active' ? 'suspended' : 'active');
-      }
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl">
-              {user.full_name?.charAt(0) || 'U'}
+      <DialogContent
+        className="max-w-3xl p-0 overflow-hidden flex flex-col max-h-[92vh]"
+        data-testid="user-detail-modal"
+      >
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 bg-gradient-to-br from-[#082c59] to-[#0a3a73] text-white flex-shrink-0">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center text-2xl font-bold">
+              {(user.full_name || user.email || 'U').charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h2 className="text-xl font-bold">{user.full_name || 'User'}</h2>
-              <p className="text-sm text-slate-500 font-normal">{user.email}</p>
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-2xl font-bold truncate">{user.full_name || 'Unnamed User'}</DialogTitle>
+              <p className="text-sm text-white/80 truncate">{user.email}</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Badge className={`border ${roleTone(user.role)}`}>
+                  <Shield className="h-3 w-3 mr-1" />
+                  <span className="capitalize">{String(user.role || '').replace('_', ' ')}</span>
+                </Badge>
+                <Badge className={user.status === 'active'
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200 border'
+                  : 'bg-red-100 text-red-800 border-red-200 border'}>
+                  {user.status || 'active'}
+                </Badge>
+                {user.operator_name && (
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 border">
+                    <Building2 className="h-3 w-3 mr-1" /> {user.operator_name}
+                  </Badge>
+                )}
+              </div>
             </div>
-          </DialogTitle>
+            {!editMode ? (
+              <Button variant="secondary" size="sm" onClick={() => setEditMode(true)} className="gap-2" data-testid="user-edit-btn">
+                <Edit2 className="h-4 w-4" /> Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={() => setEditMode(false)}>Cancel</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2 bg-white text-[#082c59] hover:bg-white/90" data-testid="user-save-btn">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">User Details</TabsTrigger>
-            <TabsTrigger value="activity">Activity Log</TabsTrigger>
+        {/* Stat row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-6 pt-5 pb-2 flex-shrink-0">
+          {statCards.map((s) => (
+            <div key={s.label} className={`rounded-xl p-3 ${s.tone}`} data-testid={`stat-${s.label.toLowerCase().replace(/\s+/g, '-')}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase font-semibold opacity-75">{s.label}</span>
+                <s.icon className="h-3.5 w-3.5 opacity-80" />
+              </div>
+              <p className="mt-1 text-lg font-bold truncate">{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs + scrollable body */}
+        <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="mx-6 mt-3 flex-shrink-0">
+            <TabsTrigger value="profile" data-testid="tab-profile"><UserIcon className="h-4 w-4 mr-2" />Profile</TabsTrigger>
+            <TabsTrigger value="activity" data-testid="tab-activity"><Activity className="h-4 w-4 mr-2" />Activity</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="space-y-6 py-4">
-            {/* Status Badges */}
-            <div className="flex items-center gap-3">
-              <Badge className={`${getRoleBadgeColor(user.role)} capitalize`}>
-                <Shield className="h-3 w-3 mr-1" />
-                {user.role?.replace('_', ' ')}
-              </Badge>
-              <Badge className={getStatusBadgeColor(user.status)}>
-                {user.status === 'active' ? (
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                ) : (
-                  <Ban className="h-3 w-3 mr-1" />
-                )}
-                {user.status}
-              </Badge>
-            </div>
-
-            <Separator />
-
-            {/* User Info */}
-            {editMode && isAdmin ? (
-              <div className="space-y-4">
-                <div>
-                  <Label>Full Name</Label>
-                  <Input
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="mt-1"
-                    type="email"
-                  />
-                </div>
-                <div>
-                  <Label>Phone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label>Role</Label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({ ...formData, role: value })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="customer">Customer</SelectItem>
-                      <SelectItem value="operator">Operator</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="flex-1 overflow-y-auto px-6 pb-6 pt-3">
+            {/* Profile tab */}
+            <TabsContent value="profile" className="space-y-4 mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field icon={UserIcon} label="Full name" editMode={editMode}
+                  value={form.full_name}
+                  onChange={(v) => setForm(f => ({ ...f, full_name: v }))}
+                  fallback={user.full_name} />
+                <Field icon={Mail} label="Email" editMode={editMode}
+                  value={form.email}
+                  onChange={(v) => setForm(f => ({ ...f, email: v }))}
+                  fallback={user.email} testid="field-email" />
+                <Field icon={Phone} label="Phone" editMode={editMode}
+                  value={form.phone}
+                  onChange={(v) => setForm(f => ({ ...f, phone: v }))}
+                  fallback={user.phone || '—'} testid="field-phone" />
+                <Field icon={MapPin} label="City" editMode={editMode}
+                  value={form.city}
+                  onChange={(v) => setForm(f => ({ ...f, city: v }))}
+                  fallback={user.city || '—'} />
+                <Field icon={MapPin} label="Region" editMode={editMode}
+                  value={form.region}
+                  onChange={(v) => setForm(f => ({ ...f, region: v }))}
+                  fallback={user.region || '—'} />
+                <Field icon={Calendar} label="Joined"
+                  fallback={formatDate(user.created_at) || '—'} />
               </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-slate-400" />
+
+              {/* Operator assignment (only for operator role) */}
+              {user.role === 'operator' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4" data-testid="operator-assignment-section">
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-xs text-slate-500">Full Name</p>
-                      <p className="font-medium">{user.full_name || 'Not provided'}</p>
+                      <h3 className="text-sm font-semibold text-amber-900 flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4" /> Operator assignment
+                      </h3>
+                      <p className="text-xs text-amber-700/80 mt-0.5">
+                        This user is a member of the assigned operator's team.
+                      </p>
                     </div>
+                    {user.operator_id && !editMode && (
+                      <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-50 gap-1" onClick={handleRemoveOperator} disabled={saving} data-testid="remove-operator-btn">
+                        <UserX className="h-3.5 w-3.5" /> Remove
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Email</p>
-                      <p className="font-medium">{user.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Phone</p>
-                      <p className="font-medium">{user.phone || 'Not provided'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-slate-400" />
-                    <div>
-                      <p className="text-xs text-slate-500">Joined</p>
-                      <p className="font-medium">{formatDate(user.created_at)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Stats */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Statistics</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4 text-center">
-                  <ShoppingBag className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-blue-900">{user.orders_count || 0}</p>
-                  <p className="text-xs text-blue-600">Total Orders</p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4 text-center">
-                  <Activity className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-green-900">{user.completed_orders || 0}</p>
-                  <p className="text-xs text-green-600">Completed</p>
-                </div>
-                <div className="bg-amber-50 rounded-lg p-4 text-center">
-                  <Calendar className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-amber-900">{user.pending_orders || 0}</p>
-                  <p className="text-xs text-amber-600">Pending</p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="activity" className="py-4">
-            {loadingActivities ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-[#082c59] mx-auto" />
-                  <p className="mt-3 text-slate-600">Loading activity...</p>
-                </div>
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="bg-slate-50 rounded-lg p-8 text-center">
-                <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 font-medium">No activity recorded</p>
-                <p className="text-xs text-slate-400 mt-1">Activity will appear here when available</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {activities.map((activity, index) => {
-                  const IconComponent = getActivityIcon(activity.action);
-                  const colorClass = getActivityColor(activity.action);
-                  
-                  return (
-                    <div 
-                      key={activity.id || index}
-                      className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${colorClass}`}>
-                        <IconComponent className="h-4 w-4" />
-                      </div>
+                  {editMode ? (
+                    <OperatorPicker
+                      value={form.operator_id}
+                      onChange={(id) => setForm(f => ({ ...f, operator_id: id }))}
+                    />
+                  ) : user.operator_id ? (
+                    <div className="flex items-center gap-2 bg-white rounded-lg border border-amber-200 px-3 py-2">
+                      <Building2 className="h-4 w-4 text-[#082c59]" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium text-slate-900 text-sm">
-                            {activity.description || activity.action?.replace(/_/g, ' ')}
-                          </p>
-                          <Badge variant="outline" className="text-xs capitalize flex-shrink-0">
-                            {activity.type}
-                          </Badge>
+                        <p className="text-sm font-semibold truncate">{user.operator_name || 'Assigned operator'}</p>
+                        <p className="text-[11px] font-mono text-slate-500 truncate">{user.operator_id}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-800/80 italic">Not assigned — click Edit to pick an operator.</p>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Activity tab */}
+            <TabsContent value="activity" className="mt-0 space-y-3" data-testid="activity-panel">
+              {/* Filters */}
+              <div className="flex flex-wrap gap-2 items-end">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search activity…"
+                    className="pl-8 h-9"
+                    value={activitySearch}
+                    onChange={(e) => { setActivitySearch(e.target.value); setActivityPage(1); }}
+                    data-testid="activity-search"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px] uppercase text-slate-500">From</Label>
+                  <Input type="date" className="h-9 w-36" value={activityDateFrom} onChange={(e) => { setActivityDateFrom(e.target.value); setActivityPage(1); }} data-testid="activity-date-from" />
+                </div>
+                <div>
+                  <Label className="text-[11px] uppercase text-slate-500">To</Label>
+                  <Input type="date" className="h-9 w-36" value={activityDateTo} onChange={(e) => { setActivityDateTo(e.target.value); setActivityPage(1); }} data-testid="activity-date-to" />
+                </div>
+                {(activitySearch || activityDateFrom || activityDateTo) && (
+                  <Button variant="outline" size="sm" onClick={() => { setActivitySearch(''); setActivityDateFrom(''); setActivityDateTo(''); setActivityPage(1); }}>
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              {/* List */}
+              <div className="rounded-xl border">
+                {activityLoading ? (
+                  <div className="py-10 text-center text-slate-500 text-sm flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading activity…
+                  </div>
+                ) : activity.length === 0 ? (
+                  <div className="py-10 text-center text-slate-500 text-sm">No activity found.</div>
+                ) : (
+                  <ul className="divide-y max-h-[45vh] overflow-y-auto">
+                    {activity.map((log, i) => (
+                      <li key={log._id || log.id || i} className="p-3 hover:bg-slate-50 flex gap-3" data-testid={`activity-item-${i}`}>
+                        <div className="w-8 h-8 rounded-full bg-[#082c59]/10 flex items-center justify-center flex-shrink-0">
+                          <Activity className="h-4 w-4 text-[#082c59]" />
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatDateTime(activity.created_at)}
-                          </span>
-                          {activity.ip_address && (
-                            <span className="flex items-center gap-1">
-                              <Globe className="h-3 w-3" />
-                              {activity.ip_address}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">{log.action || log.description || 'Activity'}</p>
+                          {log.description && log.description !== log.action && (
+                            <p className="text-xs text-slate-600 mt-0.5">{log.description}</p>
+                          )}
+                          {log.resource_type && (
+                            <span className="text-[10px] uppercase tracking-wide text-slate-500 bg-slate-100 rounded px-1.5 py-0.5 inline-block mt-1">
+                              {log.resource_type}
                             </span>
                           )}
-                          {activity.path && (
-                            <span className="text-slate-400">{activity.path}</span>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                        <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
+                          {formatDate(log.created_at || log.timestamp, true)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
 
-        <DialogFooter className="flex flex-wrap gap-2 mt-4">
-          {isAdmin && (
-            <>
-              {user.status === 'active' ? (
-                <Button variant="destructive" onClick={handleSuspend}>
-                  <Ban className="h-4 w-4 mr-2" />
-                  Suspend User
-                </Button>
-              ) : (
-                <Button variant="outline" className="text-green-600" onClick={handleSuspend}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Activate User
-                </Button>
+              {/* Pagination */}
+              {activityTotal > PAGE_SIZE && (
+                <div className="flex items-center justify-between text-sm pt-1" data-testid="activity-pagination">
+                  <span className="text-slate-500">Page {activityPage} of {totalPages}</span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setActivityPage(p => Math.max(1, p - 1))} disabled={activityPage === 1}>
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setActivityPage(p => Math.min(totalPages, p + 1))} disabled={activityPage >= totalPages}>
+                      Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
               )}
-              {editMode ? (
-                <>
-                  <Button variant="outline" onClick={() => setEditMode(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave} className="bg-[#082c59]">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                </>
-              ) : (
-                <Button variant="outline" onClick={() => setEditMode(true)}>
-                  Edit User
-                </Button>
-              )}
-            </>
-          )}
-          <Button onClick={onClose} className="bg-[#082c59]">
-            Close
-          </Button>
-        </DialogFooter>
+            </TabsContent>
+          </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Small reusable field row — editable or read-only based on editMode. */
+function Field({ icon: Icon, label, value, onChange, fallback, editMode, testid }) {
+  return (
+    <div>
+      <Label className="text-[11px] uppercase tracking-wide text-slate-500 flex items-center gap-1.5">
+        <Icon className="h-3 w-3" /> {label}
+      </Label>
+      {editMode && onChange ? (
+        <Input className="mt-1 h-9" value={value || ''} onChange={(e) => onChange(e.target.value)} data-testid={testid} />
+      ) : (
+        <p className="mt-1 text-sm text-slate-900 truncate" data-testid={testid}>{value || fallback || '—'}</p>
+      )}
+    </div>
   );
 }

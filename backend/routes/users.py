@@ -111,6 +111,61 @@ async def get_user(
     user["id"] = str(user.pop("_id", ""))
     return user
 
+
+@router.get("/{user_id}/stats")
+async def get_user_stats(
+    user_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Real statistics for a user — orders/spend/etc. Users can view own, others need users.view."""
+    db = get_database()
+    if current_user["_id"] != user_id:
+        from utils.permissions import check_user_permission
+        has_perm = await check_user_permission(current_user, "users.view", db)
+        if not has_perm:
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+    target = await db.users.find_one({"_id": user_id}, {"_id": 1, "email": 1, "role": 1})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Aggregate orders by this user.
+    base = {"$or": [{"user_id": user_id}, {"user_email": target.get("email")}]}
+    total_orders = await db.orders.count_documents(base)
+    completed = await db.orders.count_documents({**base, "status": {"$in": ["completed", "confirmed", "paid"]}})
+    pending = await db.orders.count_documents({**base, "status": {"$in": ["pending", "awaiting_payment"]}})
+    cancelled = await db.orders.count_documents({**base, "status": "cancelled"})
+
+    spent_agg = await db.orders.aggregate([
+        {"$match": {**base, "status": {"$in": ["completed", "confirmed", "paid"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_amount"}}},
+    ]).to_list(1)
+    total_spent = spent_agg[0]["total"] if spent_agg else 0
+
+    # Most-used service
+    by_service = await db.orders.aggregate([
+        {"$match": base},
+        {"$group": {"_id": "$service_type", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 1},
+    ]).to_list(1)
+    favorite_service = by_service[0]["_id"] if by_service else None
+
+    last_order_doc = await db.orders.find_one(base, sort=[("created_at", -1)])
+    last_order_at = last_order_doc.get("created_at") if last_order_doc else None
+    if last_order_at and hasattr(last_order_at, "isoformat"):
+        last_order_at = last_order_at.isoformat()
+
+    return {
+        "total_orders": total_orders,
+        "completed_orders": completed,
+        "pending_orders": pending,
+        "cancelled_orders": cancelled,
+        "total_spent": total_spent,
+        "favorite_service": favorite_service,
+        "last_order_at": last_order_at,
+    }
+
 @router.put("/{user_id}")
 async def update_user(
     user_id: str,
@@ -143,7 +198,7 @@ async def update_user(
         "region", "postal_code", "country", "id_document_number"
     ]
     # Additional fields for admin updates
-    allowed_admin_fields = ["status", "email_verified"]
+    allowed_admin_fields = ["status", "email_verified", "operator_id"]
     
     # Filter update data based on permissions
     if current_user["_id"] == user_id:
@@ -154,7 +209,26 @@ async def update_user(
     
     if not filtered_data:
         raise HTTPException(status_code=400, detail="No valid fields to update")
-    
+
+    # Handle operator_id assignment/removal — only allowed for role='operator'.
+    # Admins may pass operator_id=null to explicitly remove assignment.
+    if "operator_id" in filtered_data:
+        if target_user.get("role") != "operator":
+            raise HTTPException(
+                status_code=400,
+                detail="operator_id can only be set on users with role 'operator'",
+            )
+        new_op_id = filtered_data.get("operator_id")
+        if new_op_id:
+            op = await db.operators.find_one({"_id": new_op_id}, {"name": 1})
+            if not op:
+                raise HTTPException(status_code=404, detail="Operator not found")
+            filtered_data["operator_name"] = op.get("name")
+        else:
+            # Explicit removal
+            filtered_data["operator_id"] = None
+            filtered_data["operator_name"] = None
+
     filtered_data["updated_at"] = datetime.utcnow()
     
     await db.users.update_one({"_id": user_id}, {"$set": filtered_data})
@@ -205,12 +279,28 @@ async def update_user_role(
         raise HTTPException(status_code=403, detail="Only super admins can assign admin role")
     
     # Update using both possible id fields
+    update_payload = {"role": new_role, "updated_at": datetime.utcnow()}
+    role_unset = {}
+    # Cascade: if the user is being demoted/moved away from 'operator',
+    # automatically unset operator_id and operator_name. An admin must explicitly
+    # re-assign an operator on the next edit to restore association.
+    if current_role == "operator" and new_role != "operator":
+        role_unset = {"operator_id": "", "operator_name": ""}
+
+    update_op = {"$set": update_payload}
+    if role_unset:
+        update_op["$unset"] = role_unset
+
     await db.users.update_one(
         {"$or": [{"id": user_id}, {"_id": user_id}]},
-        {"$set": {"role": new_role, "updated_at": datetime.utcnow()}}
+        update_op,
     )
-    
-    return {"message": f"User role updated to {new_role}", "new_role": new_role}
+
+    return {
+        "message": f"User role updated to {new_role}",
+        "new_role": new_role,
+        "operator_cleared": bool(role_unset),
+    }
 
 @router.put("/{user_id}/status")
 async def update_user_status(
@@ -256,9 +346,12 @@ async def get_user_activity(
     user_id: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, description="ISO date"),
+    date_to: Optional[str] = Query(None, description="ISO date"),
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Get user's activity/audit log - own activity or requires users.view_activity permission"""
+    """Get user's activity/audit log — with optional search, date range, and pagination."""
     db = get_database()
     
     # Check if user has permission to view activity
@@ -285,7 +378,29 @@ async def get_user_activity(
     audit_query = {"$or": [{"user_id": user_id}, {"actor_id": user_id}]}
     if user_email:
         audit_query["$or"].append({"actor_email": user_email})
-    
+
+    # Date range — applied to either created_at or timestamp depending on collection.
+    date_clause_audit = {}
+    date_clause_activity = {}
+    if date_from:
+        date_clause_audit["$gte"] = date_from
+        date_clause_activity["$gte"] = date_from
+    if date_to:
+        # include end-of-day by appending T23:59:59 if a plain date was passed
+        dt_to = date_to if "T" in date_to else f"{date_to}T23:59:59"
+        date_clause_audit["$lte"] = dt_to
+        date_clause_activity["$lte"] = dt_to
+    if date_clause_audit:
+        audit_query = {"$and": [audit_query, {"$or": [{"created_at": date_clause_audit}, {"timestamp": date_clause_audit}]}]}
+        activity_query = {"$and": [activity_query, {"timestamp": date_clause_activity}]}
+
+    # Search — fuzzy match on action/description/resource_type
+    if search:
+        regex = {"$regex": search, "$options": "i"}
+        search_or = [{"action": regex}, {"description": regex}, {"resource_type": regex}]
+        audit_query = {"$and": [audit_query, {"$or": search_or}]}
+        activity_query = {"$and": [activity_query, {"$or": search_or}]}
+
     # Get from audit_logs collection
     audit_logs = await db.audit_logs.find(audit_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total_audit = await db.audit_logs.count_documents(audit_query)

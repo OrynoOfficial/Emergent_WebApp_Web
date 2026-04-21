@@ -178,7 +178,7 @@ export default function InvitationsManagement() {
 
       {/* Send Dialog */}
       <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
-        <DialogContent className="sm:max-w-md bg-white">
+        <DialogContent className="sm:max-w-lg bg-white max-h-[92vh] overflow-y-auto" data-testid="invite-dialog">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-[#082c59]" />

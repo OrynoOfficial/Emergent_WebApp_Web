@@ -56,6 +56,18 @@ async def send_invitation(
     if pending:
         raise HTTPException(status_code=400, detail="An invitation is already pending for this email")
 
+    # Enforce: operator_id only allowed for role='operator'
+    operator_id = req.operator_id if req.role == "operator" else None
+    if req.role == "operator" and not operator_id:
+        raise HTTPException(
+            status_code=400,
+            detail="operator_id is required when inviting a user as operator",
+        )
+    if operator_id:
+        op = await db.operators.find_one({"_id": operator_id}, {"_id": 1})
+        if not op:
+            raise HTTPException(status_code=404, detail="Operator not found")
+
     token = str(uuid.uuid4())
     expires_at = datetime.now(timezone.utc) + timedelta(days=INVITATION_EXPIRY_DAYS)
 
@@ -72,7 +84,7 @@ async def send_invitation(
         "email": req.email,
         "role": req.role,
         "message": req.message,
-        "operator_id": req.operator_id,
+        "operator_id": operator_id,
         "token": token,
         "status": "pending",
         "invited_by": current_user["_id"],

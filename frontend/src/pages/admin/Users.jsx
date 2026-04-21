@@ -731,7 +731,7 @@ export default function UserManagement() {
 
       {/* Create User Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="bg-white max-w-md">
+        <DialogContent className="bg-white max-w-lg max-h-[92vh] overflow-y-auto" data-testid="create-user-dialog">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-[#082c59]" />

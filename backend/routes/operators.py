@@ -267,6 +267,7 @@ async def get_operators(
     country: Optional[str] = None,
     region: Optional[str] = None,
     market_segment: Optional[str] = None,
+    search: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(require_permission("operators.view"))
@@ -306,6 +307,15 @@ async def get_operators(
         query["region"] = region
     if market_segment:
         query["market_segment"] = market_segment
+    # Text search across name/city/email when user is actively searching
+    if search and len(search.strip()) >= 2:
+        regex = {"$regex": search.strip(), "$options": "i"}
+        query["$or"] = [
+            {"name": regex},
+            {"city": regex},
+            {"email": regex},
+            {"operator_type": regex},
+        ]
     
     operators = await db.operators.find(query).sort("name", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.operators.count_documents(query)

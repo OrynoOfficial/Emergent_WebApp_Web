@@ -5,6 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Building2, Check, MapPin, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 
+// Preload operator list keyed by id for richer meta when only the id is known.
+const OPERATOR_CACHE = new Map();
+
 const SERVICE_OPTIONS = [
   { value: 'all', label: 'All services' },
   { value: 'travel', label: 'Travel' },
@@ -36,13 +39,25 @@ export default function OperatorPicker({ value, onChange, required = false }) {
   const [region, setRegion] = useState('all');
 
   useEffect(() => {
+    // Only fetch results when user is actively searching OR has narrowed via filters.
+    // This keeps the picker empty by default so it doesn't feel like a random suggestion list.
+    const hasActiveQuery =
+      (search && search.trim().length >= 2) ||
+      service !== 'all' ||
+      region !== 'all';
+    if (!hasActiveQuery) {
+      setOperators([]);
+      return undefined;
+    }
+
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
-        const params = { limit: 100 };
+        const params = { limit: 50 };
         if (service !== 'all') params.operator_type = service;
         if (region !== 'all') params.region = region;
+        if (search && search.trim().length >= 2) params.search = search.trim();
         const { data } = await api.get('/operators/', { params });
         const list = data?.operators || data?.data || data || [];
         if (!cancelled) setOperators(Array.isArray(list) ? list : []);
@@ -52,9 +67,10 @@ export default function OperatorPicker({ value, onChange, required = false }) {
         if (!cancelled) setLoading(false);
       }
     };
-    load();
-    return () => { cancelled = true; };
-  }, [service, region]);
+    // Debounce search typing
+    const t = setTimeout(load, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [search, service, region]);
 
   // Build region list from the fetched operators for a lightweight region filter
   const regionOptions = useMemo(() => {
@@ -63,18 +79,35 @@ export default function OperatorPicker({ value, onChange, required = false }) {
     return [{ value: 'all', label: 'All regions' }, ...[...set].sort().map(r => ({ value: r, label: r }))];
   }, [operators]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return operators;
-    return operators.filter(o =>
-      (o.name || '').toLowerCase().includes(q) ||
-      (o.city || '').toLowerCase().includes(q) ||
-      (o.email || '').toLowerCase().includes(q) ||
-      (o.operator_type || '').toLowerCase().includes(q)
-    );
-  }, [operators, search]);
+  const filtered = operators;
 
-  const selected = operators.find(o => (o._id || o.id) === value);
+  const hasQuery = (search && search.trim().length >= 2) || service !== 'all' || region !== 'all';
+
+  const [selectedMeta, setSelectedMeta] = useState(null);
+
+  // When value is set but we don't have it in our current list, fetch its details
+  // so the selected chip still renders with the operator name.
+  useEffect(() => {
+    if (!value) { setSelectedMeta(null); return; }
+    if (OPERATOR_CACHE.has(value)) { setSelectedMeta(OPERATOR_CACHE.get(value)); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/operators/${value}`);
+        if (cancelled) return;
+        const op = data?.operator || data;
+        if (op) {
+          OPERATOR_CACHE.set(value, op);
+          setSelectedMeta(op);
+        }
+      } catch {
+        if (!cancelled) setSelectedMeta(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [value]);
+
+  const selected = operators.find(o => (o._id || o.id) === value) || selectedMeta;
 
   return (
     <div className="space-y-2" data-testid="operator-picker">
@@ -133,11 +166,16 @@ export default function OperatorPicker({ value, onChange, required = false }) {
       <div className="border rounded-lg max-h-64 overflow-y-auto" data-testid="operator-picker-list">
         {loading ? (
           <div className="flex items-center justify-center py-8 text-slate-500 text-sm">
-            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading operators…
+            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Searching operators…
+          </div>
+        ) : !hasQuery ? (
+          <div className="py-8 text-center text-sm text-slate-500 px-4">
+            <Search className="h-5 w-5 mx-auto mb-1.5 text-slate-300" />
+            Start typing to find an operator, or filter by service/region.
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-8 text-center text-sm text-slate-500">
-            {required ? 'No matching operators. Adjust filters or create an operator first.' : 'No operators match your filters.'}
+            No operators match your query.
           </div>
         ) : (
           <ul className="divide-y">
