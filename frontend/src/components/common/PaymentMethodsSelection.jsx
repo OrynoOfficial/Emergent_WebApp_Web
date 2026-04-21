@@ -528,19 +528,21 @@ const PaymentMethodsSelection = ({
                   </p>
                 </div>
 
-                {/* Sandbox testing hints (kept for developer UX, visually restyled) */}
-                <div className="rounded-2xl border border-[#c9a74a]/20 bg-[#c9a74a]/5 p-3">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[#c9a74a] font-semibold flex items-center gap-1.5 mb-1.5">
-                    <Info className="h-3 w-3" />
-                    Sandbox Testing
-                  </p>
-                  <ul className="text-[11px] text-slate-300 space-y-0.5">
-                    <li>• Ending 1-5 → succeeds</li>
-                    <li>• Ending 6-7 → fails</li>
-                    <li>• Ending 8-9 → times out</li>
-                    <li>• Ending 0 → cancelled</li>
-                  </ul>
-                </div>
+                {/* Sandbox testing hints — dev mode only (hidden in production builds) */}
+                {import.meta.env.MODE !== 'production' && (
+                  <div className="rounded-2xl border border-[#c9a74a]/20 bg-[#c9a74a]/5 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[#c9a74a] font-semibold flex items-center gap-1.5 mb-1.5">
+                      <Info className="h-3 w-3" />
+                      Sandbox Testing
+                    </p>
+                    <ul className="text-[11px] text-slate-300 space-y-0.5">
+                      <li>• Ending 1-5 → succeeds</li>
+                      <li>• Ending 6-7 → fails</li>
+                      <li>• Ending 8-9 → times out</li>
+                      <li>• Ending 0 → cancelled</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.03] border border-white/10 backdrop-blur-xl p-4 text-center space-y-3">
