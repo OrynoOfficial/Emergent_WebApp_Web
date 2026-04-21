@@ -329,16 +329,11 @@ export default function TravelBooking() {
             : bookingData.departureDate || bookingData.travelDate;
           
           try {
-            await api.post('/seat-bookings/reserve', {
-              route_id: bookingData.outbound.id,
-              travel_date: outboundDate,
-              seat_numbers: selectedSeats
-            });
-
-            // Confirm the booking
+            // Confirm the booking — locks reserved seats as BOOKED permanently
             await api.post('/seat-bookings/confirm', {
               route_id: bookingData.outbound.id,
               travel_date: outboundDate,
+              seat_numbers: selectedSeats,
               order_id: response.booking_id || response.transactionRef || orderId,
               passengers: passengers.map((p, idx) => ({
                 seat_number: selectedSeats[idx],
@@ -350,15 +345,10 @@ export default function TravelBooking() {
 
             // Handle return trip if exists
             if (bookingData.return && returnSelectedSeats.length > 0) {
-              await api.post('/seat-bookings/reserve', {
-                route_id: bookingData.return.id,
-                travel_date: bookingData.returnDate,
-                seat_numbers: returnSelectedSeats
-              });
-
               await api.post('/seat-bookings/confirm', {
                 route_id: bookingData.return.id,
                 travel_date: bookingData.returnDate,
+                seat_numbers: returnSelectedSeats,
                 order_id: response.booking_id || response.transactionRef || orderId,
                 passengers: passengers.map((p, idx) => ({
                   seat_number: returnSelectedSeats[idx],

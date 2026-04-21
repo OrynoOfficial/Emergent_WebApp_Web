@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/client';
+import { setTimezone as persistTimezone, detectBrowserTimezone } from '../utils/dateUtils';
 
 const AuthContext = createContext(null);
 
@@ -56,7 +57,11 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       setOperatorContext(opContext);
       setEffectivePermissions(permissions);
-      
+
+      // Sync the user's preferred timezone (or detect from the browser) so every
+      // rendered date uses the correct zone from first paint.
+      persistTimezone(userData.timezone || detectBrowserTimezone());
+
       // Cache data for resilience
       localStorage.setItem('user', JSON.stringify(userData));
       if (opContext) {

@@ -110,6 +110,8 @@ export default function BanquetManagement() {
   const [viewingBanquet, setViewingBanquet] = useState(null);
   const [editingBanquet, setEditingBanquet] = useState(null);
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
 
   // Use the banquet dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');

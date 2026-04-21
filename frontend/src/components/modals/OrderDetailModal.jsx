@@ -34,6 +34,7 @@ import {
   Info,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
 
 const getStatusConfig = (status) => {
   const configs = {
@@ -86,29 +87,11 @@ const getCategoryIcon = (category) => {
   return icons[category] || '📦';
 };
 
+// Uses the user's active timezone (see utils/dateUtils.js).
 const formatDate = (dateString, includeTime = false) => {
   if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    if (includeTime) {
-      return date.toLocaleString('en-US', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    }
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch {
-    return 'Invalid Date';
-  }
+  const out = includeTime ? fmtDateTime(dateString) : fmtDate(dateString);
+  return out === '-' ? 'N/A' : out;
 };
 
 // QR Code generator URL
@@ -173,8 +156,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               </Badge>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-500">Created</p>
-              <p className="text-sm font-medium">{formatDate(order.created_at, true)}</p>
+              <p className="text-xs text-slate-500">Booked on</p>
+              <p className="text-sm font-medium" data-testid="order-booked-on">{formatDate(order.created_at, true)}</p>
+              <p className="text-[10px] text-slate-400">{getTimezone()}</p>
             </div>
           </div>
 
@@ -256,20 +240,22 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                   <p className="text-sm font-medium capitalize">{(order.service_type || order.service_category)?.replace('_', ' ') || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500">Date</p>
-                  <p className="text-sm font-medium">
+                  <p className="text-xs text-slate-500">Service Date</p>
+                  <p className="text-sm font-medium" data-testid="service-date">
                     {formatDate(order.booking_details?.travel_date || order.booking_details?.check_in || order.service_date || order.created_at)}
                   </p>
                 </div>
               </div>
-              
-              {/* Time for travel */}
-              {(order.booking_details?.departure_time || order.booking_details?.arrival_time) && (
+
+              {/* Service Time: prefer operator/customer-selected service_time, else route departure_time */}
+              {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.arrival_time) && (
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  {order.booking_details?.departure_time && (
+                  {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time) && (
                     <div>
-                      <p className="text-xs text-slate-500">Departure Time</p>
-                      <p className="text-sm font-medium">{order.booking_details.departure_time}</p>
+                      <p className="text-xs text-slate-500">Service Time</p>
+                      <p className="text-sm font-medium" data-testid="service-time">
+                        {order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time}
+                      </p>
                     </div>
                   )}
                   {order.booking_details?.arrival_time && (

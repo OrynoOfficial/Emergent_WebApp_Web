@@ -244,6 +244,52 @@ async def reserve_seats(
     return await sync_seats(req, current_user)
 
 
+# =========== Confirm (lock seats permanently after payment) ===========
+class SeatConfirmRequest(BaseModel):
+    route_id: str
+    travel_date: str
+    seat_numbers: List[str]
+    order_id: Optional[str] = None
+    passengers: Optional[List[dict]] = None  # accepted and stored if provided
+
+@router.post("/confirm")
+async def confirm_seats(
+    payload: SeatConfirmRequest,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Mark the given reserved seats as BOOKED (owned by this user) after successful payment.
+    Idempotent: already-booked seats owned by the same user are returned as confirmed.
+    """
+    db = get_database()
+    user_id = current_user["_id"]
+
+    # Only operate on seats the user has actually reserved (or already booked) for this route+date
+    query = {
+        "route_id": payload.route_id,
+        "travel_date": payload.travel_date,
+        "user_id": user_id,
+        "seat_number": {"$in": payload.seat_numbers},
+    }
+    update = {
+        "$set": {
+            "status": SeatStatus.BOOKED,
+            "payment_status": "paid",
+            "confirmed_at": datetime.now(timezone.utc),
+        }
+    }
+    if payload.order_id:
+        update["$set"]["order_id"] = payload.order_id
+    # Remove TTL field so booked seats never expire
+    update["$unset"] = {"reservation_expires": ""}
+
+    result = await db.seat_bookings.update_many(query, update)
+    await _notify_seat_change(payload.route_id, payload.travel_date)
+    return {
+        "message": f"Confirmed {result.modified_count} seats",
+        "confirmed": payload.seat_numbers,
+    }
+
+
 # =========== Counts for search results ===========
 @router.get("/available-counts")
 async def get_available_seat_counts(

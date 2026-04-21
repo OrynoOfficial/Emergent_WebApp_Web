@@ -20,6 +20,38 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import { toast } from 'sonner';
+import { setTimezone as persistTimezone, detectBrowserTimezone } from '@/utils/dateUtils';
+
+// Common IANA timezones grouped by region (rendered in the dropdown)
+const COMMON_TIMEZONES = [
+  { group: 'Africa', zones: [
+    'Africa/Abidjan', 'Africa/Accra', 'Africa/Addis_Ababa', 'Africa/Algiers', 'Africa/Bamako',
+    'Africa/Cairo', 'Africa/Casablanca', 'Africa/Dakar', 'Africa/Dar_es_Salaam', 'Africa/Djibouti',
+    'Africa/Douala', 'Africa/Johannesburg', 'Africa/Kampala', 'Africa/Khartoum', 'Africa/Kigali',
+    'Africa/Kinshasa', 'Africa/Lagos', 'Africa/Libreville', 'Africa/Luanda', 'Africa/Maputo',
+    'Africa/Nairobi', 'Africa/Niamey', 'Africa/Ouagadougou', 'Africa/Tunis', 'Africa/Windhoek',
+  ]},
+  { group: 'Americas', zones: [
+    'America/Anchorage', 'America/Argentina/Buenos_Aires', 'America/Bogota', 'America/Caracas',
+    'America/Chicago', 'America/Denver', 'America/Halifax', 'America/Lima', 'America/Los_Angeles',
+    'America/Mexico_City', 'America/Montreal', 'America/New_York', 'America/Sao_Paulo', 'America/Toronto',
+  ]},
+  { group: 'Europe', zones: [
+    'Europe/Amsterdam', 'Europe/Athens', 'Europe/Berlin', 'Europe/Brussels', 'Europe/Dublin',
+    'Europe/Istanbul', 'Europe/Lisbon', 'Europe/London', 'Europe/Madrid', 'Europe/Moscow',
+    'Europe/Paris', 'Europe/Rome', 'Europe/Stockholm', 'Europe/Vienna', 'Europe/Warsaw', 'Europe/Zurich',
+  ]},
+  { group: 'Asia', zones: [
+    'Asia/Bangkok', 'Asia/Beirut', 'Asia/Dubai', 'Asia/Hong_Kong', 'Asia/Jakarta', 'Asia/Jerusalem',
+    'Asia/Karachi', 'Asia/Kolkata', 'Asia/Kuala_Lumpur', 'Asia/Manila', 'Asia/Riyadh', 'Asia/Seoul',
+    'Asia/Shanghai', 'Asia/Singapore', 'Asia/Taipei', 'Asia/Tehran', 'Asia/Tokyo',
+  ]},
+  { group: 'Oceania', zones: [
+    'Australia/Adelaide', 'Australia/Brisbane', 'Australia/Melbourne', 'Australia/Perth',
+    'Australia/Sydney', 'Pacific/Auckland', 'Pacific/Fiji',
+  ]},
+  { group: 'UTC', zones: ['UTC'] },
+];
 
 // Settings menu items configuration - for Customers
 const CUSTOMER_SETTINGS_SECTIONS = [
@@ -252,11 +284,11 @@ export default function Settings() {
     newsletter: false,
   });
 
-  // Preferences
+  // Preferences — default to the browser-detected timezone
   const [preferences, setPreferences] = useState({
     language: 'en',
     currency: 'XAF',
-    timezone: 'Africa/Douala',
+    timezone: detectBrowserTimezone(),
     theme: 'light',
   });
 
@@ -325,16 +357,20 @@ export default function Settings() {
     loadNotificationPreferences();
   }, []);
 
-  // Load user preferences (language, currency, etc.) from user object
+  // Load user preferences (language, currency, etc.) from user object.
+  // Timezone default = user-saved → browser-detected → "Africa/Douala".
   useEffect(() => {
     if (user) {
+      const tz = user.timezone || detectBrowserTimezone() || 'Africa/Douala';
       setPreferences(prev => ({
         ...prev,
         language: user.language || 'en',
         currency: user.currency || 'XAF',
-        timezone: user.timezone || 'Africa/Douala',
+        timezone: tz,
         theme: user.theme || 'light',
       }));
+      // Keep the global dateUtils in sync so every rendered date reflects the saved TZ
+      persistTimezone(tz);
     }
   }, [user]);
 
@@ -490,6 +526,8 @@ export default function Settings() {
     setSaveSuccess(prev => ({ ...prev, preferences: false }));
     try {
       await api.put('/users/me/preferences', preferences);
+      // Persist the chosen timezone locally so every date instantly reflects it
+      persistTimezone(preferences.timezone);
       toast.success('Preferences saved successfully');
       setSaveSuccess(prev => ({ ...prev, preferences: true }));
       setTimeout(() => setSaveSuccess(prev => ({ ...prev, preferences: false })), 3000);
@@ -1012,17 +1050,38 @@ export default function Settings() {
             </div>
 
             <div>
-              <Label>Timezone</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Timezone</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const browserTz = detectBrowserTimezone();
+                    setPreferences({ ...preferences, timezone: browserTz });
+                    toast.success(`Detected: ${browserTz}`);
+                  }}
+                  className="text-xs text-[#082c59] hover:underline font-medium"
+                  data-testid="detect-timezone-btn"
+                >
+                  Use system timezone
+                </button>
+              </div>
               <select
                 value={preferences.timezone}
                 onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
                 className="w-full mt-1 p-2 border rounded-lg bg-white"
+                data-testid="timezone-select"
               >
-                <option value="Africa/Douala">Africa/Douala (WAT)</option>
-                <option value="UTC">UTC</option>
-                <option value="Europe/Paris">Europe/Paris (CET)</option>
-                <option value="America/New_York">America/New_York (ET)</option>
+                {COMMON_TIMEZONES.map((group) => (
+                  <optgroup key={group.group} label={group.group}>
+                    {group.zones.map((tz) => (
+                      <option key={tz} value={tz}>{tz.replace('_', ' ')}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
+              <p className="text-xs text-slate-500 mt-1">
+                All dates and times across the app use this timezone. Default is taken from your device.
+              </p>
             </div>
 
             <div>

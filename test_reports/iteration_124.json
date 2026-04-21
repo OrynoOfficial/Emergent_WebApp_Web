@@ -1,0 +1,39 @@
+{
+  "summary": "Iter124 — validated the 4 fixes on top of iter123. Backend (pytest 7/7 PASS in /app/backend/tests/test_iteration124_seat_confirm.py): (1) POST /api/seat-bookings/confirm moves RESERVED→BOOKED, sets payment_status=paid, attaches order_id, unsets reservation_expires; (2) /confirm is idempotent (2nd call does not regress or duplicate; seats stay booked); (3) /confirm is user-scoped — when admin calls /confirm on seats owned by a different user, update_many modifies 0 rows and the customer's user_id remains on those seat docs; (4) /confirm requires auth (401/403 without token); (5) GET /api/seat-bookings/ exposes user_id on reserved seats so LiveSeatMap can reconcile/cap to maxSeats; (6) PUT /api/users/me/preferences persists timezone and it is read back via /auth/me; (7) /api/banquets/ list works. Frontend live-verified on preview URL: /management/banquets loads WITHOUT crash, header 'Banquet Hall Management' visible, ALL 5 tabs (Dashboard, Management, Bookings, Communications, Analytics) present and clickable (no render error), Walk-in booking button has data-testid='open-walkin-booking-btn' and opens a [role=dialog]. /settings → Preferences shows timezone-select (native <select> with <optgroup> region groupings — Asia/Oceania/UTC groups visible in the rendered dropdown) and 'Use system timezone' button (data-testid='detect-timezone-btn'). On login AuthContext persists user.timezone to localStorage.oryno_tz (observed value 'UTC' for admin user). dateUtils.js implementation is correct — timezone resolved in priority: localStorage oryno_tz → Intl.DateTimeFormat → 'Africa/Douala'. LiveSeatMap.jsx reconcile correctly slices myReserved to maxSeats and calls /seat-bookings/release with the excess via query-array paramsSerializer.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/settings Preferences", "issues": ["Timezone dropdown is a native <select> with native <optgroup> rather than a shadcn Select — visually inconsistent with the rest of the app's form controls. Still fully accessible and tests pass, but consider migrating to shadcn Select for visual parity with Language/Currency controls on the same screen."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration124_seat_confirm.py",
+    "/app/test_reports/pytest/iter124.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Replace the native <select> in Settings Preferences with shadcn Select for visual consistency (Language/Currency on the same panel are shadcn).",
+    "OPTIONAL: Backend — surface 'Service Date/Time' explicitly in order/ticket payload so OrderDetailModal doesn't have to reach into booking_details heuristically. Not required — modal handles travel_time/service_time/departure_time today."
+  ],
+  "critical_code_review_comments": [
+    "routes/seat_bookings.py POST /confirm correctly scopes update_many by user_id, so a different authenticated user cannot hijack seats — verified by test_confirm_other_user_cannot_take_someone_elses_seat.",
+    "/confirm uses $unset reservation_expires so booked seats don't get pruned by the TTL sweep in GET /. Good.",
+    "/confirm accepts an optional order_id and stores it on the seat_booking doc — useful for later traceability.",
+    "LiveSeatMap.jsx fetchSeats: correctly derives myReserved from seat-map (filter by user_id === currentUserId), slices to Math.max(0, Number(maxSeats)||0), releases the excess on the server, and only then updates local state. This addresses the 'returning to book 1 seat auto-selects 2' bug (issue #3).",
+    "dateUtils.js partsInTz helper uses Intl.DateTimeFormat with timeZone, normalizes hour '24'→'00', and every public formatter (formatDate/formatDateTime/formatTime/formatDateForInput/isToday) respects getTimezone() — makes the app fully timezone-aware from a single source of truth. Good.",
+    "BanquetManagement.jsx now owns isWalkInOpen and bookingsRefreshKey state — the previously-missing state that was crashing the page. Walk-in button correctly drives the shared WalkInBookingModal; on success it bumps refreshKey and switches to the Bookings tab.",
+    "Minor: LiveSeatMap's fetchSeats useCallback has selectedSeats omitted from the deps (intentional — it's only used to compare, not to subscribe). Callers must pass a stable onSeatsChange to avoid re-entrant fetch loops. OK as-is but worth a comment.",
+    "Test skip encountered earlier: /api/users/me is gated by users.view permission for non-admins. The correct endpoint for self-profile is /api/auth/me — fixed in the test. If any frontend code still calls /users/me for the current user, it will 403 for customers/operators."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration124_seat_confirm.py (new — 7 tests, all pass)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% of specified flows live-verified (banquet page no-crash, 5 tabs, walk-in modal opens, Preferences tz-select + detect-btn present, localStorage oryno_tz persisted by AuthContext)"},
+  "test_credentials": "admin@test.com / testpassword123; customer@test.com / testpassword123; operator@test.com / testpassword123",
+  "seed_data_creation": "Test flow reserves then confirms seats '20','21' on an active travel route for T+30 days, and reserves seats '10','11' on T+45 days then releases them. Booked seats on T+30 remain in the DB after the run (intentional — they validate the 'booked seats must not remain available for next booking' requirement). If this causes noise, run: db.seat_bookings.deleteMany({order_id:'TEST_order_iter124'}).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Use /api/auth/me (NOT /api/users/me which is gated by users.view). Travel routes listing endpoint is /api/travel/routes (NOT /api/travel-routes). Default seed route has total_seats=25, so use seat numbers 1–25 in tests. The Settings Preferences timezone dropdown is a native <select> element — use page.select_option('[data-testid=\"timezone-select\"]','America/New_York') instead of role=option clicks. Login is a splash CTA ('Login to Your Account'). Vite dev-server WebSocket errors in console (wss://127.0.0.1:1) are harmless — unrelated to the app.",
+  "rca of the issue": "User's 4 reported issues mapped to: (1) ticket/service date confusion → root cause: every component formatted dates with its own ad-hoc Date.toLocale*() calls, so the TZ drifted between views; fixed by centralizing all formatting through dateUtils.js which reads a single oryno_tz key. (2) no customer TZ choice → root cause: Settings only exposed a language/currency selector; fixed by adding a timezone <select> (60+ IANA zones grouped by region) + a 'detect browser TZ' button and persisting to both backend preferences and localStorage. (3) seat carry-over on fresh booking → root cause: LiveSeatMap reconciled with the server's reserved seats for this user but didn't cap by the new passenger count, so opening the flow with 1 passenger auto-selected the previously-held 2 seats; fixed by slicing myReserved to maxSeats and calling /seat-bookings/release for the excess before updating local state. Combined with the new /confirm endpoint that moves RESERVED→BOOKED on payment, booked seats now stay blocked for subsequent bookings (issue #1b). (4) Banquet Management blank page → root cause: JSX referenced isWalkInOpen/setIsWalkInOpen and bookingsRefreshKey/setBookingsRefreshKey without declaring them, causing a ReferenceError on render; fixed by adding the two useState hooks at the top of BanquetManagement. Verified the page renders, all tabs click, and the Walk-in modal opens."
+}

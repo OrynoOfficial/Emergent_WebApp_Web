@@ -70,14 +70,32 @@ export default function LiveSeatMap({
           .filter(s => s.status === 'reserved' && s.user_id === currentUserId.current)
           .map(s => String(s.seat_number));
 
-        // If server state differs from local, update local to match
+        // Respect the current passenger count — never pre-select more than maxSeats.
+        // If the user has more reserved than they currently need, release the excess on the server.
+        const capped = myReserved.slice(0, Math.max(0, Number(maxSeats) || 0));
+        const excess = myReserved.filter(s => !capped.includes(s));
+        if (excess.length > 0) {
+          try {
+            await api.post('/seat-bookings/release', null, {
+              params: { route_id: routeId, travel_date: departureDate, seat_numbers: excess },
+              paramsSerializer: (p) => {
+                const parts = [];
+                Object.entries(p).forEach(([k, v]) => {
+                  if (Array.isArray(v)) v.forEach((val) => parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(val)}`));
+                  else parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+                });
+                return parts.join('&');
+              }
+            });
+          } catch { /* non-fatal */ }
+        }
+
+        // If server state differs from local, update local to match (capped)
         const localSet = new Set(selectedSeats.map(String));
-        const serverSet = new Set(myReserved);
+        const serverSet = new Set(capped);
         if (localSet.size !== serverSet.size || ![...localSet].every(s => serverSet.has(s))) {
-          onSeatsChange(myReserved);
-          if (myReserved.length > 0) {
-            // Find expiry from server data
-            // We don't have it in seat_map, so set a default
+          onSeatsChange(capped);
+          if (capped.length > 0) {
             setCountdown(new Date(Date.now() + 5 * 60 * 1000));
           } else {
             setCountdown(null);
@@ -91,9 +109,7 @@ export default function LiveSeatMap({
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [routeId, departureDate]);
-
-  // ---- Sync desired seats with server (single smart call) ----
+  }, [routeId, departureDate, maxSeats]);
   const syncSeats = useCallback(async (desiredSeats) => {
     if (!routeId || !departureDate) return false;
     setSyncing(true);
