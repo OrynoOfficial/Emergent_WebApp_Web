@@ -1,0 +1,95 @@
+{
+  "summary": "Iter136 fix VERIFIED. The vite plugin `disableViteHmrClient` + `configureServer` middleware that returns inert stubs for /@vite/client and /@react-refresh fully eliminates the periodic auto-refresh bug. All 90s-idle tests show ZERO framenavigated events, ZERO websocket opens, ZERO /@vite or /@react-refresh requests after reset, and ZERO `[vite] server connection lost` / `[vite] connecting` / `[vite] connected` console lines. Form mid-state survives 90s idle. Manual page.reload() loads the app cleanly. Login + /orders + /services/travel regression all pass.",
+  "test_credentials": "customer@test.com / testpassword123 (login OK; redirects to /dashboard)",
+  "verification_steps_executed": [
+    "curl https://booking-revamp-hub.preview.emergentagent.com/@vite/client → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
+    "curl https://booking-revamp-hub.preview.emergentagent.com/@react-refresh → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
+    "Single persistent browser context: WelcomeView → click `Login to Your Account` → fill #login-identifier + #login-password → submit → redirected to /dashboard (regression PASS).",
+    "Navigate /orders → reset all 4 trackers (framenavigated, websocket, vite-prefixed requests, [vite]-prefixed console lines) → idle 90s. RESULT: 0 / 0 / 0 / 0.",
+    "Navigate /services/travel → reset trackers → idle 90s. RESULT: 0 / 0 / 0 / 0.",
+    "Mid-flow form test on /services/travel: filled 3 visible text inputs with TEST_VALUE_{0..2} → reset trackers → idle 90s. RESULT: URL unchanged, all 3 input values preserved, 0/0/0/0 on the four counters.",
+    "Manual page.reload() on /services/travel → app re-mounts cleanly (root has 1 child, body text length 570).",
+    "Premium checkout modal (Stripe/MoMo) deep click flow not re-tested in this iter (iter133 already covered styling); however the entire React tree mounted and functioned without React Refresh on every tested route, so the runtime is healthy with the stubbed Refresh modules — same as a production build."
+  ],
+  "evidence_fix_succeeded": {
+    "curl_smoke": {
+      "vite_client_stub_served": true,
+      "react_refresh_stub_served": true,
+      "first_line_match": "// Stubbed by oryno-disable-vite-hmr-client (preview env)."
+    },
+    "orders_idle_90s": {
+      "start_url": "/orders",
+      "end_url": "/orders",
+      "framenavigated_count": 0,
+      "websocket_opens": 0,
+      "vite_requests_after_reset": 0,
+      "vite_console_lines": 0
+    },
+    "services_travel_idle_90s": {
+      "start_url": "/services/travel",
+      "end_url": "/services/travel",
+      "framenavigated_count": 0,
+      "websocket_opens": 0,
+      "vite_requests_after_reset": 0,
+      "vite_console_lines": 0
+    },
+    "form_mid_state_idle_90s": {
+      "page": "/services/travel",
+      "url_unchanged": true,
+      "form_state_survived": true,
+      "values_before": ["TEST_VALUE_0", "TEST_VALUE_1", "TEST_VALUE_2"],
+      "values_after": ["TEST_VALUE_0", "TEST_VALUE_1", "TEST_VALUE_2"],
+      "framenavigated_count": 0,
+      "websocket_opens": 0,
+      "vite_requests_after_reset": 0,
+      "vite_console_lines": 0
+    },
+    "manual_reload_regression": {
+      "url_after_reload": "/services/travel",
+      "root_children": 1,
+      "body_text_length": 570,
+      "page_mounted": true
+    }
+  },
+  "regression_checks": {
+    "curl_html_clean_of_vite_script_tags": true,
+    "curl_vite_client_stubbed": true,
+    "curl_react_refresh_stubbed": true,
+    "login_flow_works": true,
+    "orders_page_renders": true,
+    "services_travel_page_renders": true,
+    "manual_reload_loads_cleanly": true,
+    "form_state_survives_90s_idle": true,
+    "stripe_momo_premium_flows_explicitly_clicked": false,
+    "stripe_momo_runtime_health_inferred_via_react_tree_mounting_correctly": true
+  },
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None for the targeted bug. Fix is correct and complete.",
+    "Optional polish (non-blocking): the iter135-era comment block in /app/frontend/vite.config.js correctly explains why HTML-strip alone is insufficient and why the configureServer stub is needed — comments are now accurate; no action needed.",
+    "Optional follow-up if you want belt-and-suspenders: still recommend long-term moving the preview env to `vite build && vite preview` (production bundle) so the dev-server middleware is no longer in the request path at all. Current configureServer-stub fix is fine for now."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/vite.config.js — `configureServer` middleware uses `req.url.startsWith('/@vite/client')` and `req.url.startsWith('/@react-refresh')`, which correctly catches both the bare path and any `?import` or `?t=...` query-string variants Vite appends. Good defensive matching.",
+    "Plugin order `[react(), disableViteHmrClient()]` is correct — react() runs first so JSX preamble is injected, then disableViteHmrClient's middleware intercepts the actual GET for those virtual modules at request time and serves the stub regardless of what the preamble points to.",
+    "transformIndexHtml strip is kept as defense-in-depth — fine.",
+    "The stub for /@vite/client exports `injectQuery`, `createHotContext`, `updateStyle`, `removeStyle`, `ErrorOverlay` — these are the symbols imported by other Vite-generated modules and by /@react-refresh's first-line `import { injectQuery as __vite__injectQuery } from \"/@vite/client\"`. All required exports are present, so module resolution succeeds and no `undefined is not a function` runtime errors occur. Verified empirically — React tree mounts cleanly on every tested route.",
+    "Running a Vite dev server as the preview-facing surface is still architecturally fragile — for now the stub fix is the right pragmatic patch, but a production bundle would eliminate this entire class of bug permanently."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only test as requested)",
+    "frontend": "100% on the targeted auto-refresh bug + 100% on regression checks (login, /orders, /services/travel, form-state survival, manual reload)"
+  },
+  "seed_data_creation": "none — used existing customer@test.com seed account",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iter136 fix is verified working end-to-end. If the user reports any auto-refresh recurrence, the first thing to check is whether someone has reverted /app/frontend/vite.config.js or whether a Vite upgrade has changed the virtual-module URL scheme (e.g. /@vite/env or /@id/vite-client). Re-run the same test plan: curl /@vite/client and /@react-refresh, then 90s-idle on /orders, /services/travel, and a /services/travel mid-form state, and assert all four counters (framenavigated, websocket opens, vite-prefixed requests, [vite] console lines) are zero. Stripe/MoMo modal click-through was not deeply re-exercised in this iter — iter133 covered styling and the React runtime is healthy on every route, so the modals should still work, but a brief click-through is reasonable to add once on the next major change.",
+  "rca_of_the_issue": "ROOT CAUSE (now fixed): @vitejs/plugin-react injects a React Refresh preamble into every transformed JSX module, importing /@react-refresh, which itself imports /@vite/client. Stripping HTML script tags alone (iter135) didn't help because the JS module graph re-imported them. FIX: configureServer middleware on the Vite dev server intercepts GET /@vite/client and GET /@react-refresh and returns inert stubs (no socket open, no listeners, no auto-reload) — both modules resolve at the JS level with no-op exports, so the React app boots fully and runs without Fast Refresh capability (production-style behavior). VERIFICATION: 4 independent 90s-idle tests (orders, services/travel, services/travel-with-filled-form, plus reload regression) — all show 0 framenav, 0 ws, 0 vite reqs, 0 vite console lines."
+}
