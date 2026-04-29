@@ -24,6 +24,9 @@ import path from 'path'
  */
 const VITE_CLIENT_STUB = `
 // Stubbed by oryno-disable-vite-hmr-client (preview env).
+// We only neutralise the WebSocket / hot-update plumbing.  CSS injection
+// (updateStyle / removeStyle) MUST stay functional, otherwise Tailwind and
+// every other dev CSS module gets imported but never applied to the DOM.
 const noop = () => {};
 const noopHot = () => ({
   accept: noop, acceptExports: noop, dispose: noop, prune: noop,
@@ -32,8 +35,29 @@ const noopHot = () => ({
 });
 export const injectQuery = (url) => url;
 export const createHotContext = noopHot;
-export const updateStyle = noop;
-export const removeStyle = noop;
+
+const sheetsMap = new Map();
+export function updateStyle(id, content) {
+  let style = sheetsMap.get(id);
+  if (!style) {
+    style = document.createElement('style');
+    style.setAttribute('type', 'text/css');
+    style.setAttribute('data-vite-dev-id', id);
+    style.textContent = content;
+    document.head.appendChild(style);
+  } else {
+    style.textContent = content;
+  }
+  sheetsMap.set(id, style);
+}
+export function removeStyle(id) {
+  const style = sheetsMap.get(id);
+  if (style) {
+    document.head.removeChild(style);
+    sheetsMap.delete(id);
+  }
+}
+
 export const ErrorOverlay = class { constructor(){} close(){} };
 export default {};
 `;
