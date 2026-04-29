@@ -1,0 +1,97 @@
+{
+  "summary": "Iter135 fix (stripViteHmrClient transformIndexHtml plugin) is INSUFFICIENT. Curl-level smoke test PASSES (no @vite/client / @react-refresh script tags in served index.html), but in the actual browser BOTH /orders and /services/travel still produce 1 framenavigated event (location.reload), 1 websocket open, 1 GET /@vite/client, and the console lines `[vite] server connection lost. Polling for restart...`, `[vite] connecting...`, `[vite] connected.` during a 90s idle. The user-reported periodic auto-refresh bug is therefore NOT fixed.",
+  "test_credentials": "customer@test.com / testpassword123 (login OK, redirects to /dashboard)",
+  "verification_steps_executed": [
+    "Curl smoke test on https://booking-revamp-hub.preview.emergentagent.com/ — confirmed served HTML contains ONLY `<script type=\"module\" src=\"/src/main.jsx\"></script>`. No `/@vite/client` and no `/@react-refresh` script tags. (Curl test PASSES.)",
+    "Single persistent browser context: login customer@test.com → /orders → reset trackers → idle 90s → /services/travel → trigger Search Buses → reset trackers → idle 90s.",
+    "Trackers per page: page.on('framenavigated'), page.on('websocket'), page.on('request') filtered for `@vite|@react-refresh|/__vite`, page.on('console').",
+    "Inspected /src/main.jsx and /@react-refresh content via curl to find the actual injection path."
+  ],
+  "evidence_fix_failed": {
+    "curl_smoke_test": {
+      "url": "https://booking-revamp-hub.preview.emergentagent.com/",
+      "vite_client_in_html": false,
+      "react_refresh_in_html": false,
+      "result": "PASS at curl level"
+    },
+    "orders_idle_90s": {
+      "start_url": "/orders",
+      "end_url": "/orders",
+      "framenavigated_count": 1,
+      "framenavigated_urls": ["https://booking-revamp-hub.preview.emergentagent.com/orders"],
+      "websocket_opens": 1,
+      "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=YjhJYipEcDjd",
+      "vite_requests_after_reset": 1,
+      "vite_request_urls": ["https://booking-revamp-hub.preview.emergentagent.com/@vite/client"],
+      "console_lines_observed": [
+        "[vite] server connection lost. Polling for restart...",
+        "[vite] connecting...",
+        "[vite] connected."
+      ]
+    },
+    "services_travel_idle_90s": {
+      "start_url": "/services/travel",
+      "end_url": "/services/travel",
+      "framenavigated_count": 1,
+      "framenavigated_urls": ["https://booking-revamp-hub.preview.emergentagent.com/services/travel"],
+      "websocket_opens": 1,
+      "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=YjhJYipEcDjd",
+      "vite_requests_after_reset": 1,
+      "console_lines_observed": [
+        "[vite] server connection lost. Polling for restart...",
+        "[vite] connecting...",
+        "[vite] connected."
+      ]
+    },
+    "form_mid_state_test": "SKIPPED — bug already reproduced on the two simpler pages; no value in burning another 90s + cloudflare-rate-limit risk on a form-state test that would only re-confirm the same /@vite/client behaviour. Will re-add once a real fix is applied."
+  },
+  "rca_of_the_issue": "stripViteHmrClient only removes the `<script src=\"/@vite/client\">` and `<script src=\"/@react-refresh\">` tags from the served HTML. However @vitejs/plugin-react injects a React Refresh preamble INTO EVERY TRANSFORMED JSX MODULE — confirmed by curl on /src/main.jsx and on /@react-refresh: the @react-refresh module's first line is `import { injectQuery as __vite__injectQuery } from \"/@vite/client\";`. So as soon as the React app boots through main.jsx, the JS-level import graph pulls /@vite/client transitively, the HMR client opens a WS to the page origin, the preview HTTPS proxy drops the WS upgrade after ~60s, the client logs `server connection lost. Polling for restart...`, retries, and at some point fires location.reload() — exactly the framenavigated event we recorded. Stripping HTML script tags is a no-op against module-graph imports.",
+  "recommended_remediations_for_main_agent": [
+    "OPTION A (strongly recommended for preview env, fastest path to green): switch the supervisor frontend command to a production build. In /app/frontend/package.json `start` (or wherever supervisor calls it) change to: `vite build && vite preview --host 0.0.0.0 --port 3000`. Production build does not include the HMR client OR @react-refresh AT ALL → guaranteed zero auto-refresh, zero WS attempts, zero reload spam, and Stripe/MoMo modal flows continue to work because they are runtime-only.",
+    "OPTION B: replace `react()` with a build of plugin-react that has fast-refresh disabled, e.g. use `@vitejs/plugin-react-swc` with `{ fastRefresh: false }` OR the equivalent in `@vitejs/plugin-react` if the installed version supports it. This will stop the `/@react-refresh` import being injected into every JSX module → /@vite/client is then no longer pulled transitively.",
+    "OPTION C: add a vite plugin that patches /@react-refresh and /@vite/client to be no-ops. Specifically, intercept the GET for these two virtual modules in dev (via `configureServer` middleware) and return a 200 with `export default {}` / a stub `injectQuery = (u)=>u` so the import resolves but no socket is opened and no listeners are registered. This works without a production build.",
+    "DO NOT keep relying on transformIndexHtml stripping alone — empirically proven on Vite 7.3.0 + @vitejs/plugin-react that JSX preamble injection bypasses the HTML-level strip."
+  ],
+  "regression_checks": {
+    "manual_curl_smoke_html_clean": true,
+    "login_flow_works": true,
+    "orders_page_renders": true,
+    "services_travel_page_renders": true,
+    "search_buses_button_clickable": true,
+    "vite_config_loaded_by_supervisor": true,
+    "stripe_momo_premium_flows": "NOT RE-TESTED in this iteration (iter133 verified them; no code changes since that touch checkout)"
+  },
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Vite dev server (preview env) + @vitejs/plugin-react",
+        "issue": "iter135 strip-tags plugin only removes HTML script tags but @vitejs/plugin-react still injects `/@react-refresh` import into every transformed JSX module, which transitively imports `/@vite/client`. Result: HMR client still loads, still opens WS, still logs `server connection lost. Polling for restart...`, still triggers location.reload() during 90s idle on both /orders and /services/travel.",
+        "selector": "n/a — vite/dev-server level",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "URGENT: iter135 transformIndexHtml strip is necessary but NOT SUFFICIENT. Apply Option A (vite build && vite preview) — recommended. If not feasible, apply Option B (disable fast-refresh in plugin-react) or Option C (stub /@react-refresh and /@vite/client via configureServer middleware).",
+    "After the next attempted fix, re-run 90s idle on /orders + /services/travel + a /services/travel mid-form state (passenger details filled) and assert: 0 framenavigated events, 0 wss opens, 0 `[vite] server connection lost` lines, 0 `[vite] connecting`/`connected` lines, and form state survives the 90s idle.",
+    "Update vite.config.js comment block once the real fix lands to remove the (now-disproven) claim about HTML-level stripping being enough."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/vite.config.js comments (lines 14-17) state `no client ever loads → no socket → no auto-reload` — empirically false because @vitejs/plugin-react injects /@react-refresh into the JSX module preamble, which itself imports /@vite/client. Comment should be corrected after the real fix.",
+    "Architectural: serving the Vite DEV server as the user-facing preview is the root cause of this entire class of bugs. `vite preview` over a production build is the correct preview deployment.",
+    "Plugin order `[react(), stripViteHmrClient()]` is fine but doesn't help here because the injection happens at module-transform time, not at HTML time."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only test as requested)",
+    "frontend": "0% on the targeted bug (auto-refresh STILL reproduces in browser despite curl-clean HTML); 100% on regression checks (login, /orders, /services/travel, search button, manual reload)"
+  },
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Reproduction (unchanged from iter134): login as customer@test.com, navigate to /orders OR /services/travel, clear all event listeners, idle 90s. Both pages still record exactly 1 framenavigated (same URL = location.reload), 1 wss open, 1 GET /@vite/client, and the console lines `[vite] server connection lost. Polling for restart...` + `[vite] connecting...` + `[vite] connected.`. The curl-level HTML is now clean of @vite/client / @react-refresh script tags (iter135 plugin works at HTML level), but the JS module graph still pulls them via plugin-react's preamble. Next fix MUST attack the JS-level import path — see Option A/B/C in recommended_remediations_for_main_agent. After the next fix, the same 90s-idle test suite must show 0 of all the above counters."
+}
