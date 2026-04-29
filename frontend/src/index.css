@@ -5,6 +5,20 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Global UI scale.
+   *
+   * Setting the root font-size to 90% makes 1rem = 14.4px (was 16px), which
+   * scales every Tailwind `rem`-based utility (text-*, p-*, m-*, gap-*, w-*,
+   * h-*, max-w-*, etc.) down by 10% — i.e. the whole UI looks the same as a
+   * 90% browser-zoom level when the user is at 100% zoom. Pixel-based media
+   * queries (sm/md/lg breakpoints) and explicit `px` values are unaffected,
+   * so layouts still react to the real viewport width.
+   */
+  html {
+    font-size: 90%;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900 transition-colors duration-200;
   }
