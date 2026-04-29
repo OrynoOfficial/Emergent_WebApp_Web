@@ -16,6 +16,7 @@ import api from '../../api/client';
 import OperatorScopeFilter from '../../components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '../../components/common/QuickDateRangeFilter';
 import ViewModeToggle from '../../components/common/ViewModeToggle';
+import Pagination from '../../components/common/Pagination';
 import OrderDetailModal from '../../components/modals/OrderDetailModal';
 import { toast } from 'sonner';
 
@@ -99,6 +100,13 @@ export default function AdminBookings() {
     if (dateRange.from || dateRange.to) r = r.filter(b => inRange(b.created_at, dateRange.from, dateRange.to));
     return r.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [bookings, searchQuery, statusFilter, categoryFilter, operatorFilter, dateRange]);
+
+  // Pagination — keep the view scoped to a single page so admin lists don't blow up
+  const PAGE_SIZE = 25;
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, categoryFilter, operatorFilter, dateRange, channelFilter]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
@@ -215,7 +223,7 @@ export default function AdminBookings() {
         </Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-bookings-grid">
-          {filtered.map((b, idx) => {
+          {pageItems.map((b, idx) => {
             const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
             const Ch = CHANNEL_META[chKey];
             return (
@@ -254,7 +262,7 @@ export default function AdminBookings() {
         </div>
       ) : viewMode === 'details' ? (
         <div className="space-y-3" data-testid="admin-bookings-details">
-          {filtered.map((b, idx) => {
+          {pageItems.map((b, idx) => {
             const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
             const Ch = CHANNEL_META[chKey];
             return (
@@ -338,7 +346,7 @@ export default function AdminBookings() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filtered.map((b, idx) => {
+                {pageItems.map((b, idx) => {
                   const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
                   const Ch = CHANNEL_META[chKey];
                   return (
@@ -389,6 +397,17 @@ export default function AdminBookings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Pagination footer (shown only when there's more than one page) */}
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={setPage}
+        total={filtered.length}
+        pageSize={PAGE_SIZE}
+        itemLabel="booking"
+        className="mt-2"
+      />
 
       {/* Detail Modal */}
       <OrderDetailModal

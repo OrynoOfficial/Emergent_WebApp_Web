@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/client';
 import { useAuth } from './AuthContext';
+import { getTimeAgo } from '../utils/dateUtils';
 
 const NotificationContext = createContext(null);
 
@@ -16,34 +17,15 @@ export const NOTIFICATION_TYPES = {
   SYSTEM: 'system'
 };
 
-// Helper function to calculate relative time
+// Helper function to calculate relative time.
+// Delegates to the timezone-aware util in utils/dateUtils so notifications
+// generated server-side (datetime.utcnow() naive ISO strings) are interpreted
+// as UTC instead of being mis-parsed as local time, which previously made
+// "2 minutes ago" notifications look like "1 hour ago" for non-UTC users.
 const getRelativeTime = (dateString) => {
   if (!dateString) return 'Unknown';
-  
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now - date) / 1000);
-  
-  if (diffInSeconds < 0) return 'Just now'; // Future date (clock sync issues)
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  }
-  if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-  }
-  if (diffInSeconds < 604800) {
-    const days = Math.floor(diffInSeconds / 86400);
-    return `${days} day${days > 1 ? 's' : ''} ago`;
-  }
-  if (diffInSeconds < 2592000) {
-    const weeks = Math.floor(diffInSeconds / 604800);
-    return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-  }
-  // More than a month, show the date
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+  const result = getTimeAgo(dateString);
+  return result === '-' ? 'Unknown' : result;
 };
 
 export function NotificationProvider({ children }) {

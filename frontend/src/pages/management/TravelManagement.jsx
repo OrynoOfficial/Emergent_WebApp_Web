@@ -32,6 +32,10 @@ import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 // Travel-specific components
 import { RouteForm, VehicleForm, ViewDetailsDialog } from '@/components/management/travel';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Replace } from 'lucide-react';
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -420,29 +424,59 @@ export default function TravelManagement() {
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceVehicle, setReplaceVehicle] = useState(null);
+
+  // View modes + filters + pagination per tab (Routes / Vehicles)
+  const [routeViewMode, setRouteViewMode] = useState('grid');   // 'grid' | 'list' | 'details'
+  const [routeStatusFilter, setRouteStatusFilter] = useState('all'); // all | active | inactive
+  const [routePage, setRoutePage] = useState(1);
+  const [vehicleViewMode, setVehicleViewMode] = useState('grid');
+  const [vehicleStatusFilter, setVehicleStatusFilter] = useState('all'); // all | active | maintenance | retired
+  const [vehiclePage, setVehiclePage] = useState(1);
+  const PAGE_SIZE = 12;
+
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
   const isOperator = user?.role === 'operator';
   const dashboardData = useRealDashboardData('travel', '30days', scopeOperatorId);
 
   // Filtered data
   const filteredRoutes = useMemo(() => {
-    if (!routeSearch) return routes;
-    const s = routeSearch.toLowerCase();
-    return routes.filter(r => 
-      r.from_city?.toLowerCase().includes(s) || 
-      r.to_city?.toLowerCase().includes(s) ||
-      r.operator_name?.toLowerCase().includes(s)
-    );
-  }, [routes, routeSearch]);
+    let r = routes;
+    if (routeSearch) {
+      const s = routeSearch.toLowerCase();
+      r = r.filter(x =>
+        x.from_city?.toLowerCase().includes(s) ||
+        x.to_city?.toLowerCase().includes(s) ||
+        x.operator_name?.toLowerCase().includes(s)
+      );
+    }
+    if (routeStatusFilter !== 'all') {
+      r = r.filter(x => (routeStatusFilter === 'active' ? x.is_active !== false : x.is_active === false));
+    }
+    return r;
+  }, [routes, routeSearch, routeStatusFilter]);
 
   const filteredVehicles = useMemo(() => {
-    if (!vehicleSearch) return vehicles;
-    const s = vehicleSearch.toLowerCase();
-    return vehicles.filter(v => 
-      v.vehicle_name?.toLowerCase().includes(s) || 
-      v.plate_number?.toLowerCase().includes(s)
-    );
-  }, [vehicles, vehicleSearch]);
+    let v = vehicles;
+    if (vehicleSearch) {
+      const s = vehicleSearch.toLowerCase();
+      v = v.filter(x =>
+        x.vehicle_name?.toLowerCase().includes(s) ||
+        x.plate_number?.toLowerCase().includes(s)
+      );
+    }
+    if (vehicleStatusFilter !== 'all') {
+      v = v.filter(x => (x.status || 'active') === vehicleStatusFilter);
+    }
+    return v;
+  }, [vehicles, vehicleSearch, vehicleStatusFilter]);
+
+  // Pagination slices — reset to page 1 whenever filters change
+  useEffect(() => { setRoutePage(1); }, [routeSearch, routeStatusFilter]);
+  useEffect(() => { setVehiclePage(1); }, [vehicleSearch, vehicleStatusFilter]);
+  const routeTotalPages = Math.max(1, Math.ceil(filteredRoutes.length / PAGE_SIZE));
+  const vehicleTotalPages = Math.max(1, Math.ceil(filteredVehicles.length / PAGE_SIZE));
+  const pagedRoutes = useMemo(() => filteredRoutes.slice((routePage - 1) * PAGE_SIZE, routePage * PAGE_SIZE), [filteredRoutes, routePage]);
+  const pagedVehicles = useMemo(() => filteredVehicles.slice((vehiclePage - 1) * PAGE_SIZE, vehiclePage * PAGE_SIZE), [filteredVehicles, vehiclePage]);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -684,8 +718,8 @@ export default function TravelManagement() {
               </div>
 
               <TabsContent value="routes" className="space-y-4">
-                {/* Search and Add */}
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                {/* Toolbar — search, status filter, view mode, add */}
+                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                   <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
@@ -693,16 +727,29 @@ export default function TravelManagement() {
                       value={routeSearch}
                       onChange={(e) => setRouteSearch(e.target.value)}
                       className="pl-10 bg-white"
+                      data-testid="routes-search-input"
                     />
                   </div>
-                  <PermissionGate permission="travel.create">
-                    <Button onClick={() => openRouteDialog()} className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="w-4 h-4 mr-2" /> Add Route
-                    </Button>
-                  </PermissionGate>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={routeStatusFilter} onValueChange={setRouteStatusFilter}>
+                      <SelectTrigger className="w-40 bg-white" data-testid="routes-status-filter">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ViewModeToggle value={routeViewMode} onChange={setRouteViewMode} />
+                    <PermissionGate permission="travel.create">
+                      <Button onClick={() => openRouteDialog()} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="w-4 h-4 mr-2" /> Add Route
+                      </Button>
+                    </PermissionGate>
+                  </div>
                 </div>
 
-                {/* Routes Grid */}
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
                     <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
@@ -712,15 +759,72 @@ export default function TravelManagement() {
                     <Bus className="h-16 w-16 mx-auto text-slate-300 mb-4" />
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">No routes found</h3>
                     <p className="text-slate-500 mb-4">
-                      {routeSearch ? 'Try adjusting your search' : 'Create your first route to get started'}
+                      {routeSearch || routeStatusFilter !== 'all' ? 'Try adjusting your filters' : 'Create your first route to get started'}
                     </p>
                     <Button onClick={() => openRouteDialog()} className="bg-blue-600">
                       <Plus className="w-4 h-4 mr-2" /> Add Route
                     </Button>
                   </Card>
+                ) : routeViewMode === 'list' ? (
+                  /* List view — compact table for power users */
+                  <Card className="overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Route</th>
+                            <th className="px-4 py-3">Departure</th>
+                            <th className="px-4 py-3">Arrival</th>
+                            <th className="px-4 py-3">Price</th>
+                            <th className="px-4 py-3">Vehicle</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagedRoutes.map((route) => (
+                            <tr key={route.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3 font-medium text-slate-900">{route.from_city} → {route.to_city}</td>
+                              <td className="px-4 py-3 text-slate-700">{route.departure_time || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{route.arrival_time || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{route.price ? `${Number(route.price).toLocaleString()} FCFA` : '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{route.vehicle_name || '—'}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant={route.is_active === false ? 'secondary' : 'default'} className={route.is_active === false ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-700'}>
+                                  {route.is_active === false ? 'Inactive' : 'Active'}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <Button size="sm" variant="ghost" onClick={() => handleViewItem(route, 'route')} data-testid={`route-view-${route.id}`}>View</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => openRouteDialog(route)}>Edit</Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                ) : routeViewMode === 'details' ? (
+                  /* Details view — single column, larger cards with full info */
+                  <div className="space-y-4">
+                    {pagedRoutes.map(route => (
+                      <RouteCard
+                        key={route.id}
+                        route={route}
+                        isAdmin={isAdmin}
+                        onView={(r) => handleViewItem(r, 'route')}
+                        onEdit={openRouteDialog}
+                        onDelete={handleDeleteRoute}
+                        onApprove={handleApproveRoute}
+                      />
+                    ))}
+                  </div>
                 ) : (
+                  /* Grid view (default) */
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredRoutes.map(route => (
+                    {pagedRoutes.map(route => (
                       <RouteCard
                         key={route.id}
                         route={route}
@@ -733,11 +837,20 @@ export default function TravelManagement() {
                     ))}
                   </div>
                 )}
+
+                <Pagination
+                  page={routePage}
+                  totalPages={routeTotalPages}
+                  onChange={setRoutePage}
+                  total={filteredRoutes.length}
+                  pageSize={PAGE_SIZE}
+                  itemLabel="route"
+                />
               </TabsContent>
 
               <TabsContent value="vehicles" className="space-y-4">
-                {/* Search and Add */}
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                {/* Toolbar — search, status filter, view mode, add */}
+                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                   <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <Input
@@ -745,16 +858,30 @@ export default function TravelManagement() {
                       value={vehicleSearch}
                       onChange={(e) => setVehicleSearch(e.target.value)}
                       className="pl-10 bg-white"
+                      data-testid="vehicles-search-input"
                     />
                   </div>
-                  <PermissionGate permission="travel.create">
-                    <Button onClick={() => openVehicleDialog()} className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="w-4 h-4 mr-2" /> Add Vehicle
-                    </Button>
-                  </PermissionGate>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select value={vehicleStatusFilter} onValueChange={setVehicleStatusFilter}>
+                      <SelectTrigger className="w-40 bg-white" data-testid="vehicles-status-filter">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <ViewModeToggle value={vehicleViewMode} onChange={setVehicleViewMode} />
+                    <PermissionGate permission="travel.create">
+                      <Button onClick={() => openVehicleDialog()} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="w-4 h-4 mr-2" /> Add Vehicle
+                      </Button>
+                    </PermissionGate>
+                  </div>
                 </div>
 
-                {/* Vehicles Grid */}
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
                     <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
@@ -764,15 +891,67 @@ export default function TravelManagement() {
                     <Bus className="h-16 w-16 mx-auto text-slate-300 mb-4" />
                     <h3 className="text-lg font-semibold text-slate-900 mb-2">No vehicles found</h3>
                     <p className="text-slate-500 mb-4">
-                      {vehicleSearch ? 'Try adjusting your search' : 'Add your first vehicle to get started'}
+                      {vehicleSearch || vehicleStatusFilter !== 'all' ? 'Try adjusting your filters' : 'Add your first vehicle to get started'}
                     </p>
                     <Button onClick={() => openVehicleDialog()} className="bg-blue-600">
                       <Plus className="w-4 h-4 mr-2" /> Add Vehicle
                     </Button>
                   </Card>
+                ) : vehicleViewMode === 'list' ? (
+                  <Card className="overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Vehicle</th>
+                            <th className="px-4 py-3">Plate</th>
+                            <th className="px-4 py-3">Type</th>
+                            <th className="px-4 py-3">Capacity</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagedVehicles.map((vehicle) => (
+                            <tr key={vehicle.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3 font-medium text-slate-900">{vehicle.vehicle_name || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{vehicle.plate_number || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700 capitalize">{vehicle.vehicle_type || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{vehicle.capacity ?? '—'}</td>
+                              <td className="px-4 py-3">
+                                <Badge variant="outline" className="capitalize">{vehicle.status || 'active'}</Badge>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <Button size="sm" variant="ghost" onClick={() => handleViewItem(vehicle, 'vehicle')} data-testid={`vehicle-view-${vehicle.id}`}>View</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => openVehicleDialog(vehicle)}>Edit</Button>
+                                  <Button size="sm" variant="ghost" className="text-[#082c59] hover:bg-[#082c59]/10" onClick={() => setReplaceVehicle(vehicle)} title="Replace on all active bookings" data-testid={`replace-vehicle-btn-${vehicle.id}`}>
+                                    <Replace className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                ) : vehicleViewMode === 'details' ? (
+                  <div className="space-y-4">
+                    {pagedVehicles.map(vehicle => (
+                      <VehicleCard
+                        key={vehicle.id}
+                        vehicle={vehicle}
+                        onView={(v) => handleViewItem(v, 'vehicle')}
+                        onEdit={openVehicleDialog}
+                        onDelete={handleDeleteVehicle}
+                        onReplace={setReplaceVehicle}
+                      />
+                    ))}
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredVehicles.map(vehicle => (
+                    {pagedVehicles.map(vehicle => (
                       <VehicleCard
                         key={vehicle.id}
                         vehicle={vehicle}
@@ -784,6 +963,15 @@ export default function TravelManagement() {
                     ))}
                   </div>
                 )}
+
+                <Pagination
+                  page={vehiclePage}
+                  totalPages={vehicleTotalPages}
+                  onChange={setVehiclePage}
+                  total={filteredVehicles.length}
+                  pageSize={PAGE_SIZE}
+                  itemLabel="vehicle"
+                />
               </TabsContent>
             </Tabs>
           </TabsContent>
