@@ -28,10 +28,15 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import { Search } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
+
+const PAGE_SIZE = 12;
 
 const CHART_COLORS = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
 const CINEMA_AMENITIES = ['3d', 'imax', 'dolby_atmos', 'vip_seating', 'parking', 'snack_bar', 'lounge', 'wheelchair_access'];
@@ -136,7 +141,45 @@ export default function CinemaManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [cinemaViewMode, setCinemaViewMode] = useState('grid');
+  const [movieViewMode, setMovieViewMode] = useState('grid');
+  const [cinemaSearch, setCinemaSearch] = useState('');
+  const [movieSearch, setMovieSearch] = useState('');
+  const [cinemaPage, setCinemaPage] = useState(1);
+  const [moviePage, setMoviePage] = useState(1);
   const dashboardData = useRealDashboardData('cinema', '30days', scopeOperatorId);
+
+  const filteredCinemas = useMemo(() => {
+    if (!cinemaSearch) return cinemas;
+    const s = cinemaSearch.toLowerCase();
+    return cinemas.filter(c =>
+      (c.name || '').toLowerCase().includes(s) ||
+      (c.city || '').toLowerCase().includes(s) ||
+      (c.address || '').toLowerCase().includes(s)
+    );
+  }, [cinemas, cinemaSearch]);
+
+  const filteredMovies = useMemo(() => {
+    if (!movieSearch) return movies;
+    const s = movieSearch.toLowerCase();
+    return movies.filter(m =>
+      (m.title || '').toLowerCase().includes(s) ||
+      (Array.isArray(m.genre) ? m.genre.join(',') : (m.genre || '')).toLowerCase().includes(s)
+    );
+  }, [movies, movieSearch]);
+
+  useEffect(() => { setCinemaPage(1); }, [cinemaSearch]);
+  useEffect(() => { setMoviePage(1); }, [movieSearch]);
+  const cinemaTotalPages = Math.max(1, Math.ceil(filteredCinemas.length / PAGE_SIZE));
+  const movieTotalPages = Math.max(1, Math.ceil(filteredMovies.length / PAGE_SIZE));
+  const pagedCinemas = useMemo(
+    () => filteredCinemas.slice((cinemaPage - 1) * PAGE_SIZE, cinemaPage * PAGE_SIZE),
+    [filteredCinemas, cinemaPage]
+  );
+  const pagedMovies = useMemo(
+    () => filteredMovies.slice((moviePage - 1) * PAGE_SIZE, moviePage * PAGE_SIZE),
+    [filteredMovies, moviePage]
+  );
 
   const handleViewItem = (item, type) => {
     setViewingItem(item);
@@ -333,22 +376,65 @@ export default function CinemaManagement() {
 
             <TabsContent value="cinemas">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
                   <CardTitle>Cinemas</CardTitle>
-                  <PermissionGate permission="cinema.create">
-                    <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]" data-testid="add-cinema-btn">
-                      <Plus className="w-4 h-4 mr-2" /> Add Cinema
-                    </Button>
-                  </PermissionGate>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search cinemas..."
+                        value={cinemaSearch}
+                        onChange={(e) => setCinemaSearch(e.target.value)}
+                        className="pl-10 bg-white w-64"
+                        data-testid="cinemas-search-input"
+                      />
+                    </div>
+                    <ViewModeToggle value={cinemaViewMode} onChange={setCinemaViewMode} />
+                    <PermissionGate permission="cinema.create">
+                      <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]" data-testid="add-cinema-btn">
+                        <Plus className="w-4 h-4 mr-2" /> Add Cinema
+                      </Button>
+                    </PermissionGate>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="text-center py-8">Loading...</div>
-                  ) : cinemas.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">No cinemas found.</div>
+                  ) : filteredCinemas.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">{cinemaSearch ? 'No cinemas match your search' : 'No cinemas found.'}</div>
+                  ) : cinemaViewMode === 'list' ? (
+                    <div className="overflow-x-auto" data-testid="cinemas-list-view">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Name</th>
+                            <th className="px-4 py-3">City</th>
+                            <th className="px-4 py-3">Screens</th>
+                            <th className="px-4 py-3">Phone</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagedCinemas.map(cinema => (
+                            <tr key={cinema.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>
+                              <td className="px-4 py-3 font-medium text-slate-900">{cinema.name}</td>
+                              <td className="px-4 py-3 text-slate-700">{cinema.city || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{cinema.total_screens || (cinema.screens || []).length}</td>
+                              <td className="px-4 py-3 text-slate-700">{cinema.phone || '—'}</td>
+                              <td className="px-4 py-3 text-right">
+                                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }}>View</Button>
+                                <PermissionGate permission="cinema.edit">
+                                  <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openCinemaDialog(cinema); }}>Edit</Button>
+                                </PermissionGate>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {cinemas.map(cinema => (
+                    <div className={cinemaViewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`cinemas-${cinemaViewMode}-view`}>
+                      {pagedCinemas.map(cinema => (
                         <Card
                           key={cinema.id}
                           className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedCinema?.id === cinema.id ? 'ring-2 ring-[#082c59]' : ''}`}
@@ -362,9 +448,12 @@ export default function CinemaManagement() {
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                               <MapPin className="w-4 h-4" />{cinema.city}
                             </div>
+                            {cinemaViewMode === 'details' && cinema.description && (
+                              <p className="text-sm text-slate-600 mb-3 pb-3 border-b border-slate-100">{cinema.description}</p>
+                            )}
                             {cinema.amenities?.length > 0 && (
                               <div className="flex flex-wrap gap-1 mb-3">
-                                {cinema.amenities.slice(0, 3).map(a => (
+                                {cinema.amenities.slice(0, cinemaViewMode === 'details' ? 8 : 3).map(a => (
                                   <Badge key={a} variant="outline" className="text-xs uppercase">{a}</Badge>
                                 ))}
                               </div>
@@ -389,33 +478,92 @@ export default function CinemaManagement() {
                       ))}
                     </div>
                   )}
+
+                  <div className="mt-4">
+                    <Pagination
+                      page={cinemaPage}
+                      totalPages={cinemaTotalPages}
+                      onChange={setCinemaPage}
+                      total={filteredCinemas.length}
+                      pageSize={PAGE_SIZE}
+                      itemLabel="cinema"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="movies">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
                   <CardTitle>Films</CardTitle>
-                  <PermissionGate permission="cinema.edit">
-                    <Button onClick={() => openMovieDialog()} className="bg-[#082c59]" data-testid="add-movie-btn">
-                      <Plus className="w-4 h-4 mr-2" /> Add Movie
-                    </Button>
-                  </PermissionGate>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search films..."
+                        value={movieSearch}
+                        onChange={(e) => setMovieSearch(e.target.value)}
+                        className="pl-10 bg-white w-64"
+                        data-testid="movies-search-input"
+                      />
+                    </div>
+                    <ViewModeToggle value={movieViewMode} onChange={setMovieViewMode} />
+                    <PermissionGate permission="cinema.edit">
+                      <Button onClick={() => openMovieDialog()} className="bg-[#082c59]" data-testid="add-movie-btn">
+                        <Plus className="w-4 h-4 mr-2" /> Add Movie
+                      </Button>
+                    </PermissionGate>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {movies.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">No films. Add a film!</div>
+                  {filteredMovies.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">{movieSearch ? 'No films match your search' : 'No films. Add a film!'}</div>
+                  ) : movieViewMode === 'list' ? (
+                    <div className="overflow-x-auto" data-testid="movies-list-view">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3">Title</th>
+                            <th className="px-4 py-3">Genre</th>
+                            <th className="px-4 py-3">Duration</th>
+                            <th className="px-4 py-3">Rating</th>
+                            <th className="px-4 py-3">Price</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pagedMovies.map(movie => (
+                            <tr key={movie.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-4 py-3 font-medium text-slate-900">{movie.title}</td>
+                              <td className="px-4 py-3 text-slate-700">{Array.isArray(movie.genre) ? movie.genre.join(', ') : movie.genre || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{movie.duration || movie.duration_minutes || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700">{movie.rating || '—'}</td>
+                              <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(movie.ticket_price || 0)}</td>
+                              <td className="px-4 py-3 text-right">
+                                <Button size="sm" variant="ghost" onClick={() => handleViewItem(movie, 'movie')}>View</Button>
+                                <PermissionGate permission="cinema.edit">
+                                  <Button size="sm" variant="ghost" onClick={() => openMovieDialog(movie)}>Edit</Button>
+                                </PermissionGate>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {movies.map(movie => (
+                    <div className={movieViewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`movies-${movieViewMode}-view`}>
+                      {pagedMovies.map(movie => (
                         <Card key={movie.id}>
                           <CardContent className="pt-6">
                             <h3 className="font-semibold mb-2">{movie.title}</h3>
                             <div className="space-y-1 text-sm text-gray-500">
-                              <div className="flex items-center gap-2"><Film className="w-4 h-4" />{movie.genre}</div>
+                              <div className="flex items-center gap-2"><Film className="w-4 h-4" />{Array.isArray(movie.genre) ? movie.genre.join(', ') : movie.genre}</div>
                               <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{movie.duration}</div>
                               <div className="flex items-center gap-2"><Star className="w-4 h-4" />{movie.rating}</div>
+                              {movieViewMode === 'details' && movie.description && (
+                                <p className="text-slate-600 pt-2 border-t border-slate-100">{movie.description}</p>
+                              )}
                             </div>
                             <div className="mt-3 font-bold text-green-600">{formatFCFA(movie.ticket_price)}</div>
                             <div className="flex gap-2 mt-4">
@@ -438,6 +586,17 @@ export default function CinemaManagement() {
                       ))}
                     </div>
                   )}
+
+                  <div className="mt-4">
+                    <Pagination
+                      page={moviePage}
+                      totalPages={movieTotalPages}
+                      onChange={setMoviePage}
+                      total={filteredMovies.length}
+                      pageSize={PAGE_SIZE}
+                      itemLabel="film"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

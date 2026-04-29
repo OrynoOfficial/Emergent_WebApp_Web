@@ -1,108 +1,109 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
+
 class PackageType(str, Enum):
-    TOUR = "tour"
-    VACATION = "vacation"
-    HONEYMOON = "honeymoon"
-    ADVENTURE = "adventure"
-    BUSINESS = "business"
-    PILGRIMAGE = "pilgrimage"
-    CUSTOM = "custom"
+    DOCUMENT = "document"
+    PARCEL = "parcel"
+    FRAGILE = "fragile"
+    PERISHABLE = "perishable"
+    ELECTRONICS = "electronics"
+    HEAVY_GOODS = "heavy_goods"
+    OTHER = "other"
+
 
 class PackageStatus(str, Enum):
-    DRAFT = "draft"
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SOLD_OUT = "sold_out"
+    PENDING = "pending"
+    PICKED_UP = "picked_up"
+    IN_TRANSIT = "in_transit"
+    OUT_FOR_DELIVERY = "out_for_delivery"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    RETURNED = "returned"
 
-class PackageService(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+
+class PaymentStatus(str, Enum):
+    UNPAID = "unpaid"
+    PAID = "paid"
+    REFUNDED = "refunded"
+
+
+class PackageContact(BaseModel):
     name: str
+    phone: str
+    email: Optional[str] = None
+    address: str
+
+
+class PackageDimensions(BaseModel):
+    length_cm: float = 0
+    width_cm: float = 0
+    height_cm: float = 0
+
+
+class PhysicalPackageCreate(BaseModel):
+    """Create a physical shipment record"""
+    sender: PackageContact
+    receiver: PackageContact
+    origin_city: str
+    destination_city: str
+    package_type: PackageType = PackageType.PARCEL
+    weight_kg: float = 0
+    dimensions: PackageDimensions = PackageDimensions()
+    declared_value: float = 0
     description: Optional[str] = None
-    package_type: PackageType
-    operator_id: str
-    operator_name: str
-    destination: str
-    origin: Optional[str] = None
-    duration_days: int
-    duration_nights: int
-    images: List[str] = []
-    itinerary: List[Dict[str, Any]] = []  # [{day, title, description, activities: []}]
-    inclusions: List[str] = []  # What's included
-    exclusions: List[str] = []  # What's not included
-    base_price: float
-    price_per_person: bool = True
-    min_travelers: int = 1
-    max_travelers: Optional[int] = None
-    departure_dates: List[str] = []  # Available departure dates
-    hotels_included: List[Dict[str, Any]] = []  # [{name, stars, nights}]
-    meals_included: Dict[str, int] = {}  # {breakfast: 3, lunch: 2, dinner: 2}
-    transport_included: List[str] = []  # flight, bus, train, car
-    activities_included: List[str] = []
-    status: PackageStatus = PackageStatus.DRAFT
-    featured: bool = False
-    tags: List[str] = []
-    cancellation_policy: Optional[str] = None
-    rating: float = 0
-    total_reviews: int = 0
-    total_bookings: int = 0
+    notes: Optional[str] = None
+    price: float = 0
+    payment_status: PaymentStatus = PaymentStatus.UNPAID
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+
+
+class PhysicalPackageUpdate(BaseModel):
+    """Update a physical shipment record. All fields optional."""
+    sender: Optional[PackageContact] = None
+    receiver: Optional[PackageContact] = None
+    origin_city: Optional[str] = None
+    destination_city: Optional[str] = None
+    package_type: Optional[PackageType] = None
+    weight_kg: Optional[float] = None
+    dimensions: Optional[PackageDimensions] = None
+    declared_value: Optional[float] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    price: Optional[float] = None
+    payment_status: Optional[PaymentStatus] = None
+    status: Optional[PackageStatus] = None
+
+
+class PhysicalPackage(BaseModel):
+    id: Optional[str] = Field(default=None, alias="_id")
+    tracking_number: str
+    sender: PackageContact
+    receiver: PackageContact
+    origin_city: str
+    destination_city: str
+    package_type: PackageType = PackageType.PARCEL
+    weight_kg: float = 0
+    dimensions: PackageDimensions = PackageDimensions()
+    declared_value: float = 0
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    price: float = 0
+    payment_status: PaymentStatus = PaymentStatus.UNPAID
+    status: PackageStatus = PackageStatus.PENDING
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         populate_by_name = True
 
-class PackageServiceCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    package_type: PackageType
-    operator_id: Optional[str] = None
-    operator_name: Optional[str] = None
-    destination: str
-    origin: Optional[str] = None
-    duration_days: int
-    duration_nights: int
-    images: List[str] = []
-    itinerary: List[Dict[str, Any]] = []
-    inclusions: List[str] = []
-    exclusions: List[str] = []
-    base_price: float
-    price_per_person: bool = True
-    min_travelers: int = 1
-    max_travelers: Optional[int] = None
-    departure_dates: List[str] = []
-    hotels_included: List[Dict[str, Any]] = []
-    meals_included: Dict[str, int] = {}
-    transport_included: List[str] = []
-    activities_included: List[str] = []
-    tags: List[str] = []
-    cancellation_policy: Optional[str] = None
 
-class PackageServiceUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    package_type: Optional[PackageType] = None
-    destination: Optional[str] = None
-    origin: Optional[str] = None
-    duration_days: Optional[int] = None
-    duration_nights: Optional[int] = None
-    images: Optional[List[str]] = None
-    itinerary: Optional[List[Dict[str, Any]]] = None
-    inclusions: Optional[List[str]] = None
-    exclusions: Optional[List[str]] = None
-    base_price: Optional[float] = None
-    price_per_person: Optional[bool] = None
-    min_travelers: Optional[int] = None
-    max_travelers: Optional[int] = None
-    departure_dates: Optional[List[str]] = None
-    hotels_included: Optional[List[Dict[str, Any]]] = None
-    meals_included: Optional[Dict[str, int]] = None
-    transport_included: Optional[List[str]] = None
-    activities_included: Optional[List[str]] = None
-    status: Optional[PackageStatus] = None
-    featured: Optional[bool] = None
-    tags: Optional[List[str]] = None
-    cancellation_policy: Optional[str] = None
+# Backwards-compat aliases used by other modules importing old names.
+PackageServiceCreate = PhysicalPackageCreate
+PackageServiceUpdate = PhysicalPackageUpdate
+PackageService = PhysicalPackage

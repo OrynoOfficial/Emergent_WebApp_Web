@@ -46,16 +46,17 @@ async def get_featured_hotels(limit: int = 6):
 
 @router.get("/featured-packages")
 async def get_featured_packages(limit: int = 6):
-    """Get featured travel packages for landing page"""
+    """Get latest physical package shipments for landing page (logistics showcase)."""
     db = get_database()
     if db is None:
         return {"packages": []}
-    
+
     packages = await db.packages.find(
-        {"status": "active", "featured": True},
-        {"_id": 0, "id": "$_id", "name": 1, "destination": 1, "duration_days": 1, "base_price": 1, "rating": 1, "package_type": 1}
-    ).sort("rating", -1).limit(limit).to_list(limit)
-    
+        {},
+        {"_id": 0, "id": "$_id", "tracking_number": 1, "origin_city": 1,
+         "destination_city": 1, "package_type": 1, "status": 1, "price": 1}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+
     return {"packages": packages}
 
 

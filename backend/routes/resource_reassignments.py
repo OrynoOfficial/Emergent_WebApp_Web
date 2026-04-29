@@ -137,18 +137,17 @@ SERVICE_SPECS: Dict[str, Dict[str, Any]] = {
         "order_resource_id_path": "booking_details.package_id",
         "order_snapshot_path": "booking_details.package_info",
         "extra_order_mirrors": {
-            "booking_details.package_name": "name",
+            "booking_details.tracking_number": "tracking_number",
         },
         "snapshot_fields": [
-            "name", "package_type", "destination", "origin",
-            "duration_days", "duration_nights", "images", "base_price",
-            "inclusions",
+            "tracking_number", "package_type", "origin_city", "destination_city",
+            "weight_kg", "dimensions", "price", "status",
         ],
         "noun_singular": "package",
         "noun_singular_title": "Package",
         "booking_noun": "package",
-        "label_field": "name",
-        "secondary_label_field": "destination",
+        "label_field": "tracking_number",
+        "secondary_label_field": "destination_city",
         "compat_fields": ["operator_id"],
     },
     "laundry": {

@@ -28,6 +28,11 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import { Search } from 'lucide-react';
+
+const PAGE_SIZE = 12;
 
 const EVENT_TYPES = ['concert', 'conference', 'workshop', 'festival', 'sports', 'exhibition', 'party', 'other'];
 
@@ -72,8 +77,30 @@ export default function EventsManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState('grid');
+  const [eventPage, setEventPage] = useState(1);
+  const [eventSearch, setEventSearch] = useState('');
 
   const dashboardData = useRealDashboardData('events', '30days', scopeOperatorId);
+
+  // Filtered events
+  const filteredEvents = useMemo(() => {
+    if (!eventSearch) return events;
+    const s = eventSearch.toLowerCase();
+    return events.filter(e =>
+      (e.name || e.title || '').toLowerCase().includes(s) ||
+      (e.venue_name || e.venue || '').toLowerCase().includes(s) ||
+      (e.city || '').toLowerCase().includes(s) ||
+      (e.event_type || e.type || '').toLowerCase().includes(s)
+    );
+  }, [events, eventSearch]);
+
+  useEffect(() => { setEventPage(1); }, [eventSearch]);
+  const eventTotalPages = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
+  const pagedEvents = useMemo(
+    () => filteredEvents.slice((eventPage - 1) * PAGE_SIZE, eventPage * PAGE_SIZE),
+    [filteredEvents, eventPage]
+  );
 
   const handleViewEvent = (event) => {
     setViewingEvent(event);
@@ -260,66 +287,129 @@ export default function EventsManagement() {
           />
         </TabsContent>
 
-        <TabsContent value="management" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Events</CardTitle>
+        <TabsContent value="management" className="mt-6 space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search events by name, venue, city..."
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+                className="pl-10 bg-white"
+                data-testid="events-search-input"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="events.create">
                 <Button onClick={() => openEventDialog()} className="bg-[#082c59]">
                   <Plus className="w-4 h-4 mr-2" /> Add Event
                 </Button>
               </PermissionGate>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : events.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No events found.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {events.map(event => (
-                    <Card key={event._id || event.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-center gap-2">
-                            {getEventIcon(event.type)}
-                            <h3 className="font-semibold">{event.name}</h3>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : filteredEvents.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Calendar className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">{eventSearch ? 'No events match your search' : 'No events found.'}</p>
+            </Card>
+          ) : viewMode === 'list' ? (
+            <Card className="overflow-hidden" data-testid="events-list-view">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Event</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Venue</th>
+                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Capacity</th>
+                      <th className="px-4 py-3">Price</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedEvents.map(event => (
+                      <tr key={event._id || event.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-900">{event.name || event.title}</td>
+                        <td className="px-4 py-3 capitalize text-slate-700">{event.event_type || event.type || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{event.venue_name || event.venue || '—'}{event.city ? `, ${event.city}` : ''}</td>
+                        <td className="px-4 py-3 text-slate-700">{event.start_date || event.date || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{event.total_capacity || event.capacity || '—'}</td>
+                        <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(event.ticket_price || 0)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="inline-flex gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => handleViewEvent(event)}>View</Button>
+                            <PermissionGate permission="events.edit">
+                              <Button size="sm" variant="ghost" onClick={() => openEventDialog(event)}>Edit</Button>
+                            </PermissionGate>
                           </div>
-                          <Badge variant="outline" className="capitalize">{event.type}</Badge>
-                        </div>
-                        <div className="space-y-2 text-sm text-gray-500">
-                          <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{event.venue}, {event.city}</div>
-                          <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{event.date}</div>
-                          <div className="flex items-center gap-2"><Users className="w-4 h-4" />{event.capacity} capacity</div>
-                        </div>
-                        <div className="mt-3 font-bold text-green-600">{formatFCFA(event.ticket_price)}</div>
-                        <div className="flex gap-2 mt-4">
-                          <Button size="sm" variant="outline" onClick={() => handleViewEvent(event)} title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <PermissionGate permission="events.edit">
-                            <Button size="sm" variant="outline" onClick={() => setReplaceEvent(event)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-event-btn-${event._id || event.id}`}>
-                              <ReplaceIcon className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="events.edit">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => openEventDialog(event)}>
-                              <Edit className="w-4 h-4 mr-1" /> Edit
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="events.delete">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteEvent(event)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : (
+            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`events-${viewMode}-view`}>
+              {pagedEvents.map(event => (
+                <Card key={event._id || event.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        {getEventIcon(event.event_type || event.type)}
+                        <h3 className="font-semibold">{event.name || event.title}</h3>
+                      </div>
+                      <Badge variant="outline" className="capitalize">{event.event_type || event.type}</Badge>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{event.venue_name || event.venue}{event.city ? `, ${event.city}` : ''}</div>
+                      <div className="flex items-center gap-2"><Calendar className="w-4 h-4" />{event.start_date || event.date || '—'}</div>
+                      <div className="flex items-center gap-2"><Users className="w-4 h-4" />{event.total_capacity || event.capacity || 0} capacity</div>
+                      {viewMode === 'details' && event.description && (
+                        <p className="text-slate-600 text-sm pt-2 border-t border-slate-100">{event.description}</p>
+                      )}
+                    </div>
+                    <div className="mt-3 font-bold text-green-600">{formatFCFA(event.ticket_price)}</div>
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" variant="outline" onClick={() => handleViewEvent(event)} title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <PermissionGate permission="events.edit">
+                        <Button size="sm" variant="outline" onClick={() => setReplaceEvent(event)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-event-btn-${event._id || event.id}`}>
+                          <ReplaceIcon className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="events.edit">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openEventDialog(event)}>
+                          <Edit className="w-4 h-4 mr-1" /> Edit
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="events.delete">
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteEvent(event)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <Pagination
+            page={eventPage}
+            totalPages={eventTotalPages}
+            onChange={setEventPage}
+            total={filteredEvents.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="event"
+          />
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">

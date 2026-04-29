@@ -291,9 +291,9 @@ async def create_direct_order(
             pkg_id = booking_details.get("package_id") or order_data.service_id
             pkg = await db.packages.find_one(
                 {"_id": pkg_id},
-                {"_id": 0, "name": 1, "package_type": 1, "destination": 1,
-                 "origin": 1, "duration_days": 1, "duration_nights": 1,
-                 "images": 1, "base_price": 1, "inclusions": 1},
+                {"_id": 0, "tracking_number": 1, "package_type": 1,
+                 "origin_city": 1, "destination_city": 1, "weight_kg": 1,
+                 "dimensions": 1, "price": 1, "status": 1},
             )
             if pkg:
                 booking_details["package_id"] = pkg_id

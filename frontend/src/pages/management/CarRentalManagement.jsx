@@ -27,10 +27,14 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
 } from 'recharts';
+
+const PAGE_SIZE = 12;
 
 const CHART_COLORS = ['#22C55E', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 const CAR_FEATURES = ['ac', 'gps', 'bluetooth', 'sunroof', 'leather_seats', 'backup_camera', 'cruise_control', 'heated_seats'];
@@ -304,6 +308,8 @@ export default function CarRentalManagement() {
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceCar, setReplaceCar] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
+  const [carPage, setCarPage] = useState(1);
   const dashboardData = useRealDashboardData('car_rental', '30days', scopeOperatorId);
 
   // Filtered cars
@@ -317,6 +323,14 @@ export default function CarRentalManagement() {
       c.plate_number?.toLowerCase().includes(s)
     );
   }, [cars, carSearch]);
+
+  // Pagination
+  useEffect(() => { setCarPage(1); }, [carSearch]);
+  const carTotalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
+  const pagedCars = useMemo(
+    () => filteredCars.slice((carPage - 1) * PAGE_SIZE, carPage * PAGE_SIZE),
+    [filteredCars, carPage]
+  );
 
   const handleViewCar = (car) => {
     setViewingCar(car);
@@ -483,11 +497,14 @@ export default function CarRentalManagement() {
                   className="pl-10 bg-white"
                 />
               </div>
-              <PermissionGate permission="car_rental.create">
-                <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700">
-                  <Plus className="w-4 h-4 mr-2" /> Add Car
-                </Button>
-              </PermissionGate>
+              <div className="flex items-center gap-2 flex-wrap">
+                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                <PermissionGate permission="car_rental.create">
+                  <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="w-4 h-4 mr-2" /> Add Car
+                  </Button>
+                </PermissionGate>
+              </div>
             </div>
 
             {/* Cars Grid */}
@@ -506,9 +523,66 @@ export default function CarRentalManagement() {
                   <Plus className="w-4 h-4 mr-2" /> Add Car
                 </Button>
               </Card>
+            ) : viewMode === 'list' ? (
+              <Card className="overflow-hidden" data-testid="cars-list-view">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Vehicle</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Plate</th>
+                        <th className="px-4 py-3">City</th>
+                        <th className="px-4 py-3">Seats</th>
+                        <th className="px-4 py-3">Price/Day</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedCars.map(car => (
+                        <tr key={car._id || car.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="px-4 py-3 font-medium text-slate-900">{car.brand} {car.model} <span className="text-slate-400 text-xs">({car.year})</span></td>
+                          <td className="px-4 py-3 capitalize text-slate-700">{car.car_type}</td>
+                          <td className="px-4 py-3 font-mono text-xs">{car.plate_number || '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{car.city || '—'}</td>
+                          <td className="px-4 py-3 text-slate-700">{car.seats}</td>
+                          <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(car.price_per_day || 0)}</td>
+                          <td className="px-4 py-3">
+                            <Badge className={car.is_available ? 'bg-emerald-100 text-emerald-700 border-0' : 'bg-red-100 text-red-700 border-0'}>
+                              {car.is_available ? 'Available' : 'Rented'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="inline-flex gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => handleViewCar(car)}>View</Button>
+                              <PermissionGate permission="car_rental.edit">
+                                <Button size="sm" variant="ghost" onClick={() => openCarDialog(car)}>Edit</Button>
+                              </PermissionGate>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ) : viewMode === 'details' ? (
+              <div className="space-y-4" data-testid="cars-details-view">
+                {pagedCars.map(car => (
+                  <CarCard
+                    key={car._id || car.id}
+                    car={car}
+                    onView={handleViewCar}
+                    onEdit={openCarDialog}
+                    onDelete={handleDeleteCar}
+                    onReplace={setReplaceCar}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredCars.map(car => (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" data-testid="cars-grid-view">
+                {pagedCars.map(car => (
                   <CarCard
                     key={car._id || car.id}
                     car={car}
@@ -520,6 +594,15 @@ export default function CarRentalManagement() {
                 ))}
               </div>
             )}
+
+            <Pagination
+              page={carPage}
+              totalPages={carTotalPages}
+              onChange={setCarPage}
+              total={filteredCars.length}
+              pageSize={PAGE_SIZE}
+              itemLabel="car"
+            />
           </TabsContent>
 
           <TabsContent value="bookings" className="mt-6">

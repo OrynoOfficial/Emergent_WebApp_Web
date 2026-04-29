@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search, Filter, ChevronLeft, ChevronRight, ArrowUpDown,
-  Grid3X3, List, RefreshCw, Download, Plus, MoreVertical
+  Grid3X3, List, Rows3, RefreshCw, Download, Plus, MoreVertical
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -66,18 +66,32 @@ export function SearchFilter({
             <Button
               variant="ghost"
               size="icon"
+              className={`h-8 w-8 ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
+              onClick={() => onViewModeChange('list')}
+              data-testid="view-mode-list"
+              title="List"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
               onClick={() => onViewModeChange('grid')}
+              data-testid="view-mode-grid"
+              title="Grid"
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className={`h-8 w-8 ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
-              onClick={() => onViewModeChange('list')}
+              className={`h-8 w-8 ${viewMode === 'details' ? 'bg-white shadow-sm' : ''}`}
+              onClick={() => onViewModeChange('details')}
+              data-testid="view-mode-details"
+              title="Details"
             >
-              <List className="h-4 w-4" />
+              <Rows3 className="h-4 w-4" />
             </Button>
           </div>
         )}

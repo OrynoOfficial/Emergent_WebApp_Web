@@ -5,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Film, Clock, Star, Calendar, Play, Ticket, Loader2, MapPin, Search, LayoutGrid, List, SlidersHorizontal, Heart } from 'lucide-react';
+import { ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Heart } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
-import api from '@/api/client';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
 import { formatFCFA } from '@/utils/currency';
 import { format } from 'date-fns';
+
+const PAGE_SIZE = 12;
 
 const GENRE_COLORS = {
   'Action': 'bg-red-500 text-white',
@@ -185,6 +188,7 @@ export default function CinemaResults() {
   const [sortBy, setSortBy] = useState('rating');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || format(new Date(), 'yyyy-MM-dd');
@@ -232,9 +236,17 @@ export default function CinemaResults() {
     }
   }, [films, sortBy, searchQuery, statusFilter]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, sortBy]);
+  const totalPages = Math.max(1, Math.ceil(filteredFilms.length / PAGE_SIZE));
+  const pagedFilms = useMemo(
+    () => filteredFilms.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredFilms, page]
+  );
+
   const handleViewDetails = (film) => {
     sessionStorage.setItem('selectedFilm', JSON.stringify({ ...film, date, city }));
-    navigate(`/services/cinema/${film.id}`);
+    navigate(`/services/cinema/film/${film.id}`);
   };
 
   if (loading) {
@@ -300,22 +312,7 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <div className="flex items-center bg-slate-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
-              >
-                <List className="w-4 h-4" />
-              </Button>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
           </div>
         </div>
@@ -333,16 +330,75 @@ export default function CinemaResults() {
             </Button>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredFilms.map((film) => (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" data-testid="cinema-results-grid">
+            {pagedFilms.map((film) => (
               <FilmCardGrid key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} />
             ))}
           </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredFilms.map((film) => (
+        ) : viewMode === 'details' ? (
+          <div className="space-y-6" data-testid="cinema-results-details">
+            {pagedFilms.map((film) => (
               <FilmCardList key={film.id} film={film} onViewDetails={handleViewDetails} isFav={isFav} toggleFav={toggleFav} />
             ))}
+          </div>
+        ) : (
+          /* List view — compact rows */
+          <Card className="overflow-hidden" data-testid="cinema-results-list">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Title</th>
+                    <th className="px-4 py-3">Genre</th>
+                    <th className="px-4 py-3">Duration</th>
+                    <th className="px-4 py-3">Rating</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Price</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedFilms.map((film) => (
+                    <tr key={film.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => handleViewDetails(film)}>
+                      <td className="px-4 py-3 font-medium text-slate-900">{film.title}</td>
+                      <td className="px-4 py-3 text-slate-700">{film.genre?.slice(0, 2).join(', ') || '—'}</td>
+                      <td className="px-4 py-3 text-slate-700">{film.duration_minutes ? `${Math.floor(film.duration_minutes / 60)}h ${film.duration_minutes % 60}m` : '—'}</td>
+                      <td className="px-4 py-3">
+                        {film.imdb_rating ? (
+                          <span className="inline-flex items-center gap-1 text-amber-600">
+                            <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> {film.imdb_rating}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge className={film.status === 'coming_soon' ? 'bg-amber-500' : 'bg-emerald-500'}>
+                          {film.status === 'coming_soon' ? 'Coming Soon' : 'Now Showing'}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-[#082c59]">{formatFCFA(film.price_from || 3500)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <Button size="sm" className="bg-[#082c59] hover:bg-[#0a3a75]" onClick={(e) => { e.stopPropagation(); handleViewDetails(film); }}>
+                          <Ticket className="w-4 h-4 mr-1" /> Tickets
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {filteredFilms.length > 0 && (
+          <div className="mt-6">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={setPage}
+              total={filteredFilms.length}
+              pageSize={PAGE_SIZE}
+              itemLabel="movie"
+            />
           </div>
         )}
       </div>

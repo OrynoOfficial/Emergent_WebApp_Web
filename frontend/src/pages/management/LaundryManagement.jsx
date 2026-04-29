@@ -27,10 +27,15 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import { Search } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
+
+const PAGE_SIZE = 12;
 
 const CHART_COLORS = ['#06B6D4', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#3B82F6'];
 const SERVICES = ['washing', 'dry_cleaning', 'ironing', 'folding', 'express', 'pickup_delivery'];
@@ -116,7 +121,26 @@ export default function LaundryManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState('grid');
+  const [pressingSearch, setPressingSearch] = useState('');
+  const [pressingPage, setPressingPage] = useState(1);
   const dashboardData = useRealDashboardData('laundry', '30days', scopeOperatorId);
+
+  const filteredPressings = useMemo(() => {
+    if (!pressingSearch) return pressings;
+    const s = pressingSearch.toLowerCase();
+    return pressings.filter(p =>
+      (p.name || '').toLowerCase().includes(s) ||
+      (p.city || '').toLowerCase().includes(s) ||
+      (p.address || '').toLowerCase().includes(s)
+    );
+  }, [pressings, pressingSearch]);
+  useEffect(() => { setPressingPage(1); }, [pressingSearch]);
+  const pressingTotalPages = Math.max(1, Math.ceil(filteredPressings.length / PAGE_SIZE));
+  const pagedPressings = useMemo(
+    () => filteredPressings.slice((pressingPage - 1) * PAGE_SIZE, pressingPage * PAGE_SIZE),
+    [filteredPressings, pressingPage]
+  );
 
   const handleViewPressing = (pressing) => {
     setViewingPressing(pressing);
@@ -242,68 +266,129 @@ export default function LaundryManagement() {
           />
         </TabsContent>
 
-        <TabsContent value="management" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Laundry Shops</CardTitle>
+        <TabsContent value="management" className="mt-6 space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search shops by name, city, address..."
+                value={pressingSearch}
+                onChange={(e) => setPressingSearch(e.target.value)}
+                className="pl-10 bg-white"
+                data-testid="pressings-search-input"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="pressing.create">
                 <Button onClick={() => openPressingDialog()} className="bg-[#082c59]">
                   <Plus className="w-4 h-4 mr-2" /> Add Shop
                 </Button>
               </PermissionGate>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : pressings.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No shops found.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {pressings.map(pressing => (
-                    <Card key={pressing.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="pt-6">
-                        <h3 className="font-semibold mb-2">{pressing.name}</h3>
-                        <div className="space-y-2 text-sm text-gray-500">
-                          <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{pressing.city}</div>
-                          <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{pressing.phone}</div>
-                        </div>
-                        {pressing.services?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {pressing.services.slice(0, 3).map((s, idx) => (
-                              <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
-                                {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
-                              </Badge>
-                            ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : filteredPressings.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Shirt className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">{pressingSearch ? 'No shops match your search' : 'No shops found.'}</p>
+            </Card>
+          ) : viewMode === 'list' ? (
+            <Card className="overflow-hidden" data-testid="pressings-list-view">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Shop</th>
+                      <th className="px-4 py-3">City</th>
+                      <th className="px-4 py-3">Phone</th>
+                      <th className="px-4 py-3">Services</th>
+                      <th className="px-4 py-3">Price/kg</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedPressings.map(p => (
+                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
+                        <td className="px-4 py-3 text-slate-700">{p.city || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{p.phone || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{(p.services || []).length} services</td>
+                        <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(p.price_per_kg || 0)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="inline-flex gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => handleViewPressing(p)}>View</Button>
+                            <PermissionGate permission="pressing.edit">
+                              <Button size="sm" variant="ghost" onClick={() => openPressingDialog(p)}>Edit</Button>
+                            </PermissionGate>
                           </div>
-                        )}
-                        <div className="mt-3 font-bold text-green-600">{formatFCFA(pressing.price_per_kg)}/kg</div>
-                        <div className="flex gap-2 mt-4">
-                          <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <PermissionGate permission="pressing.edit">
-                            <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-pressing-btn-${pressing.id}`}>
-                              <ReplaceIcon className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="pressing.edit">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => openPressingDialog(pressing)}>
-                              <Edit className="w-4 h-4 mr-1" /> Edit
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="pressing.delete">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeletePressing(pressing.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : (
+            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`pressings-${viewMode}-view`}>
+              {pagedPressings.map(pressing => (
+                <Card key={pressing.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="pt-6">
+                    <h3 className="font-semibold mb-2">{pressing.name}</h3>
+                    <div className="space-y-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{pressing.city}</div>
+                      <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{pressing.phone}</div>
+                      {viewMode === 'details' && pressing.address && (
+                        <div className="text-slate-600 pt-2 border-t border-slate-100">{pressing.address}</div>
+                      )}
+                    </div>
+                    {pressing.services?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {pressing.services.slice(0, viewMode === 'details' ? 8 : 3).map((s, idx) => (
+                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
+                            {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 font-bold text-green-600">{formatFCFA(pressing.price_per_kg)}/kg</div>
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <PermissionGate permission="pressing.edit">
+                        <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-pressing-btn-${pressing.id}`}>
+                          <ReplaceIcon className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="pressing.edit">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openPressingDialog(pressing)}>
+                          <Edit className="w-4 h-4 mr-1" /> Edit
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="pressing.delete">
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeletePressing(pressing.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <Pagination
+            page={pressingPage}
+            totalPages={pressingTotalPages}
+            onChange={setPressingPage}
+            total={filteredPressings.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="shop"
+          />
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">

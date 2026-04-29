@@ -26,10 +26,15 @@ import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import { Search } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
+
+const PAGE_SIZE = 12;
 
 const CHART_COLORS = ['#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
 const BANQUET_TYPES = ['wedding', 'corporate', 'birthday', 'anniversary', 'graduation', 'conference', 'gala'];
@@ -115,7 +120,26 @@ export default function BanquetManagement() {
 
   // Use the banquet dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [banquetSearch, setBanquetSearch] = useState('');
+  const [banquetPage, setBanquetPage] = useState(1);
   const dashboardData = useRealDashboardData('banquets', '30days', scopeOperatorId);
+
+  const filteredBanquets = useMemo(() => {
+    if (!banquetSearch) return banquets;
+    const s = banquetSearch.toLowerCase();
+    return banquets.filter(b =>
+      (b.name || '').toLowerCase().includes(s) ||
+      (b.city || '').toLowerCase().includes(s) ||
+      (b.address || b.venue || '').toLowerCase().includes(s)
+    );
+  }, [banquets, banquetSearch]);
+  useEffect(() => { setBanquetPage(1); }, [banquetSearch]);
+  const banquetTotalPages = Math.max(1, Math.ceil(filteredBanquets.length / PAGE_SIZE));
+  const pagedBanquets = useMemo(
+    () => filteredBanquets.slice((banquetPage - 1) * PAGE_SIZE, banquetPage * PAGE_SIZE),
+    [filteredBanquets, banquetPage]
+  );
 
   const handleViewBanquet = (banquet) => {
     setViewingBanquet(banquet);
@@ -243,64 +267,125 @@ export default function BanquetManagement() {
           />
         </TabsContent>
 
-        <TabsContent value="management" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Banquet Halls</CardTitle>
+        <TabsContent value="management" className="mt-6 space-y-4">
+          {/* Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search halls by name, city, address..."
+                value={banquetSearch}
+                onChange={(e) => setBanquetSearch(e.target.value)}
+                className="pl-10 bg-white"
+                data-testid="banquets-search-input"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="banquets.create">
                 <Button onClick={() => openBanquetDialog()} className="bg-[#082c59]">
                   <Plus className="w-4 h-4 mr-2" /> Add Hall
                 </Button>
               </PermissionGate>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">Loading...</div>
-              ) : banquets.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No halls found.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {banquets.map(banquet => (
-                    <Card key={banquet.id} className="hover:shadow-lg transition-shadow">
-                      <CardContent className="pt-6">
-                        <div className="flex justify-between items-start mb-3">
-                          <h3 className="font-semibold">{banquet.name}</h3>
-                          <Badge variant="outline" className="capitalize">{banquet.type}</Badge>
-                        </div>
-                        <div className="space-y-2 text-sm text-gray-500">
-                          <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{banquet.venue}, {banquet.city}</div>
-                          <div className="flex items-center gap-2"><Users className="w-4 h-4" />{banquet.capacity} guests max</div>
-                        </div>
-                        {banquet.services_included?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {banquet.services_included.slice(0, 3).map(s => (
-                              <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
-                            ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Loading...</div>
+          ) : filteredBanquets.length === 0 ? (
+            <Card className="p-12 text-center">
+              <UtensilsCrossed className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">{banquetSearch ? 'No halls match your search' : 'No halls found.'}</p>
+            </Card>
+          ) : viewMode === 'list' ? (
+            <Card className="overflow-hidden" data-testid="banquets-list-view">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Hall</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Location</th>
+                      <th className="px-4 py-3">Capacity</th>
+                      <th className="px-4 py-3">Price</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pagedBanquets.map(banquet => (
+                      <tr key={banquet.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-4 py-3 font-medium text-slate-900">{banquet.name}</td>
+                        <td className="px-4 py-3 capitalize text-slate-700">{banquet.type || banquet.venue_type || '—'}</td>
+                        <td className="px-4 py-3 text-slate-700">{(banquet.address || banquet.venue || '—')}{banquet.city ? `, ${banquet.city}` : ''}</td>
+                        <td className="px-4 py-3 text-slate-700">{banquet.capacity_min || 0}–{banquet.capacity_max || banquet.capacity || 0}</td>
+                        <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(banquet.price_per_person || banquet.base_price || 0)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="inline-flex gap-1">
+                            <Button size="sm" variant="ghost" onClick={() => handleViewBanquet(banquet)}>View</Button>
+                            <PermissionGate permission="banquets.edit">
+                              <Button size="sm" variant="ghost" onClick={() => openBanquetDialog(banquet)}>Edit</Button>
+                            </PermissionGate>
                           </div>
-                        )}
-                        <div className="mt-3 font-bold text-green-600">{formatFCFA(banquet.price_per_person)}/person</div>
-                        <div className="flex gap-2 mt-4">
-                          <Button size="sm" variant="outline" onClick={() => handleViewBanquet(banquet)} title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <PermissionGate permission="banquets.edit">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => openBanquetDialog(banquet)}>
-                              <Edit className="w-4 h-4 mr-1" /> Edit
-                            </Button>
-                          </PermissionGate>
-                          <PermissionGate permission="banquets.delete">
-                            <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteBanquet(banquet.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </PermissionGate>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : (
+            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`banquets-${viewMode}-view`}>
+              {pagedBanquets.map(banquet => (
+                <Card key={banquet.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold">{banquet.name}</h3>
+                      <Badge variant="outline" className="capitalize">{banquet.type || banquet.venue_type}</Badge>
+                    </div>
+                    <div className="space-y-2 text-sm text-gray-500">
+                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{banquet.address || banquet.venue}{banquet.city ? `, ${banquet.city}` : ''}</div>
+                      <div className="flex items-center gap-2"><Users className="w-4 h-4" />{banquet.capacity_max || banquet.capacity || 0} guests max</div>
+                      {viewMode === 'details' && banquet.description && (
+                        <p className="text-slate-600 text-sm pt-2 border-t border-slate-100">{banquet.description}</p>
+                      )}
+                    </div>
+                    {banquet.services_included?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {banquet.services_included.slice(0, viewMode === 'details' ? 8 : 3).map(s => (
+                          <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 font-bold text-green-600">{formatFCFA(banquet.price_per_person || banquet.base_price || 0)}{banquet.price_per_person ? '/person' : ''}</div>
+                    <div className="flex gap-2 mt-4">
+                      <Button size="sm" variant="outline" onClick={() => handleViewBanquet(banquet)} title="View Details">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <PermissionGate permission="banquets.edit">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openBanquetDialog(banquet)}>
+                          <Edit className="w-4 h-4 mr-1" /> Edit
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="banquets.delete">
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteBanquet(banquet.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <Pagination
+            page={banquetPage}
+            totalPages={banquetTotalPages}
+            onChange={setBanquetPage}
+            total={filteredBanquets.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="hall"
+          />
         </TabsContent>
 
         <TabsContent value="bookings" className="mt-6">
