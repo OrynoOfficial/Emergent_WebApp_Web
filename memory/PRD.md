@@ -33,3 +33,5 @@
 - P2: Operator comparison dashboard
 - P3: Scheduled report emails
 - Polish (optional, from iter124): migrate Settings timezone dropdown from native `<select>` to shadcn `Select` for visual parity with Language/Currency controls.
+- **Customer-facing `/services/packages` booking flow refactor** — current flow still references old "tour" fields (inclusions, duration_days, destination, etc.). Re-conceive as a "request a shipment" flow that matches the new logistics model: customer enters sender/receiver, dimensions, weight, package_type → system generates tracking_number and creates a shipment record + linked order.
+- **Public package tracking widget** — surface a search box on the landing page (and a `/track` route) that calls `GET /api/packages/track/{tracking_number}` (already public, no auth) so any sender or receiver can paste a tracking number and instantly see live status. Repeat-traffic + conversion booster for the logistics service.
