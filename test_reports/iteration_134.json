@@ -1,0 +1,83 @@
+{
+  "summary": "Iter134 fix (vite.config.js → server.hmr:false, watch:null) is NOT EFFECTIVE on Vite 7.3.0. The exact symptom the user reports — periodic auto-refresh — is still reproducible after the fix. During a 90s idle on /orders AND on /services/travel, a framenavigated event fired at ~t+60s (same URL = location.reload triggered by Vite HMR client) and the console showed `[vite] server connection lost. Polling for restart...`.",
+  "test_credentials": "customer@test.com / testpassword123 (login OK)",
+  "verification_steps_executed": [
+    "Read /app/frontend/vite.config.js — confirmed `server: { host:'0.0.0.0', port:3000, allowedHosts:true, hmr:false, watch:null }` (sanity check — config matches request).",
+    "Verified supervisor frontend log shows `[vite] vite.config.js changed, restarting server...` followed by `server restarted.` and a fresh `VITE v7.3.0 ready` start. So the config IS loaded by the running dev server.",
+    "Logged into customer@test.com via /login (page is the marketing/auth-picker — clicking 'Login to Your Account' reveals form, then submit redirects to /dashboard).",
+    "Navigated to /orders, RESET trackers, idled 90s. Tracked: page.on('framenavigated'), page.on('websocket'), page.on('request') filtering vite/__/ws/hmr, page.on('console').",
+    "Repeated 90s idle on /services/travel.",
+    "Manual reload (page.reload) regression — page reloads cleanly, body length 576 chars, URL preserved."
+  ],
+  "evidence_fix_failed": {
+    "orders_idle_90s": {
+      "start_url": "/orders",
+      "end_url": "/orders",
+      "framenavigated_count": 1,
+      "framenavigated_event": "fired at ~t+60s with same URL = location.reload()",
+      "websocket_opens": 1,
+      "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=wTKcMgKmrXMz",
+      "vite_requests_after_reset": 64,
+      "vite_client_js_loaded": "https://booking-revamp-hub.preview.emergentagent.com/@vite/client",
+      "console_spam_during_idle": ["[vite] server connection lost. Polling for restart..."]
+    },
+    "services_travel_idle_90s": {
+      "start_url": "/services/travel",
+      "end_url": "/services/travel",
+      "framenavigated_count": 1,
+      "framenavigated_event": "fired at ~t+60s with same URL = location.reload()",
+      "websocket_opens": 1,
+      "console_spam_during_idle": ["[vite] server connection lost. Polling for restart..."]
+    },
+    "session_wide_console_scan": {
+      "vite_tagged_logs_total": 14,
+      "connecting_lines": 8,
+      "connected_lines": 8,
+      "connection_lost_polling_lines": 2,
+      "websocket_failed_lines": 0
+    },
+    "manual_reload_regression": "PASS — body content rendered, URL preserved"
+  },
+  "rca_of_the_issue": "On Vite 7.x, setting `server.hmr: false` does NOT prevent the @vite/client.js HMR client from being injected into the served HTML, and that client still attempts to open a WebSocket to the page's origin (preview HTTPS). When the WS upgrade through the preview proxy eventually drops (~60s in our run), the client logs `[vite] server connection lost. Polling for restart...` and starts a polling/reload cycle — which is exactly the bug being chased. So the iter134 single-line change is necessary but NOT SUFFICIENT on Vite 7.3.0.",
+  "recommended_remediations_for_main_agent": [
+    "OPTION A (recommended for preview env): switch the frontend to production build for the preview. In package.json, change the supervisor `start` command from `vite` to `vite build && vite preview --host 0.0.0.0 --port 3000`. Production build does NOT inject the HMR client at all → guaranteed no auto-refresh, no WS attempts, no reload spam.",
+    "OPTION B: Keep `vite` dev server but truly silence the HMR client by patching at config level — set `define: { __HMR_PROTOCOL__: '\"\"', __HMR_HOSTNAME__: '\"\"', __HMR_PORT__: '0', __HMR_DIRECT_TARGET__: '\"\"', __HMR_BASE__: '\"\"', __HMR_TIMEOUT__: '0', __HMR_ENABLE_OVERLAY__: 'false' }` AND also keep `server.hmr: false`. Without these defines, @vite/client still falls back to `location.host` and attempts a connection.",
+    "OPTION C: In index.html (or a Vite plugin) strip the auto-injected `<script type=\"module\" src=\"/@vite/client\"></script>` tag in dev. A small `transformIndexHtml` plugin that removes that script when `command === 'serve'` will prevent the client from loading at all.",
+    "DO NOT rely solely on `server.hmr: false` for Vite 7+ in this preview env — verified empirically that the HMR client still loads, still opens WS, still reloads on disconnect."
+  ],
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Vite dev server (preview env)",
+        "issue": "Auto-refresh every ~60s still occurring after iter134 fix. `[vite] server connection lost. Polling for restart...` printed and location.reload() fires. framenavigated event observed on /orders AND /services/travel during 90s idle.",
+        "selector": "n/a — env-level",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "regression_checks": {
+    "manual_reload_loads_app": true,
+    "login_flow_works": true,
+    "orders_page_renders": true,
+    "services_travel_page_renders": true,
+    "vite_config_matches_spec": true
+  },
+  "test_report_links": [],
+  "action_items": [
+    "URGENT: vite hmr:false alone does not stop the auto-refresh on Vite 7.3.0 preview env. Apply Option A (vite preview / build) OR Option B (define block) OR Option C (strip /@vite/client in index.html). Current iter134 single-line change does not resolve the user-reported bug.",
+    "Re-test 90s idle on /orders + /services/travel + a booking-flow form-mid-state page after the next attempted fix; confirm 0 framenavigated events, 0 websocket opens, 0 'connection lost. Polling for restart' lines."
+  ],
+  "critical_code_review_comments": [
+    "Comment block in vite.config.js (lines 17-23) claims `with hmr:false the client never opens a socket and never auto-reloads` — empirically false on Vite 7.3.0 in this preview env. Comment should be corrected once a working fix is applied.",
+    "Frontend dev server is being used as the production preview for users. This is the root architectural problem — `vite preview` (production-built static) would eliminate the HMR-client class of bugs entirely."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend-only test)", "frontend": "0% on the targeted bug (auto-refresh still reproduces); 100% on regression checks (login, /orders, /services/travel, manual reload)" },
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Reproduction: login as customer@test.com, go to /orders (or /services/travel), clear all event listeners, idle 60-90s, watch for framenavigated event AND console line `[vite] server connection lost. Polling for restart...`. On the current build BOTH fire. After main agent applies a real fix (Option A/B/C above), re-run the same 90s idle test on /orders + /services/travel + a booking form mid-state page (e.g., /services/travel after passenger details filled but before payment) and assert form state survives the idle window."
+}

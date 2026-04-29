@@ -14,19 +14,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: true,
-    // HMR client connects over the public preview URL (HTTPS → WSS on 443)
-    // so the browser console stays clean (no ERR_UNSAFE_PORT).  `overlay: false`
-    // prevents the red dev error overlay from hijacking the user's view.
-    hmr: {
-      clientPort: 443,
-      protocol: 'wss',
-      overlay: false,
-    },
-    // File-system watching is INTENTIONALLY DISABLED.  On this shared preview
-    // environment any incidental file touch (editor save, code-gen, git
-    // checkout, testing agent) would otherwise fire HMR → full page reload,
-    // which surfaced as "the page refreshes on its own every few minutes".
-    // Supervisor restarts still apply source changes on demand.
+    // HMR is fully DISABLED on this preview environment. The HTTPS proxy in
+    // front of the dev server does not reliably forward the WSS handshake;
+    // when the HMR client loses its socket, Vite's recovery path triggers
+    // `location.reload()` — which is what users were seeing as "the system
+    // refreshes at intervals". With hmr:false the client never opens a
+    // socket and never auto-reloads. Code changes apply on the next
+    // `sudo supervisorctl restart frontend`.
+    hmr: false,
     watch: null,
   },
 })
