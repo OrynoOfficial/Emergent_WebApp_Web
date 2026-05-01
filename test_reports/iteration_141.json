@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 141 verification of customer-facing logistics marketplace flow. BACKEND: 9/9 pytest cases pass on /app/backend/tests/test_iteration141_packages_marketplace.py. Verified GET /api/package-services/search returns 1 service for Yaounde→Douala 3kg with calculated_price=4000 (and accent-insensitive Yaoundé works); weight=9999 returns 0 services (filter respects max); unknown route returns 0; POST /api/packages/ with valid package_service_id creates shipment with tracking ORYNO-XXXXXXXX and SERVER-RECALCULATED price (client-supplied 999999 was correctly overridden to 4000); package_service_id=nonexistent returns 404; weight 9999 returns 400 with 'weight'/'tier' in detail; quote endpoint returns price>0; persistence verified via GET. FRONTEND: BLOCKER — the public preview URL is serving a STALE pre-built bundle from /app/frontend/dist/ instead of the new code. Visiting /services/packages/results renders OLD UI ('0 services found • Package Size: M', 'All Types', 'Top Rated', 'No services found') which is text NOT present anywhere in current /app/frontend/src/pages/services/PackagesResults.jsx (current code shows '{origin} → {destination}', 'Price: Low to High', service grid). Confirmed by direct fetch from inside the page: /api/package-services/search?... returns 200 with the seeded 'Express Yaoundé → Douala (Same Day)' service, but the page hits zero services because the rendered React tree is the OLD PackagesResults that calls a different endpoint/uses different params. Therefore PackagesResults grid/list view, Select button, sessionStorage population, and the PackageBooking flow could NOT be UI-validated end-to-end. Code review of the source files (PackagesSearch.jsx, PackagesResults.jsx, PackageBooking.jsx, api/management.js packageServiceApi) confirms the new marketplace code is correctly wired: PackagesSearch builds URLSearchParams and navigates to /services/packages/results; PackagesResults calls packageServiceApi.search and stores selectedPackageService + packageBookingParams in sessionStorage on Select; PackageBooking.handleSubmit calls api.post('/packages/', ...) then api.post('/orders/create', ...). The backend will correctly process these calls (verified by pytest).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Public preview deployment", "issue": "Stale /app/frontend/dist/ prebuilt bundle is being served by ingress instead of the live Vite dev source. Old PackagesResults UI ('Package Size: M', 'All Types', 'Top Rated') is rendered — text that no longer exists in current src. Customer cannot reach the new marketplace flow until the dist bundle is rebuilt or the ingress is reconfigured to serve from Vite dev server.", "selector": "/services/packages/results", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Customer Search → Results → Booking", "issue": "Cannot validate end-to-end in UI because the preview serves stale bundle. Direct API call from page returns the seeded service correctly, but the rendered React tree is the OLD component, so Select buttons / sessionStorage / booking navigation cannot be exercised.", "affected_selectors": ["[data-testid='services-grid']","button:has-text('Select')","[data-testid='view-grid']","[data-testid='view-list']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration141_packages_marketplace.py",
+    "/app/test_reports/pytest/iter141.xml"
+  ],
+  "action_items": [
+    "URGENT: Rebuild the frontend bundle or ensure the public preview ingress serves the live Vite dev build. Run `cd /app/frontend && yarn build` (or remove /app/frontend/dist/) so the new PackagesSearch/PackagesResults/PackageBooking code is actually delivered to the browser. The preview is currently serving an old prebuilt index-CffRcBUS.js with stale Packages results UI.",
+    "After rebuild, re-run UI flow: /services/packages → fill Yaounde/Douala/3kg → Find Delivery Services → /services/packages/results should show grid with the seeded operator card → Select → /services/packages/booking/{id} → fill sender+receiver, toggle 'I am the sender', pick payment method, click Confirm Booking. Backend pytest is already green so flow should work end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/routes/packages.py L88-101 — server-side calculate_price correctly overrides client-supplied price; client price=999999 was discarded and saved price=4000 as expected. ",
+    "/app/backend/routes/package_services.py L185-186 — search filter correctly drops services when weight exceeds max (price_ok=False); verified weight=9999 returns 0 results.",
+    "/app/backend/routes/package_services.py L168-170 — accent-insensitive regex working: 'Yaoundé' matches 'Yaounde' service.",
+    "/app/frontend/src/pages/services/PackagesResults.jsx L175-184,216-228 — calls packageServiceApi.search, stores selectedPackageService + packageBookingParams in sessionStorage, navigates to /services/packages/booking/{id}. Code is correct — but unreachable via preview due to stale dist build.",
+    "/app/frontend/dist/ exists and contains a stale prebuilt bundle (e.g., assets/index-CffRcBUS.js); this likely takes precedence in the ingress over the dev server, masking all recent Packages frontend changes."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration141_packages_marketplace.py (new)",
+    "/app/test_reports/pytest/iter141.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (9/9 marketplace tests pass)", "frontend": "Cannot UI-test due to stale dist bundle being served. Code review of source: 100% structurally correct."},
+  "test_credentials": "customer@test.com / testpassword123 (used for booking POST)",
+  "seed_data_creation": "1 transient package created during test_create_with_valid_service and cleaned up via DELETE in test_zz_cleanup. Seeded service 'Express Yaoundé → Douala (Same Day)' was reused (not deleted).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The customer marketplace BACKEND is fully verified and working (9/9 pytest). The blocker is FRONTEND: /app/frontend/dist/ contains a stale prebuilt bundle that the public ingress is serving instead of the new src code. After main agent rebuilds (or removes dist), the UI flow should be tested: /services/packages search → results grid renders cards with calculated_price=4000 → Select → booking page → 'I am the sender' switch autofills → fill receiver → pick payment → Confirm Booking should POST /api/packages/ then /api/orders/create and redirect/toast. Use /app/backend/tests/test_iteration141_packages_marketplace.py as backend regression.",
+  "rca_of_the_issue": "ROOT CAUSE: /app/frontend/dist/ contains a pre-built static bundle (assets/index-CffRcBUS.js) that includes the old Packages UI ('Package Size: M', 'All Types', 'Top Rated' filters). The Kubernetes/preview ingress serves this dist over the Vite dev server, so all Packages frontend changes (PackagesSearch URLSearchParams, PackagesResults marketplace search, PackageBooking) are invisible to the user. Reproduction: visit https://booking-revamp-hub.preview.emergentagent.com/services/packages/results?origin=Yaounde&destination=Douala&weight_kg=3 — observe stale UI; in DevTools, fetch('/api/package-services/search?origin_city=Yaounde&destination_city=Douala&weight_kg=3') returns 200 with the seeded service. Mitigation: rebuild dist with `yarn build` in /app/frontend or delete /app/frontend/dist so ingress falls through to Vite dev."
+}

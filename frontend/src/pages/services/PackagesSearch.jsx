@@ -53,11 +53,23 @@ export default function PackagesSearch() {
       return;
     }
 
-    sessionStorage.setItem('packageSearchParams', JSON.stringify({
+    const payload = {
       ...searchParams,
       shipping_date: searchParams.shipping_date.toISOString(),
-    }));
-    navigate('/services/packages/results');
+    };
+    sessionStorage.setItem('packageSearchParams', JSON.stringify(payload));
+
+    const qs = new URLSearchParams({
+      origin: searchParams.pickup_location,
+      destination: searchParams.delivery_location,
+      weight_kg: String(searchParams.weight_kg || ''),
+      length_cm: String(searchParams.length_cm || ''),
+      width_cm: String(searchParams.width_cm || ''),
+      height_cm: String(searchParams.height_cm || ''),
+      package_type: searchParams.package_type || 'parcel',
+      shipping_date: searchParams.shipping_date.toISOString(),
+    }).toString();
+    navigate(`/services/packages/results?${qs}`);
   };
 
   return (
@@ -259,8 +271,9 @@ export default function PackagesSearch() {
                     Auto-filled from <strong className="mx-1">{searchParams.package_size}</strong> — adjust above if needed.
                   </div>
                 )}
+              </div>
 
-              <Button type="submit" className="w-full h-12 bg-[#082c59] hover:bg-[#0a3a75] text-lg">
+              <Button type="submit" className="w-full h-12 bg-[#082c59] hover:bg-[#0a3a75] text-lg" data-testid="package-search-submit">
                 <Search className="w-5 h-5 mr-2" /> Find Delivery Services
               </Button>
             </form>

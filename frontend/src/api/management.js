@@ -164,6 +164,17 @@ export const packageApi = {
   operatorPackages: (params = {}) => api.get('/packages/operator/packages', { params }),
 };
 
+// Package Service Offerings (logistics marketplace)
+export const packageServiceApi = {
+  list: (params = {}) => api.get('/package-services/', { params }),
+  get: (id) => api.get(`/package-services/${id}`),
+  create: (data) => api.post('/package-services/', data),
+  update: (id, data) => api.put(`/package-services/${id}`, data),
+  delete: (id) => api.delete(`/package-services/${id}`),
+  search: (params = {}) => api.get('/package-services/search', { params }),
+  quote: (id, params = {}) => api.post(`/package-services/${id}/quote`, null, { params }),
+};
+
 // Car Rental Management
 export const carRentalManagementApi = {
   list: (params = {}) => api.get('/car-rental/', { params }),
