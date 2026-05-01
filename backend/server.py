@@ -47,6 +47,7 @@ from routes.pressing import router as pressing_router
 from routes.banquets import router as banquets_router
 from routes.cinema import router as cinema_router
 from routes.packages import router as packages_router
+from routes.package_services import router as package_services_router
 from routes.access_control import router as access_control_router
 from routes.notifications import router as notifications_router
 from routes.public import router as public_router
@@ -287,6 +288,7 @@ app.include_router(pressing_router)
 app.include_router(banquets_router)
 app.include_router(cinema_router)
 app.include_router(packages_router)
+app.include_router(package_services_router)
 app.include_router(access_control_router)
 app.include_router(notifications_router)
 app.include_router(validation_router)

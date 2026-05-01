@@ -63,13 +63,59 @@ _PUBLIC_STATUS_MAP = {
 @router.post("/")
 async def create_package(
     package_data: PhysicalPackageCreate,
-    current_user: dict = Depends(require_any_permission(["packages.create", "operator.services.create"]))
+    current_user: dict = Depends(get_current_active_user),
 ):
-    """Create a new physical package (shipment)."""
+    """
+    Create a new physical package booking.
+
+    Two flows:
+    1. Customer booking against an operator's service offering (sets
+       `package_service_id`) — price is computed server-side from the service.
+    2. Operator manually creating a shipment record (no service id) — uses the
+       provided price, operator falls back to the current user's operator_id.
+    """
     db = get_database()
 
-    operator_id = package_data.operator_id or current_user.get("operator_id")
-    operator_name = package_data.operator_name or current_user.get("operator_name", "")
+    # Resolve the booking's service & operator
+    service = None
+    if package_data.package_service_id:
+        service = await db.package_services.find_one({"_id": package_data.package_service_id})
+        if not service:
+            raise HTTPException(status_code=404, detail="Selected package service not found")
+        if service.get("status") != "active":
+            raise HTTPException(status_code=400, detail="Selected package service is not active")
+
+    if service:
+        # Server-calculate price from the service's pricing model
+        from routes.package_services import calculate_price
+        dims = package_data.dimensions
+        calc = calculate_price(
+            service,
+            package_data.weight_kg or 0,
+            (dims.length_cm if dims else 0) or 0,
+            (dims.width_cm if dims else 0) or 0,
+            (dims.height_cm if dims else 0) or 0,
+        )
+        if not calc["ok"]:
+            raise HTTPException(status_code=400, detail=calc["reason"])
+        price = calc["price"]
+        operator_id = service.get("operator_id")
+        operator_name = service.get("operator_name", "")
+        carrier = package_data.carrier or service.get("operator_name", "")
+        # Estimated delivery from now + delivery_time_hours if not provided
+        est = package_data.estimated_delivery
+        if not est and service.get("delivery_time_hours"):
+            from datetime import timedelta
+            est = (datetime.utcnow() + timedelta(hours=int(service["delivery_time_hours"]))).date().isoformat()
+    else:
+        # Operator manual entry path — keep existing fallback behaviour
+        if current_user.get("role") not in ("admin", "super_admin", "operator"):
+            raise HTTPException(status_code=403, detail="Only operators can manually create shipments without a service")
+        price = package_data.price or 0
+        operator_id = package_data.operator_id or current_user.get("operator_id")
+        operator_name = package_data.operator_name or current_user.get("operator_name", "")
+        carrier = package_data.carrier
+        est = package_data.estimated_delivery
 
     now = datetime.utcnow()
     initial_event = {
@@ -83,12 +129,19 @@ async def create_package(
     package = {
         "_id": str(uuid.uuid4()),
         "tracking_number": _generate_tracking_number(),
-        **package_data.dict(exclude={"operator_id", "operator_name"}),
+        "package_service_id": package_data.package_service_id,
+        **package_data.dict(exclude={
+            "operator_id", "operator_name", "package_service_id",
+            "estimated_delivery", "carrier", "price", "customer_id",
+        }),
         "operator_id": operator_id,
         "operator_name": operator_name,
+        "carrier": carrier,
+        "estimated_delivery": est,
+        "price": price,
+        "customer_id": package_data.customer_id or current_user.get("id") or current_user.get("_id"),
         "status": PackageStatus.PENDING.value,
         "current_location": package_data.origin_city,
-        "estimated_delivery": None,
         "status_history": [initial_event],
         "created_at": now,
         "updated_at": now,
@@ -96,9 +149,10 @@ async def create_package(
 
     await db.packages.insert_one(package)
     return {
-        "message": "Package created",
+        "message": "Package booking created",
         "package_id": package["_id"],
         "tracking_number": package["tracking_number"],
+        "price": price,
     }
 
 

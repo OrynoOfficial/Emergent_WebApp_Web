@@ -26,6 +26,7 @@ import ServiceCommunicationsHub from '@/components/management/ServiceCommunicati
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
+import PackageServicesTab from '@/components/management/package/PackageServicesTab';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import {
@@ -497,8 +498,9 @@ export default function PackageManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
+          <TabsTrigger value="services" data-testid="tab-services"><Truck className="h-4 w-4 mr-2" />Services</TabsTrigger>
           <TabsTrigger value="management"><Package className="h-4 w-4 mr-2" />Shipments</TabsTrigger>
           <TabsTrigger value="bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
@@ -519,6 +521,10 @@ export default function PackageManagement() {
             secondaryLabel="In Transit"
             secondaryCount={packages.filter((p) => p.status === 'in_transit').length}
           />
+        </TabsContent>
+
+        <TabsContent value="services" className="mt-6" data-testid="services-tab-content">
+          <PackageServicesTab scopeOperatorId={scopeOperatorId} operators={operators} />
         </TabsContent>
 
         <TabsContent value="management" className="mt-6 space-y-4">

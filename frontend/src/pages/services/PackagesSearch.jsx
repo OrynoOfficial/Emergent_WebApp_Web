@@ -29,29 +29,33 @@ export default function PackagesSearch() {
     pickup_location: '',
     delivery_location: '',
     shipping_date: null,
-    package_size: ''
+    package_size: '',
+    weight_kg: '',
+    length_cm: '',
+    width_cm: '',
+    height_cm: '',
+    package_type: 'parcel',
   });
   const [errors, setErrors] = useState({});
   const [showDateModal, setShowDateModal] = useState(false);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    
+
     const newErrors = {};
     if (!searchParams.pickup_location) newErrors.pickup_location = 'Please select a pickup location';
     if (!searchParams.delivery_location) newErrors.delivery_location = 'Please select a delivery location';
     if (!searchParams.shipping_date) newErrors.shipping_date = 'Please select a shipping date';
-    if (!searchParams.package_size) newErrors.package_size = 'Please select a package size';
+    if (!searchParams.weight_kg || parseFloat(searchParams.weight_kg) <= 0) newErrors.weight_kg = 'Weight must be greater than 0';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // Store search params and navigate to results
     sessionStorage.setItem('packageSearchParams', JSON.stringify({
       ...searchParams,
-      shipping_date: searchParams.shipping_date.toISOString()
+      shipping_date: searchParams.shipping_date.toISOString(),
     }));
     navigate('/services/packages/results');
   };
@@ -140,62 +144,121 @@ export default function PackagesSearch() {
                   )}
                 </div>
 
-                {/* Package Size */}
+                {/* Package Size shortcut */}
                 <div>
-                  <Label className="text-sm font-medium text-slate-700">Package Size</Label>
-                  <Select 
-                    value={searchParams.package_size} 
+                  <Label className="text-sm font-medium text-slate-700">Quick Size (optional)</Label>
+                  <Select
+                    value={searchParams.package_size}
                     onValueChange={(v) => {
-                      setSearchParams(p => ({ ...p, package_size: v }));
-                      setErrors(p => ({ ...p, package_size: null }));
+                      const info = PACKAGE_SIZES[v];
+                      const dims = info?.dimensions?.match(/(\d+)×(\d+)×(\d+)/);
+                      const wt = info?.maxWeight?.match(/(\d+)/);
+                      setSearchParams(p => ({
+                        ...p,
+                        package_size: v,
+                        length_cm: dims?.[1] || p.length_cm,
+                        width_cm: dims?.[2] || p.width_cm,
+                        height_cm: dims?.[3] || p.height_cm,
+                        weight_kg: wt?.[1] || p.weight_kg,
+                      }));
                     }}
                   >
-                    <SelectTrigger className={cn(
-                      "h-12 mt-1 bg-white border-slate-200 hover:border-[#082c59]",
-                      searchParams.package_size && "font-medium text-slate-900",
-                      errors.package_size && "border-red-500"
-                    )}>
+                    <SelectTrigger className="h-12 mt-1 bg-white border-slate-200 hover:border-[#082c59]">
                       <Package className="w-4 h-4 mr-2 text-blue-600" />
-                      <SelectValue placeholder="Select package size" />
+                      <SelectValue placeholder="Pick a size to auto-fill" />
                     </SelectTrigger>
                     <SelectContent className="bg-white shadow-xl border-slate-200">
                       {Object.entries(PACKAGE_SIZES).map(([size, info]) => (
-                        <SelectItem 
-                          key={size} 
-                          value={size}
-                          className="py-3 hover:bg-[#082c59]/5 cursor-pointer transition-colors focus:bg-[#082c59]/10"
-                        >
+                        <SelectItem key={size} value={size} className="py-3 cursor-pointer">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-[#082c59]">{size}</span>
-                            <span className="text-slate-500 text-sm">
-                              {info.dimensions} • max {info.maxWeight}
-                            </span>
+                            <span className="text-slate-500 text-sm">{info.dimensions} • max {info.maxWeight}</span>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.package_size && <p className="text-xs text-red-500 mt-1">{errors.package_size}</p>}
                 </div>
               </div>
 
-              {/* Package Size Info */}
-              {searchParams.package_size && (
-                <div className="bg-[#082c59]/5 rounded-lg p-4 border border-[#082c59]/20">
-                  <div className="flex items-start gap-3">
-                    <Package className="w-5 h-5 text-[#082c59] mt-0.5" />
-                    <div>
-                      <p className="font-medium text-[#082c59]">Size {searchParams.package_size}</p>
-                      <p className="text-sm text-slate-600">
-                        {PACKAGE_SIZES[searchParams.package_size].dimensions} • Max weight: {PACKAGE_SIZES[searchParams.package_size].maxWeight}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {PACKAGE_SIZES[searchParams.package_size].description}
-                      </p>
-                    </div>
-                  </div>
+              {/* Weight + Dimensions */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Weight (kg) *</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={searchParams.weight_kg}
+                    onChange={(e) => { setSearchParams(p => ({ ...p, weight_kg: e.target.value })); setErrors(p => ({ ...p, weight_kg: null })); }}
+                    placeholder="e.g. 2.5"
+                    data-testid="package-weight-input"
+                    className={cn("h-12 mt-1 bg-white", errors.weight_kg && "border-red-500")}
+                  />
+                  {errors.weight_kg && <p className="text-xs text-red-500 mt-1">{errors.weight_kg}</p>}
                 </div>
-              )}
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Length (cm)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={searchParams.length_cm}
+                    onChange={(e) => setSearchParams(p => ({ ...p, length_cm: e.target.value }))}
+                    placeholder="40"
+                    className="h-12 mt-1 bg-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Width (cm)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={searchParams.width_cm}
+                    onChange={(e) => setSearchParams(p => ({ ...p, width_cm: e.target.value }))}
+                    placeholder="30"
+                    className="h-12 mt-1 bg-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Height (cm)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={searchParams.height_cm}
+                    onChange={(e) => setSearchParams(p => ({ ...p, height_cm: e.target.value }))}
+                    placeholder="20"
+                    className="h-12 mt-1 bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Package type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Package Type</Label>
+                  <Select
+                    value={searchParams.package_type}
+                    onValueChange={(v) => setSearchParams(p => ({ ...p, package_type: v }))}
+                  >
+                    <SelectTrigger className="h-12 mt-1 bg-white border-slate-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="document">Document</SelectItem>
+                      <SelectItem value="parcel">Parcel</SelectItem>
+                      <SelectItem value="fragile">Fragile</SelectItem>
+                      <SelectItem value="perishable">Perishable</SelectItem>
+                      <SelectItem value="electronics">Electronics</SelectItem>
+                      <SelectItem value="heavy_goods">Heavy Goods</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {searchParams.package_size && (
+                  <div className="bg-[#082c59]/5 rounded-lg p-3 border border-[#082c59]/20 text-xs text-slate-600 flex items-center">
+                    <Package className="w-4 h-4 text-[#082c59] mr-2" />
+                    Auto-filled from <strong className="mx-1">{searchParams.package_size}</strong> — adjust above if needed.
+                  </div>
+                )}
 
               <Button type="submit" className="w-full h-12 bg-[#082c59] hover:bg-[#0a3a75] text-lg">
                 <Search className="w-5 h-5 mr-2" /> Find Delivery Services
