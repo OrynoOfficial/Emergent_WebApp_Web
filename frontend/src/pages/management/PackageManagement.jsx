@@ -309,6 +309,9 @@ export default function PackageManagement() {
   const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
   const [replacePkg, setReplacePkg] = useState(null);
+  const [advancePkg, setAdvancePkg] = useState(null);
+  const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '' });
+  const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
 
   const dashboardData = useRealDashboardData('packages', '30days', scopeOperatorId);
 
@@ -437,17 +440,40 @@ export default function PackageManagement() {
     }
   };
 
-  const handleAdvance = async (pkg) => {
+  const handleAdvance = (pkg) => {
+    // Open the advance dialog with auto-suggested next status + sensible defaults
     const order = ['pending', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered'];
     const idx = order.indexOf(pkg.status);
     const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
-    if (!next) return;
+    if (!next) {
+      toast.info('Already at the final status');
+      return;
+    }
+    setAdvancePkg(pkg);
+    setAdvanceForm({
+      status: next,
+      location: pkg.current_location || (next === 'in_transit' ? '' : pkg.origin_city || ''),
+      note: '',
+    });
+  };
+
+  const handleSubmitAdvance = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (!advancePkg || !advanceForm.status) return;
+    setAdvanceSubmitting(true);
     try {
-      await api.post(`/packages/${pkg.id}/status?status=${next}`);
-      toast.success(`Status → ${next.replace('_', ' ')}`);
+      const params = new URLSearchParams();
+      params.set('status', advanceForm.status);
+      if (advanceForm.location?.trim()) params.set('location', advanceForm.location.trim());
+      if (advanceForm.note?.trim()) params.set('note', advanceForm.note.trim());
+      await api.post(`/packages/${advancePkg.id}/status?${params.toString()}`);
+      toast.success(`Status → ${advanceForm.status.replace(/_/g, ' ')}`);
+      setAdvancePkg(null);
       loadPackages();
-    } catch {
-      toast.error('Failed to advance status');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to advance status');
+    } finally {
+      setAdvanceSubmitting(false);
     }
   };
 
@@ -910,6 +936,87 @@ export default function PackageManagement() {
         allResources={packages}
         onSuccess={() => loadPackages?.()}
       />
+
+      {/* Advance Status Dialog (location + note) */}
+      <Dialog open={!!advancePkg} onOpenChange={(o) => { if (!o) setAdvancePkg(null); }}>
+        <DialogContent className="max-w-md bg-white" data-testid="advance-status-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-[#082c59]" /> Advance Shipment Status
+            </DialogTitle>
+          </DialogHeader>
+
+          {advancePkg && (
+            <form onSubmit={handleSubmitAdvance} className="space-y-4 py-2">
+              <div className="bg-slate-50 rounded-lg p-3 text-sm">
+                <p className="text-xs text-slate-400 font-mono">{advancePkg.tracking_number}</p>
+                <p className="font-medium text-slate-900">{advancePkg.origin_city} → {advancePkg.destination_city}</p>
+                <p className="text-xs text-slate-500 mt-1 capitalize">
+                  Current: <strong>{(advancePkg.status || '').replace(/_/g, ' ')}</strong>
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="advance-status">New Status *</Label>
+                <Select
+                  value={advanceForm.status}
+                  onValueChange={(v) => setAdvanceForm((p) => ({ ...p, status: v }))}
+                >
+                  <SelectTrigger className="bg-white" data-testid="advance-status-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {STATUS_OPTIONS
+                      .filter((s) => !['cancelled', 'returned'].includes(s.value))
+                      .map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="advance-location">Current Location</Label>
+                <Input
+                  id="advance-location"
+                  data-testid="advance-location-input"
+                  placeholder="e.g. Bafoussam Hub, On the road to Douala..."
+                  value={advanceForm.location}
+                  onChange={(e) => setAdvanceForm((p) => ({ ...p, location: e.target.value }))}
+                />
+                <p className="text-xs text-slate-400 mt-1">Shown on the public tracking page as "Current Location"</p>
+              </div>
+
+              <div>
+                <Label htmlFor="advance-note">Note (optional)</Label>
+                <Textarea
+                  id="advance-note"
+                  data-testid="advance-note-input"
+                  placeholder="e.g. Delayed at customs, expected to clear by 4pm"
+                  rows={2}
+                  value={advanceForm.note}
+                  onChange={(e) => setAdvanceForm((p) => ({ ...p, note: e.target.value }))}
+                />
+                <p className="text-xs text-slate-400 mt-1">Visible to the recipient on the public timeline</p>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setAdvancePkg(null)} disabled={advanceSubmitting}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#082c59] hover:bg-[#0a3a75]"
+                  disabled={advanceSubmitting || !advanceForm.status}
+                  data-testid="confirm-advance-btn"
+                >
+                  {advanceSubmitting ? 'Updating…' : 'Update Status'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
