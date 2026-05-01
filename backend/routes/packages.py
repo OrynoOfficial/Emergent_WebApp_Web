@@ -38,6 +38,28 @@ def _normalize(pkg: dict) -> dict:
     return pkg
 
 
+_STATUS_LABELS = {
+    "pending":          {"title": "Pending Pickup",      "msg": "Awaiting pickup from sender"},
+    "picked_up":        {"title": "Package Received",    "msg": "Package collected from sender"},
+    "in_transit":       {"title": "In Transit",          "msg": "Package is on its way"},
+    "out_for_delivery": {"title": "Out for Delivery",    "msg": "Package is out for delivery to recipient"},
+    "delivered":        {"title": "Delivered",           "msg": "Package successfully delivered"},
+    "cancelled":        {"title": "Cancelled",           "msg": "Shipment was cancelled"},
+    "returned":         {"title": "Returned",            "msg": "Package returned to sender"},
+}
+
+# Map our internal statuses to the public widget's status codes
+_PUBLIC_STATUS_MAP = {
+    "pending":          "pending",
+    "picked_up":        "received",
+    "in_transit":       "in_transit",
+    "out_for_delivery": "out_for_delivery",
+    "delivered":        "delivered",
+    "cancelled":        "delayed",
+    "returned":         "delayed",
+}
+
+
 @router.post("/")
 async def create_package(
     package_data: PhysicalPackageCreate,
@@ -49,6 +71,15 @@ async def create_package(
     operator_id = package_data.operator_id or current_user.get("operator_id")
     operator_name = package_data.operator_name or current_user.get("operator_name", "")
 
+    now = datetime.utcnow()
+    initial_event = {
+        "status": PackageStatus.PENDING.value,
+        "title": "Package registered",
+        "description": f"Shipment created and awaiting pickup at {package_data.origin_city}",
+        "location": package_data.origin_city,
+        "timestamp": now,
+    }
+
     package = {
         "_id": str(uuid.uuid4()),
         "tracking_number": _generate_tracking_number(),
@@ -56,8 +87,11 @@ async def create_package(
         "operator_id": operator_id,
         "operator_name": operator_name,
         "status": PackageStatus.PENDING.value,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "current_location": package_data.origin_city,
+        "estimated_delivery": None,
+        "status_history": [initial_event],
+        "created_at": now,
+        "updated_at": now,
     }
 
     await db.packages.insert_one(package)
@@ -113,12 +147,63 @@ async def get_packages(
 
 @router.get("/track/{tracking_number}")
 async def track_package(tracking_number: str):
-    """Public tracking endpoint by tracking number."""
+    """
+    PUBLIC tracking endpoint by tracking number.
+
+    Returns a payload shaped for the public Track widget on the marketing site:
+      {
+        tracking_number, status,            # mapped public status code
+        description,                         # contents description
+        origin, destination,
+        estimated_delivery, weight,
+        current_location, vehicle,
+        events: [{ status, title, description, timestamp, location }]
+      }
+    """
     db = get_database()
-    package = await db.packages.find_one({"tracking_number": tracking_number.upper()})
-    if not package:
-        raise HTTPException(status_code=404, detail="Package not found")
-    return _normalize(package)
+    pkg = await db.packages.find_one({"tracking_number": tracking_number.upper()})
+    if not pkg:
+        raise HTTPException(status_code=404, detail="No package found with this tracking number.")
+
+    raw_status = pkg.get("status", "pending")
+    public_status = _PUBLIC_STATUS_MAP.get(raw_status, raw_status)
+
+    # Build events array (newest last)
+    events = []
+    for ev in pkg.get("status_history", []) or []:
+        ev_status = ev.get("status", "")
+        events.append({
+            "status": _PUBLIC_STATUS_MAP.get(ev_status, ev_status),
+            "title": ev.get("title") or _STATUS_LABELS.get(ev_status, {}).get("title", ev_status),
+            "description": ev.get("description") or "",
+            "timestamp": ev.get("timestamp").isoformat() if hasattr(ev.get("timestamp"), "isoformat") else ev.get("timestamp"),
+            "location": ev.get("location") or "",
+        })
+    # Fallback: synthesize a single event from current state
+    if not events:
+        events.append({
+            "status": public_status,
+            "title": _STATUS_LABELS.get(raw_status, {}).get("title", raw_status),
+            "description": _STATUS_LABELS.get(raw_status, {}).get("msg", ""),
+            "timestamp": (pkg.get("updated_at") or pkg.get("created_at")).isoformat() if hasattr((pkg.get("updated_at") or pkg.get("created_at")), "isoformat") else None,
+            "location": pkg.get("current_location") or pkg.get("origin_city") or "",
+        })
+
+    est = pkg.get("estimated_delivery")
+    return {
+        "tracking_number": pkg.get("tracking_number"),
+        "status": public_status,
+        "description": pkg.get("description") or f"{(pkg.get('package_type') or 'parcel').replace('_', ' ').title()}",
+        "origin": pkg.get("origin_city"),
+        "destination": pkg.get("destination_city"),
+        "estimated_delivery": est.isoformat() if hasattr(est, "isoformat") else est,
+        "weight": pkg.get("weight_kg") or 0,
+        "current_location": pkg.get("current_location") or "",
+        "vehicle": pkg.get("operator_name") or "",
+        "sender_location": pkg.get("origin_city"),
+        "receiver_location": pkg.get("destination_city"),
+        "events": events,
+    }
 
 
 @router.get("/{package_id}")
@@ -157,9 +242,11 @@ async def update_package(
 async def update_status(
     package_id: str,
     status: PackageStatus,
+    location: Optional[str] = None,
+    note: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["packages.edit", "operator.services.edit"]))
 ):
-    """Quick endpoint to advance package status."""
+    """Quick endpoint to advance package status. Pushes a status_history event."""
     db = get_database()
     package = await db.packages.find_one({"_id": package_id})
     if not package:
@@ -168,9 +255,26 @@ async def update_status(
     if current_user["role"] == "operator" and package.get("operator_id") != current_user.get("operator_id"):
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    now = datetime.utcnow()
+    label = _STATUS_LABELS.get(status.value, {})
+    event = {
+        "status": status.value,
+        "title": label.get("title", status.value.replace("_", " ").title()),
+        "description": note or label.get("msg", ""),
+        "location": location or package.get("current_location") or package.get("destination_city"),
+        "timestamp": now,
+    }
+
+    update = {
+        "status": status.value,
+        "updated_at": now,
+    }
+    if location:
+        update["current_location"] = location
+
     await db.packages.update_one(
         {"_id": package_id},
-        {"$set": {"status": status.value, "updated_at": datetime.utcnow()}},
+        {"$set": update, "$push": {"status_history": event}},
     )
     return {"message": "Status updated", "status": status.value}
 
