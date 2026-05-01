@@ -75,6 +75,8 @@ const DEFAULT_FORM = {
   price: '',
   payment_status: 'unpaid',
   operator_id: '',
+  estimated_delivery: '',
+  carrier: '',
 };
 
 const StatusBadge = ({ value }) => {
@@ -379,6 +381,8 @@ export default function PackageManagement() {
         price: pkg.price ?? '',
         payment_status: pkg.payment_status || 'unpaid',
         operator_id: pkg.operator_id || '',
+        estimated_delivery: pkg.estimated_delivery || '',
+        carrier: pkg.carrier || '',
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -780,9 +784,9 @@ export default function PackageManagement() {
               </div>
             </section>
 
-            {/* Pricing */}
+            {/* Pricing & ETA */}
             <section>
-              <h3 className="font-semibold text-slate-900 mb-3">Pricing</h3>
+              <h3 className="font-semibold text-slate-900 mb-3">Pricing & Delivery</h3>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label>Declared Value (FCFA)</Label>
@@ -802,6 +806,28 @@ export default function PackageManagement() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <Label>Estimated Delivery Date</Label>
+                  <Input
+                    type="date"
+                    value={form.estimated_delivery}
+                    onChange={(e) => setForm((p) => ({ ...p, estimated_delivery: e.target.value }))}
+                    data-testid="estimated-delivery-input"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Shown to the recipient on the public tracking page</p>
+                </div>
+                <div>
+                  <Label>Carrier / Vehicle</Label>
+                  <Input
+                    value={form.carrier}
+                    onChange={(e) => setForm((p) => ({ ...p, carrier: e.target.value }))}
+                    placeholder="e.g. Musango Express, Truck #CE-1234"
+                    data-testid="carrier-input"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Free-text — appears as "Carrier" on the tracking widget</p>
                 </div>
               </div>
             </section>
@@ -899,6 +925,18 @@ export default function PackageManagement() {
                 <div>
                   <p className="text-slate-500 text-xs">Declared Value</p>
                   <p className="font-semibold">{formatFCFA(viewingPkg.declared_value || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">Estimated Delivery</p>
+                  <p className="font-semibold">{viewingPkg.estimated_delivery || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">Carrier</p>
+                  <p className="font-semibold">{viewingPkg.carrier || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500 text-xs">Current Location</p>
+                  <p className="font-semibold">{viewingPkg.current_location || '—'}</p>
                 </div>
               </div>
               {viewingPkg.description && (

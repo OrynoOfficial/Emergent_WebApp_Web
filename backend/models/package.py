@@ -59,6 +59,8 @@ class PhysicalPackageCreate(BaseModel):
     payment_status: PaymentStatus = PaymentStatus.UNPAID
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    estimated_delivery: Optional[str] = None  # ISO date string
+    carrier: Optional[str] = None  # Free-text carrier/vehicle
 
 
 class PhysicalPackageUpdate(BaseModel):
@@ -76,6 +78,8 @@ class PhysicalPackageUpdate(BaseModel):
     price: Optional[float] = None
     payment_status: Optional[PaymentStatus] = None
     status: Optional[PackageStatus] = None
+    estimated_delivery: Optional[str] = None
+    carrier: Optional[str] = None
 
 
 class PhysicalPackage(BaseModel):

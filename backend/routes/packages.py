@@ -199,7 +199,7 @@ async def track_package(tracking_number: str):
         "estimated_delivery": est.isoformat() if hasattr(est, "isoformat") else est,
         "weight": pkg.get("weight_kg") or 0,
         "current_location": pkg.get("current_location") or "",
-        "vehicle": pkg.get("operator_name") or "",
+        "vehicle": pkg.get("carrier") or pkg.get("operator_name") or "",
         "sender_location": pkg.get("origin_city"),
         "receiver_location": pkg.get("destination_city"),
         "events": events,
