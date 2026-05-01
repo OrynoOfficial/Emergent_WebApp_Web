@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="1" tests="8" time="1.929" timestamp="2026-05-01T22:11:41.298696+00:00" hostname="agent-env-998fa2df-f126-4d83-bfb1-ade2e3a591a1"><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestCinemaFilms" name="test_create_film_with_new_fields" time="0.718"><failure message="AssertionError: assert [] == ['Actor A', 'Actor B']&#10;  &#10;  Right contains 2 more items, first extra item: 'Actor A'&#10;  &#10;  Full diff:&#10;  + []&#10;  - [&#10;  -     'Actor A',&#10;  -     'Actor B',&#10;  - ]">backend/tests/test_iteration140_cinema_reassign.py:70: in test_create_film_with_new_fields
+    assert got["cast"] == ["Actor A", "Actor B"]
+E   AssertionError: assert [] == ['Actor A', 'Actor B']
+E     
+E     Right contains 2 more items, first extra item: 'Actor A'
+E     
+E     Full diff:
+E     + []
+E     - [
+E     -     'Actor A',
+E     -     'Actor B',
+E     - ]</failure></testcase><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestCinemaFilms" name="test_update_film_simple_regression" time="0.218" /><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestCinemaFilms" name="test_update_film_new_fields" time="0.328"><failure message="AssertionError: assert [] == ['Actor X']&#10;  &#10;  Right contains one more item: 'Actor X'&#10;  &#10;  Full diff:&#10;  + []&#10;  - [&#10;  -     'Actor X',&#10;  - ]">backend/tests/test_iteration140_cinema_reassign.py:109: in test_update_film_new_fields
+    assert got["cast"] == ["Actor X"]
+E   AssertionError: assert [] == ['Actor X']
+E     
+E     Right contains one more item: 'Actor X'
+E     
+E     Full diff:
+E     + []
+E     - [
+E     -     'Actor X',
+E     - ]</failure></testcase><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestCinemaShowtimesRegression" name="test_create_showtime" time="0.109"><skipped type="pytest.skip" message="No cinema seed; cannot test showtime create">/app/backend/tests/test_iteration140_cinema_reassign.py:121: No cinema seed; cannot test showtime create</skipped></testcase><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestReassignPresets" name="test_restaurant_preset_registered" time="0.119" /><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestReassignPresets" name="test_banquet_preset_registered" time="0.117" /><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestReassignPresets" name="test_unsupported_service_type_still_400" time="0.117" /><testcase classname="backend.tests.test_iteration140_cinema_reassign.TestPackagesRegression" name="test_list_packages_ok" time="0.107" /></testsuite></testsuites>

@@ -8,10 +8,12 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Utensils, Plus, LayoutDashboard, MessageSquare, RefreshCw, MapPin, Star, 
   Clock, Phone, Mail, Save, Trash2, Edit, Eye, ChevronRight, X, Menu, 
-  DollarSign, ChevronLeft, Building2, Banknote, Receipt
+  DollarSign, ChevronLeft, Building2, Banknote, Receipt,
+  Replace as ReplaceIcon
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,7 +59,7 @@ const DEFAULT_MENU_ITEM = {
 // Dashboard data now fetched from API via useRealDashboardData hook
 
 // Modern Restaurant Card Component
-const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, canDelete, isSelected = false, isOtherSelected = false }) => {
+const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, onReplace, canEdit, canDelete, isSelected = false, isOtherSelected = false }) => {
   const images = restaurant.images?.filter(img => img) || [];
   const cuisineTypes = restaurant.cuisine_type || [];
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
@@ -138,6 +140,13 @@ const RestaurantCard = ({ restaurant, onViewMenu, onEdit, onDelete, canEdit, can
           >
             <Menu className="w-4 h-4 mr-1" /> View Menu
           </Button>
+          {canEdit && (
+            <PermissionGate permission="restaurants.edit">
+              <Button size="sm" variant="outline" onClick={() => onReplace?.(restaurant)} title="Migrate bookings to another restaurant" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-restaurant-btn-${restaurant.id}`}>
+                <ReplaceIcon className="w-4 h-4" />
+              </Button>
+            </PermissionGate>
+          )}
           {canEdit && (
             <PermissionGate permission="restaurants.edit">
               <Button size="sm" variant="outline" onClick={() => onEdit(restaurant)}>
@@ -263,6 +272,7 @@ export default function RestaurantManagement() {
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [replaceRestaurant, setReplaceRestaurant] = useState(null);
 
   const dashboardData = useRealDashboardData('restaurants', '30days', scopeOperatorId);
 
@@ -600,6 +610,7 @@ export default function RestaurantManagement() {
                               onViewMenu={handleViewMenu}
                               onEdit={openRestaurantDialog}
                               onDelete={confirmDeleteRestaurant}
+                              onReplace={setReplaceRestaurant}
                               canEdit={canEdit}
                               canDelete={canDelete}
                               isSelected={showMenuPanel && selectedRestaurant?.id === restaurant.id}
@@ -884,6 +895,18 @@ export default function RestaurantManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceRestaurant}
+        onClose={() => setReplaceRestaurant(null)}
+        serviceType="restaurant"
+        oldResource={replaceRestaurant}
+        allResources={restaurants}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadRestaurants?.();
         }}
       />
     </div>

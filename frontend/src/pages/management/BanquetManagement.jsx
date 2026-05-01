@@ -11,10 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   UtensilsCrossed, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Calendar, PartyPopper, Sparkles, Eye, Banknote, Receipt
+  Bell, Send, Calendar, PartyPopper, Sparkles, Eye, Banknote, Receipt,
+  Replace as ReplaceIcon,
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -117,6 +119,7 @@ export default function BanquetManagement() {
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [replaceBanquet, setReplaceBanquet] = useState(null);
 
   // Use the banquet dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
@@ -362,6 +365,11 @@ export default function BanquetManagement() {
                         <Eye className="w-4 h-4" />
                       </Button>
                       <PermissionGate permission="banquets.edit">
+                        <Button size="sm" variant="outline" onClick={() => setReplaceBanquet(banquet)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-banquet-btn-${banquet.id}`}>
+                          <ReplaceIcon className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="banquets.edit">
                         <Button size="sm" variant="outline" className="flex-1" onClick={() => openBanquetDialog(banquet)}>
                           <Edit className="w-4 h-4 mr-1" /> Edit
                         </Button>
@@ -576,6 +584,18 @@ export default function BanquetManagement() {
         onSuccess={() => {
           setBookingsRefreshKey((k) => k + 1);
           setActiveTab('bookings');
+        }}
+      />
+
+      <ReplaceResourceModal
+        open={!!replaceBanquet}
+        onClose={() => setReplaceBanquet(null)}
+        serviceType="banquet"
+        oldResource={replaceBanquet}
+        allResources={banquets}
+        onSuccess={() => {
+          setBookingsRefreshKey((k) => k + 1);
+          loadBanquets?.();
         }}
       />
     </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_any_permission
@@ -176,6 +176,8 @@ async def create_film(
     poster_url: Optional[str] = None,
     trailer_url: Optional[str] = None,
     release_date: Optional[str] = None,
+    status: Optional[str] = None,
+    imdb_rating: Optional[float] = None,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.create"]))
 ):
     """Create a new film - requires cinema.manage_screenings permission"""
@@ -195,7 +197,8 @@ async def create_film(
         "poster_url": poster_url,
         "trailer_url": trailer_url,
         "release_date": release_date,
-        "status": FilmStatus.NOW_SHOWING,
+        "imdb_rating": imdb_rating,
+        "status": status or FilmStatus.NOW_SHOWING,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
@@ -215,9 +218,12 @@ async def update_film(
     language: Optional[str] = None,
     rating: Optional[str] = None,
     director: Optional[str] = None,
+    cast: Optional[List[str]] = None,
     poster_url: Optional[str] = None,
     trailer_url: Optional[str] = None,
     release_date: Optional[str] = None,
+    imdb_rating: Optional[float] = None,
+    status: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.edit"]))
 ):
     """Update a film"""
@@ -229,8 +235,9 @@ async def update_film(
     update_data = {}
     for field, value in [("title", title), ("duration_minutes", duration_minutes), ("genre", genre),
                          ("description", description), ("language", language), ("rating", rating),
-                         ("director", director), ("poster_url", poster_url), ("trailer_url", trailer_url),
-                         ("release_date", release_date)]:
+                         ("director", director), ("cast", cast), ("poster_url", poster_url),
+                         ("trailer_url", trailer_url), ("release_date", release_date),
+                         ("imdb_rating", imdb_rating), ("status", status)]:
         if value is not None:
             update_data[field] = value
     

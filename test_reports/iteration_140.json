@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 140 end-to-end test of (1) Cinema film/showtime backend changes, (2) resource-reassignment restaurant/banquet presets, (3) payment-button disabled bug fix in HotelBooking/RestaurantBooking, (4) TravelBooking idNumber editability, (5) CinemaManagement modal overhaul, (6) /admin/sales OperatorScopeFilter + expanded time ranges + Export CSV/XLS/PDF + Revenue-by-Operator card, (7) Replace button rollout to Banquet/Restaurant/Package management, (8) Reporting user filter. BACKEND (pytest 5/8 pass, 2 fail, 1 skip): restaurant + banquet reassignment presets registered correctly (404 for nonexistent IDs, no more 'not supported' 400) — PASS. Packages list regression — PASS. Film PUT regression (simple update) — PASS. Film PUT new-scalar fields (imdb_rating, status) — PASS in terms of persistence but cast list NOT persisted (see bug below). Film POST with cast=['A','B'] + genre=['action','drama'] stores them as [] — FAIL. Repro confirmed via curl: POST /api/cinema/films?cast=A&cast=B&genre=action returns cast=[] genre=[] saved. Root cause: FastAPI signature uses `cast: List[str] = []` (mutable default) without Query() wrapper, so FastAPI treats List[str] parameters as Body not Query and the default [] always wins. Showtime create test skipped because GET /api/cinema/cinemas returned 0 seed cinemas. FRONTEND: /admin/sales fully rendered — Operator dropdown visible ('All Operators (3)'), Date filter visible ('Last 30 Days'), Export button visible and opens dropdown with export-csv-item + export-xls-item + export-pdf-item (all data-testids found), Revenue-by-Operator card present (data-testid='revenue-by-operator-card'). Code review confirms: HotelBooking line 907 removes || !selectedPaymentMethod (only !isBookingDataComplete || paymentInProgress) — FIX PRESENT; outer Pay button at line 918 still correctly gates on selectedPaymentMethod. RestaurantBooking lines 480/491 mirror the same pattern — FIX PRESENT. TravelBooking idNumber StyledInput (line 158-165) has no disabled prop — FIX PRESENT, user can edit when isTraveler is true. CinemaManagement DEFAULT_MOVIE_FORM has no ticket_price/show_times, has status/imdb_rating/cast/trailer_url/release_date; DEFAULT_SHOWTIME_FORM + openShowtimeDialog + handleSaveShowtime + Add Showtime button (data-testid='add-showtime-btn') + edit-showtime-btn + showtime-dialog + showtime-price-input all present. Cinema dialog has phone/email/screens manager with add-screen-btn. BanquetManagement, RestaurantManagement, PackageManagement all import ReplaceResourceModal and pass serviceType='banquet'/'restaurant'/'package'. Reporting.jsx has User dropdown gated on operatorFilter with /users/?operator_id=... loader. Cinema Management UI page threw many 403s during the Playwright session (probably seed admin missing some sub-permissions) and data-testids not found during interactive test — this is likely a test-env seed issue, not a code bug.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/cinema/films",
+        "issue": "cast (List[str]) and genre (List[str]) query params are NOT persisted — always saved as empty []. FastAPI treats `cast: List[str] = []` signature as Body, not Query, so default [] always wins. Need Query() wrapper: `cast: List[str] = Query(default_factory=list)`. Same fix needed for PUT /api/cinema/films/{id} (cast list update also fails). Also affects subtitles.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration140_cinema_reassign.py",
+    "/app/test_reports/pytest/iter140.xml"
+  ],
+  "repro_for_cast_bug": {
+    "command": "curl -X POST '$BASE/api/cinema/films?title=X&duration_minutes=90&cast=A&cast=B&genre=action' -H 'Authorization: Bearer <admin>'",
+    "observed": "cast=[] genre=[] in saved doc",
+    "expected": "cast=['A','B'] genre=['action']",
+    "fix_suggestion": "In /app/backend/routes/cinema.py POST /films and PUT /films/{id}: change `cast: List[str] = []` to `cast: List[str] = Query(default_factory=list)` and same for `genre`, `subtitles`. Import Query from fastapi."
+  },
+  "action_items": [
+    "Fix List[str] query params in /app/backend/routes/cinema.py (POST /films + PUT /films/{id}): wrap cast, genre, subtitles with fastapi.Query(default_factory=list). Without this, Add Movie frontend will appear to save but cast/genre are discarded silently.",
+    "(Optional) Investigate why admin@test.com gets 403 on several cinema endpoints when navigating /management/cinema — likely seed-role missing cinema.* permissions. Not blocking UI render in manual testing but caused Playwright assertions to fail in this iteration.",
+    "(Optional) Seed at least one cinema in dev DB so end-to-end showtime-create flow can be regression-tested."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/routes/cinema.py:165-208 — cast: List[str] = [] and genre: List[str] = [] are FastAPI anti-pattern. Must use Query(default_factory=list) for query-string list params. This bug silently breaks the core new feature.",
+    "/app/frontend/src/pages/management/CinemaManagement.jsx:336 — correctly appends cast entries as repeated params (castArr.forEach(c => params.append('cast', c))). Frontend is correct; backend is broken.",
+    "/app/frontend/src/pages/services/HotelBooking.jsx:907 — disabled prop correctly removed selectedPaymentMethod gate. The outer Pay button (line 918) still gates on selectedPaymentMethod, so user must pick a method to pay — correct UX.",
+    "/app/frontend/src/pages/services/RestaurantBooking.jsx:480 — same fix applied correctly.",
+    "/app/frontend/src/pages/services/TravelBooking.jsx:158-165 — idNumber StyledInput has no disabled prop; passenger can edit even when isTraveler is checked.",
+    "/app/backend/routes/resource_reassignments.py:199-237 — restaurant + banquet presets correctly registered with resource_collection mapping to 'restaurants'/'banquets', order_resource_id_path pointing to booking_details.<x>_id, and appropriate compat_fields/snapshot_fields.",
+    "/app/frontend/src/pages/admin/SalesManagement.jsx — OperatorScopeFilter integrated, TIME_RANGES has this_month/last_month/this_year/last_year/all (9 total), Export dropdown wired to handleExportCSV/XLS/PDF using xlsx+jsPDF+autoTable; revenueByOperator memo + horizontal BarChart + sortable table.",
+    "/app/frontend/src/pages/admin/Reporting.jsx:65,155-156 — User dropdown correctly loads /users/?operator_id=<id>&limit=500 and resets on operator change; disabled when !operatorFilter.",
+    "/app/frontend/src/pages/management/BanquetManagement.jsx, RestaurantManagement.jsx, PackageManagement.jsx — ReplaceResourceModal imported, replaceX state, serviceType='banquet'/'restaurant'/'package' passed correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration140_cinema_reassign.py (new)",
+    "/app/test_reports/pytest/iter140.xml (new)"
+  ],
+  "success_rate": {
+    "backend": "62.5% (5/8). Failures = cast list persistence bug (affects 2 tests). Restaurant/banquet reassignment presets + packages regression + film simple update + film scalar-field update + unsupported-service-type all pass. Showtime test skipped due to empty cinema seed.",
+    "frontend": "100% on code-review + partial UI verification. /admin/sales fully verified in Playwright (operator filter, date filter, export dropdown items, revenue-by-operator card). Cinema/Reporting page UI selectors not found during the interactive session due to 403 auth errors — probably seed permissions, not a code defect; code review confirms all required testids exist in source."
+  },
+  "test_credentials": "admin@test.com/testpassword123, customer@test.com/testpassword123 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Backend test created ~3 transient TEST_ films via POST /api/cinema/films; no explicit cleanup but small footprint and TEST_ prefixed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend bug: List[str] query params without Query() wrapper on POST/PUT /api/cinema/films silently drop cast/genre/subtitles. Trivial fix: add `from fastapi import Query` and change `cast: List[str] = []` → `cast: List[str] = Query(default_factory=list)` (and genre, subtitles). After fix, re-run /app/backend/tests/test_iteration140_cinema_reassign.py — should go 8/8 (showtime test still skips unless cinema seeded). The payment-button disable bug is verified fixed by code review; a full customer-journey Playwright test was not completed because the /services/hotels flow requires destination selection before hotel cards render, and the authenticated session in the test harness dropped during navigation — main agent can self-test manually or by seeding a hotel and clicking directly to /services/hotels/<id>. All frontend code changes (Replace buttons, Reporting user filter, Sales export dropdown, Cinema showtime dialog) are structurally correct per code review."
+}

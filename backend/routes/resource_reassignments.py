@@ -196,6 +196,44 @@ SERVICE_SPECS: Dict[str, Dict[str, Any]] = {
         # Showtimes belong to a cinema (cinema_id) — resolve operator via cinemas.operator_id.
         "compat_fields": ["cinema_id"],
     },
+    "restaurant": {
+        "resource_type": "restaurant",
+        "resource_collection": "restaurants",
+        "order_resource_id_path": "booking_details.restaurant_id",
+        "order_snapshot_path": "booking_details.restaurant_info",
+        "extra_order_mirrors": {
+            "booking_details.restaurant_name": "name",
+        },
+        "snapshot_fields": [
+            "name", "city", "address", "phone", "cuisine_type",
+            "features", "images", "average_price",
+        ],
+        "noun_singular": "restaurant",
+        "noun_singular_title": "Restaurant",
+        "booking_noun": "reservation",
+        "label_field": "name",
+        "secondary_label_field": "city",
+        "compat_fields": ["operator_id"],
+    },
+    "banquet": {
+        "resource_type": "banquet",
+        "resource_collection": "banquets",
+        "order_resource_id_path": "booking_details.banquet_id",
+        "order_snapshot_path": "booking_details.banquet_info",
+        "extra_order_mirrors": {
+            "booking_details.banquet_name": "name",
+        },
+        "snapshot_fields": [
+            "name", "venue_type", "address", "city", "capacity_min",
+            "capacity_max", "services_included", "images", "base_price",
+        ],
+        "noun_singular": "hall",
+        "noun_singular_title": "Banquet Hall",
+        "booking_noun": "booking",
+        "label_field": "name",
+        "secondary_label_field": "city",
+        "compat_fields": ["operator_id"],
+    },
 }
 
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
 import { formatFCFA } from '@/utils/currency';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter from '@/components/common/QuickDateRangeFilter';
+import api from '@/api/client';
 
 const REPORT_TYPES = [
   { id: 'bookings', name: 'Bookings Report', icon: FileText, description: 'All bookings with status and details' },
@@ -45,7 +46,35 @@ export default function Reporting() {
   const [selectedReportType, setSelectedReportType] = useState(null);
   const [dateRange, setDateRange] = useState({ preset: 'last_30_days', from: null, to: null });
   const [operatorFilter, setOperatorFilter] = useState('');
+  const [userFilter, setUserFilter] = useState('');
+  const [operatorUsers, setOperatorUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // When operator changes, reset the user filter and load operator users
+  useEffect(() => {
+    setUserFilter('');
+    if (!operatorFilter) {
+      setOperatorUsers([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingUsers(true);
+    (async () => {
+      try {
+        const res = await api.get(`/users/?operator_id=${operatorFilter}&limit=500`);
+        if (!cancelled) {
+          const list = res.data.users || res.data || [];
+          setOperatorUsers(Array.isArray(list) ? list : []);
+        }
+      } catch {
+        if (!cancelled) setOperatorUsers([]);
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [operatorFilter]);
 
   const handleGenerateReport = async () => {
     if (!selectedReportType) return;
@@ -108,7 +137,7 @@ export default function Reporting() {
                 <CardTitle>Report Configuration</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
                     <Label>Date Range</Label>
                     <div className="mt-2">
@@ -122,6 +151,25 @@ export default function Reporting() {
                     </div>
                   </div>
                   <div>
+                    <Label>User {operatorFilter ? '(under operator)' : '(pick operator first)'}</Label>
+                    <Select value={userFilter || 'all'} onValueChange={(v) => setUserFilter(v === 'all' ? '' : v)} disabled={!operatorFilter || loadingUsers}>
+                      <SelectTrigger className="mt-2 bg-white" data-testid="report-user-filter">
+                        <SelectValue placeholder={loadingUsers ? 'Loading users...' : 'All users of operator'} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white max-h-64">
+                        <SelectItem value="all">All users</SelectItem>
+                        {operatorUsers.map((u) => (
+                          <SelectItem key={u.id || u._id} value={u.id || u._id}>
+                            {u.full_name || u.name || u.email} {u.role ? `· ${u.role}` : ''}
+                          </SelectItem>
+                        ))}
+                        {!loadingUsers && operatorUsers.length === 0 && operatorFilter && (
+                          <SelectItem value="none" disabled>No users found</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Service Filter</Label>
                     <Select>
                       <SelectTrigger className="mt-2">
@@ -133,6 +181,11 @@ export default function Reporting() {
                         <SelectItem value="travel">Travel</SelectItem>
                         <SelectItem value="car_rental">Car Rental</SelectItem>
                         <SelectItem value="restaurants">Restaurants</SelectItem>
+                        <SelectItem value="events">Events</SelectItem>
+                        <SelectItem value="cinema">Cinema</SelectItem>
+                        <SelectItem value="banquets">Banquets</SelectItem>
+                        <SelectItem value="laundry">Laundry</SelectItem>
+                        <SelectItem value="packages">Packages</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

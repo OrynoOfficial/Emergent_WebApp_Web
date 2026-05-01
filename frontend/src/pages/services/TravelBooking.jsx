@@ -145,7 +145,6 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
           icon={Users}
           value={passenger.firstName}
           onChange={(e) => onChange({ ...passenger, firstName: e.target.value })}
-          disabled={isTraveler}
           required
         />
         <StyledInput
@@ -154,7 +153,6 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
           icon={Users}
           value={passenger.lastName}
           onChange={(e) => onChange({ ...passenger, lastName: e.target.value })}
-          disabled={isTraveler}
           required
         />
         <StyledInput
@@ -163,7 +161,6 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
           icon={CreditCard}
           value={passenger.idNumber}
           onChange={(e) => onChange({ ...passenger, idNumber: e.target.value })}
-          disabled={isTraveler}
           required
         />
         <StyledInput
@@ -172,7 +169,6 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
           icon={Users}
           value={passenger.phoneNumber}
           onChange={(e) => onChange({ ...passenger, phoneNumber: e.target.value })}
-          disabled={isTraveler}
           required
         />
       </div>

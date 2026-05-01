@@ -12,6 +12,7 @@ import {
   Package, Plus, Edit, Trash2, MapPin, User, Phone, Weight, Ruler,
   LayoutDashboard, BarChart2, MessageSquare, RefreshCw, Search,
   Receipt, Eye, Truck, CheckCircle, Clock, XCircle, PackageCheck,
+  Replace as ReplaceIcon,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -24,6 +25,7 @@ import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveD
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
+import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import {
@@ -150,7 +152,7 @@ const PackageAnalytics = ({ packages }) => {
 };
 
 // Card view (grid + details share the same card with size variants)
-const PackageCard = ({ pkg, onView, onEdit, onDelete, onAdvance, dense = false }) => {
+const PackageCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace, dense = false }) => {
   const dim = pkg.dimensions || {};
   const dims = [dim.length_cm, dim.width_cm, dim.height_cm].filter(Boolean).join(' × ');
   return (
@@ -197,6 +199,13 @@ const PackageCard = ({ pkg, onView, onEdit, onDelete, onAdvance, dense = false }
                 <Truck className="w-4 h-4" />
               </Button>
             )}
+            {onReplace && (
+              <PermissionGate permission="packages.edit">
+                <Button size="sm" variant="outline" onClick={() => onReplace(pkg)} title="Migrate shipments" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`pkg-replace-${pkg.id}`}>
+                  <ReplaceIcon className="w-4 h-4" />
+                </Button>
+              </PermissionGate>
+            )}
             <PermissionGate permission="packages.edit">
               <Button size="sm" variant="outline" onClick={() => onEdit(pkg)} title="Edit" data-testid={`pkg-edit-${pkg.id}`}>
                 <Edit className="w-4 h-4" />
@@ -214,7 +223,7 @@ const PackageCard = ({ pkg, onView, onEdit, onDelete, onAdvance, dense = false }
   );
 };
 
-const PackageDetailsCard = ({ pkg, onView, onEdit, onDelete, onAdvance }) => {
+const PackageDetailsCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace }) => {
   const dim = pkg.dimensions || {};
   const dims = [dim.length_cm, dim.width_cm, dim.height_cm].filter(Boolean).join(' × ');
   return (
@@ -264,6 +273,13 @@ const PackageDetailsCard = ({ pkg, onView, onEdit, onDelete, onAdvance }) => {
                 <Truck className="w-4 h-4 mr-1" /> Advance
               </Button>
             )}
+            {onReplace && (
+              <PermissionGate permission="packages.edit">
+                <Button size="sm" variant="outline" onClick={() => onReplace(pkg)} className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`pkg-details-replace-${pkg.id}`}>
+                  <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
+                </Button>
+              </PermissionGate>
+            )}
             <PermissionGate permission="packages.edit">
               <Button size="sm" variant="outline" onClick={() => onEdit(pkg)}>
                 <Edit className="w-4 h-4 mr-1" /> Edit
@@ -292,6 +308,7 @@ export default function PackageManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
+  const [replacePkg, setReplacePkg] = useState(null);
 
   const dashboardData = useRealDashboardData('packages', '30days', scopeOperatorId);
 
@@ -577,6 +594,7 @@ export default function PackageManagement() {
                   onEdit={openForm}
                   onDelete={handleDelete}
                   onAdvance={handleAdvance}
+                  onReplace={setReplacePkg}
                 />
               ))}
             </div>
@@ -590,6 +608,7 @@ export default function PackageManagement() {
                   onEdit={openForm}
                   onDelete={handleDelete}
                   onAdvance={handleAdvance}
+                  onReplace={setReplacePkg}
                 />
               ))}
             </div>
@@ -882,6 +901,15 @@ export default function PackageManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReplaceResourceModal
+        open={!!replacePkg}
+        onClose={() => setReplacePkg(null)}
+        serviceType="package"
+        oldResource={replacePkg}
+        allResources={packages}
+        onSuccess={() => loadPackages?.()}
+      />
     </div>
   );
 }

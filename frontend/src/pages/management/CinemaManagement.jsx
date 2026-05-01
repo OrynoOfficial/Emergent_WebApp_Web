@@ -62,12 +62,34 @@ const DEFAULT_MOVIE_FORM = {
   duration: '',
   rating: 'PG-13',
   description: '',
-  show_times: [],
-  ticket_price: '',
   poster_url: '',
+  trailer_url: '',
   director: '',
-  language: 'English'
+  cast: '',
+  language: 'English',
+  release_date: '',
+  imdb_rating: '',
+  status: 'now_showing', // now_showing | coming_soon
 };
+
+const DEFAULT_SHOWTIME_FORM = {
+  cinema_id: '',
+  film_id: '',
+  screen_name: '',
+  screen_type: '2d',
+  show_date: '',
+  show_time: '',
+  end_time: '',
+  price: '',
+  vip_price: '',
+  total_seats: 100,
+};
+
+const SCREEN_TYPES = ['2d', '3d', 'imax', 'dolby_atmos', 'vip'];
+const MOVIE_STATUSES = [
+  { value: 'now_showing', label: 'Now Showing' },
+  { value: 'coming_soon', label: 'Coming Soon' },
+];
 
 // Cinema specific dashboard data generator
 // Dashboard data now fetched from API via useRealDashboardData hook
@@ -136,6 +158,9 @@ export default function CinemaManagement() {
   const [editingMovie, setEditingMovie] = useState(null);
   const [cinemaForm, setCinemaForm] = useState(DEFAULT_CINEMA_FORM);
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
+  const [isShowtimeDialogOpen, setIsShowtimeDialogOpen] = useState(false);
+  const [showtimeForm, setShowtimeForm] = useState(DEFAULT_SHOWTIME_FORM);
+  const [editingShowtime, setEditingShowtime] = useState(null);
 
   // Use the cinema dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
@@ -286,11 +311,14 @@ export default function CinemaManagement() {
       duration: movie.duration_minutes ? String(movie.duration_minutes) : (movie.duration || ''),
       rating: movie.rating || 'PG-13',
       description: movie.description || '',
-      show_times: movie.show_times || [],
-      ticket_price: movie.ticket_price?.toString() || '',
       poster_url: movie.poster_url || '',
+      trailer_url: movie.trailer_url || '',
       director: movie.director || '',
-      language: movie.language || 'English'
+      cast: Array.isArray(movie.cast) ? movie.cast.join(', ') : (movie.cast || ''),
+      language: movie.language || 'English',
+      release_date: movie.release_date || '',
+      imdb_rating: movie.imdb_rating?.toString() || '',
+      status: movie.status || 'now_showing',
     } : DEFAULT_MOVIE_FORM);
     setIsMovieDialogOpen(true);
   };
@@ -299,16 +327,22 @@ export default function CinemaManagement() {
     try {
       const durationMin = parseInt(movieForm.duration) || 120;
       const genreArr = movieForm.genre ? movieForm.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
-      
+      const castArr = movieForm.cast ? movieForm.cast.split(',').map(c => c.trim()).filter(Boolean) : [];
+
       const params = new URLSearchParams();
       params.append('title', movieForm.title);
       params.append('duration_minutes', String(durationMin));
       genreArr.forEach(g => params.append('genre', g));
+      castArr.forEach(c => params.append('cast', c));
       if (movieForm.description) params.append('description', movieForm.description);
       params.append('rating', movieForm.rating || 'PG-13');
       if (movieForm.director) params.append('director', movieForm.director);
       if (movieForm.language) params.append('language', movieForm.language);
       if (movieForm.poster_url) params.append('poster_url', movieForm.poster_url);
+      if (movieForm.trailer_url) params.append('trailer_url', movieForm.trailer_url);
+      if (movieForm.release_date) params.append('release_date', movieForm.release_date);
+      if (movieForm.imdb_rating) params.append('imdb_rating', String(parseFloat(movieForm.imdb_rating)));
+      if (movieForm.status) params.append('status', movieForm.status);
 
       if (editingMovie) {
         const filmId = editingMovie.id || editingMovie._id;
@@ -322,6 +356,59 @@ export default function CinemaManagement() {
       loadMovies();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save film');
+    }
+  };
+
+  // ---- Showtime handlers ----
+  const openShowtimeDialog = (showtime = null) => {
+    setEditingShowtime(showtime);
+    if (showtime) {
+      setShowtimeForm({
+        cinema_id: showtime.cinema_id || '',
+        film_id: showtime.film_id || '',
+        screen_name: showtime.screen_name || '',
+        screen_type: showtime.screen_type || '2d',
+        show_date: showtime.show_date || '',
+        show_time: showtime.show_time || '',
+        end_time: showtime.end_time || '',
+        price: showtime.price?.toString() || '',
+        vip_price: showtime.vip_price?.toString() || '',
+        total_seats: showtime.total_seats || 100,
+      });
+    } else {
+      setShowtimeForm(DEFAULT_SHOWTIME_FORM);
+    }
+    setIsShowtimeDialogOpen(true);
+  };
+
+  const handleSaveShowtime = async () => {
+    if (!showtimeForm.cinema_id || !showtimeForm.film_id || !showtimeForm.screen_name || !showtimeForm.show_date || !showtimeForm.show_time || !showtimeForm.end_time || !showtimeForm.price) {
+      toast.error('Cinema, film, screen, date, time, end time and price are required');
+      return;
+    }
+    try {
+      const params = new URLSearchParams();
+      params.append('film_id', showtimeForm.film_id);
+      params.append('screen_name', showtimeForm.screen_name);
+      params.append('show_date', showtimeForm.show_date);
+      params.append('show_time', showtimeForm.show_time);
+      params.append('end_time', showtimeForm.end_time);
+      params.append('price', String(parseFloat(showtimeForm.price)));
+      params.append('screen_type', showtimeForm.screen_type || '2d');
+      if (showtimeForm.vip_price) params.append('vip_price', String(parseFloat(showtimeForm.vip_price)));
+      params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
+
+      if (editingShowtime) {
+        await api.put(`/cinema/showtimes/${editingShowtime.id}?${params.toString()}`);
+        toast.success('Showtime updated');
+      } else {
+        await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
+        toast.success('Showtime scheduled');
+      }
+      setIsShowtimeDialogOpen(false);
+      loadShowtimes();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to save showtime');
     }
   };
 
@@ -609,12 +696,17 @@ export default function CinemaManagement() {
                     <Button onClick={loadShowtimes} variant="outline" size="sm">
                       <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
+                    <PermissionGate permission="cinema.manage_screenings">
+                      <Button onClick={() => openShowtimeDialog()} className="bg-[#082c59]" size="sm" data-testid="add-showtime-btn">
+                        <Plus className="w-4 h-4 mr-2" /> Add Showtime
+                      </Button>
+                    </PermissionGate>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {showtimes.length === 0 ? (
                     <div className="text-center py-10 text-gray-500 text-sm">
-                      No showtimes yet. Add one from the film detail page or via your scheduling tool.
+                      No showtimes yet. Click <strong>"Add Showtime"</strong> to assign a film to a cinema, screen, date, time and price.
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -663,6 +755,11 @@ export default function CinemaManagement() {
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-1 justify-end">
+                                  <PermissionGate permission="cinema.manage_screenings">
+                                    <Button size="sm" variant="outline" onClick={() => openShowtimeDialog(st)} className="h-8" data-testid={`edit-showtime-btn-${st.id}`}>
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                  </PermissionGate>
                                   <PermissionGate permission="cinema.manage_screenings">
                                     <Button size="sm" variant="outline" onClick={() => setReplaceShowtime(st)} className="h-8 text-[#082c59]" data-testid={`replace-showtime-btn-${st.id}`}>
                                       <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
@@ -722,29 +819,108 @@ export default function CinemaManagement() {
 
       {/* Cinema Dialog */}
       <Dialog open={isCinemaDialogOpen} onOpenChange={setIsCinemaDialogOpen}>
-        <DialogContent className="max-w-xl bg-white">
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingCinema ? 'Edit Cinema' : 'Add Cinema'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label>Name</Label>
-              <Input value={cinemaForm.name} onChange={e => setCinemaForm(p => ({ ...p, name: e.target.value }))} placeholder="Cinema name" />
+              <Label>Name *</Label>
+              <Input value={cinemaForm.name} onChange={e => setCinemaForm(p => ({ ...p, name: e.target.value }))} placeholder="Canal Olympia Yaoundé" data-testid="cinema-name-input" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>City</Label>
-                <Input value={cinemaForm.city} onChange={e => setCinemaForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
+                <Label>City *</Label>
+                <Input value={cinemaForm.city} onChange={e => setCinemaForm(p => ({ ...p, city: e.target.value }))} placeholder="Yaoundé" data-testid="cinema-city-input" />
               </div>
               <div>
-                <Label>Screens</Label>
-                <Input type="number" value={cinemaForm.total_screens} onChange={e => setCinemaForm(p => ({ ...p, total_screens: parseInt(e.target.value) || 1 }))} />
+                <Label>Phone</Label>
+                <Input value={cinemaForm.phone} onChange={e => setCinemaForm(p => ({ ...p, phone: e.target.value }))} placeholder="+237..." />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Address</Label>
+                <Input value={cinemaForm.address} onChange={e => setCinemaForm(p => ({ ...p, address: e.target.value }))} placeholder="Full address" />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input type="email" value={cinemaForm.email} onChange={e => setCinemaForm(p => ({ ...p, email: e.target.value }))} placeholder="contact@cinema.com" />
               </div>
             </div>
             <div>
-              <Label>Address</Label>
-              <Input value={cinemaForm.address} onChange={e => setCinemaForm(p => ({ ...p, address: e.target.value }))} placeholder="Full address" />
+              <Label>Description</Label>
+              <Textarea value={cinemaForm.description} onChange={e => setCinemaForm(p => ({ ...p, description: e.target.value }))} placeholder="About this cinema..." rows={2} />
             </div>
+
+            {/* Screens management */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Screens</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCinemaForm(p => ({
+                    ...p,
+                    screens: [...(p.screens || []), { name: `Screen ${(p.screens?.length || 0) + 1}`, type: '2d', capacity: 100 }]
+                  }))}
+                  data-testid="add-screen-btn"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add screen
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {(cinemaForm.screens || []).length === 0 && (
+                  <p className="text-xs text-slate-500 italic">No screens yet. Click "Add screen" to add theater rooms.</p>
+                )}
+                {(cinemaForm.screens || []).map((screen, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded">
+                    <Input
+                      className="col-span-4 bg-white"
+                      placeholder="Screen name"
+                      value={screen.name || ''}
+                      onChange={(e) => setCinemaForm(p => ({
+                        ...p,
+                        screens: p.screens.map((s, i) => i === idx ? { ...s, name: e.target.value } : s)
+                      }))}
+                    />
+                    <Select
+                      value={screen.type || '2d'}
+                      onValueChange={(v) => setCinemaForm(p => ({
+                        ...p,
+                        screens: p.screens.map((s, i) => i === idx ? { ...s, type: v } : s)
+                      }))}
+                    >
+                      <SelectTrigger className="col-span-3 bg-white"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white">
+                        {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      className="col-span-3 bg-white"
+                      type="number"
+                      placeholder="Seats"
+                      value={screen.capacity || ''}
+                      onChange={(e) => setCinemaForm(p => ({
+                        ...p,
+                        screens: p.screens.map((s, i) => i === idx ? { ...s, capacity: parseInt(e.target.value) || 0 } : s)
+                      }))}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="col-span-2 text-red-500 h-8"
+                      onClick={() => setCinemaForm(p => ({ ...p, screens: p.screens.filter((_, i) => i !== idx) }))}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label>Operator</Label>
               <Select 
@@ -795,24 +971,36 @@ export default function CinemaManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCinemaDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCinema} className="bg-[#082c59]">{editingCinema ? 'Update' : 'Add'}</Button>
+            <Button onClick={handleSaveCinema} className="bg-[#082c59]" data-testid="save-cinema-btn">{editingCinema ? 'Update' : 'Add'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Movie Dialog */}
       <Dialog open={isMovieDialogOpen} onOpenChange={setIsMovieDialogOpen}>
-        <DialogContent className="max-w-xl bg-white">
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingMovie ? 'Edit Movie' : 'Add Movie'}</DialogTitle>
+            <DialogTitle>{editingMovie ? 'Edit Film' : 'Add Film'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <Label>Title</Label>
-              <Input value={movieForm.title} onChange={e => setMovieForm(p => ({ ...p, title: e.target.value }))} placeholder="Movie title" />
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <Label>Title *</Label>
+                <Input value={movieForm.title} onChange={e => setMovieForm(p => ({ ...p, title: e.target.value }))} placeholder="Movie title" data-testid="movie-title-input" />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={movieForm.status} onValueChange={v => setMovieForm(p => ({ ...p, status: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {MOVIE_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div>
-              <Label>Cover Image</Label>
+              <Label>Cover / Poster Image</Label>
               <div className="mt-1 flex items-center gap-3">
                 {movieForm.poster_url && (
                   <img src={movieForm.poster_url} alt="Poster" className="h-20 w-14 object-cover rounded-lg border" />
@@ -835,20 +1023,22 @@ export default function CinemaManagement() {
                     }}
                     className="h-10"
                   />
-                  <p className="text-xs text-slate-500 mt-1">Upload a cover/poster image for this film</p>
+                  <p className="text-xs text-slate-500 mt-1">Upload a cover/poster image (separate from the trailer)</p>
                 </div>
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Genre</Label>
-                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action, Drama" />
+                <Label>Genre (comma-separated)</Label>
+                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action, Drama, Thriller" />
               </div>
               <div>
-                <Label>Duration (minutes)</Label>
+                <Label>Duration (minutes) *</Label>
                 <Input type="number" value={movieForm.duration} onChange={e => setMovieForm(p => ({ ...p, duration: e.target.value }))} placeholder="120" />
               </div>
             </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label>Rating</Label>
@@ -859,26 +1049,189 @@ export default function CinemaManagement() {
                     <SelectItem value="PG">PG</SelectItem>
                     <SelectItem value="PG-13">PG-13</SelectItem>
                     <SelectItem value="R">R</SelectItem>
+                    <SelectItem value="NC-17">NC-17</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label>Director</Label>
-                <Input value={movieForm.director} onChange={e => setMovieForm(p => ({ ...p, director: e.target.value }))} placeholder="Director name" />
               </div>
               <div>
                 <Label>Language</Label>
                 <Input value={movieForm.language} onChange={e => setMovieForm(p => ({ ...p, language: e.target.value }))} placeholder="English" />
               </div>
+              <div>
+                <Label>IMDb Rating</Label>
+                <Input type="number" step="0.1" max="10" value={movieForm.imdb_rating} onChange={e => setMovieForm(p => ({ ...p, imdb_rating: e.target.value }))} placeholder="8.2" />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Director</Label>
+                <Input value={movieForm.director} onChange={e => setMovieForm(p => ({ ...p, director: e.target.value }))} placeholder="Director name" />
+              </div>
+              <div>
+                <Label>Release Date</Label>
+                <Input type="date" value={movieForm.release_date} onChange={e => setMovieForm(p => ({ ...p, release_date: e.target.value }))} />
+              </div>
+            </div>
+
             <div>
-              <Label>Description</Label>
-              <Textarea value={movieForm.description} onChange={e => setMovieForm(p => ({ ...p, description: e.target.value }))} placeholder="Movie description..." />
+              <Label>Cast (comma-separated)</Label>
+              <Input value={movieForm.cast} onChange={e => setMovieForm(p => ({ ...p, cast: e.target.value }))} placeholder="Actor 1, Actor 2, Actor 3" />
+            </div>
+
+            <div>
+              <Label>Trailer URL</Label>
+              <Input value={movieForm.trailer_url} onChange={e => setMovieForm(p => ({ ...p, trailer_url: e.target.value }))} placeholder="https://youtube.com/watch?v=..." />
+            </div>
+
+            <div>
+              <Label>Description / Synopsis</Label>
+              <Textarea value={movieForm.description} onChange={e => setMovieForm(p => ({ ...p, description: e.target.value }))} placeholder="Movie description..." rows={3} />
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <strong>Note:</strong> Showtimes (date, time, price) are managed separately in the <em>Showtimes</em> tab — one film can be assigned to multiple cinemas, screens and time slots, each with its own price.
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsMovieDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveMovie} className="bg-[#082c59]">{editingMovie ? 'Update' : 'Add'}</Button>
+            <Button onClick={handleSaveMovie} className="bg-[#082c59]" data-testid="save-movie-btn">{editingMovie ? 'Update' : 'Add'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Showtime Dialog */}
+      <Dialog open={isShowtimeDialogOpen} onOpenChange={setIsShowtimeDialogOpen}>
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto" data-testid="showtime-dialog">
+          <DialogHeader>
+            <DialogTitle>{editingShowtime ? 'Edit Showtime' : 'Add Showtime'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+              A showtime assigns a film to a specific cinema, screen, date, time and price. Customers book this exact slot.
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Cinema *</Label>
+                <Select
+                  value={showtimeForm.cinema_id}
+                  onValueChange={(v) => {
+                    const cin = cinemas.find((c) => c.id === v);
+                    const firstScreen = cin?.screens?.[0];
+                    setShowtimeForm(p => ({
+                      ...p,
+                      cinema_id: v,
+                      screen_name: firstScreen?.name || p.screen_name || '',
+                      screen_type: firstScreen?.type || p.screen_type || '2d',
+                      total_seats: firstScreen?.capacity || p.total_seats || 100,
+                    }));
+                  }}
+                  disabled={!!editingShowtime}
+                >
+                  <SelectTrigger className="bg-white" data-testid="showtime-cinema-select"><SelectValue placeholder="Pick a cinema..." /></SelectTrigger>
+                  <SelectContent className="bg-white max-h-60">
+                    {cinemas.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name} {c.city ? `· ${c.city}` : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Film *</Label>
+                <Select value={showtimeForm.film_id} onValueChange={(v) => setShowtimeForm(p => ({ ...p, film_id: v }))}>
+                  <SelectTrigger className="bg-white" data-testid="showtime-film-select"><SelectValue placeholder="Pick a film..." /></SelectTrigger>
+                  <SelectContent className="bg-white max-h-60">
+                    {movies.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Screen *</Label>
+                {(() => {
+                  const cin = cinemas.find((c) => c.id === showtimeForm.cinema_id);
+                  const availableScreens = cin?.screens || [];
+                  if (availableScreens.length > 0) {
+                    return (
+                      <Select
+                        value={showtimeForm.screen_name}
+                        onValueChange={(v) => {
+                          const s = availableScreens.find((x) => x.name === v);
+                          setShowtimeForm(p => ({
+                            ...p,
+                            screen_name: v,
+                            screen_type: s?.type || p.screen_type,
+                            total_seats: s?.capacity || p.total_seats,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="bg-white"><SelectValue placeholder="Pick a screen..." /></SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {availableScreens.map((s, i) => (
+                            <SelectItem key={i} value={s.name}>{s.name} ({s.type || '2d'}, {s.capacity || 0} seats)</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }
+                  return (
+                    <Input
+                      placeholder="e.g. Screen 1"
+                      value={showtimeForm.screen_name}
+                      onChange={(e) => setShowtimeForm(p => ({ ...p, screen_name: e.target.value }))}
+                    />
+                  );
+                })()}
+              </div>
+              <div>
+                <Label>Screen Type</Label>
+                <Select value={showtimeForm.screen_type} onValueChange={(v) => setShowtimeForm(p => ({ ...p, screen_type: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Total Seats *</Label>
+                <Input type="number" value={showtimeForm.total_seats} onChange={(e) => setShowtimeForm(p => ({ ...p, total_seats: parseInt(e.target.value) || 0 }))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Date *</Label>
+                <Input type="date" value={showtimeForm.show_date} onChange={(e) => setShowtimeForm(p => ({ ...p, show_date: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Start Time *</Label>
+                <Input type="time" value={showtimeForm.show_time} onChange={(e) => setShowtimeForm(p => ({ ...p, show_time: e.target.value }))} />
+              </div>
+              <div>
+                <Label>End Time *</Label>
+                <Input type="time" value={showtimeForm.end_time} onChange={(e) => setShowtimeForm(p => ({ ...p, end_time: e.target.value }))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Price (FCFA) *</Label>
+                <Input type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
+              </div>
+              <div>
+                <Label>VIP Price (FCFA, optional)</Label>
+                <Input type="number" value={showtimeForm.vip_price} onChange={(e) => setShowtimeForm(p => ({ ...p, vip_price: e.target.value }))} placeholder="5000" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsShowtimeDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveShowtime} className="bg-[#082c59]" data-testid="save-showtime-btn">{editingShowtime ? 'Update' : 'Schedule'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
