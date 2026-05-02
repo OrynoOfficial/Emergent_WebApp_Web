@@ -423,7 +423,7 @@ export default function HotelManagement() {
                       </Button>
                     </div>
                     <PermissionGate permission="hotels.create">
-                      <Button onClick={() => openHotelDialog()} className="bg-[#082c59] gap-2">
+                      <Button onClick={() => openHotelDialog()} className="bg-[#082c59] gap-2" data-testid="add-hotel-btn">
                         <Plus className="w-4 h-4" /> Add Hotel
                       </Button>
                     </PermissionGate>

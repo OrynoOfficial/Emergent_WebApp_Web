@@ -745,7 +745,7 @@ export default function TravelManagement() {
                     </Select>
                     <ViewModeToggle value={routeViewMode} onChange={setRouteViewMode} />
                     <PermissionGate permission="travel.create">
-                      <Button onClick={() => openRouteDialog()} className="bg-blue-600 hover:bg-blue-700">
+                      <Button onClick={() => openRouteDialog()} className="bg-blue-600 hover:bg-blue-700" data-testid="add-route-btn">
                         <Plus className="w-4 h-4 mr-2" /> Add Route
                       </Button>
                     </PermissionGate>

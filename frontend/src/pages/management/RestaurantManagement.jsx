@@ -508,7 +508,7 @@ export default function RestaurantManagement() {
                 Refresh
               </Button>
               <PermissionGate permission="restaurants.create">
-                <Button onClick={() => openRestaurantDialog()} className="bg-orange-600 hover:bg-orange-700">
+                <Button onClick={() => openRestaurantDialog()} className="bg-orange-600 hover:bg-orange-700" data-testid="add-restaurant-btn">
                   <Plus className="h-4 w-4 mr-2" /> Add Restaurant
                 </Button>
               </PermissionGate>

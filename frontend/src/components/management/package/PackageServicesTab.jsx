@@ -423,7 +423,7 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                 </Button>
               </PermissionGate>
               <PermissionGate permission="packages.delete">
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:bg-red-50" onClick={() => handleDelete(svc.id)}>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:bg-red-50" onClick={() => handleDelete(svc.id)} data-testid={`delete-service-btn-${svc.id}`}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </PermissionGate>
