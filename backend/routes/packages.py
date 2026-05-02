@@ -5,7 +5,7 @@ Each "package" record in db.packages now represents a physical shipment
 created/managed by a logistics operator: sender + receiver + dimensions +
 weight + tracking + status.
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_any_permission
@@ -15,7 +15,7 @@ from models.package import (
     PackageStatus,
     PaymentStatus,
 )
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 import uuid
 import secrets
@@ -232,6 +232,7 @@ async def track_package(tracking_number: str):
             "description": ev.get("description") or "",
             "timestamp": ev.get("timestamp").isoformat() if hasattr(ev.get("timestamp"), "isoformat") else ev.get("timestamp"),
             "location": ev.get("location") or "",
+            "photos": ev.get("photos") or [],
         })
     # Fallback: synthesize a single event from current state
     if not events:
@@ -257,6 +258,7 @@ async def track_package(tracking_number: str):
         "sender_location": pkg.get("origin_city"),
         "receiver_location": pkg.get("destination_city"),
         "package_photos": pkg.get("package_photos") or [],
+        "delivery_photos": pkg.get("delivery_photos") or [],
         "events": events,
     }
 
@@ -299,9 +301,16 @@ async def update_status(
     status: PackageStatus,
     location: Optional[str] = None,
     note: Optional[str] = None,
+    delivery_photos: Optional[List[str]] = Body(default=None, embed=True),
     current_user: dict = Depends(require_any_permission(["packages.edit", "operator.services.edit"]))
 ):
-    """Quick endpoint to advance package status. Pushes a status_history event."""
+    """Quick endpoint to advance package status. Pushes a status_history event.
+
+    When `status == 'delivered'`, a list of `delivery_photos` (3 URLs) MAY be sent
+    in the body and is persisted on the package as proof-of-delivery. They are
+    also attached to the status_history event and exposed by the public
+    /track/{tracking_number} endpoint.
+    """
     db = get_database()
     package = await db.packages.find_one({"_id": package_id})
     if not package:
@@ -309,6 +318,18 @@ async def update_status(
 
     if current_user["role"] == "operator" and package.get("operator_id") != current_user.get("operator_id"):
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Enforce 3 PoD photos when marking as delivered
+    if status == PackageStatus.DELIVERED:
+        photos = list(delivery_photos or [])
+        if len(photos) < 3:
+            raise HTTPException(
+                status_code=400,
+                detail="3 proof-of-delivery photos are required to mark a package as delivered.",
+            )
+        delivery_photos = photos[:3]
+    else:
+        delivery_photos = None  # don't accidentally store on non-delivery transitions
 
     now = datetime.utcnow()
     label = _STATUS_LABELS.get(status.value, {})
@@ -319,6 +340,8 @@ async def update_status(
         "location": location or package.get("current_location") or package.get("destination_city"),
         "timestamp": now,
     }
+    if delivery_photos:
+        event["photos"] = delivery_photos
 
     update = {
         "status": status.value,
@@ -326,12 +349,14 @@ async def update_status(
     }
     if location:
         update["current_location"] = location
+    if delivery_photos:
+        update["delivery_photos"] = delivery_photos
 
     await db.packages.update_one(
         {"_id": package_id},
         {"$set": update, "$push": {"status_history": event}},
     )
-    return {"message": "Status updated", "status": status.value}
+    return {"message": "Status updated", "status": status.value, "delivery_photos": delivery_photos or []}
 
 
 @router.delete("/{package_id}")

@@ -167,6 +167,7 @@ class PhysicalPackage(BaseModel):
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
     package_photos: List[str] = []
+    delivery_photos: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

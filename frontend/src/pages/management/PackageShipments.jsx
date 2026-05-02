@@ -12,7 +12,7 @@ import {
   Package, Plus, Edit, Trash2, MapPin, User, Phone, Weight, Ruler,
   RefreshCw, Search, Eye, Truck, CheckCircle, Clock, XCircle,
   PackageCheck, SlidersHorizontal, LayoutGrid, List, Filter,
-  Replace as ReplaceIcon,
+  Replace as ReplaceIcon, Camera,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import Pagination from '@/components/common/Pagination';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 
 const PAGE_SIZE = 12;
 
@@ -178,7 +179,7 @@ export default function PackageShipments() {
   const [page, setPage] = useState(1);
   const [replacePkg, setReplacePkg] = useState(null);
   const [advancePkg, setAdvancePkg] = useState(null);
-  const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '' });
+  const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '', delivery_photos: [] });
   const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -321,19 +322,27 @@ export default function PackageShipments() {
       status: next,
       location: pkg.current_location || (next === 'in_transit' ? '' : pkg.origin_city || ''),
       note: '',
+      delivery_photos: [],
     });
   };
 
   const handleSubmitAdvance = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     if (!advancePkg || !advanceForm.status) return;
+    if (advanceForm.status === 'delivered' && (advanceForm.delivery_photos?.length || 0) < 3) {
+      toast.error('Upload 3 proof-of-delivery photos to mark as delivered');
+      return;
+    }
     setAdvanceSubmitting(true);
     try {
       const params = new URLSearchParams();
       params.set('status', advanceForm.status);
       if (advanceForm.location?.trim()) params.set('location', advanceForm.location.trim());
       if (advanceForm.note?.trim()) params.set('note', advanceForm.note.trim());
-      await api.post(`/packages/${advancePkg.id}/status?${params.toString()}`);
+      const body = advanceForm.status === 'delivered'
+        ? { delivery_photos: advanceForm.delivery_photos }
+        : {};
+      await api.post(`/packages/${advancePkg.id}/status?${params.toString()}`, body);
       toast.success(`Status → ${advanceForm.status.replace(/_/g, ' ')}`);
       setAdvancePkg(null);
       loadPackages();
@@ -734,17 +743,54 @@ export default function PackageShipments() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Proof-of-Delivery photos when marking as delivered */}
+              {advanceForm.status === 'delivered' && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Camera className="h-4 w-4 text-emerald-600" />
+                    <Label className="font-semibold text-slate-800">
+                      Proof of Delivery Photos <span className="text-red-500">*</span>
+                    </Label>
+                  </div>
+                  <p className="text-xs text-slate-600 mb-3">
+                    Upload <strong>3 photos</strong> at the drop-off — package handed over, signed receipt, or delivery location. Visible to the receiver on the public tracking page.
+                  </p>
+                  <MiniImageUploader
+                    images={advanceForm.delivery_photos || []}
+                    onChange={(imgs) => setAdvanceForm((p) => ({ ...p, delivery_photos: imgs }))}
+                    max={3}
+                    folder="package_pod"
+                    accent="emerald"
+                  />
+                  {(advanceForm.delivery_photos?.length || 0) < 3 && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      {3 - (advanceForm.delivery_photos?.length || 0)} more photo(s) required
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <Label>Current Location</Label>
                 <Input placeholder="e.g. Bafoussam Hub..." value={advanceForm.location} onChange={(e) => setAdvanceForm((p) => ({ ...p, location: e.target.value }))} />
               </div>
               <div>
                 <Label>Note (optional)</Label>
-                <Textarea placeholder="e.g. Delayed at customs..." rows={2} value={advanceForm.note} onChange={(e) => setAdvanceForm((p) => ({ ...p, note: e.target.value }))} />
+                <Textarea placeholder="e.g. Delivered to receiver in person..." rows={2} value={advanceForm.note} onChange={(e) => setAdvanceForm((p) => ({ ...p, note: e.target.value }))} />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setAdvancePkg(null)} disabled={advanceSubmitting}>Cancel</Button>
-                <Button type="submit" className="bg-[#082c59]" disabled={advanceSubmitting || !advanceForm.status}>
+                <Button
+                  type="submit"
+                  className="bg-[#082c59]"
+                  disabled={
+                    advanceSubmitting ||
+                    !advanceForm.status ||
+                    (advanceForm.status === 'delivered' && (advanceForm.delivery_photos?.length || 0) < 3)
+                  }
+                  data-testid="submit-advance-status-btn"
+                >
                   {advanceSubmitting ? 'Updating…' : 'Update Status'}
                 </Button>
               </DialogFooter>
