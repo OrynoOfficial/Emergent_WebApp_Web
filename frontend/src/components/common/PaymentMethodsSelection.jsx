@@ -443,6 +443,8 @@ const PaymentMethodsSelection = ({
           {paymentMethods.map((method) => (
             <button
               key={method.id}
+              data-testid={`payment-method-${method.id}`}
+              aria-label={`Select ${method.id} payment method`}
               onClick={() => {
                 if (!method.isDisabled) {
                   setSelectedMethodInternal(method.id);

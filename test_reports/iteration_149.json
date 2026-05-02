@@ -1,0 +1,33 @@
+{
+  "summary": "RETEST iteration 149 — PackageBooking MoMo dialog flow VERIFIED WORKING. Confirmed: (1) data-testids on payment tiles are now in DOM (payment-method-stripe, payment-method-mtn_momo, payment-method-orange_money, all visible:true). (2) After filling sender_address manually + receiver + description + 3 photos uploaded (3x 200 OK), MoMo tile becomes enabled, click → Confirm → MoMo Radix dialog opens with phone prefilled '+237 677251682' and amount '5,460 FCFA' visible. Screenshot confirms dialog rendered without overlay coverage. Cancel via momo-change-method-btn closes dialog, booking page interactive again. HOWEVER, an unrelated UX bug surfaced: the sender-self toggle in PackageBooking.jsx (lines 120-125) autofills sender_name/phone/email from profile but does NOT autofill sender_address — so first-time users toggling 'I'm the sender' still see the amber 'Complete sender details' banner and cannot reach payment unless they manually type Pickup Address. This blocks the happy-path the test instructions described.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PackageBooking sender-self toggle", "issue": "Toggling 'I'm the sender' autofills name/phone/email from profile but leaves Pickup Address (sender_address) empty. isFormValid stays false → payment tiles + Confirm stay disabled. Users get stuck at the amber 'Complete sender details' banner with no obvious clue. Suggest: also pull profile.address (or last booking address) into sender_address, or at minimum make the address field visually focused / required-marker pulse so the user knows what to fill.", "selector": "[data-testid=sender-address-input]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Multiple Radix Dialogs (booking + MoMo)", "issues": ["Console floods with 'DialogContent requires a DialogTitle' + 'Missing Description or aria-describedby' a11y warnings — wrap titles in VisuallyHidden where decorative-only, or add real DialogTitle/DialogDescription."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "BUG (medium): In PackageBooking.jsx setBooking after profile fetch (around line 120-126), also set sender_address from profile.address / profile.location / profile.full_address (whichever the customer profile exposes). Without this, the entire MoMo + Stripe payment flow is unreachable via the sender-self happy path — exactly what iteration 148 hit and what nearly blocked this retest. Same fix should apply to the user-fallback branch at line 130-135.",
+    "(Optional) Fix Radix Dialog a11y warnings — add VisuallyHidden DialogTitle/DialogDescription to the booking 'Service details' modal that fires before MoMo opens.",
+    "MoMo + Stripe wiring itself is CORRECT — no further action on PaymentMethodsSelection.jsx or PackageBooking payment props."
+  ],
+  "critical_code_review_comments": [
+    "PaymentMethodsSelection.jsx data-testid wiring (line 446) and prop contract are correct — MoMo dialog opens reliably with prefilled phone and amount.",
+    "PackageBooking.jsx isFormValid (line 184-189) is strict (requires sender_address) but the sender-self toggle never sets it — root cause of the apparent 'stuck' state observed in iteration 148 and partially in this iteration. ONE LINE FIX in the profile autofill effect resolves it.",
+    "MiniImageUploader.jsx upload flow works (3x POST /api/uploads/ → 200) — no issue."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (uploads 3/3 200 OK)", "frontend": "MoMo dialog flow 100% verified once sender_address filled; Stripe path partial (couldn't fully run after MoMo cancel due to test-time budget — but tile is in DOM and clickable; confirm button enables identically)"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "Ephemeral booking attempt (no order created — cancelled before MoMo request).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "data-testids on payment tiles are confirmed working: payment-method-stripe, payment-method-mtn_momo, payment-method-orange_money (orange disabled). MoMo dialog (data-testid=momo-payment-modal) opens with id=momo-phone prefilled with sender_phone (+237 677251682) and data-testid=momo-amount showing total. To run the full happy path you MUST manually fill data-testid=sender-address-input with any string AFTER toggling sender-self — the toggle does NOT autofill the address field. Once that's done: click MoMo tile → confirm → dialog opens (~10s for 2 backend round trips POST /api/packages/ + POST /api/orders/create). Cancel via data-testid=momo-change-method-btn. For Stripe, click data-testid=payment-method-stripe + confirm-booking-btn → opens StripeCheckoutModal (in-page foreground modal, NOT a redirect anymore — note: the spec said 'window.location changes to checkout.stripe.com' but the implementation now uses an in-foreground modal via StripeCheckoutModal; verify that's intentional).",
+  "rca of the issue": "Bug RCA: the visible 'Confirm Booking button stays disabled' / 'amber banner persists' problem is NOT a regression of the MoMo prop fix — the prop fix from iteration 148 works correctly. The actual blocker is in PackageBooking.jsx profile-autofill effect (line 120-126): when `isSenderSelf=true`, the effect copies profile.full_name, phone, email into booking state but never sets sender_address. Since isFormValid (line 184) requires booking.sender_address to be truthy, the form is stuck at false → PaymentMethodsSelection wrapper gets pointer-events-none + opacity-50 → all tiles disabled → Confirm disabled. Reproduction: toggle 'I'm the sender' → fill receiver/description/photos → observe Confirm stays disabled and Pickup Address field is empty. Mitigation: pull profile.address (or any last-known address) when copying profile fields, OR keep sender_address out of isFormValid when isSenderSelf is true and let it fall back to a default like 'Pickup TBD — operator will call'."
+}
