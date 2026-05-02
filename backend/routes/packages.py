@@ -256,6 +256,7 @@ async def track_package(tracking_number: str):
         "vehicle": pkg.get("carrier") or pkg.get("operator_name") or "",
         "sender_location": pkg.get("origin_city"),
         "receiver_location": pkg.get("destination_city"),
+        "package_photos": pkg.get("package_photos") or [],
         "events": events,
     }
 
