@@ -10,8 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import {
   Package, MapPin, Clock, ArrowLeft, Calendar,
-  Building, Truck, Shield, CheckCircle2,
-  Phone, Mail, User, CreditCard, Loader2
+  Building, Truck, Shield, CheckCircle2, Camera,
+  Phone, Mail, User, CreditCard, Loader2, DollarSign,
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import api from '@/api/client';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 
 const formatHours = (h) => {
   if (!h && h !== 0) return '—';
@@ -32,7 +33,7 @@ const StepIndicator = ({ currentStep }) => {
   const steps = [
     { num: 1, label: 'Sender & Receiver' },
     { num: 2, label: 'Package' },
-    { num: 3, label: 'Payment' }
+    { num: 3, label: 'Payment' },
   ];
   return (
     <div className="flex items-center justify-center mb-8">
@@ -41,15 +42,15 @@ const StepIndicator = ({ currentStep }) => {
           <div className="flex flex-col items-center">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
               currentStep >= step.num
-                ? 'bg-[#082c59] text-white shadow-lg shadow-[#082c59]/30'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
                 : 'bg-slate-200 text-slate-500'
             }`}>
               {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.num}
             </div>
-            <span className={`text-xs mt-2 font-medium ${currentStep >= step.num ? 'text-[#082c59]' : 'text-slate-400'}`}>{step.label}</span>
+            <span className={`text-xs mt-2 font-medium ${currentStep >= step.num ? 'text-red-700' : 'text-slate-400'}`}>{step.label}</span>
           </div>
           {idx < steps.length - 1 && (
-            <div className={`w-20 h-1 mx-2 rounded-full transition-all ${currentStep > step.num ? 'bg-[#082c59]' : 'bg-slate-200'}`} />
+            <div className={`w-20 h-1 mx-2 rounded-full transition-all ${currentStep > step.num ? 'bg-red-600' : 'bg-slate-200'}`} />
           )}
         </React.Fragment>
       ))}
@@ -60,6 +61,9 @@ const StepIndicator = ({ currentStep }) => {
 export default function PackageBooking() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
+
   const [service, setService] = useState(null);
   const [searchParams, setSearchParams] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +88,7 @@ export default function PackageBooking() {
     package_description: '',
     declared_value: '',
     notes: '',
+    package_photos: [],
   });
 
   useEffect(() => {
@@ -102,7 +107,7 @@ export default function PackageBooking() {
 
   useEffect(() => {
     if (user?.email && booking.sender_email !== user.email) {
-      setBooking(prev => ({ ...prev, sender_email: user.email }));
+      setBooking((prev) => ({ ...prev, sender_email: user.email }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
@@ -113,24 +118,24 @@ export default function PackageBooking() {
       try {
         const res = await api.get('/auth/me');
         const profile = res.data;
-        setBooking(prev => ({
+        setBooking((prev) => ({
           ...prev,
           sender_name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
           sender_phone: profile.phone || '',
-          sender_email: profile.email || prev.sender_email
+          sender_email: profile.email || prev.sender_email,
         }));
       } catch {
         if (user) {
-          setBooking(prev => ({
+          setBooking((prev) => ({
             ...prev,
             sender_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
             sender_phone: user.phone || '',
-            sender_email: user.email || prev.sender_email
+            sender_email: user.email || prev.sender_email,
           }));
         }
       }
     } else {
-      setBooking(prev => ({ ...prev, sender_name: '', sender_phone: '' }));
+      setBooking((prev) => ({ ...prev, sender_name: '', sender_phone: '' }));
     }
   };
 
@@ -165,15 +170,27 @@ export default function PackageBooking() {
     toast.error(error.message || 'Payment failed');
   };
 
-  const isFormValid = () => (
+  const isFormValid = (
     booking.sender_name && booking.sender_phone && booking.sender_address &&
     booking.receiver_name && booking.receiver_phone && booking.receiver_address &&
-    booking.package_description
+    booking.package_description &&
+    (booking.package_photos?.length || 0) >= 3
   );
 
+  // Step indicator: 1=sender filling, 2=package filling, 3=payment ready
+  const senderDone = booking.sender_name && booking.sender_phone && booking.sender_address &&
+                      booking.receiver_name && booking.receiver_phone && booking.receiver_address;
+  const packageDone = booking.package_description && (booking.package_photos?.length || 0) >= 3;
+  const currentStep = paymentInProgress ? 3 : (packageDone ? 3 : (senderDone ? 2 : 1));
+
   const handleSubmit = async () => {
-    if (!isFormValid()) {
-      toast.error('Please complete all required sender, receiver and package fields');
+    if (!isFormValid) {
+      const missing = [];
+      if (!booking.sender_name || !booking.sender_phone || !booking.sender_address) missing.push('sender details');
+      if (!booking.receiver_name || !booking.receiver_phone || !booking.receiver_address) missing.push('receiver details');
+      if (!booking.package_description) missing.push('package description');
+      if ((booking.package_photos?.length || 0) < 3) missing.push('3 package photos');
+      toast.error(`Please complete: ${missing.join(', ')}`);
       return;
     }
 
@@ -181,7 +198,6 @@ export default function PackageBooking() {
     setShowPaymentOverlay(true);
 
     try {
-      // 1. Create the package shipment booking against the service offering
       const packagePayload = {
         package_service_id: service.id,
         sender: {
@@ -208,6 +224,7 @@ export default function PackageBooking() {
         declared_value: Number(booking.declared_value) || 0,
         description: booking.package_description,
         notes: booking.notes || null,
+        package_photos: booking.package_photos || [],
       };
 
       const pkgRes = await api.post('/packages/', packagePayload);
@@ -216,7 +233,6 @@ export default function PackageBooking() {
       if (!packageId) throw new Error('Failed to register package');
       setTrackingNumber(newTracking);
 
-      // 2. Create the order linked to the package shipment
       const orderPayload = {
         service_type: 'package',
         service_id: packageId,
@@ -244,7 +260,8 @@ export default function PackageBooking() {
           package_type: searchParams.package_type,
           shipping_date: searchParams.shipping_date,
           delivery_time_hours: service.delivery_time_hours,
-        }
+          package_photos: booking.package_photos,
+        },
       };
 
       const orderRes = await api.post('/orders/create', orderPayload);
@@ -264,7 +281,7 @@ export default function PackageBooking() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <Loader2 className="h-10 w-10 text-[#082c59] animate-spin mx-auto mb-4" />
+          <Loader2 className="h-10 w-10 text-red-600 animate-spin mx-auto mb-4" />
           <p className="text-slate-600 font-medium">Loading delivery details...</p>
         </div>
       </div>
@@ -275,13 +292,15 @@ export default function PackageBooking() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Card className="max-w-md mx-auto text-center p-8 shadow-xl">
-          <Clock className="w-8 h-8 text-[#082c59] mx-auto mb-3" />
+          <Clock className="w-8 h-8 text-red-600 mx-auto mb-3" />
           <p className="text-slate-600 mb-4">Session expired. Please search again.</p>
-          <Button onClick={() => navigate('/services/packages')} className="bg-[#082c59] hover:bg-[#0a3a75]">Back to Search</Button>
+          <Button onClick={() => navigate('/services/packages')} className="bg-red-600 hover:bg-red-700">Back to Search</Button>
         </Card>
       </div>
     );
   }
+
+  const cover = service.images?.[0];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
@@ -302,43 +321,10 @@ export default function PackageBooking() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <StepIndicator currentStep={paymentInProgress ? 3 : (booking.package_description ? 2 : 1)} />
-
-        {/* Service summary */}
-        <Card className="shadow-lg mb-8 overflow-hidden">
-          <div className="bg-[#082c59] p-5">
-            <div className="flex items-center gap-3 text-white">
-              <div className="p-2 bg-white/20 rounded-xl"><Truck className="h-6 w-6" /></div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-lg">{service.name}</h3>
-                  <Badge className="bg-yellow-400 text-[#082c59] hover:bg-yellow-400">Logistics</Badge>
-                </div>
-                <p className="text-sm text-white/80 flex items-center gap-1"><Building className="w-3 h-3" />{service.operator_name}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-white/70">Estimated price</div>
-                <div className="text-xl font-bold text-yellow-400">{formatCurrency(getPrice())}</div>
-              </div>
-            </div>
-          </div>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-emerald-600" /><span className="font-medium">{searchParams.origin_city}</span></div>
-              <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300" />
-              <div className="flex items-center gap-2"><span className="font-medium">{searchParams.destination_city}</span><MapPin className="h-4 w-4 text-red-600" /></div>
-            </div>
-            <div className="flex flex-wrap justify-between gap-3 mt-3 text-sm text-slate-600">
-              {searchParams.shipping_date && (
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#082c59]" /><span>{format(new Date(searchParams.shipping_date), 'PPP')}</span></div>
-              )}
-              <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#082c59]" /><span>Est. {formatHours(service.delivery_time_hours)}</span></div>
-              <div className="flex items-center gap-2"><Package className="w-4 h-4 text-[#082c59]" /><span>{searchParams.weight_kg}kg</span></div>
-            </div>
-          </CardContent>
-        </Card>
+        <StepIndicator currentStep={currentStep} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column — forms */}
           <div className="lg:col-span-2 space-y-6">
             {/* Sender */}
             <Card className="shadow-lg overflow-hidden">
@@ -357,10 +343,10 @@ export default function PackageBooking() {
                   <Switch checked={isSenderSelf} onCheckedChange={handleSenderSelfChange} data-testid="sender-self-toggle" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Full Name *</Label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_name} onChange={(e) => setBooking(p => ({ ...p, sender_name: e.target.value }))} placeholder="John Doe" className="pl-10 h-12 bg-slate-50" disabled={isSenderSelf} data-testid="sender-name-input" /></div></div>
-                  <div className="space-y-2"><Label>Phone *</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_phone} onChange={(e) => setBooking(p => ({ ...p, sender_phone: e.target.value }))} placeholder="+237 6XX XXX XXX" className="pl-10 h-12 bg-slate-50" disabled={isSenderSelf} data-testid="sender-phone-input" /></div></div>
-                  <div className="space-y-2"><Label>Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="email" value={booking.sender_email} onChange={(e) => setBooking(p => ({ ...p, sender_email: e.target.value }))} placeholder="john@example.com" className="pl-10 h-12 bg-slate-50" /></div></div>
-                  <div className="space-y-2 md:col-span-2"><Label>Pickup Address *</Label><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_address} onChange={(e) => setBooking(p => ({ ...p, sender_address: e.target.value }))} placeholder="Full pickup address" className="pl-10 h-12 bg-slate-50" data-testid="sender-address-input" /></div></div>
+                  <div className="space-y-2"><Label>Full Name *</Label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_name} onChange={(e) => setBooking((p) => ({ ...p, sender_name: e.target.value }))} placeholder="John Doe" className="pl-10 h-12 bg-slate-50" disabled={isSenderSelf} data-testid="sender-name-input" /></div></div>
+                  <div className="space-y-2"><Label>Phone *</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_phone} onChange={(e) => setBooking((p) => ({ ...p, sender_phone: e.target.value }))} placeholder="+237 6XX XXX XXX" className="pl-10 h-12 bg-slate-50" disabled={isSenderSelf} data-testid="sender-phone-input" /></div></div>
+                  <div className="space-y-2"><Label>Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="email" value={booking.sender_email} onChange={(e) => setBooking((p) => ({ ...p, sender_email: e.target.value }))} placeholder="john@example.com" className="pl-10 h-12 bg-slate-50" /></div></div>
+                  <div className="space-y-2 md:col-span-2"><Label>Pickup Address *</Label><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.sender_address} onChange={(e) => setBooking((p) => ({ ...p, sender_address: e.target.value }))} placeholder="Full pickup address" className="pl-10 h-12 bg-slate-50" data-testid="sender-address-input" /></div></div>
                 </div>
               </CardContent>
             </Card>
@@ -378,112 +364,172 @@ export default function PackageBooking() {
               </div>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Full Name *</Label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_name} onChange={(e) => setBooking(p => ({ ...p, receiver_name: e.target.value }))} placeholder="Jane Smith" className="pl-10 h-12 bg-slate-50" data-testid="receiver-name-input" /></div></div>
-                  <div className="space-y-2"><Label>Phone *</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_phone} onChange={(e) => setBooking(p => ({ ...p, receiver_phone: e.target.value }))} placeholder="+237 6XX XXX XXX" className="pl-10 h-12 bg-slate-50" data-testid="receiver-phone-input" /></div></div>
-                  <div className="space-y-2"><Label>Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="email" value={booking.receiver_email} onChange={(e) => setBooking(p => ({ ...p, receiver_email: e.target.value }))} placeholder="jane@example.com" className="pl-10 h-12 bg-slate-50" /></div></div>
-                  <div className="space-y-2 md:col-span-2"><Label>Delivery Address *</Label><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_address} onChange={(e) => setBooking(p => ({ ...p, receiver_address: e.target.value }))} placeholder="Full delivery address" className="pl-10 h-12 bg-slate-50" data-testid="receiver-address-input" /></div></div>
+                  <div className="space-y-2"><Label>Full Name *</Label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_name} onChange={(e) => setBooking((p) => ({ ...p, receiver_name: e.target.value }))} placeholder="Jane Smith" className="pl-10 h-12 bg-slate-50" data-testid="receiver-name-input" /></div></div>
+                  <div className="space-y-2"><Label>Phone *</Label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_phone} onChange={(e) => setBooking((p) => ({ ...p, receiver_phone: e.target.value }))} placeholder="+237 6XX XXX XXX" className="pl-10 h-12 bg-slate-50" data-testid="receiver-phone-input" /></div></div>
+                  <div className="space-y-2"><Label>Email</Label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input type="email" value={booking.receiver_email} onChange={(e) => setBooking((p) => ({ ...p, receiver_email: e.target.value }))} placeholder="jane@example.com" className="pl-10 h-12 bg-slate-50" /></div></div>
+                  <div className="space-y-2 md:col-span-2"><Label>Delivery Address *</Label><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" /><Input value={booking.receiver_address} onChange={(e) => setBooking((p) => ({ ...p, receiver_address: e.target.value }))} placeholder="Full delivery address" className="pl-10 h-12 bg-slate-50" data-testid="receiver-address-input" /></div></div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Package Details */}
             <Card className="shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5">
+              <div className="bg-gradient-to-r from-red-600 to-red-700 p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl"><Package className="h-6 w-6" /></div>
                   <div>
                     <h3 className="font-bold text-lg">Package Details</h3>
-                    <p className="text-sm text-white/80">Tell us about your package</p>
+                    <p className="text-sm text-white/80">Tell us about your package and snap 3 photos</p>
                   </div>
                 </div>
               </div>
-              <CardContent className="p-6 space-y-4">
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex flex-wrap gap-4 text-sm">
+              <CardContent className="p-6 space-y-5">
+                <div className="p-4 bg-red-50 rounded-xl border border-red-100 flex flex-wrap gap-4 text-sm">
                   <div><span className="text-slate-500">Type:</span> <strong className="text-slate-800 capitalize">{searchParams.package_type}</strong></div>
                   <div><span className="text-slate-500">Weight:</span> <strong className="text-slate-800">{searchParams.weight_kg} kg</strong></div>
                   <div><span className="text-slate-500">Dimensions:</span> <strong className="text-slate-800">{searchParams.length_cm || '–'} × {searchParams.width_cm || '–'} × {searchParams.height_cm || '–'} cm</strong></div>
                 </div>
-                <div className="space-y-2"><Label>Package Description *</Label><Textarea value={booking.package_description} onChange={(e) => setBooking(p => ({ ...p, package_description: e.target.value }))} placeholder="Describe the contents (e.g., laptop, documents, clothes)" className="bg-slate-50" rows={3} data-testid="package-description-input" /></div>
-                <div className="space-y-2"><Label>Declared Value (FCFA)</Label><Input type="number" value={booking.declared_value} onChange={(e) => setBooking(p => ({ ...p, declared_value: e.target.value }))} placeholder="0" className="h-12 bg-slate-50" /></div>
-                <div className="space-y-2"><Label>Special Instructions</Label><Textarea value={booking.notes} onChange={(e) => setBooking(p => ({ ...p, notes: e.target.value }))} placeholder="Any special handling instructions..." className="bg-slate-50" rows={2} /></div>
-              </CardContent>
-            </Card>
 
-            {/* Payment */}
-            <Card className="shadow-lg overflow-hidden">
-              <div className="bg-[#082c59] p-5">
-                <div className="flex items-center gap-3 text-white">
-                  <div className="p-2 bg-white/20 rounded-xl"><CreditCard className="h-6 w-6" /></div>
-                  <h3 className="font-bold text-lg">Payment Method</h3>
+                {/* 3 Photos */}
+                <div className="rounded-xl border border-red-100 bg-red-50/30 p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="h-4 w-4 text-red-600" />
+                    <Label className="font-semibold text-slate-800">Package Photos <span className="text-red-500">*</span></Label>
+                  </div>
+                  <p className="text-xs text-slate-600 mb-3">Upload <strong>exactly 3 photos</strong> of your package — front, side, and any visible damage / tags. These attach to your booking and protect you in case of dispute.</p>
+                  <MiniImageUploader
+                    images={booking.package_photos || []}
+                    onChange={(imgs) => setBooking((p) => ({ ...p, package_photos: imgs }))}
+                    max={3}
+                    folder="package_bookings"
+                    accent="red"
+                  />
+                  {(booking.package_photos?.length || 0) < 3 && (
+                    <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> {3 - (booking.package_photos?.length || 0)} more photo(s) required
+                    </p>
+                  )}
                 </div>
-              </div>
-              <CardContent className="p-6">
-                <PaymentMethodsSelection
-                  amount={getTotalPrice()}
-                  orderId={orderId}
-                  serviceName={service?.name || 'Package Delivery'}
-                  onPaymentInitiated={handlePaymentInitiated}
-                  onPaymentError={handlePaymentError}
-                  triggerPayment={triggerPayment}
-                  onMethodSelected={setSelectedPaymentMethod}
-                />
+
+                <div className="space-y-2"><Label>Package Description *</Label><Textarea value={booking.package_description} onChange={(e) => setBooking((p) => ({ ...p, package_description: e.target.value }))} placeholder="Describe the contents (e.g., laptop, documents, clothes)" className="bg-slate-50" rows={3} data-testid="package-description-input" /></div>
+                <div className="space-y-2"><Label>Declared Value (FCFA)</Label><Input type="number" value={booking.declared_value} onChange={(e) => setBooking((p) => ({ ...p, declared_value: e.target.value }))} placeholder="0" className="h-12 bg-slate-50" /></div>
+                <div className="space-y-2"><Label>Special Instructions</Label><Textarea value={booking.notes} onChange={(e) => setBooking((p) => ({ ...p, notes: e.target.value }))} placeholder="Any special handling instructions..." className="bg-slate-50" rows={2} /></div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right column — summary */}
+          {/* Right column — sticky summary + price + payment + confirm */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <Card className="shadow-lg overflow-hidden">
-                <div className="relative h-32 bg-[#082c59]">
-                  <div className="absolute inset-0 flex items-center justify-center"><Truck className="w-16 h-16 text-white/20" /></div>
-                  <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-white font-bold text-lg">{service.name}</h3>
-                    <p className="text-white/80 text-sm">{service.operator_name}</p>
+            <div className="sticky top-24 space-y-5">
+              {/* Service summary */}
+              <div className="rounded-2xl shadow-lg bg-white overflow-hidden border border-slate-100">
+                <div className="relative h-36">
+                  {cover ? (
+                    <img src={getImg(cover)} alt={service.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-rose-700" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-red-900/30 to-transparent" />
+                  <Badge className="absolute top-3 left-3 bg-yellow-400 text-red-800 hover:bg-yellow-400">Logistics</Badge>
+                  <div className="absolute bottom-3 left-4 right-4 text-white">
+                    <h3 className="font-bold">{service.name}</h3>
+                    <p className="text-white/80 text-xs flex items-center gap-1"><Building className="w-3 h-3" /> {service.operator_name}</p>
                   </div>
                 </div>
-                <CardContent className="p-5">
-                  <div className="mb-4 pb-4 border-b border-slate-100">
-                    <h4 className="font-semibold text-slate-800 mb-3">Route</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-4 h-4 text-emerald-600" /><span>From: {searchParams.origin_city}</span></div>
-                      <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-4 h-4 text-red-600" /><span>To: {searchParams.destination_city}</span></div>
-                      {searchParams.shipping_date && (<div className="flex items-center gap-2 text-slate-600"><Calendar className="w-4 h-4 text-[#082c59]" /><span>{format(new Date(searchParams.shipping_date), 'PPP')}</span></div>)}
-                      <div className="flex items-center gap-2 text-slate-600"><Clock className="w-4 h-4 text-[#082c59]" /><span>Est. {formatHours(service.delivery_time_hours)}</span></div>
+
+                <div className="p-5">
+                  {/* Route */}
+                  <div className="p-3 bg-red-50/60 rounded-xl border border-red-100 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <h4 className="font-semibold text-slate-800 text-sm">Shipment Route</h4>
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" /><span>From: <strong>{searchParams.origin_city}</strong></span></div>
+                      <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-3.5 h-3.5 text-red-600 shrink-0" /><span>To: <strong>{searchParams.destination_city}</strong></span></div>
+                      {searchParams.shipping_date && (
+                        <div className="flex items-center gap-2 text-slate-600"><Calendar className="w-3.5 h-3.5 text-red-500 shrink-0" /><span>{format(new Date(searchParams.shipping_date), 'EEE, MMM d')}</span></div>
+                      )}
+                      <div className="flex items-center gap-2 text-slate-600"><Clock className="w-3.5 h-3.5 text-red-500 shrink-0" /><span>Est. {formatHours(service.delivery_time_hours)}</span></div>
                     </div>
                   </div>
 
-                  <div className="mb-4 pb-4 border-b border-slate-100">
-                    <h4 className="font-semibold text-slate-800 mb-3">Package</h4>
+                  {/* Package summary */}
+                  <div>
+                    <h4 className="font-semibold text-slate-800 text-sm mb-2 flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-red-500" /> Package
+                    </h4>
                     <div className="p-3 bg-slate-50 rounded-xl text-sm space-y-1">
                       <div className="flex justify-between"><span className="text-slate-500">Type</span><strong className="capitalize">{searchParams.package_type}</strong></div>
                       <div className="flex justify-between"><span className="text-slate-500">Weight</span><strong>{searchParams.weight_kg} kg</strong></div>
                       <div className="flex justify-between"><span className="text-slate-500">Dimensions</span><strong>{searchParams.length_cm || '–'}×{searchParams.width_cm || '–'}×{searchParams.height_cm || '–'} cm</strong></div>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  <div className="bg-[#082c59] -mx-5 -mb-5 p-5 rounded-b-xl">
-                    <h4 className="font-semibold text-white mb-3">Price Breakdown</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-slate-300"><span>Shipping fee</span><span>{formatCurrency(getPrice())}</span></div>
-                      <div className="flex justify-between text-slate-300"><span>Service fee (5%)</span><span>+{formatCurrency(getCommission())}</span></div>
-                      <div className="pt-3 mt-3 border-t border-white/20 flex justify-between items-center">
-                        <span className="text-white font-semibold">Total</span>
-                        <span className="text-2xl font-bold text-yellow-400">{formatCurrency(getTotalPrice())}</span>
-                      </div>
+              {/* Price + payment + confirm */}
+              <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" /> Price Breakdown
+                  </h4>
+                </div>
+                <div className="bg-white p-5">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Shipping fee</span>
+                      <span className="font-medium text-slate-800">{formatCurrency(getPrice())}</span>
                     </div>
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={!isFormValid() || paymentInProgress || !selectedPaymentMethod}
-                      className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-[#082c59] h-12 font-semibold rounded-xl"
-                      data-testid="confirm-booking-btn"
-                    >
-                      {paymentInProgress ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>) : (<><Truck className="w-4 h-4 mr-2" />Confirm Booking</>)}
-                    </Button>
-                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-300"><Shield className="w-3 h-3" /><span>Free tracking included</span></div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>Service fee (5%)</span>
+                      <span className="font-medium text-slate-800">+{formatCurrency(getCommission())}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-3 mt-2 border-t border-slate-200">
+                      <span className="font-bold text-slate-900">Total</span>
+                      <span className="text-2xl font-bold text-red-700">{formatCurrency(getTotalPrice())}</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Payment */}
+                <div className="bg-gradient-to-r from-red-600 to-red-700 border-t border-slate-200 p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Payment Method
+                  </h4>
+                </div>
+                <div className="bg-slate-50 p-5">
+                  {!isFormValid && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
+                      <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                      <span>Complete sender, receiver, package details and upload <strong>3 photos</strong> to unlock payment.</span>
+                    </div>
+                  )}
+                  <div className={!isFormValid ? 'pointer-events-none opacity-50' : ''}>
+                    <PaymentMethodsSelection
+                      amount={getTotalPrice()}
+                      orderId={orderId}
+                      serviceName={service?.name || 'Package Delivery'}
+                      onPaymentInitiated={handlePaymentInitiated}
+                      onPaymentError={handlePaymentError}
+                      triggerPayment={triggerPayment}
+                      onMethodSelected={setSelectedPaymentMethod}
+                      disabled={!isFormValid || paymentInProgress}
+                    />
+                  </div>
+
+                  {/* Confirm button — BELOW payment methods */}
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!isFormValid || paymentInProgress || !selectedPaymentMethod}
+                    className="w-full h-12 text-base bg-red-600 hover:bg-red-700 text-white mt-4 rounded-xl shadow-lg font-semibold"
+                    data-testid="confirm-booking-btn"
+                  >
+                    {paymentInProgress ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>) : (<><Truck className="w-4 h-4 mr-2" />Confirm Booking · {formatCurrency(getTotalPrice())}</>)}
+                  </Button>
+                  <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500"><Shield className="w-3 h-3" /><span>Free tracking included</span></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

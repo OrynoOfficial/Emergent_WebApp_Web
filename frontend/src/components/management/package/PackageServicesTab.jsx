@@ -16,6 +16,7 @@ import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 
 const PAGE_SIZE = 12;
 
@@ -51,6 +52,7 @@ const DEFAULT_SVC = {
   accepted_types: ['parcel'],
   delivery_time_hours: 24,
   features: ['tracking'],
+  images: [],
   operator_id: '',
 };
 
@@ -118,6 +120,7 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
         tiers: svc.tiers?.length ? svc.tiers : DEFAULT_SVC.tiers,
         accepted_types: svc.accepted_types || [],
         features: svc.features || [],
+        images: svc.images || [],
       });
     } else {
       setForm(DEFAULT_SVC);
@@ -371,6 +374,22 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
           )}
 
           <form onSubmit={handleSave} className="space-y-6 px-6 py-5">
+            {/* Photos */}
+            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide flex items-center gap-2">
+                <Package className="h-4 w-4 text-red-500" /> Service Photos
+              </h3>
+              <p className="text-xs text-slate-500 mb-3">Up to 3 photos showing your vehicles, hub or branding. The first photo is used as the cover on customer search results.</p>
+              <MiniImageUploader
+                images={form.images || []}
+                onChange={(imgs) => setForm((p) => ({ ...p, images: imgs }))}
+                max={3}
+                folder="package_services"
+                accent="red"
+                helperText="PNG/JPG up to 5MB each"
+              />
+            </section>
+
             {/* Basics */}
             <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
               <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">

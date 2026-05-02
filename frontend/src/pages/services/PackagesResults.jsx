@@ -46,140 +46,182 @@ const formatHours = (h) => {
   return r ? `${d}d ${r}h` : `${d}d`;
 };
 
-const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => (
-  <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1" data-testid={`service-card-${service.id}`}>
-    <div className="relative h-32 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] p-4">
-      <div className="absolute top-3 right-3 flex gap-1.5">
-        <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
-        <button
-          onClick={(e) => { e.stopPropagation(); if (toggleFav) toggleFav(service); }}
-          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
-          data-testid={`fav-btn-${service.id}`}
-        >
-          <Heart className={`h-4 w-4 ${(isFav && isFav(service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-        </button>
-      </div>
-      <Badge className="absolute top-3 left-3 bg-yellow-400 text-[#082c59] hover:bg-yellow-400">
-        <Truck className="w-3 h-3 mr-1" /> Logistics
-      </Badge>
-      <div className="absolute bottom-4 left-4">
-        <div className="flex items-center gap-2 text-white">
-          <Package className="w-5 h-5" />
-          <span className="font-bold text-lg line-clamp-1">{service.name}</span>
+const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
+  const cover = service.images?.[0];
+  const thumbs = (service.images || []).slice(1, 3);
+  return (
+    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1" data-testid={`service-card-${service.id}`}>
+      <div className="relative h-44 overflow-hidden">
+        {cover ? (
+          <>
+            <img src={getImg(cover)} alt={service.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-red-900/30 to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-red-700 to-rose-800" />
+        )}
+        <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+          <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
+          <button
+            onClick={(e) => { e.stopPropagation(); if (toggleFav) toggleFav(service); }}
+            className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"
+            data-testid={`fav-btn-${service.id}`}
+          >
+            <Heart className={`h-4 w-4 ${(isFav && isFav(service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+          </button>
         </div>
-        <div className="flex items-center gap-1 text-white/80 text-sm mt-1">
-          <Building className="w-3 h-3" />
-          {service.operator_name || 'Operator'}
-        </div>
-      </div>
-    </div>
-
-    <CardContent className="p-5">
-      <div className="flex items-center justify-between text-sm mb-4 bg-slate-50 rounded-lg p-3">
-        <div className="text-center flex-1 min-w-0">
-          <MapPin className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-          <span className="text-slate-600 truncate block">{service.origin_city}</span>
-        </div>
-        <div className="flex-1 px-2"><div className="border-t-2 border-dashed border-slate-300" /></div>
-        <div className="text-center flex-1 min-w-0">
-          <MapPin className="w-4 h-4 text-red-500 mx-auto mb-1" />
-          <span className="text-slate-600 truncate block">{service.destination_city}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
-        <div className="flex items-center gap-1">
-          <Clock className="w-4 h-4 text-[#082c59]" />
-          <span>{formatHours(service.delivery_time_hours)}</span>
-        </div>
-        <div className="flex items-center gap-1 text-slate-500">
-          <Weight className="w-3.5 h-3.5" />
-          <span className="text-xs">up to {service.max_weight_kg}kg</span>
-        </div>
-      </div>
-
-      {service.features?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-4">
-          {service.features.slice(0, 3).map((f) => (
-            <Badge key={f} variant="secondary" className="text-[10px] capitalize">
-              <Shield className="w-2.5 h-2.5 mr-1" />{f.replace(/_/g, ' ')}
-            </Badge>
-          ))}
-          {service.features.length > 3 && <span className="text-[10px] text-slate-400">+{service.features.length - 3}</span>}
-        </div>
-      )}
-
-      <div className="flex items-end justify-between pt-3 border-t border-slate-100">
-        <div>
-          <div className="text-xs text-slate-500">Estimated price</div>
-          <div className="text-2xl font-bold text-[#082c59]">{formatFCFA(service.calculated_price || 0)}</div>
-        </div>
-        <Button
-          onClick={() => onSelect(service)}
-          className="bg-[#082c59] hover:bg-[#0a3a75] rounded-xl"
-          data-testid={`select-service-${service.id}`}
-        >
-          Select <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const ServiceCardList = ({ service, onSelect, isFav, toggleFav }) => (
-  <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
-    <div className="flex flex-col md:flex-row">
-      <div className="md:w-1/4 p-6 bg-gradient-to-br from-[#082c59] to-[#0a3a75] text-white flex flex-col justify-center">
-        <Badge className="w-fit mb-2 bg-yellow-400 text-[#082c59] hover:bg-yellow-400">
+        <Badge className="absolute top-3 left-3 bg-yellow-400 text-red-800 hover:bg-yellow-400 z-10">
           <Truck className="w-3 h-3 mr-1" /> Logistics
         </Badge>
-        <div className="flex items-center gap-2 mb-1">
-          <Package className="w-5 h-5" />
-          <span className="font-bold">{service.name}</span>
-        </div>
-        <div className="flex items-center gap-1 text-white/80 text-sm">
-          <Building className="w-3 h-3" /> {service.operator_name || 'Operator'}
-        </div>
-      </div>
-
-      <div className="md:w-1/2 p-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-2"><MapPin className="w-5 h-5 text-emerald-500" /><span className="font-medium">{service.origin_city}</span></div>
-          <div className="flex-1 border-t-2 border-dashed border-slate-300" />
-          <div className="flex items-center gap-2"><span className="font-medium">{service.destination_city}</span><MapPin className="w-5 h-5 text-red-500" /></div>
-        </div>
-        <div className="flex flex-wrap gap-3 text-sm text-slate-600 mb-2">
-          <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-[#082c59]" /><span><strong>Delivery:</strong> {formatHours(service.delivery_time_hours)}</span></div>
-          <div className="flex items-center gap-2"><Package className="w-5 h-5 text-[#082c59]" /><span><strong>Max:</strong> {service.max_weight_kg}kg</span></div>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {service.features?.slice(0, 4).map((f) => (
-            <Badge key={f} variant="secondary" className="capitalize text-xs">{f.replace(/_/g, ' ')}</Badge>
-          ))}
+        {thumbs.length > 0 && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {thumbs.map((t, i) => (
+              <img key={i} src={getImg(t)} alt="" className="w-10 h-10 rounded-md object-cover border-2 border-white/70 shadow" />
+            ))}
+          </div>
+        )}
+        <div className="absolute bottom-3 left-4 right-4 z-10">
+          <div className="flex items-center gap-2 text-white">
+            <Package className="w-5 h-5" />
+            <span className="font-bold text-lg line-clamp-1">{service.name}</span>
+          </div>
+          <div className="flex items-center gap-1 text-white/80 text-sm mt-0.5">
+            <Building className="w-3 h-3" />
+            {service.operator_name || 'Operator'}
+          </div>
         </div>
       </div>
 
-      <div className="md:w-1/4 p-6 bg-slate-50 flex flex-col justify-center items-center border-l">
-        <div className="text-sm text-slate-500 mb-1">Estimated price</div>
-        <div className="text-3xl font-bold text-[#082c59] mb-1">{formatFCFA(service.calculated_price || 0)}</div>
-        <Button
-          onClick={() => onSelect(service)}
-          className="w-full mt-3 bg-[#082c59] hover:bg-[#0a3a75] rounded-xl"
-          data-testid={`select-service-list-${service.id}`}
-        >
-          Select Service <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-        <button
-          onClick={() => toggleFav?.(service)}
-          className="mt-2 text-xs text-slate-500 hover:text-red-500 flex items-center gap-1"
-        >
-          <Heart className={`h-3.5 w-3.5 ${isFav?.(service.id) ? 'fill-red-500 text-red-500' : ''}`} />
-          {isFav?.(service.id) ? 'Saved' : 'Save'}
-        </button>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between text-sm mb-4 bg-red-50/50 rounded-lg p-3">
+          <div className="text-center flex-1 min-w-0">
+            <MapPin className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+            <span className="text-slate-600 truncate block">{service.origin_city}</span>
+          </div>
+          <div className="flex-1 px-2"><div className="border-t-2 border-dashed border-red-300" /></div>
+          <div className="text-center flex-1 min-w-0">
+            <MapPin className="w-4 h-4 text-red-500 mx-auto mb-1" />
+            <span className="text-slate-600 truncate block">{service.destination_city}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-sm text-slate-600 mb-3">
+          <div className="flex items-center gap-1">
+            <Clock className="w-4 h-4 text-red-600" />
+            <span>{formatHours(service.delivery_time_hours)}</span>
+          </div>
+          <div className="flex items-center gap-1 text-slate-500">
+            <Weight className="w-3.5 h-3.5" />
+            <span className="text-xs">up to {service.max_weight_kg}kg</span>
+          </div>
+        </div>
+
+        {service.features?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-4">
+            {service.features.slice(0, 3).map((f) => (
+              <Badge key={f} variant="secondary" className="text-[10px] capitalize bg-red-50 text-red-700 hover:bg-red-100">
+                <Shield className="w-2.5 h-2.5 mr-1" />{f.replace(/_/g, ' ')}
+              </Badge>
+            ))}
+            {service.features.length > 3 && <span className="text-[10px] text-slate-400">+{service.features.length - 3}</span>}
+          </div>
+        )}
+
+        <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+          <div>
+            <div className="text-xs text-slate-500">Estimated price</div>
+            <div className="text-2xl font-bold text-red-700">{formatFCFA(service.calculated_price || 0)}</div>
+          </div>
+          <Button
+            onClick={() => onSelect(service)}
+            className="bg-red-600 hover:bg-red-700 rounded-xl"
+            data-testid={`select-service-${service.id}`}
+          >
+            Select <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ServiceCardList = ({ service, onSelect, isFav, toggleFav }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
+  const cover = service.images?.[0];
+  const thumbs = (service.images || []).slice(1, 3);
+  return (
+    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
+      <div className="flex flex-col md:flex-row">
+        <div className="md:w-1/4 relative min-h-[160px] overflow-hidden">
+          {cover ? (
+            <img src={getImg(cover)} alt={service.name} className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-rose-700" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-red-900/30 to-transparent" />
+          <Badge className="absolute top-3 left-3 bg-yellow-400 text-red-800 hover:bg-yellow-400 z-10">
+            <Truck className="w-3 h-3 mr-1" /> Logistics
+          </Badge>
+          {thumbs.length > 0 && (
+            <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+              {thumbs.map((t, i) => (
+                <img key={i} src={getImg(t)} alt="" className="w-9 h-9 rounded-md object-cover border-2 border-white/70 shadow" />
+              ))}
+            </div>
+          )}
+          <div className="absolute bottom-3 left-3 right-3 z-10 text-white">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Package className="w-4 h-4" />
+              <span className="font-bold text-sm line-clamp-1">{service.name}</span>
+            </div>
+            <div className="flex items-center gap-1 text-white/80 text-xs">
+              <Building className="w-3 h-3" /> {service.operator_name || 'Operator'}
+            </div>
+          </div>
+        </div>
+
+        <div className="md:w-1/2 p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-2"><MapPin className="w-5 h-5 text-emerald-500" /><span className="font-medium">{service.origin_city}</span></div>
+            <div className="flex-1 border-t-2 border-dashed border-red-300" />
+            <div className="flex items-center gap-2"><span className="font-medium">{service.destination_city}</span><MapPin className="w-5 h-5 text-red-500" /></div>
+          </div>
+          <div className="flex flex-wrap gap-3 text-sm text-slate-600 mb-2">
+            <div className="flex items-center gap-2"><Clock className="w-5 h-5 text-red-600" /><span><strong>Delivery:</strong> {formatHours(service.delivery_time_hours)}</span></div>
+            <div className="flex items-center gap-2"><Package className="w-5 h-5 text-red-600" /><span><strong>Max:</strong> {service.max_weight_kg}kg</span></div>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {service.features?.slice(0, 4).map((f) => (
+              <Badge key={f} variant="secondary" className="capitalize text-xs bg-red-50 text-red-700 hover:bg-red-100">{f.replace(/_/g, ' ')}</Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="md:w-1/4 p-6 bg-red-50/40 flex flex-col justify-center items-center border-l">
+          <div className="text-sm text-slate-500 mb-1">Estimated price</div>
+          <div className="text-3xl font-bold text-red-700 mb-1">{formatFCFA(service.calculated_price || 0)}</div>
+          <Button
+            onClick={() => onSelect(service)}
+            className="w-full mt-3 bg-red-600 hover:bg-red-700 rounded-xl"
+            data-testid={`select-service-list-${service.id}`}
+          >
+            Select Service <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+          <button
+            onClick={() => toggleFav?.(service)}
+            className="mt-2 text-xs text-slate-500 hover:text-red-500 flex items-center gap-1"
+          >
+            <Heart className={`h-3.5 w-3.5 ${isFav?.(service.id) ? 'fill-red-500 text-red-500' : ''}`} />
+            {isFav?.(service.id) ? 'Saved' : 'Save'}
+          </button>
+        </div>
       </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 export default function PackagesResults() {
   const { isFav, toggleFav } = useFavourites('packages');
@@ -187,7 +229,7 @@ export default function PackagesResults() {
   const [urlParams, setUrlParams] = useSearchParams();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -333,7 +375,7 @@ export default function PackagesResults() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-[#082c59] mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-red-600 mx-auto mb-4" />
           <p className="text-slate-600">Finding delivery operators...</p>
         </div>
       </div>
@@ -351,7 +393,7 @@ export default function PackagesResults() {
           </div>
 
           {/* Editable search summary card */}
-          <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a4a8f] text-white mb-4 border-0">
+          <Card className="shadow-sm bg-gradient-to-r from-red-700 via-red-600 to-rose-600 text-white mb-4 border-0">
             <CardContent className="p-4">
               {isEditing ? (
                 <div className="space-y-3">
@@ -410,7 +452,7 @@ export default function PackagesResults() {
                     <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="text-white hover:bg-white/10">
                       <X className="w-4 h-4 mr-1" /> Cancel
                     </Button>
-                    <Button size="sm" onClick={applyEdit} className="bg-white text-[#082c59] hover:bg-white/90" data-testid="apply-edit-search">
+                    <Button size="sm" onClick={applyEdit} className="bg-white text-red-700 hover:bg-white/90" data-testid="apply-edit-search">
                       <Check className="w-4 h-4 mr-1" /> Update Search
                     </Button>
                   </div>
@@ -481,7 +523,7 @@ export default function PackagesResults() {
                 <Button variant="outline" className="relative" data-testid="filters-btn">
                   <SlidersHorizontal className="w-4 h-4 mr-1.5" /> Filters
                   {activeFiltersCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-[#082c59] text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center">
                       {activeFiltersCount}
                     </span>
                   )}
@@ -526,7 +568,7 @@ export default function PackagesResults() {
                           variant={maxDeliveryHours === opt.value ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setMaxDeliveryHours(opt.value)}
-                          className={`rounded-full ${maxDeliveryHours === opt.value ? 'bg-[#082c59]' : ''}`}
+                          className={`rounded-full ${maxDeliveryHours === opt.value ? 'bg-red-600 hover:bg-red-700' : ''}`}
                         >
                           {opt.label}
                         </Button>
@@ -548,7 +590,7 @@ export default function PackagesResults() {
                           variant={pricingModelFilter === opt.value ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setPricingModelFilter(opt.value)}
-                          className={`rounded-full ${pricingModelFilter === opt.value ? 'bg-[#082c59]' : ''}`}
+                          className={`rounded-full ${pricingModelFilter === opt.value ? 'bg-red-600 hover:bg-red-700' : ''}`}
                         >
                           {opt.label}
                         </Button>
@@ -566,7 +608,7 @@ export default function PackagesResults() {
                           variant={minMaxWeight === w ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => setMinMaxWeight(w)}
-                          className={`rounded-full ${minMaxWeight === w ? 'bg-[#082c59]' : ''}`}
+                          className={`rounded-full ${minMaxWeight === w ? 'bg-red-600 hover:bg-red-700' : ''}`}
                         >
                           {w === 0 ? 'Any' : `${w}kg+`}
                         </Button>
@@ -592,7 +634,7 @@ export default function PackagesResults() {
 
                   <div className="flex gap-3 pt-4 border-t">
                     <Button variant="outline" onClick={clearFilters} className="flex-1 rounded-xl">Clear All</Button>
-                    <Button onClick={() => setFilterOpen(false)} className="flex-1 bg-[#082c59] rounded-xl" data-testid="apply-filters-btn">
+                    <Button onClick={() => setFilterOpen(false)} className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl" data-testid="apply-filters-btn">
                       Show {filteredServices.length} Results
                     </Button>
                   </div>
@@ -622,7 +664,7 @@ export default function PackagesResults() {
               {activeFiltersCount > 0 && (
                 <Button onClick={clearFilters} variant="outline" data-testid="clear-filters-btn">Clear Filters</Button>
               )}
-              <Button onClick={() => navigate('/services/packages')} className="bg-[#082c59]" data-testid="modify-search-btn">Modify Search</Button>
+              <Button onClick={() => navigate('/services/packages')} className="bg-red-600 hover:bg-red-700" data-testid="modify-search-btn">Modify Search</Button>
             </div>
           </div>
         ) : viewMode === 'grid' ? (

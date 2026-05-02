@@ -125,6 +125,7 @@ class PhysicalPackageCreate(BaseModel):
     estimated_delivery: Optional[str] = None
     carrier: Optional[str] = None
     customer_id: Optional[str] = None  # set by booking endpoint from authenticated user
+    package_photos: List[str] = []  # customer-uploaded photos of the package
 
 
 class PhysicalPackageUpdate(BaseModel):
@@ -144,6 +145,7 @@ class PhysicalPackageUpdate(BaseModel):
     status: Optional[PackageStatus] = None
     estimated_delivery: Optional[str] = None
     carrier: Optional[str] = None
+    package_photos: Optional[List[str]] = None
 
 
 class PhysicalPackage(BaseModel):
@@ -164,6 +166,7 @@ class PhysicalPackage(BaseModel):
     status: PackageStatus = PackageStatus.PENDING
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    package_photos: List[str] = []
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
