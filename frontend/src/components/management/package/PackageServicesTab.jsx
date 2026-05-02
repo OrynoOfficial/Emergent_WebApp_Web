@@ -523,15 +523,15 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-600" /> Origin City *</Label>
-                        <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" className="bg-white" />
+                        <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" className="bg-white" data-testid="origin-city-input" />
                       </div>
                       <div>
                         <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-red-500" /> Destination City *</Label>
-                        <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" className="bg-white" />
+                        <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" className="bg-white" data-testid="destination-city-input" />
                       </div>
                       <div>
                         <Label className="flex items-center gap-1"><Clock className="h-3 w-3 text-blue-600" /> Delivery Time (hrs)</Label>
-                        <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} className="bg-white" />
+                        <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} className="bg-white" data-testid="delivery-time-input" />
                       </div>
                     </div>
                   </div>
@@ -590,12 +590,12 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                     <div className="grid grid-cols-2 gap-3 bg-white rounded-lg p-3 border border-slate-100">
                       <div>
                         <Label>Base Price (FCFA) *</Label>
-                        <Input type="number" value={form.base_price} onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))} placeholder="1500" />
+                        <Input type="number" value={form.base_price} onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))} placeholder="1500" data-testid="base-price-input" />
                         <p className="text-[10px] text-slate-400 mt-1">Charged regardless of weight</p>
                       </div>
                       <div>
                         <Label>Per-kg Rate (FCFA) *</Label>
-                        <Input type="number" value={form.per_kg_rate} onChange={(e) => setForm((p) => ({ ...p, per_kg_rate: e.target.value }))} placeholder="400" />
+                        <Input type="number" value={form.per_kg_rate} onChange={(e) => setForm((p) => ({ ...p, per_kg_rate: e.target.value }))} placeholder="400" data-testid="per-kg-rate-input" />
                         <p className="text-[10px] text-slate-400 mt-1">Added on top of base for each kg</p>
                       </div>
                     </div>
@@ -609,7 +609,7 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white rounded-lg p-3 border border-slate-100">
                     <div>
                       <Label>Max Weight (kg)</Label>
-                      <Input type="number" step="0.1" value={form.max_weight_kg} onChange={(e) => setForm((p) => ({ ...p, max_weight_kg: e.target.value }))} />
+                      <Input type="number" step="0.1" value={form.max_weight_kg} onChange={(e) => setForm((p) => ({ ...p, max_weight_kg: e.target.value }))} data-testid="max-weight-input" />
                     </div>
                     <div>
                       <Label>Max Length (cm)</Label>
