@@ -1,0 +1,32 @@
+{
+  "summary": "Verified PackageBooking MoMo prop-wiring fix. Code inspection confirms PackageBooking.jsx now passes onProcessingChange, onTrigger, customerPhone (sender_phone), customerEmail, onMoMoDialogOpen, serviceDetails, triggerPayment to PaymentMethodsSelection — matching RestaurantBooking pattern exactly. E2E Playwright test progressed login → navigate → sender self-toggle auto-fill (phone=+237 677251682 verified) → receiver/description fill → 3 photo uploads (all 200 OK, 3 thumbnails rendered). Blocked at clicking the MTN MoMo payment tile because the payment tiles are rendered as logo images without visible text or data-testid, so text-based selector failed. This is a TEST selector limitation, NOT a regression of the fix. Backend uploads/packages/orders endpoints all returned 200.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PaymentMethodsSelection tiles", "issues": ["Payment method tiles (Visa, MoMo, Stripe) lack data-testid attributes and accessible text labels — they render as logo images only. Add data-testid='payment-method-momo' / 'payment-method-stripe' / 'payment-method-card' on each tile button to make them testable and accessible."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add data-testid attributes to each payment tile in PaymentMethodsSelection.jsx (e.g., data-testid=`payment-method-${id}` on the tile button/card) so Playwright can reliably click MoMo/Stripe/card tiles without relying on image alt text.",
+    "(Optional) Also add visible text labels or aria-label to each tile for accessibility + screen readers.",
+    "After adding testids, retest the full MoMo dialog flow — code-level fix is correct; only the automated verification was blocked."
+  ],
+  "critical_code_review_comments": [
+    "Fix itself is correct — PackageBooking.jsx lines 520-535 now mirror RestaurantBooking.jsx lines 469-487 for all toggle-dance props.",
+    "handleProcessingChange and handleMoMoDialogOpen are implemented identically to RestaurantBooking — toggle-dance should work.",
+    "customerPhone={booking.sender_phone} is wired so MoMo dialog will prefill sender phone.",
+    "Radix DialogContent warnings in console about missing DialogTitle (accessibility) — unrelated to this bug but worth addressing."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (uploads+packages+orders 200)", "frontend": "partial — could not click MoMo tile via automation due to missing testid"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None (ephemeral test booking attempt; no order was created because Confirm stayed disabled).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Payment tiles lack data-testid. After main agent adds data-testid='payment-method-momo'/'payment-method-stripe' on the tile buttons in PaymentMethodsSelection.jsx, rerun this exact test flow: login as customer@test.com, /services/packages/results?origin=Buea&destination=Limbe&weight_kg=2&package_type=parcel&length_cm=20&width_cm=15&height_cm=10, click Select Service, click details-book-btn, toggle sender-self, fill receiver (Jane Doe/+237677000000/12 Limbe Beach Road), fill package desc, upload 3 photos via single input[type=file] with set_input_files list of 3 png files (78-byte 10x10 red png works — verified). Then click the MoMo testid tile, then click confirm-booking-btn. After the API calls (POST /api/packages/, POST /api/orders/create) return, the MoMo phone-entry Radix dialog should open with sender_phone pre-filled. The dialog selector that works is [role='dialog']. Cancel dialog → booking page remains interactive. For Stripe: click payment-method-stripe testid → confirm → window.location changes to https://checkout.stripe.com/...",
+  "rca of the issue": "Original bug: PackageBooking was missing onProcessingChange callback, so PaymentMethodsSelection's initiatePayment early-return path (line 341: `if (disabled || isProcessingInternal) return`) was never escaped — after handleSubmit set paymentInProgress=true to show overlay, the parent never got a callback to reset disabled, and the useEffect retry of initiatePayment bailed out. Fix is to pass onProcessingChange (toggles disabled back off), onMoMoDialogOpen (hides overlay when dialog opens), customerPhone (prefills dialog), and onTrigger + serviceDetails — all present now."
+}

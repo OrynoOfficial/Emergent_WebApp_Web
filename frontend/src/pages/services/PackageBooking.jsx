@@ -143,6 +143,17 @@ export default function PackageBooking() {
   const getCommission = () => Math.round(getPrice() * 0.05);
   const getTotalPrice = () => getPrice() + getCommission();
 
+  const handleMoMoDialogOpen = () => {
+    // MoMo dialog is taking over the flow — hide our processing overlay
+    setShowPaymentOverlay(false);
+    setPaymentInProgress(false);
+  };
+
+  const handleProcessingChange = (isProcessing) => {
+    setShowPaymentOverlay(isProcessing);
+    if (!isProcessing) setPaymentInProgress(false);
+  };
+
   const handlePaymentInitiated = async (response) => {
     setPaymentInProgress(false);
     setShowPaymentOverlay(false);
@@ -510,8 +521,14 @@ export default function PackageBooking() {
                       amount={getTotalPrice()}
                       orderId={orderId}
                       serviceName={service?.name || 'Package Delivery'}
+                      customerPhone={booking.sender_phone}
+                      customerEmail={booking.sender_email}
+                      serviceDetails={{ service_id: service?.id, service_name: service?.name, operator_id: service?.operator_id }}
                       onPaymentInitiated={handlePaymentInitiated}
                       onPaymentError={handlePaymentError}
+                      onMoMoDialogOpen={handleMoMoDialogOpen}
+                      onProcessingChange={handleProcessingChange}
+                      onTrigger={() => setPaymentInProgress(true)}
                       triggerPayment={triggerPayment}
                       onMethodSelected={setSelectedPaymentMethod}
                       disabled={!isFormValid || paymentInProgress}
