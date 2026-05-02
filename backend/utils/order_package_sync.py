@@ -4,10 +4,17 @@ Sync helpers between `orders` and `packages` collections.
 When an order's payment / status changes for a service_type='package' booking,
 the linked physical-shipment record (`db.packages`) must be kept in sync so
 the operator's Shipments page and the public /api/packages/track endpoint
-reflect reality.
+reflect reality. Also notifies the operator (in-app + email) when a payment
+is verified so they can dispatch immediately.
 """
+import logging
 from datetime import datetime, timezone
 from typing import Optional
+
+from utils.notifications import create_notification
+from utils.email import send_email
+
+logger = logging.getLogger(__name__)
 
 
 async def _resolve_package_id(db, order: dict) -> Optional[str]:
