@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -756,33 +758,48 @@ export default function HotelManagement() {
       </div>
 
       {/* Hotel Dialog */}
-      <Dialog open={isHotelDialogOpen} onOpenChange={setIsHotelDialogOpen}>
-        <DialogContent className="max-w-3xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <Hotel className="h-5 w-5 text-[#082c59]" />
-              {editingHotel ? 'Edit Hotel' : 'Add New Hotel'}
-            </DialogTitle>
-          </DialogHeader>
-          <HotelForm 
-            form={hotelForm} 
-            onChange={setHotelForm} 
+      <ServiceFormShell
+        open={isHotelDialogOpen}
+        onOpenChange={setIsHotelDialogOpen}
+        icon={Hotel}
+        title={editingHotel ? 'Edit Hotel' : 'Add New Hotel'}
+        subtitle={editingHotel
+          ? 'Refine your property details, images and amenities. Customers see updates immediately.'
+          : 'Tell us about the property — at least 5 images are required to publish.'}
+        editing={!!editingHotel}
+        accent="pink"
+        leftColumn={
+          <HotelForm
+            form={hotelForm}
+            onChange={setHotelForm}
             operators={operators}
             isEditing={!!editingHotel}
           />
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsHotelDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleSaveHotel} 
-              className="bg-[#082c59]" 
-              disabled={saving || (hotelForm.images || []).length < 5}
-            >
-              {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              {editingHotel ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(hotelForm.images || [])[0]}
+            thumbs={(hotelForm.images || []).slice(1, 3)}
+            icon={Hotel}
+            badgeText="Hotel"
+            badgeClass="bg-pink-500 text-white"
+            placeholderColor="from-pink-600 via-rose-600 to-fuchsia-700"
+            title={hotelForm.name}
+            subtitle={`${hotelForm.city || 'City'}, ${hotelForm.country || 'Country'}`}
+            location={hotelForm.address}
+            rating={hotelForm.star_rating}
+            tags={hotelForm.amenities || []}
+            tagsAccentClass="bg-pink-50 text-pink-700"
+            priceLabel={`${(hotelForm.images || []).length}/5+ images`}
+            priceValue={(hotelForm.images || []).length >= 5 ? 'Ready to submit ✓' : `Need ${5 - (hotelForm.images || []).length} more`}
+            accentTextClass={(hotelForm.images || []).length >= 5 ? 'text-emerald-600' : 'text-amber-600'}
+          />
+        }
+        submitting={saving}
+        submitLabel={editingHotel ? 'Update Hotel' : 'Create Hotel'}
+        onSubmit={handleSaveHotel}
+        submitDataTestId="save-hotel-btn"
+      />
 
       {/* Room Dialog */}
       <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>

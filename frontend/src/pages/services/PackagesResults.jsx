@@ -13,6 +13,7 @@ import {
   ArrowLeft, Package, MapPin, Clock, Building, Truck,
   LayoutGrid, List, Search, SlidersHorizontal, Heart, Loader2, Shield,
   Edit2, Check, X, Weight, Ruler, ArrowRight,
+  Info, Tag, Percent,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
@@ -20,6 +21,8 @@ import { packageServiceApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import LocationInput from '@/components/shared/LocationInput';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 
 const PACKAGE_TYPES = [
   { value: 'document', label: 'Document' },
@@ -223,6 +226,281 @@ const ServiceCardList = ({ service, onSelect, isFav, toggleFav }) => {
   );
 };
 
+/**
+ * Rich details modal for a package service offering — opens when a card is clicked.
+ * Shows swipeable photo carousel, full description, all pricing tiers, capacity, features,
+ * subscribe + favourite controls, and a Book CTA.
+ */
+const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
+  if (!service) return null;
+  const photos = service.images && service.images.length ? service.images : [];
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-5xl bg-white p-0 overflow-hidden max-h-[92vh] overflow-y-auto" data-testid="service-details-modal">
+        {/* Photo Carousel / banner */}
+        <div className="relative">
+          {photos.length > 0 ? (
+            <Carousel opts={{ loop: photos.length > 1 }} className="w-full">
+              <CarouselContent className="ml-0">
+                {photos.map((img, i) => (
+                  <CarouselItem key={i} className="pl-0">
+                    <div className="relative h-72 sm:h-80 w-full bg-slate-900">
+                      <img src={getImg(img)} alt={`${service.name} ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                      <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                        {i + 1} / {photos.length}
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {photos.length > 1 && (
+                <>
+                  <CarouselPrevious className="left-3 bg-white/90 hover:bg-white border-0 shadow-lg" data-testid="details-prev-photo" />
+                  <CarouselNext className="right-3 bg-white/90 hover:bg-white border-0 shadow-lg" data-testid="details-next-photo" />
+                </>
+              )}
+            </Carousel>
+          ) : (
+            <div className="h-72 bg-gradient-to-br from-red-600 via-red-700 to-rose-800 flex items-center justify-center">
+              <Truck className="w-20 h-20 text-white/30" />
+            </div>
+          )}
+
+          {/* Header overlays */}
+          <div className="absolute top-3 left-3 z-10 flex gap-2">
+            <Badge className="bg-yellow-400 text-red-800 hover:bg-yellow-400">
+              <Truck className="w-3 h-3 mr-1" /> Logistics
+            </Badge>
+          </div>
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
+            <button
+              onClick={() => toggleFav?.(service)}
+              className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"
+              data-testid="details-fav-btn"
+            >
+              <Heart className={`h-5 w-5 ${isFav?.(service.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"
+              data-testid="details-close-btn"
+            >
+              <X className="h-5 w-5 text-white" />
+            </button>
+          </div>
+
+          {/* Title in banner */}
+          <div className="absolute bottom-4 left-4 right-4 z-10 text-white pointer-events-none">
+            <h2 className="text-2xl font-bold drop-shadow-md">{service.name}</h2>
+            <p className="text-sm text-white/90 flex items-center gap-1.5">
+              <Building className="w-3.5 h-3.5" /> {service.operator_name || 'Operator'}
+            </p>
+          </div>
+
+          {/* Photo dot indicator */}
+          {photos.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+              {photos.map((_, i) => (
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/60" />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+          {/* Left: Info */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* Route */}
+            <div className="bg-red-50/60 rounded-xl p-4 border border-red-100">
+              <p className="text-[10px] uppercase tracking-widest text-red-700 font-semibold mb-2">Route</p>
+              <div className="flex items-center justify-between">
+                <div className="text-center flex-1 min-w-0">
+                  <MapPin className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
+                  <p className="text-sm font-semibold text-slate-700 truncate">{service.origin_city}</p>
+                  <p className="text-[10px] text-slate-400 uppercase">Pickup</p>
+                </div>
+                <div className="flex-1 px-3"><div className="border-t-2 border-dashed border-red-300" /></div>
+                <div className="text-center flex-1 min-w-0">
+                  <MapPin className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                  <p className="text-sm font-semibold text-slate-700 truncate">{service.destination_city}</p>
+                  <p className="text-[10px] text-slate-400 uppercase">Delivery</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            {service.description && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <Info className="w-3 h-3" /> About this service
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">{service.description}</p>
+              </div>
+            )}
+
+            {/* Capacity grid */}
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Capacity Limits</p>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <Weight className="w-4 h-4 text-slate-500 mx-auto mb-1" />
+                  <p className="text-base font-bold text-slate-900">{service.max_weight_kg || 0}<span className="text-xs font-normal text-slate-500">kg</span></p>
+                  <p className="text-[10px] text-slate-400">Max weight</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <Ruler className="w-4 h-4 text-slate-500 mx-auto mb-1" />
+                  <p className="text-base font-bold text-slate-900">{service.max_length_cm || 0}</p>
+                  <p className="text-[10px] text-slate-400">Length cm</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <Ruler className="w-4 h-4 text-slate-500 mx-auto mb-1" />
+                  <p className="text-base font-bold text-slate-900">{service.max_width_cm || 0}</p>
+                  <p className="text-[10px] text-slate-400">Width cm</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <Ruler className="w-4 h-4 text-slate-500 mx-auto mb-1" />
+                  <p className="text-base font-bold text-slate-900">{service.max_height_cm || 0}</p>
+                  <p className="text-[10px] text-slate-400">Height cm</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            {service.pricing_model === 'tiered' && service.tiers?.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <Tag className="w-3 h-3" /> Weight Tiers
+                </p>
+                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 text-left">Bracket</th>
+                        <th className="px-4 py-2 text-left">Range</th>
+                        <th className="px-4 py-2 text-right">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {service.tiers.map((t, i) => (
+                        <tr key={i} className="border-t border-slate-100 hover:bg-slate-50">
+                          <td className="px-4 py-2 font-medium text-slate-700">{t.label || `Tier ${i + 1}`}</td>
+                          <td className="px-4 py-2 text-slate-600">{t.weight_min_kg}–{t.weight_max_kg} kg</td>
+                          <td className="px-4 py-2 text-right font-bold text-red-700">{formatFCFA(t.price || 0)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {service.pricing_model === 'per_kg' && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2 flex items-center gap-1">
+                  <Percent className="w-3 h-3" /> Pricing
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500">Base price</p>
+                    <p className="text-xl font-bold text-red-700">{formatFCFA(service.base_price || 0)}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs text-slate-500">Per-kg rate</p>
+                    <p className="text-xl font-bold text-red-700">{formatFCFA(service.per_kg_rate || 0)}<span className="text-xs font-normal">/kg</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Accepted package types */}
+            {service.accepted_types?.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Accepted Package Types</p>
+                <div className="flex flex-wrap gap-2">
+                  {service.accepted_types.map((t) => (
+                    <Badge key={t} variant="secondary" className="capitalize bg-slate-100 hover:bg-slate-100">
+                      {t.replace(/_/g, ' ')}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Features */}
+            {service.features?.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Service Features</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {service.features.map((f) => (
+                    <div key={f} className="flex items-center gap-2 bg-emerald-50/50 rounded-lg px-3 py-2">
+                      <Shield className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span className="text-xs text-slate-700 capitalize">{f.replace(/_/g, ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: sticky pricing + book */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-4 space-y-4">
+              <div className="rounded-2xl border-0 shadow-lg overflow-hidden bg-white">
+                <div className="bg-gradient-to-r from-red-600 to-rose-600 p-4 text-white">
+                  <p className="text-xs uppercase tracking-widest text-white/80">Estimated price</p>
+                  <p className="text-3xl font-bold">{formatFCFA(service.calculated_price || 0)}</p>
+                  <p className="text-[11px] text-white/80 mt-0.5">Based on your search inputs</p>
+                </div>
+                <div className="p-4 space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Clock className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span>Delivery in {service.delivery_time_hours || 0}h</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Package className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span>Up to {service.max_weight_kg}kg accepted</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Building className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span className="truncate">{service.operator_name}</span>
+                  </div>
+                </div>
+                <div className="p-4 pt-0">
+                  <Button
+                    onClick={() => onBook(service)}
+                    className="w-full bg-red-600 hover:bg-red-700 rounded-xl h-12 text-base font-semibold"
+                    data-testid="details-book-btn"
+                  >
+                    Book this service <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                  <button
+                    onClick={() => toggleFav?.(service)}
+                    className="w-full mt-2 text-xs text-slate-500 hover:text-red-500 flex items-center justify-center gap-1 py-1"
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${isFav?.(service.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                    {isFav?.(service.id) ? 'Saved to favourites' : 'Save for later'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500 flex items-start gap-2">
+                <Shield className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                <span>Free real-time tracking included with every booking. Final price confirmed at checkout.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function PackagesResults() {
   const { isFav, toggleFav } = useFavourites('packages');
   const navigate = useNavigate();
@@ -232,6 +510,7 @@ export default function PackagesResults() {
   const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
+  const [detailsService, setDetailsService] = useState(null);
 
   // Filter state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -337,7 +616,7 @@ export default function PackagesResults() {
     }
   }, [services, sortBy, searchQuery, priceRange, maxDeliveryHours, selectedFeatures, pricingModelFilter, minMaxWeight]);
 
-  const handleSelect = (service) => {
+  const handleBook = (service) => {
     sessionStorage.setItem('selectedPackageService', JSON.stringify(service));
     sessionStorage.setItem('packageBookingParams', JSON.stringify({
       origin_city: origin,
@@ -351,6 +630,8 @@ export default function PackagesResults() {
     }));
     navigate(`/services/packages/booking/${service.id}`);
   };
+
+  const handleSelect = (service) => setDetailsService(service);
 
   const toggleFeature = (feature) => {
     setSelectedFeatures((prev) => prev.includes(feature) ? prev.filter(f => f !== feature) : [...prev, feature]);
@@ -681,6 +962,19 @@ export default function PackagesResults() {
           </div>
         )}
       </div>
+
+      {/* Rich details modal */}
+      <ServiceDetailsModal
+        service={detailsService}
+        open={!!detailsService}
+        onClose={() => setDetailsService(null)}
+        onBook={(svc) => {
+          setDetailsService(null);
+          handleBook(svc);
+        }}
+        isFav={isFav}
+        toggleFav={toggleFav}
+      />
     </div>
   );
 }

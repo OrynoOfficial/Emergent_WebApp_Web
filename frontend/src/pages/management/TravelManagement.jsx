@@ -36,6 +36,8 @@ import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Replace } from 'lucide-react';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -995,11 +997,17 @@ export default function TravelManagement() {
       </div>
 
       {/* Route Dialog */}
-      <Dialog open={isRouteDialogOpen} onOpenChange={setIsRouteDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white">
-          <DialogHeader>
-            <DialogTitle>{editingRoute ? 'Edit Route' : 'Create Route'}</DialogTitle>
-          </DialogHeader>
+      <ServiceFormShell
+        open={isRouteDialogOpen}
+        onOpenChange={setIsRouteDialogOpen}
+        icon={Bus}
+        title={editingRoute ? 'Edit Route' : 'Create Route'}
+        subtitle={editingRoute
+          ? 'Update timings, pricing, vehicle assignment and amenities.'
+          : 'Define a new travel route — origin, destination, schedule and vehicle.'}
+        editing={!!editingRoute}
+        accent="blue"
+        leftColumn={
           <RouteForm
             form={routeForm}
             onChange={setRouteForm}
@@ -1010,12 +1018,29 @@ export default function TravelManagement() {
             onOperatorChange={setSelectedOperator}
             onVehicleSelect={handleVehicleSelect}
           />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRouteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRoute} className="bg-blue-600">{editingRoute ? 'Update' : 'Create'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={null}
+            icon={Bus}
+            badgeText="Travel"
+            badgeClass="bg-blue-500 text-white"
+            placeholderColor="from-blue-700 via-blue-600 to-sky-500"
+            title={routeForm.from_city && routeForm.to_city ? `${routeForm.from_city} → ${routeForm.to_city}` : 'Origin → Destination'}
+            subtitle={routeForm.vehicle_name || (routeForm.vehicle_type ? `${routeForm.vehicle_type} vehicle` : 'No vehicle assigned')}
+            location={routeForm.departure_time && routeForm.arrival_time ? `🕐 ${routeForm.departure_time} – ${routeForm.arrival_time}` : 'Schedule pending'}
+            tags={routeForm.amenities || []}
+            tagsAccentClass="bg-blue-50 text-blue-700"
+            priceLabel="Per-seat price"
+            priceValue={routeForm.price ? `${Number(routeForm.price).toLocaleString()} FCFA` : '—'}
+            accentTextClass="text-blue-700"
+          />
+        }
+        submitting={false}
+        submitLabel={editingRoute ? 'Update Route' : 'Create Route'}
+        onSubmit={handleSaveRoute}
+        submitDataTestId="save-route-btn"
+      />
 
       {/* Vehicle Dialog */}
       <Dialog open={isVehicleDialogOpen} onOpenChange={setIsVehicleDialogOpen}>

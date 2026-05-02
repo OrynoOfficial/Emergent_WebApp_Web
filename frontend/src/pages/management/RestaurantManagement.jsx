@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
@@ -740,29 +742,57 @@ export default function RestaurantManagement() {
       </div>
 
       {/* Restaurant Dialog */}
-      <Dialog open={isRestaurantDialogOpen} onOpenChange={setIsRestaurantDialogOpen}>
-        <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Utensils className="h-5 w-5 text-orange-600" />
-              {editingRestaurant ? 'Edit Restaurant' : 'Add Restaurant'}
-            </DialogTitle>
-          </DialogHeader>
+      <ServiceFormShell
+        open={isRestaurantDialogOpen}
+        onOpenChange={setIsRestaurantDialogOpen}
+        icon={Utensils}
+        title={editingRestaurant ? 'Edit Restaurant' : 'Add Restaurant'}
+        subtitle={editingRestaurant
+          ? 'Update cuisine, hours, photos and contact info — changes go live immediately.'
+          : 'Tell us about the restaurant — cuisine, location, ambience and photos.'}
+        editing={!!editingRestaurant}
+        accent="orange"
+        leftColumn={
           <RestaurantForm
             form={restaurantForm}
             onChange={setRestaurantForm}
             operators={operators}
             isEditing={!!editingRestaurant}
           />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRestaurantDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveRestaurant} disabled={saving} className="bg-orange-600 hover:bg-orange-700">
-              {saving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              {editingRestaurant ? 'Update' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(restaurantForm.images || [])[0]}
+            thumbs={(restaurantForm.images || []).slice(1, 3)}
+            icon={Utensils}
+            badgeText="Restaurant"
+            badgeClass="bg-orange-500 text-white"
+            placeholderColor="from-orange-600 via-orange-500 to-amber-500"
+            title={restaurantForm.name}
+            subtitle={(restaurantForm.cuisine_type || []).slice(0, 2).join(' · ') || 'Cuisine pending'}
+            location={`${restaurantForm.city || 'City'}${restaurantForm.address ? ', ' + restaurantForm.address : ''}`}
+            tags={[
+              ...(restaurantForm.cuisine_type || []),
+              ...(restaurantForm.features || []),
+            ]}
+            tagsAccentClass="bg-orange-50 text-orange-700"
+            priceLabel="Price range"
+            priceValue={(() => {
+              const p = restaurantForm.price_range;
+              if (p === 'budget') return '$ Budget';
+              if (p === 'moderate') return '$$ Moderate';
+              if (p === 'upscale') return '$$$ Upscale';
+              if (p === 'fine_dining') return '$$$$ Fine dining';
+              return '—';
+            })()}
+            accentTextClass="text-orange-700"
+          />
+        }
+        submitting={saving}
+        submitLabel={editingRestaurant ? 'Update Restaurant' : 'Create Restaurant'}
+        onSubmit={handleSaveRestaurant}
+        submitDataTestId="save-restaurant-btn"
+      />
 
       {/* Menu Item Dialog */}
       <Dialog open={isMenuDialogOpen} onOpenChange={setIsMenuDialogOpen}>

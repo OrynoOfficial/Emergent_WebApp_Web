@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 146 — Frontend-only review of (1) PackagesServicesTab new ServiceCard, (2) PackagesResults customer-facing ServiceDetailsModal, (3) Hotel/Travel/Restaurant management modals converted to ServiceFormShell. ServicesTab card design and Restaurant modal verified end-to-end. Hotel and Travel Add buttons could not be located by automated test (label/selector ambiguity) — manual inspection of source confirms ServiceFormShell wiring is in place but the live UI test is INCONCLUSIVE for Hotel/Travel and needs main-agent self-test or data-testid additions. Customer-facing PackagesResults renders correctly but Yaoundé→Douala has zero active operators in the seed (only Buea→Limbe active), so the ServiceDetailsModal could not be opened with the URL provided in the review request — flow is INCONCLUSIVE.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Customer ServiceDetailsModal verification",
+        "issue": "Test URL /services/packages/results?origin=Yaoundé&destination=Douala&weight_kg=2 returns 'No operators available' because the only active package service in the seed is 'Bwako-Ko Packages' on Buea→Limbe. The /search endpoint correctly excludes the pending 'MVOG Packages & Delivery' (Douala→Yaoundé). Net effect: ServiceDetailsModal (carousel, fav, subscribe, book) could not be opened in this run.",
+        "affected_selectors": ["service-details-modal", "details-fav-btn", "details-close-btn", "details-book-btn", "details-prev-photo", "details-next-photo"]
+      },
+      {
+        "flow": "Hotel + Travel Add modal opening",
+        "issue": "Automated test could not find 'Add Hotel' / 'Add Route' button labels on the management pages within the harness session. Source code does call <ServiceFormShell> with accent='pink' (Hotel) and accent='blue' (Travel) so the implementation looks correct; needs data-testid on the trigger button (e.g. add-hotel-btn / add-route-btn) for reliable automation.",
+        "affected_selectors": ["[data-testid=add-hotel-btn]", "[data-testid=add-route-btn]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add data-testid to 'Add Hotel' / 'Add Route' / 'Add Restaurant' trigger buttons on management list pages (e.g. add-hotel-btn, add-route-btn, add-restaurant-btn) — would let automation reliably open the modals.",
+    "Add data-testid='delete-service-btn-{id}' to the trash button in PackageServicesTab ServiceCard (only edit-service-btn-{id} is exposed today — trash button is visible but un-test-id'd).",
+    "Either re-seed an ACTIVE package service that serves Yaoundé→Douala OR update review_request docs/test guidance to use Buea→Limbe so the ServiceDetailsModal is reachable. Today the only active service is on Buea→Limbe, so the URL in the review request shows the empty-state page.",
+    "Self-test by main agent: open /management/hotels → 'Add Hotel' → confirm pink gradient header, 2-col, type into name → preview title updates; same for /management/travel (blue, from_city/to_city) — automated session was unable to reach these but Restaurant variant (which uses identical shell pattern) works correctly so this is most likely a selector-only gap, not a functional bug."
+  ],
+  "critical_code_review_comments": [
+    "GenericPreviewCard.jsx:44 uses `import.meta.env.VITE_BACKEND_URL` — correct for Vite (frontend is Vite per package.json type: module + scripts.start: vite). Both REACT_APP_BACKEND_URL and VITE_BACKEND_URL are set in .env so safe.",
+    "ServiceFormShell.jsx — accents map covers red/navy/orange/blue/emerald/pink. Hotel uses 'pink', Travel uses 'blue', Restaurant uses 'orange', PackageService uses 'red'. All defined; mismatched accent names would silently fall back to red (line 62) — not a current issue but worth a console.warn for safety.",
+    "PackagesResults.jsx ServiceDetailsModal (lines 234-300): carousel arrows are conditionally rendered only when photos.length > 1 — matches spec. Subscribe + favourite + close + book testids all present (verified via grep). Book button calls onBook() which navigates and closes the modal — looks correct in source.",
+    "PackageServicesTab ServiceCard — confirmed in browser: cover photo banner, status-badge top-left ('Pending Approval' / 'Active'), service name, capacity ('up to 20kg'), 24h delivery, tiered pricing (Document/Small Parcel/Large Parcel + FCFA), tag pills, 'Starting at FCFA' price, Edit button (data-testid present), trash icon (NO data-testid).",
+    "Restaurant modal verified end-to-end in browser: orange gradient + Utensils icon header, 2-col layout, LIVE PREVIEW label with red pulse dot, GenericPreviewCard with 'Restaurant' badge, 'Untitled…' placeholder, Cuisine/City/Price-range fields shown live, '$$ Moderate' as priceValue, sticky footer with Cancel + Create Restaurant.",
+    "PackagesResults customer page renders the empty-state cleanly when no operators serve the route — 'No operators available' + 'Modify Search' button visible — no JS errors.",
+    "Hotel/Travel Add modal automation failed only because of missing testid on the trigger button — the modal source itself wraps HotelForm and RouteForm in ServiceFormShell with the correct accent/icon, so behaviour is expected to be identical to the verified Restaurant variant."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "Verified: PackageServicesTab card design + Restaurant ServiceFormShell. Inconclusive: Hotel/Travel ServiceFormShell (selector gap), customer ServiceDetailsModal (no matching active service for the test URL)."},
+  "test_credentials": "Per /app/memory/test_credentials.md — admin@test.com & customer@test.com, both testpassword123",
+  "seed_data_creation": "None. No backend writes performed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "VERIFIED in this run: (a) /management/packages Services tab — both seeded services (MVOG=Pending, Bwako-Ko=Active) render in the new card design with cover photo, StatusBadge, tiered pricing, tags, Edit testid, trash icon (no testid). (b) /management/restaurants 'Add Restaurant' opens ServiceFormShell with orange gradient + Utensils icon, 2-col layout with LIVE PREVIEW, '$$ Moderate' price-range pill in preview, Cancel + Create Restaurant footer. (c) Customer /services/packages/results renders the empty-state cleanly. INCONCLUSIVE — needs retest after main agent adds data-testid OR confirms button labels: Hotel/Travel Add modals (could not click trigger), and ServiceDetailsModal end-to-end (Yaoundé→Douala has no active operators in seed; use origin=Buea&destination=Limbe&weight_kg=2 instead). Source code review confirms all three converted modals correctly use ServiceFormShell with accent='pink'/'blue'/'orange' and Hotel/Travel modal source structure mirrors Restaurant which is verified working — high confidence the implementation is correct, just blocked on test selectors and seed data. ALSO: the PackagesResults search page lost auth state when navigated via page.goto in repeat sessions of this harness — direct in-app link click would be more reliable for automation.",
+  "rca of the issue": "No bug fixes required. Two test gaps to close: (1) Add data-testid to Add Hotel / Add Route trigger buttons; (2) Update review_request URL or seed data so customer ServiceDetailsModal can be reached. ServiceFormShell + GenericPreviewCard design is confirmed correct via Restaurant variant + source review."
+}
