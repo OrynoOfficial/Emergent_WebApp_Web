@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 145 — bug fix verified: ALL newly-created package service offerings now persist as status='pending' regardless of creator role (super_admin/admin/operator). Modal UX upgrade also verified. Backend: 5 passed + 1 skipped (operator lacks packages.create permission on this env — expected). Frontend: admin end-to-end confirmed — the modal is the wide red-themed form-builder with live preview card, photo uploader as first left-column section, pricing mode pills, and 'Submit for Approval' red button. After submit, the new service appears in the list with a 'Pending Approval' badge (not Active) confirming the bug fix end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration145_pending_status.py",
+    "/app/test_reports/pytest/iteration145.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/package_services.py:119 initial_status hard-coded to 'pending' — correct. Payload excludes operator-provided status (line 116). No role branching remains. Matches user's explicit requirement.",
+    "routes/package_services.py:245-246 operators still correctly blocked from flipping status via PUT.",
+    "PackageServicesTab.jsx header lines 446-447 use bg-gradient-to-r from-red-700 via-red-600 to-rose-600 — matches spec.",
+    "PackageServicesTab.jsx line 444 DialogContent has max-w-6xl — matches spec.",
+    "PackageServicesTab.jsx line 490 uses grid-cols-1 lg:grid-cols-3 with left column spanning lg:col-span-2 and right sticky preview — correct 2/3 + 1/3 split.",
+    "PackageServicesTab.jsx line 496 Service Photos is the FIRST section in the left column — correct.",
+    "PackageServicesTab.jsx lines 548/557 active pricing-mode pill gets border-red-500 bg-red-50 — correct.",
+    "PackageServicesTab.jsx line 728 save-service-btn is bg-red-600 with label 'Submit for Approval' — correct.",
+    "PackageServicesTab.jsx line 284 toast message 'Service offering submitted — awaiting admin approval' — matches spec.",
+    "Minor: seed data — the CoCo-Yams Shipping LTD service referenced in review_request is NOT present in this env; current legacy active seed is 'Bwako-Ko Packages | West Region Tours'. Test was relaxed to cover 'any legacy active service must remain active'. No product regression — just stale docs in review_request.",
+    "Minor: 'Yaoundé'/'Douala' placeholders on the Name input + Origin/Destination inputs overlap textually, which made automated selectors ambiguous during testing. Adding data-testid to origin-city-input / destination-city-input would improve testability (same applies to base_price / per_kg_rate / max_weight_kg / delivery_time_hours inputs)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration145_pending_status.py"
+  ],
+  "success_rate": {"backend": "100% (5 passed, 1 skipped due to operator role lacking packages.create)", "frontend": "100% on spec'd criteria"},
+  "test_credentials": "Per /app/memory/test_credentials.md — admin@test.com, superadmin@oryno.com, operator@test.com (skipped), all testpassword123",
+  "seed_data_creation": "Transient TEST_PendingSvc_* and TEST_UiSubmit_145 services created during pytest + browser run; all deleted in teardown or via manual cleanup script at end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iteration 145 requirements verified: (1) POST /api/package-services/ always returns status='pending' for super_admin/admin (operator not testable — operator@test.com is a bus operator without packages.create perm). (2) Legacy active services unchanged (Bwako-Ko remains active). (3) Pending services not in /search. (4) /validation approve endpoint flips pending→active. (5) Modal is max-w-6xl, red gradient, 2-col layout, photo-first left, sticky preview on right, red save button, live preview updates from name input (observed visually). (6) Upon successful submit, new service appears in list with 'Pending Approval' badge — end-to-end bug-fix proven. If re-running browser tests, beware that 3 input fields share ambiguous placeholders ('Yaoundé' and 'Douala') on the service-name input — use visible order or add data-testids.",
+  "rca of the issue": "Previous iteration (143/144) had role-based fast-track making admin/super_admin creates status='active'. E1 correctly collapsed to a single hard-coded initial_status='pending' at line 119 of routes/package_services.py, with the incoming payload further stripping any client-supplied status via data.dict(exclude={'status'}). Fix confirmed both at unit level (pytest) and end-to-end (admin UI shows 'Pending Approval' on newly-created service)."
+}

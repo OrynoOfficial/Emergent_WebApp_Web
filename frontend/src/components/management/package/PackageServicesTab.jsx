@@ -69,6 +69,114 @@ const StatusBadge = ({ value }) => {
   return <Badge className={`${v.cls} capitalize border-0`}>{v.label}</Badge>;
 };
 
+const formatHours = (h) => {
+  const n = parseInt(h);
+  if (!n) return '—';
+  if (n < 24) return `${n}h`;
+  const d = Math.floor(n / 24);
+  const r = n % 24;
+  return r ? `${d}d ${r}h` : `${d}d`;
+};
+
+/**
+ * Live preview card — mimics the customer-facing PackagesResults card.
+ */
+const ServicePreviewCard = ({ form }) => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+  const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
+  const cover = (form.images || [])[0];
+  const thumbs = (form.images || []).slice(1, 3);
+
+  // Compute preview price
+  let priceSample = null;
+  if (form.pricing_model === 'tiered') {
+    const firstWithPrice = (form.tiers || []).find((t) => parseFloat(t.price) > 0);
+    if (firstWithPrice) priceSample = { value: parseFloat(firstWithPrice.price), label: firstWithPrice.label || 'Sample' };
+  } else if (form.pricing_model === 'per_kg') {
+    const base = parseFloat(form.base_price) || 0;
+    const perKg = parseFloat(form.per_kg_rate) || 0;
+    if (base > 0 || perKg > 0) priceSample = { value: base + perKg * 2, label: '2 kg sample' };
+  }
+
+  return (
+    <div className="rounded-2xl border-0 shadow-md overflow-hidden bg-white">
+      <div className="relative h-36 overflow-hidden">
+        {cover ? (
+          <>
+            <img src={getImg(cover)} alt={form.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-red-900/30 to-transparent" />
+          </>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-red-700 to-rose-800 flex items-center justify-center">
+            <Package className="w-12 h-12 text-white/30" />
+          </div>
+        )}
+        <Badge className="absolute top-2 left-2 bg-yellow-400 text-red-800 hover:bg-yellow-400 z-10 text-[10px]">
+          <Truck className="w-2.5 h-2.5 mr-1" /> Logistics
+        </Badge>
+        {thumbs.length > 0 && (
+          <div className="absolute top-2 right-2 flex gap-1 z-10">
+            {thumbs.map((t, i) => (
+              <img key={i} src={getImg(t)} alt="" className="w-8 h-8 rounded-md object-cover border-2 border-white/70 shadow" />
+            ))}
+          </div>
+        )}
+        <div className="absolute bottom-2 left-3 right-3 z-10 text-white">
+          <p className="font-bold text-sm line-clamp-1 flex items-center gap-1">
+            <Package className="w-3.5 h-3.5" />
+            {form.name || 'Service name…'}
+          </p>
+          <p className="text-white/70 text-[10px] truncate">
+            {form.origin_city || 'Origin'} → {form.destination_city || 'Destination'}
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-center justify-between text-xs mb-3 bg-red-50/50 rounded-lg p-2">
+          <div className="text-center flex-1">
+            <MapPin className="w-3 h-3 text-emerald-500 mx-auto mb-0.5" />
+            <span className="text-slate-600 truncate block text-[11px]">{form.origin_city || '—'}</span>
+          </div>
+          <div className="flex-1 px-1"><div className="border-t-2 border-dashed border-red-300" /></div>
+          <div className="text-center flex-1">
+            <MapPin className="w-3 h-3 text-red-500 mx-auto mb-0.5" />
+            <span className="text-slate-600 truncate block text-[11px]">{form.destination_city || '—'}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] text-slate-600 mb-3">
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-red-600" />
+            <span>{formatHours(form.delivery_time_hours)}</span>
+          </div>
+          <span className="text-slate-400">up to {form.max_weight_kg || 0}kg</span>
+        </div>
+
+        {form.features?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {form.features.slice(0, 3).map((f) => (
+              <Badge key={f} variant="secondary" className="text-[9px] capitalize bg-red-50 text-red-700 hover:bg-red-100 px-1.5 py-0">
+                {f.replace(/_/g, ' ')}
+              </Badge>
+            ))}
+            {form.features.length > 3 && <span className="text-[9px] text-slate-400 self-center">+{form.features.length - 3}</span>}
+          </div>
+        )}
+
+        <div className="pt-2 border-t border-slate-100">
+          <div className="text-[10px] text-slate-500">
+            {priceSample ? `Estimated · ${priceSample.label}` : 'Set a price to preview'}
+          </div>
+          <div className="text-xl font-bold text-red-700">
+            {priceSample ? `${priceSample.value.toLocaleString()} FCFA` : '—'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function PackageServicesTab({ scopeOperatorId, operators }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -172,12 +280,8 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
         await api.put(`/package-services/${editing.id}`, payload);
         toast.success('Service updated');
       } else {
-        const res = await api.post('/package-services/', payload);
-        if (res.data?.status === 'pending') {
-          toast.success('Service offering submitted — awaiting admin approval', { duration: 5000 });
-        } else {
-          toast.success('Service offering created');
-        }
+        await api.post('/package-services/', payload);
+        toast.success('Service offering submitted — awaiting admin approval', { duration: 5000 });
       }
       setIsFormOpen(false);
       load();
@@ -337,18 +441,27 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl bg-white max-h-[92vh] overflow-y-auto p-0" data-testid="service-form-dialog">
+        <DialogContent className="max-w-6xl bg-white max-h-[94vh] overflow-y-auto p-0" data-testid="service-form-dialog">
           {/* Branded header */}
-          <div className="bg-gradient-to-r from-[#082c59] to-[#0d4a8f] text-white px-6 py-5">
+          <div className="bg-gradient-to-r from-red-700 via-red-600 to-rose-600 text-white px-6 py-5">
             <DialogHeader>
-              <DialogTitle className="text-white text-xl flex items-center gap-2">
-                <Truck className="h-5 w-5" /> {editing ? 'Edit Service Offering' : 'New Service Offering'}
-              </DialogTitle>
-              <p className="text-white/70 text-sm mt-1">
-                {editing
-                  ? 'Update your route, pricing tiers, and capacity. Activation status is managed by admins.'
-                  : 'Define a delivery route and how you price it. Once submitted, the offering is reviewed by admins before going live.'}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <DialogTitle className="text-white text-2xl flex items-center gap-2">
+                    <Truck className="h-6 w-6" /> {editing ? 'Edit Service Offering' : 'New Service Offering'}
+                  </DialogTitle>
+                  <p className="text-white/80 text-sm mt-1">
+                    {editing
+                      ? 'Update your route, pricing tiers, photos and capacity. Activation status is managed by admins.'
+                      : 'Define a delivery route and how you price it. Once submitted, the offering is reviewed by admins before going live.'}
+                  </p>
+                </div>
+                {editing && (
+                  <div className="flex-shrink-0">
+                    <StatusBadge value={editing.status} />
+                  </div>
+                )}
+              </div>
             </DialogHeader>
           </div>
 
@@ -373,206 +486,246 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
             </div>
           )}
 
-          <form onSubmit={handleSave} className="space-y-6 px-6 py-5">
-            {/* Photos */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide flex items-center gap-2">
-                <Package className="h-4 w-4 text-red-500" /> Service Photos
-              </h3>
-              <p className="text-xs text-slate-500 mb-3">Up to 3 photos showing your vehicles, hub or branding. The first photo is used as the cover on customer search results.</p>
-              <MiniImageUploader
-                images={form.images || []}
-                onChange={(imgs) => setForm((p) => ({ ...p, images: imgs }))}
-                max={3}
-                folder="package_services"
-                accent="red"
-                helperText="PNG/JPG up to 5MB each"
-              />
-            </section>
+          <form onSubmit={handleSave} className="px-6 py-5">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* === LEFT: form fields === */}
+              <div className="lg:col-span-2 space-y-5">
+                {/* Photos */}
+                <section className="rounded-xl border border-red-100 bg-gradient-to-br from-red-50/60 to-rose-50/40 p-5">
+                  <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide flex items-center gap-2">
+                    <Package className="h-4 w-4 text-red-500" /> Service Photos
+                  </h3>
+                  <p className="text-xs text-slate-500 mb-3">Up to 3 photos showing your vehicles, hub or branding. The first photo is used as the cover on customer search results.</p>
+                  <MiniImageUploader
+                    images={form.images || []}
+                    onChange={(imgs) => setForm((p) => ({ ...p, images: imgs }))}
+                    max={3}
+                    folder="package_services"
+                    accent="red"
+                    helperText="PNG/JPG up to 5MB each — the first photo is the cover"
+                  />
+                </section>
 
-            {/* Basics */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">
-                <Package className="h-4 w-4 text-[#082c59]" /> Service Details
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <Label>Service Name *</Label>
-                  <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Express Yaoundé → Douala" data-testid="service-name-input" className="bg-white" />
-                </div>
-                <div>
-                  <Label>Description</Label>
-                  <Textarea rows={2} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="What's special about this service?" className="bg-white" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-600" /> Origin City *</Label>
-                    <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" className="bg-white" />
+                {/* Basics */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                  <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <Package className="h-4 w-4 text-red-500" /> Service Details
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Service Name *</Label>
+                      <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Express Yaoundé → Douala" data-testid="service-name-input" className="bg-white" />
+                    </div>
+                    <div>
+                      <Label>Description</Label>
+                      <Textarea rows={2} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="What's special about this service?" className="bg-white" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-600" /> Origin City *</Label>
+                        <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" className="bg-white" />
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-red-500" /> Destination City *</Label>
+                        <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" className="bg-white" />
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-1"><Clock className="h-3 w-3 text-blue-600" /> Delivery Time (hrs)</Label>
+                        <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} className="bg-white" />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-red-500" /> Destination City *</Label>
-                    <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" className="bg-white" />
-                  </div>
-                  <div>
-                    <Label className="flex items-center gap-1"><Clock className="h-3 w-3 text-blue-600" /> Delivery Time (hrs)</Label>
-                    <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} className="bg-white" />
-                  </div>
-                </div>
-              </div>
-            </section>
+                </section>
 
-            {/* Pricing */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Pricing Model</h3>
-              <p className="text-xs text-slate-500 mb-3">Choose how customers are charged for this route.</p>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, pricing_model: 'tiered' }))}
-                  className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'tiered' ? 'border-[#082c59] bg-[#082c59]/5' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                  data-testid="pricing-tiered-radio"
-                >
-                  <p className="font-semibold text-sm text-slate-900">Weight Tiers</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Flat price per weight bracket (Document, Small, Large…)</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setForm((p) => ({ ...p, pricing_model: 'per_kg' }))}
-                  className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'per_kg' ? 'border-[#082c59] bg-[#082c59]/5' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                  data-testid="pricing-per-kg-radio"
-                >
-                  <p className="font-semibold text-sm text-slate-900">Base + Per-kg</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Fixed base price + extra rate per kilogram</p>
-                </button>
-              </div>
-
-              {form.pricing_model === 'tiered' ? (
-                <div className="space-y-2 bg-white rounded-lg p-3 border border-slate-100">
-                  <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wide text-slate-400 px-1">
-                    <span className="col-span-2">Min kg</span>
-                    <span className="col-span-2">Max kg</span>
-                    <span className="col-span-3">Label</span>
-                    <span className="col-span-4">Price (FCFA)</span>
-                    <span className="col-span-1"></span>
+                {/* Pricing */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                  <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Pricing Model</h3>
+                  <p className="text-xs text-slate-500 mb-3">Choose how customers are charged for this route.</p>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, pricing_model: 'tiered' }))}
+                      className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'tiered' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                      data-testid="pricing-tiered-radio"
+                    >
+                      <p className="font-semibold text-sm text-slate-900">Weight Tiers</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Flat price per weight bracket</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, pricing_model: 'per_kg' }))}
+                      className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'per_kg' ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                      data-testid="pricing-per-kg-radio"
+                    >
+                      <p className="font-semibold text-sm text-slate-900">Base + Per-kg</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Fixed base + extra per kg</p>
+                    </button>
                   </div>
-                  {(form.tiers || []).map((t, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                      <Input type="number" step="0.01" className="col-span-2" value={t.weight_min_kg} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, weight_min_kg: e.target.value } : x) }))} />
-                      <Input type="number" step="0.01" className="col-span-2" value={t.weight_max_kg} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, weight_max_kg: e.target.value } : x) }))} />
-                      <Input className="col-span-3" placeholder="e.g. Small" value={t.label || ''} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, label: e.target.value } : x) }))} />
-                      <Input type="number" className="col-span-4" placeholder="2000" value={t.price} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, price: e.target.value } : x) }))} />
-                      <Button type="button" size="icon" variant="ghost" className="col-span-1 text-red-500" onClick={() => setForm((p) => ({ ...p, tiers: p.tiers.filter((_, i) => i !== idx) }))}>
-                        <Trash2 className="h-4 w-4" />
+
+                  {form.pricing_model === 'tiered' ? (
+                    <div className="space-y-2 bg-white rounded-lg p-3 border border-slate-100">
+                      <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wide text-slate-400 px-1">
+                        <span className="col-span-2">Min kg</span>
+                        <span className="col-span-2">Max kg</span>
+                        <span className="col-span-3">Label</span>
+                        <span className="col-span-4">Price (FCFA)</span>
+                        <span className="col-span-1"></span>
+                      </div>
+                      {(form.tiers || []).map((t, idx) => (
+                        <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                          <Input type="number" step="0.01" className="col-span-2" value={t.weight_min_kg} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, weight_min_kg: e.target.value } : x) }))} />
+                          <Input type="number" step="0.01" className="col-span-2" value={t.weight_max_kg} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, weight_max_kg: e.target.value } : x) }))} />
+                          <Input className="col-span-3" placeholder="e.g. Small" value={t.label || ''} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, label: e.target.value } : x) }))} />
+                          <Input type="number" className="col-span-4" placeholder="2000" value={t.price} onChange={(e) => setForm((p) => ({ ...p, tiers: p.tiers.map((x, i) => i === idx ? { ...x, price: e.target.value } : x) }))} />
+                          <Button type="button" size="icon" variant="ghost" className="col-span-1 text-red-500" onClick={() => setForm((p) => ({ ...p, tiers: p.tiers.filter((_, i) => i !== idx) }))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button type="button" size="sm" variant="outline" className="mt-1" onClick={() => setForm((p) => ({ ...p, tiers: [...(p.tiers || []), { weight_min_kg: 0, weight_max_kg: 0, price: '', label: '' }] }))}>
+                        <Plus className="h-3 w-3 mr-1" /> Add tier
                       </Button>
                     </div>
-                  ))}
-                  <Button type="button" size="sm" variant="outline" className="mt-1" onClick={() => setForm((p) => ({ ...p, tiers: [...(p.tiers || []), { weight_min_kg: 0, weight_max_kg: 0, price: '', label: '' }] }))}>
-                    <Plus className="h-3 w-3 mr-1" /> Add tier
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 bg-white rounded-lg p-3 border border-slate-100">
-                  <div>
-                    <Label>Base Price (FCFA) *</Label>
-                    <Input type="number" value={form.base_price} onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))} placeholder="1500" />
-                    <p className="text-[10px] text-slate-400 mt-1">Charged regardless of weight</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 bg-white rounded-lg p-3 border border-slate-100">
+                      <div>
+                        <Label>Base Price (FCFA) *</Label>
+                        <Input type="number" value={form.base_price} onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))} placeholder="1500" />
+                        <p className="text-[10px] text-slate-400 mt-1">Charged regardless of weight</p>
+                      </div>
+                      <div>
+                        <Label>Per-kg Rate (FCFA) *</Label>
+                        <Input type="number" value={form.per_kg_rate} onChange={(e) => setForm((p) => ({ ...p, per_kg_rate: e.target.value }))} placeholder="400" />
+                        <p className="text-[10px] text-slate-400 mt-1">Added on top of base for each kg</p>
+                      </div>
+                    </div>
+                  )}
+                </section>
+
+                {/* Capacity */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                  <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Capacity Limits</h3>
+                  <p className="text-xs text-slate-500 mb-3">The maximum package this service can carry.</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white rounded-lg p-3 border border-slate-100">
+                    <div>
+                      <Label>Max Weight (kg)</Label>
+                      <Input type="number" step="0.1" value={form.max_weight_kg} onChange={(e) => setForm((p) => ({ ...p, max_weight_kg: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label>Max Length (cm)</Label>
+                      <Input type="number" value={form.max_length_cm} onChange={(e) => setForm((p) => ({ ...p, max_length_cm: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label>Max Width (cm)</Label>
+                      <Input type="number" value={form.max_width_cm} onChange={(e) => setForm((p) => ({ ...p, max_width_cm: e.target.value }))} />
+                    </div>
+                    <div>
+                      <Label>Max Height (cm)</Label>
+                      <Input type="number" value={form.max_height_cm} onChange={(e) => setForm((p) => ({ ...p, max_height_cm: e.target.value }))} />
+                    </div>
                   </div>
+                </section>
+
+                {/* Types + Features */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5 space-y-4">
                   <div>
-                    <Label>Per-kg Rate (FCFA) *</Label>
-                    <Input type="number" value={form.per_kg_rate} onChange={(e) => setForm((p) => ({ ...p, per_kg_rate: e.target.value }))} placeholder="400" />
-                    <p className="text-[10px] text-slate-400 mt-1">Added on top of base for each kg</p>
+                    <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Accepted Package Types</h3>
+                    <p className="text-xs text-slate-500 mb-3">Tap to toggle which kinds of packages this service accepts.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {PACKAGE_TYPES.map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setForm((p) => ({
+                            ...p,
+                            accepted_types: p.accepted_types?.includes(t.value)
+                              ? p.accepted_types.filter((x) => x !== t.value)
+                              : [...(p.accepted_types || []), t.value],
+                          }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${form.accepted_types?.includes(t.value) ? 'bg-red-600 text-white border-red-600' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </section>
 
-            {/* Capacity */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Capacity Limits</h3>
-              <p className="text-xs text-slate-500 mb-3">The maximum package this service can carry.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white rounded-lg p-3 border border-slate-100">
-                <div>
-                  <Label>Max Weight (kg)</Label>
-                  <Input type="number" step="0.1" value={form.max_weight_kg} onChange={(e) => setForm((p) => ({ ...p, max_weight_kg: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Max Length (cm)</Label>
-                  <Input type="number" value={form.max_length_cm} onChange={(e) => setForm((p) => ({ ...p, max_length_cm: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Max Width (cm)</Label>
-                  <Input type="number" value={form.max_width_cm} onChange={(e) => setForm((p) => ({ ...p, max_width_cm: e.target.value }))} />
-                </div>
-                <div>
-                  <Label>Max Height (cm)</Label>
-                  <Input type="number" value={form.max_height_cm} onChange={(e) => setForm((p) => ({ ...p, max_height_cm: e.target.value }))} />
-                </div>
-              </div>
-            </section>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Service Features</h3>
+                    <p className="text-xs text-slate-500 mb-3">Things that make your service stand out.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {FEATURES.map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setForm((p) => ({
+                            ...p,
+                            features: p.features?.includes(f) ? p.features.filter((x) => x !== f) : [...(p.features || []), f],
+                          }))}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition ${form.features?.includes(f) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
+                        >
+                          {f.replace(/_/g, ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </section>
 
-            {/* Types + Features */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-4">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Accepted Package Types</h3>
-                <p className="text-xs text-slate-500 mb-3">Tap to toggle which kinds of packages this service accepts.</p>
-                <div className="flex flex-wrap gap-2">
-                  {PACKAGE_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setForm((p) => ({
-                        ...p,
-                        accepted_types: p.accepted_types?.includes(t.value)
-                          ? p.accepted_types.filter((x) => x !== t.value)
-                          : [...(p.accepted_types || []), t.value],
-                      }))}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${form.accepted_types?.includes(t.value) ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
+                {/* Operator (admins only) */}
+                {operators?.length > 0 && (
+                  <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                    <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">Operator Assignment</h3>
+                    <Select value={form.operator_id || ''} onValueChange={(v) => setForm((p) => ({ ...p, operator_id: v }))}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="Select operator..." /></SelectTrigger>
+                      <SelectContent className="bg-white max-h-60">
+                        {operators.map((op) => (
+                          <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </section>
+                )}
               </div>
 
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Service Features</h3>
-                <p className="text-xs text-slate-500 mb-3">Things that make your service stand out.</p>
-                <div className="flex flex-wrap gap-2">
-                  {FEATURES.map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setForm((p) => ({
-                        ...p,
-                        features: p.features?.includes(f) ? p.features.filter((x) => x !== f) : [...(p.features || []), f],
-                      }))}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition ${form.features?.includes(f) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
-                    >
-                      {f.replace(/_/g, ' ')}
-                    </button>
-                  ))}
+              {/* === RIGHT: Live Preview === */}
+              <div className="lg:col-span-1">
+                <div className="lg:sticky lg:top-4 space-y-4">
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Live Preview
+                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-400 normal-case font-normal">how customers will see it</span>
+                  </div>
+                  <ServicePreviewCard form={form} />
+
+                  {/* Photo thumbnail summary */}
+                  {(form.images || []).length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">
+                        Photos ({form.images.length}/3)
+                      </p>
+                      <div className="flex gap-2">
+                        {form.images.map((img, i) => {
+                          const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+                          const url = img?.startsWith('/api') ? `${backendUrl}${img}` : img;
+                          return (
+                            <div key={i} className="relative">
+                              <img src={url} alt="" className="w-16 h-16 rounded-lg object-cover border-2 border-white shadow-sm" />
+                              {i === 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">COVER</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </section>
+            </div>
 
-            {/* Operator (admins only) */}
-            {operators?.length > 0 && (
-              <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-                <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">Operator Assignment</h3>
-                <Select value={form.operator_id || ''} onValueChange={(v) => setForm((p) => ({ ...p, operator_id: v }))}>
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Select operator..." /></SelectTrigger>
-                  <SelectContent className="bg-white max-h-60">
-                    {operators.map((op) => (
-                      <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </section>
-            )}
-
-            <DialogFooter className="border-t pt-4 -mx-6 px-6 sticky bottom-0 bg-white">
+            <DialogFooter className="border-t pt-4 mt-6 -mx-6 px-6 sticky bottom-0 bg-white">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={submitting}>Cancel</Button>
-              <Button type="submit" className="bg-[#082c59] hover:bg-[#0a3a75]" disabled={submitting} data-testid="save-service-btn">
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white" disabled={submitting} data-testid="save-service-btn">
                 {submitting ? 'Saving…' : editing ? 'Update Service' : 'Submit for Approval'}
               </Button>
             </DialogFooter>

@@ -114,9 +114,9 @@ async def create_service(
     operator_name = data.operator_name or current_user.get("operator_name", "")
 
     payload = data.dict(exclude={"operator_id", "operator_name", "status"})
-    role = current_user.get("role")
-    # Admin/super_admin can fast-track to active, everyone else goes through approval
-    initial_status = "active" if role in ("admin", "super_admin") else "pending"
+    # All newly-created offerings must go through admin approval, regardless of role.
+    # An admin/super_admin can flip the status to 'active' from the Validation page.
+    initial_status = "pending"
 
     service = {
         "_id": str(uuid.uuid4()),
