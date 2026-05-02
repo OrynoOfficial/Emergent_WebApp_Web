@@ -118,24 +118,38 @@ export default function PackageBooking() {
       try {
         const res = await api.get('/auth/me');
         const profile = res.data;
+        const builtAddress =
+          profile.address ||
+          profile.full_address ||
+          [profile.address_line, profile.city, profile.country].filter(Boolean).join(', ') ||
+          [profile.city, profile.country].filter(Boolean).join(', ') ||
+          searchParams?.origin_city ||
+          '';
         setBooking((prev) => ({
           ...prev,
           sender_name: profile.full_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
           sender_phone: profile.phone || '',
           sender_email: profile.email || prev.sender_email,
+          sender_address: prev.sender_address || builtAddress,
         }));
       } catch {
         if (user) {
+          const fallbackAddress =
+            user.address ||
+            [user.city, user.country].filter(Boolean).join(', ') ||
+            searchParams?.origin_city ||
+            '';
           setBooking((prev) => ({
             ...prev,
             sender_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
             sender_phone: user.phone || '',
             sender_email: user.email || prev.sender_email,
+            sender_address: prev.sender_address || fallbackAddress,
           }));
         }
       }
     } else {
-      setBooking((prev) => ({ ...prev, sender_name: '', sender_phone: '' }));
+      setBooking((prev) => ({ ...prev, sender_name: '', sender_phone: '', sender_address: '' }));
     }
   };
 
