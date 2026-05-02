@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_permission, require_any_permission
+from utils.order_package_sync import sync_package_payment_from_order
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -217,7 +218,14 @@ async def approve_ticket(
     
     # Update using the MongoDB _id
     await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
-    
+
+    # Mirror the payment state onto the linked physical-package shipment
+    if update_data.get("payment_status") == "paid":
+        merged = {**order, **update_data}
+        await sync_package_payment_from_order(
+            db, merged, paid=True, note="Payment confirmed by admin"
+        )
+
     await log_validation_action(db, "approved", "ticket", ticket_id, 
         order.get("service_name", order.get("order_number", ticket_id)),
         current_user, request.reason, {"order_status": update_data.get("status")})
@@ -328,7 +336,14 @@ async def verify_payment(
     
     # Update using the MongoDB _id
     await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
-    
+
+    # Mirror the payment state onto the linked physical-package shipment
+    if verified:
+        merged = {**order, **update_data}
+        await sync_package_payment_from_order(
+            db, merged, paid=True, note=notes or "Payment verified by admin"
+        )
+
     await log_validation_action(db, "approved" if verified else "rejected", "payment", order_id,
         order.get("service_name", order.get("order_number", order_id)),
         current_user, notes, {"amount": order.get("total_amount")})
@@ -366,6 +381,10 @@ async def bulk_verify_payments(
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         await db.orders.update_one({"_id": order.get("_id")}, {"$set": update_data})
+        merged = {**order, **update_data}
+        await sync_package_payment_from_order(
+            db, merged, paid=True, note="Payment verified (bulk) by admin"
+        )
         verified_count += 1
     
     return {"message": f"Successfully verified {verified_count} payments", "verified_count": verified_count}

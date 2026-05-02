@@ -3,6 +3,7 @@ from services.stripe_service import StripeService
 from services.mtn_momo_service import MTNMoMoService
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.order_package_sync import sync_package_payment_from_order
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
@@ -208,7 +209,6 @@ async def process_payment_success(db, order_id: str, user_id: str, payment_metho
                 "cinema": "cinema_bookings",
                 "laundry": "laundry_orders",
                 "pressing": "laundry_orders",
-                "package": "package_bookings",
                 "banquet": "banquet_bookings",
                 "hotel": "room_bookings",
                 "travel": "seat_bookings",
@@ -224,6 +224,14 @@ async def process_payment_success(db, order_id: str, user_id: str, payment_metho
                         "payment_status": "completed",
                         "updated_at": datetime.now(timezone.utc)
                     }}
+                )
+
+        # 2b. For package shipments — sync the linked physical-package record
+        if service_type == "package":
+            order_doc = await db.orders.find_one({"_id": order_id})
+            if order_doc:
+                await sync_package_payment_from_order(
+                    db, order_doc, paid=True, note=f"Payment received via {payment_method or 'mobile money'}"
                 )
         
         # 3. Award loyalty points

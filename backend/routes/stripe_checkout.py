@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from services.stripe_checkout_service import stripe_checkout_service
+from utils.order_package_sync import sync_package_payment_from_order
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
@@ -242,7 +243,14 @@ async def get_checkout_status(
                     "updated_at": datetime.now(timezone.utc)
                 }}
             )
-            
+
+            # Mirror payment to the linked physical-package shipment
+            order = await db.orders.find_one({"_id": order_id})
+            if order:
+                await sync_package_payment_from_order(
+                    db, order, paid=True, note="Payment received via Stripe"
+                )
+
             # Trigger chain reactions (loyalty points, commission, notifications)
             await process_successful_payment(db, order_id, user_id)
         
