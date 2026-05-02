@@ -498,10 +498,9 @@ export default function PackageManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="services" data-testid="tab-services"><Truck className="h-4 w-4 mr-2" />Services</TabsTrigger>
-          <TabsTrigger value="management"><Package className="h-4 w-4 mr-2" />Shipments</TabsTrigger>
           <TabsTrigger value="bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>

@@ -25,6 +25,7 @@ export const ICON_COLORS = {
   dashboard: '#4D96FF', services: '#00C853', browse: '#00C853',
   hotels: '#EC4899', restaurants: '#F59E0B', travel: '#3B82F6',
   'car-rental': '#10B981', events: '#F97316', packages: '#EF4444',
+  shipments: '#EF4444',
   laundry: '#A855F7', cinema: '#06B6D4', banquet: '#14B8A6',
   orders: '#9575CD', receipts: '#2962FF', loyalty: '#AB47BC',
   management: '#7E57C2', analytics: '#4D96FF', bookings: '#FF7043',
@@ -174,6 +175,12 @@ export default function useSidebarMenu() {
       if (managementSubmenu.length > 0) {
         items.push({ key: 'management', label: 'Service Management', icon: Briefcase, isDropdown: true, submenu: managementSubmenu });
       }
+    }
+
+    // Shipments — standalone page for admins/super admins and operators with package access
+    const canSeeShipments = isAdminOrSuper || (isOperator && canOperatorAccessService('package') && canManagePackages);
+    if (canSeeShipments) {
+      items.push({ key: 'shipments', label: 'Shipments', icon: Package, path: '/management/shipments' });
     }
 
     // Transactions (Admin/Super Admin: All Orders, All Receipts, All Bookings as submenu)

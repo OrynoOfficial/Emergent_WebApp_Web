@@ -11,7 +11,7 @@
     "[data-testid='stripe-checkout-modal'] absent on the direct-URL fallback (correct — modal only used inside PaymentMethodsSelection)",
     "All required testids present on the panel: checkout-heading, checkout-total-amount, checkout-proceed-stripe-btn, checkout-change-payment-method-btn, checkout-back-btn, summary-order-number",
     "Heading renders 'Review & pay 20,000 FCFA' with gold accent; 3-col summary + sticky payment card; Visa/MC/AMEX badges; Stripe PCI notice",
-    "Click Continue to Stripe → POST /api/checkout/session fires with body {\"order_id\":\"<uuid>\",\"origin_url\":\"https://booking-revamp-hub.preview.emergentagent.com\"} (intercepted and verified) and the response URL is consumed by window.location.href (button enters 'Redirecting to Stripe…' loading state)",
+    "Click Continue to Stripe → POST /api/checkout/session fires with body {\"order_id\":\"<uuid>\",\"origin_url\":\"https://delivery-platform-108.preview.emergentagent.com\"} (intercepted and verified) and the response URL is consumed by window.location.href (button enters 'Redirecting to Stripe…' loading state)",
     "Login flow intact (splash CTA → credentials → dashboard)",
     "My Orders page loads (70 orders, 9 pending) — no regression"
   ],

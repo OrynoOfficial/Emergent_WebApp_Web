@@ -2,8 +2,8 @@
   "summary": "Iter136 fix VERIFIED. The vite plugin `disableViteHmrClient` + `configureServer` middleware that returns inert stubs for /@vite/client and /@react-refresh fully eliminates the periodic auto-refresh bug. All 90s-idle tests show ZERO framenavigated events, ZERO websocket opens, ZERO /@vite or /@react-refresh requests after reset, and ZERO `[vite] server connection lost` / `[vite] connecting` / `[vite] connected` console lines. Form mid-state survives 90s idle. Manual page.reload() loads the app cleanly. Login + /orders + /services/travel regression all pass.",
   "test_credentials": "customer@test.com / testpassword123 (login OK; redirects to /dashboard)",
   "verification_steps_executed": [
-    "curl https://booking-revamp-hub.preview.emergentagent.com/@vite/client → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
-    "curl https://booking-revamp-hub.preview.emergentagent.com/@react-refresh → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
+    "curl https://delivery-platform-108.preview.emergentagent.com/@vite/client → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
+    "curl https://delivery-platform-108.preview.emergentagent.com/@react-refresh → first line is `// Stubbed by oryno-disable-vite-hmr-client (preview env).` (PASS)",
     "Single persistent browser context: WelcomeView → click `Login to Your Account` → fill #login-identifier + #login-password → submit → redirected to /dashboard (regression PASS).",
     "Navigate /orders → reset all 4 trackers (framenavigated, websocket, vite-prefixed requests, [vite]-prefixed console lines) → idle 90s. RESULT: 0 / 0 / 0 / 0.",
     "Navigate /services/travel → reset trackers → idle 90s. RESULT: 0 / 0 / 0 / 0.",

@@ -99,6 +99,7 @@ async def get_pending_validations(
     car_rentals = await get_services_with_id(db.car_rentals)
     restaurants = await get_services_with_id(db.restaurants)
     packages = await get_services_with_id(db.packages)
+    package_services = await get_services_with_id(db.package_services)
     events = await get_services_with_id(db.events)
     cinemas = await get_services_with_id(db.cinemas)
     pressing = await get_services_with_id(db.pressing)
@@ -143,6 +144,7 @@ async def get_pending_validations(
             "car_rentals": car_rentals,
             "restaurants": restaurants,
             "packages": packages,
+            "package_services": package_services,
             "events": events,
             "cinemas": cinemas,
             "pressing": pressing,
@@ -156,7 +158,8 @@ async def get_pending_validations(
             "pending_promotions": len(pending_promotions),
             "services": sum([
                 len(travel_routes), len(hotels), len(car_rentals), len(restaurants),
-                len(packages), len(events), len(cinemas), len(pressing), len(banquets)
+                len(packages), len(package_services), len(events), len(cinemas),
+                len(pressing), len(banquets)
             ])
         }
     }
@@ -384,6 +387,7 @@ async def approve_service(
         "car_rental": "car_rentals",
         "restaurant": "restaurants",
         "package": "packages",
+        "package_service": "package_services",
         "event": "events",
         "cinema": "cinemas",
         "pressing": "pressing",
@@ -430,6 +434,7 @@ async def reject_service(
         "car_rental": "car_rentals",
         "restaurant": "restaurants",
         "package": "packages",
+        "package_service": "package_services",
         "event": "events",
         "cinema": "cinemas",
         "pressing": "pressing",
@@ -463,8 +468,8 @@ async def reject_service(
 
 COLLECTION_MAP = {
     "travel_route": "travel_routes", "hotel": "hotels", "car_rental": "car_rentals",
-    "restaurant": "restaurants", "package": "packages", "event": "events",
-    "cinema": "cinemas", "pressing": "pressing", "banquet": "banquets"
+    "restaurant": "restaurants", "package": "packages", "package_service": "package_services",
+    "event": "events", "cinema": "cinemas", "pressing": "pressing", "banquet": "banquets"
 }
 
 @router.post("/services/{service_type}/{service_id}/suspend")

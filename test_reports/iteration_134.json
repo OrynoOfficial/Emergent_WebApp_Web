@@ -18,7 +18,7 @@
       "websocket_opens": 1,
       "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=wTKcMgKmrXMz",
       "vite_requests_after_reset": 64,
-      "vite_client_js_loaded": "https://booking-revamp-hub.preview.emergentagent.com/@vite/client",
+      "vite_client_js_loaded": "https://delivery-platform-108.preview.emergentagent.com/@vite/client",
       "console_spam_during_idle": ["[vite] server connection lost. Polling for restart..."]
     },
     "services_travel_idle_90s": {

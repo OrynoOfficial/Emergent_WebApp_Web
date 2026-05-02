@@ -24,7 +24,7 @@
   "updated_files": [],
   "success_rate": {"backend": "100% (9/9, not retested per request)", "frontend": "95% (search/results/booking UI fully validated; only the final payment-method click step blocked by missing data-testid)"},
   "test_credentials": "customer@test.com / testpassword123",
-  "seed_data_creation": "None — reused seeded service 'Express Yaoundé → Douala (Same Day)' (id=19d5ad91-b365-401d-9d7e-08cefee0534a, price 4000 FCFA, 8h, 3kg).",
+  "seed_data_creation": "None — reused seeded service 'Express Yaoundé → Douala (Same Day)' (id=delivery-platform-108, price 4000 FCFA, 8h, 3kg).",
   "retest_needed": false,
   "should_main_agent_self_test": true,
   "context_for_next_testing_agent": "Marketplace flow is GREEN. /app/frontend/dist/ has been removed (confirmed via ls). Vite dev server serves live source. All NEW UI markers ('Price: Low to High', 'operator(s) found', 'Estimated price') render. Customer flow Search→Results→Booking works end-to-end up to but not including payment-method click (missing data-testid on PaymentMethodsSelection child buttons). Main agent can self-verify the final POST chain via curl or by adding the data-testid attributes and re-running the same Playwright script. Backend regression: /app/backend/tests/test_iteration141_packages_marketplace.py.",

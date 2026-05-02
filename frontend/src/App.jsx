@@ -72,6 +72,7 @@ import LaundryManagement from './pages/management/LaundryManagement';
 import BanquetManagement from './pages/management/BanquetManagement';
 import CinemaManagement from './pages/management/CinemaManagement';
 import PackageManagement from './pages/management/PackageManagement';
+import PackageShipments from './pages/management/PackageShipments';
 import CustomerServiceManagement from './pages/management/CustomerServiceManagement';
 import AccessGroupManagement from './pages/management/AccessGroupManagement';
 import TeamRolesManagement from './pages/management/TeamRolesManagement';
@@ -883,6 +884,15 @@ function App() {
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
                 <PackageManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/management/shipments"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+                <PackageShipments />
               </ProtectedRoute>
             }
           />

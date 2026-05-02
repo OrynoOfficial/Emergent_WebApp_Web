@@ -15,7 +15,7 @@ import websockets
 from datetime import datetime, timedelta
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://booking-revamp-hub.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://delivery-platform-108.preview.emergentagent.com')
 WS_URL = BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://')
 
 # Test credentials

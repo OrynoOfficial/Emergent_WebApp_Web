@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Plus, Edit, Trash2, MapPin, Package, Truck, Clock, RefreshCw, Search, Eye,
+  Plus, Edit, Trash2, MapPin, Package, Truck, Clock, RefreshCw, Search,
 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
@@ -51,17 +51,20 @@ const DEFAULT_SVC = {
   accepted_types: ['parcel'],
   delivery_time_hours: 24,
   features: ['tracking'],
-  status: 'active',
   operator_id: '',
 };
 
 const StatusBadge = ({ value }) => {
   const map = {
-    active: 'bg-emerald-100 text-emerald-700',
-    inactive: 'bg-slate-200 text-slate-700',
-    draft: 'bg-amber-100 text-amber-700',
+    active: { cls: 'bg-emerald-100 text-emerald-700', label: 'Active' },
+    pending: { cls: 'bg-amber-100 text-amber-700', label: 'Pending Approval' },
+    inactive: { cls: 'bg-slate-200 text-slate-700', label: 'Inactive' },
+    suspended: { cls: 'bg-orange-100 text-orange-700', label: 'Suspended' },
+    rejected: { cls: 'bg-red-100 text-red-700', label: 'Rejected' },
+    draft: { cls: 'bg-slate-100 text-slate-600', label: 'Draft' },
   };
-  return <Badge className={`${map[value] || map.draft} capitalize border-0`}>{value || 'draft'}</Badge>;
+  const v = map[value] || map.draft;
+  return <Badge className={`${v.cls} capitalize border-0`}>{v.label}</Badge>;
 };
 
 export default function PackageServicesTab({ scopeOperatorId, operators }) {
@@ -160,12 +163,18 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
         })),
         operator_name: operator?.name || form.operator_name || '',
       };
+      // Operators cannot set status — admins control activation via the Validation page
+      delete payload.status;
       if (editing) {
         await api.put(`/package-services/${editing.id}`, payload);
         toast.success('Service updated');
       } else {
-        await api.post('/package-services/', payload);
-        toast.success('Service offering created');
+        const res = await api.post('/package-services/', payload);
+        if (res.data?.status === 'pending') {
+          toast.success('Service offering submitted — awaiting admin approval', { duration: 5000 });
+        } else {
+          toast.success('Service offering created');
+        }
       }
       setIsFormOpen(false);
       load();
@@ -325,68 +334,102 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-3xl bg-white max-h-[90vh] overflow-y-auto" data-testid="service-form-dialog">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Service Offering' : 'New Service Offering'}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl bg-white max-h-[92vh] overflow-y-auto p-0" data-testid="service-form-dialog">
+          {/* Branded header */}
+          <div className="bg-gradient-to-r from-[#082c59] to-[#0d4a8f] text-white px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-white text-xl flex items-center gap-2">
+                <Truck className="h-5 w-5" /> {editing ? 'Edit Service Offering' : 'New Service Offering'}
+              </DialogTitle>
+              <p className="text-white/70 text-sm mt-1">
+                {editing
+                  ? 'Update your route, pricing tiers, and capacity. Activation status is managed by admins.'
+                  : 'Define a delivery route and how you price it. Once submitted, the offering is reviewed by admins before going live.'}
+              </p>
+            </DialogHeader>
+          </div>
 
-          <form onSubmit={handleSave} className="space-y-5 py-3">
+          {/* Approval banner — only shown when creating */}
+          {!editing && (
+            <div className="mx-6 mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                <strong className="font-semibold">Admin approval required.</strong> New offerings start as
+                <span className="mx-1 inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-700 text-xs font-medium">Pending Approval</span>
+                and are reviewed by an admin via the Validation page. You'll be notified when it's activated.
+              </div>
+            </div>
+          )}
+
+          {editing && editing.status === 'pending' && (
+            <div className="mx-6 mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">
+                This offering is awaiting <strong>admin approval</strong>. Edits won't bypass the review.
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSave} className="space-y-6 px-6 py-5">
             {/* Basics */}
-            <section>
-              <h3 className="font-semibold text-slate-900 mb-2">Basics</h3>
+            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">
+                <Package className="h-4 w-4 text-[#082c59]" /> Service Details
+              </h3>
               <div className="space-y-3">
                 <div>
                   <Label>Service Name *</Label>
-                  <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Express Yaoundé → Douala" data-testid="service-name-input" />
+                  <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Express Yaoundé → Douala" data-testid="service-name-input" className="bg-white" />
                 </div>
                 <div>
                   <Label>Description</Label>
-                  <Textarea rows={2} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="What's special about this service?" />
+                  <Textarea rows={2} value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="What's special about this service?" className="bg-white" />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <Label>Origin City *</Label>
-                    <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" />
+                    <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-emerald-600" /> Origin City *</Label>
+                    <Input value={form.origin_city} onChange={(e) => setForm((p) => ({ ...p, origin_city: e.target.value }))} placeholder="Yaoundé" className="bg-white" />
                   </div>
                   <div>
-                    <Label>Destination City *</Label>
-                    <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" />
+                    <Label className="flex items-center gap-1"><MapPin className="h-3 w-3 text-red-500" /> Destination City *</Label>
+                    <Input value={form.destination_city} onChange={(e) => setForm((p) => ({ ...p, destination_city: e.target.value }))} placeholder="Douala" className="bg-white" />
                   </div>
                   <div>
-                    <Label>Delivery Time (hours)</Label>
-                    <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} />
+                    <Label className="flex items-center gap-1"><Clock className="h-3 w-3 text-blue-600" /> Delivery Time (hrs)</Label>
+                    <Input type="number" value={form.delivery_time_hours} onChange={(e) => setForm((p) => ({ ...p, delivery_time_hours: e.target.value }))} className="bg-white" />
                   </div>
                 </div>
               </div>
             </section>
 
             {/* Pricing */}
-            <section>
-              <h3 className="font-semibold text-slate-900 mb-2">Pricing Model</h3>
-              <div className="flex gap-4 mb-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={form.pricing_model === 'tiered'}
-                    onChange={() => setForm((p) => ({ ...p, pricing_model: 'tiered' }))}
-                    data-testid="pricing-tiered-radio"
-                  />
-                  <span className="text-sm font-medium">Weight Tiers</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={form.pricing_model === 'per_kg'}
-                    onChange={() => setForm((p) => ({ ...p, pricing_model: 'per_kg' }))}
-                    data-testid="pricing-per-kg-radio"
-                  />
-                  <span className="text-sm font-medium">Base + Per-kg</span>
-                </label>
+            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Pricing Model</h3>
+              <p className="text-xs text-slate-500 mb-3">Choose how customers are charged for this route.</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, pricing_model: 'tiered' }))}
+                  className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'tiered' ? 'border-[#082c59] bg-[#082c59]/5' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                  data-testid="pricing-tiered-radio"
+                >
+                  <p className="font-semibold text-sm text-slate-900">Weight Tiers</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Flat price per weight bracket (Document, Small, Large…)</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, pricing_model: 'per_kg' }))}
+                  className={`text-left rounded-xl border-2 px-4 py-3 transition-all ${form.pricing_model === 'per_kg' ? 'border-[#082c59] bg-[#082c59]/5' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                  data-testid="pricing-per-kg-radio"
+                >
+                  <p className="font-semibold text-sm text-slate-900">Base + Per-kg</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Fixed base price + extra rate per kilogram</p>
+                </button>
               </div>
 
               {form.pricing_model === 'tiered' ? (
-                <div className="space-y-2">
-                  <div className="grid grid-cols-12 gap-2 text-xs uppercase tracking-wide text-slate-400 px-1">
+                <div className="space-y-2 bg-white rounded-lg p-3 border border-slate-100">
+                  <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wide text-slate-400 px-1">
                     <span className="col-span-2">Min kg</span>
                     <span className="col-span-2">Max kg</span>
                     <span className="col-span-3">Label</span>
@@ -404,28 +447,31 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                       </Button>
                     </div>
                   ))}
-                  <Button type="button" size="sm" variant="outline" onClick={() => setForm((p) => ({ ...p, tiers: [...(p.tiers || []), { weight_min_kg: 0, weight_max_kg: 0, price: '', label: '' }] }))}>
+                  <Button type="button" size="sm" variant="outline" className="mt-1" onClick={() => setForm((p) => ({ ...p, tiers: [...(p.tiers || []), { weight_min_kg: 0, weight_max_kg: 0, price: '', label: '' }] }))}>
                     <Plus className="h-3 w-3 mr-1" /> Add tier
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 bg-white rounded-lg p-3 border border-slate-100">
                   <div>
                     <Label>Base Price (FCFA) *</Label>
                     <Input type="number" value={form.base_price} onChange={(e) => setForm((p) => ({ ...p, base_price: e.target.value }))} placeholder="1500" />
+                    <p className="text-[10px] text-slate-400 mt-1">Charged regardless of weight</p>
                   </div>
                   <div>
                     <Label>Per-kg Rate (FCFA) *</Label>
                     <Input type="number" value={form.per_kg_rate} onChange={(e) => setForm((p) => ({ ...p, per_kg_rate: e.target.value }))} placeholder="400" />
+                    <p className="text-[10px] text-slate-400 mt-1">Added on top of base for each kg</p>
                   </div>
                 </div>
               )}
             </section>
 
             {/* Capacity */}
-            <section>
-              <h3 className="font-semibold text-slate-900 mb-2">Capacity Limits</h3>
-              <div className="grid grid-cols-4 gap-3">
+            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Capacity Limits</h3>
+              <p className="text-xs text-slate-500 mb-3">The maximum package this service can carry.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white rounded-lg p-3 border border-slate-100">
                 <div>
                   <Label>Max Weight (kg)</Label>
                   <Input type="number" step="0.1" value={form.max_weight_kg} onChange={(e) => setForm((p) => ({ ...p, max_weight_kg: e.target.value }))} />
@@ -446,76 +492,69 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
             </section>
 
             {/* Types + Features */}
-            <section>
-              <h3 className="font-semibold text-slate-900 mb-2">Accepted Package Types</h3>
-              <div className="flex flex-wrap gap-2">
-                {PACKAGE_TYPES.map((t) => (
-                  <Badge
-                    key={t.value}
-                    className={`cursor-pointer ${form.accepted_types?.includes(t.value) ? 'bg-[#082c59] text-white' : 'bg-white border border-slate-300 text-slate-700'}`}
-                    onClick={() => setForm((p) => ({
-                      ...p,
-                      accepted_types: p.accepted_types?.includes(t.value)
-                        ? p.accepted_types.filter((x) => x !== t.value)
-                        : [...(p.accepted_types || []), t.value],
-                    }))}
-                  >
-                    {t.label}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h3 className="font-semibold text-slate-900 mb-2">Features</h3>
-              <div className="flex flex-wrap gap-2">
-                {FEATURES.map((f) => (
-                  <Badge
-                    key={f}
-                    className={`cursor-pointer capitalize ${form.features?.includes(f) ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-300 text-slate-700'}`}
-                    onClick={() => setForm((p) => ({
-                      ...p,
-                      features: p.features?.includes(f) ? p.features.filter((x) => x !== f) : [...(p.features || []), f],
-                    }))}
-                  >
-                    {f.replace('_', ' ')}
-                  </Badge>
-                ))}
-              </div>
-            </section>
-
-            {/* Operator + Status */}
-            <section className="grid grid-cols-2 gap-3">
-              {operators?.length > 0 && (
-                <div>
-                  <Label>Operator</Label>
-                  <Select value={form.operator_id || ''} onValueChange={(v) => setForm((p) => ({ ...p, operator_id: v }))}>
-                    <SelectTrigger className="bg-white"><SelectValue placeholder="Select operator..." /></SelectTrigger>
-                    <SelectContent className="bg-white max-h-60">
-                      {operators.map((op) => (
-                        <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+            <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-4">
               <div>
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
+                <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Accepted Package Types</h3>
+                <p className="text-xs text-slate-500 mb-3">Tap to toggle which kinds of packages this service accepts.</p>
+                <div className="flex flex-wrap gap-2">
+                  {PACKAGE_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setForm((p) => ({
+                        ...p,
+                        accepted_types: p.accepted_types?.includes(t.value)
+                          ? p.accepted_types.filter((x) => x !== t.value)
+                          : [...(p.accepted_types || []), t.value],
+                      }))}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${form.accepted_types?.includes(t.value) ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-1 text-sm uppercase tracking-wide">Service Features</h3>
+                <p className="text-xs text-slate-500 mb-3">Things that make your service stand out.</p>
+                <div className="flex flex-wrap gap-2">
+                  {FEATURES.map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setForm((p) => ({
+                        ...p,
+                        features: p.features?.includes(f) ? p.features.filter((x) => x !== f) : [...(p.features || []), f],
+                      }))}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition ${form.features?.includes(f) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400'}`}
+                    >
+                      {f.replace(/_/g, ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Operator (admins only) */}
+            {operators?.length > 0 && (
+              <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">Operator Assignment</h3>
+                <Select value={form.operator_id || ''} onValueChange={(v) => setForm((p) => ({ ...p, operator_id: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Select operator..." /></SelectTrigger>
+                  <SelectContent className="bg-white max-h-60">
+                    {operators.map((op) => (
+                      <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </section>
+              </section>
+            )}
 
-            <DialogFooter>
+            <DialogFooter className="border-t pt-4 -mx-6 px-6 sticky bottom-0 bg-white">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={submitting}>Cancel</Button>
               <Button type="submit" className="bg-[#082c59] hover:bg-[#0a3a75]" disabled={submitting} data-testid="save-service-btn">
-                {submitting ? 'Saving…' : editing ? 'Update' : 'Create Service'}
+                {submitting ? 'Saving…' : editing ? 'Update Service' : 'Submit for Approval'}
               </Button>
             </DialogFooter>
           </form>

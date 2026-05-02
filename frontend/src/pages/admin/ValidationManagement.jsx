@@ -30,7 +30,7 @@ export default function ValidationManagement() {
   const [data, setData] = useState({
     general_tickets: [], cancellation_tickets: [], pending_payments: [],
     pending_operators: [], pending_promotions: [],
-    services: { travel_routes: [], hotels: [], car_rentals: [], restaurants: [], packages: [], events: [], cinemas: [], pressing: [], banquets: [] },
+    services: { travel_routes: [], hotels: [], car_rentals: [], restaurants: [], packages: [], package_services: [], events: [], cinemas: [], pressing: [], banquets: [] },
     counts: { general_tickets: 0, cancellation_tickets: 0, pending_payments: 0, pending_operators: 0, pending_promotions: 0, services: 0 }
   });
   const [history, setHistory] = useState({ entries: [], total: 0, type_counts: {} });
@@ -110,6 +110,7 @@ export default function ValidationManagement() {
     ...data.services.car_rentals.map(s => ({ ...s, type: 'car_rental' })),
     ...data.services.restaurants.map(s => ({ ...s, type: 'restaurant' })),
     ...data.services.packages.map(s => ({ ...s, type: 'package' })),
+    ...(data.services.package_services || []).map(s => ({ ...s, type: 'package_service' })),
     ...data.services.events.map(s => ({ ...s, type: 'event' })),
     ...data.services.cinemas.map(s => ({ ...s, type: 'cinema' })),
     ...data.services.pressing.map(s => ({ ...s, type: 'pressing' })),

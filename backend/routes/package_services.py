@@ -19,20 +19,25 @@ from typing import Optional, List
 from datetime import datetime
 import uuid
 import re
+import unicodedata
 
 router = APIRouter(prefix="/api/package-services", tags=["Package Services"])
 
 
 def _accent_insensitive_regex(value: str) -> str:
-    """Make city searches accent-insensitive: e -> [eèéêë] etc."""
+    """Make city searches accent-insensitive in either direction:
+    typing 'Yaounde' OR 'Yaoundé' should both match a stored 'Yaounde'/'Yaoundé'."""
     if not value:
         return value
+    # First strip accents from the input so we always work from the bare ascii char
+    stripped = unicodedata.normalize('NFD', value)
+    stripped = ''.join(ch for ch in stripped if unicodedata.category(ch) != 'Mn')
     char_map = {
         'a': '[aàáâãäå]', 'e': '[eèéêë]', 'i': '[iìíîï]',
         'o': '[oòóôõö]', 'u': '[uùúûü]', 'c': '[cç]', 'n': '[nñ]',
     }
     pattern = ''
-    for ch in value.lower():
+    for ch in stripped.lower():
         pattern += char_map.get(ch, re.escape(ch))
     return pattern
 
@@ -98,21 +103,37 @@ async def create_service(
     data: PackageServiceOfferingCreate,
     current_user: dict = Depends(require_any_permission(["packages.create", "operator.services.create"]))
 ):
-    """Operator creates a new package service offering."""
+    """Operator creates a new package service offering.
+
+    Newly-created offerings always start in **pending** status and need to be
+    approved by an admin / super-admin via the Validation page before they
+    show up in the public marketplace search.
+    """
     db = get_database()
     operator_id = data.operator_id or current_user.get("operator_id")
     operator_name = data.operator_name or current_user.get("operator_name", "")
 
+    payload = data.dict(exclude={"operator_id", "operator_name", "status"})
+    role = current_user.get("role")
+    # Admin/super_admin can fast-track to active, everyone else goes through approval
+    initial_status = "active" if role in ("admin", "super_admin") else "pending"
+
     service = {
         "_id": str(uuid.uuid4()),
-        **data.dict(exclude={"operator_id", "operator_name"}),
+        **payload,
+        "status": initial_status,
         "operator_id": operator_id,
         "operator_name": operator_name,
+        "created_by": current_user.get("_id") or current_user.get("id"),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
     await db.package_services.insert_one(service)
-    return {"message": "Service offering created", "service_id": service["_id"]}
+    return {
+        "message": "Service offering submitted for admin approval" if initial_status == "pending" else "Service offering created",
+        "service_id": service["_id"],
+        "status": initial_status,
+    }
 
 
 @router.get("/")
@@ -220,6 +241,9 @@ async def update_service(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     update_data = {k: v for k, v in data.dict().items() if v is not None}
+    # Operators cannot change activation status — that is admin-controlled via Validation
+    if current_user.get("role") not in ("admin", "super_admin"):
+        update_data.pop("status", None)
     update_data["updated_at"] = datetime.utcnow()
     await db.package_services.update_one({"_id": service_id}, {"$set": update_data})
     return {"message": "Service updated"}

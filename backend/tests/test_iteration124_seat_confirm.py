@@ -5,7 +5,7 @@ import pytest
 import requests
 from datetime import datetime, timedelta
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://booking-revamp-hub.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://delivery-platform-108.preview.emergentagent.com").rstrip("/")
 
 CUSTOMER = {"email": "customer@test.com", "password": "testpassword123"}
 OPERATOR = {"email": "operator@test.com", "password": "testpassword123"}
