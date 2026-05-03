@@ -498,11 +498,10 @@ export default function PackageManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="services" data-testid="tab-services"><Truck className="h-4 w-4 mr-2" />Services</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
@@ -669,10 +668,6 @@ export default function PackageManagement() {
             serviceIcon={<Package className="h-5 w-5 text-blue-600" />}
             primaryColor="blue"
           />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="mt-6">
-          <PackageAnalytics packages={packages} />
         </TabsContent>
       </Tabs>
 
