@@ -51,8 +51,15 @@ const PermissionGate = ({
     hasAnyPermission, 
     hasAllPermissions, 
     canAccessModule,
+    isPrivilegedRole,
     loading 
   } = usePermissions();
+
+  // Admin / super_admin always pass — bypass the loading guard so these users
+  // never see Add buttons disappear during a permissions refetch.
+  if (isPrivilegedRole) {
+    return <>{children}</>;
+  }
 
   // Don't render anything while loading permissions
   if (loading) {

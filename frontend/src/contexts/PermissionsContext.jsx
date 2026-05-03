@@ -48,6 +48,7 @@ export const PermissionsProvider = ({ children }) => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [hasAllPermissionsFlag, setHasAllPermissionsFlag] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
   const [error, setError] = useState(null);
 
   // Admin / super_admin always have full access regardless of the
@@ -64,18 +65,23 @@ export const PermissionsProvider = ({ children }) => {
       setIsSuperAdmin(false);
       setHasAllPermissionsFlag(false);
       setLoading(false);
+      setHasFetched(false);
+      return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      // Token not yet persisted by AuthContext — bail out without flagging an
+      // error. The effect will re-run as soon as the token lands.
+      if (!hasFetched) setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        // Token not yet persisted by AuthContext — bail out without flagging an
-        // error. The effect will re-run as soon as the token lands.
-        setLoading(false);
-        return;
-      }
+      // Only show the loading skeleton on the FIRST fetch — subsequent
+      // refetches should run as background updates so PermissionGate doesn't
+      // hide all the Add buttons mid-session.
+      if (!hasFetched) setLoading(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL}/access/my-permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -93,6 +99,7 @@ export const PermissionsProvider = ({ children }) => {
       setIsSuperAdmin(data.is_super_admin || false);
       setHasAllPermissionsFlag(data.has_all_permissions || false);
       setError(null);
+      setHasFetched(true);
     } catch (err) {
       console.error('Error fetching permissions:', err);
       setError(err.message);
@@ -103,7 +110,7 @@ export const PermissionsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, hasFetched]);
 
   // Refetch permissions when user changes
   useEffect(() => {
@@ -212,6 +219,7 @@ export const PermissionsProvider = ({ children }) => {
     permissions: Array.from(permissions),
     assignedRoles,
     isSuperAdmin,
+    isPrivilegedRole,
     hasAllPermissionsFlag,
     loading,
     error,
