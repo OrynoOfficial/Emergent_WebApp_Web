@@ -50,6 +50,12 @@ export const PermissionsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Admin / super_admin always have full access regardless of the
+  // /access/my-permissions response (server enforces the same rule).
+  // This prevents a race where the first permissions fetch fires before the
+  // access_token is persisted and returns 403 — blocking every Add button.
+  const isPrivilegedRole = user?.role === 'admin' || user?.role === 'super_admin';
+
   // Fetch user permissions from the API
   const fetchPermissions = useCallback(async () => {
     if (!isAuthenticated) {
@@ -64,6 +70,12 @@ export const PermissionsProvider = ({ children }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('access_token');
+      if (!token) {
+        // Token not yet persisted by AuthContext — bail out without flagging an
+        // error. The effect will re-run as soon as the token lands.
+        setLoading(false);
+        return;
+      }
       const response = await fetch(`${import.meta.env.VITE_API_URL}/access/my-permissions`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -102,6 +114,11 @@ export const PermissionsProvider = ({ children }) => {
    * Check if user has a specific permission
    */
   const hasPermission = useCallback((permission) => {
+    // Admin / super_admin role bypass — server enforces the same rule.
+    if (isPrivilegedRole) {
+      return true;
+    }
+
     // Super admin has all permissions
     if (isSuperAdmin || hasAllPermissionsFlag) {
       return true;
@@ -124,7 +141,7 @@ export const PermissionsProvider = ({ children }) => {
     }
 
     return false;
-  }, [permissions, isSuperAdmin, hasAllPermissionsFlag]);
+  }, [permissions, isSuperAdmin, hasAllPermissionsFlag, isPrivilegedRole]);
 
   /**
    * Check if user has any of the specified permissions
@@ -134,13 +151,18 @@ export const PermissionsProvider = ({ children }) => {
       return true; // No permissions required
     }
 
+    // Admin / super_admin role bypass
+    if (isPrivilegedRole) {
+      return true;
+    }
+
     // Super admin has all permissions
     if (isSuperAdmin || hasAllPermissionsFlag) {
       return true;
     }
 
     return permissionList.some(permission => hasPermission(permission));
-  }, [hasPermission, isSuperAdmin, hasAllPermissionsFlag]);
+  }, [hasPermission, isSuperAdmin, hasAllPermissionsFlag, isPrivilegedRole]);
 
   /**
    * Check if user has all of the specified permissions
@@ -150,18 +172,27 @@ export const PermissionsProvider = ({ children }) => {
       return true; // No permissions required
     }
 
+    // Admin / super_admin role bypass
+    if (isPrivilegedRole) {
+      return true;
+    }
+
     // Super admin has all permissions
     if (isSuperAdmin || hasAllPermissionsFlag) {
       return true;
     }
 
     return permissionList.every(permission => hasPermission(permission));
-  }, [hasPermission, isSuperAdmin, hasAllPermissionsFlag]);
+  }, [hasPermission, isSuperAdmin, hasAllPermissionsFlag, isPrivilegedRole]);
 
   /**
    * Check if user can access a specific module
    */
   const canAccessModule = useCallback((module) => {
+    if (isPrivilegedRole) {
+      return true;
+    }
+
     if (isSuperAdmin || hasAllPermissionsFlag) {
       return true;
     }
@@ -175,7 +206,7 @@ export const PermissionsProvider = ({ children }) => {
     }
 
     return false;
-  }, [permissions, isSuperAdmin, hasAllPermissionsFlag]);
+  }, [permissions, isSuperAdmin, hasAllPermissionsFlag, isPrivilegedRole]);
 
   const value = {
     permissions: Array.from(permissions),

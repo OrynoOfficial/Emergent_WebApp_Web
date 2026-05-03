@@ -1,0 +1,37 @@
+{
+  "summary": "Re-tested 2-col Live Preview modal rollout for Car Rental, Events, Banquets, Laundry, Cinema (+Movie) and regression on Hotels/Travel/Restaurants/Packages after the PermissionsContext patch. The patch IS working — Add buttons now show for admins as soon as the management sub-tab is selected. Verified end-to-end on 2 of 9 modals (Car Rental + Events): shell, gradient header, live preview, name-field → preview update, and save button. The remaining 7 modals could NOT be verified in this session because, after testing 2 management pages in succession, every subsequent page.goto to /management/{x} renders a completely blank white page (#root has content but visible body is blank). Direct navigation to a single page works (verified by going straight to /management/events fresh), so the blocker is some side-effect that occurs after opening+closing a ServiceFormShell modal or after multiple management-page navigations within the same SPA session. Important nuance: NONE of the management Add buttons sit on the default 'Dashboard' sub-tab — they all live under the inner 'Management' (or 'Fleet Management' for Car Rental, 'Films' for movies) sub-tab. Tests must click that inner tab before looking for add-*-btn.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Management pages SPA stability", "issue": "After opening + Escape-closing a ServiceFormShell on /management/car-rental and /management/events in the same Playwright session, every subsequent navigation to /management/banquets, /management/laundry, /management/cinema, /management/hotels, /management/travel, /management/restaurants, /management/packages renders a totally blank white page (no errors in console, root has html content but offscreen). A fresh login + direct goto to that single page works fine. Suggests an unmounted-state / context reset bug or stuck loading flag after modal close + route change. Could also be a permission-fetch loading flag stuck after Escape-triggered focus change.", "selector": "n/a", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_modals": {
+    "car-rental": {"add_btn": true, "shell": true, "header_gradient": "emerald-700→emerald-600→teal-500", "live_preview_label": true, "filled_field": "Brand", "preview_updates_with_text": true, "save_btn": true},
+    "events": {"add_btn": true, "shell": true, "header_gradient": "#082c59→#0a3a75→#0d4a8f (navy/dark blue)", "live_preview_label": true, "filled_field": "Event Name", "preview_updates_with_text": true, "save_btn": true}
+  },
+  "unverified_modals_due_to_blank_page_bug": ["banquets", "laundry", "cinema", "movies", "hotels", "travel", "restaurants", "packages"],
+  "permissions_fix_verified": true,
+  "test_report_links": [],
+  "action_items": [
+    "RCA the 'blank page on subsequent /management/* navigations' issue. Hypotheses: (a) PermissionsContext loading flag stuck true after a re-fetch race triggered by component unmount; (b) a modal global state or focus trap leaks across route changes; (c) router-level error-boundary swallowing an exception silently. Reproducer: login as admin → open /management/car-rental → Fleet Management tab → open add-car-btn modal → Escape → goto /management/events → Management tab → open add-event-btn modal → Escape → goto /management/banquets → BLANK. Adding a console.log inside PermissionGate's `if (loading) return null;` and inside the management page roots should pinpoint it.",
+    "Once the blank-page bug is fixed, re-run the modal smoke for the remaining 7 pages (banquets PINK, laundry BLUE, cinema RED, movie RED inside Films sub-tab, hotels/travel/restaurants/packages regression).",
+    "Consider adding a top-level error-boundary that visibly surfaces the blank-page error so it doesn't show as a silent white screen in production."
+  ],
+  "critical_code_review_comments": [
+    "PermissionsContext.jsx loading state: on every fetchPermissions invocation we setLoading(true) BEFORE checking the token. If another effect causes fetchPermissions to be re-called after unmount of the management page tree (e.g., user state nudge), the loading→null short-circuit in PermissionGate can hide everything. Consider only setting loading=true when a real network request is about to fire (move setLoading(true) below the `if (!token) {setLoading(false); return}` guard).",
+    "PermissionGate returns null while loading — combined with the auto-rerunning fetchPermissions effect, this is a known foot-gun. Add a role-based 'optimistic allow' for admin/super_admin that ignores the loading flag entirely (the privileged-role short-circuit is already present in hasPermission, but PermissionGate bails out at the loading check BEFORE calling hasPermission, so admins still see nothing during loading). Move the `if (loading) return null;` AFTER a `if (isPrivilegedRole) return children` guard.",
+    "All management pages have an inner Tabs component where 'Dashboard' is default and the actual CRUD UI (with add-*-btn) lives under 'Management' / 'Fleet Management' / 'Films'. Document this clearly so testers don't think Add buttons are missing when they're really on a non-default sub-tab.",
+    "Multiple 422s observed on initial load for /api/ratings/* (logged 'Ratings API not available'). Not blocking but worth investigating."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "22% (2 of 9 modals fully verified end-to-end; PermissionsContext patch confirmed working)"},
+  "test_credentials": "admin@test.com / testpassword123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) PermissionsContext patch is confirmed working — admin sees Add buttons. 2) DO NOT navigate between multiple /management/* pages in one session via page.goto — after the 2nd or 3rd page the SPA renders blank. Either do one fresh login per page, or fix the bug first. 3) The Add button is NEVER on the default Dashboard sub-tab — always click the inner 'Management' tab (Car Rental: 'Fleet Management', Cinema films: 'Films'). 4) Verified gradients: car-rental=emerald, events=navy(#082c59). Banquets should be pink, laundry blue, cinema red, movies red, hotels TBD, travel TBD, restaurants TBD. 5) Live Preview pane updates correctly when typing into the labelled name input — confirmed for Car Rental Brand and Events Event Name.",
+  "rca_of_the_issue": "BLANK-PAGE BUG — Reproduction: admin login → /management/car-rental → click 'Fleet Management' tab → click add-car-btn → Escape → goto /management/events → click 'Management' tab → click add-event-btn → Escape → goto /management/banquets ⇒ blank. Likely RCA: PermissionGate's `if (loading) return null` combined with PermissionsContext.fetchPermissions setting loading=true on every invocation. When user/auth context emits a re-render after modal close+navigation, fetchPermissions re-fires, sets loading=true, and the entire management page subtree (which is wrapped in PermissionGate via canAccessModule) renders null. Mitigation: in PermissionGate, return children early when isPrivilegedRole (move that check above the loading guard); OR in PermissionsContext, only flip loading to true on the FIRST fetch, treat refetches as background updates."
+}
