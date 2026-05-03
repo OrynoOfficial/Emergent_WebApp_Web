@@ -26,6 +26,9 @@ export default function MiniImageUploader({
     red: { ring: 'border-red-300 hover:border-red-400 bg-red-50/30', icon: 'text-red-500', dot: 'bg-red-500' },
     navy: { ring: 'border-slate-300 hover:border-slate-400 bg-slate-50/30', icon: 'text-[#082c59]', dot: 'bg-[#082c59]' },
     emerald: { ring: 'border-emerald-300 hover:border-emerald-400 bg-emerald-50/30', icon: 'text-emerald-600', dot: 'bg-emerald-500' },
+    blue: { ring: 'border-blue-300 hover:border-blue-400 bg-blue-50/30', icon: 'text-blue-600', dot: 'bg-blue-500' },
+    orange: { ring: 'border-orange-300 hover:border-orange-400 bg-orange-50/30', icon: 'text-orange-600', dot: 'bg-orange-500' },
+    pink: { ring: 'border-pink-300 hover:border-pink-400 bg-pink-50/30', icon: 'text-pink-600', dot: 'bg-pink-500' },
   }[accent] || {};
 
   const handleFiles = async (files) => {

@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -282,7 +285,7 @@ export default function LaundryManagement() {
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="pressing.create">
-                <Button onClick={() => openPressingDialog()} className="bg-[#082c59]">
+                <Button onClick={() => openPressingDialog()} className="bg-[#082c59]" data-testid="add-pressing-btn">
                   <Plus className="w-4 h-4 mr-2" /> Add Shop
                 </Button>
               </PermissionGate>
@@ -410,12 +413,31 @@ export default function LaundryManagement() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isPressingDialogOpen} onOpenChange={setIsPressingDialogOpen}>
-        <DialogContent className="max-w-xl bg-white">
-          <DialogHeader>
-            <DialogTitle>{editingPressing ? 'Edit Shop' : 'Add Shop'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <ServiceFormShell
+        open={isPressingDialogOpen}
+        onOpenChange={setIsPressingDialogOpen}
+        icon={Shirt}
+        title={editingPressing ? 'Edit Shop' : 'Add Pressing Shop'}
+        subtitle={editingPressing
+          ? 'Update services, pricing, contact and storefront photos.'
+          : 'Register a new pressing shop — photos, services and pricing.'}
+        editing={!!editingPressing}
+        accent="blue"
+        leftColumn={
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Storefront photos</Label>
+              <div className="mt-2">
+                <MiniImageUploader
+                  images={pressingForm.images || []}
+                  onChange={(imgs) => setPressingForm(p => ({ ...p, images: imgs }))}
+                  max={3}
+                  folder="pressing"
+                  accent="blue"
+                  helperText="Up to 3 photos. The first is the cover."
+                />
+              </div>
+            </div>
             <div>
               <Label>Shop Name</Label>
               <Input value={pressingForm.name} onChange={e => setPressingForm(p => ({ ...p, name: e.target.value }))} placeholder="Shop name" />
@@ -490,12 +512,30 @@ export default function LaundryManagement() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPressingDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePressing} className="bg-[#082c59]">{editingPressing ? 'Update' : 'Add'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(pressingForm.images || [])[0]}
+            thumbs={(pressingForm.images || []).slice(1, 3)}
+            icon={Shirt}
+            badgeText="Pressing"
+            badgeClass="bg-blue-500 text-white"
+            placeholderColor="from-blue-700 via-blue-600 to-sky-500"
+            title={pressingForm.name || 'Shop name'}
+            subtitle={pressingForm.phone || 'Contact phone'}
+            location={[pressingForm.address, pressingForm.city].filter(Boolean).join(' · ') || 'Address · City'}
+            tags={(pressingForm.services || []).map(s => typeof s === 'string' ? s : s?.type || s?.name || '').filter(Boolean)}
+            tagsAccentClass="bg-blue-50 text-blue-700"
+            priceLabel="Per Kg"
+            priceValue={pressingForm.price_per_kg ? `${Number(pressingForm.price_per_kg).toLocaleString()} FCFA` : '—'}
+            accentTextClass="text-blue-700"
+          />
+        }
+        submitting={false}
+        submitLabel={editingPressing ? 'Update Shop' : 'Add Shop'}
+        onSubmit={handleSavePressing}
+        submitDataTestId="save-pressing-btn"
+      />
 
       {/* View Laundry Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

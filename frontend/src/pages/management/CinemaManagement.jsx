@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -818,12 +821,31 @@ export default function CinemaManagement() {
       </Tabs>
 
       {/* Cinema Dialog */}
-      <Dialog open={isCinemaDialogOpen} onOpenChange={setIsCinemaDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingCinema ? 'Edit Cinema' : 'Add Cinema'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <ServiceFormShell
+        open={isCinemaDialogOpen}
+        onOpenChange={setIsCinemaDialogOpen}
+        icon={Monitor}
+        title={editingCinema ? 'Edit Cinema' : 'Add New Cinema'}
+        subtitle={editingCinema
+          ? 'Update venue info, screens and amenities. Customers see this on the cinema page.'
+          : 'Register a new cinema venue — name, screens, amenities and contact info.'}
+        editing={!!editingCinema}
+        accent="red"
+        leftColumn={
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Venue photos</Label>
+              <div className="mt-2">
+                <MiniImageUploader
+                  images={cinemaForm.images || []}
+                  onChange={(imgs) => setCinemaForm(p => ({ ...p, images: imgs }))}
+                  max={3}
+                  folder="cinemas"
+                  accent="red"
+                  helperText="Up to 3 photos of the venue. The first is the cover."
+                />
+              </div>
+            </div>
             <div>
               <Label>Name *</Label>
               <Input value={cinemaForm.name} onChange={e => setCinemaForm(p => ({ ...p, name: e.target.value }))} placeholder="Canal Olympia Yaoundé" data-testid="cinema-name-input" />
@@ -969,20 +991,46 @@ export default function CinemaManagement() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCinemaDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCinema} className="bg-[#082c59]" data-testid="save-cinema-btn">{editingCinema ? 'Update' : 'Add'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(cinemaForm.images || [])[0]}
+            thumbs={(cinemaForm.images || []).slice(1, 3)}
+            icon={Monitor}
+            badgeText="Cinema"
+            badgeClass="bg-red-500 text-white"
+            placeholderColor="from-red-700 via-red-600 to-rose-600"
+            title={cinemaForm.name || 'Cinema name'}
+            subtitle={cinemaForm.phone || cinemaForm.email || 'Contact'}
+            location={[cinemaForm.address, cinemaForm.city].filter(Boolean).join(' · ') || 'Address · City'}
+            tags={cinemaForm.amenities || []}
+            tagsAccentClass="bg-red-50 text-red-700"
+            priceLabel="Screens"
+            priceValue={(cinemaForm.screens || []).length > 0
+              ? `${cinemaForm.screens.length} screen${cinemaForm.screens.length === 1 ? '' : 's'}`
+              : '—'}
+            accentTextClass="text-red-700"
+          />
+        }
+        submitting={false}
+        submitLabel={editingCinema ? 'Update Cinema' : 'Add Cinema'}
+        onSubmit={handleSaveCinema}
+        submitDataTestId="save-cinema-btn"
+      />
 
       {/* Movie Dialog */}
-      <Dialog open={isMovieDialogOpen} onOpenChange={setIsMovieDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingMovie ? 'Edit Film' : 'Add Film'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <ServiceFormShell
+        open={isMovieDialogOpen}
+        onOpenChange={setIsMovieDialogOpen}
+        icon={Film}
+        title={editingMovie ? 'Edit Film' : 'Add New Film'}
+        subtitle={editingMovie
+          ? 'Refresh poster, synopsis, cast and ratings.'
+          : 'Add a new film to your catalogue. Showtimes are scheduled separately.'}
+        editing={!!editingMovie}
+        accent="red"
+        leftColumn={
+          <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
                 <Label>Title *</Label>
@@ -1093,12 +1141,30 @@ export default function CinemaManagement() {
               <strong>Note:</strong> Showtimes (date, time, price) are managed separately in the <em>Showtimes</em> tab — one film can be assigned to multiple cinemas, screens and time slots, each with its own price.
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMovieDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveMovie} className="bg-[#082c59]" data-testid="save-movie-btn">{editingMovie ? 'Update' : 'Add'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={movieForm.poster_url}
+            icon={Film}
+            badgeText={movieForm.status === 'coming_soon' ? 'Coming Soon' : 'Now Showing'}
+            badgeClass={movieForm.status === 'coming_soon' ? 'bg-amber-400 text-slate-900' : 'bg-red-500 text-white'}
+            placeholderColor="from-red-700 via-rose-600 to-fuchsia-600"
+            title={movieForm.title || 'Film title'}
+            subtitle={[movieForm.director && `Dir. ${movieForm.director}`, movieForm.language].filter(Boolean).join(' · ') || 'Director · Language'}
+            location={[movieForm.duration && `${movieForm.duration} min`, movieForm.rating, movieForm.release_date].filter(Boolean).join(' · ') || 'Duration · Rating · Release'}
+            rating={movieForm.imdb_rating || null}
+            tags={(movieForm.genre || '').split(',').map(g => g.trim()).filter(Boolean)}
+            tagsAccentClass="bg-red-50 text-red-700"
+            priceLabel="Cast"
+            priceValue={(movieForm.cast || '').split(',').slice(0, 3).map(c => c.trim()).filter(Boolean).join(', ') || '—'}
+            accentTextClass="text-slate-900 text-sm"
+          />
+        }
+        submitting={false}
+        submitLabel={editingMovie ? 'Update Film' : 'Add Film'}
+        onSubmit={handleSaveMovie}
+        submitDataTestId="save-movie-btn"
+      />
 
       {/* Showtime Dialog */}
       <Dialog open={isShowtimeDialogOpen} onOpenChange={setIsShowtimeDialogOpen}>

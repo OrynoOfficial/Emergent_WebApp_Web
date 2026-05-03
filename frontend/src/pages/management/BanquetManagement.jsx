@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -286,7 +289,7 @@ export default function BanquetManagement() {
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="banquets.create">
-                <Button onClick={() => openBanquetDialog()} className="bg-[#082c59]">
+                <Button onClick={() => openBanquetDialog()} className="bg-[#082c59]" data-testid="add-banquet-btn">
                   <Plus className="w-4 h-4 mr-2" /> Add Hall
                 </Button>
               </PermissionGate>
@@ -415,12 +418,31 @@ export default function BanquetManagement() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isBanquetDialogOpen} onOpenChange={setIsBanquetDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingBanquet ? 'Edit Hall' : 'Add Hall'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+      <ServiceFormShell
+        open={isBanquetDialogOpen}
+        onOpenChange={setIsBanquetDialogOpen}
+        icon={PartyPopper}
+        title={editingBanquet ? 'Edit Hall' : 'Add Banquet Hall'}
+        subtitle={editingBanquet
+          ? 'Refresh capacity, pricing, services and gallery photos.'
+          : 'List a new banquet venue — photos, capacity, pricing and bundled services.'}
+        editing={!!editingBanquet}
+        accent="pink"
+        leftColumn={
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Hall photos</Label>
+              <div className="mt-2">
+                <MiniImageUploader
+                  images={banquetForm.images || []}
+                  onChange={(imgs) => setBanquetForm(p => ({ ...p, images: imgs }))}
+                  max={3}
+                  folder="banquets"
+                  accent="pink"
+                  helperText="Up to 3 photos. The first is the cover."
+                />
+              </div>
+            </div>
             <div className="col-span-2">
               <Label>Hall Name</Label>
               <Input value={banquetForm.name} onChange={e => setBanquetForm(p => ({ ...p, name: e.target.value }))} placeholder="Hall name" />
@@ -507,12 +529,30 @@ export default function BanquetManagement() {
               <Textarea value={banquetForm.description} onChange={e => setBanquetForm(p => ({ ...p, description: e.target.value }))} placeholder="Description..." />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBanquetDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveBanquet} className="bg-[#082c59]">{editingBanquet ? 'Update' : 'Add'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(banquetForm.images || [])[0]}
+            thumbs={(banquetForm.images || []).slice(1, 3)}
+            icon={PartyPopper}
+            badgeText={(banquetForm.type || 'banquet').replace('_', ' ')}
+            badgeClass="bg-pink-500 text-white"
+            placeholderColor="from-pink-600 via-rose-500 to-fuchsia-500"
+            title={banquetForm.name || 'Hall name'}
+            subtitle={banquetForm.venue || 'Venue'}
+            location={[banquetForm.city, banquetForm.capacity ? `Up to ${banquetForm.capacity} guests` : null].filter(Boolean).join(' · ') || 'City · Capacity'}
+            tags={banquetForm.services_included || []}
+            tagsAccentClass="bg-pink-50 text-pink-700"
+            priceLabel="Per guest"
+            priceValue={banquetForm.price_per_person ? `${Number(banquetForm.price_per_person).toLocaleString()} FCFA` : '—'}
+            accentTextClass="text-pink-700"
+          />
+        }
+        submitting={false}
+        submitLabel={editingBanquet ? 'Update Hall' : 'Add Hall'}
+        onSubmit={handleSaveBanquet}
+        submitDataTestId="save-banquet-btn"
+      />
 
       {/* View Banquet Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

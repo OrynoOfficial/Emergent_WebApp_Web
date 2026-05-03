@@ -1,0 +1,36 @@
+{
+  "summary": "Frontend-only testing of the 2-col Live Preview modal rollout to Car Rental, Events, Banquets, Pressing/Laundry, Cinema (+Movie) plus regression on Hotels/Travel/Restaurants. Direct UI login flow is blocked by a pre-existing permissions bug — admin@test.com's first /api/access/my-permissions call returns 403 from the browser (but 200 from curl with a fresh token), so PermissionGate hides ALL Add buttons (add-car-btn, add-event-btn, add-banquet-btn, add-pressing-btn, add-cinema-btn, add-movie-btn, add-hotel-btn, add-route-btn, add-restaurant-btn) and customer-facing modals cannot be opened through the normal login flow. After injecting a fresh access_token via window.fetch into localStorage to bypass the race, ONLY Car Rental was verifiable in the remaining session — subsequent page navigations lost the working state (sidebar 'Events'/'Halls' link collisions intercepted clicks). Car Rental modal itself renders correctly: ServiceFormShell present, emerald gradient header, Live Preview pane, save-car-btn present.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/access/my-permissions", "issue": "Returns 403 to the SPA on the FIRST call right after form-based login for admin@test.com, even though curl with a fresh token returns 200 with full admin permissions. Likely a race between AuthContext persisting access_token to localStorage and PermissionsContext firing its useEffect. This pre-dates iteration 150 but blocks all management-page testing through the UI."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PermissionGate (global)", "issue": "All management 'Add …' buttons disappear whenever the initial my-permissions fetch fails (race/403). Since PermissionGate renders null while loading and on failure sets permissions to empty Set, admins see no Add buttons on any /management/* page through normal login.", "selector": "[data-testid^=add-]", "priority": "HIGH"},
+      {"component": "CarRentalManagement Live Preview", "issue": "Typing 'TestBrandXYZ' into the first text input inside the shell did NOT show up in the preview card on the right (preview innerText did not contain the value). Needs verification with the actual Brand input; could be that the preview uses `${form.brand} ${form.model}` and the filled input was not `brand` — but worth a quick manual confirmation by main agent.", "selector": "[data-testid=service-form-shell]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Investigate /api/access/my-permissions 403 race on first SPA login for admin@test.com (browser: 403; curl: 200). Either delay PermissionsContext fetch until AuthContext has finished persisting tokens, or make PermissionGate fall back to 'allow' for users whose base_role is 'admin'/'super_admin' while permissions are loading/errored. Without this fix, every Add button across /management/* is invisible for admin users — blocking the whole modal rollout.",
+    "Manually verify the live-preview text updates on CarRentalManagement when typing into the Brand input specifically (not just the first text input). Same quick check for Events Name, Banquet Hall Name, Pressing Shop Name, Cinema Name, Movie Title.",
+    "After the permissions fix, re-run the full 2-col modal smoke on all 9 Add buttons (car/event/banquet/pressing/cinema/movie + hotel/travel/restaurant regression)."
+  ],
+  "critical_code_review_comments": [
+    "PermissionsContext.jsx fetchPermissions depends on `isAuthenticated` which is `!!user || !!access_token`. The effect also depends on `user`. On first form-login, the effect may fire before `access_token` is persisted by AuthContext.login, resulting in a 403 (no Authorization header) and permissions being locked to empty. Consider awaiting token persistence or retrying once on 401/403.",
+    "PermissionGate returns null both while loading AND on empty permissions — this yields a completely silent failure mode where admins see no Add buttons anywhere. Add a role-based bypass (admin/super_admin) or a loading indicator so the problem is visible.",
+    "ServiceFormShell.jsx grid is `lg:grid-cols-3` with `lg:col-span-2` (form) + `lg:col-span-1` (preview). That is 2:1 rather than a true 2-col shell — works fine visually, just note the naming vs the PRD '2-column'.",
+    "GenericPreviewCard assumes `cover` is either absolute or starts with `/api`; relative uploads in other shapes may 404 — consider a stricter check."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "~11% (1 of 9 Add modals verified end-to-end; the rest are blocked by the permissions-403 race, not by the iteration-150 modal code)"},
+  "seed_data_creation": "None created",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "BLOCKER: admin@test.com's first browser call to /api/access/my-permissions returns 403 after a normal UI login; API works from curl. PermissionGate then hides every add-*-btn. Workaround used in this session: `await page.evaluate` to fetch /api/auth/login, write access_token/refresh_token/user into localStorage, then navigate to /management/car-rental. After this workaround Car Rental modal rendered correctly (shell, emerald header, Live Preview label, save-car-btn). But switching pages via page.goto during the same Playwright session lost state — sidebar contains 'Events', 'Halls' text which collides with `button:has-text(\"Events\")` selectors. For future runs, use tab selectors like `[role=tab][data-state][value=...]` or click the specific inner-page tab via its data-testid if added. Also note TabsTrigger values: car-rental='management', not 'fleet'. Hotels/Travel/Restaurants regression smoke was not completed — main agent should retest after permissions race fix.",
+  "rca of the issue": "Root cause: PermissionsContext.fetchPermissions runs as soon as `user`/`isAuthenticated` changes, but the access_token write in AuthContext.login may not yet be visible to the fetch call (or a stale session's token is used). Server responds 403 → PermissionsContext sets permissions to empty Set → PermissionGate (used around every Add button on management pages) renders null → admin sees no Add buttons. Mitigation A: in AuthContext.login, persist access_token to localStorage BEFORE calling setUser, and have PermissionsContext useEffect depend on a dedicated `authReady` flag that is only flipped after both token and user are stored. Mitigation B: retry fetchPermissions once on 401/403. Mitigation C: short-circuit PermissionGate with `return children` when `user.role === 'admin' || user.role === 'super_admin'`. Not caused by iteration-150 code."
+}

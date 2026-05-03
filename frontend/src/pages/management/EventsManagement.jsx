@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -303,7 +306,7 @@ export default function EventsManagement() {
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="events.create">
-                <Button onClick={() => openEventDialog()} className="bg-[#082c59]">
+                <Button onClick={() => openEventDialog()} className="bg-[#082c59]" data-testid="add-event-btn">
                   <Plus className="w-4 h-4 mr-2" /> Add Event
                 </Button>
               </PermissionGate>
@@ -427,12 +430,18 @@ export default function EventsManagement() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingEvent ? 'Edit Event' : 'Create Event'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+      <ServiceFormShell
+        open={isEventDialogOpen}
+        onOpenChange={setIsEventDialogOpen}
+        icon={Calendar}
+        title={editingEvent ? 'Edit Event' : 'Create Event'}
+        subtitle={editingEvent
+          ? 'Update venue, schedule, ticket pricing and capacity.'
+          : 'List a new event — set the date, venue, ticketing and a striking cover image.'}
+        editing={!!editingEvent}
+        accent="navy"
+        leftColumn={
+          <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label>Event Name</Label>
               <Input value={eventForm.name} onChange={e => setEventForm(p => ({ ...p, name: e.target.value }))} placeholder="Event name" />
@@ -461,8 +470,21 @@ export default function EventsManagement() {
                     }}
                     className="h-10"
                   />
-                  <p className="text-xs text-slate-500 mt-1">Upload a cover image for your event</p>
+                  <p className="text-xs text-slate-500 mt-1">Hero image shown at the top of the event detail page</p>
                 </div>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Gallery (optional)</Label>
+              <div className="mt-2">
+                <MiniImageUploader
+                  images={eventForm.images || []}
+                  onChange={(imgs) => setEventForm(p => ({ ...p, images: imgs }))}
+                  max={3}
+                  folder="events"
+                  accent="navy"
+                  helperText="Up to 3 additional photos shown alongside the cover."
+                />
               </div>
             </div>
             <div>
@@ -545,12 +567,30 @@ export default function EventsManagement() {
               <Textarea value={eventForm.description} onChange={e => setEventForm(p => ({ ...p, description: e.target.value }))} placeholder="Event description..." />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEventDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEvent} className="bg-[#082c59]">{editingEvent ? 'Update' : 'Create'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={eventForm.cover_image || (eventForm.images || [])[0]}
+            thumbs={(eventForm.images || []).slice(0, 2)}
+            icon={Calendar}
+            badgeText={(eventForm.event_type || 'event').replace('_', ' ')}
+            badgeClass="bg-yellow-400 text-slate-900"
+            placeholderColor="from-[#082c59] via-[#0a3a75] to-[#0d4a8f]"
+            title={eventForm.name || 'Event title'}
+            subtitle={eventForm.venue_name || 'Venue'}
+            location={[eventForm.city, eventForm.start_date].filter(Boolean).join(' · ') || 'City · Date'}
+            tags={(eventForm.tags && eventForm.tags.length > 0) ? eventForm.tags : [eventForm.event_type, eventForm.doors_open && `Doors ${eventForm.doors_open}`].filter(Boolean)}
+            tagsAccentClass="bg-blue-50 text-[#082c59]"
+            priceLabel="From"
+            priceValue={eventForm.ticket_price ? `${Number(eventForm.ticket_price).toLocaleString()} FCFA` : '—'}
+            accentTextClass="text-[#082c59]"
+          />
+        }
+        submitting={false}
+        submitLabel={editingEvent ? 'Update Event' : 'Create Event'}
+        onSubmit={handleSaveEvent}
+        submitDataTestId="save-event-btn"
+      />
 
       {/* View Event Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>

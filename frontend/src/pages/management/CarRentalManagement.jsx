@@ -6,6 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
@@ -500,7 +503,7 @@ export default function CarRentalManagement() {
               <div className="flex items-center gap-2 flex-wrap">
                 <ViewModeToggle value={viewMode} onChange={setViewMode} />
                 <PermissionGate permission="car_rental.create">
-                  <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700" data-testid="add-car-btn">
                     <Plus className="w-4 h-4 mr-2" /> Add Car
                   </Button>
                 </PermissionGate>
@@ -622,122 +625,158 @@ export default function CarRentalManagement() {
       </div>
 
       {/* Car Dialog */}
-      <Dialog open={isCarDialogOpen} onOpenChange={setIsCarDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Car className="h-5 w-5 text-emerald-600" />
-              {editingCar ? 'Edit Car' : 'Add Car'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+      <ServiceFormShell
+        open={isCarDialogOpen}
+        onOpenChange={setIsCarDialogOpen}
+        icon={Car}
+        title={editingCar ? 'Edit Car' : 'Add New Car'}
+        subtitle={editingCar
+          ? 'Refresh photos, pricing, features. Renters see updates immediately.'
+          : 'List a new vehicle with up to 3 photos to attract renters.'}
+        editing={!!editingCar}
+        accent="emerald"
+        leftColumn={
+          <div className="space-y-5">
             <div>
-              <Label>Brand</Label>
-              <Input value={carForm.brand} onChange={e => setCarForm(p => ({ ...p, brand: e.target.value }))} placeholder="Toyota" />
+              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Photos</Label>
+              <div className="mt-2">
+                <MiniImageUploader
+                  images={carForm.images || []}
+                  onChange={(imgs) => setCarForm(p => ({ ...p, images: imgs }))}
+                  max={3}
+                  folder="car_rental"
+                  accent="emerald"
+                  helperText="Upload up to 3 photos. The first one is shown as cover."
+                />
+              </div>
             </div>
-            <div>
-              <Label>Model</Label>
-              <Input value={carForm.model} onChange={e => setCarForm(p => ({ ...p, model: e.target.value }))} placeholder="Corolla" />
-            </div>
-            <div>
-              <Label>Year</Label>
-              <Input type="number" value={carForm.year} onChange={e => setCarForm(p => ({ ...p, year: parseInt(e.target.value) }))} />
-            </div>
-            <div>
-              <Label>Type</Label>
-              <Select value={carForm.car_type} onValueChange={v => setCarForm(p => ({ ...p, car_type: v }))}>
-                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  {CAR_TYPES.map(type => (<SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>City</Label>
-              <Input value={carForm.city} onChange={e => setCarForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
-            </div>
-            <div>
-              <Label>Plate Number</Label>
-              <Input value={carForm.plate_number} onChange={e => setCarForm(p => ({ ...p, plate_number: e.target.value }))} placeholder="LT 1234 AB" />
-            </div>
-            <div>
-              <Label>Price/Day (FCFA)</Label>
-              <Input type="number" value={carForm.price_per_day} onChange={e => setCarForm(p => ({ ...p, price_per_day: e.target.value }))} placeholder="25000" />
-            </div>
-            <div>
-              <Label>Seats</Label>
-              <Input type="number" value={carForm.seats} onChange={e => setCarForm(p => ({ ...p, seats: parseInt(e.target.value) }))} />
-            </div>
-            <div>
-              <Label>Transmission</Label>
-              <Select value={carForm.transmission} onValueChange={v => setCarForm(p => ({ ...p, transmission: v }))}>
-                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="automatic">Automatic</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Fuel Type</Label>
-              <Select value={carForm.fuel_type} onValueChange={v => setCarForm(p => ({ ...p, fuel_type: v }))}>
-                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="petrol">Petrol</SelectItem>
-                  <SelectItem value="diesel">Diesel</SelectItem>
-                  <SelectItem value="electric">Electric</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Label>Operator</Label>
-              <Select 
-                value={carForm.operator_id || ''} 
-                onValueChange={v => {
-                  const op = operators.find(o => (o._id || o.id) === v);
-                  setCarForm(p => ({ ...p, operator_id: v, operator_name: op?.name || '' }));
-                }}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select an operator..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-60">
-                  {operators.map(op => (
-                    <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Brand</Label>
+                <Input value={carForm.brand} onChange={e => setCarForm(p => ({ ...p, brand: e.target.value }))} placeholder="Toyota" />
+              </div>
+              <div>
+                <Label>Model</Label>
+                <Input value={carForm.model} onChange={e => setCarForm(p => ({ ...p, model: e.target.value }))} placeholder="Corolla" />
+              </div>
+              <div>
+                <Label>Year</Label>
+                <Input type="number" value={carForm.year} onChange={e => setCarForm(p => ({ ...p, year: parseInt(e.target.value) }))} />
+              </div>
+              <div>
+                <Label>Type</Label>
+                <Select value={carForm.car_type} onValueChange={v => setCarForm(p => ({ ...p, car_type: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    {CAR_TYPES.map(type => (<SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>City</Label>
+                <Input value={carForm.city} onChange={e => setCarForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
+              </div>
+              <div>
+                <Label>Plate Number</Label>
+                <Input value={carForm.plate_number} onChange={e => setCarForm(p => ({ ...p, plate_number: e.target.value }))} placeholder="LT 1234 AB" />
+              </div>
+              <div>
+                <Label>Price/Day (FCFA)</Label>
+                <Input type="number" value={carForm.price_per_day} onChange={e => setCarForm(p => ({ ...p, price_per_day: e.target.value }))} placeholder="25000" />
+              </div>
+              <div>
+                <Label>Seats</Label>
+                <Input type="number" value={carForm.seats} onChange={e => setCarForm(p => ({ ...p, seats: parseInt(e.target.value) }))} />
+              </div>
+              <div>
+                <Label>Transmission</Label>
+                <Select value={carForm.transmission} onValueChange={v => setCarForm(p => ({ ...p, transmission: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="automatic">Automatic</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fuel Type</Label>
+                <Select value={carForm.fuel_type} onValueChange={v => setCarForm(p => ({ ...p, fuel_type: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="petrol">Petrol</SelectItem>
+                    <SelectItem value="diesel">Diesel</SelectItem>
+                    <SelectItem value="electric">Electric</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label>Operator</Label>
+                <Select 
+                  value={carForm.operator_id || ''} 
+                  onValueChange={v => {
+                    const op = operators.find(o => (o._id || o.id) === v);
+                    setCarForm(p => ({ ...p, operator_id: v, operator_name: op?.name || '' }));
+                  }}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select an operator..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-60">
+                    {operators.map(op => (
+                      <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2">
+                <Label>Features</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {CAR_FEATURES.map(feature => (
+                    <Badge
+                      key={feature}
+                      variant={carForm.features?.includes(feature) ? 'default' : 'outline'}
+                      className="cursor-pointer capitalize"
+                      onClick={() => {
+                        setCarForm(p => ({
+                          ...p,
+                          features: p.features?.includes(feature)
+                            ? p.features.filter(f => f !== feature)
+                            : [...(p.features || []), feature]
+                        }));
+                      }}
+                    >
+                      {feature.replace('_', ' ')}
+                    </Badge>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Label>Features</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {CAR_FEATURES.map(feature => (
-                  <Badge
-                    key={feature}
-                    variant={carForm.features?.includes(feature) ? 'default' : 'outline'}
-                    className="cursor-pointer capitalize"
-                    onClick={() => {
-                      setCarForm(p => ({
-                        ...p,
-                        features: p.features?.includes(feature)
-                          ? p.features.filter(f => f !== feature)
-                          : [...(p.features || []), feature]
-                      }));
-                    }}
-                  >
-                    {feature.replace('_', ' ')}
-                  </Badge>
-                ))}
+                </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCarDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveCar} className="bg-emerald-600">{editingCar ? 'Update' : 'Add'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        }
+        preview={
+          <GenericPreviewCard
+            cover={(carForm.images || [])[0]}
+            thumbs={(carForm.images || []).slice(1, 3)}
+            icon={Car}
+            badgeText="Car Rental"
+            badgeClass="bg-emerald-500 text-white"
+            placeholderColor="from-emerald-700 via-emerald-600 to-teal-500"
+            title={[carForm.brand, carForm.model].filter(Boolean).join(' ') || 'Brand Model'}
+            subtitle={`${carForm.year || 'Year'} · ${(carForm.car_type || 'sedan').replace('_', ' ')}${carForm.transmission ? ` · ${carForm.transmission}` : ''}`}
+            location={[carForm.city, carForm.plate_number].filter(Boolean).join(' · ') || 'City · Plate'}
+            tags={carForm.features || []}
+            tagsAccentClass="bg-emerald-50 text-emerald-700"
+            priceLabel="Per day"
+            priceValue={carForm.price_per_day ? `${Number(carForm.price_per_day).toLocaleString()} FCFA` : '—'}
+            accentTextClass="text-emerald-700"
+          />
+        }
+        submitting={false}
+        submitLabel={editingCar ? 'Update Car' : 'Add Car'}
+        onSubmit={handleSaveCar}
+        submitDataTestId="save-car-btn"
+      />
 
       {/* View Car Dialog - Enhanced with Image Carousel */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
