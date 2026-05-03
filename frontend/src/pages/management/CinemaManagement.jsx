@@ -11,6 +11,7 @@ import GenericPreviewCard from '@/components/management/shared/GenericPreviewCar
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
@@ -161,6 +162,10 @@ export default function CinemaManagement() {
   const [editingMovie, setEditingMovie] = useState(null);
   const [cinemaForm, setCinemaForm] = useState(DEFAULT_CINEMA_FORM);
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
+
+  // Bulk selection state
+  const [selectedCinemaIds, setSelectedCinemaIds] = useState(new Set());
+  const [selectedMovieIds, setSelectedMovieIds] = useState(new Set());
   const [isShowtimeDialogOpen, setIsShowtimeDialogOpen] = useState(false);
   const [showtimeForm, setShowtimeForm] = useState(DEFAULT_SHOWTIME_FORM);
   const [editingShowtime, setEditingShowtime] = useState(null);
@@ -304,6 +309,72 @@ export default function CinemaManagement() {
     } catch (error) {
       toast.error('Failed to delete');
     }
+  };
+
+  const handleBulkDeleteCinemas = async () => {
+    const ids = Array.from(selectedCinemaIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} cinema${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    let okCount = 0;
+    let failCount = 0;
+    for (const id of ids) {
+      try {
+        await api.delete(`/cinema/${id}`);
+        okCount += 1;
+      } catch {
+        failCount += 1;
+      }
+    }
+    setSelectedCinemaIds(new Set());
+    if (selectedCinema && ids.includes(selectedCinema.id)) setSelectedCinema(null);
+    toast.success(`${okCount} deleted${failCount ? ` · ${failCount} failed` : ''}`);
+    loadCinemas();
+  };
+
+  const handleDeleteMovie = async (id) => {
+    if (!confirm('Delete this film?')) return;
+    try {
+      await api.delete(`/cinema/films/${id}`);
+      toast.success('Film deleted');
+      loadMovies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  const handleBulkDeleteMovies = async () => {
+    const ids = Array.from(selectedMovieIds);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} film${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+    let okCount = 0;
+    let failCount = 0;
+    for (const id of ids) {
+      try {
+        await api.delete(`/cinema/films/${id}`);
+        okCount += 1;
+      } catch {
+        failCount += 1;
+      }
+    }
+    setSelectedMovieIds(new Set());
+    toast.success(`${okCount} deleted${failCount ? ` · ${failCount} failed` : ''}`);
+    loadMovies();
+  };
+
+  const toggleCinemaSelected = (id) => {
+    setSelectedCinemaIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleMovieSelected = (id) => {
+    setSelectedMovieIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
   const openMovieDialog = (movie = null) => {
@@ -482,6 +553,18 @@ export default function CinemaManagement() {
                       />
                     </div>
                     <ViewModeToggle value={cinemaViewMode} onChange={setCinemaViewMode} />
+                    {selectedCinemaIds.size > 0 && (
+                      <PermissionGate permission="cinema.delete">
+                        <Button
+                          variant="outline"
+                          className="border-red-200 text-red-600 hover:bg-red-50"
+                          onClick={handleBulkDeleteCinemas}
+                          data-testid="bulk-delete-cinemas-btn"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete selected ({selectedCinemaIds.size})
+                        </Button>
+                      </PermissionGate>
+                    )}
                     <PermissionGate permission="cinema.create">
                       <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]" data-testid="add-cinema-btn">
                         <Plus className="w-4 h-4 mr-2" /> Add Cinema
@@ -499,6 +582,22 @@ export default function CinemaManagement() {
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                           <tr>
+                            <th className="px-4 py-3 w-10">
+                              <Checkbox
+                                checked={pagedCinemas.length > 0 && pagedCinemas.every(c => selectedCinemaIds.has(c.id))}
+                                onCheckedChange={(v) => {
+                                  setSelectedCinemaIds(prev => {
+                                    const next = new Set(prev);
+                                    if (v) pagedCinemas.forEach(c => next.add(c.id));
+                                    else pagedCinemas.forEach(c => next.delete(c.id));
+                                    return next;
+                                  });
+                                }}
+                                aria-label="Select all cinemas"
+                                data-testid="select-all-cinemas-checkbox"
+                              />
+                            </th>
+                            <th className="px-4 py-3">Photo</th>
                             <th className="px-4 py-3">Name</th>
                             <th className="px-4 py-3">City</th>
                             <th className="px-4 py-3">Screens</th>
@@ -508,11 +607,28 @@ export default function CinemaManagement() {
                         </thead>
                         <tbody>
                           {pagedCinemas.map(cinema => (
-                            <tr key={cinema.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>
-                              <td className="px-4 py-3 font-medium text-slate-900">{cinema.name}</td>
-                              <td className="px-4 py-3 text-slate-700">{cinema.city || '—'}</td>
-                              <td className="px-4 py-3 text-slate-700">{cinema.total_screens || (cinema.screens || []).length}</td>
-                              <td className="px-4 py-3 text-slate-700">{cinema.phone || '—'}</td>
+                            <tr key={cinema.id} className="border-b border-slate-100 hover:bg-slate-50" data-testid={`cinema-row-${cinema.id}`}>
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedCinemaIds.has(cinema.id)}
+                                  onCheckedChange={() => toggleCinemaSelected(cinema.id)}
+                                  aria-label={`Select ${cinema.name}`}
+                                  data-testid={`select-cinema-${cinema.id}`}
+                                />
+                              </td>
+                              <td className="px-4 py-3 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>
+                                {(cinema.images && cinema.images[0]) ? (
+                                  <img src={cinema.images[0]} alt={cinema.name} className="h-10 w-14 object-cover rounded" />
+                                ) : (
+                                  <div className="h-10 w-14 rounded bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
+                                    <Monitor className="h-4 w-4 text-white" />
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 font-medium text-slate-900 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>{cinema.name}</td>
+                              <td className="px-4 py-3 text-slate-700 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>{cinema.city || '—'}</td>
+                              <td className="px-4 py-3 text-slate-700 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>{cinema.total_screens || (cinema.screens || []).length}</td>
+                              <td className="px-4 py-3 text-slate-700 cursor-pointer" onClick={() => setSelectedCinema(cinema)}>{cinema.phone || '—'}</td>
                               <td className="px-4 py-3 text-right">
                                 <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }}>View</Button>
                                 <PermissionGate permission="cinema.edit">
@@ -529,16 +645,34 @@ export default function CinemaManagement() {
                       {pagedCinemas.map(cinema => (
                         <Card
                           key={cinema.id}
-                          className={`cursor-pointer hover:shadow-lg transition-shadow ${selectedCinema?.id === cinema.id ? 'ring-2 ring-[#082c59]' : ''}`}
+                          className={`relative cursor-pointer hover:shadow-lg transition-shadow ${selectedCinema?.id === cinema.id ? 'ring-2 ring-[#082c59]' : ''}`}
                           onClick={() => setSelectedCinema(cinema)}
+                          data-testid={`cinema-card-${cinema.id}`}
                         >
-                          <CardContent className="pt-6">
+                          <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur rounded shadow-sm p-1" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedCinemaIds.has(cinema.id)}
+                              onCheckedChange={() => toggleCinemaSelected(cinema.id)}
+                              aria-label={`Select ${cinema.name}`}
+                              data-testid={`select-cinema-card-${cinema.id}`}
+                            />
+                          </div>
+                          {(cinema.images && cinema.images[0]) ? (
+                            <div className="h-36 w-full overflow-hidden rounded-t-lg">
+                              <img src={cinema.images[0]} alt={cinema.name} className="h-full w-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="h-36 w-full rounded-t-lg bg-gradient-to-br from-red-700 via-red-600 to-rose-600 flex items-center justify-center">
+                              <Monitor className="h-10 w-10 text-white/80" />
+                            </div>
+                          )}
+                          <CardContent className="pt-4">
                             <div className="flex justify-between items-start mb-3">
                               <h3 className="font-semibold">{cinema.name}</h3>
-                              <Badge variant="outline">{cinema.total_screens} Screens</Badge>
+                              <Badge variant="outline">{cinema.total_screens || (cinema.screens || []).length} Screens</Badge>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                              <MapPin className="w-4 h-4" />{cinema.city}
+                              <MapPin className="w-4 h-4" />{cinema.city || '—'}
                             </div>
                             {cinemaViewMode === 'details' && cinema.description && (
                               <p className="text-sm text-slate-600 mb-3 pb-3 border-b border-slate-100">{cinema.description}</p>
@@ -601,6 +735,18 @@ export default function CinemaManagement() {
                       />
                     </div>
                     <ViewModeToggle value={movieViewMode} onChange={setMovieViewMode} />
+                    {selectedMovieIds.size > 0 && (
+                      <PermissionGate permission="cinema.delete">
+                        <Button
+                          variant="outline"
+                          className="border-red-200 text-red-600 hover:bg-red-50"
+                          onClick={handleBulkDeleteMovies}
+                          data-testid="bulk-delete-movies-btn"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Delete selected ({selectedMovieIds.size})
+                        </Button>
+                      </PermissionGate>
+                    )}
                     <PermissionGate permission="cinema.edit">
                       <Button onClick={() => openMovieDialog()} className="bg-[#082c59]" data-testid="add-movie-btn">
                         <Plus className="w-4 h-4 mr-2" /> Add Movie
@@ -616,66 +762,122 @@ export default function CinemaManagement() {
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                           <tr>
+                            <th className="px-4 py-3 w-10">
+                              <Checkbox
+                                checked={pagedMovies.length > 0 && pagedMovies.every(m => selectedMovieIds.has(m.id || m._id))}
+                                onCheckedChange={(v) => {
+                                  setSelectedMovieIds(prev => {
+                                    const next = new Set(prev);
+                                    if (v) pagedMovies.forEach(m => next.add(m.id || m._id));
+                                    else pagedMovies.forEach(m => next.delete(m.id || m._id));
+                                    return next;
+                                  });
+                                }}
+                                aria-label="Select all films"
+                                data-testid="select-all-movies-checkbox"
+                              />
+                            </th>
+                            <th className="px-4 py-3">Poster</th>
                             <th className="px-4 py-3">Title</th>
                             <th className="px-4 py-3">Genre</th>
                             <th className="px-4 py-3">Duration</th>
                             <th className="px-4 py-3">Rating</th>
-                            <th className="px-4 py-3">Price</th>
                             <th className="px-4 py-3 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {pagedMovies.map(movie => (
-                            <tr key={movie.id} className="border-b border-slate-100 hover:bg-slate-50">
-                              <td className="px-4 py-3 font-medium text-slate-900">{movie.title}</td>
-                              <td className="px-4 py-3 text-slate-700">{Array.isArray(movie.genre) ? movie.genre.join(', ') : movie.genre || '—'}</td>
-                              <td className="px-4 py-3 text-slate-700">{movie.duration || movie.duration_minutes || '—'}</td>
-                              <td className="px-4 py-3 text-slate-700">{movie.rating || '—'}</td>
-                              <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(movie.ticket_price || 0)}</td>
-                              <td className="px-4 py-3 text-right">
-                                <Button size="sm" variant="ghost" onClick={() => handleViewItem(movie, 'movie')}>View</Button>
-                                <PermissionGate permission="cinema.edit">
-                                  <Button size="sm" variant="ghost" onClick={() => openMovieDialog(movie)}>Edit</Button>
-                                </PermissionGate>
-                              </td>
-                            </tr>
-                          ))}
+                          {pagedMovies.map(movie => {
+                            const movieId = movie.id || movie._id;
+                            return (
+                              <tr key={movieId} className="border-b border-slate-100 hover:bg-slate-50" data-testid={`movie-row-${movieId}`}>
+                                <td className="px-4 py-3">
+                                  <Checkbox
+                                    checked={selectedMovieIds.has(movieId)}
+                                    onCheckedChange={() => toggleMovieSelected(movieId)}
+                                    aria-label={`Select ${movie.title}`}
+                                    data-testid={`select-movie-${movieId}`}
+                                  />
+                                </td>
+                                <td className="px-4 py-3">
+                                  {movie.poster_url ? (
+                                    <img src={movie.poster_url} alt={movie.title} className="h-14 w-10 object-cover rounded shadow-sm" />
+                                  ) : (
+                                    <div className="h-14 w-10 rounded bg-gradient-to-br from-red-700 to-rose-600 flex items-center justify-center">
+                                      <Film className="h-4 w-4 text-white" />
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 font-medium text-slate-900">{movie.title}</td>
+                                <td className="px-4 py-3 text-slate-700">{Array.isArray(movie.genre) ? movie.genre.join(', ') : movie.genre || '—'}</td>
+                                <td className="px-4 py-3 text-slate-700">{movie.duration_minutes ? `${movie.duration_minutes} min` : (movie.duration ? `${movie.duration} min` : '—')}</td>
+                                <td className="px-4 py-3 text-slate-700">{movie.rating || '—'}</td>
+                                <td className="px-4 py-3 text-right">
+                                  <Button size="sm" variant="ghost" onClick={() => handleViewItem(movie, 'movie')}>View</Button>
+                                  <PermissionGate permission="cinema.edit">
+                                    <Button size="sm" variant="ghost" onClick={() => openMovieDialog(movie)}>Edit</Button>
+                                  </PermissionGate>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   ) : (
                     <div className={movieViewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`movies-${movieViewMode}-view`}>
-                      {pagedMovies.map(movie => (
-                        <Card key={movie.id}>
-                          <CardContent className="pt-6">
-                            <h3 className="font-semibold mb-2">{movie.title}</h3>
-                            <div className="space-y-1 text-sm text-gray-500">
-                              <div className="flex items-center gap-2"><Film className="w-4 h-4" />{Array.isArray(movie.genre) ? movie.genre.join(', ') : movie.genre}</div>
-                              <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{movie.duration}</div>
-                              <div className="flex items-center gap-2"><Star className="w-4 h-4" />{movie.rating}</div>
-                              {movieViewMode === 'details' && movie.description && (
-                                <p className="text-slate-600 pt-2 border-t border-slate-100">{movie.description}</p>
-                              )}
+                      {pagedMovies.map(movie => {
+                        const movieId = movie.id || movie._id;
+                        return (
+                          <Card key={movieId} className="relative overflow-hidden" data-testid={`movie-card-${movieId}`}>
+                            <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur rounded shadow-sm p-1">
+                              <Checkbox
+                                checked={selectedMovieIds.has(movieId)}
+                                onCheckedChange={() => toggleMovieSelected(movieId)}
+                                aria-label={`Select ${movie.title}`}
+                                data-testid={`select-movie-card-${movieId}`}
+                              />
                             </div>
-                            <div className="mt-3 font-bold text-green-600">{formatFCFA(movie.ticket_price)}</div>
-                            <div className="flex gap-2 mt-4">
-                              <Button size="sm" variant="outline" onClick={() => handleViewItem(movie, 'movie')} title="View Details">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <PermissionGate permission="cinema.edit">
-                                <Button size="sm" variant="outline" className="flex-1" onClick={() => openMovieDialog(movie)}>
-                                  <Edit className="w-4 h-4 mr-1" /> Edit
+                            {movie.poster_url ? (
+                              <div className="h-44 w-full overflow-hidden">
+                                <img src={movie.poster_url} alt={movie.title} className="h-full w-full object-cover" />
+                              </div>
+                            ) : (
+                              <div className="h-44 w-full bg-gradient-to-br from-red-700 via-rose-600 to-fuchsia-600 flex items-center justify-center">
+                                <Film className="h-12 w-12 text-white/80" />
+                              </div>
+                            )}
+                            {movie.status === 'coming_soon' && (
+                              <Badge className="absolute top-3 right-3 bg-amber-400 text-slate-900">Coming Soon</Badge>
+                            )}
+                            <CardContent className="pt-4">
+                              <h3 className="font-semibold mb-2 line-clamp-1">{movie.title}</h3>
+                              <div className="space-y-1 text-sm text-gray-500">
+                                <div className="flex items-center gap-2"><Film className="w-4 h-4" />{Array.isArray(movie.genre) ? movie.genre.join(', ') : (movie.genre || '—')}</div>
+                                <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{movie.duration_minutes ? `${movie.duration_minutes} min` : (movie.duration ? `${movie.duration} min` : '—')}</div>
+                                <div className="flex items-center gap-2"><Star className="w-4 h-4 text-yellow-500" />{movie.rating || '—'}{movie.imdb_rating ? ` · IMDb ${movie.imdb_rating}` : ''}</div>
+                                {movieViewMode === 'details' && movie.description && (
+                                  <p className="text-slate-600 pt-2 border-t border-slate-100 line-clamp-3">{movie.description}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-2 mt-4">
+                                <Button size="sm" variant="outline" onClick={() => handleViewItem(movie, 'movie')} title="View Details">
+                                  <Eye className="w-4 h-4" />
                                 </Button>
-                              </PermissionGate>
-                              <PermissionGate permission="cinema.delete">
-                                <Button size="sm" variant="outline" className="text-red-600">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </PermissionGate>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                                <PermissionGate permission="cinema.edit">
+                                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openMovieDialog(movie)}>
+                                    <Edit className="w-4 h-4 mr-1" /> Edit
+                                  </Button>
+                                </PermissionGate>
+                                <PermissionGate permission="cinema.delete">
+                                  <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteMovie(movieId)} title="Delete">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </PermissionGate>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -1302,74 +1504,187 @@ export default function CinemaManagement() {
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg bg-white">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Film className="h-5 w-5 text-rose-600" />
-              {viewingType === 'cinema' ? 'Cinema Details' : 'Movie Details'}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl bg-white p-0 overflow-hidden max-h-[92vh]">
           {viewingItem && viewingType === 'cinema' && (
-            <div className="space-y-4 py-4">
-              <div className="bg-rose-50 rounded-lg p-4">
-                <h3 className="font-bold text-lg text-rose-900">{viewingItem.name}</h3>
-                <p className="text-sm text-rose-700">{viewingItem.total_screens} screens • {viewingItem.total_seats} seats</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500">Location</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <MapPin className="h-4 w-4" /> {viewingItem.city || 'N/A'}
-                  </p>
+            <div className="overflow-y-auto max-h-[92vh]">
+              {/* Hero */}
+              {(viewingItem.images && viewingItem.images[0]) ? (
+                <div className="relative h-56 w-full">
+                  <img src={viewingItem.images[0]} alt={viewingItem.name} className="absolute inset-0 h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <div className="absolute bottom-4 left-6 right-6 text-white">
+                    <Badge className="bg-red-500 text-white mb-2">Cinema</Badge>
+                    <h2 className="text-3xl font-bold">{viewingItem.name}</h2>
+                    <p className="text-sm flex items-center gap-1 mt-1 text-white/90"><MapPin className="h-4 w-4" /> {viewingItem.address || viewingItem.city || '—'}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-500">Address</p>
-                  <p className="font-medium">{viewingItem.address || 'N/A'}</p>
-                </div>
-              </div>
-              {viewingItem.amenities?.length > 0 && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-2">Amenities</p>
-                  <div className="flex flex-wrap gap-1">
-                    {viewingItem.amenities.map(a => (
-                      <Badge key={a} variant="outline" className="text-xs uppercase">{a}</Badge>
-                    ))}
+              ) : (
+                <div className="relative h-56 w-full bg-gradient-to-br from-red-700 via-red-600 to-rose-600 flex items-end p-6">
+                  <Monitor className="absolute right-6 top-6 h-20 w-20 text-white/15" />
+                  <div className="text-white">
+                    <Badge className="bg-white text-red-700 mb-2">Cinema</Badge>
+                    <h2 className="text-3xl font-bold">{viewingItem.name}</h2>
+                    <p className="text-sm flex items-center gap-1 mt-1 text-white/90"><MapPin className="h-4 w-4" /> {viewingItem.address || viewingItem.city || '—'}</p>
                   </div>
                 </div>
               )}
-            </div>
-          )}
-          {viewingItem && viewingType === 'movie' && (
-            <div className="space-y-4 py-4">
-              <div className="bg-purple-50 rounded-lg p-4">
-                <h3 className="font-bold text-lg text-purple-900">{viewingItem.title}</h3>
-                <Badge className="mt-1">{viewingItem.genre}</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500">Duration</p>
-                  <p className="font-medium">{viewingItem.duration}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Rating</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-500" /> {viewingItem.rating}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Ticket Price</p>
-                  <p className="font-bold text-green-600">{formatFCFA(viewingItem.ticket_price)}</p>
-                </div>
-              </div>
-              {viewingItem.description && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-1">Description</p>
-                  <p className="text-sm bg-slate-50 p-3 rounded">{viewingItem.description}</p>
+
+              {/* Image strip */}
+              {viewingItem.images && viewingItem.images.length > 1 && (
+                <div className="grid grid-cols-3 gap-2 px-6 pt-4">
+                  {viewingItem.images.slice(1, 4).map((img, idx) => (
+                    <img key={idx} src={img} alt="" className="h-24 w-full object-cover rounded-lg" />
+                  ))}
                 </div>
               )}
+
+              <div className="px-6 pb-6 pt-4 space-y-5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 uppercase">Screens</p>
+                    <p className="text-lg font-semibold text-slate-900">{viewingItem.total_screens || (viewingItem.screens || []).length}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 uppercase">Seats</p>
+                    <p className="text-lg font-semibold text-slate-900">{viewingItem.total_seats || (viewingItem.screens || []).reduce((s, x) => s + (x.capacity || 0), 0) || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 uppercase">Phone</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{viewingItem.phone || '—'}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-500 uppercase">Email</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{viewingItem.email || '—'}</p>
+                  </div>
+                </div>
+
+                {viewingItem.description && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">About</p>
+                    <p className="text-sm text-slate-700 leading-relaxed">{viewingItem.description}</p>
+                  </div>
+                )}
+
+                {viewingItem.amenities?.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Amenities</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {viewingItem.amenities.map(a => (
+                        <Badge key={a} variant="outline" className="text-xs uppercase bg-red-50 border-red-200 text-red-700">{a}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {viewingItem.screens?.length > 0 && (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Theater rooms</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {viewingItem.screens.map((s, i) => (
+                        <div key={i} className="flex items-center justify-between bg-slate-50 rounded p-3 text-sm">
+                          <div className="font-medium text-slate-900">{s.name || `Screen ${i + 1}`}</div>
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Badge variant="outline" className="uppercase text-xs">{s.type || '2d'}</Badge>
+                            <span>{s.capacity || 0} seats</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-          <DialogFooter>
+
+          {viewingItem && viewingType === 'movie' && (
+            <div className="overflow-y-auto max-h-[92vh]">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+                {/* Poster */}
+                <div className="md:col-span-1 bg-slate-900 flex items-center justify-center md:min-h-[500px] p-6">
+                  {viewingItem.poster_url ? (
+                    <img src={viewingItem.poster_url} alt={viewingItem.title} className="max-h-[460px] w-auto rounded-lg shadow-2xl" />
+                  ) : (
+                    <div className="h-[400px] w-full max-w-[280px] rounded-lg bg-gradient-to-br from-red-700 via-rose-600 to-fuchsia-600 flex items-center justify-center">
+                      <Film className="h-16 w-16 text-white/60" />
+                    </div>
+                  )}
+                </div>
+                {/* Details */}
+                <div className="md:col-span-2 p-6 space-y-4">
+                  <div>
+                    {viewingItem.status === 'coming_soon' ? (
+                      <Badge className="bg-amber-400 text-slate-900 mb-2">Coming Soon</Badge>
+                    ) : (
+                      <Badge className="bg-red-500 text-white mb-2">Now Showing</Badge>
+                    )}
+                    <h2 className="text-2xl font-bold text-slate-900">{viewingItem.title}</h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {viewingItem.director ? `Directed by ${viewingItem.director}` : ''}
+                      {viewingItem.release_date ? `${viewingItem.director ? ' · ' : ''}${viewingItem.release_date}` : ''}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(viewingItem.genre) ? viewingItem.genre : (viewingItem.genre || '').split(',')).map(g => g.toString().trim()).filter(Boolean).map(g => (
+                      <Badge key={g} variant="outline" className="bg-red-50 border-red-200 text-red-700">{g}</Badge>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 uppercase">Duration</p>
+                      <p className="text-sm font-semibold text-slate-900 flex items-center gap-1.5"><Clock className="h-4 w-4" />{viewingItem.duration_minutes ? `${viewingItem.duration_minutes} min` : (viewingItem.duration ? `${viewingItem.duration} min` : '—')}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 uppercase">Rating</p>
+                      <p className="text-sm font-semibold text-slate-900">{viewingItem.rating || '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 uppercase">Language</p>
+                      <p className="text-sm font-semibold text-slate-900">{viewingItem.language || '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-lg p-3">
+                      <p className="text-xs text-slate-500 uppercase">IMDb</p>
+                      <p className="text-sm font-semibold text-slate-900 flex items-center gap-1"><Star className="h-4 w-4 text-yellow-500" />{viewingItem.imdb_rating || '—'}</p>
+                    </div>
+                  </div>
+
+                  {viewingItem.description && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">Synopsis</p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{viewingItem.description}</p>
+                    </div>
+                  )}
+
+                  {(viewingItem.cast && (Array.isArray(viewingItem.cast) ? viewingItem.cast : viewingItem.cast.split(',')).filter(Boolean).length > 0) && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-1">Cast</p>
+                      <p className="text-sm text-slate-700">
+                        {(Array.isArray(viewingItem.cast) ? viewingItem.cast : viewingItem.cast.split(',')).map(c => c.toString().trim()).filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {viewingItem.trailer_url && (
+                    <a
+                      href={viewingItem.trailer_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-red-600 hover:text-red-700"
+                    >
+                      <Film className="h-4 w-4" /> Watch trailer ↗
+                    </a>
+                  )}
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                    Showtimes & ticket prices for this film are managed in the <strong>Showtimes</strong> tab — one film can play in multiple cinemas at different prices.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
             <Button variant="outline" onClick={() => {
               if (viewingType === 'cinema') openCinemaDialog(viewingItem);
               else openMovieDialog(viewingItem);
