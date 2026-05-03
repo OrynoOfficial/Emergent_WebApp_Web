@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -310,6 +310,8 @@ const PaymentMethodsSelection = ({
         onProcessingChange(false);
       }
       if (onPaymentInitiated) {
+        // opening_modal: true tells the parent to clear loading state and
+        // reset triggerPayment without surfacing a "Payment Failed" toast.
         onPaymentInitiated({ opening_modal: true, orderId });
       }
     } catch (err) {
@@ -338,11 +340,7 @@ const PaymentMethodsSelection = ({
       }
       return;
     }
-    if (disabled || isProcessingInternal) {
-      // Reset processing state if disabled
-      if (onProcessingChange) {
-        onProcessingChange(false);
-      }
+    if (isProcessingInternal) {
       return;
     }
 
@@ -423,14 +421,26 @@ const PaymentMethodsSelection = ({
     } finally {
       setIsProcessingInternal(false);
     }
-  }, [selectedMethodInternal, disabled, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange]);
+  }, [selectedMethodInternal, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange]);
 
+  // Fire initiatePayment exactly ONCE per false→true transition of triggerPayment.
+  // Using a ref instead of relying on dependency arrays avoids the prior race
+  // where (a) `disabled` early-returned, (b) onProcessingChange flipped paymentInProgress
+  // off, (c) initiatePayment re-rendered and the effect re-fired — a fragile 2-pass
+  // cycle that broke when parent's `onTrigger` flipped `triggerPayment` mid-flow.
+  const prevTriggerRef = useRef(false);
   useEffect(() => {
-    if (triggerPayment && selectedMethodInternal && !isProcessingInternal) {
-      if (onTrigger) {
-        onTrigger();
+    if (triggerPayment && !prevTriggerRef.current) {
+      prevTriggerRef.current = true;
+      if (selectedMethodInternal && !isProcessingInternal) {
+        if (onTrigger) {
+          onTrigger();
+        }
+        initiatePayment();
       }
-      initiatePayment();
+    } else if (!triggerPayment && prevTriggerRef.current) {
+      // Reset so the next false→true transition can re-fire
+      prevTriggerRef.current = false;
     }
   }, [triggerPayment, selectedMethodInternal, isProcessingInternal, onTrigger, initiatePayment]);
 

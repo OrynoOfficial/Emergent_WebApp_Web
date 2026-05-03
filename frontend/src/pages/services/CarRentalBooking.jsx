@@ -216,6 +216,9 @@ export default function CarRentalBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.redirectUrl) {
       toast.info('Redirecting to payment...');
       window.location.href = response.redirectUrl;
@@ -244,7 +247,7 @@ export default function CarRentalBooking() {
     }
 
     // Reuse existing order — user previously cancelled the modal.
-    if (orderId) { rePayExisting(setTriggerPayment, setPaymentInProgress); return; }
+    if (orderId) { rePayExisting(setTriggerPayment); return; }
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);

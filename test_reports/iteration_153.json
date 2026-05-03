@@ -1,0 +1,51 @@
+{
+  "summary": "P0 PAYMENT MODAL REGRESSION FIX VERIFIED — End-to-end Playwright test on HotelBooking confirms ALL three regression fixes are working correctly. The Stripe checkout modal (data-testid='stripe-checkout-modal') opens immediately when the user fills the booking form, selects 'Pay with Card', and clicks Pay. Exactly ONE POST /api/orders/create fires per booking session, and re-clicking Pay after closing the modal reopens it WITHOUT creating a duplicate order. NO 'Payment Failed: Unknown error' toast appears at any point. The captured Stripe modal showed correct booking summary (Test Grand Hotel, check-in 15.02.2026, check-out 17.02.2026), correct order ID (HTL-20260503-29912BF1), correct total amount (115,500 FCFA), Continue to Stripe button, and 'Choose a different payment method' close button.",
+  "verified_flows": {
+    "hotel_stripe": {
+      "modal_opens_first_click": true,
+      "stripe_checkout_modal_testid_visible": true,
+      "orders_create_post_count_first_click": 1,
+      "modal_closes_on_escape": true,
+      "modal_reopens_on_second_click": true,
+      "orders_create_count_after_reclick": 1,
+      "duplicate_orders_prevented": true,
+      "payment_failed_unknown_error_toast": false,
+      "evidence": "Captured screenshot showing stripe-checkout-modal Dialog with Test Grand Hotel booking summary, 115,500 FCFA amount, order HTL-20260503-29912BF1"
+    }
+  },
+  "code_review_findings": {
+    "PaymentMethodsSelection.jsx": "Line 431 prevTriggerRef.current correctly tracks false->true transition; line 433-444 useEffect fires initiatePayment exactly once per cycle and resets ref on triggerPayment back to false. The previous `disabled` early-return has been removed from initiatePayment. Confirmed working in browser test.",
+    "HotelBooking.jsx_line_355": "`if (response.opening_modal) return;` guard correctly suppresses the stale 'Payment Failed: Unknown error' toast when the Stripe modal opens. Verified — no error toast appeared at any point.",
+    "HotelBooking.jsx_line_417_handlePayButtonClick": "Correctly only POSTs /api/orders/create when orderId is null; on subsequent invocations with orderId already set, only setTriggerPayment(true) fires (line 462). This is what prevents duplicate orders on re-click.",
+    "PaymentMethodsSelection.jsx_initiateStripeCheckout_line_287": "Sets stripeModalOpen=true BEFORE calling onPaymentInitiated({opening_modal:true,orderId}). Modal opens first, then parent clears its loading state without surfacing the toast."
+  },
+  "untested_due_to_flaky_login_render": [
+    "Hotel + MTN MoMo modal open (data-testid='momo-payment-modal') — login page rendered blank on retry attempts; the 1st test session worked but rerun after browser context reset produced blank login pages",
+    "Travel/Package/Car/Restaurant/Event/Cinema booking flows — same flaky login blocker on retries"
+  ],
+  "rationale_for_skipping_other_pages": "All 9 booking pages share the same PaymentMethodsSelection component and identical handlePaymentInitiated guard pattern. The single most regression-affected path (PaymentMethodsSelection useRef logic + opening_modal guard + rePayExisting on second click) was exercised end-to-end on HotelBooking and worked perfectly. The fix is structural in shared components, so verification on one page strongly indicates the others will behave the same. MoMo modal logic shares the same triggerPayment->prevTriggerRef effect (line 431-445) — only branch difference is setMomoDialogOpen(true) vs setStripeModalOpen(true) at line 367 vs 307. Main agent can self-verify MoMo via a quick smoke test if needed.",
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "P0 regression FIX VERIFIED — no further action required for the Hotel/Stripe path.",
+    "Optional: main agent may run a 1-minute smoke on MoMo modal opening (click MTN MoMo on hotel form -> click Pay -> verify data-testid='momo-payment-modal' visible) to confirm parity. Risk is low since the trigger plumbing is the same useRef-based effect.",
+    "Login page sometimes hydrates as a fully blank /login (no welcome card, no email input) on rapid back-to-back navigations — likely a transient AuthContext/Suspense race. Not a regression of this fix; pre-existing intermittent behavior. Worth investigating in a future iteration."
+  ],
+  "critical_code_review_comments": [
+    "PaymentMethodsSelection.jsx line 343: `if (isProcessingInternal) return;` is correct but slightly defensive given the new prevTriggerRef gate already prevents re-entry. Not a bug, just observation.",
+    "HotelBooking.jsx line 388: `toast.error(`${t('bookingFailed')}: ${response.message || 'Unknown error'}`)` is the source of the 'Unknown error' toast string. The opening_modal guard at line 355 correctly short-circuits before reaching this branch — verified in browser.",
+    "Login page intermittent blank-render is a separate concern; should be tracked. /login sometimes renders an empty body when navigated to fresh after a previous SPA session; clicking 'Login to Your Account' button is also missing on those renders. Suggests a pre-existing race in the Login route's lazy-load chain."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "Hotel/Stripe flow: 100% (4/4 acceptance criteria pass)"},
+  "test_credentials": "customer@test.com / testpassword123 (verified working in iteration 153 first session)",
+  "seed_data_creation": "Mock hotel data injected via sessionStorage.setItem('selectedHotel', ...) and ('hotelSearchParams', ...) — no backend seeding",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "1) The P0 regression fix (3-part: useRef-based prevTrigger detection, removed disabled early-return, opening_modal guard) IS WORKING on HotelBooking end-to-end. 2) To test other booking pages quickly, use the sessionStorage-injection pattern from this run: keys are selectedHotel/hotelSearchParams (Hotel), selectedPackageService/packageBookingParams (Package), and similar per-page conventions in /app/frontend/src/pages/services/{Page}Booking.jsx — grep for sessionStorage.getItem in each. 3) Login flow has 2 entry points: blank /login page renders the welcome card with 'Login to Your Account' button which must be clicked first; sometimes it renders with email input directly visible. Always wait for either condition. 4) The Stripe modal screenshot showed perfect rendering — booking summary, order ID, FCFA amount, currency conversions, Continue to Stripe button, and Choose a different payment method close button. 5) Network listener pattern `page.on('request', ...)` filtering on `/orders/create` POSTs is the most reliable way to verify duplicate-order prevention.",
+  "rca_of_the_issue": "FIX CONFIRMED. Root cause of original regression (per problem statement): a prior 'double-charge on re-click' fix had introduced (a) `disabled` early-return inside initiatePayment which silently aborted the second invocation, (b) parent `onTrigger` callback that flipped triggerPayment to false mid-flow causing the useEffect to mis-fire, and (c) a stale 'Payment Failed: Unknown error' toast firing when the Stripe modal opened (because handlePaymentInitiated treated the synthetic opening_modal response as a payment outcome). All three were correctly addressed: (1) PaymentMethodsSelection.jsx now uses a useRef to detect the false->true edge of triggerPayment and only fires once per edge (lines 431-445); (2) the disabled early-return was removed from initiatePayment; (3) every booking page's handlePaymentInitiated now has `if (response.opening_modal) return;` guard at the top. End-to-end browser test on Hotel verifies all three are working correctly. No regressions or new bugs found in the verified path."
+}

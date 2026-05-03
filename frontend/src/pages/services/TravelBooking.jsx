@@ -316,6 +316,9 @@ export default function TravelBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.redirectUrl) {
       window.location.href = response.redirectUrl;
     } else if (response.success || response.transactionRef) {
@@ -943,7 +946,7 @@ export default function TravelBooking() {
                       onPaymentInitiated={handlePaymentInitiated}
                       disabled={!isFormValid || paymentInProgress}
                       triggerPayment={triggerPayment}
-                      onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
+                      onTrigger={() => setPaymentInProgress(true)}
                       orderId={orderId}
                       onMoMoDialogOpen={handleMoMoDialogOpen}
                       onProcessingChange={handleProcessingChange}

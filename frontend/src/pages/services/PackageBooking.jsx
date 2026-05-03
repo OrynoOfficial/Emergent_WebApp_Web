@@ -20,6 +20,7 @@ import api from '@/api/client';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
+import { rePayExisting } from '@/utils/paymentRetry';
 
 const formatHours = (h) => {
   if (!h && h !== 0) return '—';
@@ -173,6 +174,9 @@ export default function PackageBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome. Don't surface error toast.
+    if (response.opening_modal) return;
+
     if (response.redirectUrl) {
       toast.info('Redirecting to payment...');
       window.location.href = response.redirectUrl;
@@ -223,12 +227,7 @@ export default function PackageBooking() {
     // closed without paying — just re-open the payment dialog with the
     // existing orderId. Prevents duplicate packages, duplicate orders, and
     // double charges.
-    if (orderId) {
-      setPaymentInProgress(true);
-      setShowPaymentOverlay(true);
-      setTriggerPayment(true);
-      return;
-    }
+    if (orderId) { rePayExisting(setTriggerPayment); return; }
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);

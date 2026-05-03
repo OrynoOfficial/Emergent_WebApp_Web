@@ -174,6 +174,9 @@ export default function BanquetBooking() {
     setPaymentInProgress(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.success || response.transactionRef) {
       try {
         const eventDate = booking.event_date ? format(booking.event_date, 'yyyy-MM-dd') : '';

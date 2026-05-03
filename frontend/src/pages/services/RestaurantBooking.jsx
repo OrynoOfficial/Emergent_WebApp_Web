@@ -191,6 +191,9 @@ export default function RestaurantBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.redirectUrl) {
       window.location.href = response.redirectUrl;
       return;
@@ -218,7 +221,7 @@ export default function RestaurantBooking() {
       return;
     }
 
-    if (orderId) { rePayExisting(setTriggerPayment, setPaymentInProgress); return; }
+    if (orderId) { rePayExisting(setTriggerPayment); return; }
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
@@ -482,7 +485,7 @@ export default function RestaurantBooking() {
                     onPaymentInitiated={handlePaymentInitiated}
                     disabled={!isFormValid || paymentInProgress}
                     triggerPayment={triggerPayment}
-                    onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
+                    onTrigger={() => setPaymentInProgress(true)}
                     orderId={orderId}
                     onMoMoDialogOpen={handleMoMoDialogOpen}
                     onProcessingChange={handleProcessingChange}

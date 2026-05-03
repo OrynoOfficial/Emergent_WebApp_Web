@@ -178,6 +178,9 @@ export default function LaundryBooking() {
     setPaymentInProgress(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.success || response.transactionRef) {
       toast.success('Booking confirmed!');
       navigate('/orders');

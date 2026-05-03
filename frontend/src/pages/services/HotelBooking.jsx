@@ -351,6 +351,9 @@ export default function HotelBooking() {
     setShowPaymentOverlay(false);
     setTriggerPayment(false);
 
+    // Stripe modal opened — not a payment outcome.
+    if (response.opening_modal) return;
+
     if (response.redirectUrl) {
       toast.info(response.message || t('redirecting'));
       window.location.href = response.redirectUrl;
@@ -906,7 +909,7 @@ export default function HotelBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   disabled={!isBookingDataComplete || paymentInProgress}
                   triggerPayment={triggerPayment}
-                  onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
+                  onTrigger={() => setPaymentInProgress(true)}
                   orderId={orderId}
                   onMoMoDialogOpen={handleMoMoDialogOpen}
                   onProcessingChange={handleProcessingChange}
