@@ -432,10 +432,9 @@ export default function CinemaManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><Film className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -453,6 +452,9 @@ export default function CinemaManagement() {
             itemLabel="Cinemas"
             secondaryLabel="Screens"
             secondaryCount={dashboardData.secondaryCount}
+            recentBookingsSlot={
+              <OperatorBookingsList serviceType="cinema" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
+            }
           />
         </TabsContent>
 
@@ -799,10 +801,6 @@ export default function CinemaManagement() {
               </Card>
             </TabsContent>
           </Tabs>
-        </TabsContent>
-
-        <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="cinema" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

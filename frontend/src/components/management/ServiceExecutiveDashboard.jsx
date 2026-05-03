@@ -55,7 +55,14 @@ export default function ServiceExecutiveDashboard({
   secondaryLabel = "Sub-items",
   secondaryCount = 0,
   onViewAllBookings,
-  analyticsSection = null
+  analyticsSection = null,
+  /**
+   * Optional ReactNode rendered INSIDE the Recent Bookings card (replaces the
+   * default `recentBookings` mini-list). Pages pass `<OperatorBookingsList
+   * compact />` here so the full bookings list lives on the Dashboard sub-tab
+   * and the standalone "Bookings" sub-tab can be retired.
+   */
+  recentBookingsSlot = null
 }) {
   const navigate = useNavigate();
   
@@ -341,7 +348,9 @@ export default function ServiceExecutiveDashboard({
           </div>
         </CardHeader>
         <CardContent>
-          {recentBookings.length === 0 ? (
+          {recentBookingsSlot ? (
+            recentBookingsSlot
+          ) : recentBookings.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <Calendar className="h-12 w-12 mx-auto text-slate-300 mb-2" />
               <p>No recent bookings</p>

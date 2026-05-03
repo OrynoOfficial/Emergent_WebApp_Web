@@ -245,10 +245,9 @@ export default function LaundryManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><Shirt className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -266,6 +265,9 @@ export default function LaundryManagement() {
             itemLabel="Shops"
             secondaryLabel="Services"
             secondaryCount={dashboardData.secondaryCount}
+            recentBookingsSlot={
+              <OperatorBookingsList serviceType="laundry" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
+            }
           />
         </TabsContent>
 
@@ -392,10 +394,6 @@ export default function LaundryManagement() {
             pageSize={PAGE_SIZE}
             itemLabel="shop"
           />
-        </TabsContent>
-
-        <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="laundry" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

@@ -341,7 +341,7 @@ export default function HotelManagement() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="dashboard">
               <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
             </TabsTrigger>
@@ -350,9 +350,6 @@ export default function HotelManagement() {
             </TabsTrigger>
             <TabsTrigger value="rooms" disabled={!selectedHotel}>
               <Bed className="h-4 w-4 mr-2" /> Rooms
-            </TabsTrigger>
-            <TabsTrigger value="bookings" data-testid="tab-bookings">
-              <Receipt className="h-4 w-4 mr-2" /> Bookings
             </TabsTrigger>
             <TabsTrigger value="communications">
               <MessageSquare className="h-4 w-4 mr-2" /> Communications
@@ -372,6 +369,9 @@ export default function HotelManagement() {
               itemLabel="Hotels"
               secondaryLabel="Rooms"
               secondaryCount={dashboardData.secondaryCount}
+              recentBookingsSlot={
+                <OperatorBookingsList serviceType="hotel" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
+              }
             />
           </TabsContent>
 
@@ -737,11 +737,6 @@ export default function HotelManagement() {
                 )}
               </>
             )}
-          </TabsContent>
-
-          {/* Bookings Tab */}
-          <TabsContent value="bookings">
-            <OperatorBookingsList serviceType="hotel" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
           </TabsContent>
 
           {/* Communications Tab */}

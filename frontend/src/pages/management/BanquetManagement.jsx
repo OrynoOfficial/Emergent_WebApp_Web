@@ -249,10 +249,9 @@ export default function BanquetManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="management"><UtensilsCrossed className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="bookings" data-testid="tab-bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -270,6 +269,9 @@ export default function BanquetManagement() {
             itemLabel="Halls"
             secondaryLabel="Total Capacity"
             secondaryCount={dashboardData.secondaryCount}
+            recentBookingsSlot={
+              <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
+            }
           />
         </TabsContent>
 
@@ -397,10 +399,6 @@ export default function BanquetManagement() {
             pageSize={PAGE_SIZE}
             itemLabel="hall"
           />
-        </TabsContent>
-
-        <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

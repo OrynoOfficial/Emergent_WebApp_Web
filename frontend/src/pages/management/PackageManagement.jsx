@@ -498,10 +498,9 @@ export default function PackageManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
           <TabsTrigger value="services" data-testid="tab-services"><Truck className="h-4 w-4 mr-2" />Services</TabsTrigger>
-          <TabsTrigger value="bookings"><Receipt className="h-4 w-4 mr-2" />Bookings</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-2" />Analytics</TabsTrigger>
         </TabsList>
@@ -519,6 +518,9 @@ export default function PackageManagement() {
             itemLabel="Shipments"
             secondaryLabel="In Transit"
             secondaryCount={packages.filter((p) => p.status === 'in_transit').length}
+            recentBookingsSlot={
+              <OperatorBookingsList serviceType="package" compact viewAllHref="/admin/bookings" />
+            }
           />
         </TabsContent>
 
@@ -657,10 +659,6 @@ export default function PackageManagement() {
             pageSize={PAGE_SIZE}
             itemLabel="package"
           />
-        </TabsContent>
-
-        <TabsContent value="bookings" className="mt-6">
-          <OperatorBookingsList serviceType="package" compact viewAllHref="/admin/bookings" />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
