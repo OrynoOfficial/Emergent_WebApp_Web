@@ -365,15 +365,21 @@ async def update_status(
         "updated_at": now,
     }
 
-    # Stage ordering — only roll the package's PRIMARY status forward, never
-    # backward, so re-saving a note for an earlier stage doesn't regress the
-    # shipment. The audit history still gets the new event.
+    # Stage ordering — once a shipment has advanced past a stage the operator
+    # can NOT go back to re-edit it. Reject any attempt to re-save a status at
+    # or below the current one (defense-in-depth; the UI also locks past
+    # stages, but a direct API call should also be rejected).
     _STATUS_ORDER = [
         "pending", "received", "picked_up", "in_transit",
         "out_for_delivery", "delivered", "delayed", "cancelled", "returned",
     ]
     cur_idx = _STATUS_ORDER.index(package.get("status")) if package.get("status") in _STATUS_ORDER else -1
     new_idx = _STATUS_ORDER.index(status.value) if status.value in _STATUS_ORDER else -1
+    if cur_idx != -1 and new_idx != -1 and new_idx <= cur_idx:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Shipment is already at '{package.get('status')}'. You cannot move back to or re-edit '{status.value}'."
+        )
     if cur_idx == -1 or new_idx >= cur_idx:
         update["status"] = status.value
     if location:

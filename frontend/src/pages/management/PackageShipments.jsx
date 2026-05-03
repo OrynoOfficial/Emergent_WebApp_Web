@@ -727,6 +727,45 @@ export default function PackageShipments() {
                 <div><p className="text-slate-500 text-xs">Current Location</p><p className="font-semibold">{viewingPkg.current_location || '—'}</p></div>
               </div>
               {viewingPkg.description && (<div><p className="text-slate-500 text-xs mb-1">Description</p><p className="text-sm bg-slate-50 p-3 rounded">{viewingPkg.description}</p></div>)}
+
+              {/* Customer-uploaded photos (taken at booking time) */}
+              {Array.isArray(viewingPkg.package_photos) && viewingPkg.package_photos.length > 0 && (
+                <div data-testid="package-photos-section">
+                  <p className="text-slate-500 text-xs mb-2 flex items-center gap-1.5">
+                    <Camera className="h-3.5 w-3.5" /> Photos uploaded by customer
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {viewingPkg.package_photos.map((url, i) => {
+                      const fullUrl = url?.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || ''}${url}` : url;
+                      return (
+                        <a key={i} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-lg overflow-hidden border border-slate-200 hover:ring-2 hover:ring-[#082c59] transition">
+                          <img src={fullUrl} alt={`Customer photo ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Operator proof-of-delivery photos (after delivery) */}
+              {Array.isArray(viewingPkg.delivery_photos) && viewingPkg.delivery_photos.length > 0 && (
+                <div data-testid="delivery-photos-section">
+                  <p className="text-slate-500 text-xs mb-2 flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> Proof of delivery
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {viewingPkg.delivery_photos.map((url, i) => {
+                      const fullUrl = url?.startsWith('/') ? `${import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || ''}${url}` : url;
+                      return (
+                        <a key={i} href={fullUrl} target="_blank" rel="noopener noreferrer" className="block aspect-square rounded-lg overflow-hidden border border-emerald-200 hover:ring-2 hover:ring-emerald-500 transition">
+                          <img src={fullUrl} alt={`Proof of delivery ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-t pt-4">
                 <span className="text-sm text-slate-500">Shipping price</span>
                 <span className="text-2xl font-bold text-[#082c59]">{formatFCFA(viewingPkg.price || 0)}</span>
@@ -738,8 +777,8 @@ export default function PackageShipments() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 mt-2" data-testid="internal-notes-section">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <Label className="text-sm font-semibold text-amber-900">Internal notes</Label>
-                      <p className="text-[11px] text-amber-700/80 mt-0.5">Visible only to admins, super-admins, the assigned operator and their team — never to the customer.</p>
+                      <Label className="text-sm font-semibold text-amber-900">Internal notes <span className="text-amber-700/70 font-normal italic">— Customer won&apos;t see this</span></Label>
+                      <p className="text-[11px] text-amber-700/80 mt-0.5">Visible only to admins, super-admins, the assigned operator and their team.</p>
                     </div>
                     <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] uppercase">Staff only</Badge>
                   </div>
@@ -806,8 +845,12 @@ export default function PackageShipments() {
               {/* Status ladder */}
               <div>
                 <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">New status</Label>
+                <p className="text-[11px] text-slate-500 mt-0.5">Past stages are locked — once advanced, you cannot edit a previous status.</p>
                 <div className="mt-2 grid grid-cols-5 gap-1.5">
-                  {[
+                  {(() => {
+                    const ladder = ['pending', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered'];
+                    const currentIdx = ladder.indexOf(advancePkg.status);
+                    return [
                     { value: 'pending', label: 'Pending', icon: Clock },
                     { value: 'picked_up', label: 'Picked up', icon: PackageCheck },
                     { value: 'in_transit', label: 'In transit', icon: Truck },
@@ -816,23 +859,34 @@ export default function PackageShipments() {
                   ].map((s) => {
                     const Icon = s.icon;
                     const active = advanceForm.status === s.value;
+                    const stageIdx = ladder.indexOf(s.value);
+                    // Lock current and past stages — operator can only move forward.
+                    const locked = currentIdx !== -1 && stageIdx <= currentIdx;
                     return (
                       <button
                         type="button"
                         key={s.value}
-                        onClick={() => setAdvanceForm((p) => ({ ...p, status: s.value }))}
+                        onClick={() => { if (!locked) setAdvanceForm((p) => ({ ...p, status: s.value })); }}
+                        disabled={locked}
+                        title={locked ? (stageIdx === currentIdx ? 'Current status — already set' : 'Past stage — locked') : ''}
                         data-testid={`advance-status-${s.value}`}
-                        className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 px-2 py-3 transition-all text-[11px] font-medium leading-tight ${
+                        className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 px-2 py-3 transition-all text-[11px] font-medium leading-tight relative ${
                           active
                             ? 'border-[#082c59] bg-[#082c59]/5 text-[#082c59] shadow-sm'
-                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                            : locked
+                              ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-70'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
                         }`}
                       >
-                        <Icon className={`h-4 w-4 ${active ? 'text-[#082c59]' : 'text-slate-400'}`} />
+                        <Icon className={`h-4 w-4 ${active ? 'text-[#082c59]' : locked ? 'text-slate-400' : 'text-slate-400'}`} />
                         <span className="text-center">{s.label}</span>
+                        {locked && stageIdx < currentIdx && (
+                          <CheckCircle className="absolute top-1 right-1 h-3 w-3 text-emerald-500" />
+                        )}
                       </button>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               </div>
 
