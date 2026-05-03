@@ -553,7 +553,7 @@ export default function PackageBooking() {
                       onPaymentError={handlePaymentError}
                       onMoMoDialogOpen={handleMoMoDialogOpen}
                       onProcessingChange={handleProcessingChange}
-                      onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
+                      onTrigger={() => setPaymentInProgress(true)}
                       triggerPayment={triggerPayment}
                       onMethodSelected={setSelectedPaymentMethod}
                       disabled={!isFormValid || paymentInProgress}
