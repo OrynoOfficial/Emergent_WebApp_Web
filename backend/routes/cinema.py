@@ -292,6 +292,12 @@ async def create_showtime(
         "is_active": True,
         "created_at": datetime.utcnow()
     }
+    # Copy seat_layout from the cinema's screen (if defined) so the booking
+    # page can render the exact visual layout the operator configured.
+    for s in (cinema.get("screens") or []):
+        if (s.get("name") == screen_name) and s.get("seat_layout"):
+            showtime["seat_layout"] = s["seat_layout"]
+            break
     
     await db.showtimes.insert_one(showtime)
     
@@ -463,8 +469,70 @@ async def create_showtime_body(
         "is_active": True,
         "created_at": datetime.utcnow(),
     }
+    # Copy seat_layout from the cinema's matching screen (if any) so
+    # CinemaBooking.jsx can render the same visual layout the operator built.
+    for s in (cinema.get("screens") or []):
+        if (s.get("name") == body.get("screen_name")) and s.get("seat_layout"):
+            st["seat_layout"] = s["seat_layout"]
+            break
     await db.showtimes.insert_one(st)
     return {"message": "Showtime created", "showtime_id": st["_id"]}
+
+
+@router.get("/showtimes/{showtime_id}/details")
+async def get_showtime_details(showtime_id: str):
+    """Public endpoint: returns one showtime + film + cinema + booked seats so
+    the booking page can render the seat map and order summary in a single
+    network roundtrip."""
+    db = get_database()
+    st = await db.showtimes.find_one({"_id": showtime_id})
+    if not st:
+        raise HTTPException(status_code=404, detail="Showtime not found")
+    film = await db.films.find_one({"_id": st.get("film_id")}, {"_id": 0}) if st.get("film_id") else None
+    cinema = await db.cinemas.find_one({"_id": st.get("cinema_id")}) if st.get("cinema_id") else None
+
+    # If the showtime didn't carry a seat_layout (legacy rows), fall back to
+    # the cinema's matching screen layout.
+    seat_layout = st.get("seat_layout")
+    if not seat_layout and cinema:
+        for s in (cinema.get("screens") or []):
+            if s.get("name") == st.get("screen_name") and s.get("seat_layout"):
+                seat_layout = s["seat_layout"]
+                break
+
+    # Aggregate booked / reserved seats for this showtime
+    booked_cursor = db.cinema_bookings.find(
+        {"showtime_id": showtime_id, "status": {"$in": ["reserved", "confirmed", "paid"]}},
+        {"_id": 0, "seats": 1},
+    )
+    booked_seats: list = []
+    async for b in booked_cursor:
+        booked_seats.extend(b.get("seats", []) or [])
+
+    showtime_out = {
+        "id": st.get("_id"),
+        "cinema_id": st.get("cinema_id"),
+        "cinema_name": cinema.get("name") if cinema else st.get("cinema_name"),
+        "city": cinema.get("city") if cinema else None,
+        "film_id": st.get("film_id"),
+        "film_title": st.get("film_title"),
+        "screen_name": st.get("screen_name"),
+        "screen_type": st.get("screen_type", "2d"),
+        "show_date": st.get("show_date"),
+        "show_time": st.get("show_time"),
+        "end_time": st.get("end_time"),
+        "price": st.get("price"),
+        "vip_price": st.get("vip_price"),
+        "total_seats": st.get("total_seats"),
+        "available_seats": st.get("available_seats"),
+    }
+
+    return {
+        "showtime": showtime_out,
+        "film": film,
+        "seat_layout": seat_layout,
+        "booked_seats": sorted(set(booked_seats)),
+    }
 
 
 @router.post("/showtimes/{showtime_id}/book")

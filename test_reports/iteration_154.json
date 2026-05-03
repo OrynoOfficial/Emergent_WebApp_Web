@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only e2e verification of the rebuilt Cinema Booking page, Cinema Results page, Cinema Management cards and the new in-dialog Cinema Seat Builder. All four feature requirements pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": [
+    "/services/cinema/booking/demo-id?date=2026-05-04 (mock fallback): premium dark cyan theme, step indicator (Seats/Details/Payment) with data-testid='booking-step-1' present, hero card with film info, visual seat map (data-testid='cinema-seat-map') renders 8 rows × 12 cols with VIP rows G/H (gold crown), aisles after columns 4 and 8, blocked seats A1/A12 (disabled), booked seats A3/D8/etc. (disabled). Right column stack ordering verified by DOM y-coords: Order Summary (y=788) is ABOVE Payment Method (y=961) — payment is correctly BELOW order summary as required. Confirm button (data-testid='cinema-confirm-booking-btn') visible. Total badge (data-testid='cinema-booking-total') renders 5,250 FCFA (5,000 + 5% service fee).",
+    "/services/cinema/results?city=Yaoundé : premium dark cyan theme, view toggle (List / Grid / Details) present and active, Top-rated sort + search filters present, movie cards render with rating badge, coloured genre tags (Action/Thriller/Suspense), age rating tag (NC-17), 'Coming Soon' status badge in amber.",
+    "/management/cinema → Management tab → Cinemas: cinema cards (data-testid='cinema-card-{id}') show 'Active' status badge, rating, cinema name, city, address, 2D coloured tag, '4 screens / 510 seats' capacity, phone number, amenity chips (parking/snacks/wheelchair access +3).",
+    "Add Cinema dialog (data-testid='add-cinema-btn') opens a comprehensive form. data-testid='add-screen-btn' adds a screen row containing data-testid='screen-toggle-builder-0'. Clicking it expands the inline CinemaSeatBuilder (data-testid='seat-builder'). VIP tool (data-testid='seat-builder-tool-vip') is initially active (ring-2 styling confirmed). Clicking seat A1 marked the ENTIRE row A as VIP (verified A5 also gets amber styling). Switching to Blocked tool and clicking B2 turns it rose. Switching to Aisle tool and clicking column header data-testid='seat-builder-col-3' inserts a visible vertical aisle line. Stats badges live-update: initial 96 seats → 95 seats after blocking 1 → 119 seats after rows=10. Layout count and aisles count chips also update correctly."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CinemaSeatBuilder hint copy says 'Click on a column header to insert a vertical aisle gap right after that column' but the implementation in handleAisleToggle uses afterCol=c+1 (1-based), not c. The helper text vs behaviour is consistent (after column N), but operators clicking column header '3' will see the line appear visually after column 3 — verified to work. Minor copy nit: the column header looks like a plain numeric label and is only highlighted (sky-50 bg) when the Aisle tool is active; otherwise it appears non-interactive. Fine.",
+    "CinemaBooking falls back to a mock when GET /cinema/showtimes/{id}/details fails — error is swallowed silently. Consider logging a console.warn so QA / users notice degraded mode (currently impossible to tell mock vs real from the UI).",
+    "PaymentMethodsSelection card shows 'Choose a payment method' CTA inside the card AND the global Confirm button below also says 'Choose a payment method' until one is picked — slight redundancy but acceptable.",
+    "Cinema Results page action items pulled correctly; the title bar shows 'Movies in Yaoundé' and a single 'Coming Soon' card — could not verify 'Now Showing' status badge styling from this run since seed data only had a Coming Soon film, but the logic for status badge is in place."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% of requested flows passed"},
+  "test_credentials": "customer@test.com / testpassword123 (used for booking page); admin@test.com / testpassword123 (used for management)",
+  "seed_data_creation": "None — used existing 'Nzamzam Conerie' cinema seeded in the DB; booking page tested against the intentional mock-fallback for showtime id 'demo-id'.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Vertical column ordering on the booking page was verified by reading bounding-box top values via page.evaluate() — Order Summary block at y=788, Payment Method at y=961. The Cinema Management page top-level Tabs are: Dashboard / Management / Communications. The 'Cinemas' / 'Movies' / 'Showtimes' tabs are second-level inside Management — so any further test needs to click Management before looking for add-cinema-btn / add-movie-btn / add-showtime-btn. SeatBuilder default tool is 'vip' and clicking any cell in a row toggles the WHOLE row as VIP (intentional). Backend showtime details endpoint was not exercised — request was frontend-only.",
+  "rca of the issue": "n/a — no bugs found"
+}

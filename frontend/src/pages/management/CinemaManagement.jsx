@@ -16,11 +16,12 @@ import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
   Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt,
-  Replace as ReplaceIcon
+  Replace as ReplaceIcon, LayoutGrid, Armchair, Sparkles, Phone, Mail,
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
+import CinemaSeatBuilder from '@/components/cinema/CinemaSeatBuilder';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
@@ -162,6 +163,8 @@ export default function CinemaManagement() {
   const [editingMovie, setEditingMovie] = useState(null);
   const [cinemaForm, setCinemaForm] = useState(DEFAULT_CINEMA_FORM);
   const [movieForm, setMovieForm] = useState(DEFAULT_MOVIE_FORM);
+  // Which screen row in the cinema dialog has its seat-builder expanded.
+  const [expandedScreenIdx, setExpandedScreenIdx] = useState(null);
 
   // Bulk selection state
   const [selectedCinemaIds, setSelectedCinemaIds] = useState(new Set());
@@ -278,6 +281,7 @@ export default function CinemaManagement() {
   const openCinemaDialog = (cinema = null) => {
     setEditingCinema(cinema);
     setCinemaForm(cinema ? { ...cinema, operator_id: cinema.operator_id || '', operator_name: cinema.operator_name || '' } : DEFAULT_CINEMA_FORM);
+    setExpandedScreenIdx(null);
     setIsCinemaDialogOpen(true);
   };
 
@@ -678,11 +682,11 @@ export default function CinemaManagement() {
                       {pagedCinemas.map(cinema => (
                         <Card
                           key={cinema.id}
-                          className={`relative cursor-pointer hover:shadow-lg transition-shadow ${selectedCinema?.id === cinema.id ? 'ring-2 ring-[#082c59]' : ''}`}
+                          className={`relative cursor-pointer overflow-hidden border border-slate-200 hover:border-cyan-400 hover:shadow-xl transition-all duration-300 group ${selectedCinema?.id === cinema.id ? 'ring-2 ring-cyan-500 border-cyan-500 shadow-lg' : ''}`}
                           onClick={() => setSelectedCinema(cinema)}
                           data-testid={`cinema-card-${cinema.id}`}
                         >
-                          <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur rounded shadow-sm p-1" onClick={(e) => e.stopPropagation()}>
+                          <div className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur rounded shadow-sm p-1" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedCinemaIds.has(cinema.id)}
                               onCheckedChange={() => toggleCinemaSelected(cinema.id)}
@@ -690,44 +694,115 @@ export default function CinemaManagement() {
                               data-testid={`select-cinema-card-${cinema.id}`}
                             />
                           </div>
+                          {/* Status badge top-right */}
+                          <Badge
+                            className={`absolute top-3 right-3 z-10 backdrop-blur-sm border ${
+                              cinema.status === 'inactive'
+                                ? 'bg-slate-500/90 text-white border-slate-400'
+                                : 'bg-emerald-500/90 text-white border-emerald-400'
+                            }`}
+                          >
+                            {cinema.status === 'inactive' ? 'Inactive' : 'Active'}
+                          </Badge>
+
+                          {/* Hero — image or cinema-themed gradient with screens preview */}
                           {(cinema.images && cinema.images[0]) ? (
-                            <div className="h-36 w-full overflow-hidden rounded-t-lg">
-                              <img src={cinema.images[0]} alt={cinema.name} className="h-full w-full object-cover" />
+                            <div className="relative h-40 w-full overflow-hidden">
+                              <img src={cinema.images[0]} alt={cinema.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
+                              {cinema.rating > 0 && (
+                                <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-amber-500 text-slate-950 text-xs font-bold px-2 py-1 rounded-full">
+                                  <Star className="w-3 h-3 fill-slate-950" /> {cinema.rating?.toFixed?.(1) || cinema.rating}
+                                </div>
+                              )}
                             </div>
                           ) : (
-                            <div className="h-36 w-full rounded-t-lg bg-gradient-to-br from-red-700 via-red-600 to-rose-600 flex items-center justify-center">
-                              <Monitor className="h-10 w-10 text-white/80" />
+                            <div className="relative h-40 w-full bg-gradient-to-br from-cyan-700 via-cyan-600 to-slate-900 flex items-center justify-center overflow-hidden">
+                              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 50%)' }} />
+                              <Monitor className="h-14 w-14 text-white/80" />
+                              <div className="absolute bottom-2 inset-x-0 flex justify-center gap-0.5">
+                                {Array.from({ length: Math.min((cinema.screens || []).length || 1, 8) }, (_, i) => (
+                                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-300/60" />
+                                ))}
+                              </div>
                             </div>
                           )}
-                          <CardContent className="pt-4">
-                            <div className="flex justify-between items-start mb-3">
-                              <h3 className="font-semibold">{cinema.name}</h3>
-                              <Badge variant="outline">{cinema.total_screens || (cinema.screens || []).length} Screens</Badge>
+
+                          <CardContent className="pt-4 pb-4">
+                            <div className="flex items-start justify-between gap-2 mb-1.5">
+                              <h3 className="font-bold text-slate-900 text-base leading-tight line-clamp-1 group-hover:text-cyan-700 transition-colors">{cinema.name}</h3>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                              <MapPin className="w-4 h-4" />{cinema.city || '—'}
+                            {/* Location row */}
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span className="truncate">{cinema.city || '—'}{cinema.address ? ` · ${cinema.address}` : ''}</span>
                             </div>
+
+                            {/* Coloured screen-type tags */}
+                            {(cinema.screens || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-3">
+                                {Array.from(new Set((cinema.screens || []).map(s => s.type || s.screen_type || '2d'))).slice(0, 5).map((t) => (
+                                  <Badge
+                                    key={t}
+                                    className={`text-[10px] uppercase tracking-wider border ${
+                                      t === 'imax'        ? 'bg-violet-100 text-violet-700 border-violet-300' :
+                                      t === '3d'          ? 'bg-cyan-100 text-cyan-700 border-cyan-300' :
+                                      t === 'dolby_atmos' ? 'bg-amber-100 text-amber-700 border-amber-300' :
+                                      t === 'vip'         ? 'bg-rose-100 text-rose-700 border-rose-300' :
+                                                            'bg-slate-100 text-slate-700 border-slate-300'
+                                    }`}
+                                  >
+                                    {t}
+                                  </Badge>
+                                ))}
+                                <Badge variant="outline" className="text-[10px] bg-white">
+                                  <Monitor className="w-2.5 h-2.5 mr-0.5" />
+                                  {cinema.total_screens || (cinema.screens || []).length} screen{((cinema.screens || []).length || 0) !== 1 ? 's' : ''}
+                                </Badge>
+                              </div>
+                            )}
+
+                            {/* Quick stats row — capacity / contact */}
+                            <div className="grid grid-cols-2 gap-2 mb-3 text-[11px]">
+                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 rounded">
+                                <Armchair className="w-3.5 h-3.5 text-cyan-600" />
+                                <span className="text-slate-600 tabular-nums">
+                                  {(cinema.screens || []).reduce((sum, s) => sum + (s.capacity || 0), 0) || '—'} seats
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-slate-50 rounded">
+                                <Phone className="w-3.5 h-3.5 text-cyan-600" />
+                                <span className="text-slate-600 truncate">{cinema.phone || '—'}</span>
+                              </div>
+                            </div>
+
                             {cinemaViewMode === 'details' && cinema.description && (
-                              <p className="text-sm text-slate-600 mb-3 pb-3 border-b border-slate-100">{cinema.description}</p>
+                              <p className="text-xs text-slate-500 line-clamp-2 mb-3 italic">{cinema.description}</p>
                             )}
                             {cinema.amenities?.length > 0 && (
                               <div className="flex flex-wrap gap-1 mb-3">
-                                {cinema.amenities.slice(0, cinemaViewMode === 'details' ? 8 : 3).map(a => (
-                                  <Badge key={a} variant="outline" className="text-xs uppercase">{a}</Badge>
+                                {cinema.amenities.slice(0, cinemaViewMode === 'details' ? 6 : 3).map(a => (
+                                  <Badge key={a} variant="outline" className="text-[10px] uppercase tracking-wider bg-slate-50 text-slate-700 border-slate-200">
+                                    <Sparkles className="w-2.5 h-2.5 mr-0.5 text-cyan-500" />{a.replace(/_/g, ' ')}
+                                  </Badge>
                                 ))}
+                                {cinema.amenities.length > (cinemaViewMode === 'details' ? 6 : 3) && (
+                                  <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-500 border-slate-200">+{cinema.amenities.length - (cinemaViewMode === 'details' ? 6 : 3)}</Badge>
+                                )}
                               </div>
                             )}
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }} title="View Details">
+
+                            <div className="flex gap-1.5 pt-2 border-t border-slate-100">
+                              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleViewItem(cinema, 'cinema'); }} title="View Details" className="px-3">
                                 <Eye className="w-4 h-4" />
                               </Button>
                               <PermissionGate permission="cinema.edit">
-                                <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); openCinemaDialog(cinema); }}>
+                                <Button size="sm" variant="outline" className="flex-1 hover:bg-cyan-50 hover:border-cyan-300 hover:text-cyan-700" onClick={(e) => { e.stopPropagation(); openCinemaDialog(cinema); }}>
                                   <Edit className="w-4 h-4 mr-1" /> Edit
                                 </Button>
                               </PermissionGate>
                               <PermissionGate permission="cinema.delete">
-                                <Button size="sm" variant="outline" className="text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteCinema(cinema.id); }}>
+                                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50 hover:border-red-300 px-3" onClick={(e) => { e.stopPropagation(); handleDeleteCinema(cinema.id); }}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </PermissionGate>
@@ -1186,68 +1261,98 @@ export default function CinemaManagement() {
             {/* Screens management */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <Label>Screens</Label>
+                <Label>Screens & seat layout</Label>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => setCinemaForm(p => ({
                     ...p,
-                    screens: [...(p.screens || []), { name: `Screen ${(p.screens?.length || 0) + 1}`, type: '2d', capacity: 100 }]
+                    screens: [...(p.screens || []), { name: `Screen ${(p.screens?.length || 0) + 1}`, type: '2d', capacity: 96, seat_layout: { rows: 8, cols: 12, aisle_after_col: [6], vip_rows: [], blocked: [] } }]
                   }))}
                   data-testid="add-screen-btn"
                 >
                   <Plus className="w-3 h-3 mr-1" /> Add screen
                 </Button>
               </div>
-              <div className="space-y-2">
+              <p className="text-[11px] text-slate-500 -mt-1 mb-2">Each screen can have its own seat layout. The layout is used at booking time for visual seat selection.</p>
+              <div className="space-y-3">
                 {(cinemaForm.screens || []).length === 0 && (
                   <p className="text-xs text-slate-500 italic">No screens yet. Click "Add screen" to add theater rooms.</p>
                 )}
-                {(cinemaForm.screens || []).map((screen, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded">
-                    <Input
-                      className="col-span-4 bg-white"
-                      placeholder="Screen name"
-                      value={screen.name || ''}
-                      onChange={(e) => setCinemaForm(p => ({
-                        ...p,
-                        screens: p.screens.map((s, i) => i === idx ? { ...s, name: e.target.value } : s)
-                      }))}
-                    />
-                    <Select
-                      value={screen.type || '2d'}
-                      onValueChange={(v) => setCinemaForm(p => ({
-                        ...p,
-                        screens: p.screens.map((s, i) => i === idx ? { ...s, type: v } : s)
-                      }))}
-                    >
-                      <SelectTrigger className="col-span-3 bg-white"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      className="col-span-3 bg-white"
-                      type="number"
-                      placeholder="Seats"
-                      value={screen.capacity || ''}
-                      onChange={(e) => setCinemaForm(p => ({
-                        ...p,
-                        screens: p.screens.map((s, i) => i === idx ? { ...s, capacity: parseInt(e.target.value) || 0 } : s)
-                      }))}
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="col-span-2 text-red-500 h-8"
-                      onClick={() => setCinemaForm(p => ({ ...p, screens: p.screens.filter((_, i) => i !== idx) }))}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                {(cinemaForm.screens || []).map((screen, idx) => {
+                  const layout = screen.seat_layout || { rows: 8, cols: 12, aisle_after_col: [6], vip_rows: [], blocked: [] };
+                  const computedCapacity = (layout.rows || 0) * (layout.cols || 0) - (layout.blocked || []).length;
+                  return (
+                    <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-12 gap-2 items-center p-3">
+                        <Input
+                          className="col-span-4 bg-white"
+                          placeholder="Screen name"
+                          value={screen.name || ''}
+                          onChange={(e) => setCinemaForm(p => ({
+                            ...p,
+                            screens: p.screens.map((s, i) => i === idx ? { ...s, name: e.target.value } : s)
+                          }))}
+                          data-testid={`screen-name-${idx}`}
+                        />
+                        <Select
+                          value={screen.type || '2d'}
+                          onValueChange={(v) => setCinemaForm(p => ({
+                            ...p,
+                            screens: p.screens.map((s, i) => i === idx ? { ...s, type: v } : s)
+                          }))}
+                        >
+                          <SelectTrigger className="col-span-3 bg-white" data-testid={`screen-type-${idx}`}><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <div className="col-span-3 flex items-center gap-1.5 px-2 py-1.5 bg-white rounded border border-slate-200 text-xs">
+                          <Armchair className="h-3.5 w-3.5 text-slate-500" />
+                          <span className="font-semibold text-slate-700 tabular-nums">{computedCapacity}</span>
+                          <span className="text-slate-500">seats</span>
+                        </div>
+                        <div className="col-span-2 flex justify-end gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-cyan-700 border-cyan-300 bg-cyan-50 hover:bg-cyan-100"
+                            onClick={() => setExpandedScreenIdx(expandedScreenIdx === idx ? null : idx)}
+                            data-testid={`screen-toggle-builder-${idx}`}
+                          >
+                            <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                            {expandedScreenIdx === idx ? 'Hide' : 'Layout'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="text-red-500 h-8"
+                            onClick={() => setCinemaForm(p => ({ ...p, screens: p.screens.filter((_, i) => i !== idx) }))}
+                            data-testid={`screen-delete-${idx}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      {expandedScreenIdx === idx && (
+                        <div className="p-3 pt-0">
+                          <CinemaSeatBuilder
+                            value={layout}
+                            onChange={(newLayout) => setCinemaForm(p => ({
+                              ...p,
+                              screens: p.screens.map((s, i) => i === idx
+                                ? { ...s, seat_layout: newLayout, capacity: (newLayout.rows || 0) * (newLayout.cols || 0) - (newLayout.blocked || []).length }
+                                : s),
+                            }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
