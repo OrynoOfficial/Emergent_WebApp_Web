@@ -215,7 +215,15 @@ async def track_package(tracking_number: str):
       }
     """
     db = get_database()
-    pkg = await db.packages.find_one({"tracking_number": tracking_number.upper()})
+    # Accept tracking numbers with leading/trailing whitespace and any casing
+    # (the Base 44 widget often sends trimmed-but-not-uppercased values).
+    tn = (tracking_number or "").strip().upper()
+    pkg = await db.packages.find_one({"tracking_number": tn})
+    if not pkg:
+        # Case-insensitive fallback for legacy numbers stored in mixed case
+        pkg = await db.packages.find_one({
+            "tracking_number": {"$regex": f"^{tn}$", "$options": "i"}
+        })
     if not pkg:
         raise HTTPException(status_code=404, detail="No package found with this tracking number.")
 
@@ -354,9 +362,20 @@ async def update_status(
         event["photos"] = delivery_photos
 
     update = {
-        "status": status.value,
         "updated_at": now,
     }
+
+    # Stage ordering — only roll the package's PRIMARY status forward, never
+    # backward, so re-saving a note for an earlier stage doesn't regress the
+    # shipment. The audit history still gets the new event.
+    _STATUS_ORDER = [
+        "pending", "received", "picked_up", "in_transit",
+        "out_for_delivery", "delivered", "delayed", "cancelled", "returned",
+    ]
+    cur_idx = _STATUS_ORDER.index(package.get("status")) if package.get("status") in _STATUS_ORDER else -1
+    new_idx = _STATUS_ORDER.index(status.value) if status.value in _STATUS_ORDER else -1
+    if cur_idx == -1 or new_idx >= cur_idx:
+        update["status"] = status.value
     if location:
         update["current_location"] = location
     if delivery_photos:
@@ -366,7 +385,7 @@ async def update_status(
         {"_id": package_id},
         {"$set": update, "$push": {"status_history": event}},
     )
-    return {"message": "Status updated", "status": status.value, "delivery_photos": delivery_photos or []}
+    return {"message": "Status updated", "status": update.get("status", package.get("status")), "delivery_photos": delivery_photos or []}
 
 
 @router.delete("/{package_id}")

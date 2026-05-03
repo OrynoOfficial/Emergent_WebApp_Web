@@ -12,7 +12,7 @@ import {
   Package, Plus, Edit, Trash2, MapPin, User, Phone, Weight, Ruler,
   RefreshCw, Search, Eye, Truck, CheckCircle, Clock, XCircle,
   PackageCheck, SlidersHorizontal, LayoutGrid, List, Filter,
-  Replace as ReplaceIcon, Camera,
+  Camera,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -21,7 +21,6 @@ import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
-import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import Pagination from '@/components/common/Pagination';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 
@@ -88,7 +87,7 @@ const PaymentBadge = ({ value }) => {
 };
 
 // Card view (similar to results page card style)
-const ShipmentCard = ({ pkg, onView, onDelete, onAdvance, onReplace }) => {
+const ShipmentCard = ({ pkg, onView, onDelete, onAdvance }) => {
   const dim = pkg.dimensions || {};
   const dims = [dim.length_cm, dim.width_cm, dim.height_cm].filter(Boolean).join(' × ');
   return (
@@ -136,13 +135,6 @@ const ShipmentCard = ({ pkg, onView, onDelete, onAdvance, onReplace }) => {
                 <Truck className="w-4 h-4" />
               </Button>
             )}
-            {onReplace && (
-              <PermissionGate permission="packages.edit">
-                <Button size="sm" variant="ghost" onClick={() => onReplace(pkg)} title="Migrate" className="h-8 w-8 p-0 text-[#082c59]">
-                  <ReplaceIcon className="w-4 h-4" />
-                </Button>
-              </PermissionGate>
-            )}
             <PermissionGate permission="packages.delete">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600" onClick={() => onDelete(pkg.id)} data-testid={`shipment-delete-${pkg.id}`}>
                 <Trash2 className="w-4 h-4" />
@@ -172,7 +164,6 @@ export default function PackageShipments() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [page, setPage] = useState(1);
-  const [replacePkg, setReplacePkg] = useState(null);
   const [advancePkg, setAdvancePkg] = useState(null);
   const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '', delivery_photos: [] });
   const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
@@ -338,14 +329,32 @@ export default function PackageShipments() {
     } else {
       next = order[idx + 1];
     }
+    // Pre-load the note that was previously saved for this stage (if any) so
+    // operators can review and continue editing past notes instead of losing
+    // them between sessions.
+    const prev = (pkg.status_history || []).slice().reverse().find(e => e.status === next);
     setAdvancePkg(pkg);
     setAdvanceForm({
       status: next,
-      location: pkg.current_location || (next === 'in_transit' ? '' : pkg.origin_city || ''),
-      note: '',
-      delivery_photos: [],
+      location: prev?.location || pkg.current_location || (next === 'in_transit' ? '' : pkg.origin_city || ''),
+      note: prev?.description || '',
+      delivery_photos: prev?.photos || [],
     });
   };
+
+  // When the user picks a different stage in the dialog, hydrate that stage's
+  // last-known note/location/photos so prior context is never lost.
+  useEffect(() => {
+    if (!advancePkg || !advanceForm.status) return;
+    const prev = (advancePkg.status_history || []).slice().reverse().find(e => e.status === advanceForm.status);
+    setAdvanceForm(p => ({
+      ...p,
+      note: prev?.description || '',
+      location: prev?.location || (advanceForm.status === advancePkg.status ? (advancePkg.current_location || '') : ''),
+      delivery_photos: prev?.photos || [],
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advanceForm.status, advancePkg?.id]);
 
   const handleSubmitAdvance = async (e) => {
     if (e?.preventDefault) e.preventDefault();
@@ -571,7 +580,6 @@ export default function PackageShipments() {
                 onView={handleView}
                 onDelete={handleDelete}
                 onAdvance={handleAdvance}
-                onReplace={setReplacePkg}
               />
             ))}
           </div>
@@ -681,12 +689,12 @@ export default function PackageShipments() {
 
       {/* View Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-2xl bg-white">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl bg-white max-h-[92vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-3 sticky top-0 bg-white z-10 border-b border-slate-100">
             <DialogTitle className="flex items-center gap-2"><Package className="h-5 w-5 text-[#082c59]" /> Shipment Details</DialogTitle>
           </DialogHeader>
           {viewingPkg && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 px-6 py-4">
               <div className="bg-slate-50 rounded-lg p-4">
                 <p className="text-xs text-slate-400 font-mono uppercase tracking-wider">{viewingPkg.tracking_number}</p>
                 <h3 className="font-bold text-lg text-slate-900 mt-1">{viewingPkg.origin_city} → {viewingPkg.destination_city}</h3>
@@ -759,24 +767,15 @@ export default function PackageShipments() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="px-6 py-3 border-t bg-slate-50 sticky bottom-0">
             <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ReplaceResourceModal
-        open={!!replacePkg}
-        onClose={() => setReplacePkg(null)}
-        serviceType="package"
-        oldResource={replacePkg}
-        allResources={packages}
-        onSuccess={() => loadPackages?.()}
-      />
-
       {/* Advance Status Dialog */}
       <Dialog open={!!advancePkg} onOpenChange={(o) => { if (!o) setAdvancePkg(null); }}>
-        <DialogContent className="max-w-xl bg-white p-0 overflow-hidden" data-testid="advance-status-dialog">
+        <DialogContent className="max-w-xl bg-white p-0 overflow-hidden max-h-[92vh] overflow-y-auto" data-testid="advance-status-dialog">
           {/* Hero header */}
           <div className="bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] px-6 py-5 text-white">
             <div className="flex items-center gap-3">

@@ -219,6 +219,17 @@ export default function PackageBooking() {
       return;
     }
 
+    // Already created the package + order on a prior attempt that the user
+    // closed without paying — just re-open the payment dialog with the
+    // existing orderId. Prevents duplicate packages, duplicate orders, and
+    // double charges.
+    if (orderId) {
+      setPaymentInProgress(true);
+      setShowPaymentOverlay(true);
+      setTriggerPayment(true);
+      return;
+    }
+
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
 
@@ -542,7 +553,7 @@ export default function PackageBooking() {
                       onPaymentError={handlePaymentError}
                       onMoMoDialogOpen={handleMoMoDialogOpen}
                       onProcessingChange={handleProcessingChange}
-                      onTrigger={() => setPaymentInProgress(true)}
+                      onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
                       triggerPayment={triggerPayment}
                       onMethodSelected={setSelectedPaymentMethod}
                       disabled={!isFormValid || paymentInProgress}

@@ -17,6 +17,7 @@ import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import { rePayExisting } from '@/utils/paymentRetry';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import { format } from 'date-fns';
 
@@ -208,6 +209,8 @@ export default function CinemaBooking() {
       return;
     }
     
+    if (orderId) { rePayExisting(setTriggerPayment, setPaymentInProgress); return; }
+
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
     setCurrentStep(3);

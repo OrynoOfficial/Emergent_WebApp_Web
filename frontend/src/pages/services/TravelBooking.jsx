@@ -943,7 +943,7 @@ export default function TravelBooking() {
                       onPaymentInitiated={handlePaymentInitiated}
                       disabled={!isFormValid || paymentInProgress}
                       triggerPayment={triggerPayment}
-                      onTrigger={() => setPaymentInProgress(true)}
+                      onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
                       orderId={orderId}
                       onMoMoDialogOpen={handleMoMoDialogOpen}
                       onProcessingChange={handleProcessingChange}

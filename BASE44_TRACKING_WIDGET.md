@@ -67,7 +67,12 @@ GET https://YOUR-BACKEND.example.com/api/packages/track/{TRACKING_NUMBER}
 </style>
 
 <script>
-  const ORYNO_BACKEND = "https://YOUR-BACKEND.example.com";   // <- set me
+  // ⚠ IMPORTANT — keep this URL in sync with your live Oryno backend.
+  // Each Emergent preview/deploy gets its own URL; if tracking shows
+  // "No package found" on Base 44, the most common cause is this constant
+  // pointing to a previous (stale) deployment URL.
+  // Current backend (May 2026):
+  const ORYNO_BACKEND = "https://delivery-platform-108.preview.emergentagent.com";
   const fullUrl = (u) => (u && u.startsWith("/")) ? ORYNO_BACKEND + u : u;
 
   function renderOrynoPhotos(label, urls) {
@@ -84,7 +89,10 @@ GET https://YOUR-BACKEND.example.com/api/packages/track/{TRACKING_NUMBER}
   }
 
   async function trackOryno(trackingNumber, mountEl) {
-    const res = await fetch(`${ORYNO_BACKEND}/api/packages/track/${trackingNumber}`);
+    // Always trim + uppercase before sending — the Oryno API also normalises
+    // on its end, but this avoids round-trip 404s on stray whitespace.
+    const tn = String(trackingNumber || "").trim().toUpperCase();
+    const res = await fetch(`${ORYNO_BACKEND}/api/packages/track/${encodeURIComponent(tn)}`);
     if (!res.ok) {
       mountEl.innerHTML = `<p>Tracking number not found.</p>`;
       return;

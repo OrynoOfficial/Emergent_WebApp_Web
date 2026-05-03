@@ -906,7 +906,7 @@ export default function HotelBooking() {
                   onPaymentInitiated={handlePaymentInitiated}
                   disabled={!isBookingDataComplete || paymentInProgress}
                   triggerPayment={triggerPayment}
-                  onTrigger={() => setPaymentInProgress(true)}
+                  onTrigger={() => { setPaymentInProgress(true); setTriggerPayment(false); }}
                   orderId={orderId}
                   onMoMoDialogOpen={handleMoMoDialogOpen}
                   onProcessingChange={handleProcessingChange}

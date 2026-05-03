@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
+import { rePayExisting } from '../../utils/paymentRetry';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
@@ -172,6 +173,8 @@ export default function EventBooking() {
       toast.error('Please fill in all required fields');
       return;
     }
+
+    if (orderId) { rePayExisting(setTriggerPayment, setPaymentInProgress); return; }
 
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
