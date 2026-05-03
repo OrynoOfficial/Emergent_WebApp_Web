@@ -88,7 +88,7 @@ const PaymentBadge = ({ value }) => {
 };
 
 // Card view (similar to results page card style)
-const ShipmentCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace }) => {
+const ShipmentCard = ({ pkg, onView, onDelete, onAdvance, onReplace }) => {
   const dim = pkg.dimensions || {};
   const dims = [dim.length_cm, dim.width_cm, dim.height_cm].filter(Boolean).join(' × ');
   return (
@@ -143,11 +143,6 @@ const ShipmentCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace }) =
                 </Button>
               </PermissionGate>
             )}
-            <PermissionGate permission="packages.edit">
-              <Button size="sm" variant="ghost" onClick={() => onEdit(pkg)} title="Edit" className="h-8 w-8 p-0" data-testid={`shipment-edit-${pkg.id}`}>
-                <Edit className="w-4 h-4" />
-              </Button>
-            </PermissionGate>
             <PermissionGate permission="packages.delete">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600" onClick={() => onDelete(pkg.id)} data-testid={`shipment-delete-${pkg.id}`}>
                 <Trash2 className="w-4 h-4" />
@@ -182,6 +177,9 @@ export default function PackageShipments() {
   const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '', delivery_photos: [] });
   const [advanceSubmitting, setAdvanceSubmitting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Internal-notes editing for the View dialog (admin / super_admin / operator only)
+  const [internalNotesDraft, setInternalNotesDraft] = useState('');
+  const [internalNotesSaving, setInternalNotesSaving] = useState(false);
 
   const loadPackages = useCallback(async () => {
     try {
@@ -257,8 +255,25 @@ export default function PackageShipments() {
 
   const handleView = (pkg) => {
     setViewingPkg(pkg);
+    setInternalNotesDraft(pkg.internal_notes || '');
     setIsViewOpen(true);
     activityLogger.serviceView(pkg.id, pkg.tracking_number);
+  };
+
+  const handleSaveInternalNotes = async () => {
+    if (!viewingPkg) return;
+    setInternalNotesSaving(true);
+    try {
+      await api.put(`/packages/${viewingPkg.id}`, { internal_notes: internalNotesDraft });
+      toast.success('Internal notes saved');
+      // Reflect in local state immediately
+      setViewingPkg(p => p ? { ...p, internal_notes: internalNotesDraft } : p);
+      setPackages(prev => prev.map(x => x.id === viewingPkg.id ? { ...x, internal_notes: internalNotesDraft } : x));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save note');
+    } finally {
+      setInternalNotesSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -312,10 +327,16 @@ export default function PackageShipments() {
   const handleAdvance = (pkg) => {
     const order = ['pending', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered'];
     const idx = order.indexOf(pkg.status);
-    const next = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
-    if (!next) {
-      toast.info('Already at the final status');
+    // Legacy/unknown statuses (e.g. "active" from the old tours flow) get reset
+    // to the start of the ladder so the operator can move them forward.
+    let next;
+    if (idx === -1) {
+      next = 'pending';
+    } else if (idx >= order.length - 1) {
+      toast.info('Already delivered');
       return;
+    } else {
+      next = order[idx + 1];
     }
     setAdvancePkg(pkg);
     setAdvanceForm({
@@ -525,10 +546,14 @@ export default function PackageShipments() {
                       <td className="px-4 py-3 font-bold text-[#082c59]">{formatFCFA(pkg.price || 0)}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="inline-flex items-center gap-1.5">
-                          <Button size="sm" variant="ghost" onClick={() => handleView(pkg)}>View</Button>
-                          <PermissionGate permission="packages.edit">
-                            <Button size="sm" variant="ghost" onClick={() => openForm(pkg)}>Edit</Button>
-                          </PermissionGate>
+                          <Button size="sm" variant="ghost" onClick={() => handleView(pkg)} data-testid={`shipment-list-view-${pkg.id}`}>View</Button>
+                          {pkg.status !== 'delivered' && pkg.status !== 'cancelled' && (
+                            <PermissionGate permission="packages.edit">
+                              <Button size="sm" variant="ghost" onClick={() => handleAdvance(pkg)} className="text-blue-600" data-testid={`shipment-list-advance-${pkg.id}`}>
+                                <Truck className="w-4 h-4 mr-1" /> Advance
+                              </Button>
+                            </PermissionGate>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -544,7 +569,6 @@ export default function PackageShipments() {
                 key={pkg.id}
                 pkg={pkg}
                 onView={handleView}
-                onEdit={openForm}
                 onDelete={handleDelete}
                 onAdvance={handleAdvance}
                 onReplace={setReplacePkg}
@@ -699,12 +723,43 @@ export default function PackageShipments() {
                 <span className="text-sm text-slate-500">Shipping price</span>
                 <span className="text-2xl font-bold text-[#082c59]">{formatFCFA(viewingPkg.price || 0)}</span>
               </div>
+
+              {/* INTERNAL NOTES — admin / super_admin / operator only.
+                  Never returned by the public /track endpoint. */}
+              {['admin', 'super_admin', 'operator'].includes(_user?.role) && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 mt-2" data-testid="internal-notes-section">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <Label className="text-sm font-semibold text-amber-900">Internal notes</Label>
+                      <p className="text-[11px] text-amber-700/80 mt-0.5">Visible only to admins, super-admins, the assigned operator and their team — never to the customer.</p>
+                    </div>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] uppercase">Staff only</Badge>
+                  </div>
+                  <Textarea
+                    value={internalNotesDraft}
+                    onChange={(e) => setInternalNotesDraft(e.target.value)}
+                    placeholder="Customer asked to deliver after 5pm. Receiver phone is unreliable, use sender's number for notification."
+                    rows={3}
+                    className="bg-white border-amber-200 focus:border-amber-400"
+                    data-testid="internal-notes-textarea"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSaveInternalNotes}
+                      disabled={internalNotesSaving || (internalNotesDraft || '') === (viewingPkg.internal_notes || '')}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      data-testid="save-internal-notes-btn"
+                    >
+                      {internalNotesSaving ? 'Saving…' : 'Save note'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { openForm(viewingPkg); setIsViewOpen(false); }}>
-              <Edit className="w-4 h-4 mr-2" /> Edit
-            </Button>
             <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
           </DialogFooter>
         </DialogContent>
@@ -721,27 +776,65 @@ export default function PackageShipments() {
 
       {/* Advance Status Dialog */}
       <Dialog open={!!advancePkg} onOpenChange={(o) => { if (!o) setAdvancePkg(null); }}>
-        <DialogContent className="max-w-md bg-white" data-testid="advance-status-dialog">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Truck className="h-5 w-5 text-[#082c59]" /> Advance Shipment Status</DialogTitle>
-          </DialogHeader>
-          {advancePkg && (
-            <form onSubmit={handleSubmitAdvance} className="space-y-4 py-2">
-              <div className="bg-slate-50 rounded-lg p-3 text-sm">
-                <p className="text-xs text-slate-400 font-mono">{advancePkg.tracking_number}</p>
-                <p className="font-medium text-slate-900">{advancePkg.origin_city} → {advancePkg.destination_city}</p>
-                <p className="text-xs text-slate-500 mt-1 capitalize">Current: <strong>{(advancePkg.status || '').replace(/_/g, ' ')}</strong></p>
+        <DialogContent className="max-w-xl bg-white p-0 overflow-hidden" data-testid="advance-status-dialog">
+          {/* Hero header */}
+          <div className="bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] px-6 py-5 text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Truck className="h-5 w-5" />
               </div>
               <div>
-                <Label htmlFor="advance-status">New Status *</Label>
-                <Select value={advanceForm.status} onValueChange={(v) => setAdvanceForm((p) => ({ ...p, status: v }))}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {STATUS_OPTIONS.filter((s) => !['cancelled', 'returned'].includes(s.value)).map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <h2 className="text-lg font-semibold leading-tight">Advance shipment</h2>
+                <p className="text-xs text-white/80">Move the package forward in the delivery pipeline</p>
+              </div>
+            </div>
+            {advancePkg && (
+              <div className="mt-4 flex items-center justify-between bg-white/10 backdrop-blur rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-[10px] text-white/70 font-mono uppercase tracking-widest">{advancePkg.tracking_number}</p>
+                  <p className="text-sm font-medium">{advancePkg.origin_city} → {advancePkg.destination_city}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-white/70 uppercase tracking-wide">Current</p>
+                  <Badge className="bg-white text-[#082c59] capitalize">{(advancePkg.status || 'unknown').replace(/_/g, ' ')}</Badge>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {advancePkg && (
+            <form onSubmit={handleSubmitAdvance} className="px-6 py-5 space-y-5 max-h-[60vh] overflow-y-auto">
+              {/* Status ladder */}
+              <div>
+                <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">New status</Label>
+                <div className="mt-2 grid grid-cols-5 gap-1.5">
+                  {[
+                    { value: 'pending', label: 'Pending', icon: Clock },
+                    { value: 'picked_up', label: 'Picked up', icon: PackageCheck },
+                    { value: 'in_transit', label: 'In transit', icon: Truck },
+                    { value: 'out_for_delivery', label: 'Out for del.', icon: Truck },
+                    { value: 'delivered', label: 'Delivered', icon: CheckCircle },
+                  ].map((s) => {
+                    const Icon = s.icon;
+                    const active = advanceForm.status === s.value;
+                    return (
+                      <button
+                        type="button"
+                        key={s.value}
+                        onClick={() => setAdvanceForm((p) => ({ ...p, status: s.value }))}
+                        data-testid={`advance-status-${s.value}`}
+                        className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 px-2 py-3 transition-all text-[11px] font-medium leading-tight ${
+                          active
+                            ? 'border-[#082c59] bg-[#082c59]/5 text-[#082c59] shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                        }`}
+                      >
+                        <Icon className={`h-4 w-4 ${active ? 'text-[#082c59]' : 'text-slate-400'}`} />
+                        <span className="text-center">{s.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Proof-of-Delivery photos when marking as delivered */}
@@ -750,7 +843,7 @@ export default function PackageShipments() {
                   <div className="flex items-center gap-2 mb-1">
                     <Camera className="h-4 w-4 text-emerald-600" />
                     <Label className="font-semibold text-slate-800">
-                      Proof of Delivery Photos <span className="text-red-500">*</span>
+                      Proof of Delivery photos <span className="text-red-500">*</span>
                     </Label>
                   </div>
                   <p className="text-xs text-slate-600 mb-3">
@@ -771,31 +864,50 @@ export default function PackageShipments() {
                 </div>
               )}
 
-              <div>
-                <Label>Current Location</Label>
-                <Input placeholder="e.g. Bafoussam Hub..." value={advanceForm.location} onChange={(e) => setAdvanceForm((p) => ({ ...p, location: e.target.value }))} />
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Current location</Label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      className="pl-9"
+                      placeholder="e.g. Bafoussam Hub, Douala depot..."
+                      value={advanceForm.location}
+                      onChange={(e) => setAdvanceForm((p) => ({ ...p, location: e.target.value }))}
+                      data-testid="advance-location-input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Note <span className="text-slate-400 normal-case font-normal">(visible to the customer)</span></Label>
+                  <Textarea
+                    placeholder="e.g. Delivered to receiver in person..."
+                    rows={2}
+                    value={advanceForm.note}
+                    onChange={(e) => setAdvanceForm((p) => ({ ...p, note: e.target.value }))}
+                    data-testid="advance-note-input"
+                  />
+                </div>
               </div>
-              <div>
-                <Label>Note (optional)</Label>
-                <Textarea placeholder="e.g. Delivered to receiver in person..." rows={2} value={advanceForm.note} onChange={(e) => setAdvanceForm((p) => ({ ...p, note: e.target.value }))} />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setAdvancePkg(null)} disabled={advanceSubmitting}>Cancel</Button>
-                <Button
-                  type="submit"
-                  className="bg-[#082c59]"
-                  disabled={
-                    advanceSubmitting ||
-                    !advanceForm.status ||
-                    (advanceForm.status === 'delivered' && (advanceForm.delivery_photos?.length || 0) < 3)
-                  }
-                  data-testid="submit-advance-status-btn"
-                >
-                  {advanceSubmitting ? 'Updating…' : 'Update Status'}
-                </Button>
-              </DialogFooter>
             </form>
           )}
+
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
+            <Button type="button" variant="outline" onClick={() => setAdvancePkg(null)} disabled={advanceSubmitting}>Cancel</Button>
+            <Button
+              type="button"
+              onClick={handleSubmitAdvance}
+              className="bg-[#082c59]"
+              disabled={
+                advanceSubmitting ||
+                !advanceForm.status ||
+                (advanceForm.status === 'delivered' && (advanceForm.delivery_photos?.length || 0) < 3)
+              }
+              data-testid="submit-advance-status-btn"
+            >
+              {advanceSubmitting ? 'Updating…' : `Update → ${advanceForm.status.replace(/_/g, ' ')}`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

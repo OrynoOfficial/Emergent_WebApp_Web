@@ -169,6 +169,10 @@ export default function CinemaManagement() {
   const [isShowtimeDialogOpen, setIsShowtimeDialogOpen] = useState(false);
   const [showtimeForm, setShowtimeForm] = useState(DEFAULT_SHOWTIME_FORM);
   const [editingShowtime, setEditingShowtime] = useState(null);
+  // Inline-edit state for showtimes table rows
+  const [inlineEditShowtimeId, setInlineEditShowtimeId] = useState(null);
+  const [inlineShowtimeDraft, setInlineShowtimeDraft] = useState({});
+  const [inlineShowtimeSaving, setInlineShowtimeSaving] = useState(false);
 
   // Use the cinema dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
@@ -434,6 +438,36 @@ export default function CinemaManagement() {
   };
 
   // ---- Showtime handlers ----
+  const handleInlineSaveShowtime = async (st) => {
+    setInlineShowtimeSaving(true);
+    try {
+      const params = new URLSearchParams();
+      if (inlineShowtimeDraft.screen_name !== undefined && inlineShowtimeDraft.screen_name !== st.screen_name) params.append('screen_name', inlineShowtimeDraft.screen_name);
+      if (inlineShowtimeDraft.show_date !== undefined && inlineShowtimeDraft.show_date !== st.show_date) params.append('show_date', inlineShowtimeDraft.show_date);
+      if (inlineShowtimeDraft.show_time !== undefined && inlineShowtimeDraft.show_time !== st.show_time) params.append('show_time', inlineShowtimeDraft.show_time);
+      if (inlineShowtimeDraft.end_time !== undefined && inlineShowtimeDraft.end_time !== st.end_time) params.append('end_time', inlineShowtimeDraft.end_time);
+      if (inlineShowtimeDraft.total_seats !== undefined && inlineShowtimeDraft.total_seats !== st.total_seats) params.append('total_seats', String(inlineShowtimeDraft.total_seats));
+      if (inlineShowtimeDraft.price !== undefined && Number(inlineShowtimeDraft.price) !== Number(st.price)) params.append('price', String(parseFloat(inlineShowtimeDraft.price)));
+      if (inlineShowtimeDraft.vip_price !== undefined && Number(inlineShowtimeDraft.vip_price || 0) !== Number(st.vip_price || 0)) params.append('vip_price', String(parseFloat(inlineShowtimeDraft.vip_price || 0)));
+      if (params.toString().length === 0) {
+        toast.info('No changes');
+        setInlineEditShowtimeId(null);
+        setInlineShowtimeDraft({});
+        return;
+      }
+      await api.put(`/cinema/showtimes/${st.id}?${params.toString()}`);
+      toast.success('Showtime updated');
+      setInlineEditShowtimeId(null);
+      setInlineShowtimeDraft({});
+      loadShowtimes();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Update failed');
+    } finally {
+      setInlineShowtimeSaving(false);
+    }
+  };
+
+
   const openShowtimeDialog = (showtime = null) => {
     setEditingShowtime(showtime);
     if (showtime) {
@@ -931,70 +965,148 @@ export default function CinemaManagement() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {showtimes.map((st) => (
-                            <tr key={st.id} className="hover:bg-slate-50" data-testid={`showtime-row-${st.id}`}>
-                              <td className="py-3 px-4 font-medium text-[#082c59]">{st.film_title || '—'}</td>
-                              <td className="py-3 px-4 text-slate-700">{st.cinema_name || '—'}</td>
-                              <td className="py-3 px-4">
-                                <span className="inline-flex items-center gap-1">
-                                  <Monitor className="h-3.5 w-3.5 text-slate-400" />
-                                  {st.screen_name || '—'}
-                                  {st.screen_type && <span className="text-[10px] uppercase bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{st.screen_type}</span>}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-slate-600">
-                                <span className="block">{st.show_date}</span>
-                                <span className="text-xs text-slate-400">{st.show_time}{st.end_time ? ` – ${st.end_time}` : ''}</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="text-xs">
-                                  <span className="font-semibold">{st.available_seats ?? '—'}</span> / {st.total_seats ?? '—'}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-slate-700">
-                                {st.price ? formatFCFA(st.price) : '—'}
-                                {st.vip_price && <span className="block text-xs text-amber-700">VIP {formatFCFA(st.vip_price)}</span>}
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${st.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                                  {st.is_active !== false ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-1 justify-end">
-                                  <PermissionGate permission="cinema.manage_screenings">
-                                    <Button size="sm" variant="outline" onClick={() => openShowtimeDialog(st)} className="h-8" data-testid={`edit-showtime-btn-${st.id}`}>
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                  </PermissionGate>
-                                  <PermissionGate permission="cinema.manage_screenings">
-                                    <Button size="sm" variant="outline" onClick={() => setReplaceShowtime(st)} className="h-8 text-[#082c59]" data-testid={`replace-showtime-btn-${st.id}`}>
-                                      <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
-                                    </Button>
-                                  </PermissionGate>
-                                  <PermissionGate permission="cinema.manage_screenings">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-red-600 hover:bg-red-50"
-                                      onClick={async () => {
-                                        try {
-                                          await api.delete(`/cinema/showtimes/${st.id}`);
-                                          toast.success('Showtime deactivated');
-                                          loadShowtimes();
-                                        } catch (err) {
-                                          toast.error(err.response?.data?.detail || 'Delete failed');
-                                        }
-                                      }}
-                                      data-testid={`delete-showtime-btn-${st.id}`}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </PermissionGate>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                          {showtimes.map((st) => {
+                            const isEdit = inlineEditShowtimeId === st.id;
+                            const draft = isEdit ? inlineShowtimeDraft : st;
+                            const setDraft = (patch) => setInlineShowtimeDraft(p => ({ ...p, ...patch }));
+                            return (
+                              <tr key={st.id} className="hover:bg-slate-50" data-testid={`showtime-row-${st.id}`}>
+                                <td className="py-3 px-4 font-medium text-[#082c59]">{st.film_title || '—'}</td>
+                                <td className="py-3 px-4 text-slate-700">{st.cinema_name || '—'}</td>
+                                <td className="py-3 px-4">
+                                  {isEdit ? (
+                                    <Input
+                                      className="h-8 w-32"
+                                      value={draft.screen_name || ''}
+                                      onChange={(e) => setDraft({ screen_name: e.target.value })}
+                                      data-testid={`inline-screen-${st.id}`}
+                                    />
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Monitor className="h-3.5 w-3.5 text-slate-400" />
+                                      {st.screen_name || '—'}
+                                      {st.screen_type && <span className="text-[10px] uppercase bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{st.screen_type}</span>}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-slate-600">
+                                  {isEdit ? (
+                                    <div className="flex flex-col gap-1">
+                                      <Input className="h-8 w-32" type="date" value={draft.show_date || ''} onChange={(e) => setDraft({ show_date: e.target.value })} data-testid={`inline-date-${st.id}`} />
+                                      <div className="flex gap-1">
+                                        <Input className="h-8 w-20" type="time" value={draft.show_time || ''} onChange={(e) => setDraft({ show_time: e.target.value })} data-testid={`inline-time-${st.id}`} />
+                                        <Input className="h-8 w-20" type="time" value={draft.end_time || ''} onChange={(e) => setDraft({ end_time: e.target.value })} />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span className="block">{st.show_date}</span>
+                                      <span className="text-xs text-slate-400">{st.show_time}{st.end_time ? ` – ${st.end_time}` : ''}</span>
+                                    </>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  {isEdit ? (
+                                    <Input
+                                      className="h-8 w-20"
+                                      type="number"
+                                      value={draft.total_seats || 0}
+                                      onChange={(e) => setDraft({ total_seats: parseInt(e.target.value) || 0 })}
+                                      data-testid={`inline-seats-${st.id}`}
+                                    />
+                                  ) : (
+                                    <span className="text-xs">
+                                      <span className="font-semibold">{st.available_seats ?? '—'}</span> / {st.total_seats ?? '—'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4 text-slate-700">
+                                  {isEdit ? (
+                                    <div className="flex flex-col gap-1">
+                                      <Input className="h-8 w-24" type="number" placeholder="Price" value={draft.price ?? ''} onChange={(e) => setDraft({ price: e.target.value })} data-testid={`inline-price-${st.id}`} />
+                                      <Input className="h-8 w-24" type="number" placeholder="VIP" value={draft.vip_price ?? ''} onChange={(e) => setDraft({ vip_price: e.target.value })} />
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {st.price ? formatFCFA(st.price) : '—'}
+                                      {st.vip_price && <span className="block text-xs text-amber-700">VIP {formatFCFA(st.vip_price)}</span>}
+                                    </>
+                                  )}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${st.is_active !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {st.is_active !== false ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center gap-1 justify-end">
+                                    {isEdit ? (
+                                      <>
+                                        <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleInlineSaveShowtime(st)} disabled={inlineShowtimeSaving} data-testid={`inline-save-${st.id}`}>
+                                          {inlineShowtimeSaving ? '...' : 'Save'}
+                                        </Button>
+                                        <Button size="sm" variant="outline" className="h-8" onClick={() => { setInlineEditShowtimeId(null); setInlineShowtimeDraft({}); }} data-testid={`inline-cancel-${st.id}`}>
+                                          Cancel
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <PermissionGate permission="cinema.manage_screenings">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8"
+                                          onClick={() => {
+                                            setInlineEditShowtimeId(st.id);
+                                            setInlineShowtimeDraft({
+                                              screen_name: st.screen_name,
+                                              show_date: st.show_date,
+                                              show_time: st.show_time,
+                                              end_time: st.end_time,
+                                              total_seats: st.total_seats,
+                                              price: st.price,
+                                              vip_price: st.vip_price,
+                                            });
+                                          }}
+                                          data-testid={`inline-edit-${st.id}`}
+                                          title="Quick edit"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </Button>
+                                      </PermissionGate>
+                                    )}
+                                    {!isEdit && (
+                                      <>
+                                        <PermissionGate permission="cinema.manage_screenings">
+                                          <Button size="sm" variant="outline" onClick={() => setReplaceShowtime(st)} className="h-8 text-[#082c59]" data-testid={`replace-showtime-btn-${st.id}`}>
+                                            <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
+                                          </Button>
+                                        </PermissionGate>
+                                        <PermissionGate permission="cinema.manage_screenings">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 text-red-600 hover:bg-red-50"
+                                            onClick={async () => {
+                                              try {
+                                                await api.delete(`/cinema/showtimes/${st.id}`);
+                                                toast.success('Showtime deactivated');
+                                                loadShowtimes();
+                                              } catch (err) {
+                                                toast.error(err.response?.data?.detail || 'Delete failed');
+                                              }
+                                            }}
+                                            data-testid={`delete-showtime-btn-${st.id}`}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </PermissionGate>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1366,138 +1478,162 @@ export default function CinemaManagement() {
         submitDataTestId="save-movie-btn"
       />
 
-      {/* Showtime Dialog */}
+      {/* Showtime Dialog — styled with a gradient header + grouped sections */}
       <Dialog open={isShowtimeDialogOpen} onOpenChange={setIsShowtimeDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto" data-testid="showtime-dialog">
-          <DialogHeader>
-            <DialogTitle>{editingShowtime ? 'Edit Showtime' : 'Add Showtime'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
-              A showtime assigns a film to a specific cinema, screen, date, time and price. Customers book this exact slot.
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Cinema *</Label>
-                <Select
-                  value={showtimeForm.cinema_id}
-                  onValueChange={(v) => {
-                    const cin = cinemas.find((c) => c.id === v);
-                    const firstScreen = cin?.screens?.[0];
-                    setShowtimeForm(p => ({
-                      ...p,
-                      cinema_id: v,
-                      screen_name: firstScreen?.name || p.screen_name || '',
-                      screen_type: firstScreen?.type || p.screen_type || '2d',
-                      total_seats: firstScreen?.capacity || p.total_seats || 100,
-                    }));
-                  }}
-                  disabled={!!editingShowtime}
-                >
-                  <SelectTrigger className="bg-white" data-testid="showtime-cinema-select"><SelectValue placeholder="Pick a cinema..." /></SelectTrigger>
-                  <SelectContent className="bg-white max-h-60">
-                    {cinemas.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name} {c.city ? `· ${c.city}` : ''}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <DialogContent className="max-w-2xl bg-white p-0 overflow-hidden max-h-[92vh]" data-testid="showtime-dialog">
+          {/* Hero */}
+          <div className="bg-gradient-to-br from-red-700 via-red-600 to-rose-600 px-6 py-5 text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                <Ticket className="h-5 w-5" />
               </div>
               <div>
-                <Label>Film *</Label>
-                <Select value={showtimeForm.film_id} onValueChange={(v) => setShowtimeForm(p => ({ ...p, film_id: v }))}>
-                  <SelectTrigger className="bg-white" data-testid="showtime-film-select"><SelectValue placeholder="Pick a film..." /></SelectTrigger>
-                  <SelectContent className="bg-white max-h-60">
-                    {movies.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Screen *</Label>
-                {(() => {
-                  const cin = cinemas.find((c) => c.id === showtimeForm.cinema_id);
-                  const availableScreens = cin?.screens || [];
-                  if (availableScreens.length > 0) {
-                    return (
-                      <Select
-                        value={showtimeForm.screen_name}
-                        onValueChange={(v) => {
-                          const s = availableScreens.find((x) => x.name === v);
-                          setShowtimeForm(p => ({
-                            ...p,
-                            screen_name: v,
-                            screen_type: s?.type || p.screen_type,
-                            total_seats: s?.capacity || p.total_seats,
-                          }));
-                        }}
-                      >
-                        <SelectTrigger className="bg-white"><SelectValue placeholder="Pick a screen..." /></SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {availableScreens.map((s, i) => (
-                            <SelectItem key={i} value={s.name}>{s.name} ({s.type || '2d'}, {s.capacity || 0} seats)</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    );
-                  }
-                  return (
-                    <Input
-                      placeholder="e.g. Screen 1"
-                      value={showtimeForm.screen_name}
-                      onChange={(e) => setShowtimeForm(p => ({ ...p, screen_name: e.target.value }))}
-                    />
-                  );
-                })()}
-              </div>
-              <div>
-                <Label>Screen Type</Label>
-                <Select value={showtimeForm.screen_type} onValueChange={(v) => setShowtimeForm(p => ({ ...p, screen_type: v }))}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Total Seats *</Label>
-                <Input type="number" value={showtimeForm.total_seats} onChange={(e) => setShowtimeForm(p => ({ ...p, total_seats: parseInt(e.target.value) || 0 }))} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Date *</Label>
-                <Input type="date" value={showtimeForm.show_date} onChange={(e) => setShowtimeForm(p => ({ ...p, show_date: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Start Time *</Label>
-                <Input type="time" value={showtimeForm.show_time} onChange={(e) => setShowtimeForm(p => ({ ...p, show_time: e.target.value }))} />
-              </div>
-              <div>
-                <Label>End Time *</Label>
-                <Input type="time" value={showtimeForm.end_time} onChange={(e) => setShowtimeForm(p => ({ ...p, end_time: e.target.value }))} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Price (FCFA) *</Label>
-                <Input type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
-              </div>
-              <div>
-                <Label>VIP Price (FCFA, optional)</Label>
-                <Input type="number" value={showtimeForm.vip_price} onChange={(e) => setShowtimeForm(p => ({ ...p, vip_price: e.target.value }))} placeholder="5000" />
+                <h2 className="text-lg font-semibold leading-tight">{editingShowtime ? 'Edit showtime' : 'Schedule a new showtime'}</h2>
+                <p className="text-xs text-white/80">Assign a film to a cinema, screen, date, time and price.</p>
               </div>
             </div>
           </div>
-          <DialogFooter>
+
+          <div className="px-6 py-5 space-y-5 overflow-y-auto" style={{ maxHeight: 'calc(92vh - 160px)' }}>
+            {/* Section: WHAT */}
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">1 · What's playing</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Cinema *</Label>
+                  <Select
+                    value={showtimeForm.cinema_id}
+                    onValueChange={(v) => {
+                      const cin = cinemas.find((c) => c.id === v);
+                      const firstScreen = cin?.screens?.[0];
+                      setShowtimeForm(p => ({
+                        ...p,
+                        cinema_id: v,
+                        screen_name: firstScreen?.name || p.screen_name || '',
+                        screen_type: firstScreen?.type || p.screen_type || '2d',
+                        total_seats: firstScreen?.capacity || p.total_seats || 100,
+                      }));
+                    }}
+                    disabled={!!editingShowtime}
+                  >
+                    <SelectTrigger className="bg-white" data-testid="showtime-cinema-select"><SelectValue placeholder="Pick a cinema..." /></SelectTrigger>
+                    <SelectContent className="bg-white max-h-60">
+                      {cinemas.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}{c.city ? ` · ${c.city}` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Film *</Label>
+                  <Select value={showtimeForm.film_id} onValueChange={(v) => setShowtimeForm(p => ({ ...p, film_id: v }))}>
+                    <SelectTrigger className="bg-white" data-testid="showtime-film-select"><SelectValue placeholder="Pick a film..." /></SelectTrigger>
+                    <SelectContent className="bg-white max-h-60">
+                      {movies.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section: WHERE */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5"><Monitor className="h-3 w-3" /> 2 · Which screen</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Screen *</Label>
+                  {(() => {
+                    const cin = cinemas.find((c) => c.id === showtimeForm.cinema_id);
+                    const availableScreens = cin?.screens || [];
+                    if (availableScreens.length > 0) {
+                      return (
+                        <Select
+                          value={showtimeForm.screen_name}
+                          onValueChange={(v) => {
+                            const s = availableScreens.find((x) => x.name === v);
+                            setShowtimeForm(p => ({
+                              ...p,
+                              screen_name: v,
+                              screen_type: s?.type || p.screen_type,
+                              total_seats: s?.capacity || p.total_seats,
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="bg-white"><SelectValue placeholder="Pick a screen..." /></SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {availableScreens.map((s, i) => (
+                              <SelectItem key={i} value={s.name}>{s.name} ({s.type || '2d'}, {s.capacity || 0} seats)</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    }
+                    return (
+                      <Input
+                        placeholder="e.g. Screen 1"
+                        value={showtimeForm.screen_name}
+                        onChange={(e) => setShowtimeForm(p => ({ ...p, screen_name: e.target.value }))}
+                        className="bg-white"
+                      />
+                    );
+                  })()}
+                </div>
+                <div>
+                  <Label className="text-xs">Format</Label>
+                  <Select value={showtimeForm.screen_type} onValueChange={(v) => setShowtimeForm(p => ({ ...p, screen_type: v }))}>
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Seats *</Label>
+                  <Input className="bg-white" type="number" value={showtimeForm.total_seats} onChange={(e) => setShowtimeForm(p => ({ ...p, total_seats: parseInt(e.target.value) || 0 }))} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: WHEN */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5"><Clock className="h-3 w-3" /> 3 · When</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">Date *</Label>
+                  <Input className="bg-white" type="date" value={showtimeForm.show_date} onChange={(e) => setShowtimeForm(p => ({ ...p, show_date: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Start *</Label>
+                  <Input className="bg-white" type="time" value={showtimeForm.show_time} onChange={(e) => setShowtimeForm(p => ({ ...p, show_time: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-xs">End *</Label>
+                  <Input className="bg-white" type="time" value={showtimeForm.end_time} onChange={(e) => setShowtimeForm(p => ({ ...p, end_time: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: PRICE */}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5"><Banknote className="h-3 w-3" /> 4 · Pricing</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Standard price (FCFA) *</Label>
+                  <Input className="bg-white" type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
+                </div>
+                <div>
+                  <Label className="text-xs">VIP price (optional)</Label>
+                  <Input className="bg-white" type="number" value={showtimeForm.vip_price} onChange={(e) => setShowtimeForm(p => ({ ...p, vip_price: e.target.value }))} placeholder="5000" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
             <Button variant="outline" onClick={() => setIsShowtimeDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveShowtime} className="bg-[#082c59]" data-testid="save-showtime-btn">{editingShowtime ? 'Update' : 'Schedule'}</Button>
+            <Button onClick={handleSaveShowtime} className="bg-[#082c59]" data-testid="save-showtime-btn">{editingShowtime ? 'Update showtime' : 'Schedule showtime'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

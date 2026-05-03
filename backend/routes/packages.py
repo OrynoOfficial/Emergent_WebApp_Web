@@ -264,12 +264,22 @@ async def track_package(tracking_number: str):
 
 
 @router.get("/{package_id}")
-async def get_package(package_id: str):
-    """Get package details by id."""
+async def get_package(
+    package_id: str,
+    current_user: dict = Depends(require_any_permission(
+        ["packages.view", "packages.edit", "operator.services.view", "operator.services.edit"]
+    )),
+):
+    """Get package details by id. Authenticated only — returns `internal_notes`
+    which must NOT be exposed publicly. Public tracking uses /track/{tn}."""
     db = get_database()
     package = await db.packages.find_one({"_id": package_id})
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
+    if current_user.get("role") == "operator" and package.get("operator_id") != current_user.get("operator_id"):
+        # Strip internal_notes for cross-operator reads (defensive)
+        package = dict(package)
+        package.pop("internal_notes", None)
     return _normalize(package)
 
 

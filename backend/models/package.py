@@ -118,6 +118,7 @@ class PhysicalPackageCreate(BaseModel):
     declared_value: float = 0
     description: Optional[str] = None
     notes: Optional[str] = None
+    internal_notes: Optional[str] = None
     price: float = 0
     payment_status: PaymentStatus = PaymentStatus.UNPAID
     operator_id: Optional[str] = None
@@ -140,6 +141,7 @@ class PhysicalPackageUpdate(BaseModel):
     declared_value: Optional[float] = None
     description: Optional[str] = None
     notes: Optional[str] = None
+    internal_notes: Optional[str] = None
     price: Optional[float] = None
     payment_status: Optional[PaymentStatus] = None
     status: Optional[PackageStatus] = None
@@ -161,6 +163,7 @@ class PhysicalPackage(BaseModel):
     declared_value: float = 0
     description: Optional[str] = None
     notes: Optional[str] = None
+    internal_notes: Optional[str] = None
     price: float = 0
     payment_status: PaymentStatus = PaymentStatus.UNPAID
     status: PackageStatus = PackageStatus.PENDING

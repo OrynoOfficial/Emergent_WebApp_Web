@@ -7,6 +7,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 // Auth Pages
 import Login from './pages/Login';
+import TrackPackage from './pages/TrackPackage';
 import Register from './pages/Register';
 
 // Smart redirect based on user role
@@ -139,6 +140,8 @@ function App() {
           <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/track" element={<TrackPackage />} />
+          <Route path="/track/:trackingNumber" element={<TrackPackage />} />
             <Route path="/register" element={<Register />} />
           
           {/* Protected Routes - All Users */}
