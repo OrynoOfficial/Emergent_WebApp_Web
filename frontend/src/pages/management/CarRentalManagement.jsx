@@ -32,6 +32,7 @@ import ServiceCommunicationsHub from '@/components/management/ServiceCommunicati
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -708,23 +709,12 @@ export default function CarRentalManagement() {
                 </Select>
               </div>
               <div className="col-span-2">
-                <Label>Operator</Label>
-                <Select 
-                  value={carForm.operator_id || ''} 
-                  onValueChange={v => {
-                    const op = operators.find(o => (o._id || o.id) === v);
-                    setCarForm(p => ({ ...p, operator_id: v, operator_name: op?.name || '' }));
-                  }}
-                >
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select an operator..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white max-h-60">
-                    {operators.map(op => (
-                      <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OperatorSelector
+                  value={carForm.operator_id || ''}
+                  onChange={(id, name) => setCarForm(p => ({ ...p, operator_id: id, operator_name: name }))}
+                  operators={operators}
+                  testId="car-operator-selector"
+                />
               </div>
               <div className="col-span-2">
                 <Label>Features</Label>

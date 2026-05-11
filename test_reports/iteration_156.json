@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 156 — Tested the unified OperatorSelector roll-out and backend cinema-film operator_id passthrough. Backend: 4/4 pytest cases pass — admin can override operator_id/operator_name on POST /api/cinema/films, operator user without cinema permission is correctly 403'd, the film created with operator_id=Musango is correctly returned with that operator_id in the listing, and /api/hotels/management/my-hotels remains scoped to the operator. Frontend: source-level verification of HotelForm (hotel-city-input is an <Input>; OperatorSelector testIds match spec) and OperatorSelector component (locked branch for non-admin, Command/Popover searchable picker for admin, all data-testid attributes present). Live UI interaction was partially blocked by Radix Tabs tab-switch needing pointer events — the Hotel mgmt page rendered correctly with 17 hotels but the Add Hotel button lives on the 'Hotels' sub-tab and JS-driven .click() on the Radix tab did not switch panels; could not visually open the create modal in this run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": [
+    "POST /api/cinema/films with admin token + operator_id=<Musango op id> + operator_name persists those values; GET /api/cinema/films?include_all_operators=true returns the film with operator_id matching the override.",
+    "POST /api/cinema/films with admin token and no operator_id stores operator_id=null (admin global film).",
+    "POST /api/cinema/films with operator@test.com (Musango Bus Service — no cinema permission) returns 403 'Permission denied. Required one of: cinema.manage_screenings, cinema.create' — correct authz.",
+    "GET /api/hotels/management/my-hotels with operator@test.com returns 200 with only hotels matching the user's operator_id (no data-leak regression).",
+    "Source review of /app/frontend/src/components/management/shared/OperatorSelector.jsx: Locked branch renders data-testid='{prefix}-operator-selector-locked' with Lock icon + 'Auto-assigned' Badge for non-admin users with operator_id; admin branch renders Popover+Command with data-testid='{prefix}-operator-selector', search-input testid '{prefix}-operator-selector-search-input', and per-option testids '{prefix}-operator-selector-option-<id>'. Matches spec.",
+    "Source review of HotelForm.jsx: 'City' field is a plain <Input data-testid=\"hotel-city-input\" /> (no Select). OperatorSelector is mounted with testId='hotel-operator-selector'.",
+    "Backend cinema.py create_film signature confirmed to accept optional operator_id + operator_name query params; admins keep user input, non-admins are forced to current_user.operator_id."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration156_operator_film.py",
+    "/app/test_reports/pytest/iter156.xml"
+  ],
+  "action_items": [
+    "Main agent: run a quick visual self-test of the Hotel / Restaurant / Cinema-Showtime modals as admin to confirm the OperatorSelector picker opens and shows operators (Radix tab interaction prevented automated coverage in this iteration).",
+    "Consider adding a stable data-testid to the management-page tab triggers (e.g. data-testid='hotels-tab') so playwright can switch panels reliably without depending on Radix internals."
+  ],
+  "critical_code_review_comments": [
+    "OperatorSelector locked branch reads user.operator_id || operatorContext?.operator_id — good. But the auto-prefill useEffect fires onChange every render where value !== userOperatorId; since onChange identity may change per parent render, this can cause a re-prefill loop if a parent recreates onChange every render. Suggest wrapping callbacks in useCallback at call sites, or omitting onChange from the dependency array (already in deps now). Low risk but worth a defensive comment.",
+    "Backend POST /api/cinema/films uses query params (not JSON body or form). Frontend description in the agent note says 'form-encoded data'; verify the frontend actually sends them as query params (e.g. URL params on POST) — otherwise admin override won't reach the endpoint. The current backend treats them as Query params via FastAPI default.",
+    "GET /api/cinema/films without ?include_all_operators=true appears to filter by current user's operator_id even for admin (admin's Musango override film was not returned in the default list, only via include_all_operators=true). Confirm this is intentional — admins listing films may otherwise be surprised by missing rows."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration156_operator_film.py"
+  ],
+  "success_rate": {"backend": "100% (4/4 passed)", "frontend": "source-verified; live modal interaction blocked by Radix tab automation issue"},
+  "test_credentials": "admin@test.com / testpassword123, operator@test.com / testpassword123 (Musango Bus Service)",
+  "seed_data_creation": "Created and then deleted 3 short-lived TEST_* films during pytest run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Tab switching on the management pages (/management/hotels, /management/restaurants, /management/cinema) needs either (a) a data-testid on the Radix tab trigger, or (b) using page.get_by_role('tab', name='Hotels').click() instead of evaluating .click() on the DOM node. The 'Add Hotel' / 'add-restaurant-btn' buttons exist on the 'Hotels' / 'Restaurants' sub-tab respectively, not on Dashboard. Cinema films endpoint expects operator_id as query param (not JSON body).",
+  "rca of the issue": "n/a — all backend assertions passed; no defects found."
+}

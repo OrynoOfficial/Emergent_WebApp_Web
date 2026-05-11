@@ -9,6 +9,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Grid3X3, Upload, RefreshCw, X, Building2 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 
 const AMENITIES_OPTIONS = ['wifi', 'ac', 'power_outlet', 'restroom', 'tv_screen', 'reclining_seats', 'refreshments'];
 
@@ -150,32 +151,15 @@ export function VehicleForm({ form, onChange, onOpenSeatLayout, operators = [] }
         </div>
         
         {/* Operator Selection */}
-        {operators.length > 0 && (
-          <div className="col-span-2">
-            <Label className="flex items-center gap-2 mb-1.5">
-              <Building2 className="w-4 h-4 text-indigo-600" />
-              Assigned Operator
-            </Label>
-            <Select 
-              value={form.operator_id || ''} 
-              onValueChange={(id) => {
-                const op = operators.find(o => (o.id || o._id) === id);
-                updateForm({ operator_id: id, operator_name: op?.name || '' });
-              }}
-            >
-              <SelectTrigger className="bg-white border-indigo-200">
-                <SelectValue placeholder="Select operator" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {operators.map(op => (
-                  <SelectItem key={op.id || op._id} value={op.id || op._id}>
-                    {op.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        <div className="col-span-2">
+          <OperatorSelector
+            value={form.operator_id || ''}
+            onChange={(id, name) => updateForm({ operator_id: id, operator_name: name })}
+            operators={operators}
+            label="Assigned Operator"
+            testId="vehicle-operator-selector"
+          />
+        </div>
         
         <div className="col-span-2">
           <Label>Vehicle Name *</Label>

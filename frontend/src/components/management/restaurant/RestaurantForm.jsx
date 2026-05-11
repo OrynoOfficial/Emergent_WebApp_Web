@@ -5,9 +5,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Upload, X, Loader2 } from 'lucide-react';
 import api from '@/api/client';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 
 // Reusable Image Uploader component
 function ImageUploader({ images, onChange, maxImages = 6 }) {
@@ -199,48 +200,71 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
         </div>
 
         {/* Operator Assignment */}
-        {operators.length > 0 && (
-          <div className="space-y-3">
-            <h4 className="font-medium text-slate-900 border-b pb-2">Operator</h4>
-            <div>
-              <Label>Assign to Operator</Label>
-              <Select value={form.operator_id || ''} onValueChange={(v) => {
-                const op = operators.find(o => o.id === v);
-                updateForm('operator_id', v === 'none' ? '' : v);
-                updateForm('operator_name', op?.name || '');
-              }}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select operator" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="none">No operator</SelectItem>
-                  {operators.map(op => (
-                    <SelectItem key={op.id} value={op.id}>{op.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
+        <div className="space-y-3">
+          <h4 className="font-medium text-slate-900 border-b pb-2">Operator</h4>
+          <OperatorSelector
+            value={form.operator_id || ''}
+            onChange={(id, name) => onChange({ ...form, operator_id: id, operator_name: name })}
+            operators={operators}
+            helperText="The restaurant will be owned by the selected operator. Admins can search any operator; operators are auto-assigned to their own organisation."
+            testId="restaurant-operator-selector"
+          />
+        </div>
 
         {/* Classification */}
         <div className="space-y-3">
           <h4 className="font-medium text-slate-900 border-b pb-2">Classification</h4>
           
-          <div>
-            <Label>Price Range</Label>
-            <Select value={form.price_range || 'moderate'} onValueChange={(v) => updateForm('price_range', v)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {PRICE_RANGES.map(pr => (
-                  <SelectItem key={pr.value} value={pr.value}>{pr.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Price Range</Label>
+              <Select value={form.price_range || 'moderate'} onValueChange={(v) => updateForm('price_range', v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {PRICE_RANGES.map(pr => (
+                    <SelectItem key={pr.value} value={pr.value}>{pr.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Avg cost (per 2 people)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.average_cost_for_two ?? ''}
+                onChange={(e) => updateForm('average_cost_for_two', e.target.value === '' ? null : parseFloat(e.target.value))}
+                placeholder="e.g. 25000"
+                className="mt-1"
+              />
+            </div>
           </div>
-          
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Currency</Label>
+              <Select value={form.currency || 'XAF'} onValueChange={(v) => updateForm('currency', v)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="XAF">XAF (FCFA)</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Website</Label>
+              <Input
+                value={form.website || ''}
+                onChange={(e) => updateForm('website', e.target.value)}
+                placeholder="https://example.com"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
           <div>
             <Label className="mb-2 block">Cuisine Types</Label>
             <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg">
@@ -255,6 +279,66 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Capacity & Reservations */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-slate-900 border-b pb-2">Capacity & Reservations</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Total tables</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.total_tables ?? ''}
+                onChange={(e) => updateForm('total_tables', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+                placeholder="e.g. 20"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Max capacity (guests)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.max_capacity ?? ''}
+                onChange={(e) => updateForm('max_capacity', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+                placeholder="e.g. 80"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <label className="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer">
+            <div>
+              <p className="text-sm font-medium text-slate-800">Accept reservations</p>
+              <p className="text-[11px] text-slate-500">Guests can book tables online ahead of time.</p>
+            </div>
+            <Switch
+              checked={form.accepts_reservations !== false}
+              onCheckedChange={(v) => updateForm('accepts_reservations', v)}
+            />
+          </label>
+        </div>
+
+        {/* Opening hours (free text — 7-day picker would be over-engineered for now) */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-slate-900 border-b pb-2">Opening hours</h4>
+          <Textarea
+            value={form._opening_hours_text || (form.opening_hours && typeof form.opening_hours === 'object' ? Object.entries(form.opening_hours).map(([d, h]) => `${d}: ${h}`).join('\n') : '')}
+            onChange={(e) => {
+              const text = e.target.value;
+              const parsed = {};
+              text.split('\n').forEach((line) => {
+                const m = line.match(/^([^:]+):\s*(.+)$/);
+                if (m) parsed[m[1].trim().toLowerCase()] = m[2].trim();
+              });
+              onChange({ ...form, opening_hours: parsed, _opening_hours_text: text });
+            }}
+            rows={4}
+            placeholder={"Monday: 11:00 - 23:00\nTuesday: 11:00 - 23:00\nWednesday: 11:00 - 23:00\nThursday: 11:00 - 23:00\nFriday: 11:00 - 00:00\nSaturday: 12:00 - 00:00\nSunday: Closed"}
+            className="mt-1 font-mono text-xs"
+          />
+          <p className="text-[11px] text-slate-500">One day per line: <code>day: hours</code></p>
         </div>
 
         {/* Features */}

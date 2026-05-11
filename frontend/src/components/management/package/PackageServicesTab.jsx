@@ -17,6 +17,7 @@ import PermissionGate from '@/components/common/PermissionGate';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 
 const PAGE_SIZE = 12;
 
@@ -750,20 +751,18 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
                   </div>
                 </section>
 
-                {/* Operator (admins only) */}
-                {operators?.length > 0 && (
-                  <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
-                    <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">Operator Assignment</h3>
-                    <Select value={form.operator_id || ''} onValueChange={(v) => setForm((p) => ({ ...p, operator_id: v }))}>
-                      <SelectTrigger className="bg-white"><SelectValue placeholder="Select operator..." /></SelectTrigger>
-                      <SelectContent className="bg-white max-h-60">
-                        {operators.map((op) => (
-                          <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </section>
-                )}
+                {/* Operator Assignment */}
+                <section className="rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                  <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wide">Operator Assignment</h3>
+                  <OperatorSelector
+                    value={form.operator_id || ''}
+                    onChange={(id, name) => setForm((p) => ({ ...p, operator_id: id, operator_name: name }))}
+                    operators={operators || []}
+                    label={null}
+                    testId="package-service-operator-selector"
+                    helperText="The logistics company that will fulfil shipments booked through this offering."
+                  />
+                </section>
               </div>
 
               {/* === RIGHT: Live Preview === */}

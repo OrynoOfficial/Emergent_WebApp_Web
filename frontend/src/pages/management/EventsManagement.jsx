@@ -33,6 +33,7 @@ import ServiceCommunicationsHub from '@/components/management/ServiceCommunicati
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import { Search } from 'lucide-react';
 
 const PAGE_SIZE = 12;
@@ -535,30 +536,13 @@ export default function EventsManagement() {
               <Input value={eventForm.contact_phone} onChange={e => setEventForm(p => ({ ...p, contact_phone: e.target.value }))} placeholder="+237 6XX XXX XXX" />
             </div>
             <div className="col-span-2">
-              <Label>Operator</Label>
-              <Select 
-                value={eventForm.operator_id || ''} 
-                onValueChange={v => {
-                  const op = operators.find(o => (o._id || o.id) === v);
-                  setEventForm(p => ({ 
-                    ...p, 
-                    operator_id: v,
-                    operator_name: op?.name || ''
-                  }));
-                }}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select an operator..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-60">
-                  {operators.map(op => (
-                    <SelectItem key={op._id || op.id} value={op._id || op.id}>
-                      {op.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-1">Select the operator managing this event</p>
+              <OperatorSelector
+                value={eventForm.operator_id || ''}
+                onChange={(id, name) => setEventForm(p => ({ ...p, operator_id: id, operator_name: name }))}
+                operators={operators}
+                helperText="Operator managing this event"
+                testId="event-operator-selector"
+              />
             </div>
             <div className="col-span-2">
               <Label>Description</Label>

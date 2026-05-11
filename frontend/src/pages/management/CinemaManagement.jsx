@@ -75,6 +75,8 @@ const DEFAULT_MOVIE_FORM = {
   release_date: '',
   imdb_rating: '',
   status: 'now_showing', // now_showing | coming_soon
+  operator_id: '',
+  operator_name: '',
 };
 
 const DEFAULT_SHOWTIME_FORM = {
@@ -425,6 +427,8 @@ export default function CinemaManagement() {
       if (movieForm.release_date) params.append('release_date', movieForm.release_date);
       if (movieForm.imdb_rating) params.append('imdb_rating', String(parseFloat(movieForm.imdb_rating)));
       if (movieForm.status) params.append('status', movieForm.status);
+      if (movieForm.operator_id) params.append('operator_id', movieForm.operator_id);
+      if (movieForm.operator_name) params.append('operator_name', movieForm.operator_name);
 
       if (editingMovie) {
         const filmId = editingMovie.id || editingMovie._id;
@@ -507,7 +511,10 @@ export default function CinemaManagement() {
       params.append('end_time', showtimeForm.end_time);
       params.append('price', String(parseFloat(showtimeForm.price)));
       params.append('screen_type', showtimeForm.screen_type || '2d');
-      if (showtimeForm.vip_price) params.append('vip_price', String(parseFloat(showtimeForm.vip_price)));
+      // VIP pricing is now derived automatically from the standard price (1.5×)
+      // so VIP-row seats in the configured seat layout work out-of-the-box.
+      const stdPrice = parseFloat(showtimeForm.price) || 0;
+      if (stdPrice > 0) params.append('vip_price', String(Math.round(stdPrice * 1.5)));
       params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
 
       if (editingShowtime) {
@@ -1357,29 +1364,12 @@ export default function CinemaManagement() {
             </div>
 
             <div>
-              <Label>Operator</Label>
-              <Select 
-                value={cinemaForm.operator_id || ''} 
-                onValueChange={v => {
-                  const op = operators.find(o => (o._id || o.id) === v);
-                  setCinemaForm(p => ({ 
-                    ...p, 
-                    operator_id: v,
-                    operator_name: op?.name || ''
-                  }));
-                }}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Select an operator..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-60">
-                  {operators.map(op => (
-                    <SelectItem key={op._id || op.id} value={op._id || op.id}>
-                      {op.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OperatorSelector
+                value={cinemaForm.operator_id || ''}
+                onChange={(id, name) => setCinemaForm(p => ({ ...p, operator_id: id, operator_name: name }))}
+                operators={operators}
+                testId="cinema-operator-selector"
+              />
             </div>
             <div>
               <Label>Amenities</Label>
@@ -1444,6 +1434,13 @@ export default function CinemaManagement() {
         accent="red"
         leftColumn={
           <div className="space-y-4">
+            <OperatorSelector
+              value={movieForm.operator_id || ''}
+              onChange={(id, name) => setMovieForm(p => ({ ...p, operator_id: id, operator_name: name }))}
+              operators={operators}
+              testId="film-operator-selector"
+              helperText="Films are owned by an operator (admin can pick any; operators auto-assigned)."
+            />
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2">
                 <Label>Title *</Label>
@@ -1642,59 +1639,84 @@ export default function CinemaManagement() {
             {/* Section: WHERE */}
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5"><Monitor className="h-3 w-3" /> 2 · Which screen</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label className="text-xs">Screen *</Label>
-                  {(() => {
-                    const cin = cinemas.find((c) => c.id === showtimeForm.cinema_id);
-                    const availableScreens = cin?.screens || [];
-                    if (availableScreens.length > 0) {
-                      return (
-                        <Select
-                          value={showtimeForm.screen_name}
-                          onValueChange={(v) => {
-                            const s = availableScreens.find((x) => x.name === v);
-                            setShowtimeForm(p => ({
-                              ...p,
-                              screen_name: v,
-                              screen_type: s?.type || p.screen_type,
-                              total_seats: s?.capacity || p.total_seats,
-                            }));
-                          }}
-                        >
-                          <SelectTrigger className="bg-white"><SelectValue placeholder="Pick a screen..." /></SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {availableScreens.map((s, i) => (
-                              <SelectItem key={i} value={s.name}>{s.name} ({s.type || '2d'}, {s.capacity || 0} seats)</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      );
-                    }
-                    return (
-                      <Input
-                        placeholder="e.g. Screen 1"
+              {(() => {
+                const cin = cinemas.find((c) => c.id === showtimeForm.cinema_id);
+                const availableScreens = cin?.screens || [];
+                const selectedScreen = availableScreens.find((s) => s.name === showtimeForm.screen_name);
+                if (!showtimeForm.cinema_id) {
+                  return <p className="text-xs text-slate-500 italic">Pick a cinema first to see available screens.</p>;
+                }
+                if (availableScreens.length === 0) {
+                  return (
+                    <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
+                      This cinema has no screens configured yet. Open the cinema in the Cinemas tab → Edit → Screens & seat layout to add one.
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Screen *</Label>
+                      <Select
                         value={showtimeForm.screen_name}
-                        onChange={(e) => setShowtimeForm(p => ({ ...p, screen_name: e.target.value }))}
-                        className="bg-white"
-                      />
-                    );
-                  })()}
-                </div>
-                <div>
-                  <Label className="text-xs">Format</Label>
-                  <Select value={showtimeForm.screen_type} onValueChange={(v) => setShowtimeForm(p => ({ ...p, screen_type: v }))}>
-                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {SCREEN_TYPES.map((t) => <SelectItem key={t} value={t} className="uppercase">{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Seats *</Label>
-                  <Input className="bg-white" type="number" value={showtimeForm.total_seats} onChange={(e) => setShowtimeForm(p => ({ ...p, total_seats: parseInt(e.target.value) || 0 }))} />
-                </div>
-              </div>
+                        onValueChange={(v) => {
+                          const s = availableScreens.find((x) => x.name === v);
+                          const layout = s?.seat_layout;
+                          const computedSeats = layout
+                            ? (layout.rows || 0) * (layout.cols || 0) - ((layout.blocked || []).length)
+                            : (s?.capacity || 0);
+                          setShowtimeForm(p => ({
+                            ...p,
+                            screen_name: v,
+                            screen_type: s?.type || '2d',
+                            total_seats: computedSeats,
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="bg-white" data-testid="showtime-screen-select"><SelectValue placeholder="Pick a screen..." /></SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {availableScreens.map((s, i) => {
+                            const layout = s.seat_layout;
+                            const seatsCount = layout
+                              ? (layout.rows || 0) * (layout.cols || 0) - ((layout.blocked || []).length)
+                              : (s.capacity || 0);
+                            return (
+                              <SelectItem key={i} value={s.name}>
+                                <span className="flex items-center gap-2">
+                                  <span className="font-medium">{s.name}</span>
+                                  <span className="uppercase text-[10px] tracking-wider px-1.5 py-0.5 bg-cyan-100 text-cyan-700 rounded">{s.type || '2d'}</span>
+                                  <span className="text-slate-500 text-xs">· {seatsCount} seats</span>
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Read-only screen summary — auto-derived from the selected screen */}
+                    {selectedScreen && (
+                      <div className="grid grid-cols-3 gap-3 text-xs bg-white rounded-md border border-slate-200 p-3">
+                        <div>
+                          <p className="text-slate-500 mb-0.5">Format</p>
+                          <p className="font-semibold text-slate-700 uppercase">{selectedScreen.type || '2d'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 mb-0.5">Capacity</p>
+                          <p className="font-semibold text-slate-700 tabular-nums">{showtimeForm.total_seats} seats</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-500 mb-0.5">Layout</p>
+                          <p className="font-semibold text-slate-700 tabular-nums">
+                            {selectedScreen.seat_layout
+                              ? `${selectedScreen.seat_layout.rows}r × ${selectedScreen.seat_layout.cols}c`
+                              : '—'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Section: WHEN */}
@@ -1716,18 +1738,13 @@ export default function CinemaManagement() {
               </div>
             </div>
 
-            {/* Section: PRICE */}
+            {/* Section: PRICE — VIP pricing intentionally removed (per Cinema rebuild — VIP seats are flagged on the seat layout itself, and operators set VIP markup at the seat layout level if needed) */}
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5"><Banknote className="h-3 w-3" /> 4 · Pricing</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Standard price (FCFA) *</Label>
-                  <Input className="bg-white" type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
-                </div>
-                <div>
-                  <Label className="text-xs">VIP price (optional)</Label>
-                  <Input className="bg-white" type="number" value={showtimeForm.vip_price} onChange={(e) => setShowtimeForm(p => ({ ...p, vip_price: e.target.value }))} placeholder="5000" />
-                </div>
+              <div>
+                <Label className="text-xs">Standard ticket price (FCFA) *</Label>
+                <Input className="bg-white" type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
+                <p className="text-[11px] text-emerald-700/80 mt-1.5">VIP seats (if marked in the screen's seat layout) are priced 1.5× this standard ticket price automatically.</p>
               </div>
             </div>
           </div>

@@ -9,8 +9,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Upload, RefreshCw, X, Info, Check } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 
-const CITIES = ['Douala', 'Yaoundé', 'Bafoussam', 'Kribi', 'Limbe', 'Buea', 'Bamenda'];
 const HOTEL_AMENITIES = ['wifi', 'pool', 'gym', 'spa', 'restaurant', 'bar', 'parking', 'room_service', 'concierge', 'business_center', 'laundry', 'airport_shuttle'];
 
 // Image Uploader Component
@@ -123,14 +123,13 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
         
         <div>
           <Label>City *</Label>
-          <Select value={form.city || ''} onValueChange={v => updateForm({ city: v })}>
-            <SelectTrigger className="bg-white mt-1.5">
-              <SelectValue placeholder="Select city" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Input
+            value={form.city || ''}
+            onChange={(e) => updateForm({ city: e.target.value })}
+            placeholder="e.g. Douala, Yaoundé, Kribi…"
+            className="mt-1.5"
+            data-testid="hotel-city-input"
+          />
         </div>
         
         <div>
@@ -146,25 +145,12 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
         </div>
       </div>
       
-      <div>
-        <Label>Operator</Label>
-        <Select 
-          value={form.operator_id || ''} 
-          onValueChange={v => {
-            const op = operators.find(o => (o._id || o.id) === v);
-            updateForm({ operator_id: v, operator_name: op?.name || '' });
-          }}
-        >
-          <SelectTrigger className="bg-white mt-1.5">
-            <SelectValue placeholder="Select operator" />
-          </SelectTrigger>
-          <SelectContent className="bg-white max-h-60">
-            {operators.map(op => (
-              <SelectItem key={op._id || op.id} value={op._id || op.id}>{op.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <OperatorSelector
+        value={form.operator_id || ''}
+        onChange={(id, name) => updateForm({ operator_id: id, operator_name: name })}
+        operators={operators}
+        testId="hotel-operator-selector"
+      />
       
       <div>
         <Label>Address *</Label>

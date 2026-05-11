@@ -178,11 +178,20 @@ async def create_film(
     release_date: Optional[str] = None,
     status: Optional[str] = None,
     imdb_rating: Optional[float] = None,
+    operator_id: Optional[str] = None,
+    operator_name: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.create"]))
 ):
     """Create a new film - requires cinema.manage_screenings permission"""
     db = get_database()
     
+    # Operators can only assign films to themselves; admins can pick any operator
+    effective_operator_id = operator_id
+    effective_operator_name = operator_name
+    if current_user.get("role") not in ("admin", "super_admin"):
+        effective_operator_id = current_user.get("operator_id")
+        effective_operator_name = current_user.get("operator_name") or operator_name
+
     film = {
         "_id": str(uuid.uuid4()),
         "title": title,
@@ -199,6 +208,8 @@ async def create_film(
         "release_date": release_date,
         "imdb_rating": imdb_rating,
         "status": status or FilmStatus.NOW_SHOWING,
+        "operator_id": effective_operator_id,
+        "operator_name": effective_operator_name,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }

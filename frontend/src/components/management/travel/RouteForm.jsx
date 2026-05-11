@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Building2 } from 'lucide-react';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 
 /**
  * RouteForm - Form component for creating/editing routes
@@ -23,38 +23,18 @@ export function RouteForm({
   return (
     <div className="grid grid-cols-2 gap-4 py-4">
       {/* Operator Selection - Always show if operators available */}
-      {operators.length > 0 && (
-        <div className="col-span-2">
-          <Label className="flex items-center gap-2 mb-1.5">
-            <Building2 className="w-4 h-4 text-indigo-600" />
-            Assigned Operator
-          </Label>
-          <Select 
-            value={selectedOperator?.id || form.operator_id || ''} 
-            onValueChange={(id) => {
-              const op = operators.find(o => (o.id || o._id) === id);
-              onOperatorChange({ id, name: op?.name || '' });
-              updateForm({ operator_id: id, operator_name: op?.name || '' });
-            }}
-          >
-            <SelectTrigger className="bg-white border-indigo-200 focus:ring-indigo-500">
-              <SelectValue placeholder="Select operator" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {operators.map(op => (
-                <SelectItem key={op.id || op._id} value={op.id || op._id}>
-                  {op.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {(selectedOperator?.name || form.operator_name) && (
-            <p className="text-xs text-indigo-600 mt-1">
-              Currently assigned to: <span className="font-semibold">{selectedOperator?.name || form.operator_name}</span>
-            </p>
-          )}
-        </div>
-      )}
+      <div className="col-span-2">
+        <OperatorSelector
+          value={selectedOperator?.id || form.operator_id || ''}
+          onChange={(id, name) => {
+            onOperatorChange?.({ id, name });
+            updateForm({ operator_id: id, operator_name: name });
+          }}
+          operators={operators}
+          label="Assigned Operator"
+          testId="route-operator-selector"
+        />
+      </div>
       
       <div>
         <Label>From City *</Label>
