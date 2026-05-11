@@ -149,6 +149,33 @@ export default function SalesManagement() {
     })();
   }, [isAdminLike]);
 
+  // Helper: compute previous-period date window for delta comparison
+  const getPeriodWindow = (range) => {
+    const now = new Date();
+    let start = null;
+    let end = now;
+    switch (range) {
+      case 'today': start = new Date(now); start.setHours(0, 0, 0, 0); break;
+      case '7d':  start = new Date(now.getTime() - 7  * 86400000); break;
+      case '30d': start = new Date(now.getTime() - 30 * 86400000); break;
+      case '90d': start = new Date(now.getTime() - 90 * 86400000); break;
+      case 'this_month': start = new Date(now.getFullYear(), now.getMonth(), 1); break;
+      case 'last_month': {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end   = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      }
+      case 'this_year': start = new Date(now.getFullYear(), 0, 1); break;
+      case 'last_year': {
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end   = new Date(now.getFullYear(), 0, 1);
+        break;
+      }
+      default: start = new Date(0);
+    }
+    return { start, end };
+  };
+
   const fetchSalesData = async () => {
     setLoading(true);
     try {
@@ -164,11 +191,39 @@ export default function SalesManagement() {
       const orders = filterOrdersByRange(rawOrders, timeRange);
       setAllOrders(orders);
       const paymentData = paymentMethodsRes.data || {};
-      
+
+      // Compute previous-period orders for change-rate deltas
+      const { start, end } = getPeriodWindow(timeRange);
+      const periodMs = Math.max(1, end.getTime() - start.getTime());
+      const prevStart = new Date(start.getTime() - periodMs);
+      const prevEnd = start;
+      const prevOrders = rawOrders.filter((o) => {
+        const d = new Date(o.created_at || o.booking_date || o.service_date || o.updated_at);
+        return !isNaN(d) && d >= prevStart && d < prevEnd;
+      });
+
       // Calculate totals from real data
       const totalSales = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
       const totalOrders = orders.length;
       const avgOrderValue = totalOrders > 0 ? Math.floor(totalSales / totalOrders) : 0;
+
+      // Previous period totals
+      const prevTotalSales = prevOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      const prevTotalOrders = prevOrders.length;
+      const prevAvgOrderValue = prevTotalOrders > 0 ? Math.floor(prevTotalSales / prevTotalOrders) : 0;
+
+      // % change helper — returns rounded value with sign preserved
+      const pctChange = (curr, prev) => {
+        if (!prev) return curr > 0 ? 100 : 0;
+        return Math.round(((curr - prev) / prev) * 1000) / 10; // 1 decimal
+      };
+
+      // Conversion rate = completed (or paid) orders / total orders × 100
+      const isCompleted = (o) => ['completed', 'confirmed', 'delivered', 'fulfilled'].includes((o.status || '').toLowerCase()) || (o.payment_status || '').toLowerCase() === 'paid';
+      const completedOrders = orders.filter(isCompleted).length;
+      const prevCompletedOrders = prevOrders.filter(isCompleted).length;
+      const conversionRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 1000) / 10 : 0;
+      const prevConversionRate = prevTotalOrders > 0 ? Math.round((prevCompletedOrders / prevTotalOrders) * 1000) / 10 : 0;
       
       // Calculate by service type
       const byService = {};
@@ -180,26 +235,34 @@ export default function SalesManagement() {
         byService[serviceType].sales += order.total_amount || 0;
         byService[serviceType].orders += 1;
       });
-      
+
+      // Same by service for the previous period (for accurate per-service deltas)
+      const prevByService = {};
+      prevOrders.forEach(order => {
+        const serviceType = order.service_type || order.service_category || 'other';
+        if (!prevByService[serviceType]) prevByService[serviceType] = { sales: 0 };
+        prevByService[serviceType].sales += order.total_amount || 0;
+      });
+
       const salesByService = Object.entries(byService).map(([service, data]) => ({
         service,
         name: service.charAt(0).toUpperCase() + service.slice(1).replace('_', ' '),
         sales: data.sales,
         orders: data.orders,
         percentage: totalSales > 0 ? Math.round((data.sales / totalSales) * 100) : 0,
-        change: Math.floor(Math.random() * 30) - 5 // Mock change for now
+        change: pctChange(data.sales, prevByService[service]?.sales || 0),
       })).sort((a, b) => b.sales - a.sales);
 
       setSalesData({
         summary: {
           totalSales,
-          salesChange: 15.3,
+          salesChange: pctChange(totalSales, prevTotalSales),
           totalOrders,
-          ordersChange: 8.7,
+          ordersChange: pctChange(totalOrders, prevTotalOrders),
           avgOrderValue,
-          avgValueChange: 6.1,
-          conversionRate: 4.2,
-          conversionChange: 0.8
+          avgValueChange: pctChange(avgOrderValue, prevAvgOrderValue),
+          conversionRate,
+          conversionChange: Math.round((conversionRate - prevConversionRate) * 10) / 10,
         },
         salesByService,
         paymentMethods: paymentData.payment_methods || [],
@@ -207,32 +270,11 @@ export default function SalesManagement() {
       });
     } catch (error) {
       console.error('Failed to fetch sales data:', error);
-      // Fallback to mock data
+      // Empty state — show zeros instead of mock so users don't think the platform has stale fake data
       setSalesData({
-        summary: {
-          totalSales: 48500000,
-          salesChange: 15.3,
-          totalOrders: 1250,
-          ordersChange: 8.7,
-          avgOrderValue: 38800,
-          avgValueChange: 6.1,
-          conversionRate: 4.2,
-          conversionChange: 0.8
-        },
-        salesByService: [
-          { service: 'hotels', name: 'Hotels', sales: 18500000, orders: 420, percentage: 38, change: 12.5 },
-          { service: 'travel', name: 'Travel', sales: 12800000, orders: 520, percentage: 26, change: 18.2 },
-          { service: 'car_rental', name: 'Car Rental', sales: 8200000, orders: 145, percentage: 17, change: 8.4 },
-          { service: 'restaurants', name: 'Restaurants', sales: 5500000, orders: 125, percentage: 11, change: -2.1 },
-          { service: 'events', name: 'Events', sales: 2500000, orders: 28, percentage: 5, change: 25.0 },
-          { service: 'packages', name: 'Packages', sales: 1000000, orders: 12, percentage: 3, change: 45.0 }
-        ],
-        paymentMethods: [
-          { method: 'MTN Mobile Money', amount: 22310000, percentage: 46, color: 'bg-yellow-500' },
-          { method: 'Orange Money', amount: 14550000, percentage: 30, color: 'bg-orange-500' },
-          { method: 'Card Payment', amount: 8730000, percentage: 18, color: 'bg-blue-500' },
-          { method: 'Bank Transfer', amount: 2910000, percentage: 6, color: 'bg-gray-500' }
-        ],
+        summary: { totalSales: 0, salesChange: 0, totalOrders: 0, ordersChange: 0, avgOrderValue: 0, avgValueChange: 0, conversionRate: 0, conversionChange: 0 },
+        salesByService: [],
+        paymentMethods: [],
         orders: []
       });
     } finally {
@@ -377,16 +419,34 @@ export default function SalesManagement() {
         { method: 'Bank Transfer', amount: Math.floor(salesSummary.totalSales * 0.06), percentage: 6, color: 'bg-gray-500' }
       ];
 
-  // Daily sales trend data
-  const dailySales = [
-    { date: 'Dec 16', sales: Math.floor(salesSummary.totalSales * 0.12), orders: Math.floor(salesSummary.totalOrders * 0.12) },
-    { date: 'Dec 17', sales: Math.floor(salesSummary.totalSales * 0.14), orders: Math.floor(salesSummary.totalOrders * 0.14) },
-    { date: 'Dec 18', sales: Math.floor(salesSummary.totalSales * 0.11), orders: Math.floor(salesSummary.totalOrders * 0.11) },
-    { date: 'Dec 19', sales: Math.floor(salesSummary.totalSales * 0.15), orders: Math.floor(salesSummary.totalOrders * 0.15) },
-    { date: 'Dec 20', sales: Math.floor(salesSummary.totalSales * 0.18), orders: Math.floor(salesSummary.totalOrders * 0.18) },
-    { date: 'Dec 21', sales: Math.floor(salesSummary.totalSales * 0.16), orders: Math.floor(salesSummary.totalOrders * 0.16) },
-    { date: 'Dec 22', sales: Math.floor(salesSummary.totalSales * 0.14), orders: Math.floor(salesSummary.totalOrders * 0.14) }
-  ];
+  // ---------------------------------------------------------------
+  // Daily Sales Trend — dynamic last-N-days driven by `dailyTrendRange`.
+  // Default: last 14 days, ending today. Filterable in the UI.
+  // ---------------------------------------------------------------
+  const [dailyTrendRange, setDailyTrendRange] = useState(14);
+  const dailySales = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const buckets = new Map();
+    for (let i = dailyTrendRange - 1; i >= 0; i -= 1) {
+      const d = new Date(today.getTime() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      buckets.set(key, { date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), iso: key, sales: 0, orders: 0 });
+    }
+    for (const o of allOrders) {
+      const ts = new Date(o.created_at || o.booking_date || o.service_date || o.updated_at);
+      if (isNaN(ts)) continue;
+      const key = ts.toISOString().slice(0, 10);
+      const bucket = buckets.get(key);
+      if (bucket) {
+        bucket.sales += o.total_amount || 0;
+        bucket.orders += 1;
+      }
+    }
+    return Array.from(buckets.values());
+  }, [allOrders, dailyTrendRange]);
+
+  const dailySalesMax = useMemo(() => dailySales.reduce((m, d) => Math.max(m, d.sales), 0) || 1, [dailySales]);
 
   // Top selling products
   const topProducts = salesByService.slice(0, 5).map((item, idx) => ({
@@ -516,28 +576,46 @@ export default function SalesManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Sales Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Sales Trend</CardTitle>
+        <Card data-testid="daily-sales-trend-card">
+          <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle>Daily Sales Trend</CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                {dailySales.length > 0 && `${dailySales[0].date} → ${dailySales[dailySales.length - 1].date} · live data`}
+              </p>
+            </div>
+            <Select value={String(dailyTrendRange)} onValueChange={(v) => setDailyTrendRange(parseInt(v, 10))}>
+              <SelectTrigger className="w-32 h-8 text-xs" data-testid="daily-sales-range-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="14">Last 14 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+              </SelectContent>
+            </Select>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2 max-h-[440px] overflow-y-auto pr-1">
               {dailySales.map((day, idx) => (
-                <div key={idx} className="flex items-center gap-4">
-                  <div className="w-16 text-sm text-gray-500">{day.date}</div>
+                <div key={idx} className="flex items-center gap-3" data-testid={`daily-sales-row-${day.iso}`}>
+                  <div className="w-16 text-xs text-gray-500 tabular-nums shrink-0">{day.date}</div>
                   <div className="flex-1">
                     <div className="h-6 bg-gray-100 rounded overflow-hidden">
-                      <div 
-                        className="h-full bg-gradient-to-r from-[#082c59] to-blue-400 rounded flex items-center justify-end pr-2"
-                        style={{ width: `${(day.sales / 2500000) * 100}%` }}
+                      <div
+                        className="h-full bg-gradient-to-r from-[#082c59] to-blue-400 rounded flex items-center justify-end pr-2 transition-all"
+                        style={{ width: `${day.sales > 0 ? Math.max(6, (day.sales / dailySalesMax) * 100) : 0}%` }}
                       >
-                        <span className="text-xs text-white font-medium">{formatFCFA(day.sales)}</span>
+                        {day.sales > 0 && <span className="text-[11px] text-white font-medium tabular-nums">{formatFCFA(day.sales)}</span>}
                       </div>
                     </div>
                   </div>
-                  <div className="w-16 text-right text-sm">{day.orders} orders</div>
+                  <div className="w-16 text-right text-xs text-slate-600 tabular-nums shrink-0">{day.orders} orders</div>
                 </div>
               ))}
+              {dailySales.every((d) => d.orders === 0) && (
+                <p className="text-center text-sm text-slate-500 italic py-6">No orders in the selected window.</p>
+              )}
             </div>
           </CardContent>
         </Card>

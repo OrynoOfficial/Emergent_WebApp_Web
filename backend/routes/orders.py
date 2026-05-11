@@ -480,24 +480,25 @@ async def create_direct_order(
 async def get_user_orders(
     current_user: dict = Depends(get_current_active_user),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    operator_id: Optional[str] = None,
 ):
-    """Get orders - Admin sees all, others see their own"""
+    """Get orders - Admin sees all (optionally filtered by operator_id), operators see their own."""
     db = get_database()
     
     user_role = current_user.get("role", "customer")
     user_id = current_user.get("id") or current_user.get("_id")
     
-    # Admin and super_admin can see all orders
+    # Admin and super_admin can see all orders, optionally filtered by operator_id
     if user_role in ["admin", "super_admin"]:
-        query = {}
+        query = {"operator_id": operator_id} if operator_id else {}
     # Operators see orders for their services
     elif user_role == "operator" or current_user.get("operator_id"):
-        operator_id = current_user.get("operator_id")
-        if operator_id:
+        op_id = current_user.get("operator_id")
+        if op_id:
             query = {"$or": [
                 {"user_id": user_id},
-                {"operator_id": operator_id}
+                {"operator_id": op_id}
             ]}
         else:
             query = {"user_id": user_id}

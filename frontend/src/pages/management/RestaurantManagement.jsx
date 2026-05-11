@@ -283,7 +283,7 @@ export default function RestaurantManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/restaurants/${params}`);
+      const res = await api.get(`/restaurants/management/my-restaurants${params}`);
       setRestaurants(res.data.restaurants || res.data || []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);

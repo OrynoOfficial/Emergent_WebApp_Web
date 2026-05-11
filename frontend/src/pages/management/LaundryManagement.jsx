@@ -155,8 +155,9 @@ export default function LaundryManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/pressing/${params}`);
-      setPressings(res.data.pressings || res.data || []);
+      const res = await api.get(`/pressing/management/my-shops${params}`);
+      // Backend returns `shops` from my-shops; older callers used `pressings`.
+      setPressings(res.data.shops || res.data.pressings || res.data || []);
       
       // Load operators
       try {

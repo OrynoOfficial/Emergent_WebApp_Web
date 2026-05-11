@@ -204,14 +204,58 @@ async def get_data_analytics_overview(
         for k, v in service_performance.items()
     ], key=lambda x: x["revenue"], reverse=True)[:10]
     
-    # Returning users calculation
+    # Returning users calculation — RESPECT operator filter so an operator
+    # only sees repeat customers within their own orders.
+    returning_match = {"created_at": {"$gte": start_date}}
+    if effective_operator_id:
+        returning_match["operator_id"] = effective_operator_id
+    elif operator_id and current_user.get("role") in ("admin", "super_admin"):
+        returning_match["operator_id"] = operator_id
     repeat_users = await db.orders.aggregate([
-        {"$match": {"created_at": {"$gte": start_date}}},
+        {"$match": returning_match},
         {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
         {"$match": {"count": {"$gt": 1}}}
     ]).to_list(10000)
     returning_rate = (len(repeat_users) / active_users * 100) if active_users > 0 else 0
-    
+
+    # ---------------------------------------------------------------
+    # Daily trend — last 14 days of real per-day aggregates.
+    # Used by the "Daily Orders Summary" table and the daily sales chart.
+    # ---------------------------------------------------------------
+    daily_window_days = 14
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    daily_start = today_start - timedelta(days=daily_window_days - 1)
+    daily_query = {"created_at": {"$gte": daily_start}}
+    if effective_operator_id:
+        daily_query["operator_id"] = effective_operator_id
+    elif operator_id and current_user.get("role") in ("admin", "super_admin"):
+        daily_query["operator_id"] = operator_id
+
+    daily_orders = await db.orders.find(daily_query, {
+        "_id": 0, "created_at": 1, "total_amount": 1, "status": 1,
+    }).to_list(20000)
+    buckets: dict = {}
+    for d in range(daily_window_days):
+        day = (daily_start + timedelta(days=d)).date()
+        buckets[day.isoformat()] = {"orders": 0, "revenue": 0.0}
+    for o in daily_orders:
+        ts = o.get("created_at")
+        if not ts:
+            continue
+        key = ts.date().isoformat() if hasattr(ts, "date") else None
+        if key and key in buckets:
+            buckets[key]["orders"] += 1
+            buckets[key]["revenue"] += float(o.get("total_amount") or 0)
+    daily_trend = [
+        {
+            "date": day_iso,
+            "label": datetime.fromisoformat(day_iso).strftime("%b %d"),
+            "orders": v["orders"],
+            "revenue": v["revenue"],
+        }
+        for day_iso, v in sorted(buckets.items())
+    ]
+
     return {
         "summary": {
             "totalUsers": total_users,
@@ -223,6 +267,7 @@ async def get_data_analytics_overview(
         },
         "revenueByService": revenue_by_service_list,
         "monthlyTrend": monthly_trend,
+        "dailyTrend": daily_trend,
         "topServices": top_services,
         "userMetrics": {
             "newUsers": new_users,

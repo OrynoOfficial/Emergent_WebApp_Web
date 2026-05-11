@@ -322,6 +322,7 @@ async def get_my_venues(
     search: Optional[str] = None,
     city: Optional[str] = None,
     venue_type: Optional[str] = None,
+    operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
     current_user: dict = Depends(get_current_active_user)
@@ -337,6 +338,8 @@ async def get_my_venues(
     
     # Build base query with operator filter
     query = get_operator_filter(current_user)
+    if operator_id and current_user.get("role") in ("super_admin", "admin"):
+        query["operator_id"] = operator_id
     
     # Add optional filters
     if search:

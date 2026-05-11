@@ -162,15 +162,26 @@ export default function Analytics() {
             value: s.value,
             color: SERVICE_COLORS[s.name?.toLowerCase()] || '#64748b'
           })) || [],
-          recent_trends: extendedRes.data.monthlyTrend?.map(t => ({
-            date: t.month,
-            revenue: t.revenue,
-            orders: t.bookings
-          })) || []
+          // Use the real day-level series for the "Daily Orders Summary" table.
+          // Falls back to the monthly trend (legacy) only if the backend hasn't
+          // been redeployed yet.
+          recent_trends: (extendedRes.data.dailyTrend?.length
+            ? extendedRes.data.dailyTrend.map(t => ({
+                date: t.label || t.date,
+                revenue: t.revenue || 0,
+                orders: t.orders || 0,
+              }))
+            : (extendedRes.data.monthlyTrend?.map(t => ({
+                date: t.month,
+                revenue: t.revenue,
+                orders: t.bookings
+              })) || [])
+          )
         });
         setDataAnalytics(extendedRes.data);
-      } else if (isOperator) {
-        // For operators with no data, show empty state
+      } else {
+        // No data — show empty state for every role. Avoid showing fake
+        // numbers on a real dashboard (was previously mocked for admins).
         setData({
           total_revenue: 0,
           total_orders: 0,
@@ -183,71 +194,22 @@ export default function Analytics() {
           recent_trends: []
         });
         setDataAnalytics(EMPTY_OPERATOR_DATA);
-      } else {
-        // For admins with no data, use mock
-        setData({
-          total_revenue: 125400,
-          total_orders: 1847,
-          total_customers: 892,
-          average_order_value: 68,
-          revenue_growth: 12.5,
-          orders_growth: 8.3,
-          customers_growth: 15.2,
-          category_breakdown: [
-            { name: 'Hotels', value: 45, color: '#EC4899' },
-            { name: 'Restaurants', value: 25, color: '#F59E0B' },
-            { name: 'Travel', value: 15, color: '#3B82F6' },
-            { name: 'Car Rental', value: 10, color: '#10B981' },
-            { name: 'Events', value: 5, color: '#8B5CF6' }
-          ],
-          recent_trends: []
-        });
-        setDataAnalytics(MOCK_DATA_ANALYTICS);
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
-      // For operators, show empty data. For admins, show mock data.
-      if (isOperator) {
-        setData({
-          total_revenue: 0,
-          total_orders: 0,
-          total_customers: 0,
-          average_order_value: 0,
-          revenue_growth: 0,
-          orders_growth: 0,
-          customers_growth: 0,
-          category_breakdown: [],
-          recent_trends: []
-        });
-        setDataAnalytics(EMPTY_OPERATOR_DATA);
-      } else {
-        setData({
-          total_revenue: 125400,
-          total_orders: 1847,
-          total_customers: 892,
-          average_order_value: 68,
-          revenue_growth: 12.5,
-          orders_growth: 8.3,
-          customers_growth: 15.2,
-          category_breakdown: [
-            { name: 'Hotels', value: 45, color: '#EC4899' },
-            { name: 'Restaurants', value: 25, color: '#F59E0B' },
-            { name: 'Travel', value: 15, color: '#3B82F6' },
-            { name: 'Car Rental', value: 10, color: '#10B981' },
-            { name: 'Events', value: 5, color: '#8B5CF6' }
-          ],
-          recent_trends: [
-            { date: 'Mon', revenue: 15000, orders: 45 },
-            { date: 'Tue', revenue: 18000, orders: 52 },
-            { date: 'Wed', revenue: 22000, orders: 65 },
-            { date: 'Thu', revenue: 19000, orders: 55 },
-            { date: 'Fri', revenue: 25000, orders: 72 },
-            { date: 'Sat', revenue: 30000, orders: 88 },
-            { date: 'Sun', revenue: 28000, orders: 81 }
-          ]
-        });
-        setDataAnalytics(MOCK_DATA_ANALYTICS);
-      }
+      // Always show empty data on error — never fake numbers.
+      setData({
+        total_revenue: 0,
+        total_orders: 0,
+        total_customers: 0,
+        average_order_value: 0,
+        revenue_growth: 0,
+        orders_growth: 0,
+        customers_growth: 0,
+        category_breakdown: [],
+        recent_trends: []
+      });
+      setDataAnalytics(EMPTY_OPERATOR_DATA);
     } finally {
       setLoading(false);
     }
@@ -551,9 +513,18 @@ export default function Analytics() {
 
       {/* Daily Orders Summary */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="font-bold text-slate-900 mb-6">Daily Orders Summary</h3>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+          <div>
+            <h3 className="font-bold text-slate-900">Daily Orders Summary</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {data?.recent_trends?.length
+                ? `${data.recent_trends[0].date} → ${data.recent_trends[data.recent_trends.length - 1].date} · ${data.recent_trends.length} days · live`
+                : 'No daily data available yet'}
+            </p>
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" data-testid="daily-orders-summary-table">
             <thead>
               <tr className="border-b border-slate-200">
                 <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Day</th>
@@ -563,16 +534,18 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {data?.recent_trends?.map((day, index) => (
+              {data?.recent_trends?.length ? data.recent_trends.map((day, index) => (
                 <tr key={index} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 font-medium text-slate-900">{day.date}</td>
-                  <td className="py-3 px-4 text-right text-slate-600">{day.orders}</td>
-                  <td className="py-3 px-4 text-right text-slate-600">{formatFCFA(day.revenue)}</td>
-                  <td className="py-3 px-4 text-right text-slate-600">
-                    {formatFCFA(Math.round(day.revenue / day.orders))}
+                  <td className="py-3 px-4 text-right text-slate-600 tabular-nums">{day.orders}</td>
+                  <td className="py-3 px-4 text-right text-slate-600 tabular-nums">{formatFCFA(day.revenue)}</td>
+                  <td className="py-3 px-4 text-right text-slate-600 tabular-nums">
+                    {day.orders > 0 ? formatFCFA(Math.round(day.revenue / day.orders)) : '—'}
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr><td colSpan={4} className="py-6 text-center text-sm text-slate-500 italic">No daily order activity in the selected window.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

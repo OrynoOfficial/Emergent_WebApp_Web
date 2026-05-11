@@ -345,8 +345,9 @@ export default function CarRentalManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/car-rental/${params}`);
-      setCars(res.data.cars || res.data || []);
+      const res = await api.get(`/car-rental/management/my-vehicles${params}`);
+      // Backend returns `vehicles` from my-vehicles; older callers used `cars`.
+      setCars(res.data.vehicles || res.data.cars || res.data || []);
       
       try {
         const opRes = await api.get('/operators/');

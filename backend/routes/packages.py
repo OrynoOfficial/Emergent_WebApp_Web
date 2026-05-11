@@ -167,12 +167,19 @@ async def get_packages(
     operator_id: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    current_user: dict = Depends(get_current_active_user),
 ):
-    """List physical packages with optional filters."""
-    db = get_database()
-    query: dict = {}
+    """List physical packages with optional filters.
 
-    if operator_id:
+    Operator-scoped: regular operator users only see their operator's packages.
+    Admin / super_admin see everything (with optional `operator_id` filter).
+    """
+    from middleware.auth import get_operator_filter
+    db = get_database()
+    query: dict = get_operator_filter(current_user)
+
+    # Admin / super_admin override
+    if operator_id and current_user.get("role") in ("super_admin", "admin"):
         query["operator_id"] = operator_id
     if status:
         query["status"] = status

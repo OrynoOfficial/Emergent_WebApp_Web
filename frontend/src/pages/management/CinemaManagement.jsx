@@ -232,7 +232,7 @@ export default function CinemaManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/cinema/${params}`);
+      const res = await api.get(`/cinema/management/my-cinemas${params}`);
       setCinemas(res.data.cinemas || res.data || []);
       
       try {

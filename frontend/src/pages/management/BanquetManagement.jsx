@@ -157,8 +157,9 @@ export default function BanquetManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/banquets/${params}`);
-      setBanquets(res.data.banquets || res.data || []);
+      const res = await api.get(`/banquets/management/my-venues${params}`);
+      // Backend returns `venues` from my-venues; older callers used `banquets`.
+      setBanquets(res.data.venues || res.data.banquets || res.data || []);
       
       // Load operators
       try {

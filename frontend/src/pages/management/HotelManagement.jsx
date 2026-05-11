@@ -151,7 +151,7 @@ export default function HotelManagement() {
     setLoading(true);
     try {
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/hotels/${params}`);
+      const res = await api.get(`/hotels/management/my-hotels${params}`);
       setHotels(res.data.hotels || res.data || []);
       try { 
         const opRes = await api.get('/operators/'); 

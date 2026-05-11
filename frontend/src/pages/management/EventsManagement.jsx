@@ -115,7 +115,7 @@ export default function EventsManagement() {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
-      const res = await api.get(`/events/${params}`);
+      const res = await api.get(`/events/management/my-events${params}`);
       setEvents(res.data.events || res.data || []);
       
       // Load operators
