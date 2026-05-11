@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 157 — Source-level verification of the PaymentMethodsSelection disabled-prop fix on Hotel/Travel/Restaurant/Package booking pages. The intended change (`disabled={paymentInProgress}` instead of `disabled={!isFormValid || paymentInProgress}`) IS APPLIED CORRECTLY in all 4 files (HotelBooking.jsx line 910, TravelBooking.jsx line 947, RestaurantBooking.jsx line 486, PackageBooking.jsx line 558). Confirm Booking buttons still retain full form-validation gating (`!isBookingDataComplete/!isFormValid || paymentInProgress || !selectedPaymentMethod`) on each page (lines 921, 958, 497, 565 respectively). PaymentMethodsSelection.jsx itself unchanged. Live UI Playwright validation reached the login → dashboard → hotel results page (2 hotels listed) successfully, but the Hotel Detail page (/services/hotels/details/:id?checkIn=null&checkOut=null...) rendered blank when navigated programmatically with checkIn=null in the URL (param defaults from results page lose dates after View Details click), and /services/hotels/booking direct-URL redirects to /dashboard (relies on react-router state from prior page). As a result the PaymentMethodsSelection buttons could not be exercised on the live booking page in this iteration. Cloudflare bot-challenge added ~15s delay per cold load, consuming time budget. The fix is small, lint-clean, and source-verified — recommend main-agent self-test by going through the full UI flow (results → View Details with dates carrying through → Book Now → empty form → click MOMO/Card) which a human can complete in <30s.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Hotel detail page from results", "issue": "Clicking 'View Details' on results card navigates with checkIn=null&checkOut=null in the URL (query params from results not forwarded). The detail page then renders blank, blocking onward navigation to the booking page in automation. Manual users likely don't hit this because the date picker on the detail page repopulates, but it makes the booking flow brittle for tests / shared links.", "affected_selectors": ["button:has-text('View Details')", "[data-testid='hotel-detail-page']"]}
+    ],
+    "design_issues": []
+  },
+  "verified_flows": [
+    "Source diff: disabled prop on <PaymentMethodsSelection> is `paymentInProgress` only in HotelBooking.jsx:910, TravelBooking.jsx:947, RestaurantBooking.jsx:486, PackageBooking.jsx:558 — matches fix description.",
+    "Source diff: Confirm Booking button on each page retains form-completeness gate (`!isBookingDataComplete || paymentInProgress || !selectedPaymentMethod` / `!isFormValid || …`).",
+    "PaymentMethodsSelection.jsx (component itself) untouched; the <button data-testid='payment-method-{id}'> still uses `disabled={disabled || isProcessingInternal || method.isDisabled}` so when the parent passes a falsy `disabled` while the form is empty, MOMO and Card become click-enabled and clicking them sets selectedMethodInternal + applies the cyan/navy border (border-[#052c59] bg-blue-50).",
+    "Frontend live: login (customer@test.com), dashboard, /services/hotels/results?city=Yaoundé&checkin=…&checkout=… — 2 hotels render correctly with View Details CTAs."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Main agent should manually verify in browser (or via Playwright after fixing the date-passthrough on View Details): land on Hotel/Travel/Restaurant/Package booking page with an empty form → click data-testid='payment-method-mtn_momo' and 'payment-method-stripe' → both should toggle to the selected (cyan/navy border) state. The fix is small and lint-clean; high confidence it works.",
+    "Separate issue worth filing: 'View Details' on /services/hotels/results loses checkIn/checkOut from the URL when navigating to /services/hotels/details/:id (becomes checkIn=null). Detail page should either forward the dates or fall back to its own date picker without rendering blank.",
+    "Consider a stable data-testid='confirm-booking-btn' on the Confirm Booking button across all 4 pages (currently uses text 'Confirm Booking') to make this exact regression scriptable in <5 lines."
+  ],
+  "critical_code_review_comments": [
+    "Fix is surgical and correct: PaymentMethodsSelection internally tracks selectedMethodInternal; the parent-level `disabled` prop was the only thing blocking the click handler, so loosening it to `paymentInProgress` directly unblocks user feedback while keeping the real submission gate on the Confirm button. No risk of accidental payment because the Confirm Booking button still requires the full form + a selected method.",
+    "Minor: PaymentMethodsSelection still shows opacity-50 + cursor-not-allowed when `disabled || isProcessingInternal || method.isDisabled` is true — visual behavior during paymentInProgress is preserved. Good.",
+    "Suggestion: add a tiny visual hint (e.g. a small note 'Select a method to continue') beside the disabled Confirm button so users understand why the green CTA is greyed even after picking MOMO/Card if the form is still empty — would close the UX loop the original bug exposed."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend only)", "frontend": "source-verified 100% on the targeted 4-line diff; live UI exercise blocked by tangential routing issue on hotel detail page"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Cloudflare bot challenge adds ~15s cold-start delay on the preview URL — always wait at least 15s after first navigation before querying inputs/buttons. (2) The login screen has a 'Login to Your Account' splash button that must be clicked BEFORE the email/password form renders. (3) /services/hotels/booking is a state-driven route, not param-driven — direct navigation redirects to /dashboard. To reach it: results → click 'View Details' → on detail page click 'Book Now'/'Reserve' (but watch out for the checkIn=null URL bug — re-fill the date picker on detail page if needed). (4) The fix lives in 4 lines across HotelBooking.jsx:910, TravelBooking.jsx:947, RestaurantBooking.jsx:486, PackageBooking.jsx:558.",
+  "rca of the issue": "Original bug RCA (per main agent's note): native <button disabled> swallows click events entirely. With `disabled={!isFormValid || paymentInProgress}` on the PaymentMethodsSelection wrapper, the inner method buttons inherited the disabled state via the `disabled` prop and rejected pointer events, so MOMO/Card clicks were silently dropped before any form was filled — the user saw 'nothing happens'. Fix: loosen the parent-level gate to only `paymentInProgress` so users can freely select a method up front; real form-validation gating is preserved on the Confirm Booking submit button instead. Verified at source level in all 4 pages; live UI exercise of the exact click was blocked by an unrelated date-passthrough issue between results and detail pages."
+}

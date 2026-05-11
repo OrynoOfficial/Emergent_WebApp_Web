@@ -555,7 +555,7 @@ export default function PackageBooking() {
                       onTrigger={() => setPaymentInProgress(true)}
                       triggerPayment={triggerPayment}
                       onMethodSelected={setSelectedPaymentMethod}
-                      disabled={!isFormValid || paymentInProgress}
+                      disabled={paymentInProgress}
                     />
                   </div>
 

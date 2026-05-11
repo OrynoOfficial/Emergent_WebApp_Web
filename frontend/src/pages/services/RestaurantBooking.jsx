@@ -483,7 +483,7 @@ export default function RestaurantBooking() {
                       operator_name: restaurant?.operator_name,
                     }}
                     onPaymentInitiated={handlePaymentInitiated}
-                    disabled={!isFormValid || paymentInProgress}
+                    disabled={paymentInProgress}
                     triggerPayment={triggerPayment}
                     onTrigger={() => setPaymentInProgress(true)}
                     orderId={orderId}

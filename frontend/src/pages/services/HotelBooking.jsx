@@ -907,7 +907,7 @@ export default function HotelBooking() {
                   customerEmail={formData.email}
                   serviceDetails={serviceDetailsForPayment}
                   onPaymentInitiated={handlePaymentInitiated}
-                  disabled={!isBookingDataComplete || paymentInProgress}
+                  disabled={paymentInProgress}
                   triggerPayment={triggerPayment}
                   onTrigger={() => setPaymentInProgress(true)}
                   orderId={orderId}

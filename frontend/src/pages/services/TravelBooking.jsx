@@ -944,7 +944,7 @@ export default function TravelBooking() {
                         }
                       }}
                       onPaymentInitiated={handlePaymentInitiated}
-                      disabled={!isFormValid || paymentInProgress}
+                      disabled={paymentInProgress}
                       triggerPayment={triggerPayment}
                       onTrigger={() => setPaymentInProgress(true)}
                       orderId={orderId}
