@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
@@ -46,11 +46,21 @@ export default function OperatorSelector({
   const [open, setOpen] = useState(false);
 
   // Auto-prefill for operator users on mount / when operator changes.
+  // Use a ref to ensure we only fire onChange once per operator-id change
+  // even if the parent recreates the onChange callback on every render.
+  const prefilledForRef = useRef(null);
   useEffect(() => {
-    if (isOperatorScoped && userOperatorId && value !== userOperatorId) {
+    if (
+      isOperatorScoped &&
+      userOperatorId &&
+      value !== userOperatorId &&
+      prefilledForRef.current !== userOperatorId
+    ) {
+      prefilledForRef.current = userOperatorId;
       onChange?.(userOperatorId, userOperatorName || '');
     }
-  }, [isOperatorScoped, userOperatorId, userOperatorName, value, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOperatorScoped, userOperatorId, userOperatorName, value]);
 
   const selected = useMemo(() => {
     if (!value) return null;
