@@ -28,6 +28,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
