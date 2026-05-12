@@ -5,7 +5,7 @@ from middleware.auth import get_current_active_user
 from utils.permissions import require_permission, require_any_permission
 from models.operator import OperatorCreate, OperatorUpdate, OperatorStatus
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 router = APIRouter(prefix="/api/operators", tags=["Operators"])
@@ -130,6 +130,8 @@ async def create_operator(
     operator_id = str(uuid.uuid4())
     owner_user_id = current_user["_id"]
     owner_account_created = False
+    invite_email_status = None
+    invite_email_link = None
     
     # Create owner user account if requested
     if operator_data.create_owner_account and operator_data.owner_email:
@@ -139,8 +141,12 @@ async def create_operator(
             raise HTTPException(status_code=400, detail=f"User with email {operator_data.owner_email} already exists")
         
         from utils.auth import get_password_hash
+        import secrets
         owner_user_id = str(uuid.uuid4())
-        password = operator_data.owner_password or "Oryno@2024"
+        has_temp_password = bool(operator_data.owner_password)
+        # If admin didn't set a starting password, store a strong random one;
+        # the invitee will reset it during account confirmation.
+        password = operator_data.owner_password or secrets.token_urlsafe(24)
         
         owner_user = {
             "_id": owner_user_id,
@@ -153,17 +159,53 @@ async def create_operator(
             "operator_id": operator_id,
             "operator_name": operator_data.name,
             "operator_role": "owner",
-            "status": "active",
-            "email_verified": True,
+            "permissions": operator_data.owner_permissions or [],
+            "status": "pending_verification",
+            "email_verified": False,
             "country": operator_data.country,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
         await db.users.insert_one(owner_user)
         owner_account_created = True
+
+        # Create a verification token and try to send the invite email.
+        # The link is always available in the response — useful as a manual fallback
+        # while the Resend account is still in testing mode / a domain isn't verified.
+        invite_token = secrets.token_urlsafe(32)
+        from os import environ
+        _public_url = environ.get("APP_PUBLIC_URL", "").rstrip("/")
+        invite_email_link = f"{_public_url}/verify-account?token={invite_token}" if _public_url else None
+        await db.verification_tokens.insert_one({
+            "_id": invite_token,
+            "user_id": owner_user_id,
+            "user_email": operator_data.owner_email,
+            "purpose": "account_invite",
+            "operator_id": operator_id,
+            "operator_name": operator_data.name,
+            "has_temp_password": has_temp_password,
+            "consumed_at": None,
+            "created_at": datetime.utcnow(),
+            "expires_at": datetime.utcnow() + timedelta(days=7),
+        })
+        try:
+            from services.email_service import send_account_invite_email
+            email_result = await send_account_invite_email(
+                recipient_email=operator_data.owner_email,
+                recipient_name=operator_data.owner_full_name or operator_data.name,
+                invite_token=invite_token,
+                operator_name=operator_data.name,
+                inviter_name=current_user.get("full_name"),
+                has_temp_password=has_temp_password,
+            )
+            invite_email_status = email_result.get("status", "sent")
+        except Exception:
+            import logging
+            logging.exception("Failed to send operator owner invite email")
+            invite_email_status = "failed"
     
     # Exclude owner fields from operator dict
-    op_dict = operator_data.dict(exclude={"create_owner_account", "owner_full_name", "owner_email", "owner_phone", "owner_password"})
+    op_dict = operator_data.dict(exclude={"create_owner_account", "owner_full_name", "owner_email", "owner_phone", "owner_password", "owner_permissions"})
     
     operator = {
         "_id": operator_id,
@@ -225,7 +267,12 @@ async def create_operator(
     if owner_account_created:
         result["owner_user_id"] = owner_user_id
         result["owner_email"] = operator_data.owner_email
-        result["default_password"] = operator_data.owner_password or "Oryno@2024"
+        # Only echo the starting password back when the admin set it; if invitee
+        # will reset it, we never expose the random placeholder.
+        if operator_data.owner_password:
+            result["default_password"] = operator_data.owner_password
+        result["invite_email_status"] = invite_email_status  # "sent" | "failed"
+        result["invite_link"] = invite_email_link
     
     return result
 

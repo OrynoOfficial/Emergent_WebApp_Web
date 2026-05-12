@@ -89,6 +89,7 @@ class OperatorCreate(BaseModel):
     owner_email: Optional[str] = None
     owner_phone: Optional[str] = None
     owner_password: Optional[str] = None
+    owner_permissions: Optional[List[str]] = None  # pre-assigned scoped permissions
 
 class OperatorUpdate(BaseModel):
     name: Optional[str] = None

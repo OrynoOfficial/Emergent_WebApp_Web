@@ -1,4 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
+from pydantic import BaseModel
+from typing import Optional
 from models.user import UserCreate, UserLogin, User, Token, UserUpdate
 from utils.auth import (
     get_password_hash,
@@ -143,6 +145,11 @@ async def login(credentials: UserLogin, request: Request):
         )
     
     # Check if user is active
+    if user["status"] == "pending_verification":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please confirm your account from the invitation email before signing in."
+        )
     if user["status"] != "active":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -398,3 +405,132 @@ async def change_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to change password"
         )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Account verification (operator owner / staff invite flow)
+# ──────────────────────────────────────────────────────────────────────────────
+
+class VerifyAccountRequest(BaseModel):
+    token: str
+    password: Optional[str] = None  # required when has_temp_password=False
+
+
+@router.get("/verify-account/{token}")
+async def get_verification_token_info(token: str):
+    """Return public info about an invite token so the verify-account UI can prefill the user's name/email."""
+    db = get_database()
+    tok = await db.verification_tokens.find_one({"_id": token}, {"_id": 0})
+    if not tok:
+        raise HTTPException(status_code=404, detail="Invitation link is invalid or has been revoked")
+    if tok.get("consumed_at"):
+        raise HTTPException(status_code=410, detail="This invitation has already been used")
+    if tok.get("expires_at") and tok["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="This invitation has expired — ask your admin to send a new one")
+
+    user = await db.users.find_one({"_id": tok["user_id"]}, {"_id": 0, "password_hash": 0})
+    return {
+        "email": tok.get("user_email"),
+        "full_name": user.get("full_name") if user else None,
+        "operator_name": tok.get("operator_name"),
+        "has_temp_password": tok.get("has_temp_password", False),
+        "expires_at": tok.get("expires_at"),
+    }
+
+
+@router.post("/verify-account")
+async def verify_account(body: VerifyAccountRequest):
+    """
+    Confirm an invited account.
+    - If has_temp_password=True, the invitee just confirms (password optional, only updates if provided).
+    - If has_temp_password=False, the invitee MUST provide a new password.
+    Marks the user active+email_verified and consumes the token.
+    """
+    db = get_database()
+    tok = await db.verification_tokens.find_one({"_id": body.token})
+    if not tok:
+        raise HTTPException(status_code=404, detail="Invitation link is invalid or has been revoked")
+    if tok.get("consumed_at"):
+        raise HTTPException(status_code=410, detail="This invitation has already been used")
+    if tok.get("expires_at") and tok["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="This invitation has expired — ask your admin to send a new one")
+
+    user = await db.users.find_one({"_id": tok["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    update_fields = {
+        "status": "active",
+        "email_verified": True,
+        "updated_at": datetime.utcnow(),
+    }
+    has_temp_password = tok.get("has_temp_password", False)
+    if not has_temp_password:
+        if not body.password or len(body.password) < 8:
+            raise HTTPException(status_code=400, detail="A password of at least 8 characters is required")
+        from utils.auth import get_password_hash
+        update_fields["password_hash"] = get_password_hash(body.password)
+    elif body.password:
+        if len(body.password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        from utils.auth import get_password_hash
+        update_fields["password_hash"] = get_password_hash(body.password)
+
+    await db.users.update_one({"_id": user["_id"]}, {"$set": update_fields})
+    await db.verification_tokens.update_one(
+        {"_id": body.token},
+        {"$set": {"consumed_at": datetime.utcnow()}},
+    )
+    return {"message": "Account confirmed — you can now sign in.", "email": user["email"]}
+
+
+@router.post("/resend-invite/{user_id}")
+async def resend_invite(user_id: str, current_user: dict = Depends(get_current_active_user)):
+    """Resend the invite email for a user still pending verification. Admin/super-admin only."""
+    if current_user["role"] not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_database()
+    user = await db.users.find_one({"_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("status") != "pending_verification":
+        raise HTTPException(status_code=400, detail="User is not pending verification")
+
+    import secrets as _secrets
+    from os import environ as _env
+    invite_token = _secrets.token_urlsafe(32)
+    _public_url = _env.get("APP_PUBLIC_URL", "").rstrip("/")
+    invite_link = f"{_public_url}/verify-account?token={invite_token}" if _public_url else None
+    # Invalidate any prior outstanding tokens for this user (defence in depth)
+    await db.verification_tokens.update_many(
+        {"user_id": user_id, "consumed_at": None},
+        {"$set": {"consumed_at": datetime.utcnow(), "revoked": True}},
+    )
+    await db.verification_tokens.insert_one({
+        "_id": invite_token,
+        "user_id": user_id,
+        "user_email": user["email"],
+        "purpose": "account_invite",
+        "operator_id": user.get("operator_id"),
+        "operator_name": user.get("operator_name"),
+        "has_temp_password": True,  # treat resend as "password already known"; admin can change later
+        "consumed_at": None,
+        "created_at": datetime.utcnow(),
+        "expires_at": datetime.utcnow() + timedelta(days=7),
+    })
+    email_status = "failed"
+    try:
+        from services.email_service import send_account_invite_email
+        await send_account_invite_email(
+            recipient_email=user["email"],
+            recipient_name=user.get("full_name") or user["email"],
+            invite_token=invite_token,
+            operator_name=user.get("operator_name"),
+            inviter_name=current_user.get("full_name"),
+            has_temp_password=True,
+        )
+        email_status = "sent"
+    except Exception:
+        import logging
+        logging.exception("Failed to resend invite email")
+    return {"message": "Invitation refreshed", "invite_link": invite_link, "email_status": email_status}

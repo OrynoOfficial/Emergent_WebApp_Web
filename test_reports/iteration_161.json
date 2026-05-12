@@ -1,0 +1,37 @@
+{
+  "summary": "Iter 161 — Validated the new operator-owner email verification flow + 4-step SetupWizard. Created /app/backend/tests/test_operator_invite_flow.py (12 tests, all pass) covering: (1) POST /api/operators/ with create_owner_account=true returns owner_account_created=true, invite_link (containing /verify-account?token=...), invite_email_status='sent'|'failed', and only echoes default_password when admin set one; (2) GET /api/auth/verify-account/{token} returns {email, full_name, operator_name, has_temp_password, expires_at} (404 unknown, 410 consumed); (3) POST /api/auth/verify-account requires password>=8 chars when has_temp_password=false (400), consumes token on success, returns 410 on replay; succeeds without password when has_temp_password=true; (4) POST /api/auth/login is blocked with 403 'Please confirm your account...' while status=pending_verification and succeeds after verify; (5) POST /api/auth/resend-invite/{user_id} requires admin (403 for customer, 404 for unknown user), generates a fresh token and invalidates the prior one (old token -> 410, new -> 200); (6) Duplicate owner_email rejected with 400. Frontend: Playwright walked superadmin through the wizard end-to-end — wizard opens via data-testid='setup-wizard', all 4 left-rail indicators present (basics/owner/role/review), step 1 surfaces field-level validation errors when Next clicked empty, step 2 owner toggle defaults ON, step 3 shows all 3 role preset cards (wizard-role-owner/manager/staff) + 8 permission checkboxes (wizard-perm-*), Finish on step 4 POSTs to /api/operators and opens the Invitation result dialog (data-testid='invite-result-dialog') showing the invite link + Copy button as designed (email status correctly reported 'failed' for Resend sandbox, fallback link rendered).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "/verify-account?token=... navigated to from an already-authenticated browser session", "issue": "Page rendered blank during the in-app SPA navigation right after Finish — the public route is correctly declared in App.jsx (no ProtectedRoute wrapper) and the GET /api/auth/verify-account/{token} endpoint is verified working via pytest. Most likely a navigation-timing artifact (goto fired while invite-result-dialog was still mounted/transitioning). Recommend manual retest in a fresh tab / incognito to confirm; if reproducible, audit the App.jsx layout chain for any auth-context side effects on the public route.", "affected_selectors": ["[data-testid=\"verify-form\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Wizard modal + Invite result dialog", "issues": ["Console emits Radix warning 'DialogContent requires a DialogTitle for the component to be accessible for screen reader users' on every open — accessibility regression. Wrap the title in <VisuallyHidden> or set aria-describedby on the DialogContent for the SetupWizard and the Invitation result dialog."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_operator_invite_flow.py",
+    "/app/test_reports/pytest/iter_161_invite_flow.xml"
+  ],
+  "action_items": [
+    "Investigate (low-priority) /verify-account blank-page when reached via SPA navigation from a logged-in session; confirm in incognito. Likely cosmetic timing.",
+    "Add DialogTitle / aria-describedby to SetupWizard DialogContent and invite-result-dialog to silence the Radix a11y console error."
+  ],
+  "critical_code_review_comments": [
+    "operators.py line 178: invite_email_link is built conditionally on APP_PUBLIC_URL; if that env is ever missing the response silently returns invite_link=null while the verification_token row is already persisted — admin would have no fallback. Consider raising / logging when APP_PUBLIC_URL missing.",
+    "resend-invite (auth.py:504) marks prior outstanding tokens with consumed_at=now AND revoked=true, but GET /api/auth/verify-account treats only consumed_at to return 410 — the 'revoked' flag is informational only. That works (old token returns 410), but the duplication is slightly confusing.",
+    "VerifyAccount.jsx line 11 mixes Vite (import.meta.env.VITE_BACKEND_URL) and CRA (process.env.REACT_APP_BACKEND_URL) — fine as a fallback chain, but the project is now Vite-only; pick one to avoid drift.",
+    "OperatorCreate.email is a plain str (operators/ accepts test.local) but UserLogin uses EmailStr (rejects test.local). This asymmetry surfaced during testing — admins could create owners with emails the same user can never log in with. Consider EmailStr on owner_email and operator email."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_operator_invite_flow.py (new)"
+  ],
+  "success_rate": {"backend": "100% (12/12 pytest)", "frontend": "~95% — full happy path verified; only the post-finish in-app navigation to /verify-account showed a blank-page artifact under one specific path"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (also customer@test.com used to assert resend-invite RBAC)",
+  "seed_data_creation": "Each pytest run creates a handful of TEST_Op_<uuid> operators + owner_<uuid>@example.com users in DB; UI run also creates one TEST_Wiz_<uuid>. None are cleaned up — recommend a one-time cleanup script for ops:{name:/^TEST_/} and users:{email:/^(owner|wiz_owner|biz)_.*@example\\.com$/}.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Wizard testids — open wizard via button:has-text('Add Operator'); wizard root [data-testid='setup-wizard']; step indicators [data-testid='wizard-step-indicator-{basics|owner|role|review}']; nav [data-testid='wizard-next-btn'|'wizard-back-btn'|'wizard-finish-btn']. (2) Step 1 inputs: wizard-op-name / wizard-op-email / wizard-op-phone / wizard-op-city / wizard-op-type. (3) Step 2: wizard-toggle-owner (Switch — read aria-checked), wizard-owner-name / wizard-owner-email / wizard-owner-password. (4) Step 3 roles: wizard-role-owner/manager/staff; permissions wizard-perm-bookings.view etc (8 total). (5) Invite result dialog: [data-testid='invite-result-dialog']. (6) /verify-account form testids: verify-form / verify-email / verify-password-input / verify-confirm-input / verify-submit-btn. (7) IMPORTANT: backend login uses Pydantic EmailStr — use real-TLD addresses (@example.com) for owner_email in tests; @test.local will 422 on login despite passing operator creation. (8) Resend is sandbox-restricted → email_status='failed' for non-allowlisted recipients is EXPECTED; invite_link is the source of truth. (9) Pytest file: /app/backend/tests/test_operator_invite_flow.py — can rerun as regression suite.",
+  "rca of the issue": "No critical bugs found. Minor frontend artifact: /verify-account blank screen after in-app navigation from a freshly-finished wizard while still authenticated. The route IS public (App.jsx:147 — outside ProtectedRoute). API verified working via pytest (TestVerifyAccount.test_get_token_info_for_valid_no_pw). Root cause hypothesis: react-router transition fired while dialog overlay was unmounting; opening the same URL in a fresh tab should render the form. No action required by main agent unless reproducible."
+}

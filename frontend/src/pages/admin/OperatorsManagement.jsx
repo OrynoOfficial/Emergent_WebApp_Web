@@ -20,6 +20,7 @@ import { formatDate } from '@/utils/dateUtils';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/shared/AdminModal';
+import AddOperatorWizard from '@/components/admin/AddOperatorWizard';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
 
@@ -298,21 +299,55 @@ export default function OperatorsManagement() {
     setSelectedOperator(null);
   };
 
-  const handleCreate = async () => {
+  const [lastInviteResult, setLastInviteResult] = useState(null);
+
+  const submitOperatorCreate = async (payload) => {
     try {
-      const res = await api.post('/operators/', createForm);
+      const res = await api.post('/operators/', payload);
       await loadOperators();
+      const data = res.data || {};
       let msg = 'Operator created successfully';
-      if (res.data?.owner_account_created) {
-        msg += `. Owner account created: ${res.data.owner_email} (password: ${res.data.default_password})`;
+      if (data.owner_account_created) {
+        msg += data.invite_email_status === 'sent'
+          ? `. Invite email sent to ${data.owner_email}.`
+          : `. Email could not be delivered — copy the invite link below.`;
       }
       toast.success(msg);
+      if (data.owner_account_created && data.invite_link) {
+        setIsCreateOpen(false);
+        setLastInviteResult({
+          email: data.owner_email,
+          link: data.invite_link,
+          emailStatus: data.invite_email_status,
+          tempPassword: data.default_password || null,
+        });
+      } else {
+        setIsCreateOpen(false);
+      }
     } catch (error) {
       console.error('Failed to create operator:', error);
       toast.error(error.response?.data?.detail || 'Failed to create operator');
+      throw error;
     }
-    setIsCreateOpen(false);
+  };
+
+  const handleCreate = async () => {
+    await submitOperatorCreate(createForm);
     setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'], country: 'CM', region: '', market_segment: 'sme', create_owner_account: false, owner_full_name: '', owner_email: '', owner_phone: '', owner_password: '' });
+  };
+
+  const closeInviteResult = () => {
+    setLastInviteResult(null);
+    setIsCreateOpen(false);
+  };
+
+  const copyInviteLink = async () => {
+    try {
+      await navigator.clipboard.writeText(lastInviteResult?.link || '');
+      toast.success('Invite link copied to clipboard');
+    } catch {
+      toast.error('Could not copy — long-press to copy manually');
+    }
   };
 
   // Stats
@@ -875,119 +910,12 @@ export default function OperatorsManagement() {
         </div>
       </AdminModal>
 
-      {/* Create Operator Dialog */}
-      <AdminModal
+      {/* Create Operator Wizard (multi-step) */}
+      <AddOperatorWizard
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
-        title="Add New Operator"
-        subtitle="Register a new service provider on the platform"
-        icon={<Plus className="w-5 h-5 text-white" />}
-        accentColor="emerald"
-        size="lg"
-        footer={<>
-          <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleCreate}>Create Operator</Button>
-        </>}
-      >
-        <div className="space-y-5">
-          <AdminModal.Section title="Company Details" icon={<Building className="w-4 h-4" />}>
-            <div className="space-y-4 p-4 bg-slate-50/60 rounded-xl border border-slate-100">
-              <FormField label="Company Name" required>
-                <StyledInput value={createForm.name} onChange={e => setCreateForm(p => ({ ...p, name: e.target.value }))} placeholder="Company Name" />
-              </FormField>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Email" required>
-                  <StyledInput type="email" value={createForm.email} onChange={e => setCreateForm(p => ({ ...p, email: e.target.value }))} placeholder="contact@company.cm" />
-                </FormField>
-                <FormField label="Phone">
-                  <StyledInput value={createForm.phone} onChange={e => setCreateForm(p => ({ ...p, phone: e.target.value }))} placeholder="+237 600 000 000" />
-                </FormField>
-              </div>
-              <FormField label="City">
-                <StyledInput value={createForm.city} onChange={e => setCreateForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
-              </FormField>
-            </div>
-          </AdminModal.Section>
-            
-          <AdminModal.Section title="Geography & Segment" icon={<Globe className="w-4 h-4" />}>
-            <div className="grid grid-cols-3 gap-4 p-4 bg-blue-50/40 rounded-xl border border-blue-100">
-              <FormField label="Country">
-                <Select value={createForm.country} onValueChange={v => { setCreateForm(p => ({ ...p, country: v, region: '' })); loadRegionsForCountry(v, 'create'); }}>
-                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-country-select"><SelectValue placeholder="Select country" /></SelectTrigger>
-                  <SelectContent className="bg-white">{countries.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </FormField>
-              <FormField label="Region">
-                <Select value={createForm.region || undefined} onValueChange={v => setCreateForm(p => ({ ...p, region: v }))}>
-                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-region-select"><SelectValue placeholder="Select region" /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {regions.map(r => <SelectItem key={r.code} value={r.code}>{r.name}</SelectItem>)}
-                    {regions.length === 0 && <SelectItem value="__none__" disabled>No regions</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </FormField>
-              <FormField label="Market Segment">
-                <Select value={createForm.market_segment} onValueChange={v => setCreateForm(p => ({ ...p, market_segment: v }))}>
-                  <SelectTrigger className="bg-white border-blue-200" data-testid="create-segment-select"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {marketSegments.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                    {marketSegments.length === 0 && <><SelectItem value="sme">SME</SelectItem><SelectItem value="enterprise">Enterprise</SelectItem><SelectItem value="strategic">Strategic</SelectItem></>}
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </div>
-          </AdminModal.Section>
-
-          <AdminModal.Section title="Service Type" icon={<Star className="w-4 h-4" />}>
-            <div className="p-4 bg-emerald-50/40 rounded-xl border border-emerald-100">
-              <FormField label="Primary Service Type" required>
-                <Select value={createForm.operator_type} onValueChange={v => setCreateForm(p => ({ ...p, operator_type: v, service_types: [v] }))}>
-                  <SelectTrigger className="bg-white border-emerald-200"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white">{SERVICE_TYPES.filter(s => s !== 'all').map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}</SelectContent>
-                </Select>
-              </FormField>
-            </div>
-          </AdminModal.Section>
-
-          <AdminModal.Section title="Owner Account" icon={<UserCog className="w-4 h-4" />}>
-            <div className="p-4 bg-violet-50/40 rounded-xl border border-violet-100">
-              <label className="flex items-center gap-3 mb-4 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={createForm.create_owner_account}
-                  onChange={e => setCreateForm(p => ({ ...p, create_owner_account: e.target.checked }))}
-                  className="rounded text-violet-600 focus:ring-violet-500 h-4 w-4"
-                  data-testid="create-owner-toggle"
-                />
-                <div>
-                  <p className="text-sm font-medium text-slate-800">Create owner user account</p>
-                  <p className="text-xs text-slate-500">Create a login account for the operator owner</p>
-                </div>
-              </label>
-              {createForm.create_owner_account && (
-                <div className="space-y-4 pt-3 border-t border-violet-200/50">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Owner Full Name" required>
-                      <StyledInput value={createForm.owner_full_name} onChange={e => setCreateForm(p => ({ ...p, owner_full_name: e.target.value }))} placeholder="John Doe" data-testid="owner-name-input" />
-                    </FormField>
-                    <FormField label="Owner Email" required>
-                      <StyledInput type="email" value={createForm.owner_email} onChange={e => setCreateForm(p => ({ ...p, owner_email: e.target.value }))} placeholder="owner@company.cm" data-testid="owner-email-input" />
-                    </FormField>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField label="Owner Phone">
-                      <StyledInput value={createForm.owner_phone} onChange={e => setCreateForm(p => ({ ...p, owner_phone: e.target.value }))} placeholder="+237 600 000 000" />
-                    </FormField>
-                    <FormField label="Password" hint="Leave empty for default: Oryno@2024">
-                      <StyledInput type="password" value={createForm.owner_password} onChange={e => setCreateForm(p => ({ ...p, owner_password: e.target.value }))} placeholder="Leave empty for default" />
-                    </FormField>
-                  </div>
-                </div>
-              )}
-            </div>
-          </AdminModal.Section>
-        </div>
-      </AdminModal>
+        onCreate={submitOperatorCreate}
+      />
 
       {/* Suspend Confirmation Dialog */}
       <Dialog open={isSuspendOpen} onOpenChange={setIsSuspendOpen}>
@@ -1046,6 +974,36 @@ export default function OperatorsManagement() {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={confirmDelete}>Delete Operator</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invitation result dialog — shown after a new owner account is created */}
+      <Dialog open={!!lastInviteResult} onOpenChange={(o) => { if (!o) closeInviteResult(); }}>
+        <DialogContent className="bg-white max-w-md" data-testid="invite-result-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {lastInviteResult?.emailStatus === 'sent' ? '✉️ Invitation sent' : '🔗 Share invite link'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              {lastInviteResult?.emailStatus === 'sent'
+                ? <>An email has been sent to <strong>{lastInviteResult?.email}</strong> asking them to confirm their account. You can also share the link below as a backup.</>
+                : <>The invite email couldn't be delivered automatically. Copy the link below and share it with <strong>{lastInviteResult?.email}</strong> so they can confirm their account.</>}
+            </p>
+            <div className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-xs break-all font-mono text-slate-700" data-testid="invite-link-text">
+              {lastInviteResult?.link}
+            </div>
+            {lastInviteResult?.tempPassword && (
+              <p className="text-xs text-slate-500">
+                Starting password set by admin: <span className="font-mono text-slate-700">{lastInviteResult.tempPassword}</span> (the invitee will be asked to confirm before signing in).
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={copyInviteLink} data-testid="copy-invite-link-btn">Copy link</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={closeInviteResult} data-testid="invite-result-done-btn">Done</Button>
           </div>
         </DialogContent>
       </Dialog>

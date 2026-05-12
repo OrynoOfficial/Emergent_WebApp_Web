@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Login from './pages/Login';
 import TrackPackage from './pages/TrackPackage';
 import Register from './pages/Register';
+import VerifyAccount from './pages/auth/VerifyAccount';
 
 // Smart redirect based on user role
 function RoleBasedRedirect() {
@@ -143,6 +144,7 @@ function App() {
           <Route path="/track" element={<TrackPackage />} />
           <Route path="/track/:trackingNumber" element={<TrackPackage />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-account" element={<VerifyAccount />} />
           
           {/* Protected Routes - All Users */}
           <Route
