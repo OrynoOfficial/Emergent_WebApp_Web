@@ -254,23 +254,25 @@ export default function CinemaManagement() {
 
   const loadMovies = useCallback(async () => {
     try {
-      const res = await api.get('/cinema/films');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/cinema/management/my-films${params}`);
       setMovies(res.data.films || res.data || []);
     } catch (error) {
       console.error('Failed to load films:', error);
       setMovies([]);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   const loadShowtimes = useCallback(async () => {
     try {
-      const res = await api.get('/cinema/showtimes/operator');
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/cinema/showtimes/operator${params}`);
       setShowtimes(res.data.showtimes || []);
     } catch (error) {
       console.error('Failed to load showtimes:', error);
       setShowtimes([]);
     }
-  }, []);
+  }, [scopeOperatorId]);
 
   useEffect(() => {
     loadCinemas();

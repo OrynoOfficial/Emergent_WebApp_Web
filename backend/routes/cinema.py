@@ -337,6 +337,7 @@ async def get_showtimes(
 async def list_operator_showtimes(
     cinema_id: Optional[str] = None,
     date: Optional[str] = None,
+    operator_id: Optional[str] = None,
     current_user: dict = Depends(get_current_active_user),
 ):
     """List all showtimes for the current operator (or all if admin). Returns IDs."""
@@ -346,6 +347,9 @@ async def list_operator_showtimes(
     cinema_query = {}
     if current_user["role"] == "operator":
         cinema_query["operator_id"] = current_user.get("operator_id")
+    elif operator_id:
+        # Admin override: scope to a specific operator
+        cinema_query["operator_id"] = operator_id
     if cinema_id:
         cinema_query["_id"] = cinema_id
     cinema_ids = await db.cinemas.distinct("_id", cinema_query)
@@ -706,5 +710,51 @@ async def get_my_cinemas(
         "cinemas": cinemas, 
         "total": total,
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
+    }
+
+
+@router.get("/management/my-films")
+async def get_my_films(
+    status: Optional[str] = None,
+    genre: Optional[str] = None,
+    operator_id: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """
+    Get films scoped to the current operator.
+    Admin / super_admin can see all films (or filter by an explicit operator_id).
+    Operator users only see films belonging to their operator.
+    Films without operator_id are surfaced only to admins.
+    """
+    from middleware.auth import get_operator_filter
+
+    db = get_database()
+    query: dict = {}
+
+    if current_user.get("role") in ("super_admin", "admin"):
+        if operator_id:
+            query["operator_id"] = operator_id
+    else:
+        op_filter = get_operator_filter(current_user)
+        query.update(op_filter)
+
+    if status:
+        query["status"] = status
+    if genre:
+        query["genre"] = genre
+
+    cursor = db.films.find(query).sort("title", 1).skip(skip).limit(limit)
+    films_list = []
+    for f in await cursor.to_list(limit):
+        f["id"] = str(f.pop("_id", ""))
+        films_list.append(f)
+    total = await db.films.count_documents(query)
+
+    return {
+        "films": films_list,
+        "total": total,
+        "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"],
     }
 
