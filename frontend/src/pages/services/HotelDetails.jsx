@@ -397,13 +397,26 @@ export default function HotelDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Safe date parser — guards against "null"/"undefined" strings and invalid dates
+  const parseDateParam = (raw, fallback) => {
+    if (!raw || raw === 'null' || raw === 'undefined') return fallback;
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? fallback : d;
+  };
+
+  const initialCheckIn = parseDateParam(searchParams.get('checkIn') || searchParams.get('check_in') || searchParams.get('checkin'), new Date());
+  const initialCheckOut = parseDateParam(
+    searchParams.get('checkOut') || searchParams.get('check_out') || searchParams.get('checkout'),
+    addDays(initialCheckIn, 2)
+  );
+
   // Search Params State
   const [bookingParams, setBookingParams] = useState({
-    checkIn: searchParams.get('checkIn') ? new Date(searchParams.get('checkIn')) : new Date(),
-    checkOut: searchParams.get('checkOut') ? new Date(searchParams.get('checkOut')) : addDays(new Date(), 2),
+    checkIn: initialCheckIn,
+    checkOut: initialCheckOut,
     adults: parseInt(searchParams.get('adults') || searchParams.get('guests') || '2'),
     children: 0,
-    rooms: 1
+    rooms: parseInt(searchParams.get('rooms') || '1')
   });
   
   // Dialogs State

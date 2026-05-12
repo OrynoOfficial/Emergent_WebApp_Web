@@ -478,8 +478,8 @@ export default function HotelsResults() {
   const [editGuests, setEditGuests] = useState(2);
 
   const destination = searchParams.get('destination') || searchParams.get('city') || '';
-  const checkIn = searchParams.get('checkIn') || searchParams.get('check_in');
-  const checkOut = searchParams.get('checkOut') || searchParams.get('check_out');
+  const checkIn = searchParams.get('checkIn') || searchParams.get('check_in') || searchParams.get('checkin');
+  const checkOut = searchParams.get('checkOut') || searchParams.get('check_out') || searchParams.get('checkout');
   const guests = parseInt(searchParams.get('guests') || searchParams.get('adults') || '2');
   const rooms = parseInt(searchParams.get('rooms') || '1');
 
@@ -662,7 +662,14 @@ export default function HotelsResults() {
   }, [hotels, searchTerm, priceRange, selectedStars, selectedAmenities, sortBy, freeCancellation, breakfastIncluded, minGuestRating]);
 
   const handleViewDetails = (hotel) => {
-    navigate(`/services/hotels/details/${hotel.id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`);
+    const hotelId = hotel._id || hotel.id;
+    const params = new URLSearchParams();
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (guests) params.set('adults', guests.toString());
+    if (rooms) params.set('rooms', rooms.toString());
+    const qs = params.toString();
+    navigate(`/services/hotels/details/${hotelId}${qs ? `?${qs}` : ''}`);
   };
 
   const toggleStar = (star) => {

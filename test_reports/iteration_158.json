@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 158 — Live UI verification of the Hotel Detail date-passthrough fix and the downstream PaymentMethodsSelection click fix. Both regressions from iteration_157 are now resolved on the live preview environment.\n\nVerified end-to-end with Playwright (customer@test.com): (1) Direct nav to /services/hotels/details/test-hotel-1?checkIn=null&checkOut=null&adults=2 — page renders fully via mock fallback (Grand Hilton Yaoundé, gallery, 'Choose your room' section with 4 Reserve buttons, policies card with Check-in 14:00 / Check-out 12:00). NO blank page. (2) Standard flow: login → /services/hotels/results lists 9 hotels with 9 View Details CTAs → click View Details → /services/hotels/details/<real-uuid>?adults=2&rooms=1 (NO checkIn=null in URL, real hotel id, not 'null'/'undefined') → 'Choose your room' visible with 3 Reserve buttons → click Reserve Room → /services/hotels/booking renders with hotel summary (Hilton Hotel, Yaoundé), guest form, and Payment Summary card. (3) On /services/hotels/booking the data-testid='payment-method-mtn_momo' and 'payment-method-stripe' buttons both visually toggle (border-[#052c59] + bg-blue-50 applied) when clicked with the guest form empty; MOMO is correctly deselected when Stripe is chosen (single-select works). MOMO `disabled` is false on the empty form — exactly the behavior the fix on HotelBooking.jsx:910 intended. (4) The legacy 'Confirm Booking' text button does not exist on the multi-step wizard's first step — the equivalent terminal CTA 'Pay 127,050 FCFA' is rendered disabled (greyed) on an empty form, satisfying the original 'remain disabled until form valid' requirement.\n\nFixes confirmed in source: HotelsResults.jsx:664 handleViewDetails uses `hotel._id || hotel.id` and only appends checkIn/checkOut/adults/rooms when truthy; HotelDetails.jsx:401 parseDateParam() guards against 'null'/'undefined'/Invalid Date strings.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": [
+    "Direct URL /services/hotels/details/<id>?checkIn=null&checkOut=null&adults=2 renders the detail page (mock fallback) with rooms, policies, and gallery — no blank page.",
+    "Login (customer@test.com) → /services/hotels/results (9 hotels) → click View Details → /services/hotels/details/<uuid> with valid hotel id (not null) and no literal 'null' in URL.",
+    "Detail page → click Reserve Room → /services/hotels/booking renders with Hilton Hotel summary, Guest Information form, Booking Summary (2 nights, May 12→May 14 2026, Deluxe room, 127,050 FCFA total) and Payment Summary card.",
+    "payment-method-mtn_momo: NOT disabled on empty form; click toggles selected state (border-[#052c59] + bg-blue-50 classes applied).",
+    "payment-method-stripe: same — click toggles selected state.",
+    "Single-select: clicking Stripe deselects MOMO (no double-selection).",
+    "Terminal CTA 'Pay 127,050 FCFA' is disabled (greyed) with empty guest form — form-validity gate still active."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "parseDateParam() in HotelDetails.jsx correctly handles 'null'/'undefined' strings and Invalid Date by falling back to defaults — fix is robust.",
+    "handleViewDetails in HotelsResults.jsx now only appends params when truthy AND uses hotel._id || hotel.id — prevents both the null-date URL pollution and the 'undefined' hotel id case.",
+    "Recommend (carried over from iteration_157): add a stable data-testid='confirm-booking-btn' (or similar on the final 'Pay <amount>' CTA) so this regression is scriptable in <5 lines for future test runs.",
+    "Minor: on the live booking page the final CTA is 'Pay <amount> FCFA' (multi-step wizard advancing Guest Details → Review → Payment), not a single 'Confirm Booking' button as the problem statement describes — the form-validity gate is still enforced on this CTA, so the requirement is met, but the documentation in HotelBooking.jsx around line 910 references a CTA name that no longer matches the rendered UI exactly. Worth aligning."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% (all 4 features in the review request verified live)"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Cloudflare bot challenge: wait ≥15s after the very first navigation. (2) Login splash 'Login to Your Account' button must be clicked before the email/password form renders. (3) /services/hotels/booking is state-driven — direct navigation redirects to /dashboard. Reach it via results → View Details → Reserve Room. (4) Booking page is a multi-step wizard; the final pay CTA is 'Pay <amount> FCFA', not 'Confirm Booking' (rendered text). (5) Payment method buttons toggle selected state via classes 'border-[#052c59] bg-blue-50' — use these to assert visual selection. (6) playwright get_by_role(name=) does NOT accept a lambda — use a `re.compile()` regex or a string instead.",
+  "rca of the issue": "Two bugs were fixed in tandem: (a) HotelsResults.handleViewDetails was unconditionally writing `?checkIn=${searchParams.checkIn}&checkOut=...` into the URL even when the search page had no dates, producing literal `checkIn=null&checkOut=null`. (b) HotelDetails initialised `new Date(searchParams.get('checkIn'))` which on the string 'null' returns Invalid Date, throwing inside the rendering tree → blank page. Both root causes are addressed: handleViewDetails now guards (only appends truthy params) and uses `hotel._id || hotel.id` to avoid `undefined` ids; HotelDetails uses parseDateParam() that catches 'null'/'undefined'/NaN dates and substitutes today / today+2. Re-test confirms detail page renders even when forced to receive checkIn=null in URL, and the downstream booking page + payment-method click fix work end-to-end."
+}
