@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import UserDetailModal from '../../components/modals/UserDetailModal';
 import InvitationsManagement from './InvitationsManagement';
 import OperatorPicker from '../../components/shared/OperatorPicker';
+import AddUserWizard from '../../components/admin/AddUserWizard';
 import { activityLogger } from '../../utils/activityLogger';
 import { toast } from 'sonner';
 import { formatDate } from '../../utils/dateUtils';
@@ -171,8 +172,52 @@ export default function UserManagement() {
     }
   };
 
+  const [lastUserInvite, setLastUserInvite] = useState(null);
+
+  const submitUserCreate = async (payload) => {
+    try {
+      const res = await api.post('/users/create', payload);
+      try {
+        await activityLogger.logActivity('user.create', 'user', {
+          entityName: payload.email,
+          details: `Created new user: ${payload.full_name}`,
+          metadata: { role: payload.role, operator_id: payload.operator_id || null }
+        });
+      } catch (logError) {
+        console.warn('Activity logging failed:', logError);
+      }
+      const data = res.data || {};
+      let msg = `User "${payload.full_name}" created`;
+      if (data.send_invite) {
+        msg += data.invite_email_status === 'sent'
+          ? `. Invite email sent.`
+          : `. Email could not be delivered — copy the invite link below.`;
+      }
+      toast.success(msg);
+      fetchUsers();
+      setIsCreateModalOpen(false);
+      if (data.send_invite && data.invite_link) {
+        setLastUserInvite({
+          email: payload.email,
+          link: data.invite_link,
+          emailStatus: data.invite_email_status,
+          tempPassword: data.default_password || null,
+        });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to create user');
+      throw error;
+    }
+  };
+
+  const closeUserInvite = () => setLastUserInvite(null);
+  const copyUserInviteLink = async () => {
+    try { await navigator.clipboard.writeText(lastUserInvite?.link || ''); toast.success('Invite link copied'); }
+    catch { toast.error('Could not copy — long-press to copy manually'); }
+  };
+
+  // Kept for backwards-compat in case any external caller still uses createForm; the wizard is the primary path now.
   const handleCreateUser = async () => {
-    // Validate role assignment
     if ((createForm.role === 'admin' || createForm.role === 'super_admin') && currentUserRole !== 'super_admin') {
       toast.error('Only super admins can create admin or super admin accounts');
       return;
@@ -181,27 +226,10 @@ export default function UserManagement() {
       toast.error('Pick an operator to assign this user to');
       return;
     }
-
-    try {
-      const payload = { ...createForm };
-      if (payload.role !== 'operator') delete payload.operator_id;
-      await api.post('/users/create', payload);
-      try {
-        await activityLogger.logActivity('user.create', 'user', {
-          entityName: createForm.email,
-          details: `Created new user: ${createForm.full_name}`,
-          metadata: { role: createForm.role, operator_id: createForm.operator_id || null }
-        });
-      } catch (logError) {
-        console.warn('Activity logging failed:', logError);
-      }
-      toast.success(`User "${createForm.full_name}" created successfully`);
-      fetchUsers();
-      setIsCreateModalOpen(false);
-      setCreateForm({ email: '', full_name: '', phone: '', password: '', role: 'customer', operator_id: '' });
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create user');
-    }
+    const payload = { ...createForm };
+    if (payload.role !== 'operator') delete payload.operator_id;
+    await submitUserCreate(payload);
+    setCreateForm({ email: '', full_name: '', phone: '', password: '', role: 'customer', operator_id: '' });
   };
 
   const handleCloseModal = () => {
@@ -729,86 +757,38 @@ export default function UserManagement() {
         canManage={selectedUser ? canManageRole(currentUserRole, selectedUser.role) : false}
       />
 
-      {/* Create User Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="bg-white max-w-lg max-h-[92vh] overflow-y-auto" data-testid="create-user-dialog">
+      {/* Create User Wizard (3-step) */}
+      <AddUserWizard
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onCreate={submitUserCreate}
+        currentUserRole={currentUserRole}
+      />
+
+      {/* Invitation result dialog — shown after a user is created with send_invite */}
+      <Dialog open={!!lastUserInvite} onOpenChange={(o) => { if (!o) closeUserInvite(); }}>
+        <DialogContent className="bg-white max-w-md" data-testid="user-invite-result-dialog">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-[#082c59]" />
-              Create New User
+            <DialogTitle>
+              {lastUserInvite?.emailStatus === 'sent' ? '✉️ Invitation sent' : '🔗 Share invite link'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Full Name</Label>
-              <Input 
-                value={createForm.full_name} 
-                onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))}
-                placeholder="John Doe"
-              />
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              {lastUserInvite?.emailStatus === 'sent'
+                ? <>An email has been sent to <strong>{lastUserInvite?.email}</strong> asking them to confirm their account. You can also share the link below as a backup.</>
+                : <>The invite email couldn't be delivered automatically. Copy the link below and share it with <strong>{lastUserInvite?.email}</strong> so they can confirm their account.</>}
+            </p>
+            <div className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-xs break-all font-mono text-slate-700" data-testid="user-invite-link-text">
+              {lastUserInvite?.link}
             </div>
-            <div>
-              <Label>Email</Label>
-              <Input 
-                type="email"
-                value={createForm.email} 
-                onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="john@example.com"
-              />
-            </div>
-            <div>
-              <Label>Phone</Label>
-              <Input 
-                value={createForm.phone} 
-                onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+237 600 000 000"
-              />
-            </div>
-            <div>
-              <Label>Password</Label>
-              <Input 
-                type="password"
-                value={createForm.password} 
-                onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <Label>Role</Label>
-              <Select value={createForm.role} onValueChange={v => setCreateForm(f => ({ ...f, role: v, operator_id: v === 'operator' ? f.operator_id : '' }))}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {getAvailableRoles().map(role => (
-                    <SelectItem key={role} value={role} className="capitalize">
-                      {role.replace('_', ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(createForm.role === 'admin' || createForm.role === 'super_admin') && (
-                <p className="text-xs text-amber-600 mt-1">
-                  ⚠️ Admin roles have elevated privileges
-                </p>
-              )}
-            </div>
-            {createForm.role === 'operator' && (
-              <div>
-                <Label>Assign to operator <span className="text-red-500">*</span></Label>
-                <div className="mt-1">
-                  <OperatorPicker
-                    value={createForm.operator_id}
-                    onChange={(id) => setCreateForm(f => ({ ...f, operator_id: id }))}
-                    required
-                  />
-                </div>
-              </div>
+            {lastUserInvite?.tempPassword && (
+              <p className="text-xs text-slate-500">Starting password set by admin: <span className="font-mono text-slate-700">{lastUserInvite.tempPassword}</span></p>
             )}
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#082c59]" onClick={handleCreateUser}>Create User</Button>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={copyUserInviteLink} data-testid="copy-user-invite-link-btn">Copy link</Button>
+            <Button className="bg-[#082c59] hover:bg-[#0a3a75] text-white" onClick={closeUserInvite} data-testid="user-invite-result-done-btn">Done</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -6,9 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import api from '@/api/client';
 
 /**
  * /verify-account?token=...
@@ -34,7 +32,7 @@ export default function VerifyAccount() {
     async function load() {
       if (!token) { setError('Missing invitation token.'); setLoading(false); return; }
       try {
-        const res = await axios.get(`${API}/auth/verify-account/${token}`);
+        const res = await api.get(`/auth/verify-account/${token}`);
         if (!cancelled) setInfo(res.data);
       } catch (e) {
         if (!cancelled) setError(e.response?.data?.detail || 'This invitation link is no longer valid.');
@@ -64,7 +62,7 @@ export default function VerifyAccount() {
     setSubmitting(true);
     try {
       const body = { token, password: needsPassword ? password : (password || undefined) };
-      await axios.post(`${API}/auth/verify-account`, body);
+      await api.post(`/auth/verify-account`, body);
       setDone(true);
       toast.success('Account confirmed — you can now sign in.');
       setTimeout(() => navigate('/login'), 1800);

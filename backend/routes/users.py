@@ -459,7 +459,9 @@ async def create_user(
     user_data: dict,
     current_user: dict = Depends(require_permission("users.create"))
 ):
-    """Create a new user - requires users.create permission"""
+    """Create a new user. When `send_invite=true` the user is created in
+    pending_verification state and an invitation email is sent so they can
+    confirm their account before logging in."""
     from utils.auth import get_password_hash
     
     db = get_database()
@@ -475,18 +477,29 @@ async def create_user(
         raise HTTPException(status_code=403, detail="Only super admins can create super admins")
     if new_role == "admin" and current_user["role"] != "super_admin":
         raise HTTPException(status_code=403, detail="Only super admins can create admins")
-    
-    # Create user
+
+    send_invite = bool(user_data.get("send_invite", False))
+    # When inviting AND no password provided, generate a random placeholder.
+    # The invitee will set their own password on /verify-account.
+    raw_password = user_data.get("password")
+    has_temp_password = bool(raw_password)
+    if not raw_password:
+        import secrets as _secrets
+        raw_password = _secrets.token_urlsafe(24)
+
+    user_id = str(uuid.uuid4())
     user = {
-        "_id": str(uuid.uuid4()),
+        "_id": user_id,
+        "id": user_id,
         "email": user_data.get("email"),
         "username": user_data.get("username"),
-        "password_hash": get_password_hash(user_data.get("password", "defaultpass123")),
+        "password_hash": get_password_hash(raw_password),
         "full_name": user_data.get("full_name"),
         "phone": user_data.get("phone"),
         "role": new_role,
-        "status": user_data.get("status", "active"),
-        "email_verified": True,
+        "permissions": user_data.get("permissions") or [],
+        "status": "pending_verification" if send_invite else user_data.get("status", "active"),
+        "email_verified": False if send_invite else True,
         "two_fa_enabled": False,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
@@ -505,10 +518,56 @@ async def create_user(
             raise HTTPException(status_code=404, detail="Operator not found")
         user["operator_id"] = operator_id
         user["operator_name"] = op.get("name")
+        if user_data.get("operator_role"):
+            user["operator_role"] = user_data["operator_role"]
 
     await db.users.insert_one(user)
+
+    invite_link = None
+    invite_email_status = None
+    if send_invite:
+        import secrets as _secrets
+        from os import environ as _env
+        from datetime import timedelta as _td
+        invite_token = _secrets.token_urlsafe(32)
+        _public = _env.get("APP_PUBLIC_URL", "").rstrip("/")
+        invite_link = f"{_public}/verify-account?token={invite_token}" if _public else None
+        await db.verification_tokens.insert_one({
+            "_id": invite_token,
+            "user_id": user_id,
+            "user_email": user["email"],
+            "purpose": "account_invite",
+            "operator_id": user.get("operator_id"),
+            "operator_name": user.get("operator_name"),
+            "has_temp_password": has_temp_password,
+            "consumed_at": None,
+            "created_at": datetime.utcnow(),
+            "expires_at": datetime.utcnow() + _td(days=7),
+        })
+        try:
+            from services.email_service import send_account_invite_email
+            await send_account_invite_email(
+                recipient_email=user["email"],
+                recipient_name=user.get("full_name") or user["email"],
+                invite_token=invite_token,
+                operator_name=user.get("operator_name"),
+                inviter_name=current_user.get("full_name"),
+                has_temp_password=has_temp_password,
+            )
+            invite_email_status = "sent"
+        except Exception:
+            import logging
+            logging.exception("Failed to send user invite email")
+            invite_email_status = "failed"
     
-    return {"message": "User created successfully", "user_id": user["_id"]}
+    return {
+        "message": "User created successfully",
+        "user_id": user["_id"],
+        "send_invite": send_invite,
+        "invite_link": invite_link,
+        "invite_email_status": invite_email_status,
+        "default_password": raw_password if has_temp_password else None,
+    }
 
 @router.get("/permissions/check")
 async def check_permissions(
