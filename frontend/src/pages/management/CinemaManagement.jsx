@@ -17,6 +17,7 @@ import {
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
   Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt,
   Replace as ReplaceIcon, LayoutGrid, Armchair, Sparkles, Phone, Mail,
+  ChevronUp, ChevronDown,
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
@@ -64,7 +65,7 @@ const DEFAULT_CINEMA_FORM = {
 
 const DEFAULT_MOVIE_FORM = {
   title: '',
-  genre: '',
+  genre: [],
   duration: '',
   rating: 'PG-13',
   description: '',
@@ -79,6 +80,12 @@ const DEFAULT_MOVIE_FORM = {
   operator_id: '',
   operator_name: '',
 };
+
+const FILM_GENRE_OPTIONS = [
+  'Thriller', 'Action', 'Comedy', 'Horror', 'Documentary', 'Adventure',
+  'Crime', 'Drama', 'Romance', 'Sci-Fi', 'Musical', 'Fantasy',
+  'Family/Children', 'Animation',
+];
 
 const DEFAULT_SHOWTIME_FORM = {
   cinema_id: '',
@@ -159,6 +166,7 @@ export default function CinemaManagement() {
 
   const [isCinemaDialogOpen, setIsCinemaDialogOpen] = useState(false);
   const [isMovieDialogOpen, setIsMovieDialogOpen] = useState(false);
+  const [genreFieldExpanded, setGenreFieldExpanded] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [viewingItem, setViewingItem] = useState(null);
   const [viewingType, setViewingType] = useState('cinema');
@@ -394,7 +402,7 @@ export default function CinemaManagement() {
     setEditingMovie(movie);
     setMovieForm(movie ? {
       title: movie.title || '',
-      genre: Array.isArray(movie.genre) ? movie.genre.join(', ') : (movie.genre || ''),
+      genre: Array.isArray(movie.genre) ? movie.genre : (movie.genre ? String(movie.genre).split(',').map(g => g.trim()).filter(Boolean) : []),
       duration: movie.duration_minutes ? String(movie.duration_minutes) : (movie.duration || ''),
       rating: movie.rating || 'PG-13',
       description: movie.description || '',
@@ -407,13 +415,14 @@ export default function CinemaManagement() {
       imdb_rating: movie.imdb_rating?.toString() || '',
       status: movie.status || 'now_showing',
     } : DEFAULT_MOVIE_FORM);
+    setGenreFieldExpanded(false);
     setIsMovieDialogOpen(true);
   };
 
   const handleSaveMovie = async () => {
     try {
       const durationMin = parseInt(movieForm.duration) || 120;
-      const genreArr = movieForm.genre ? movieForm.genre.split(',').map(g => g.trim()).filter(Boolean) : [];
+      const genreArr = Array.isArray(movieForm.genre) ? movieForm.genre : [];
       const castArr = movieForm.cast ? movieForm.cast.split(',').map(c => c.trim()).filter(Boolean) : [];
 
       const params = new URLSearchParams();
@@ -1491,8 +1500,53 @@ export default function CinemaManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Genre (comma-separated)</Label>
-                <Input value={movieForm.genre} onChange={e => setMovieForm(p => ({ ...p, genre: e.target.value }))} placeholder="Action, Drama, Thriller" />
+                <Label>Genre</Label>
+                <button
+                  type="button"
+                  onClick={() => setGenreFieldExpanded((v) => !v)}
+                  className="w-full mt-1 flex items-center justify-between gap-2 bg-white border border-input rounded-md px-3 py-2 text-sm hover:border-slate-400 transition-colors"
+                  data-testid="genre-picker-toggle"
+                >
+                  <span className="flex flex-wrap items-center gap-1 text-left">
+                    {movieForm.genre.length === 0 ? (
+                      <span className="text-slate-400">Select one or more genres…</span>
+                    ) : (
+                      movieForm.genre.map((g) => (
+                        <span key={g} className="inline-flex items-center bg-red-50 text-red-700 border border-red-200 text-[11px] px-1.5 py-0.5 rounded-full">
+                          {g}
+                        </span>
+                      ))
+                    )}
+                  </span>
+                  {genreFieldExpanded
+                    ? <ChevronUp className="h-4 w-4 text-slate-500 shrink-0" />
+                    : <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />}
+                </button>
+                {genreFieldExpanded && (
+                  <div className="mt-2 p-2 border rounded-md bg-slate-50 flex flex-wrap gap-1.5" data-testid="genre-picker-options">
+                    {FILM_GENRE_OPTIONS.map((g) => {
+                      const active = movieForm.genre.includes(g);
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setMovieForm((p) => ({
+                            ...p,
+                            genre: active ? p.genre.filter((x) => x !== g) : [...p.genre, g],
+                          }))}
+                          data-testid={`genre-option-${g}`}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                            active
+                              ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-red-300 hover:text-red-600'
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Duration (minutes) *</Label>
@@ -1566,7 +1620,7 @@ export default function CinemaManagement() {
             subtitle={[movieForm.director && `Dir. ${movieForm.director}`, movieForm.language].filter(Boolean).join(' · ') || 'Director · Language'}
             location={[movieForm.duration && `${movieForm.duration} min`, movieForm.rating, movieForm.release_date].filter(Boolean).join(' · ') || 'Duration · Rating · Release'}
             rating={movieForm.imdb_rating || null}
-            tags={(movieForm.genre || '').split(',').map(g => g.trim()).filter(Boolean)}
+            tags={Array.isArray(movieForm.genre) ? movieForm.genre : []}
             tagsAccentClass="bg-red-50 text-red-700"
             priceLabel="Cast"
             priceValue={(movieForm.cast || '').split(',').slice(0, 3).map(c => c.trim()).filter(Boolean).join(', ') || '—'}

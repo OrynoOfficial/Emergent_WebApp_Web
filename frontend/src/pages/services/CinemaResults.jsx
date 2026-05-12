@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Heart, Sparkles, PlayCircle,
+  ChevronDown, ChevronUp, X,
 } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
@@ -17,6 +18,14 @@ import { formatFCFA } from '@/utils/currency';
 import { format, parseISO, isValid } from 'date-fns';
 
 const PAGE_SIZE = 12;
+
+const GENRE_OPTIONS = [
+  'Thriller', 'Action', 'Comedy', 'Horror', 'Documentary', 'Adventure',
+  'Crime', 'Drama', 'Romance', 'Sci-Fi', 'Musical', 'Fantasy',
+  'Family/Children', 'Animation',
+];
+
+const RATING_OPTIONS = ['G', 'PG', 'PG-13', 'R', 'NC-17'];
 
 const GENRE_COLORS = {
   Action:    'bg-red-500/20 text-red-300 border-red-500/40',
@@ -194,24 +203,38 @@ export default function CinemaResults() {
   const [sortBy, setSortBy] = useState('rating');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [ratingFilter, setRatingFilter] = useState('all');
+  const [durationFilter, setDurationFilter] = useState('all');
+  const [genresExpanded, setGenresExpanded] = useState(false);
   const [page, setPage] = useState(1);
 
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || format(new Date(), 'yyyy-MM-dd');
   const dateValid = isValid(parseISO(date));
   const showingParam = searchParams.get('showing') || 'all';
+  const genreParam = searchParams.get('genre') || '';
 
   // Sync the status filter with the URL `showing` param when it changes
   useEffect(() => {
     setStatusFilter(showingParam === 'now_showing' || showingParam === 'coming_soon' ? showingParam : 'all');
   }, [showingParam]);
 
+  // Pre-select the genre coming from the search page
+  useEffect(() => {
+    if (genreParam && genreParam !== 'All Genres') {
+      setSelectedGenres([genreParam]);
+    }
+  }, [genreParam]);
+
   useEffect(() => { loadFilms(); /* eslint-disable-next-line */ }, [searchParams]);
 
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const res = await cinemaApi.listFilms({ city });
+      const params = {};
+      if (city) params.city = city;
+      const res = await cinemaApi.listFilms(params);
       setFilms(res.data.films || res.data || []);
     } catch (e) {
       console.error('Failed to load films:', e);
@@ -221,6 +244,18 @@ export default function CinemaResults() {
     }
   };
 
+  const toggleGenre = (g) => {
+    setSelectedGenres((prev) => prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]);
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setSelectedGenres([]);
+    setRatingFilter('all');
+    setDurationFilter('all');
+  };
+
   const filteredFilms = useMemo(() => {
     let filtered = [...films];
     if (searchQuery) {
@@ -228,15 +263,35 @@ export default function CinemaResults() {
       filtered = filtered.filter((f) => f.title?.toLowerCase().includes(q) || f.genre?.some((g) => g.toLowerCase().includes(q)));
     }
     if (statusFilter !== 'all') filtered = filtered.filter((f) => f.status === statusFilter);
+    if (selectedGenres.length > 0) {
+      // OR-match: include films that have ANY of the selected genres
+      const lowered = selectedGenres.map((g) => g.toLowerCase());
+      filtered = filtered.filter((f) => {
+        const filmGenres = Array.isArray(f.genre) ? f.genre : (f.genre ? [f.genre] : []);
+        return filmGenres.some((fg) => lowered.includes(String(fg).toLowerCase()));
+      });
+    }
+    if (ratingFilter !== 'all') {
+      filtered = filtered.filter((f) => f.rating === ratingFilter);
+    }
+    if (durationFilter !== 'all') {
+      filtered = filtered.filter((f) => {
+        const d = f.duration_minutes || 0;
+        if (durationFilter === 'short') return d > 0 && d <= 90;
+        if (durationFilter === 'medium') return d > 90 && d <= 120;
+        if (durationFilter === 'long') return d > 120;
+        return true;
+      });
+    }
     switch (sortBy) {
       case 'title':    return filtered.sort((a, b) => a.title.localeCompare(b.title));
       case 'duration': return filtered.sort((a, b) => a.duration_minutes - b.duration_minutes);
       case 'rating':
       default:         return filtered.sort((a, b) => (b.imdb_rating || 0) - (a.imdb_rating || 0));
     }
-  }, [films, sortBy, searchQuery, statusFilter]);
+  }, [films, sortBy, searchQuery, statusFilter, selectedGenres, ratingFilter, durationFilter]);
 
-  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, sortBy]);
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, sortBy, selectedGenres, ratingFilter, durationFilter]);
   const totalPages = Math.max(1, Math.ceil(filteredFilms.length / PAGE_SIZE));
   const pagedFilms = useMemo(
     () => filteredFilms.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
@@ -309,6 +364,30 @@ export default function CinemaResults() {
                 <SelectItem value="coming_soon">Coming Soon</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={ratingFilter} onValueChange={setRatingFilter}>
+              <SelectTrigger className="w-32 bg-slate-800/60 border-slate-700/60 text-white" data-testid="filter-rating">
+                <Star className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Rating" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                <SelectItem value="all">Any rating</SelectItem>
+                {RATING_OPTIONS.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={durationFilter} onValueChange={setDurationFilter}>
+              <SelectTrigger className="w-40 bg-slate-800/60 border-slate-700/60 text-white" data-testid="filter-duration">
+                <Clock className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Duration" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                <SelectItem value="all">Any length</SelectItem>
+                <SelectItem value="short">Under 90 min</SelectItem>
+                <SelectItem value="medium">90 – 120 min</SelectItem>
+                <SelectItem value="long">Over 120 min</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48 bg-slate-800/60 border-slate-700/60 text-white">
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
@@ -323,6 +402,57 @@ export default function CinemaResults() {
             <div className="flex items-center bg-slate-800/60 border border-slate-700/60 rounded-lg p-1">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
+            {(searchQuery || statusFilter !== 'all' || selectedGenres.length > 0 || ratingFilter !== 'all' || durationFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-cyan-300 hover:bg-cyan-500/10"
+                data-testid="clear-filters-btn"
+              >
+                <X className="w-3.5 h-3.5 mr-1" /> Clear
+              </Button>
+            )}
+          </div>
+
+          {/* Genre chips — expandable */}
+          <div className="mt-3" data-testid="genre-filter-section">
+            <button
+              type="button"
+              onClick={() => setGenresExpanded((v) => !v)}
+              className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-300/80 hover:text-cyan-200 transition-colors"
+              data-testid="genre-filter-toggle"
+            >
+              <span>Genres</span>
+              {selectedGenres.length > 0 && (
+                <span className="bg-cyan-500/30 text-cyan-100 border border-cyan-400/40 rounded-full px-2 py-0.5 text-[10px]">
+                  {selectedGenres.length}
+                </span>
+              )}
+              {genresExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            {genresExpanded && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {GENRE_OPTIONS.map((g) => {
+                  const active = selectedGenres.includes(g);
+                  return (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => toggleGenre(g)}
+                      data-testid={`genre-chip-${g}`}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        active
+                          ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm'
+                          : 'bg-slate-800/60 text-slate-300 border-slate-700 hover:border-cyan-500/60 hover:text-cyan-200'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

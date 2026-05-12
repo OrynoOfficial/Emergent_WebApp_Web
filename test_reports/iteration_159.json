@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 159 — End-to-end verification of the 5 Cinema fixes. Backend: 5/5 pytest cases passing (films?city=Yaoundé returns total=0 with both 'Yaoundé' and 'yaounde' case-insensitive; /api/cinema/showtimes/operator returns total=0 with proper shape and is auth-gated; films-no-city returns 200). Frontend Customer (/services/cinema/results?city=Yaoundé): all new controls present — 'Any rating', 'Any length', sort 'Top rated', expandable Genres chip section with all 14 genres including Thriller and Family/Children, count badge '1' appears after selecting Thriller (chip turns cyan), 'Clear' button visible, empty-state 'No movies found' rendered. Frontend Admin (/management/cinema → Management → Films → Add Movie): genre-picker-toggle starts collapsed with exact placeholder 'Select one or more genres…', expands on click to reveal all 14 chips, clicked chips switch to red bg (bg-red-500 text-white border-red-500), LIVE PREVIEW on right correctly renders selected genre tags (Thriller, Family/Children) in real time. data-testid attributes 'genre-picker-toggle' and 'genre-option-<Name>' all present and functional.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": [
+    "GET /api/cinema/films?city=Yaoundé → {films: [], total: 0} (200).",
+    "GET /api/cinema/films?city=yaounde → empty (case-insensitive verified).",
+    "GET /api/cinema/showtimes/operator (admin Bearer token) → {showtimes: [], total: 0}; unauth returns 401/403.",
+    "Customer /services/cinema/results?city=Yaoundé renders Rating/Length/Sort selects + expandable Genres section; Thriller chip click updates active count badge to 1.",
+    "Admin → Cinema → Management → Films → Add Movie: collapsed picker text 'Select one or more genres…', expand reveals 14/14 genres, Thriller & Family/Children clicks set bg-red-500 active state, LIVE PREVIEW reflects selected genres."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration159_cinema_fixes.py",
+    "/app/test_reports/pytest/iteration159.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Films collection is NOT fully wiped in DB — there is 1 leftover film 'Olympus has Fallen' (genre stored as array ['Action','Thriller','Crime']). It does not affect the city filter test because showtimes collection IS empty, so /films?city=Yaoundé still returns 0. If a truly clean slate is desired, drop the films collection too.",
+    "On /services/cinema/results the new filter labels render as 'Any rating', 'Any length', and the sort defaults to 'Top rated'. The review request copy mentioned literal 'Rating', 'Duration', 'Sort' words — the controls are present but use placeholder-style labels. Consider exposing the underlying label (e.g., 'Rating: Any', 'Duration: Any', 'Sort: Top rated') for clarity.",
+    "Add Film button in Cinema Management is labelled 'Add Movie' (not 'Add Film' as the review request copy suggests). Modal title is 'Add New Film' and submit button is 'Add Film'. Minor copy inconsistency between trigger button and modal."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration159_cinema_fixes.py"],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all 5 fixes verified)"},
+  "test_credentials": "admin@test.com / testpassword123, customer@test.com / testpassword123",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Cloudflare bot challenge ~20s on cold load. (2) Cinema Management URL is /management/cinema and uses three sub-tabs: Dashboard, Management, Communications. Films/Cinemas/Showtimes are nested under Management. (3) Films tab text is 'Films (N)' not exact 'Films' — use regex match. (4) Add-button on Films tab is 'Add Movie' (not 'Add Film'). (5) genre-picker-toggle and genre-option-<Name> data-testids are reliable selectors (genre-option-Family/Children works as-is with the slash). (6) Selected genre chips use Tailwind classes bg-red-500 text-white border-red-500 — use this for active-state assertion. (7) Customer Results page sort dropdown defaults to 'Top rated' not literal 'Sort'."
+}

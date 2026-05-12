@@ -73,17 +73,38 @@ async def get_cinemas(
 async def get_films(
     status: Optional[str] = None,
     genre: Optional[str] = None,
+    city: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get films"""
+    """Get films. When `city` is provided, only films that have at least one showtime
+    in a cinema located in that city are returned (case-insensitive match on cinema.city)."""
     db = get_database()
     
     query = {}
     if status:
         query["status"] = status
     if genre:
-        query["genre"] = genre
+        # Genres are stored as a list — match if any genre tag equals/contains the requested value
+        query["genre"] = {"$regex": f"^{genre}$", "$options": "i"}
+
+    # City filter: derive the set of film_ids that have showtimes in a cinema in that city
+    if city:
+        cinema_ids_in_city = await db.cinemas.distinct(
+            "_id",
+            {"city": {"$regex": f"^{city}$", "$options": "i"}}
+        )
+        film_ids_in_city = []
+        if cinema_ids_in_city:
+            film_ids_in_city = await db.showtimes.distinct(
+                "film_id",
+                {"cinema_id": {"$in": cinema_ids_in_city}}
+            )
+        if film_ids_in_city:
+            query["_id"] = {"$in": film_ids_in_city}
+        else:
+            # No films play in this city right now → return empty result fast
+            return {"films": [], "total": 0}
     
     films_list = []
     for f in await db.films.find(query).sort("title", 1).skip(skip).limit(limit).to_list(limit):
@@ -358,8 +379,20 @@ async def list_operator_showtimes(
     if date:
         query["show_date"] = date
     showtimes = await db.showtimes.find(query).sort([("show_date", 1), ("show_time", 1)]).to_list(500)
+
+    # Build a quick lookup so each showtime carries its cinema_name (older records may be missing it)
+    cinemas_map = {}
+    if cinema_ids:
+        async for c in db.cinemas.find({"_id": {"$in": cinema_ids}}, {"name": 1, "city": 1}):
+            cinemas_map[c["_id"]] = {"name": c.get("name"), "city": c.get("city")}
+
     for s in showtimes:
         s["id"] = s.pop("_id", None)
+        cm = cinemas_map.get(s.get("cinema_id"))
+        if cm:
+            # Only fill when missing — don't clobber existing values
+            s.setdefault("cinema_name", cm["name"])
+            s.setdefault("cinema_city", cm["city"])
     return {"showtimes": showtimes, "total": len(showtimes)}
 
 
