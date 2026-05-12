@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 160 — Verified the two Cinema → Schedule a new showtime modal changes end-to-end on the live preview URL. (1) Recurring toggle: data-testids 'repeat-mode-single' and 'repeat-mode-recurring' both render; default is One date (recurring-section NOT in the DOM, count=0). Clicking Recurring reveals the recurring-section, exposes a Start date / End date pair of date inputs, an End time, and a 'Repeat on' chip row with all 7 weekdays (data-testid='repeat-day-Mon'..'Sun'). Filling Start=2026-02-02 (Mon) End=2026-02-06 (Fri) and selecting Mon/Wed/Fri produces the preview line 'This will create 3 showtimes'. (2) Pricing section now shows label 'Ticket price (FCFA) *' (single occurrence) with green help text 'A single flat price applies to every seat on this showtime.' — VIP wording removed: 0 occurrences of 'VIP' and 0 occurrences of '1.5×' in the entire modal. The Showtimes table (visible behind the modal) shows columns Film | Cinema | Screen | Date·Time | Seats | Price | Status | Actions — single Price column (no separate VIP price column). CinemaBooking.calculatePricing inspected directly: returns seatPrices = selectedSeats.map(() => basePrice) (flat) and the inline comment confirms 'VIP rows now use the same flat ticket price — no VIP markup'. Did NOT execute the actual N-POST recurring submit because a Cinema+Film+Screen combo (already exists: PH-Netflix / Olympus has Fallen) would create real DB rows; the entirety of the recurring expansion lives in client-side handleSaveShowtime + computeRecurringDates, both of which were code-reviewed and validated by the preview-counter (which uses the same function and correctly reported 3).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Schedule new showtime modal (Recurring mode)", "issues": ["The recurring section shows Start date + End time on the first row but End date is pushed onto its own line below, which feels unbalanced visually. Consider arranging as a 2x2 grid: [Start date | End date] / [Start time | End time]. Functional, just slightly off in alignment."]}
+    ]
+  },
+  "verified_flows": [
+    "Login admin@test.com → /management/cinema → Management tab → Showtimes (1) sub-tab → Add Showtime modal opens.",
+    "Modal default state: One date toggle active, recurring-section absent from DOM, Date/Start/End single-row layout shown.",
+    "Toggle to Recurring → recurring-section appears, End date input appears, 7 weekday chips render (Mon..Sun via data-testid='repeat-day-<Short>').",
+    "Date range 02-02→02-06 + Mon/Wed/Fri → preview line 'This will create 3 showtimes' rendered (matches computeRecurringDates expected output).",
+    "Pricing section reads exactly 'Ticket price (FCFA) *' with help 'A single flat price applies to every seat on this showtime.' — zero VIP / 1.5× references anywhere in the modal.",
+    "Showtimes inline table no longer exposes a VIP price column — single 'Price' column displays 6,500 FCFA for existing row."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CinemaBooking.jsx line 201 still returns `vipPrice: basePrice` from calculatePricing — harmless (same value) but a leftover; the field can be dropped entirely since no consumer should be reading it now that VIP is removed.",
+    "CinemaBooking.jsx still references seatLayout.vip_rows / vip_price elsewhere (line 141, 147, 298 — vipRowSet for seat-map rendering). If the product intent is to fully retire VIP UX, those visual VIP row indicators should also be cleaned up; if VIP rows remain only as a seating-style hint (no price impact), the current behavior is consistent.",
+    "DialogContent missing DialogTitle warning is being thrown in the console for the Schedule modal — accessibility regression unrelated to this iteration but worth noting (already present in iteration_159). Wrap the title in VisuallyHidden or set aria-describedby.",
+    "Recurring N-POST flow is fired sequentially in handleSaveShowtime — for the documented cap of 60 showtimes this is fine, but consider Promise.allSettled to parallelize and reduce wall-clock time on slow networks. Toast already handles partial failures.",
+    "Frontend env has both VITE_API_URL and REACT_APP_BACKEND_URL — leftover dual-stack config; harmless but confusing for future devs."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only request)", "frontend": "100% (all 5 acceptance points verified)"},
+  "test_credentials": "admin@test.com / testpassword123",
+  "seed_data_creation": "none — relied on existing PH-Netflix cinema + Olympus has Fallen film leftover from previous iterations",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "(1) Add Showtime button data-testid is 'add-showtime-btn'. (2) Modal opens via portal — selectors for repeat-mode-single/recurring, repeat-end-date-input, recurring-section, repeat-day-Mon..Sun all reliable. (3) Date inputs in the modal are native <input type='date'> — fill with ISO YYYY-MM-DD via page.fill() works. (4) computeRecurringDates uses JS getDay() 0=Sun..6=Sat which matches the WEEKDAY_OPTIONS mapping. (5) Existing DB content for full submit test: cinema 'PH-Netflix' with 'Standard Screen' + film 'Olympus has Fallen'. (6) DialogContent missing DialogTitle warning is pre-existing — not a regression."
+}

@@ -96,9 +96,22 @@ const DEFAULT_SHOWTIME_FORM = {
   show_time: '',
   end_time: '',
   price: '',
-  vip_price: '',
   total_seats: 100,
+  // Recurrence (front-end only; expanded into multiple showtimes on save)
+  repeat_mode: 'single', // 'single' | 'recurring'
+  repeat_end_date: '',
+  repeat_days: [], // array of 0-6 (Sun..Sat)
 };
+
+const WEEKDAY_OPTIONS = [
+  { value: 1, short: 'Mon', long: 'Monday' },
+  { value: 2, short: 'Tue', long: 'Tuesday' },
+  { value: 3, short: 'Wed', long: 'Wednesday' },
+  { value: 4, short: 'Thu', long: 'Thursday' },
+  { value: 5, short: 'Fri', long: 'Friday' },
+  { value: 6, short: 'Sat', long: 'Saturday' },
+  { value: 0, short: 'Sun', long: 'Sunday' },
+];
 
 const SCREEN_TYPES = ['2d', '3d', 'imax', 'dolby_atmos', 'vip'];
 const MOVIE_STATUSES = [
@@ -468,7 +481,6 @@ export default function CinemaManagement() {
       if (inlineShowtimeDraft.end_time !== undefined && inlineShowtimeDraft.end_time !== st.end_time) params.append('end_time', inlineShowtimeDraft.end_time);
       if (inlineShowtimeDraft.total_seats !== undefined && inlineShowtimeDraft.total_seats !== st.total_seats) params.append('total_seats', String(inlineShowtimeDraft.total_seats));
       if (inlineShowtimeDraft.price !== undefined && Number(inlineShowtimeDraft.price) !== Number(st.price)) params.append('price', String(parseFloat(inlineShowtimeDraft.price)));
-      if (inlineShowtimeDraft.vip_price !== undefined && Number(inlineShowtimeDraft.vip_price || 0) !== Number(st.vip_price || 0)) params.append('vip_price', String(parseFloat(inlineShowtimeDraft.vip_price || 0)));
       if (params.toString().length === 0) {
         toast.info('No changes');
         setInlineEditShowtimeId(null);
@@ -500,8 +512,10 @@ export default function CinemaManagement() {
         show_time: showtime.show_time || '',
         end_time: showtime.end_time || '',
         price: showtime.price?.toString() || '',
-        vip_price: showtime.vip_price?.toString() || '',
         total_seats: showtime.total_seats || 100,
+        repeat_mode: 'single',
+        repeat_end_date: '',
+        repeat_days: [],
       });
     } else {
       setShowtimeForm(DEFAULT_SHOWTIME_FORM);
@@ -509,32 +523,97 @@ export default function CinemaManagement() {
     setIsShowtimeDialogOpen(true);
   };
 
+  // Expand recurrence to a list of concrete dates between [start, end] inclusive,
+  // keeping only the dates whose JS weekday is in repeat_days.
+  const computeRecurringDates = (startStr, endStr, daysOfWeek) => {
+    if (!startStr || !endStr || !Array.isArray(daysOfWeek) || daysOfWeek.length === 0) return [];
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return [];
+    const out = [];
+    const cur = new Date(start);
+    while (cur <= end) {
+      if (daysOfWeek.includes(cur.getDay())) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        out.push(`${y}-${m}-${d}`);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+  };
+
   const handleSaveShowtime = async () => {
     if (!showtimeForm.cinema_id || !showtimeForm.film_id || !showtimeForm.screen_name || !showtimeForm.show_date || !showtimeForm.show_time || !showtimeForm.end_time || !showtimeForm.price) {
       toast.error('Cinema, film, screen, date, time, end time and price are required');
       return;
     }
-    try {
-      const params = new URLSearchParams();
-      params.append('film_id', showtimeForm.film_id);
-      params.append('screen_name', showtimeForm.screen_name);
-      params.append('show_date', showtimeForm.show_date);
-      params.append('show_time', showtimeForm.show_time);
-      params.append('end_time', showtimeForm.end_time);
-      params.append('price', String(parseFloat(showtimeForm.price)));
-      params.append('screen_type', showtimeForm.screen_type || '2d');
-      // VIP pricing is now derived automatically from the standard price (1.5×)
-      // so VIP-row seats in the configured seat layout work out-of-the-box.
-      const stdPrice = parseFloat(showtimeForm.price) || 0;
-      if (stdPrice > 0) params.append('vip_price', String(Math.round(stdPrice * 1.5)));
-      params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
 
+    // Decide the list of dates to create (recurring) or update (single edit)
+    let datesToCreate = [showtimeForm.show_date];
+    if (!editingShowtime && showtimeForm.repeat_mode === 'recurring') {
+      if (!showtimeForm.repeat_end_date || showtimeForm.repeat_days.length === 0) {
+        toast.error('Pick an end date and at least one day of the week for the recurrence');
+        return;
+      }
+      datesToCreate = computeRecurringDates(
+        showtimeForm.show_date,
+        showtimeForm.repeat_end_date,
+        showtimeForm.repeat_days
+      );
+      if (datesToCreate.length === 0) {
+        toast.error('No matching dates in the selected range — check the days and dates');
+        return;
+      }
+      if (datesToCreate.length > 60) {
+        toast.error(`That recurrence would create ${datesToCreate.length} showtimes — please narrow the range (max 60).`);
+        return;
+      }
+    }
+
+    try {
       if (editingShowtime) {
+        const params = new URLSearchParams();
+        params.append('film_id', showtimeForm.film_id);
+        params.append('screen_name', showtimeForm.screen_name);
+        params.append('show_date', showtimeForm.show_date);
+        params.append('show_time', showtimeForm.show_time);
+        params.append('end_time', showtimeForm.end_time);
+        params.append('price', String(parseFloat(showtimeForm.price)));
+        params.append('screen_type', showtimeForm.screen_type || '2d');
+        params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
         await api.put(`/cinema/showtimes/${editingShowtime.id}?${params.toString()}`);
         toast.success('Showtime updated');
       } else {
-        await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
-        toast.success('Showtime scheduled');
+        // Create one showtime per resolved date
+        let created = 0;
+        const failures = [];
+        for (const d of datesToCreate) {
+          const params = new URLSearchParams();
+          params.append('film_id', showtimeForm.film_id);
+          params.append('screen_name', showtimeForm.screen_name);
+          params.append('show_date', d);
+          params.append('show_time', showtimeForm.show_time);
+          params.append('end_time', showtimeForm.end_time);
+          params.append('price', String(parseFloat(showtimeForm.price)));
+          params.append('screen_type', showtimeForm.screen_type || '2d');
+          params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
+          try {
+            await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
+            created += 1;
+          } catch (e) {
+            failures.push(d);
+          }
+        }
+        if (created > 0 && failures.length === 0) {
+          toast.success(created === 1 ? 'Showtime scheduled' : `Scheduled ${created} showtimes`);
+        } else if (created > 0 && failures.length > 0) {
+          toast.warning(`Scheduled ${created} showtimes, ${failures.length} failed`);
+        } else {
+          toast.error('Failed to schedule any showtimes');
+          return;
+        }
       }
       setIsShowtimeDialogOpen(false);
       loadShowtimes();
@@ -1115,15 +1194,9 @@ export default function CinemaManagement() {
                                 </td>
                                 <td className="py-3 px-4 text-slate-700">
                                   {isEdit ? (
-                                    <div className="flex flex-col gap-1">
-                                      <Input className="h-8 w-24" type="number" placeholder="Price" value={draft.price ?? ''} onChange={(e) => setDraft({ price: e.target.value })} data-testid={`inline-price-${st.id}`} />
-                                      <Input className="h-8 w-24" type="number" placeholder="VIP" value={draft.vip_price ?? ''} onChange={(e) => setDraft({ vip_price: e.target.value })} />
-                                    </div>
+                                    <Input className="h-8 w-24" type="number" placeholder="Price" value={draft.price ?? ''} onChange={(e) => setDraft({ price: e.target.value })} data-testid={`inline-price-${st.id}`} />
                                   ) : (
-                                    <>
-                                      {st.price ? formatFCFA(st.price) : '—'}
-                                      {st.vip_price && <span className="block text-xs text-amber-700">VIP {formatFCFA(st.vip_price)}</span>}
-                                    </>
+                                    <>{st.price ? formatFCFA(st.price) : '—'}</>
                                   )}
                                 </td>
                                 <td className="py-3 px-4">
@@ -1157,7 +1230,6 @@ export default function CinemaManagement() {
                                               end_time: st.end_time,
                                               total_seats: st.total_seats,
                                               price: st.price,
-                                              vip_price: st.vip_price,
                                             });
                                           }}
                                           data-testid={`inline-edit-${st.id}`}
@@ -1778,10 +1850,37 @@ export default function CinemaManagement() {
 
             {/* Section: WHEN */}
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3 flex items-center gap-1.5"><Clock className="h-3 w-3" /> 3 · When</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 flex items-center gap-1.5"><Clock className="h-3 w-3" /> 3 · When</p>
+                {!editingShowtime && (
+                  <div className="inline-flex rounded-full border border-slate-200 bg-white p-0.5 text-[11px]" data-testid="showtime-repeat-mode">
+                    <button
+                      type="button"
+                      onClick={() => setShowtimeForm(p => ({ ...p, repeat_mode: 'single' }))}
+                      data-testid="repeat-mode-single"
+                      className={`px-2.5 py-0.5 rounded-full transition-colors ${
+                        showtimeForm.repeat_mode === 'single' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      One date
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowtimeForm(p => ({ ...p, repeat_mode: 'recurring' }))}
+                      data-testid="repeat-mode-recurring"
+                      className={`px-2.5 py-0.5 rounded-full transition-colors ${
+                        showtimeForm.repeat_mode === 'recurring' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Recurring
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Date *</Label>
+                  <Label className="text-xs">{showtimeForm.repeat_mode === 'recurring' ? 'Start date *' : 'Date *'}</Label>
                   <Input className="bg-white" type="date" value={showtimeForm.show_date} onChange={(e) => setShowtimeForm(p => ({ ...p, show_date: e.target.value }))} />
                 </div>
                 <div>
@@ -1793,15 +1892,73 @@ export default function CinemaManagement() {
                   <Input className="bg-white" type="time" value={showtimeForm.end_time} onChange={(e) => setShowtimeForm(p => ({ ...p, end_time: e.target.value }))} />
                 </div>
               </div>
+
+              {showtimeForm.repeat_mode === 'recurring' && !editingShowtime && (
+                <div className="mt-3 pt-3 border-t border-slate-200 space-y-3" data-testid="recurring-section">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">End date *</Label>
+                      <Input
+                        className="bg-white"
+                        type="date"
+                        value={showtimeForm.repeat_end_date}
+                        min={showtimeForm.show_date || undefined}
+                        onChange={(e) => setShowtimeForm(p => ({ ...p, repeat_end_date: e.target.value }))}
+                        data-testid="repeat-end-date-input"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">Repeat on *</Label>
+                    <div className="flex flex-wrap gap-1.5" data-testid="repeat-days-picker">
+                      {WEEKDAY_OPTIONS.map((d) => {
+                        const active = showtimeForm.repeat_days.includes(d.value);
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            onClick={() => setShowtimeForm((p) => ({
+                              ...p,
+                              repeat_days: active ? p.repeat_days.filter((x) => x !== d.value) : [...p.repeat_days, d.value],
+                            }))}
+                            data-testid={`repeat-day-${d.short}`}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
+                              active
+                                ? 'bg-[#082c59] text-white border-[#082c59] shadow-sm'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-[#082c59]/40 hover:text-[#082c59]'
+                            }`}
+                          >
+                            {d.short}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {(() => {
+                    const preview = computeRecurringDates(
+                      showtimeForm.show_date,
+                      showtimeForm.repeat_end_date,
+                      showtimeForm.repeat_days
+                    );
+                    if (preview.length === 0) return null;
+                    return (
+                      <p className="text-[11px] text-slate-600">
+                        This will create <span className="font-semibold text-[#082c59]">{preview.length}</span> showtime{preview.length === 1 ? '' : 's'}
+                        {preview.length > 60 ? ' — too many, please narrow the range.' : '.'}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
-            {/* Section: PRICE — VIP pricing intentionally removed (per Cinema rebuild — VIP seats are flagged on the seat layout itself, and operators set VIP markup at the seat layout level if needed) */}
+            {/* Section: PRICE */}
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5"><Banknote className="h-3 w-3" /> 4 · Pricing</p>
               <div>
-                <Label className="text-xs">Standard ticket price (FCFA) *</Label>
+                <Label className="text-xs">Ticket price (FCFA) *</Label>
                 <Input className="bg-white" type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
-                <p className="text-[11px] text-emerald-700/80 mt-1.5">VIP seats (if marked in the screen's seat layout) are priced 1.5× this standard ticket price automatically.</p>
+                <p className="text-[11px] text-emerald-700/80 mt-1.5">A single flat price applies to every seat on this showtime.</p>
               </div>
             </div>
           </div>

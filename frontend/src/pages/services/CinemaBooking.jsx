@@ -179,29 +179,16 @@ export default function CinemaBooking() {
 
   const calculatePricing = () => {
     const basePrice = showtime?.price || 0;
-    const vipPrice  = showtime?.vip_price || basePrice * 1.5;
-    const vipRows = new Set(seatLayout?.vip_rows || []);
-
-    // Compute per-seat actual price (VIP if its row letter is VIP, else base)
-    let seatsTotal = 0;
-    selectedSeats.forEach((seatId) => {
-      const rowLetter = seatId[0];
-      seatsTotal += vipRows.has(rowLetter) ? vipPrice : basePrice;
-    });
+    // VIP rows now use the same flat ticket price — no VIP markup
+    let seatsTotal = basePrice * selectedSeats.length;
     // Apply ticket-type discounts proportionally to selected seats: child=0.5, senior=0.7, adult=1.
-    // Distribute discounts to seats from the cheapest first.
-    const sortedSeats = [...selectedSeats].sort((a, b) => {
-      const aIsVip = vipRows.has(a[0]); const bIsVip = vipRows.has(b[0]);
-      return (aIsVip === bIsVip) ? 0 : aIsVip ? 1 : -1;
-    });
-    const seatPrices = sortedSeats.map((seatId) => vipRows.has(seatId[0]) ? vipPrice : basePrice);
-    // Build queue: child slots first, then senior, then adult
     const slots = [
       ...Array(ticketCounts.child).fill(0.5),
       ...Array(ticketCounts.senior).fill(0.7),
       ...Array(ticketCounts.adult).fill(1),
     ];
     let subtotal = 0;
+    const seatPrices = selectedSeats.map(() => basePrice);
     seatPrices.forEach((p, i) => {
       const m = slots[i] ?? 1;
       subtotal += p * m;
@@ -211,7 +198,7 @@ export default function CinemaBooking() {
     }
     const commissionRate = 5;
     const commission = subtotal * (commissionRate / 100);
-    return { subtotal, commission, commissionRate, total: subtotal + commission, basePrice, vipPrice };
+    return { subtotal, commission, commissionRate, total: subtotal + commission, basePrice, vipPrice: basePrice };
   };
 
   const pricing = calculatePricing();
@@ -402,7 +389,7 @@ export default function CinemaBooking() {
                   </div>
                   <div>
                     <h3 className="font-bold text-white">Tickets</h3>
-                    <p className="text-xs text-cyan-200/70">Pick the categories — final price scales with seat type (VIP / Standard)</p>
+                    <p className="text-xs text-cyan-200/70">Pick the categories — final price applies the discount to the seat price</p>
                   </div>
                 </div>
               </div>
@@ -419,7 +406,7 @@ export default function CinemaBooking() {
                         )}
                       </div>
                       <div className="text-slate-400 text-xs mt-0.5">
-                        {t.id === 'adult' ? `${formatCurrency(showtime?.price)} standard · ${formatCurrency(pricing.vipPrice)} VIP` : `Discount applies to seat price`}
+                        {t.id === 'adult' ? `${formatCurrency(showtime?.price)} per ticket` : `Discount applies to seat price`}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
