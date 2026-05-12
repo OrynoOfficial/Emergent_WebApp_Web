@@ -199,6 +199,12 @@ export default function CinemaResults() {
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || format(new Date(), 'yyyy-MM-dd');
   const dateValid = isValid(parseISO(date));
+  const showingParam = searchParams.get('showing') || 'all';
+
+  // Sync the status filter with the URL `showing` param when it changes
+  useEffect(() => {
+    setStatusFilter(showingParam === 'now_showing' || showingParam === 'coming_soon' ? showingParam : 'all');
+  }, [showingParam]);
 
   useEffect(() => { loadFilms(); /* eslint-disable-next-line */ }, [searchParams]);
 

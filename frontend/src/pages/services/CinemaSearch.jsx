@@ -14,7 +14,7 @@ export default function CinemaSearch() {
   const [searchParams, setSearchParams] = useState({
     city: '',
     genre: '',
-    showing: 'now_showing'
+    showing: 'all'
   });
   const [errors, setErrors] = useState({});
   const [shakeFields, setShakeFields] = useState({});
@@ -45,7 +45,7 @@ export default function CinemaSearch() {
     const params = new URLSearchParams();
     params.set('city', searchParams.city);
     if (searchParams.genre && searchParams.genre !== 'All Genres') params.set('genre', searchParams.genre);
-    params.set('showing', searchParams.showing);
+    if (searchParams.showing && searchParams.showing !== 'all') params.set('showing', searchParams.showing);
     navigate(`/services/cinema/results?${params.toString()}`);
   };
 
@@ -64,26 +64,6 @@ export default function CinemaSearch() {
       <div className="max-w-4xl mx-auto px-4 -mt-8">
         <Card className="shadow-xl">
           <CardContent className="p-6">
-            {/* Showing Toggle */}
-            <div className="flex items-center gap-4 mb-6">
-              <Button
-                type="button"
-                variant={searchParams.showing === 'now_showing' ? "default" : "outline"}
-                onClick={() => setSearchParams(p => ({ ...p, showing: 'now_showing' }))}
-                className={searchParams.showing === 'now_showing' ? "bg-[#082c59]" : ""}
-              >
-                <Play className="w-4 h-4 mr-2" /> Now Showing
-              </Button>
-              <Button
-                type="button"
-                variant={searchParams.showing === 'coming_soon' ? "default" : "outline"}
-                onClick={() => setSearchParams(p => ({ ...p, showing: 'coming_soon' }))}
-                className={searchParams.showing === 'coming_soon' ? "bg-[#082c59]" : ""}
-              >
-                <Calendar className="w-4 h-4 mr-2" /> Coming Soon
-              </Button>
-            </div>
-
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* City */}
@@ -116,6 +96,32 @@ export default function CinemaSearch() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Subtle status refinement — default shows both Now Showing and Coming Soon */}
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="uppercase tracking-wider">Show:</span>
+                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5" data-testid="cinema-status-segment">
+                  {[
+                    { value: 'all', label: 'All' },
+                    { value: 'now_showing', label: 'Now Showing' },
+                    { value: 'coming_soon', label: 'Coming Soon' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSearchParams(p => ({ ...p, showing: opt.value }))}
+                      data-testid={`cinema-status-${opt.value}`}
+                      className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                        searchParams.showing === opt.value
+                          ? 'bg-[#082c59] text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
