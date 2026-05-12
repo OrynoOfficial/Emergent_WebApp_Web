@@ -8,7 +8,7 @@ import { Loader2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const API = `${import.meta.env.VITE_BACKEND_URL || process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /**
  * /verify-account?token=...
