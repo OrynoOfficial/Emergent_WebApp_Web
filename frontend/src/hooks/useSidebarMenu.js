@@ -215,7 +215,7 @@ export default function useSidebarMenu() {
 
     // Operator-specific admin items
     if (isOperator) {
-      adminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/admin/team-roles', icon: Users });
+      adminSubmenu.push({ key: 'team-roles', label: 'Team & Roles', path: '/management/team-roles', icon: Users });
     }
 
     // Ratings
