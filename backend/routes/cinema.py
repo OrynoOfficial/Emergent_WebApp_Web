@@ -111,7 +111,62 @@ async def get_films(
         f["id"] = str(f.pop("_id", ""))
         films_list.append(f)
     total = await db.films.count_documents(query)
-    
+
+    # Enrich each film with `cinema_names` (unique cinema names where it's playing)
+    # and `price_from` (min showtime price). If `city` is set, restrict the
+    # showtime lookup to cinemas in that city so the user sees only relevant venues.
+    if films_list:
+        film_ids = [f["id"] for f in films_list]
+        showtime_query = {"film_id": {"$in": film_ids}, "is_active": {"$ne": False}}
+        if city:
+            # Reuse cinema_ids_in_city if we computed it above; otherwise compute now.
+            try:
+                cinema_ids_filter = cinema_ids_in_city  # noqa: F821 — defined when city is set
+            except NameError:
+                cinema_ids_filter = await db.cinemas.distinct(
+                    "_id", {"city": {"$regex": f"^{city}$", "$options": "i"}}
+                )
+            showtime_query["cinema_id"] = {"$in": cinema_ids_filter}
+
+        showtimes = await db.showtimes.find(
+            showtime_query,
+            {"film_id": 1, "cinema_id": 1, "cinema_name": 1, "price": 1, "_id": 0},
+        ).to_list(2000)
+
+        # Build a cinema_id → name lookup for showtimes missing cinema_name.
+        missing_cinema_ids = {s["cinema_id"] for s in showtimes if not s.get("cinema_name") and s.get("cinema_id")}
+        cinema_name_by_id = {}
+        if missing_cinema_ids:
+            async for c in db.cinemas.find(
+                {"_id": {"$in": list(missing_cinema_ids)}}, {"name": 1}
+            ):
+                cinema_name_by_id[c["_id"]] = c.get("name")
+
+        # Aggregate per film
+        by_film = {fid: {"cinemas": set(), "min_price": None} for fid in film_ids}
+        for s in showtimes:
+            fid = s.get("film_id")
+            if fid not in by_film:
+                continue
+            cname = s.get("cinema_name") or cinema_name_by_id.get(s.get("cinema_id"))
+            if cname:
+                by_film[fid]["cinemas"].add(cname)
+            price = s.get("price")
+            if price is not None:
+                try:
+                    p = float(price)
+                    cur = by_film[fid]["min_price"]
+                    if cur is None or p < cur:
+                        by_film[fid]["min_price"] = p
+                except (TypeError, ValueError):
+                    pass
+
+        for f in films_list:
+            agg = by_film.get(f["id"], {})
+            f["cinema_names"] = sorted(agg.get("cinemas") or [])
+            if agg.get("min_price") is not None:
+                f["price_from"] = agg["min_price"]
+
     return {"films": films_list, "total": total}
 
 @router.get("/films/{film_id}")

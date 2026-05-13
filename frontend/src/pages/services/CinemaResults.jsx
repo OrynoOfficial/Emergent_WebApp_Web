@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Heart, Sparkles, PlayCircle,
-  ChevronDown, ChevronUp, X,
+  ChevronDown, ChevronUp, X, MapPin,
 } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
@@ -52,6 +52,14 @@ function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Build a short, readable label of cinemas where the film plays.
+// e.g. ["PH-Netflix", "Bonapriso Studios", "Akwa Cine"] → "PH-Netflix, Bonapriso Studios +1"
+function formatCinemaNames(names) {
+  if (!Array.isArray(names) || names.length === 0) return null;
+  if (names.length <= 2) return names.join(', ');
+  return `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
 }
 
 const FilmPosterFallback = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&q=80';
@@ -126,10 +134,25 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
           {film.description && (
             <p className="text-xs text-slate-400 line-clamp-2 mb-3">{film.description}</p>
           )}
+          {formatCinemaNames(film.cinema_names) && (
+            <div
+              className="flex items-start gap-1.5 text-[11px] text-cyan-200/90 mb-3"
+              data-testid={`film-cinemas-${film.id || film._id}`}
+              title={film.cinema_names.join(', ')}
+            >
+              <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-400/70" />
+              <span className="line-clamp-1">{formatCinemaNames(film.cinema_names)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-3 border-t border-slate-800">
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider">From</div>
-              <div className="text-lg font-bold text-cyan-300 tabular-nums">{formatFCFA(film.price_from || 3500)}</div>
+              <div
+                className="text-lg font-bold text-cyan-300 tabular-nums"
+                data-testid={`film-price-from-${film.id || film._id}`}
+              >
+                {film.price_from != null ? formatFCFA(film.price_from) : '—'}
+              </div>
             </div>
             <Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-lg shadow-md shadow-cyan-500/30" data-testid={`get-tickets-${film.id || film._id}`}>
               <Ticket className="w-3.5 h-3.5 mr-1" /> Tickets
@@ -177,11 +200,26 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
               {film.director && <span>Dir. {film.director}</span>}
               {film.language && <span>{film.language}</span>}
             </div>
+            {formatCinemaNames(film.cinema_names) && (
+              <div
+                className="flex items-start gap-1.5 text-xs text-cyan-200/90 mt-3"
+                data-testid={`film-cinemas-list-${film.id || film._id}`}
+                title={film.cinema_names.join(', ')}
+              >
+                <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-400/70" />
+                <span className="line-clamp-1">Playing at {formatCinemaNames(film.cinema_names)}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between pt-4 border-t border-slate-800 mt-4">
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider">Tickets from</div>
-              <div className="text-2xl font-bold text-cyan-300 tabular-nums">{formatFCFA(film.price_from || 3500)}</div>
+              <div
+                className="text-2xl font-bold text-cyan-300 tabular-nums"
+                data-testid={`film-price-from-list-${film.id || film._id}`}
+              >
+                {film.price_from != null ? formatFCFA(film.price_from) : '—'}
+              </div>
             </div>
             <Button className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-lg shadow-md shadow-cyan-500/30">
               <Ticket className="w-4 h-4 mr-2" /> Get tickets
@@ -490,10 +528,11 @@ export default function CinemaResults() {
                   <tr>
                     <th className="px-4 py-3">Title</th>
                     <th className="px-4 py-3">Genre</th>
+                    <th className="px-4 py-3">Cinema</th>
                     <th className="px-4 py-3">Duration</th>
                     <th className="px-4 py-3">Rating</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Price</th>
+                    <th className="px-4 py-3">From</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -502,6 +541,13 @@ export default function CinemaResults() {
                     <tr key={film.id || film._id} className="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer transition-colors" onClick={() => handleViewDetails(film)}>
                       <td className="px-4 py-3 font-medium text-white">{film.title}</td>
                       <td className="px-4 py-3 text-slate-300">{film.genre?.slice(0, 2).join(', ') || '—'}</td>
+                      <td
+                        className="px-4 py-3 text-slate-300 max-w-[220px]"
+                        title={(film.cinema_names || []).join(', ')}
+                        data-testid={`film-cinemas-row-${film.id || film._id}`}
+                      >
+                        <span className="line-clamp-1">{formatCinemaNames(film.cinema_names) || '—'}</span>
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{formatDuration(film.duration_minutes)}</td>
                       <td className="px-4 py-3">
                         {film.imdb_rating ? (
@@ -515,7 +561,12 @@ export default function CinemaResults() {
                           {film.status === 'coming_soon' ? 'Coming Soon' : 'Now Showing'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 font-bold text-cyan-300 tabular-nums">{formatFCFA(film.price_from || 3500)}</td>
+                      <td
+                        className="px-4 py-3 font-bold text-cyan-300 tabular-nums"
+                        data-testid={`film-price-from-row-${film.id || film._id}`}
+                      >
+                        {film.price_from != null ? formatFCFA(film.price_from) : '—'}
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold" onClick={(e) => { e.stopPropagation(); handleViewDetails(film); }}>
                           <Ticket className="w-4 h-4 mr-1" /> Tickets
