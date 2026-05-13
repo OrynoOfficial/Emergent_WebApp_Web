@@ -1109,7 +1109,7 @@ export default function CinemaManagement() {
                     <Button onClick={loadShowtimes} variant="outline" size="sm">
                       <RefreshCw className="w-4 h-4 mr-2" /> Refresh
                     </Button>
-                    <PermissionGate permission="cinema.manage_screenings">
+                    <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
                       <Button onClick={() => openShowtimeDialog()} className="bg-[#082c59]" size="sm" data-testid="add-showtime-btn">
                         <Plus className="w-4 h-4 mr-2" /> Add Showtime
                       </Button>
@@ -1216,7 +1216,7 @@ export default function CinemaManagement() {
                                         </Button>
                                       </>
                                     ) : (
-                                      <PermissionGate permission="cinema.manage_screenings">
+                                      <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -1241,12 +1241,12 @@ export default function CinemaManagement() {
                                     )}
                                     {!isEdit && (
                                       <>
-                                        <PermissionGate permission="cinema.manage_screenings">
+                                        <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
                                           <Button size="sm" variant="outline" onClick={() => setReplaceShowtime(st)} className="h-8 text-[#082c59]" data-testid={`replace-showtime-btn-${st.id}`}>
                                             <ReplaceIcon className="w-4 h-4 mr-1" /> Replace
                                           </Button>
                                         </PermissionGate>
-                                        <PermissionGate permission="cinema.manage_screenings">
+                                        <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
                                           <Button
                                             size="sm"
                                             variant="outline"
