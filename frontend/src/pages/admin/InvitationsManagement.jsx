@@ -1,38 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
-  Mail, Send, Loader2, Copy, Check, Clock, UserPlus, XCircle,
-  CheckCircle, AlertCircle, Trash2, RefreshCw
+  Mail, Loader2, Copy, Check, Clock, CheckCircle, AlertCircle, XCircle,
+  Trash2, RefreshCw, Send, Search, UserPlus, Building2, ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
-import OperatorPicker from '@/components/shared/OperatorPicker';
+import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_STYLES = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: Clock },
-  used: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: CheckCircle },
-  expired: { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200', icon: AlertCircle },
-  revoked: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200', icon: XCircle },
+  pending:  { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  icon: Clock,         label: 'Pending'   },
+  used:     { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200',icon: CheckCircle,   label: 'Activated' },
+  expired:  { bg: 'bg-slate-50',   text: 'text-slate-500',   border: 'border-slate-200',  icon: AlertCircle,   label: 'Expired'   },
+  revoked:  { bg: 'bg-red-50',     text: 'text-red-600',     border: 'border-red-200',    icon: XCircle,       label: 'Revoked'   },
 };
+
+const FILTERS = ['all', 'pending', 'used', 'expired', 'revoked'];
+
+const ROLE_BADGE = {
+  super_admin: { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: ShieldCheck },
+  admin:       { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: ShieldCheck },
+  operator:    { color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: Building2  },
+  customer:    { color: 'bg-slate-100 text-slate-700 border-slate-200',    icon: UserPlus   },
+};
+
+function timeAgo(d) {
+  if (!d) return '—';
+  try { return formatDistanceToNow(new Date(d), { addSuffix: true }); }
+  catch { return '—'; }
+}
 
 export default function InvitationsManagement() {
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showSendDialog, setShowSendDialog] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const [copiedToken, setCopiedToken] = useState(null);
-  const [form, setForm] = useState({ email: '', role: 'customer', message: '', operator_id: '' });
+  const [resending, setResending] = useState({});
 
-  const loadInvitations = async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/invitations/');
+      const { data } = await api.get('/auth/invitations');
       setInvitations(data.invitations || []);
     } catch {
       toast.error('Failed to load invitations');
@@ -41,210 +52,225 @@ export default function InvitationsManagement() {
     }
   };
 
-  useEffect(() => { loadInvitations(); }, []);
+  useEffect(() => { load(); }, []);
 
-  const handleSend = async () => {
-    if (!form.email) { toast.error('Email is required'); return; }
-    if (form.role === 'operator' && !form.operator_id) {
-      toast.error('Pick an operator to assign this user to');
-      return;
+  const filtered = useMemo(() => {
+    let list = [...invitations];
+    if (filter !== 'all') list = list.filter((i) => i.status === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((i) =>
+        i.email?.toLowerCase().includes(q) ||
+        i.full_name?.toLowerCase().includes(q) ||
+        i.operator_name?.toLowerCase().includes(q)
+      );
     }
-    setSending(true);
+    return list;
+  }, [invitations, filter, search]);
+
+  const counts = useMemo(() => {
+    const map = { pending: 0, used: 0, expired: 0, revoked: 0 };
+    invitations.forEach((i) => { if (map[i.status] !== undefined) map[i.status] += 1; });
+    return map;
+  }, [invitations]);
+
+  const copyLink = async (link, token) => {
     try {
-      const payload = { ...form };
-      if (form.role !== 'operator') delete payload.operator_id;
-      await api.post('/invitations/send', payload);
-      toast.success(`Invitation sent to ${form.email}`);
-      setShowSendDialog(false);
-      setForm({ email: '', role: 'customer', message: '', operator_id: '' });
-      loadInvitations();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send invitation');
+      await navigator.clipboard.writeText(link);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 1800);
+      toast.success('Invite link copied');
+    } catch {
+      toast.error('Could not copy — long-press to copy manually');
+    }
+  };
+
+  const resendInvite = async (inv) => {
+    setResending((p) => ({ ...p, [inv.user_id]: true }));
+    try {
+      const { data } = await api.post(`/auth/resend-invite/${inv.user_id}`);
+      toast.success(data?.email_status === 'sent' ? 'Invitation resent by email' : 'New invite link generated — copy & share');
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to resend');
     } finally {
-      setSending(false);
+      setResending((p) => ({ ...p, [inv.user_id]: false }));
     }
   };
 
-  const handleRevoke = async (token) => {
+  const revoke = async (token) => {
+    if (!confirm('Revoke this invitation? The recipient will no longer be able to confirm their account with this link.')) return;
     try {
-      await api.delete(`/invitations/${token}`);
+      await api.delete(`/auth/invitations/${token}`);
       toast.success('Invitation revoked');
-      loadInvitations();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to revoke');
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to revoke');
     }
-  };
-
-  const copyLink = (link) => {
-    navigator.clipboard.writeText(link);
-    setCopiedToken(link);
-    setTimeout(() => setCopiedToken(null), 2000);
-    toast.success('Link copied to clipboard');
   };
 
   return (
     <div className="space-y-6" data-testid="invitations-management">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Invitations</h2>
-          <p className="text-sm text-slate-500">Invite new users to join the platform</p>
+          <h2 className="text-xl font-bold text-slate-900">Pending invitations</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Track every invite generated by the Add User wizard. Resend, revoke or copy the activation link from here.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadInvitations} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
-          <Button onClick={() => setShowSendDialog(true)} className="bg-[#082c59] hover:bg-[#0a3a75]" data-testid="send-invite-btn">
-            <UserPlus className="w-4 h-4 mr-2" /> Send Invitation
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+          <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        {['pending', 'used', 'expired', 'revoked'].map(status => {
-          const count = invitations.filter(i => i.status === status).length;
-          const style = STATUS_STYLES[status];
+      {/* Stat tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {(['pending', 'used', 'expired', 'revoked']).map((s) => {
+          const style = STATUS_STYLES[s];
           const Icon = style.icon;
+          const active = filter === s;
           return (
-            <div key={status} className={`p-4 rounded-xl border ${style.border} ${style.bg}`}>
+            <button
+              key={s}
+              type="button"
+              onClick={() => setFilter(active ? 'all' : s)}
+              data-testid={`stat-${s}`}
+              className={`text-left p-4 rounded-xl border transition ${style.border} ${style.bg} hover:shadow-sm ${active ? 'ring-2 ring-[#082c59]/40' : ''}`}
+            >
               <div className="flex items-center gap-2 mb-1">
                 <Icon className={`w-4 h-4 ${style.text}`} />
-                <span className={`text-xs font-semibold capitalize ${style.text}`}>{status}</span>
+                <span className={`text-xs font-semibold uppercase tracking-wider ${style.text}`}>{style.label}</span>
               </div>
-              <span className="text-2xl font-bold text-slate-900">{count}</span>
-            </div>
+              <span className="text-2xl font-bold text-slate-900">{counts[s] || 0}</span>
+            </button>
           );
         })}
       </div>
 
-      {/* Invitations List */}
+      {/* Filter bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[260px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by email, name or operator…"
+            className="pl-9"
+            data-testid="invitations-search"
+          />
+        </div>
+        <div className="inline-flex bg-slate-100 rounded-lg p-0.5" data-testid="invitations-filter-tabs">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              data-testid={`filter-${f}`}
+              className={`text-xs px-3 py-1.5 rounded-md capitalize transition-colors ${
+                filter === f ? 'bg-white text-[#082c59] shadow-sm font-medium' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {f === 'all' ? 'All' : STATUS_STYLES[f]?.label || f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
             <Loader2 className="w-8 h-8 animate-spin text-[#082c59] mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">Loading invitations...</p>
+            <p className="text-slate-500 text-sm">Loading invitations…</p>
           </div>
-        ) : invitations.length === 0 ? (
-          <div className="p-12 text-center">
+        ) : filtered.length === 0 ? (
+          <div className="p-14 text-center">
             <Mail className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">No invitations sent yet</p>
-            <Button className="mt-4 bg-[#082c59]" onClick={() => setShowSendDialog(true)}>
-              <Send className="w-4 h-4 mr-2" /> Send Your First Invitation
-            </Button>
+            <p className="text-slate-700 font-medium">No invitations to show</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+              Invitations are created automatically when you add a new user via the <strong>Add User</strong> wizard with the “Send confirmation email” toggle enabled.
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {invitations.map((inv, idx) => {
+          <ul className="divide-y divide-slate-100" data-testid="invitations-list">
+            {filtered.map((inv) => {
               const style = STATUS_STYLES[inv.status] || STATUS_STYLES.pending;
               const Icon = style.icon;
+              const roleBadge = ROLE_BADGE[inv.role] || ROLE_BADGE.customer;
+              const RoleIcon = roleBadge.icon;
+              const isPending = inv.status === 'pending';
               return (
-                <div key={idx} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors" data-testid={`invitation-row-${idx}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${style.bg} border ${style.border}`}>
-                      <Mail className={`w-5 h-5 ${style.text}`} />
+                <li
+                  key={inv.token}
+                  className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50 transition-colors"
+                  data-testid={`invitation-row-${inv.email}`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${style.bg} border ${style.border}`}>
+                    <Mail className={`w-4.5 h-4.5 ${style.text}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-slate-900 text-sm truncate">{inv.email}</p>
+                      <Badge className={`${roleBadge.color} text-[10px] capitalize border`}>
+                        <RoleIcon className="w-3 h-3 mr-1" />{inv.role || 'user'}
+                      </Badge>
+                      {inv.operator_name && (
+                        <span className="text-[11px] text-slate-500">· {inv.operator_name}</span>
+                      )}
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900 text-sm">{inv.email}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[10px] capitalize">{inv.role}</Badge>
-                        <span className="text-[10px] text-slate-400">
-                          {inv.created_at ? new Date(inv.created_at).toLocaleDateString() : ''}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-[11px] text-slate-500">
+                      {inv.full_name && <span>{inv.full_name}</span>}
+                      <span>Sent {timeAgo(inv.created_at)}</span>
+                      {inv.status === 'pending' && inv.expires_at && <span>· Expires {timeAgo(inv.expires_at)}</span>}
+                      {inv.status === 'used' && inv.consumed_at && <span>· Activated {timeAgo(inv.consumed_at)}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className={`${style.bg} ${style.text} border ${style.border} text-[10px] capitalize`}>
-                      <Icon className="w-3 h-3 mr-1" /> {inv.status}
-                    </Badge>
-                    {inv.invite_link && inv.status === 'pending' && (
-                      <Button variant="ghost" size="sm" onClick={() => copyLink(inv.invite_link)} className="h-8 px-2">
-                        {copiedToken === inv.invite_link ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <Badge className={`${style.bg} ${style.text} border ${style.border} text-[10px] uppercase tracking-wider`}>
+                    <Icon className="w-3 h-3 mr-1" /> {style.label}
+                  </Badge>
+                  <div className="flex items-center gap-1">
+                    {isPending && inv.invite_link && (
+                      <Button
+                        variant="ghost" size="sm" className="h-8 px-2"
+                        onClick={() => copyLink(inv.invite_link, inv.token)}
+                        data-testid={`copy-${inv.email}`}
+                        title="Copy invite link"
+                      >
+                        {copiedToken === inv.token ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     )}
-                    {inv.status === 'pending' && (
-                      <Button variant="ghost" size="sm" onClick={() => handleRevoke(inv.token)} className="h-8 px-2 text-red-500 hover:text-red-700">
-                        <Trash2 className="w-3.5 h-3.5" />
+                    {isPending && (
+                      <Button
+                        variant="ghost" size="sm" className="h-8 px-2 text-[#082c59] hover:bg-[#082c59]/5"
+                        onClick={() => resendInvite(inv)}
+                        disabled={!!resending[inv.user_id]}
+                        data-testid={`resend-${inv.email}`}
+                        title="Resend invite"
+                      >
+                        {resending[inv.user_id]
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Send className="w-4 h-4" />}
+                      </Button>
+                    )}
+                    {isPending && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => revoke(inv.token)}
+                        data-testid={`revoke-${inv.email}`}
+                        title="Revoke invite"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </div>
-
-      {/* Send Dialog */}
-      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
-        <DialogContent className="sm:max-w-lg bg-white max-h-[92vh] overflow-y-auto" data-testid="invite-dialog">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-[#082c59]" />
-              Send Invitation
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-sm font-medium">Email Address *</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="user@example.com"
-                  className="pl-10"
-                  data-testid="invite-email-input"
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Role</Label>
-              <Select value={form.role} onValueChange={v => setForm(p => ({ ...p, role: v, operator_id: v === 'operator' ? p.operator_id : '' }))}>
-                <SelectTrigger className="mt-1" data-testid="invite-role-select">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {form.role === 'operator' && (
-              <div>
-                <Label className="text-sm font-medium">Assign to operator <span className="text-red-500">*</span></Label>
-                <div className="mt-1">
-                  <OperatorPicker
-                    value={form.operator_id}
-                    onChange={(id) => setForm(p => ({ ...p, operator_id: id }))}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <Label className="text-sm font-medium">Personal Message (optional)</Label>
-              <Textarea
-                value={form.message}
-                onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                placeholder="Welcome to our platform..."
-                className="mt-1"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSendDialog(false)}>Cancel</Button>
-            <Button onClick={handleSend} disabled={sending || !form.email} className="bg-[#082c59]" data-testid="confirm-send-invite-btn">
-              {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-              {sending ? 'Sending...' : 'Send Invitation'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

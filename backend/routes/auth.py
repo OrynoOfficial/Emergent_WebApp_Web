@@ -18,6 +18,7 @@ from config.database import get_database
 from middleware.auth import get_current_active_user
 from datetime import datetime, timedelta
 import uuid
+import os
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -534,3 +535,86 @@ async def resend_invite(user_id: str, current_user: dict = Depends(get_current_a
         import logging
         logging.exception("Failed to resend invite email")
     return {"message": "Invitation refreshed", "invite_link": invite_link, "email_status": email_status}
+
+
+@router.get("/invitations")
+async def list_invitations(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """List account-invitation verification tokens with derived status.
+    Admin/super_admin only. Used by the Invitations sub-page on /admin/users.
+    """
+    if current_user["role"] not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_database()
+    query = {"purpose": "account_invite"}
+    if search:
+        query["user_email"] = {"$regex": search, "$options": "i"}
+    cursor = db.verification_tokens.find(query).sort("created_at", -1).limit(500)
+    now = datetime.utcnow()
+    items = []
+    user_ids = set()
+    for t in await cursor.to_list(500):
+        user_ids.add(t["user_id"])
+        items.append(t)
+
+    # Bulk-fetch the matching users so the UI can show role + status
+    users_map = {}
+    if user_ids:
+        async for u in db.users.find({"_id": {"$in": list(user_ids)}}, {"_id": 1, "role": 1, "operator_name": 1, "full_name": 1, "status": 1, "email_verified": 1}):
+            users_map[u["_id"]] = u
+
+    public_url = os.environ.get("APP_PUBLIC_URL", "").rstrip("/")
+
+    def derive_status(t):
+        if t.get("revoked"):
+            return "revoked"
+        if t.get("consumed_at"):
+            return "used"
+        if t.get("expires_at") and t["expires_at"] < now:
+            return "expired"
+        return "pending"
+
+    out = []
+    for t in items:
+        u = users_map.get(t["user_id"], {})
+        derived = derive_status(t)
+        if status and derived != status:
+            continue
+        token_id = t.get("_id")
+        out.append({
+            "token": token_id,
+            "user_id": t["user_id"],
+            "email": t.get("user_email"),
+            "full_name": u.get("full_name"),
+            "role": u.get("role"),
+            "operator_name": u.get("operator_name") or t.get("operator_name"),
+            "status": derived,
+            "user_account_status": u.get("status"),
+            "has_temp_password": t.get("has_temp_password", False),
+            "created_at": t.get("created_at"),
+            "expires_at": t.get("expires_at"),
+            "consumed_at": t.get("consumed_at"),
+            "invite_link": f"{public_url}/verify-account?token={token_id}" if public_url else None,
+        })
+    return {"invitations": out, "total": len(out)}
+
+
+@router.delete("/invitations/{token}")
+async def revoke_invitation(token: str, current_user: dict = Depends(get_current_active_user)):
+    """Revoke a pending account invite. Admin/super_admin only."""
+    if current_user["role"] not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db = get_database()
+    tok = await db.verification_tokens.find_one({"_id": token})
+    if not tok:
+        raise HTTPException(status_code=404, detail="Invitation not found")
+    if tok.get("consumed_at"):
+        raise HTTPException(status_code=400, detail="Invitation has already been used")
+    await db.verification_tokens.update_one(
+        {"_id": token},
+        {"$set": {"consumed_at": datetime.utcnow(), "revoked": True}},
+    )
+    return {"message": "Invitation revoked"}
