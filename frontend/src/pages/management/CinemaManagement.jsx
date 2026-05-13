@@ -474,20 +474,20 @@ export default function CinemaManagement() {
   const handleInlineSaveShowtime = async (st) => {
     setInlineShowtimeSaving(true);
     try {
-      const params = new URLSearchParams();
-      if (inlineShowtimeDraft.screen_name !== undefined && inlineShowtimeDraft.screen_name !== st.screen_name) params.append('screen_name', inlineShowtimeDraft.screen_name);
-      if (inlineShowtimeDraft.show_date !== undefined && inlineShowtimeDraft.show_date !== st.show_date) params.append('show_date', inlineShowtimeDraft.show_date);
-      if (inlineShowtimeDraft.show_time !== undefined && inlineShowtimeDraft.show_time !== st.show_time) params.append('show_time', inlineShowtimeDraft.show_time);
-      if (inlineShowtimeDraft.end_time !== undefined && inlineShowtimeDraft.end_time !== st.end_time) params.append('end_time', inlineShowtimeDraft.end_time);
-      if (inlineShowtimeDraft.total_seats !== undefined && inlineShowtimeDraft.total_seats !== st.total_seats) params.append('total_seats', String(inlineShowtimeDraft.total_seats));
-      if (inlineShowtimeDraft.price !== undefined && Number(inlineShowtimeDraft.price) !== Number(st.price)) params.append('price', String(parseFloat(inlineShowtimeDraft.price)));
-      if (params.toString().length === 0) {
+      const payload = {};
+      if (inlineShowtimeDraft.screen_name !== undefined && inlineShowtimeDraft.screen_name !== st.screen_name) payload.screen_name = inlineShowtimeDraft.screen_name;
+      if (inlineShowtimeDraft.show_date !== undefined && inlineShowtimeDraft.show_date !== st.show_date) payload.show_date = inlineShowtimeDraft.show_date;
+      if (inlineShowtimeDraft.show_time !== undefined && inlineShowtimeDraft.show_time !== st.show_time) payload.show_time = inlineShowtimeDraft.show_time;
+      if (inlineShowtimeDraft.end_time !== undefined && inlineShowtimeDraft.end_time !== st.end_time) payload.end_time = inlineShowtimeDraft.end_time;
+      if (inlineShowtimeDraft.total_seats !== undefined && inlineShowtimeDraft.total_seats !== st.total_seats) payload.total_seats = parseInt(inlineShowtimeDraft.total_seats, 10);
+      if (inlineShowtimeDraft.price !== undefined && Number(inlineShowtimeDraft.price) !== Number(st.price)) payload.price = parseFloat(inlineShowtimeDraft.price);
+      if (Object.keys(payload).length === 0) {
         toast.info('No changes');
         setInlineEditShowtimeId(null);
         setInlineShowtimeDraft({});
         return;
       }
-      await api.put(`/cinema/showtimes/${st.id}?${params.toString()}`);
+      await api.put(`/cinema/showtimes/${st.id}`, payload);
       toast.success('Showtime updated');
       setInlineEditShowtimeId(null);
       setInlineShowtimeDraft({});
@@ -574,16 +574,17 @@ export default function CinemaManagement() {
 
     try {
       if (editingShowtime) {
-        const params = new URLSearchParams();
-        params.append('film_id', showtimeForm.film_id);
-        params.append('screen_name', showtimeForm.screen_name);
-        params.append('show_date', showtimeForm.show_date);
-        params.append('show_time', showtimeForm.show_time);
-        params.append('end_time', showtimeForm.end_time);
-        params.append('price', String(parseFloat(showtimeForm.price)));
-        params.append('screen_type', showtimeForm.screen_type || '2d');
-        params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
-        await api.put(`/cinema/showtimes/${editingShowtime.id}?${params.toString()}`);
+        const payload = {
+          film_id: showtimeForm.film_id,
+          screen_name: showtimeForm.screen_name,
+          show_date: showtimeForm.show_date,
+          show_time: showtimeForm.show_time,
+          end_time: showtimeForm.end_time,
+          price: parseFloat(showtimeForm.price),
+          screen_type: showtimeForm.screen_type || '2d',
+          total_seats: parseInt(showtimeForm.total_seats, 10) || 100,
+        };
+        await api.put(`/cinema/showtimes/${editingShowtime.id}`, payload);
         toast.success('Showtime updated');
       } else {
         // Create one showtime per resolved date
@@ -1252,6 +1253,7 @@ export default function CinemaManagement() {
                                             variant="outline"
                                             className="h-8 text-red-600 hover:bg-red-50"
                                             onClick={async () => {
+                                              if (!window.confirm(`Delete showtime for "${st.film_title || 'this film'}" on ${st.show_date} at ${st.show_time}? This is a soft-delete.`)) return;
                                               try {
                                                 await api.delete(`/cinema/showtimes/${st.id}`);
                                                 toast.success('Showtime deactivated');
