@@ -32,7 +32,7 @@
     "checkout_session_network_call": {
       "method": "POST",
       "url": "/api/checkout/session",
-      "payload": "{\"order_id\":\"01645b13-6844-4c22-8c12-c84307b0cc64\",\"origin_url\":\"https://delivery-platform-108.preview.emergentagent.com\"}",
+      "payload": "{\"order_id\":\"01645b13-6844-4c22-8c12-c84307b0cc64\",\"origin_url\":\"https://cinema-management-p0.preview.emergentagent.com\"}",
       "redirect_behavior": "window.location.href assigned to response.data.url (confirmed — browser left preview domain when stubbed URL returned)"
     }
   },

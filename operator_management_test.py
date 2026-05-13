@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List
 
 # Configuration
-BASE_URL = "https://delivery-platform-108.preview.emergentagent.com/api"
+BASE_URL = "https://cinema-management-p0.preview.emergentagent.com/api"
 
 # Test credentials
 SUPER_ADMIN_CREDS = {"email": "superadmin@oryno.com", "password": "testpassword123"}

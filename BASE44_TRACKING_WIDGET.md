@@ -72,7 +72,7 @@ GET https://YOUR-BACKEND.example.com/api/packages/track/{TRACKING_NUMBER}
   // "No package found" on Base 44, the most common cause is this constant
   // pointing to a previous (stale) deployment URL.
   // Current backend (May 2026):
-  const ORYNO_BACKEND = "https://delivery-platform-108.preview.emergentagent.com";
+  const ORYNO_BACKEND = "https://cinema-management-p0.preview.emergentagent.com";
   const fullUrl = (u) => (u && u.startsWith("/")) ? ORYNO_BACKEND + u : u;
 
   function renderOrynoPhotos(label, urls) {

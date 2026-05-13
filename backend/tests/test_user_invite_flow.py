@@ -11,7 +11,7 @@ import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-BASE_URL = os.environ.get("API_BASE_URL", "https://delivery-platform-108.preview.emergentagent.com")
+BASE_URL = os.environ.get("API_BASE_URL", "https://cinema-management-p0.preview.emergentagent.com")
 API = f"{BASE_URL}/api"
 
 

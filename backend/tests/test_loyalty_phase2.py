@@ -10,7 +10,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://delivery-platform-108.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cinema-management-p0.preview.emergentagent.com')
 
 class TestLoyaltyPhase2:
     """Tests for Phase 2 Loyalty features"""

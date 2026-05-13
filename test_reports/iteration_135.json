@@ -2,14 +2,14 @@
   "summary": "Iter135 fix (stripViteHmrClient transformIndexHtml plugin) is INSUFFICIENT. Curl-level smoke test PASSES (no @vite/client / @react-refresh script tags in served index.html), but in the actual browser BOTH /orders and /services/travel still produce 1 framenavigated event (location.reload), 1 websocket open, 1 GET /@vite/client, and the console lines `[vite] server connection lost. Polling for restart...`, `[vite] connecting...`, `[vite] connected.` during a 90s idle. The user-reported periodic auto-refresh bug is therefore NOT fixed.",
   "test_credentials": "customer@test.com / testpassword123 (login OK, redirects to /dashboard)",
   "verification_steps_executed": [
-    "Curl smoke test on https://delivery-platform-108.preview.emergentagent.com/ — confirmed served HTML contains ONLY `<script type=\"module\" src=\"/src/main.jsx\"></script>`. No `/@vite/client` and no `/@react-refresh` script tags. (Curl test PASSES.)",
+    "Curl smoke test on https://cinema-management-p0.preview.emergentagent.com/ — confirmed served HTML contains ONLY `<script type=\"module\" src=\"/src/main.jsx\"></script>`. No `/@vite/client` and no `/@react-refresh` script tags. (Curl test PASSES.)",
     "Single persistent browser context: login customer@test.com → /orders → reset trackers → idle 90s → /services/travel → trigger Search Buses → reset trackers → idle 90s.",
     "Trackers per page: page.on('framenavigated'), page.on('websocket'), page.on('request') filtered for `@vite|@react-refresh|/__vite`, page.on('console').",
     "Inspected /src/main.jsx and /@react-refresh content via curl to find the actual injection path."
   ],
   "evidence_fix_failed": {
     "curl_smoke_test": {
-      "url": "https://delivery-platform-108.preview.emergentagent.com/",
+      "url": "https://cinema-management-p0.preview.emergentagent.com/",
       "vite_client_in_html": false,
       "react_refresh_in_html": false,
       "result": "PASS at curl level"
@@ -18,11 +18,11 @@
       "start_url": "/orders",
       "end_url": "/orders",
       "framenavigated_count": 1,
-      "framenavigated_urls": ["https://delivery-platform-108.preview.emergentagent.com/orders"],
+      "framenavigated_urls": ["https://cinema-management-p0.preview.emergentagent.com/orders"],
       "websocket_opens": 1,
       "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=YjhJYipEcDjd",
       "vite_requests_after_reset": 1,
-      "vite_request_urls": ["https://delivery-platform-108.preview.emergentagent.com/@vite/client"],
+      "vite_request_urls": ["https://cinema-management-p0.preview.emergentagent.com/@vite/client"],
       "console_lines_observed": [
         "[vite] server connection lost. Polling for restart...",
         "[vite] connecting...",
@@ -33,7 +33,7 @@
       "start_url": "/services/travel",
       "end_url": "/services/travel",
       "framenavigated_count": 1,
-      "framenavigated_urls": ["https://delivery-platform-108.preview.emergentagent.com/services/travel"],
+      "framenavigated_urls": ["https://cinema-management-p0.preview.emergentagent.com/services/travel"],
       "websocket_opens": 1,
       "websocket_url": "wss://booking-revamp-hub.preview.emergentagent.com/?token=YjhJYipEcDjd",
       "vite_requests_after_reset": 1,
