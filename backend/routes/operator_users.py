@@ -21,11 +21,12 @@ router = APIRouter(prefix="/api/operators", tags=["Operator Users"])
 class OperatorUserCreate(BaseModel):
     """Create a new user for an operator"""
     email: EmailStr
-    password: str
+    password: Optional[str] = None  # optional — when blank an invite email is sent and invitee sets their own password
     full_name: str
     phone: Optional[str] = None
     operator_role: str = "local_user"  # "local_admin" | "local_user"
     scoped_permissions: List[str] = []
+    send_invite: bool = True  # default to invite flow per the iteration-161 verification policy
 
 
 class OperatorUserAssign(BaseModel):
@@ -142,13 +143,45 @@ async def get_operator_users(
     }
 
 
+@router.get("/{operator_id}/owner-permissions")
+async def get_operator_owner_permissions(operator_id: str, current_user: dict = Depends(get_current_active_user)):
+    """Return the union of permissions held by the owner(s) of this operator.
+    Used by the Team page to cap what an owner can grant to a new team member
+    (an owner can never grant a permission they don't hold themselves)."""
+    db = get_database()
+    # Allow operator team members + platform admins
+    if current_user.get("operator_id") != operator_id and current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+    owners = await db.users.find(
+        {"operator_id": operator_id, "operator_role": "owner"},
+        {"_id": 1, "permissions": 1, "scoped_permissions": 1},
+    ).to_list(20)
+    perms = set()
+    for o in owners:
+        for p in (o.get("scoped_permissions") or []):
+            perms.add(p)
+        for p in (o.get("permissions") or []):
+            perms.add(p)
+    return {"permissions": sorted(perms), "owner_count": len(owners)}
+
+
 @router.post("/{operator_id}/users")
 async def create_operator_user(
     operator_id: str,
     user_data: OperatorUserCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a new user and assign them to an operator"""
+    """Create a new user and assign them to an operator.
+
+    Permission inheritance: when the caller is an operator-owner, the granted
+    scoped_permissions are intersected with the owner's own permissions — an
+    owner can never grant a permission they don't hold themselves.
+
+    Email verification: by default an invitation email is sent and the new
+    user is created in `pending_verification` state. They must confirm via the
+    /verify-account link before they can sign in. Set send_invite=false to
+    skip and require the caller-set password.
+    """
     db = get_database()
     
     # Verify access (must be admin or local_admin)
@@ -170,24 +203,47 @@ async def create_operator_user(
     # Validate operator_role
     if user_data.operator_role not in ["local_admin", "local_user"]:
         raise HTTPException(status_code=400, detail="Invalid operator role. Must be 'local_admin' or 'local_user'")
-    
-    # Create the user
+
+    # Permission inheritance cap — owners can only grant what they themselves have.
+    requested_perms = list(user_data.scoped_permissions or [])
+    if current_user.get("operator_role") == "owner" and current_user.get("role") not in ("admin", "super_admin"):
+        owner_perms = set((current_user.get("scoped_permissions") or [])) | set((current_user.get("permissions") or []))
+        invalid = [p for p in requested_perms if p not in owner_perms]
+        if invalid:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You can only grant permissions you hold yourself. Missing: {', '.join(invalid)}",
+            )
+
+    # Decide invitation flow
+    send_invite = bool(user_data.send_invite)
+    has_temp_password = bool(user_data.password)
+    if send_invite:
+        # Need *some* hash so the row is valid; invitee will set their own via the verify-account flow
+        import secrets as _secrets
+        raw_password = user_data.password or _secrets.token_urlsafe(24)
+    else:
+        if not user_data.password:
+            raise HTTPException(status_code=400, detail="A password is required when send_invite is false")
+        raw_password = user_data.password
+
+    user_id = str(uuid.uuid4())
     new_user = {
-        "_id": str(uuid.uuid4()),
+        "_id": user_id,
+        "id": user_id,
         "email": user_data.email,
-        "password_hash": hash_password(user_data.password),
+        "password_hash": hash_password(raw_password),
         "full_name": user_data.full_name,
         "phone": user_data.phone,
-        "role": UserRole.OPERATOR.value,  # Platform role is 'operator'
-        "status": UserStatus.ACTIVE.value,
-        
+        "role": UserRole.OPERATOR.value,
+        "status": "pending_verification" if send_invite else UserStatus.ACTIVE.value,
+        "email_verified": False if send_invite else True,
         # Operator assignment
         "operator_id": operator_id,
         "operator_name": operator["name"],
         "operator_role": user_data.operator_role,
         "operator_type": operator.get("operator_type"),
-        "scoped_permissions": user_data.scoped_permissions,
-        
+        "scoped_permissions": requested_perms,
         # Metadata
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
@@ -196,27 +252,65 @@ async def create_operator_user(
     }
     
     await db.users.insert_one(new_user)
-    
-    # Create activity log
+
+    # Activity log
     activity = {
         "_id": str(uuid.uuid4()),
         "type": "operator_user_created",
         "operator_id": operator_id,
-        "user_id": new_user["_id"],
+        "user_id": user_id,
         "performed_by": current_user["_id"],
-        "details": {
-            "user_email": user_data.email,
-            "operator_role": user_data.operator_role
-        },
-        "created_at": datetime.now(timezone.utc)
+        "details": {"user_email": user_data.email, "operator_role": user_data.operator_role},
+        "created_at": datetime.now(timezone.utc),
     }
     await db.activity_logs.insert_one(activity)
-    
+
+    invite_link = None
+    invite_email_status = None
+    if send_invite:
+        import secrets as _secrets
+        import os as _os
+        from datetime import timedelta as _td
+        invite_token = _secrets.token_urlsafe(32)
+        _public = _os.environ.get("APP_PUBLIC_URL", "").rstrip("/")
+        invite_link = f"{_public}/verify-account?token={invite_token}" if _public else None
+        await db.verification_tokens.insert_one({
+            "_id": invite_token,
+            "user_id": user_id,
+            "user_email": user_data.email,
+            "purpose": "account_invite",
+            "operator_id": operator_id,
+            "operator_name": operator["name"],
+            "has_temp_password": has_temp_password,
+            "consumed_at": None,
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + _td(days=7),
+        })
+        try:
+            from services.email_service import send_account_invite_email
+            await send_account_invite_email(
+                recipient_email=user_data.email,
+                recipient_name=user_data.full_name,
+                invite_token=invite_token,
+                operator_name=operator["name"],
+                inviter_name=current_user.get("full_name"),
+                has_temp_password=has_temp_password,
+            )
+            invite_email_status = "sent"
+        except Exception:
+            import logging
+            logging.exception("Failed to send team-member invite email")
+            invite_email_status = "failed"
+
     return {
         "message": "User created and assigned to operator successfully",
-        "user_id": new_user["_id"],
+        "user_id": user_id,
         "email": user_data.email,
-        "operator_role": user_data.operator_role
+        "operator_role": user_data.operator_role,
+        "send_invite": send_invite,
+        "invite_link": invite_link,
+        "invite_email_status": invite_email_status,
+        "default_password": raw_password if (has_temp_password and send_invite) else None,
     }
 
 

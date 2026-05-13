@@ -71,8 +71,13 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
     full_name: '',
     phone: '',
     operator_role: 'local_user',
-    scoped_permissions: []
+    scoped_permissions: [],
+    send_invite: true,
   });
+
+  // Owner's available permissions — used as the cap for what we can grant
+  const [ownerPermissions, setOwnerPermissions] = useState([]);
+  const [lastInvite, setLastInvite] = useState(null);  // { email, link, emailStatus, tempPassword }
   
   const [assignForm, setAssignForm] = useState({
     user_id: '',
@@ -142,10 +147,22 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
     }
   }, [operatorId, canAssignExistingUsers]);
   
+  // Load owner permissions (the cap for what we can grant to a new member)
+  const loadOwnerPermissions = useCallback(async () => {
+    if (!operatorId) return;
+    try {
+      const res = await api.get(`/operators/${operatorId}/owner-permissions`);
+      setOwnerPermissions(res.data?.permissions || []);
+    } catch {
+      setOwnerPermissions([]);
+    }
+  }, [operatorId]);
+
   useEffect(() => {
     loadUsers();
     loadStats();
-  }, [loadUsers, loadStats]);
+    loadOwnerPermissions();
+  }, [loadUsers, loadStats, loadOwnerPermissions]);
   
   useEffect(() => {
     if (showAssignDialog) {
@@ -155,15 +172,23 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
   
   // Create new user
   const handleCreateUser = async () => {
-    if (!createForm.email || !createForm.password || !createForm.full_name) {
-      toast.error('Please fill in all required fields');
+    if (!createForm.email || !createForm.full_name) {
+      toast.error('Full name and email are required');
       return;
     }
-    
+    if (!createForm.send_invite && !createForm.password) {
+      toast.error('Pick a password or enable the invite toggle');
+      return;
+    }
+    if (createForm.password && createForm.password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await api.post(`/operators/${operatorId}/users`, createForm);
-      toast.success('User created successfully');
+      const res = await api.post(`/operators/${operatorId}/users`, createForm);
+      const data = res.data || {};
       setShowCreateDialog(false);
       setCreateForm({
         email: '',
@@ -171,8 +196,24 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
         full_name: '',
         phone: '',
         operator_role: 'local_user',
-        scoped_permissions: []
+        scoped_permissions: [],
+        send_invite: true,
       });
+      if (data.send_invite && data.invite_link) {
+        setLastInvite({
+          email: data.email,
+          link: data.invite_link,
+          emailStatus: data.invite_email_status,
+          tempPassword: data.default_password,
+        });
+        toast.success(
+          data.invite_email_status === 'sent'
+            ? `Invite email sent to ${data.email}`
+            : 'User created — copy the invite link below'
+        );
+      } else {
+        toast.success('User created');
+      }
       loadUsers();
       loadStats();
     } catch (error) {
@@ -505,13 +546,32 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
             </div>
             
             <div>
-              <Label>Password *</Label>
+              <Label className="flex items-center justify-between">
+                <span>Send confirmation email</span>
+                <input
+                  type="checkbox"
+                  checked={createForm.send_invite}
+                  onChange={(e) => setCreateForm(f => ({ ...f, send_invite: e.target.checked }))}
+                  className="h-4 w-4"
+                  data-testid="op-team-invite-toggle"
+                />
+              </Label>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {createForm.send_invite
+                  ? "We'll email them a link to confirm and (optionally) set their own password."
+                  : "User will be activated immediately with the password you set."}
+              </p>
+            </div>
+
+            <div>
+              <Label>{createForm.send_invite ? 'Starting password (optional)' : 'Password *'}</Label>
               <Input
                 type="password"
                 value={createForm.password}
                 onChange={(e) => setCreateForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="••••••••"
+                placeholder={createForm.send_invite ? 'Leave blank — invitee sets their own' : 'At least 8 characters'}
                 className="mt-1"
+                data-testid="op-team-password"
               />
             </div>
             
@@ -552,6 +612,60 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
               <p className="text-xs text-slate-500 mt-1">
                 {OPERATOR_ROLES[createForm.operator_role]?.description}
               </p>
+            </div>
+
+            {/* Scoped permissions — capped at what the owner holds */}
+            <div className="border-t pt-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs uppercase tracking-wider text-slate-500">Granted permissions</Label>
+                <span className="text-[10px] text-slate-400">{createForm.scoped_permissions.length} / {ownerPermissions.length} available</span>
+              </div>
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">
+                Team members can only inherit permissions you already hold. Permissions you don't have appear greyed out.
+              </p>
+              {SCOPED_PERMISSIONS.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1" data-testid="op-team-perm-list">
+                  {['Bookings', 'Services', 'Reports', 'Settings'].map((cat) => (
+                    <div key={cat}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">{cat}</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {SCOPED_PERMISSIONS.filter((p) => p.category === cat).map((p) => {
+                          const ownerHasIt = ownerPermissions.includes(p.id);
+                          const checked = createForm.scoped_permissions.includes(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition ${
+                                !ownerHasIt
+                                  ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                                  : checked
+                                  ? 'border-blue-300 bg-blue-50 text-slate-900 cursor-pointer'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 cursor-pointer'
+                              }`}
+                              data-testid={`op-team-perm-${p.id}`}
+                            >
+                              <input
+                                type="checkbox"
+                                disabled={!ownerHasIt}
+                                checked={checked}
+                                onChange={() => setCreateForm((f) => ({
+                                  ...f,
+                                  scoped_permissions: checked
+                                    ? f.scoped_permissions.filter((x) => x !== p.id)
+                                    : [...f.scoped_permissions, p.id],
+                                }))}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span className="flex-1">{p.label}</span>
+                              {!ownerHasIt && <span className="text-[9px]">locked</span>}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           
@@ -743,6 +857,40 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
               Remove User
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invitation result dialog — shown after a team member is created with send_invite */}
+      <Dialog open={!!lastInvite} onOpenChange={(o) => { if (!o) setLastInvite(null); }}>
+        <DialogContent className="bg-white max-w-md" data-testid="op-team-invite-result">
+          <DialogHeader>
+            <DialogTitle>
+              {lastInvite?.emailStatus === 'sent' ? '✉️ Invitation sent' : '🔗 Share invite link'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              {lastInvite?.emailStatus === 'sent'
+                ? <>An email has been sent to <strong>{lastInvite?.email}</strong>. They'll need to confirm before signing in.</>
+                : <>Copy this link and share it with <strong>{lastInvite?.email}</strong> to confirm their account.</>}
+            </p>
+            <div className="rounded-lg bg-slate-100 border border-slate-200 px-3 py-2 text-xs break-all font-mono text-slate-700">
+              {lastInvite?.link}
+            </div>
+            {lastInvite?.tempPassword && (
+              <p className="text-xs text-slate-500">Starting password: <span className="font-mono text-slate-700">{lastInvite.tempPassword}</span></p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try { await navigator.clipboard.writeText(lastInvite?.link || ''); toast.success('Invite link copied'); }
+                catch { toast.error('Could not copy — long-press manually'); }
+              }}
+            >Copy link</Button>
+            <Button className="bg-[#082c59] text-white" onClick={() => setLastInvite(null)}>Done</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
