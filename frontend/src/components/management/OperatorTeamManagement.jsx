@@ -18,6 +18,7 @@ import {
 import api from '@/api/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorTeamMemberWizard from '@/components/management/OperatorTeamMemberWizard';
 
 // Role configuration
 const OPERATOR_ROLES = {
@@ -510,176 +511,34 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
         </CardContent>
       </Card>
       
-      {/* Create User Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-blue-600" />
-              Create New Team Member
-            </DialogTitle>
-            <DialogDescription>
-              Create a new user account for {operatorName}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Full Name *</Label>
-              <Input
-                value={createForm.full_name}
-                onChange={(e) => setCreateForm(f => ({ ...f, full_name: e.target.value }))}
-                placeholder="John Doe"
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label>Email *</Label>
-              <Input
-                type="email"
-                value={createForm.email}
-                onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="john@example.com"
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label className="flex items-center justify-between">
-                <span>Send confirmation email</span>
-                <input
-                  type="checkbox"
-                  checked={createForm.send_invite}
-                  onChange={(e) => setCreateForm(f => ({ ...f, send_invite: e.target.checked }))}
-                  className="h-4 w-4"
-                  data-testid="op-team-invite-toggle"
-                />
-              </Label>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {createForm.send_invite
-                  ? "We'll email them a link to confirm and (optionally) set their own password."
-                  : "User will be activated immediately with the password you set."}
-              </p>
-            </div>
-
-            <div>
-              <Label>{createForm.send_invite ? 'Starting password (optional)' : 'Password *'}</Label>
-              <Input
-                type="password"
-                value={createForm.password}
-                onChange={(e) => setCreateForm(f => ({ ...f, password: e.target.value }))}
-                placeholder={createForm.send_invite ? 'Leave blank — invitee sets their own' : 'At least 8 characters'}
-                className="mt-1"
-                data-testid="op-team-password"
-              />
-            </div>
-            
-            <div>
-              <Label>Phone (optional)</Label>
-              <Input
-                value={createForm.phone}
-                onChange={(e) => setCreateForm(f => ({ ...f, phone: e.target.value }))}
-                placeholder="+237 6XX XXX XXX"
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label>Role</Label>
-              <Select
-                value={createForm.operator_role}
-                onValueChange={(v) => setCreateForm(f => ({ ...f, operator_role: v }))}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="local_user">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" /> Local User
-                    </div>
-                  </SelectItem>
-                  {canCreateAdmins && (
-                    <SelectItem value="local_admin">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" /> Local Admin
-                      </div>
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-1">
-                {OPERATOR_ROLES[createForm.operator_role]?.description}
-              </p>
-            </div>
-
-            {/* Scoped permissions — capped at what the owner holds */}
-            <div className="border-t pt-3">
-              <div className="flex items-center justify-between mb-1.5">
-                <Label className="text-xs uppercase tracking-wider text-slate-500">Granted permissions</Label>
-                <span className="text-[10px] text-slate-400">{createForm.scoped_permissions.length} / {ownerPermissions.length} available</span>
-              </div>
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">
-                Team members can only inherit permissions you already hold. Permissions you don't have appear greyed out.
-              </p>
-              {SCOPED_PERMISSIONS.length > 0 && (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1" data-testid="op-team-perm-list">
-                  {['Bookings', 'Services', 'Reports', 'Settings'].map((cat) => (
-                    <div key={cat}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">{cat}</p>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {SCOPED_PERMISSIONS.filter((p) => p.category === cat).map((p) => {
-                          const ownerHasIt = ownerPermissions.includes(p.id);
-                          const checked = createForm.scoped_permissions.includes(p.id);
-                          return (
-                            <label
-                              key={p.id}
-                              className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition ${
-                                !ownerHasIt
-                                  ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
-                                  : checked
-                                  ? 'border-blue-300 bg-blue-50 text-slate-900 cursor-pointer'
-                                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 cursor-pointer'
-                              }`}
-                              data-testid={`op-team-perm-${p.id}`}
-                            >
-                              <input
-                                type="checkbox"
-                                disabled={!ownerHasIt}
-                                checked={checked}
-                                onChange={() => setCreateForm((f) => ({
-                                  ...f,
-                                  scoped_permissions: checked
-                                    ? f.scoped_permissions.filter((x) => x !== p.id)
-                                    : [...f.scoped_permissions, p.id],
-                                }))}
-                                className="h-3.5 w-3.5"
-                              />
-                              <span className="flex-1">{p.label}</span>
-                              {!ownerHasIt && <span className="text-[9px]">locked</span>}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateUser} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
-              {submitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
-              Create User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Team Member Wizard (3-step) */}
+      <OperatorTeamMemberWizard
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        operatorId={operatorId}
+        onCreated={async (payload) => {
+          const res = await api.post(`/operators/${operatorId}/users`, payload);
+          const data = res.data || {};
+          setShowCreateDialog(false);
+          if (data.send_invite && data.invite_link) {
+            setLastInvite({
+              email: data.email,
+              link: data.invite_link,
+              emailStatus: data.invite_email_status,
+              tempPassword: data.default_password,
+            });
+            toast.success(
+              data.invite_email_status === 'sent'
+                ? `Invite email sent to ${data.email}`
+                : 'Team member created — copy the invite link below'
+            );
+          } else {
+            toast.success('Team member created');
+          }
+          loadUsers();
+          loadStats();
+        }}
+      />
       
       {/* Assign Existing User Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
