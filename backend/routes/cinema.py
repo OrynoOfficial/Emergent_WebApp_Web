@@ -221,7 +221,8 @@ async def get_film_showtimes(film_id: str, city: Optional[str] = None):
             cinema_lookup[c["_id"]] = {"name": c.get("name"), "city": c.get("city")}
 
     for s in showtimes:
-        s["id"] = s.pop("_id", None)
+        raw_id = s.pop("_id", None)
+        s["id"] = str(raw_id) if raw_id is not None else None
         if not s.get("cinema_name"):
             lk = cinema_lookup.get(s.get("cinema_id"))
             if lk:
@@ -542,7 +543,7 @@ async def delete_showtime(
     showtime_id: str,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
 ):
-    """Soft-delete (deactivate) a showtime. Refuses if there are active bookings — operators should use the Replace flow instead."""
+    """Hard-delete a showtime. Refuses if there are active bookings — operators should use the Replace flow instead."""
     db = get_database()
     st = await db.showtimes.find_one({"_id": showtime_id})
     if not st:
@@ -570,11 +571,14 @@ async def delete_showtime(
             ),
         )
 
-    await db.showtimes.update_one(
-        {"_id": showtime_id},
-        {"$set": {"is_active": False, "deleted_at": datetime.utcnow()}},
-    )
-    return {"message": "Showtime deactivated", "showtime_id": showtime_id}
+    # Hard-delete: remove the showtime document entirely from the collection so
+    # it cannot resurface in any listing or aggregation.
+    result = await db.showtimes.delete_one({"_id": showtime_id})
+    return {
+        "message": "Showtime deleted",
+        "showtime_id": showtime_id,
+        "deleted_count": result.deleted_count,
+    }
 
 
 @router.post("/showtimes")
