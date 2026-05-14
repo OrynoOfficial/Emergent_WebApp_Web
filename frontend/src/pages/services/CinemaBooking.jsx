@@ -72,6 +72,15 @@ function safeFmtDate(s) {
   return isValid(d) ? format(d, 'EEE, MMM d, yyyy') : s;
 }
 
+// Resolve film poster URLs — backend stores `/api/static/...` which needs the
+// page origin prefix so the kubernetes ingress can route it to the API.
+function resolvePoster(url) {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/api/')) return `${window.location.origin}${url}`;
+  return url;
+}
+
 export default function CinemaBooking() {
   const { showtimeId } = useParams();
   const [searchParams] = useSearchParams();
@@ -114,38 +123,46 @@ export default function CinemaBooking() {
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // 1) Prime UI immediately from sessionStorage (set by FilmDetails when the user
+      //    picked the showtime) so the title/cinema/date/time match what they saw.
+      let primed = null;
+      try {
+        const raw = sessionStorage.getItem('cinemaBookingData');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.showtime?.id === showtimeId) {
+            primed = parsed;
+            if (parsed.film) setFilm(parsed.film);
+            if (parsed.showtime) setShowtime(parsed.showtime);
+            if (parsed.showtime?.seat_layout) setSeatLayout(parsed.showtime.seat_layout);
+          }
+        }
+      } catch { /* sessionStorage may be unavailable / malformed — ignore */ }
+
+      // 2) Fetch the canonical showtime details (public endpoint) so seat_layout +
+      //    booked_seats + freshly enriched cinema_name override the primed values.
       let data = null;
       try {
         const res = await api.get(`/cinema/showtimes/${showtimeId}/details`);
         data = res.data;
-      } catch { /* fallback to mock below */ }
+      } catch (err) {
+        console.error('Failed to load showtime details:', err);
+      }
 
       if (data) {
-        setShowtime(data.showtime || data);
-        setFilm(data.film || { title: data.film_title || 'Movie' });
-        if (data.seat_layout || data.showtime?.seat_layout) {
-          setSeatLayout(data.seat_layout || data.showtime.seat_layout);
-        }
-        if (data.booked_seats) setBookedSeats(data.booked_seats);
-      } else {
-        // Mock fallback (preserves existing behaviour while seat config is rolled out)
-        const mockShowtime = {
-          id: showtimeId,
-          cinema_name: 'CanalOlympia Yaoundé',
-          city: 'Yaoundé',
-          screen_name: 'Screen 1',
-          screen_type: '3d',
-          show_date: searchParams.get('date') || format(new Date(), 'yyyy-MM-dd'),
-          show_time: '14:00',
-          price: 5000,
-          vip_price: 7500,
-          total_seats: 96,
-        };
-        setShowtime(mockShowtime);
-        setFilm({ id: searchParams.get('film'), title: 'Black Panther: Wakanda Forever', duration_minutes: 161, rating: 'PG-13' });
-        // Mock layout — 8 rows × 12 cols, last 2 rows VIP, central aisle, a few blocked.
-        setSeatLayout({ rows: 8, cols: 12, aisle_after_col: [4, 8], vip_rows: ['G', 'H'], blocked: ['A1', 'A12'] });
-        setBookedSeats(['A3', 'A4', 'B5', 'B6', 'C7', 'D8', 'D9', 'E10']);
+        const apiShowtime = data.showtime || data;
+        // Prefer API values; backfill with `film_title` so we never end up with an empty title.
+        setShowtime((prev) => ({ ...(prev || {}), ...apiShowtime }));
+        setFilm((prev) => data.film || prev || { title: apiShowtime.film_title || 'Movie' });
+        const layout = data.seat_layout || apiShowtime?.seat_layout;
+        if (layout) setSeatLayout(layout);
+        if (Array.isArray(data.booked_seats)) setBookedSeats(data.booked_seats);
+      } else if (!primed) {
+        // No primed data AND API failed — surface a recoverable empty state so we
+        // don't render misleading "Black Panther" mock content.
+        setShowtime(null);
+        setFilm(null);
       }
     } catch (e) {
       console.error('Failed to load showtime:', e);
@@ -463,7 +480,7 @@ export default function CinemaBooking() {
               <Card className="overflow-hidden border-cyan-500/20 bg-slate-900/70 backdrop-blur-md">
                 <div className="relative h-44 bg-gradient-to-br from-cyan-700 via-cyan-600 to-slate-900 overflow-hidden">
                   {film?.poster_url ? (
-                    <img src={film.poster_url} alt={film.title} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                    <img src={resolvePoster(film.poster_url)} alt={film.title} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-70" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Film className="w-24 h-24 text-white/15" />

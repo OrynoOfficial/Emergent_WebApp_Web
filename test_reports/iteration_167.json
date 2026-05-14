@@ -1,0 +1,57 @@
+{
+  "summary": "Frontend-only verification of /services/cinema/booking/{showtimeId} after the 'Black Panther mock removal' change. Both flows verified: (a) direct deep-link with NO sessionStorage, and (b) navigation from /services/cinema/film/{id} -> click ShowtimeCard. In both cases the booking page renders the selected film/cinema/date/time (Olympus has Fallen - EN @ PH-Netflix, Wed, Jul 1, 2026, 15:00, VIP). The Black Panther mock string is absent (count=0). Poster URL is correctly prefixed via resolvePoster() to '<origin>/api/static/films/<id>.png' and renders in the order-summary header. Step indicator, tickets +/-, payment-method card and Confirm-booking CTA are all still present and unchanged.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_observations": {
+    "deep_link": {
+      "url": "/services/cinema/booking/c58f7a3e-...?film=1edf...&date=2026-07-01",
+      "BlackPanther_count": 0,
+      "Olympus_count": 3,
+      "PH-Netflix_count": 2,
+      "has_date_Wed_Jul_1_2026": true,
+      "has_time_15_00": true,
+      "poster_src": "https://cinema-management-p0.preview.emergentagent.com/api/static/films/4ffe92b1-ccf7-4a9f-a597-b8e1338d1932.png",
+      "poster_alt": "Olympus has Fallen - EN",
+      "cta_present": true,
+      "step_indicator_present": true,
+      "ticket_increment_present": true
+    },
+    "via_showtime_card_click": {
+      "showtime_card_testid_clicked": "showtime-card-c58f7a3e-6586-4606-b3cb-15cf0f23f71d",
+      "sessionStorage_cinemaBookingData_length": 1347,
+      "sessionStorage_film_title_in_payload": "Olympus has Fallen - EN",
+      "BlackPanther_count": 0,
+      "Olympus_count": 3,
+      "PH-Netflix_count": 2,
+      "has_date_Wed_Jul_1_2026": true,
+      "has_time_15_00": true
+    },
+    "header_hero_meta_row": "MapPin PH-Netflix | Calendar Wed, Jul 1, 2026 | Clock 15:00 | VIP badge - all rendered with the selected film name 'Olympus has Fallen - EN'",
+    "regression_checks": {
+      "step_indicator": "Seats/Details/Payment intact",
+      "seat_map": "Rendered with rows A and B, legend (Available/Selected/VIP/Booked/Blocked)",
+      "tickets_counter": "Adult/Child/Senior with +/- buttons present (data-testid intact)",
+      "payment_methods_card": "Present below order summary",
+      "confirm_button_testid": "cinema-confirm-booking-btn"
+    }
+  },
+  "test_report_links": ["/app/test_reports/cinema_booking_deeplink_v3.png", "/app/test_reports/cinema_booking_via_click.png"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "loadData() correctly merges sessionStorage prime then API authoritative refresh; on full API failure with no prime it nulls out state instead of falling back to mock - good.",
+    "resolvePoster() only prefixes '/api/' paths; relative paths starting with '/static/...' or other absolute roots would remain un-prefixed. Not an issue with current backend which always serves '/api/static/...'.",
+    "Header h1 inside the booking content shows the actual selected film title; the page document body still includes a global sidebar 'Welcome back' heading which is expected layout (not a regression).",
+    "If both sessionStorage prime is missing AND the API request fails, the page renders an empty-ish UI (no title, no cinema, no date). Consider showing an explicit error state with retry/back navigation."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "customer@test.com / testpassword123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None - used existing seeded showtime id c58f7a3e-6586-4606-b3cb-15cf0f23f71d (Olympus has Fallen - EN @ PH-Netflix, 2026-07-01 15:00, VIP).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both code paths (sessionStorage-primed via ShowtimeCard click, and cold deep-link) now correctly render the selected film/cinema/date/time on /services/cinema/booking/{id}. No Black Panther mock anywhere. Poster src resolved through resolvePoster() to absolute origin + /api/static/...; image loads. Login flow on this app requires clicking 'Login to Your Account' first to reveal the email/password form (two-step login screen). Payment was NOT submitted as instructed."
+}
