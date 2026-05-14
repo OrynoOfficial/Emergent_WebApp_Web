@@ -574,6 +574,9 @@ async def delete_showtime(
     # Hard-delete: remove the showtime document entirely from the collection so
     # it cannot resurface in any listing or aggregation.
     result = await db.showtimes.delete_one({"_id": showtime_id})
+    if result.deleted_count == 0:
+        # Lost a race against another concurrent delete — treat as 404.
+        raise HTTPException(status_code=404, detail="Showtime not found")
     return {
         "message": "Showtime deleted",
         "showtime_id": showtime_id,
