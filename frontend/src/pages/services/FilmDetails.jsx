@@ -1,205 +1,380 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Film, Clock, Star, Calendar, MapPin, ArrowLeft, Play, Users, AlertCircle } from 'lucide-react';
-import { cinemaApi } from '@/api/management';
+import {
+  ArrowLeft, Film, Clock, Star, Calendar, Ticket, Loader2, Users, Monitor, MapPin,
+} from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
-import { isPast, isToday } from '@/utils/dateUtils';
-import { format, addDays } from 'date-fns';
+import api from '@/api/client';
+
+const GENRE_COLORS = {
+  Action:    'bg-red-100 text-red-700',
+  Comedy:    'bg-yellow-100 text-yellow-700',
+  Drama:     'bg-blue-100 text-blue-700',
+  Horror:    'bg-purple-100 text-purple-700',
+  'Sci-Fi':  'bg-cyan-100 text-cyan-700',
+  Romance:   'bg-pink-100 text-pink-700',
+  Animation: 'bg-green-100 text-green-700',
+  Adventure: 'bg-orange-100 text-orange-700',
+  Crime:     'bg-slate-100 text-slate-700',
+  Thriller:  'bg-rose-100 text-rose-700',
+};
+
+const SCREEN_TYPE_LABELS = {
+  '2d':           { label: '2D',           color: 'bg-gray-200 text-gray-800' },
+  '3d':           { label: '3D',           color: 'bg-blue-200 text-blue-800' },
+  'imax':         { label: 'IMAX',         color: 'bg-purple-200 text-purple-800' },
+  'vip':          { label: 'VIP',          color: 'bg-amber-200 text-amber-800' },
+  'dolby_atmos':  { label: 'Dolby Atmos',  color: 'bg-indigo-200 text-indigo-800' },
+};
+
+const POSTER_FALLBACK = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80';
+
+// Resolve a film poster URL. Backend stores API-relative paths like `/api/static/films/...`;
+// prefix them with the page origin so the kubernetes ingress routes them to the backend.
+function resolvePoster(url) {
+  if (!url) return POSTER_FALLBACK;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/api/')) return `${window.location.origin}${url}`;
+  return url;
+}
+
+function formatDateLabel(yyyymmdd) {
+  try {
+    const d = parseISO(yyyymmdd);
+    if (!isValid(d)) return yyyymmdd;
+    return format(d, 'EEEE, MMMM d');
+  } catch {
+    return yyyymmdd;
+  }
+}
+
+function ShowtimeCard({ st, onSelect }) {
+  const screen = SCREEN_TYPE_LABELS[st.screen_type] || { label: (st.screen_type || '—').toUpperCase(), color: 'bg-gray-200 text-gray-800' };
+  const seatsLeft = st.available_seats ?? st.total_seats ?? 0;
+  const soldOut = seatsLeft <= 0;
+  return (
+    <button
+      type="button"
+      onClick={() => !soldOut && onSelect(st)}
+      disabled={soldOut}
+      data-testid={`showtime-card-${st.id}`}
+      className={`text-left rounded-xl border transition-all p-4 group ${
+        soldOut
+          ? 'bg-slate-800/40 border-slate-700/60 opacity-60 cursor-not-allowed'
+          : 'bg-slate-800/70 border-slate-700/60 hover:border-cyan-400/60 hover:bg-slate-800 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)] cursor-pointer'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xl font-bold text-white tabular-nums" data-testid={`showtime-time-${st.id}`}>
+          {st.show_time}
+          {st.end_time && <span className="text-xs text-slate-400 ml-2 font-normal">→ {st.end_time}</span>}
+        </div>
+        <Badge className={`text-[10px] ${screen.color}`} data-testid={`showtime-screen-${st.id}`}>
+          {screen.label}
+        </Badge>
+      </div>
+      <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2.5">
+        <Monitor className="w-3.5 h-3.5" /> {st.screen_name || '—'}
+      </div>
+      <div className="flex items-center justify-between pt-2.5 border-t border-slate-700/60">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Price</div>
+          <div className="text-base font-bold text-cyan-300 tabular-nums" data-testid={`showtime-price-${st.id}`}>
+            {st.price != null ? formatFCFA(st.price) : '—'}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wider text-slate-500 flex items-center justify-end gap-1">
+            <Users className="w-3 h-3" /> Seats
+          </div>
+          <div
+            className={`text-sm font-semibold tabular-nums ${
+              soldOut ? 'text-rose-400' : seatsLeft <= 5 ? 'text-amber-300' : 'text-emerald-300'
+            }`}
+            data-testid={`showtime-seats-${st.id}`}
+          >
+            {soldOut ? 'Sold out' : `${seatsLeft} left`}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
 
 export default function FilmDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const cityScope = searchParams.get('city') || '';
+
   const [film, setFilm] = useState(null);
   const [showtimes, setShowtimes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedCinema, setSelectedCinema] = useState('all');
-
-  // Generate next 7 days
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(new Date(), i);
-    return { value: format(date, 'yyyy-MM-dd'), label: format(date, 'EEE, MMM d') };
-  });
+  const [dateFilter, setDateFilter] = useState('all');
+  const [screenFilter, setScreenFilter] = useState('all');
 
   useEffect(() => {
-    loadFilm();
-  }, [id]);
-
-  const loadFilm = async () => {
-    try {
+    let cancelled = false;
+    (async () => {
       setLoading(true);
-      const res = await cinemaApi.getFilm(id);
-      setFilm(res.data);
-      // Load showtimes
-      setShowtimes([
-        { id: '1', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: '2d', show_time: '10:30', price: 3500, available_seats: 120 },
-        { id: '2', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: '3d', show_time: '14:00', price: 5000, available_seats: 85 },
-        { id: '3', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: 'imax', show_time: '17:30', price: 7500, available_seats: 45 },
-        { id: '4', cinema_name: 'Cinéma Le Wouri', city: 'Douala', screen_type: '2d', show_time: '11:00', price: 3000, available_seats: 100 },
-        { id: '5', cinema_name: 'Cinéma Le Wouri', city: 'Douala', screen_type: '3d', show_time: '15:30', price: 4500, available_seats: 60 },
-        { id: '6', cinema_name: 'Cinéma Le Wouri', city: 'Douala', screen_type: '2d', show_time: '20:00', price: 3500, available_seats: 90 }
-      ]);
-    } catch (error) {
-      // Mock data
-      setFilm({
-        id: id,
-        title: 'Black Panther: Wakanda Forever',
-        genre: ['Action', 'Sci-Fi', 'Adventure'],
-        duration_minutes: 161,
-        rating: 'PG-13',
-        language: 'English',
-        director: 'Ryan Coogler',
-        cast: ['Letitia Wright', 'Lupita Nyong\'o', 'Danai Gurira', 'Winston Duke'],
-        description: 'The people of Wakanda fight to protect their home from intervening world powers as they mourn the death of King T\'Challa.',
-        release_date: '2022-11-11',
-        imdb_rating: 7.3
-      });
-      setShowtimes([
-        { id: '1', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: '2d', show_time: '10:30', price: 3500, available_seats: 120 },
-        { id: '2', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: '3d', show_time: '14:00', price: 5000, available_seats: 85 },
-        { id: '3', cinema_name: 'CanalOlympia Yaoundé', city: 'Yaoundé', screen_type: 'imax', show_time: '17:30', price: 7500, available_seats: 45 },
-        { id: '4', cinema_name: 'Cinéma Le Wouri', city: 'Douala', screen_type: '2d', show_time: '11:00', price: 3000, available_seats: 100 },
-        { id: '5', cinema_name: 'Cinéma Le Wouri', city: 'Douala', screen_type: '3d', show_time: '15:30', price: 4500, available_seats: 60 }
-      ]);
-    } finally {
-      setLoading(false);
+      try {
+        const [filmRes, showtimesRes] = await Promise.all([
+          api.get(`/cinema/films/${id}`).catch(() => null),
+          api.get(`/cinema/films/${id}/showtimes`, { params: cityScope ? { city: cityScope } : {} }).catch(() => null),
+        ]);
+        if (cancelled) return;
+        setFilm(filmRes?.data || null);
+        setShowtimes(showtimesRes?.data?.showtimes || []);
+      } catch (e) {
+        console.error('Failed to load film details:', e);
+        if (!cancelled) { setFilm(null); setShowtimes([]); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, cityScope]);
+
+  const dateOptions = useMemo(() => {
+    const set = new Set(showtimes.map((s) => s.show_date).filter(Boolean));
+    return Array.from(set).sort();
+  }, [showtimes]);
+
+  const screenOptions = useMemo(() => {
+    const set = new Set(showtimes.map((s) => s.screen_type).filter(Boolean));
+    return Array.from(set).sort();
+  }, [showtimes]);
+
+  const groupedShowtimes = useMemo(() => {
+    const list = showtimes
+      .filter((s) => dateFilter === 'all' || s.show_date === dateFilter)
+      .filter((s) => screenFilter === 'all' || s.screen_type === screenFilter);
+    const byDate = new Map();
+    for (const s of list) {
+      const d = s.show_date || 'TBD';
+      if (!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(s);
     }
+    const result = [];
+    for (const date of Array.from(byDate.keys()).sort()) {
+      const group = byDate.get(date).slice().sort((a, b) => (a.show_time || '').localeCompare(b.show_time || ''));
+      result.push({ date, showtimes: group });
+    }
+    return result;
+  }, [showtimes, dateFilter, screenFilter]);
+
+  const cinemaNames = useMemo(() => {
+    const set = new Set();
+    for (const s of showtimes) {
+      if (s.cinema_name) set.add(s.cinema_name);
+    }
+    return Array.from(set).sort();
+  }, [showtimes]);
+
+  const handleSelectShowtime = (showtime) => {
+    sessionStorage.setItem('cinemaBookingData', JSON.stringify({
+      film,
+      showtime,
+      date: showtime.show_date,
+    }));
+    navigate(`/services/cinema/booking/${showtime.id}?film=${film.id}&date=${showtime.show_date}`);
   };
 
-  const filteredShowtimes = showtimes.filter(st => 
-    selectedCinema === 'all' || st.cinema_name === selectedCinema
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
+      </div>
+    );
+  }
 
-  const groupedShowtimes = filteredShowtimes.reduce((acc, st) => {
-    if (!acc[st.cinema_name]) acc[st.cinema_name] = [];
-    acc[st.cinema_name].push(st);
-    return acc;
-  }, {});
-
-  const cinemaNames = [...new Set(showtimes.map(st => st.cinema_name))];
-
-  if (loading) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading...</div>;
-  if (!film) return <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Film not found</div>;
+  if (!film) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center text-white">
+        <div className="text-center">
+          <Film className="w-16 h-16 mx-auto mb-4 text-slate-500" />
+          <h2 className="text-xl font-semibold mb-2">Film not found</h2>
+          <Button onClick={() => navigate('/services/cinema')} className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold" data-testid="film-details-back-to-cinema">
+            Back to Cinema
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
-      {/* Header */}
-      <div className="bg-black/50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      {/* Top bar */}
+      <div className="bg-black/40 backdrop-blur-xl border-b border-cyan-500/10">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <Button variant="ghost" className="text-white hover:text-white hover:bg-white/10" onClick={() => navigate('/services/cinema')}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Movies
+          <Button variant="ghost" className="text-cyan-300 hover:bg-cyan-500/10" onClick={() => navigate(-1)} data-testid="film-details-back">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
         </div>
       </div>
 
-      {/* Film Hero */}
-      <div className="bg-gradient-to-r from-[#082c59] to-purple-900">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Poster */}
-            <div className="w-full md:w-64 flex-shrink-0">
-              <div className="aspect-[2/3] bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-                <Film className="w-20 h-20 text-white/50" />
-              </div>
+      {/* Hero */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Poster */}
+          <div className="w-full md:w-80 flex-shrink-0">
+            <div className="aspect-[2/3] rounded-xl overflow-hidden relative bg-slate-800 shadow-2xl shadow-cyan-500/10 border border-slate-800">
+              <img
+                src={resolvePoster(film.poster_url)}
+                alt={film.title}
+                onError={(e) => { e.currentTarget.src = POSTER_FALLBACK; }}
+                className="w-full h-full object-cover"
+                data-testid="film-poster-image"
+              />
+              {film.imdb_rating != null && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-amber-400/40">
+                  <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+                  <span className="text-white font-bold">{film.imdb_rating}</span>
+                </div>
+              )}
             </div>
-            {/* Details */}
-            <div className="flex-1 text-white">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{film.title}</h1>
-              <div className="flex flex-wrap gap-3 mb-4">
-                <Badge className="bg-yellow-500 text-black">{film.rating}</Badge>
-                {film.genre?.map(g => <Badge key={g} variant="outline" className="border-white/30 text-white">{g}</Badge>)}
-              </div>
-              <div className="flex flex-wrap gap-6 text-slate-300 mb-4">
-                <div className="flex items-center gap-2"><Clock className="w-4 h-4" /> {Math.floor(film.duration_minutes / 60)}h {film.duration_minutes % 60}m</div>
-                <div className="flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400" /> {film.imdb_rating}/10 IMDb</div>
-                <div className="flex items-center gap-2"><Calendar className="w-4 h-4" /> {film.release_date}</div>
-              </div>
-              <p className="text-slate-300 mb-4">{film.description}</p>
-              <div className="text-sm text-slate-400">
-                <p><strong className="text-white">Director:</strong> {film.director}</p>
-                <p><strong className="text-white">Cast:</strong> {film.cast?.join(', ')}</p>
-              </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4" data-testid="film-title">{film.title}</h1>
+
+            {/* Genres */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {film.genre?.map((g) => (
+                <Badge key={g} className={GENRE_COLORS[g] || 'bg-slate-700 text-slate-200'}>{g}</Badge>
+              ))}
+            </div>
+
+            {/* Meta */}
+            <div className="flex flex-wrap gap-4 text-slate-300 mb-6 text-sm">
+              {film.duration_minutes && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {Math.floor(film.duration_minutes / 60)}h {film.duration_minutes % 60}m
+                </span>
+              )}
+              {film.rating && (
+                <Badge variant="outline" className="border-slate-600 text-slate-300">{film.rating}</Badge>
+              )}
+              {film.release_date && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" /> {film.release_date}
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            {film.description && (
+              <p className="text-slate-300 mb-6 leading-relaxed">{film.description}</p>
+            )}
+
+            {/* Cast & crew + Cinema */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              {film.director && (
+                <div>
+                  <span className="text-slate-500">Director:</span>
+                  <span className="ml-2 text-white">{film.director}</span>
+                </div>
+              )}
+              {film.cast?.length > 0 && (
+                <div>
+                  <span className="text-slate-500">Cast:</span>
+                  <span className="ml-2 text-white">{film.cast.join(', ')}</span>
+                </div>
+              )}
+              {cinemaNames.length > 0 && (
+                <div data-testid="film-cinema-names">
+                  <span className="text-slate-500 inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Cinema:</span>
+                  <span className="ml-2 text-white">{cinemaNames.join(', ')}</span>
+                </div>
+              )}
+              {film.language && (
+                <div>
+                  <span className="text-slate-500">Language:</span>
+                  <span className="ml-2 text-white">{film.language}</span>
+                </div>
+              )}
+              {film.subtitles?.length > 0 && (
+                <div>
+                  <span className="text-slate-500">Subtitles:</span>
+                  <span className="ml-2 text-white">{film.subtitles.join(', ')}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Showtimes */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <CardTitle className="text-white">Showtimes</CardTitle>
-              <div className="flex gap-4">
-                <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
+      <div className="max-w-6xl mx-auto px-4 pb-12">
+        <Card className="bg-slate-900/60 border-slate-800 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-cyan-400" /> Select Showtime
+              </h2>
+
+              <div className="flex flex-wrap gap-3">
+                {/* Date filter — default "All dates" */}
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="showtime-date-filter">
                     <Calendar className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    {dates.map(d => <SelectItem key={d.value} value={d.value} className="text-white hover:bg-gray-700">{d.label}</SelectItem>)}
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                    <SelectItem value="all" className="text-white hover:bg-slate-800">All dates</SelectItem>
+                    {dateOptions.map((d) => (
+                      <SelectItem key={d} value={d} className="text-white hover:bg-slate-800">
+                        {formatDateLabel(d)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                <Select value={selectedCinema} onValueChange={setSelectedCinema}>
-                  <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
-                    <MapPin className="w-4 h-4 mr-2" />
+
+                {/* Screen filter — replaces the previous City filter */}
+                <Select value={screenFilter} onValueChange={setScreenFilter}>
+                  <SelectTrigger className="w-44 bg-slate-800 border-slate-700 text-white" data-testid="showtime-screen-filter">
+                    <Monitor className="w-4 h-4 mr-2" />
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem value="all" className="text-white hover:bg-gray-700">All Cinemas</SelectItem>
-                    {cinemaNames.map(name => <SelectItem key={name} value={name} className="text-white hover:bg-gray-700">{name}</SelectItem>)}
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                    <SelectItem value="all" className="text-white hover:bg-slate-800">All screens</SelectItem>
+                    {screenOptions.map((s) => (
+                      <SelectItem key={s} value={s} className="text-white hover:bg-slate-800">
+                        {SCREEN_TYPE_LABELS[s]?.label || s.toUpperCase()}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {Object.entries(groupedShowtimes).length === 0 ? (
-              <div className="text-center py-8 text-gray-400">No showtimes available for this date</div>
+
+            {groupedShowtimes.length === 0 ? (
+              <div className="text-center py-12" data-testid="no-showtimes-message">
+                <Monitor className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-400">No showtimes match these filters.</p>
+              </div>
             ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedShowtimes).map(([cinemaName, times]) => (
-                  <div key={cinemaName} className="border-b border-gray-700 pb-6 last:border-0">
-                    <div className="flex items-center gap-2 mb-4">
-                      <MapPin className="w-5 h-5 text-gray-400" />
-                      <h3 className="font-semibold text-white text-lg">{cinemaName}</h3>
-                      <span className="text-gray-500 text-sm">({times[0]?.city})</span>
+              <div className="space-y-8" data-testid="showtime-groups">
+                {groupedShowtimes.map(({ date, showtimes: group }) => (
+                  <div key={date} data-testid={`showtime-group-${date}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Calendar className="w-4 h-4 text-cyan-400" />
+                      <h3 className="text-base font-semibold text-white">{formatDateLabel(date)}</h3>
+                      <span className="text-xs text-slate-500">
+                        {group.length} showtime{group.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                      {times.map(st => {
-                        const isShowPast = isPast(selectedDate, st.show_time);
-                        
-                        return (
-                          <Button 
-                            key={st.id} 
-                            variant="outline" 
-                            disabled={isShowPast}
-                            style={isShowPast ? { opacity: 0.4, filter: 'grayscale(100%)' } : {}}
-                            className={`flex-col h-auto py-3 px-4 ${
-                              isShowPast 
-                                ? 'bg-gray-800 border-gray-700 text-gray-500 cursor-not-allowed' 
-                                : 'bg-gray-700 border-gray-600 text-white hover:bg-[#082c59] hover:border-[#082c59]'
-                            }`} 
-                            onClick={() => !isShowPast && navigate(`/services/cinema/booking/${st.id}?film=${film.id}&date=${selectedDate}`)}
-                          >
-                            {isShowPast && (
-                              <span className="text-[10px] text-gray-400 mb-1 flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" /> Passed
-                              </span>
-                            )}
-                            <span className={`font-bold text-lg ${isShowPast ? 'text-gray-500' : ''}`}>{st.show_time}</span>
-                            <Badge className={`mt-1 uppercase text-xs ${isShowPast ? 'bg-gray-600' : ''}`} variant={st.screen_type === 'imax' ? 'default' : 'secondary'}>{st.screen_type}</Badge>
-                            <span className={`text-sm mt-1 ${isShowPast ? 'text-gray-500' : ''}`}>{formatFCFA(st.price)}</span>
-                            {!isShowPast && (
-                              <span className="text-xs text-gray-400 mt-1"><Users className="w-3 h-3 inline mr-1" />{st.available_seats} seats</span>
-                            )}
-                          </Button>
-                        );
-                      })}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {group.map((st) => (
+                        <ShowtimeCard key={st.id} st={st} onSelect={handleSelectShowtime} />
+                      ))}
                     </div>
                   </div>
                 ))}

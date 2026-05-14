@@ -179,6 +179,58 @@ async def get_film(film_id: str):
     film["id"] = film.pop("_id")
     return film
 
+
+@router.get("/films/{film_id}/showtimes")
+async def get_film_showtimes(film_id: str, city: Optional[str] = None):
+    """Public: list every ACTIVE showtime for a film across every cinema, enriched
+    with cinema_name + screen_type. Used by the customer-facing
+    /services/cinema/film/{id} page to render the showtime ladder grouped by date.
+    Soft-deleted showtimes (is_active=False) are excluded.
+    """
+    db = get_database()
+
+    # Verify film exists (avoid leaking the public showtime stream for unknown ids).
+    film = await db.films.find_one({"_id": film_id}, {"_id": 1})
+    if not film:
+        raise HTTPException(status_code=404, detail="Film not found")
+
+    query = {"film_id": film_id, "is_active": {"$ne": False}}
+
+    # Optional city scope
+    if city:
+        cinema_ids_in_city = await db.cinemas.distinct(
+            "_id", {"city": {"$regex": f"^{city}$", "$options": "i"}}
+        )
+        if not cinema_ids_in_city:
+            return {"showtimes": [], "total": 0}
+        query["cinema_id"] = {"$in": cinema_ids_in_city}
+
+    showtimes = await db.showtimes.find(query).sort(
+        [("show_date", 1), ("show_time", 1)]
+    ).to_list(1000)
+
+    # Backfill cinema_name where missing.
+    missing_cinema_ids = {
+        s["cinema_id"] for s in showtimes if not s.get("cinema_name") and s.get("cinema_id")
+    }
+    cinema_lookup = {}
+    if missing_cinema_ids:
+        async for c in db.cinemas.find(
+            {"_id": {"$in": list(missing_cinema_ids)}}, {"name": 1, "city": 1}
+        ):
+            cinema_lookup[c["_id"]] = {"name": c.get("name"), "city": c.get("city")}
+
+    for s in showtimes:
+        s["id"] = s.pop("_id", None)
+        if not s.get("cinema_name"):
+            lk = cinema_lookup.get(s.get("cinema_id"))
+            if lk:
+                s["cinema_name"] = lk["name"]
+                s.setdefault("cinema_city", lk["city"])
+
+    return {"showtimes": showtimes, "total": len(showtimes)}
+
+
 @router.get("/{cinema_id}")
 async def get_cinema(cinema_id: str):
     """Get cinema details"""

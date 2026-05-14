@@ -1,0 +1,65 @@
+{
+  "summary": "Iter 166 — Verified the new public GET /api/cinema/films/{film_id}/showtimes endpoint and the redesigned /services/cinema/film/{id} page. Backend pytest: 7/7 PASS (404 on unknown film, enrichment with cinema_name+screen_type, sorted output, PH-Netflix presence, city scope matching/case-insensitivity/empty). Frontend Playwright E2E PASS on every spec item: poster image loads from /api/static/films/... (naturalWidth=1920), MapPin cinema-name block reads 'Cinema: PH-Netflix', showtimes grouped into 9 ascending date sections with cards sorted by time within each, every ShowtimeCard renders time/screen/price/seats data-testids, Date filter defaults to 'All dates' (10 options), Screen filter replaces city filter (no city-filter selector found) with 'All screens' default + friendly labels (Dolby Atmos / VIP), and clicking a card navigates to /services/cinema/booking/<showtime_id>?film=...&date=... with sessionStorage.cinemaBookingData persisted.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "backend_test_evidence": {
+    "endpoint": "GET /api/cinema/films/{film_id}/showtimes",
+    "test_file": "/app/backend/tests/test_film_showtimes_public.py",
+    "results": "7 passed in 0.97s",
+    "junit_xml": "/app/test_reports/pytest/film_showtimes_public.xml",
+    "verified_behaviour": [
+      "Unknown film_id -> 404",
+      "Active showtimes returned with `id` (no `_id`), film_id matches, is_active != False",
+      "cinema_name and screen_type enrichment present on every record",
+      "Required fields show_date/show_time/price present for ShowtimeCard",
+      "Results sorted ascending by (show_date, show_time)",
+      "cinema_name='PH-Netflix' for seed film",
+      "?city=Edea returns >0 results; ?city=edea returns the same count (case-insensitive)",
+      "?city=Atlantis_999 returns {showtimes: [], total: 0}"
+    ]
+  },
+  "frontend_e2e_evidence": {
+    "page": "/services/cinema/film/1edf5c04-f19a-4808-9b3c-b8e168e8dc02",
+    "auth_method": "POST /api/auth/login as customer@test.com -> seeded localStorage (access_token, refresh_token, user) before page.goto",
+    "observed": {
+      "film-title": "Olympus has Fallen",
+      "film-poster-image src": "https://cinema-management-p0.preview.emergentagent.com/api/static/films/4ffe92b1-ccf7-4a9f-a597-b8e1338d1932.png (naturalWidth=1920)",
+      "film-cinema-names": "'Cinema: PH-Netflix' (MapPin icon present)",
+      "showtime-group-* count": 9,
+      "group ids (ascending)": "showtime-group-2026-07-01, -07-03, -07-05, -07-06, -07-08, -07-10, -07-12, -07-13, -07-15",
+      "first-group times": "['10:00','15:00'] (sorted)",
+      "showtime-card-* count": 10,
+      "card[0] fields": "screen='Dolby Atmos', price='8,500 FCFA', seats='15 left'",
+      "showtime-date-filter trigger": "'All dates' (default)",
+      "date-filter options": "10 entries: 'All dates' + 9 unique formatted dates (e.g. 'Wednesday, July 1')",
+      "showtime-city-filter": "NOT PRESENT (removed) — confirmed",
+      "showtime-screen-filter trigger": "'All screens' (default)",
+      "screen-filter options": "['All screens','Dolby Atmos','VIP'] — friendly labels confirmed",
+      "card-click navigation": "/services/cinema/booking/ea1304f7-255a-422b-9eee-dbd25fdf5664?film=1edf5c04-...&date=2026-07-01",
+      "sessionStorage.cinemaBookingData": "present and contains the chosen showtime id"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_film_showtimes_public.py",
+    "/app/test_reports/pytest/film_showtimes_public.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "(Good) /app/backend/routes/cinema.py: ordered the new /films/{film_id}/showtimes route BEFORE /{cinema_id} — required because /{cinema_id} would otherwise swallow this path. Correct.",
+    "(Good) Backfill of cinema_name uses a single batched db.cinemas.find({_id: {$in:[...]}}) keyed by missing ids — no N+1.",
+    "(Good) Soft-delete filter uses is_active: {$ne: False} so legacy docs without the field still surface (matches enrichment in /api/cinema/films).",
+    "(Nit, P3) The endpoint caps results at .to_list(1000); fine for current seed but worth a code comment so a future operator with >1000 active showtimes for a single film knows to paginate.",
+    "(Good) FilmDetails.jsx: resolvePoster() prefixes /api/static/... with window.location.origin so the kubernetes ingress routes correctly; absolute http(s) urls pass through unchanged; onError fallback to Unsplash placeholder is sensible.",
+    "(Good) groupedShowtimes useMemo sorts each group's items by show_time and emits groups in ascending date order — matches spec exactly.",
+    "(Good) Screen filter friendly-label map (2d/3d/imax/vip/dolby_atmos) lives in one constant SCREEN_TYPE_LABELS reused by both the badge on cards and the option labels — single source of truth.",
+    "(Nit, P3) The cinema-name <span> uses an ml-2 after an inline-flex icon-label; on RTL locales this would not flip — not relevant today but worth noting if i18n is added."
+  ],
+  "updated_files": ["/app/backend/tests/test_film_showtimes_public.py"],
+  "success_rate": {"backend": "100% (7/7 pytest)", "frontend": "100% (all 9 spec items asserted in live Playwright run)"},
+  "test_credentials": "customer@test.com / testpassword123 (used to satisfy SPA route guard; the showtimes endpoint itself is public)",
+  "seed_data_creation": "None — used the existing seed film 1edf5c04-f19a-4808-9b3c-b8e168e8dc02 (Olympus has Fallen) which has 10 active showtimes across 9 dates on PH-Netflix.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "For testing the customer-facing cinema pages, login via POST /api/auth/login then page.evaluate to seed localStorage with KEYS 'access_token', 'refresh_token', 'user' (the AuthContext reads these exact keys). page.reload after seeding is fragile due to route-guard hydration race — use page.goto directly after seeding. The dataset has a single PH-Netflix cinema with 10 showtimes for film 1edf5c04-... across 9 dates in July 2026; screen types in play are 'dolby_atmos' and 'vip'. The new endpoint /api/cinema/films/{film_id}/showtimes is public (no auth) and supports ?city= (case-insensitive).",
+  "rca of the issue": "Not a bug — feature delivery verified end-to-end. E1 added a new public showtimes endpoint enriched with cinema_name+screen_type, and rewrote FilmDetails.jsx to (a) resolve API-relative poster paths to the page origin, (b) display the cinema names with a MapPin meta row after Cast, (c) group cards by show_date and sort by show_time within each group, (d) render time/screen/price/seats on every card with the required data-testids, (e) default the date filter to 'All dates' and (f) replace the City filter with a Screen filter using friendly labels. All confirmed live."
+}
