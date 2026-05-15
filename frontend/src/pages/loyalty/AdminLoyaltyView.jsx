@@ -232,6 +232,18 @@ export default function AdminLoyaltyView() {
 
   const totalTierMembers = Object.values(programStats.membersByTier).reduce((s, v) => s + v, 0) || 1;
 
+  // Operator-scoped stats derived from their own promotions/alerts feed so the
+  // top metric cards are meaningful for an operator (not a global rollup).
+  const operatorStats = useMemo(() => {
+    const all = opRewards || [];
+    const promos = all.filter(r => r.type === 'promotion');
+    const alerts = all.filter(r => r.type === 'alert');
+    const activePromos = promos.filter(r => r.status === 'approved').length;
+    const activeAlerts = alerts.filter(r => r.status === 'approved').length;
+    const pending = all.filter(r => r.status === 'pending_approval').length;
+    return { activePromos, activeAlerts, pending };
+  }, [opRewards]);
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <Loader2 className="h-10 w-10 animate-spin text-[#082c59]" />
@@ -240,41 +252,83 @@ export default function AdminLoyaltyView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 border-0 text-white">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div><p className="text-blue-200 text-xs font-medium uppercase tracking-wide">Total Members</p><p className="text-3xl font-bold mt-1">{programStats.totalMembers.toLocaleString()}</p></div>
-              <Users className="h-10 w-10 text-blue-300/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 text-white">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div><p className="text-amber-200 text-xs font-medium uppercase tracking-wide">Points Issued</p><p className="text-3xl font-bold mt-1">{programStats.totalPointsIssued.toLocaleString()}</p></div>
-              <Coins className="h-10 w-10 text-amber-300/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-0 text-white">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div><p className="text-emerald-200 text-xs font-medium uppercase tracking-wide">Points Redeemed</p><p className="text-3xl font-bold mt-1">{programStats.totalPointsRedeemed.toLocaleString()}</p></div>
-              <Gift className="h-10 w-10 text-emerald-300/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-violet-500 to-purple-600 border-0 text-white">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div><p className="text-violet-200 text-xs font-medium uppercase tracking-wide">Active Rewards</p><p className="text-3xl font-bold mt-1">{rewards.filter(r => r.is_active !== false).length}</p></div>
-              <Trophy className="h-10 w-10 text-violet-300/50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats Overview — operators see metrics scoped to their own promotions
+          and alerts; admins keep the global loyalty rollup. */}
+      {isOperator ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="operator-promo-stats">
+          <Card className="bg-gradient-to-br from-purple-600 to-fuchsia-700 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-200 text-xs font-medium uppercase tracking-wide">Active Promotions</p>
+                  <p className="text-3xl font-bold mt-1" data-testid="stat-active-promos">{operatorStats.activePromos.toLocaleString()}</p>
+                  <p className="text-[11px] text-purple-200/80 mt-1">Currently approved & live</p>
+                </div>
+                <Gift className="h-10 w-10 text-purple-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-200 text-xs font-medium uppercase tracking-wide">Active Alerts</p>
+                  <p className="text-3xl font-bold mt-1" data-testid="stat-active-alerts">{operatorStats.activeAlerts.toLocaleString()}</p>
+                  <p className="text-[11px] text-amber-200/80 mt-1">Approved notices reaching customers</p>
+                </div>
+                <Bell className="h-10 w-10 text-amber-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-sky-500 to-cyan-600 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sky-100 text-xs font-medium uppercase tracking-wide">Awaiting Approval</p>
+                  <p className="text-3xl font-bold mt-1" data-testid="stat-pending-approval">{operatorStats.pending.toLocaleString()}</p>
+                  <p className="text-[11px] text-sky-100/80 mt-1">Drafts pending admin review</p>
+                </div>
+                <Clock className="h-10 w-10 text-sky-200/50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div><p className="text-blue-200 text-xs font-medium uppercase tracking-wide">Total Members</p><p className="text-3xl font-bold mt-1">{programStats.totalMembers.toLocaleString()}</p></div>
+                <Users className="h-10 w-10 text-blue-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div><p className="text-amber-200 text-xs font-medium uppercase tracking-wide">Points Issued</p><p className="text-3xl font-bold mt-1">{programStats.totalPointsIssued.toLocaleString()}</p></div>
+                <Coins className="h-10 w-10 text-amber-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div><p className="text-emerald-200 text-xs font-medium uppercase tracking-wide">Points Redeemed</p><p className="text-3xl font-bold mt-1">{programStats.totalPointsRedeemed.toLocaleString()}</p></div>
+                <Gift className="h-10 w-10 text-emerald-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-violet-500 to-purple-600 border-0 text-white">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <div><p className="text-violet-200 text-xs font-medium uppercase tracking-wide">Active Rewards</p><p className="text-3xl font-bold mt-1">{rewards.filter(r => r.is_active !== false).length}</p></div>
+                <Trophy className="h-10 w-10 text-violet-300/50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Tabs — operators get a skewed view with only Promo & Alerts (their tenant scope). */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
