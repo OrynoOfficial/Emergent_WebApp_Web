@@ -6,6 +6,15 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **🧩 CinemaManagement refactor + operator-scoped Promo & Alerts stats (Feb 15 2026 — iter 173)** — Two-part delivery:
+  1. **Refactor**: `pages/management/CinemaManagement.jsx` cut from ~2,300 → ~1,382 lines. Four dialogs extracted to dedicated components under `/components/cinema/`:
+     - `CinemaFormDialog.jsx` (cinema venue create/edit with screens & seat layout builder)
+     - `MovieFormDialog.jsx` (film create/edit with genre chips & poster upload)
+     - `ShowtimeFormDialog.jsx` (single + recurring showtime scheduler with VIP/Child/Senior pricing)
+     - `CinemaViewDialog.jsx` (read-only details for Cinema/Movie)
+     Shared constants (`PAGE_SIZE`, `CINEMA_AMENITIES`, `FILM_GENRE_OPTIONS`, `WEEKDAY_OPTIONS`, `SCREEN_TYPES`, `MOVIE_STATUSES`, `DEFAULT_*_FORM` defaults, `computeRecurringDates` helper) hoisted to `/components/cinema/cinemaConstants.js`. `yarn build` exits clean; all original `data-testid`s preserved.
+  2. **Operator Promo & Alerts stats**: `AdminLoyaltyView.jsx` now conditionally renders the top stats grid. Operators get **3** scoped cards (`operator-promo-stats`) — Active Promotions (`stat-active-promos`, purple→fuchsia), Active Alerts (`stat-active-alerts`, amber→orange), Awaiting Approval (`stat-pending-approval`, sky→cyan) — derived from their own `/api/subscriptions/promotions` feed (`operatorStats` `useMemo`). Admins keep the original 4-card global rollup (Total Members / Points Issued / Points Redeemed / Active Rewards). Verified live by testing agent iter 173: operator sees exactly 3 cards with the correct labels & test-ids; admin path verified via backend `/api/loyalty/admin/stats` returning expected payload.
+
 - **🎬💖⭐ Cinema Results polish (Feb 15 2026 — iter 172)** — Three deliverables in one batch:
   1. **Cyan-accent header**: `/services/cinema/results` top area now sports a cyan gradient hero card (`bg-gradient-to-r from-cyan-500 via-cyan-600 to-cyan-700`, `data-testid='cinema-results-hero'`) plus cyan-tinted filter inputs (cyan-50/60 backgrounds, cyan-200 borders, cyan-600 icons) — same accent treatment that Restaurants Results uses with orange. Sticky header now also has a subtle shadow.
   2. **Subscribe + Heart on List view**: previously only the Grid card exposed Subscribe + Favourite. List view now mirrors both buttons in the top-right of the poster (`favourite-list-<id>`). The SubscribeButton's `data-testid` was made unique per-operator (`subscribe-btn-${operatorId}` with fallback) so per-card subscribe controls are individually targetable.
