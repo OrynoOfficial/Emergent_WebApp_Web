@@ -77,7 +77,7 @@ export default function CinemaSeatMap({
           const isVipRow = vipRows.has(rowLetter);
           return (
             <div key={rowLetter} className="flex items-center gap-1.5 select-none">
-              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-600' : 'text-slate-400'}`}>{rowLetter}</span>
+              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-orange-600' : 'text-slate-400'}`}>{rowLetter}</span>
               <div className="flex gap-1">
                 {Array.from({ length: cols }, (_, cIdx) => {
                   const seatId = getSeatId(rIdx, cIdx);
@@ -101,12 +101,12 @@ export default function CinemaSeatMap({
                         isBooked && 'bg-slate-300 border-slate-400 text-slate-500 cursor-not-allowed',
                         isBlocked && !isBooked && 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed',
                         isSelected && 'bg-cyan-500 border-cyan-700 text-white shadow-[0_0_18px_rgba(34,211,238,0.55)] ring-2 ring-cyan-300',
-                        !isSelected && !isBooked && !isBlocked && isVipRow && 'bg-amber-100 border-amber-400 text-amber-800 hover:bg-amber-200',
+                        !isSelected && !isBooked && !isBlocked && isVipRow && 'bg-orange-200 border-orange-500 text-orange-900 hover:bg-orange-300 shadow-sm shadow-orange-200',
                         !isSelected && !isBooked && !isBlocked && !isVipRow && 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-cyan-50 hover:border-cyan-400',
                       )}
                     >
                       {isVipRow && !isBlocked && !isBooked && (
-                        <Crown className="absolute -top-1.5 -right-1 h-2.5 w-2.5 text-amber-500" />
+                        <Crown className="absolute -top-2 -right-1 h-3 w-3 text-orange-600 drop-shadow" />
                       )}
                       {cIdx + 1}
                     </button>
@@ -120,7 +120,7 @@ export default function CinemaSeatMap({
                   ) : seatBtn;
                 })}
               </div>
-              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-600' : 'text-slate-400'}`}>{rowLetter}</span>
+              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-orange-600' : 'text-slate-400'}`}>{rowLetter}</span>
             </div>
           );
         })}
@@ -131,7 +131,7 @@ export default function CinemaSeatMap({
         <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-6 text-[11px]">
           <LegendItem swatch="bg-slate-100 border-slate-300" label="Available" />
           <LegendItem swatch="bg-cyan-500 border-cyan-700 ring-2 ring-cyan-300" label="Selected" />
-          <LegendItem swatch="bg-amber-100 border-amber-400" label="VIP" icon={<Crown className="h-3 w-3 text-amber-500" />} />
+          <LegendItem swatch="bg-orange-200 border-orange-500" label="VIP" icon={<Crown className="h-3 w-3 text-orange-600" />} />
           <LegendItem swatch="bg-slate-300 border-slate-400" label="Booked" muted />
           <LegendItem swatch="bg-slate-200 border-slate-300" label="Blocked" muted />
         </div>

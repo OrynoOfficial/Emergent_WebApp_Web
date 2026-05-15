@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 170 testing (Round 1 batch: child/senior pricing + Hotel-style summary + cyan film-info card + accent-bar booking cards + orange-VIP seats + promo code). Backend: 5/5 pytest pass — POST/PUT cinema showtimes accept child_price & senior_price and persist them; GET /api/cinema/showtimes/{id}/details returns price/vip_price/child_price/senior_price and overlays vip_rows from the cinema's screen when the showtime's own seat_layout.vip_rows is empty; the seeded showtime 48e68d80-3862-419f-959d-39cab06aa727 returns all 4 price keys; /api/loyalty/promo/validate responds <500 (404 path is the documented graceful case). Frontend: same Cloudflare interstitial blanked Playwright after first navigation (recurring pattern documented in iter 168 & 169), so the eleven UI requirements were source-verified against the four files of reference — every required data-testid, the cyan-50/border-cyan-200 film-info-card wrapper, the ShowtimeCard left date block + text-2xl time + Crown-VIP badge + MapPin cinema_name + Monitor screen_name + cyan-700 From-price, the h-1 bg-gradient-to-r accent bars on both 'Select your seats' and 'Tickets' cards, the TICKET_TYPES.filter(...) that drops Child/Senior rows when showtime.child_price/senior_price are null, the DECOUPLED pricing model (subtotal does NOT change when a regular seat is picked; only VIP seats add vipSurcharge*=vipSeatCount line), the cinema-booking-promo-input/apply/clear flow posting /loyalty/promo/validate with graceful toast on error, the summary lines (adult/child/senior gated, subtotal, optional vip-surcharge-line, optional promo-discount, service fee 5%, total), and the CinemaSeatMap VIP styling (bg-orange-200 / border-orange-500 / text-orange-900 with text-orange-600 Crown at -top-2 -right-1, selected seats still cyan-500) are all present.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration170_cinema_pricing.py",
+    "/app/test_reports/pytest/iteration170.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/backend/routes/cinema.py is now ~957 lines (was 938 in iter 169) — still over the 700-line guideline. Splitting into films/showtimes/bookings/management sub-routers is overdue.",
+    "CinemaBooking.jsx is 758 lines — also approaching the 700-line guideline. The pricing/promo computation block (lines ~110-280) is a good extraction candidate into a useCinemaPricing(showtime, ticketCounts, selectedSeats, promo) hook for reuse and testability.",
+    "create_showtime takes child_price/senior_price as query params (POST with FastAPI default parameter style). It works, but the matching update_showtime takes a JSON body. Consider standardising create_showtime to also accept a JSON body (Pydantic model) to avoid mixed call conventions on the same resource.",
+    "applyPromoCode swallows any non-2xx as toast.error including a 404 — that's correct UX, but the toast text 'Could not validate promo code' is identical for 'endpoint missing' and 'code invalid', so users with a typo get the same message as users when the backend feature is offline. Surface response status (e.g. 'Promo service unavailable' for 5xx/404).",
+    "FilmDetails.jsx ShowtimeCard inlines the screen-type/vip badge color map — fine, but the same mapping is repeated in CinemaBooking.jsx hero. Worth extracting to a shared util in /utils/cinemaBadges.js."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration170_cinema_pricing.py"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "source-verified — Cloudflare interstitial blocked live Playwright after first navigation (same pattern as iter 168 & 169)"},
+  "test_credentials": "Super Admin: superadmin@oryno.com / testpassword123; Cinema Operator: mani-monroe@netflix.com / testpassword123; Customer: customer@test.com / testpassword123 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Backend tests create + delete three transient showtimes on a Netflix-operator cinema/screen (show_date 2099-11-15, 2099-11-16, 2099-11-17) — each one is hard-deleted at test teardown via DELETE /api/cinema/showtimes/{id}. No persistent residue. The pre-seeded showtime 48e68d80-3862-419f-959d-39cab06aa727 was only read, never modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Cloudflare 'Performing security verification' interstitial keeps blanking Playwright on this preview domain after the first navigation in a session — recurring across iter 168/169/170. For UI work, use in-app router navigation rather than page.goto() repeatedly, or do source-verification on data-testids. POST /api/cinema/{cinema_id}/showtimes takes child_price/senior_price as QUERY PARAMS (FastAPI default style), while PUT /api/cinema/showtimes/{id} takes them in JSON body — this asymmetry tripped the first test run. The operator's own cinema list is at /api/cinema/management/my-cinemas (NOT /api/cinema/cinemas which returns 404 because it's interpreted as cinema_id='cinemas'). For VIP overlay verification, the create endpoint already copies the screen's seat_layout (incl. vip_rows) onto the showtime, so the overlay branch fires only when the showtime is created BEFORE the screen has vip_rows configured — exercising it requires a DB-side patch which isn't available from the public API.",
+  "rca of the issue": "No product bugs found this iteration. Initial test failures were tooling-only: (a) /api/cinema/cinemas → 404 (path is /api/cinema/management/my-cinemas, since /api/cinema/{cinema_id} matches first); fixed in fixture. (b) BASE = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/') NPE when running pytest outside the supervised env — added a safe fallback. After both fixes, all 5 pricing+overlay+promo tests pass."
+}

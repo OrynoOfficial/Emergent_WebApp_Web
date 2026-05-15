@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ArrowLeft, Film, Clock, Star, Calendar, Ticket, Loader2, Users, Monitor, MapPin,
+  ArrowLeft, Film, Clock, Star, Calendar, Ticket, Loader2, Users, Monitor, MapPin, Crown,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
@@ -57,34 +57,72 @@ function ShowtimeCard({ st, onSelect }) {
   const screen = SCREEN_TYPE_LABELS[st.screen_type] || { label: (st.screen_type || '—').toUpperCase(), color: 'bg-gray-200 text-gray-800' };
   const seatsLeft = st.available_seats ?? st.total_seats ?? 0;
   const soldOut = seatsLeft <= 0;
+  // Pull a richer date object so we can render day + month prominently on the card.
+  let dateLabel = null;
+  try {
+    const d = parseISO(st.show_date);
+    if (isValid(d)) dateLabel = { dow: format(d, 'EEE'), day: format(d, 'd'), mon: format(d, 'MMM') };
+  } catch { /* fallthrough — date label stays null */ }
+  const hasVip = st.vip_price != null && st.vip_price !== 0;
   return (
     <button
       type="button"
       onClick={() => !soldOut && onSelect(st)}
       disabled={soldOut}
       data-testid={`showtime-card-${st.id}`}
-      className={`text-left rounded-xl border transition-all p-4 group ${
+      className={`relative text-left rounded-2xl border bg-white p-4 transition-all duration-200 overflow-hidden ${
         soldOut
-          ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
-          : 'bg-white border-slate-200 hover:border-cyan-400 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)] cursor-pointer'
+          ? 'border-slate-200 opacity-60 cursor-not-allowed'
+          : 'border-slate-200 shadow-sm hover:shadow-xl hover:shadow-cyan-500/15 hover:-translate-y-0.5 hover:border-cyan-400 cursor-pointer'
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xl font-bold text-slate-900 tabular-nums" data-testid={`showtime-time-${st.id}`}>
-          {st.show_time}
-          {st.end_time && <span className="text-xs text-slate-500 ml-2 font-normal">→ {st.end_time}</span>}
+      {/* Top accent bar — same hover language as the result Movie cards */}
+      <div className={`absolute top-0 left-0 right-0 h-1 ${soldOut ? 'bg-slate-200' : 'bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-400'}`} />
+
+      {/* HEADER: prominent date · time · screen */}
+      <div className="flex items-start gap-3 mb-3 pt-1">
+        {dateLabel && (
+          <div className="flex-shrink-0 w-12 text-center bg-cyan-50 border border-cyan-200 rounded-lg py-1">
+            <div className="text-[9px] font-semibold uppercase tracking-widest text-cyan-700/80">{dateLabel.dow}</div>
+            <div className="text-xl font-extrabold leading-none text-cyan-700 tabular-nums">{dateLabel.day}</div>
+            <div className="text-[9px] font-semibold uppercase tracking-widest text-cyan-700/80">{dateLabel.mon}</div>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <div className="text-2xl font-extrabold text-slate-900 tabular-nums leading-none" data-testid={`showtime-time-${st.id}`}>
+              {st.show_time}
+            </div>
+            {st.end_time && <span className="text-xs text-slate-500 font-medium">→ {st.end_time}</span>}
+          </div>
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <Badge className={`text-[10px] ${screen.color}`} data-testid={`showtime-screen-${st.id}`}>{screen.label}</Badge>
+            {hasVip && (
+              <Badge className="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-0.5">
+                <Crown className="h-2.5 w-2.5" /> VIP
+              </Badge>
+            )}
+          </div>
         </div>
-        <Badge className={`text-[10px] ${screen.color}`} data-testid={`showtime-screen-${st.id}`}>
-          {screen.label}
-        </Badge>
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2.5">
-        <Monitor className="w-3.5 h-3.5" /> {st.screen_name || '—'}
+
+      {/* MIDDLE: cinema + screen line */}
+      <div className="space-y-1 mb-3 text-xs">
+        {st.cinema_name && (
+          <div className="flex items-center gap-1.5 text-slate-700 font-medium">
+            <MapPin className="w-3.5 h-3.5 text-cyan-600" /> {st.cinema_name}
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 text-slate-500">
+          <Monitor className="w-3.5 h-3.5" /> {st.screen_name || '—'}
+        </div>
       </div>
+
+      {/* FOOTER: price + seats-left */}
       <div className="flex items-center justify-between pt-2.5 border-t border-slate-200">
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Price</div>
-          <div className="text-base font-bold text-cyan-700 tabular-nums" data-testid={`showtime-price-${st.id}`}>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">From</div>
+          <div className="text-lg font-bold text-cyan-700 tabular-nums" data-testid={`showtime-price-${st.id}`}>
             {st.price != null ? formatFCFA(st.price) : '—'}
           </div>
         </div>
@@ -240,8 +278,8 @@ export default function FilmDetails() {
             </div>
           </div>
 
-          {/* Info */}
-          <div className="flex-1">
+          {/* Info — cyan-tinted card to match cinema accent */}
+          <div className="flex-1 rounded-2xl bg-gradient-to-br from-cyan-50 via-white to-cyan-50/40 border-2 border-cyan-200 shadow-lg shadow-cyan-500/10 p-6 md:p-7" data-testid="film-info-card">
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4" data-testid="film-title">{film.title}</h1>
 
             {/* Genres */}

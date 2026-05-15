@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Film, Clock, MapPin, ArrowLeft, Calendar, Armchair, Plus, Minus, Loader2,
   CreditCard, User, CheckCircle2, Popcorn, Crown, Sparkles, Ticket,
@@ -105,6 +106,44 @@ export default function CinemaBooking() {
   const [triggerPayment, setTriggerPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
+  // Promo code (Hotel-style apply/clear)
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(null); // {code, discount_percent?, discount_amount?}
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
+
+  const applyPromoCode = async () => {
+    const code = (promoCode || '').trim();
+    if (!code) return;
+    setPromoSubmitting(true);
+    try {
+      // Try the loyalty promo validation endpoint. If it's missing or returns
+      // an error, we surface a clear toast and keep the existing total.
+      const res = await api.post('/loyalty/promo/validate', { code, service_type: 'cinema' });
+      const data = res.data || {};
+      if (data.valid === false) {
+        toast.error(data.message || 'Promo code is not valid');
+        setPromoApplied(null);
+      } else {
+        setPromoApplied({
+          code,
+          discount_percent: data.discount_percent ?? null,
+          discount_amount: data.discount_amount ?? null,
+          message: data.message,
+        });
+        toast.success(data.message || `Promo "${code}" applied`);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not validate promo code');
+      setPromoApplied(null);
+    } finally {
+      setPromoSubmitting(false);
+    }
+  };
+
+  const clearPromoCode = () => {
+    setPromoApplied(null);
+    setPromoCode('');
+  };
 
   useEffect(() => { loadData(); /* eslint-disable-next-line */ }, [showtimeId]);
 
@@ -194,10 +233,16 @@ export default function CinemaBooking() {
 
   const totalTickets = ticketCounts.adult + ticketCounts.child + ticketCounts.senior;
 
-  // Detect VIP-tier seats: those whose row letter is in seat_layout.vip_rows.
-  // When showtime.vip_price is set we charge that price for VIP seats; the
-  // rest of the seats charge showtime.price. This mirrors the backend pricing
-  // logic in book_cinema_seats so the UI total matches the order amount.
+  // Conditional ticket types — Child / Senior only appear when the showtime
+  // has a price configured for them (showtime.child_price / senior_price).
+  // When absent we hide the counter entirely so customers don't see options
+  // that the operator didn't price up.
+  const hasChildTier = showtime?.child_price != null;
+  const hasSeniorTier = showtime?.senior_price != null;
+  const adultPrice = Number(showtime?.price || 0);
+  const childPrice = hasChildTier ? Number(showtime.child_price) : adultPrice;
+  const seniorPrice = hasSeniorTier ? Number(showtime.senior_price) : adultPrice;
+  const vipPrice = showtime?.vip_price != null ? Number(showtime.vip_price) : adultPrice;
   const vipRowSet = new Set((seatLayout?.vip_rows || []).map((r) => String(r).toUpperCase()));
   const isVipSeat = (seat) => {
     const row = String(seat).replace(/[^A-Za-z]/g, '').toUpperCase();
@@ -205,42 +250,46 @@ export default function CinemaBooking() {
   };
   const hasVipPricing = vipRowSet.size > 0 && showtime?.vip_price != null;
 
+  // Pricing model — DECOUPLED from seat count:
+  //   subtotal = adult*adultPrice + child*childPrice + senior*seniorPrice
+  //   vipSurcharge = vipSeatsSelected * (vipPrice - adultPrice)
+  //   serviceFee = (subtotal + vipSurcharge) * 5%
+  //   promoDiscount = subtotal * promo% (when applied)
+  //   total = subtotal + vipSurcharge + serviceFee - promoDiscount
+  // This means adjusting the Adult counter does NOT get reset just because the
+  // customer picks a seat; only choosing a VIP-row seat raises the price (and
+  // we surface a clear "+VIP surcharge" line explaining why).
   const calculatePricing = () => {
-    const basePrice = showtime?.price || 0;
-    const vipPrice = hasVipPricing ? Number(showtime.vip_price) : basePrice;
-
-    // Per-seat unit price (VIP seats charge vipPrice).
-    const seatPrices = selectedSeats.map((s) => (hasVipPricing && isVipSeat(s)) ? vipPrice : basePrice);
-
-    // Apply ticket-type discounts proportionally: child=0.5, senior=0.7, adult=1.
-    const slots = [
-      ...Array(ticketCounts.child).fill(0.5),
-      ...Array(ticketCounts.senior).fill(0.7),
-      ...Array(ticketCounts.adult).fill(1),
-    ];
-    let subtotal = 0;
-    seatPrices.forEach((p, i) => {
-      const m = slots[i] ?? 1;
-      subtotal += p * m;
-    });
-    if (selectedSeats.length === 0) {
-      // Pre-selection preview uses base price for tickets-counter math.
-      subtotal = basePrice * (ticketCounts.adult + ticketCounts.child * 0.5 + ticketCounts.senior * 0.7);
-    }
+    const subtotal =
+      ticketCounts.adult * adultPrice +
+      ticketCounts.child * childPrice +
+      ticketCounts.senior * seniorPrice;
     const vipSeatCount = selectedSeats.filter(isVipSeat).length;
     const regularSeatCount = selectedSeats.length - vipSeatCount;
+    const vipSurchargePerSeat = Math.max(0, vipPrice - adultPrice);
+    const vipSurcharge = hasVipPricing ? vipSeatCount * vipSurchargePerSeat : 0;
+    const beforeFee = subtotal + vipSurcharge;
+    const promoDiscount = promoApplied ? Math.min(beforeFee, (promoApplied.discount_amount || (beforeFee * (promoApplied.discount_percent || 0) / 100)) || 0) : 0;
     const commissionRate = 5;
-    const commission = subtotal * (commissionRate / 100);
+    const commission = (beforeFee - promoDiscount) * (commissionRate / 100);
+    const total = beforeFee - promoDiscount + commission;
     return {
       subtotal,
-      commission,
-      commissionRate,
-      total: subtotal + commission,
-      basePrice,
-      vipPrice,
-      hasVipPricing,
+      vipSurcharge,
+      vipSurchargePerSeat,
       vipSeatCount,
       regularSeatCount,
+      promoDiscount,
+      commission,
+      commissionRate,
+      total,
+      adultPrice,
+      childPrice,
+      seniorPrice,
+      vipPrice,
+      hasVipPricing,
+      hasChildTier,
+      hasSeniorTier,
     };
   };
 
@@ -399,16 +448,17 @@ export default function CinemaBooking() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left — seats + tickets + booker */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Seat selection */}
-            <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
-              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-5">
+            {/* Seat selection — same elevated white card style as Movie Cards in results */}
+            <Card className="overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+              <div className="h-1 bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-400" />
+              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-100 p-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-300">
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-200">
                     <Armchair className="h-5 w-5 text-cyan-700" />
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900">Select your seats</h3>
-                    <p className="text-xs text-cyan-700/80">Choose {totalTickets} seat{totalTickets !== 1 ? 's' : ''} from the layout below</p>
+                    <p className="text-xs text-cyan-700/80">Choose {totalTickets} seat{totalTickets !== 1 ? 's' : ''} — orange seats are VIP and cost extra</p>
                   </div>
                 </div>
               </div>
@@ -423,58 +473,71 @@ export default function CinemaBooking() {
               </CardContent>
             </Card>
 
-            {/* Tickets */}
-            <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
-              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-5">
+            {/* Tickets — same elevated white card style */}
+            <Card className="overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+              <div className="h-1 bg-gradient-to-r from-cyan-400 via-cyan-500 to-cyan-400" />
+              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-100 p-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-300">
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-200">
                     <Popcorn className="h-5 w-5 text-cyan-700" />
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900">Tickets</h3>
-                    <p className="text-xs text-cyan-700/80">Pick the categories — final price applies the discount to the seat price</p>
+                    <p className="text-xs text-cyan-700/80">Choose how many tickets of each tier — picking a VIP seat adds a surcharge</p>
                   </div>
                 </div>
               </div>
               <CardContent className="p-5 space-y-3">
-                {TICKET_TYPES.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-4 bg-slate-100 hover:bg-slate-50 rounded-xl border border-slate-300/50 transition">
-                    <div>
-                      <div className="flex items-center gap-2 text-slate-900 font-medium">
-                        {t.name}
-                        {t.id !== 'adult' && (
-                          <Badge className={`text-[10px] ${t.id === 'child' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'} border`}>
-                            {t.description}
-                          </Badge>
-                        )}
+                {TICKET_TYPES.filter((t) => {
+                  if (t.id === 'adult') return true;
+                  if (t.id === 'child') return pricing.hasChildTier;
+                  if (t.id === 'senior') return pricing.hasSeniorTier;
+                  return false;
+                }).map((t) => {
+                  const unitPrice = t.id === 'adult' ? pricing.adultPrice : t.id === 'child' ? pricing.childPrice : pricing.seniorPrice;
+                  const adultPriceLocal = pricing.adultPrice;
+                  const pctOff = adultPriceLocal > 0 && unitPrice < adultPriceLocal
+                    ? Math.round((1 - unitPrice / adultPriceLocal) * 100)
+                    : 0;
+                  return (
+                    <div key={t.id} className="flex items-center justify-between p-4 bg-slate-100 hover:bg-slate-50 rounded-xl border border-slate-300/50 transition" data-testid={`ticket-row-${t.id}`}>
+                      <div>
+                        <div className="flex items-center gap-2 text-slate-900 font-medium">
+                          {t.name}
+                          {pctOff > 0 && (
+                            <Badge className={`text-[10px] ${t.id === 'child' ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-amber-100 text-amber-800 border-amber-300'} border`}>
+                              −{pctOff}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-slate-500 text-xs mt-0.5 tabular-nums" data-testid={`ticket-${t.id}-price`}>
+                          {formatCurrency(unitPrice)} per ticket
+                        </div>
                       </div>
-                      <div className="text-slate-500 text-xs mt-0.5">
-                        {t.id === 'adult' ? `${formatCurrency(showtime?.price)} per ticket` : `Discount applies to seat price`}
+                      <div className="flex items-center gap-3">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-9 w-9 rounded-full border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:border-cyan-400/40"
+                          onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: Math.max(0, p[t.id] - 1) }))}
+                          data-testid={`ticket-${t.id}-decrement`}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <span className="w-8 text-center text-slate-900 text-lg font-bold tabular-nums">{ticketCounts[t.id]}</span>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-9 w-9 rounded-full border-cyan-300 bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
+                          onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: p[t.id] + 1 }))}
+                          data-testid={`ticket-${t.id}-increment`}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-9 w-9 rounded-full border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:border-cyan-400/40"
-                        onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: Math.max(0, p[t.id] - 1) }))}
-                        data-testid={`ticket-${t.id}-decrement`}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <span className="w-8 text-center text-slate-900 text-lg font-bold tabular-nums">{ticketCounts[t.id]}</span>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-9 w-9 rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-700 hover:bg-cyan-100"
-                        onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: p[t.id] + 1 }))}
-                        data-testid={`ticket-${t.id}-increment`}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 
@@ -553,32 +616,86 @@ export default function CinemaBooking() {
                     </div>
                   </div>
 
-                  {/* Pricing breakdown */}
+                  {/* Pricing breakdown — Hotel-style summary */}
                   <div>
                     <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-cyan-600" /> Order summary
                     </h4>
                     <div className="space-y-1.5 text-sm">
                       {ticketCounts.adult > 0 && (
-                        <div className="flex justify-between text-slate-600"><span>Adult × {ticketCounts.adult}</span><span className="tabular-nums">{formatCurrency(ticketCounts.adult * (showtime?.price || 0))}</span></div>
+                        <div className="flex justify-between text-slate-600" data-testid="summary-adult-line">
+                          <span>Adult × {ticketCounts.adult}</span>
+                          <span className="tabular-nums">{formatCurrency(ticketCounts.adult * pricing.adultPrice)}</span>
+                        </div>
                       )}
-                      {ticketCounts.child > 0 && (
-                        <div className="flex justify-between text-slate-600"><span>Child × {ticketCounts.child}</span><span className="tabular-nums">{formatCurrency(ticketCounts.child * (showtime?.price || 0) * 0.5)}</span></div>
+                      {ticketCounts.child > 0 && pricing.hasChildTier && (
+                        <div className="flex justify-between text-slate-600" data-testid="summary-child-line">
+                          <span>Child × {ticketCounts.child}</span>
+                          <span className="tabular-nums">{formatCurrency(ticketCounts.child * pricing.childPrice)}</span>
+                        </div>
                       )}
-                      {ticketCounts.senior > 0 && (
-                        <div className="flex justify-between text-slate-600"><span>Senior × {ticketCounts.senior}</span><span className="tabular-nums">{formatCurrency(ticketCounts.senior * (showtime?.price || 0) * 0.7)}</span></div>
+                      {ticketCounts.senior > 0 && pricing.hasSeniorTier && (
+                        <div className="flex justify-between text-slate-600" data-testid="summary-senior-line">
+                          <span>Senior × {ticketCounts.senior}</span>
+                          <span className="tabular-nums">{formatCurrency(ticketCounts.senior * pricing.seniorPrice)}</span>
+                        </div>
                       )}
+                      <div className="flex justify-between text-slate-500 text-xs pt-1 border-t border-slate-100" data-testid="summary-subtotal-line">
+                        <span>Subtotal</span>
+                        <span className="tabular-nums">{formatCurrency(pricing.subtotal)}</span>
+                      </div>
                       {pricing.hasVipPricing && pricing.vipSeatCount > 0 && (
                         <div className="flex justify-between text-amber-700" data-testid="vip-surcharge-line">
                           <span className="flex items-center gap-1">
-                            <Crown className="h-3 w-3" /> VIP surcharge × {pricing.vipSeatCount}
+                            <Crown className="h-3 w-3" /> VIP seats × {pricing.vipSeatCount}
                           </span>
                           <span className="tabular-nums">
-                            +{formatCurrency(pricing.vipSeatCount * (pricing.vipPrice - pricing.basePrice))}
+                            +{formatCurrency(pricing.vipSurcharge)}
                           </span>
                         </div>
                       )}
+                      {pricing.promoDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-600" data-testid="summary-promo-discount-line">
+                          <span>Promo ({promoApplied?.code})</span>
+                          <span className="tabular-nums">−{formatCurrency(pricing.promoDiscount)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-slate-500"><span>Service fee ({pricing.commissionRate}%)</span><span className="tabular-nums">+{formatCurrency(pricing.commission)}</span></div>
+
+                      {/* Promo code field — Hotel-style apply/clear */}
+                      <div className="pt-2 mt-1" data-testid="cinema-booking-promo-section">
+                        {!promoApplied ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={promoCode}
+                              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                              placeholder="Promo code"
+                              className="h-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 uppercase text-xs"
+                              data-testid="cinema-booking-promo-input"
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyPromoCode(); } }}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={applyPromoCode}
+                              disabled={!promoCode.trim() || promoSubmitting}
+                              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white text-xs"
+                              data-testid="cinema-booking-promo-apply"
+                            >
+                              {promoSubmitting ? '...' : 'Apply'}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5" data-testid="cinema-booking-promo-applied">
+                            <div className="flex items-center gap-2 text-emerald-700 text-xs font-medium">
+                              <Sparkles className="h-3 w-3" />
+                              {promoApplied.code} applied
+                            </div>
+                            <button type="button" onClick={clearPromoCode} className="text-emerald-700 hover:text-emerald-900 text-xs underline" data-testid="cinema-booking-promo-clear">Remove</button>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="pt-3 mt-3 border-t border-slate-200 flex justify-between items-center">
                         <span className="text-slate-900 font-semibold">Total</span>
                         <span className="text-2xl font-bold text-cyan-700 tabular-nums" data-testid="cinema-booking-total">{formatCurrency(pricing.total)}</span>

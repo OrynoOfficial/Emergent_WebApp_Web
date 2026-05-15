@@ -96,6 +96,9 @@ const DEFAULT_SHOWTIME_FORM = {
   show_time: '',
   end_time: '',
   price: '',
+  vip_price: '', // Only used when the selected screen has VIP rows configured
+  child_price: '', // Optional — when blank, the Child counter is hidden on the booking page
+  senior_price: '', // Optional — when blank, the Senior counter is hidden on the booking page
   total_seats: 100,
   // Recurrence (front-end only; expanded into multiple showtimes on save)
   repeat_mode: 'single', // 'single' | 'recurring'
@@ -542,6 +545,8 @@ export default function CinemaManagement() {
         end_time: showtime.end_time || '',
         price: showtime.price?.toString() || '',
         vip_price: showtime.vip_price != null ? String(showtime.vip_price) : '',
+        child_price: showtime.child_price != null ? String(showtime.child_price) : '',
+        senior_price: showtime.senior_price != null ? String(showtime.senior_price) : '',
         total_seats: showtime.total_seats || 100,
         repeat_mode: 'single',
         repeat_end_date: '',
@@ -617,6 +622,12 @@ export default function CinemaManagement() {
         if (showtimeForm.vip_price !== '' && showtimeForm.vip_price != null) {
           payload.vip_price = parseFloat(showtimeForm.vip_price);
         }
+        if (showtimeForm.child_price !== '' && showtimeForm.child_price != null) {
+          payload.child_price = parseFloat(showtimeForm.child_price);
+        }
+        if (showtimeForm.senior_price !== '' && showtimeForm.senior_price != null) {
+          payload.senior_price = parseFloat(showtimeForm.senior_price);
+        }
         await api.put(`/cinema/showtimes/${editingShowtime.id}`, payload);
         toast.success('Showtime updated');
       } else {
@@ -635,6 +646,12 @@ export default function CinemaManagement() {
           params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
           if (showtimeForm.vip_price !== '' && showtimeForm.vip_price != null) {
             params.append('vip_price', String(parseFloat(showtimeForm.vip_price)));
+          }
+          if (showtimeForm.child_price !== '' && showtimeForm.child_price != null) {
+            params.append('child_price', String(parseFloat(showtimeForm.child_price)));
+          }
+          if (showtimeForm.senior_price !== '' && showtimeForm.senior_price != null) {
+            params.append('senior_price', String(parseFloat(showtimeForm.senior_price)));
           }
           try {
             await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
@@ -2088,6 +2105,37 @@ export default function CinemaManagement() {
                         ? `Row${vipRows.length === 1 ? '' : 's'} ${vipRows.join(', ')} are VIP on this screen — those seats charge the VIP price; every other seat uses the regular price.`
                         : 'A single flat price applies to every seat on this showtime. To enable VIP pricing, mark rows as VIP in the Cinema → Screens & seat layout step.'}
                     </p>
+
+                    {/* Optional discounted ticket tiers — when left blank the
+                        Child / Senior counters are hidden on the booking page. */}
+                    <div className="mt-3 pt-3 border-t border-emerald-200/70">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700/80 mb-2">Discount tiers (optional)</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Child price (FCFA)</Label>
+                          <Input
+                            className="bg-white"
+                            type="number"
+                            value={showtimeForm.child_price}
+                            onChange={(e) => setShowtimeForm((p) => ({ ...p, child_price: e.target.value }))}
+                            placeholder="Leave blank to hide"
+                            data-testid="showtime-child-price-input"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Senior price (FCFA)</Label>
+                          <Input
+                            className="bg-white"
+                            type="number"
+                            value={showtimeForm.senior_price}
+                            onChange={(e) => setShowtimeForm((p) => ({ ...p, senior_price: e.target.value }))}
+                            placeholder="Leave blank to hide"
+                            data-testid="showtime-senior-price-input"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-emerald-700/70 mt-1.5">When left empty, the Child / Senior ticket type will not appear on the booking page — only Adult.</p>
+                    </div>
                   </>
                 );
               })()}

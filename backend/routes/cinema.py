@@ -398,6 +398,8 @@ async def create_showtime(
     price: float,
     screen_type: str = "2d",
     vip_price: Optional[float] = None,
+    child_price: Optional[float] = None,
+    senior_price: Optional[float] = None,
     total_seats: int = 100,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
 ):
@@ -427,6 +429,8 @@ async def create_showtime(
         "end_time": end_time,
         "price": price,
         "vip_price": vip_price,
+        "child_price": child_price,
+        "senior_price": senior_price,
         "total_seats": total_seats,
         "available_seats": total_seats,
         "is_active": True,
@@ -526,7 +530,8 @@ async def update_showtime(
     allowed = {
         "film_id", "film_title", "screen_name", "screen_type",
         "show_date", "show_time", "end_time",
-        "price", "vip_price", "total_seats", "is_active",
+        "price", "vip_price", "child_price", "senior_price",
+        "total_seats", "is_active",
     }
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if "film_id" in updates and "film_title" not in updates:
@@ -654,13 +659,25 @@ async def get_showtime_details(showtime_id: str):
     cinema = await db.cinemas.find_one({"_id": st.get("cinema_id")}) if st.get("cinema_id") else None
 
     # If the showtime didn't carry a seat_layout (legacy rows), fall back to
-    # the cinema's matching screen layout.
+    # the cinema's matching screen layout. Additionally, always overlay the
+    # cinema screen's vip_rows when present — vip_rows is configured on the
+    # screen (not the showtime), so it's authoritative.
     seat_layout = st.get("seat_layout")
-    if not seat_layout and cinema:
-        for s in (cinema.get("screens") or []):
-            if s.get("name") == st.get("screen_name") and s.get("seat_layout"):
-                seat_layout = s["seat_layout"]
-                break
+    if cinema:
+        matching_screen = next(
+            (s for s in (cinema.get("screens") or []) if s.get("name") == st.get("screen_name")),
+            None,
+        )
+        if matching_screen:
+            screen_layout = matching_screen.get("seat_layout") or {}
+            if not seat_layout:
+                seat_layout = screen_layout
+            else:
+                # Overlay vip_rows from the cinema screen if the showtime layout
+                # doesn't have them (or has an empty list).
+                cinema_vip_rows = screen_layout.get("vip_rows") or []
+                if cinema_vip_rows and not (seat_layout.get("vip_rows") or []):
+                    seat_layout = {**seat_layout, "vip_rows": cinema_vip_rows}
 
     # Aggregate booked / reserved seats for this showtime
     booked_cursor = db.cinema_bookings.find(
@@ -685,6 +702,8 @@ async def get_showtime_details(showtime_id: str):
         "end_time": st.get("end_time"),
         "price": st.get("price"),
         "vip_price": st.get("vip_price"),
+        "child_price": st.get("child_price"),
+        "senior_price": st.get("senior_price"),
         "total_seats": st.get("total_seats"),
         "available_seats": st.get("available_seats"),
     }
