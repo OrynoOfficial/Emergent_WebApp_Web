@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
   ArrowLeft, Clock, Bus, Star, MapPin, Users, Armchair, Wifi, Coffee, UtensilsCrossed, 
-  Loader2, ArrowRight, Calendar, SlidersHorizontal, LayoutGrid, List, Heart, 
+  Loader2, ArrowRight, Calendar, SlidersHorizontal, LayoutGrid, List, 
   ChevronLeft, ChevronRight, Zap, Shield, Check, Search, X, Edit2, Image, History, CalendarDays, AlertCircle
 } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
@@ -22,6 +22,7 @@ import { isPast } from '../../utils/dateUtils';
 import api from '../../api/client';
 import { useFavourites } from '../../hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
@@ -115,13 +116,13 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
         {!isTripPast && (
           <div className="absolute top-3 right-3 flex gap-1.5">
             <SubscribeButton operatorId={trip.operator_id} operatorName={trip.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFav(trip); }}
+            <FavouriteButton
+              isFavourite={!!isFav(tripId)}
+              onToggle={() => toggleFav(trip)}
+              testId={`fav-btn-${tripId}`}
               className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-all"
-              data-testid={`fav-btn-${tripId}`}
-            >
-              <Heart className={`h-4 w-4 ${isFav(tripId) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-            </button>
+              emptyClass="text-white"
+            />
           </div>
         )}
         <div className="absolute top-3 left-3">

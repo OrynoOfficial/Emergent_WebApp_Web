@@ -20,6 +20,7 @@ import { formatFCFA } from '@/utils/currency';
 import { packageServiceApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import LocationInput from '@/components/shared/LocationInput';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
@@ -67,13 +68,13 @@ const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => {
         )}
         <div className="absolute top-3 right-3 flex gap-1.5 z-10">
           <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
-          <button
-            onClick={(e) => { e.stopPropagation(); if (toggleFav) toggleFav(service); }}
+          <FavouriteButton
+            isFavourite={!!(isFav && isFav(service.id))}
+            onToggle={() => toggleFav?.(service)}
+            testId={`fav-btn-${service.id}`}
             className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"
-            data-testid={`fav-btn-${service.id}`}
-          >
-            <Heart className={`h-4 w-4 ${(isFav && isFav(service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-          </button>
+            emptyClass="text-white"
+          />
         </div>
         <Badge className="absolute top-3 left-3 bg-yellow-400 text-red-800 hover:bg-yellow-400 z-10">
           <Truck className="w-3 h-3 mr-1" /> Logistics
@@ -278,13 +279,13 @@ const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav 
           </div>
           <div className="absolute top-3 right-3 z-10 flex gap-2">
             <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
-            <button
-              onClick={() => toggleFav?.(service)}
+            <FavouriteButton
+              isFavourite={!!isFav?.(service.id)}
+              onToggle={() => toggleFav?.(service)}
+              testId="details-fav-btn"
               className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"
-              data-testid="details-fav-btn"
-            >
-              <Heart className={`h-5 w-5 ${isFav?.(service.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-            </button>
+              emptyClass="text-white"
+            />
             <button
               onClick={onClose}
               className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all"

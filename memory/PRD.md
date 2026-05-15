@@ -6,6 +6,8 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **❤️ FavouriteButton rolled out to all result pages (Feb 15 2026)** — The shared `<FavouriteButton>` (rose-tinted ping ring + scale-125 icon bump on toggle, `data-testid="favourite-pulse"`) is now used across **all 9 customer-facing results pages**: Cinema, Hotels, Travel, Restaurants, Cars, Events, Laundry, Banquet and Packages. Replaced 11 inline `<button>` + `<Heart>` blocks total (1-2 per page; Packages has 2 in main grid + details modal). Unused `Heart` lucide imports removed from 8 files (PackagesResults retains 2 text-style Save/Saved buttons that aren't a clean fit for the icon-only component). Lint clean, `yarn build` clean.
+
 - **❤️ Heart (Favourite) pulse parity (Feb 15 2026)** — Created reusable `/components/shared/FavouriteButton.jsx` that mirrors `SubscribeButton`'s 700ms `animate-ping` ring (rose-400/50 when adding, slate-400/40 when removing) + `scale-125` icon bump on click. Exposes `data-testid="favourite-pulse"` for testability. Wired into both `FilmCardGrid` and `FilmCardList` in `/pages/services/CinemaResults.jsx`, replacing the inline `<button>` + `<Heart>` blocks (Heart import removed as no longer used). Build clean, lint clean. Other result pages (hotels, travel, restaurants, etc.) keep their existing inline implementations — they can adopt the new component on demand without breaking.
 
 - **🛬🔔 Operator landing path + Bell pulse (Feb 15 2026 — iter 175)** — Two small polish wins:

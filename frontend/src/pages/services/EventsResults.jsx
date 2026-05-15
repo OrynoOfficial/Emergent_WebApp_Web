@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, Heart, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
 import { eventsApi } from '@/api/services';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
@@ -74,12 +75,13 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
         {!isEventPast && (
           <div className="absolute top-3 right-3 z-10 flex gap-1.5">
             <SubscribeButton operatorId={event.operator_id} operatorName={event.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(event);  }}
+            <FavouriteButton
+              isFavourite={!!(isFav && isFav(event._id || event.id))}
+              onToggle={() => toggleFav && toggleFav(event)}
+              testId={`favourite-${event._id || event.id}`}
               className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-            >
-              <Heart className={`h-5 w-5 ${(isFav && isFav(event._id || event.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-            </button>
+              emptyClass="text-white"
+            />
           </div>
         )}
         

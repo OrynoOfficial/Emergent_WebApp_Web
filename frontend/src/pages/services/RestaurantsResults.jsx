@@ -11,7 +11,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import {
   ArrowLeft, Star, MapPin, Clock, Users, Utensils, SlidersHorizontal, Search, 
-  Loader2, ChevronLeft, ChevronRight, X, DollarSign, Award, Phone, Heart,
+  Loader2, ChevronLeft, ChevronRight, X, DollarSign, Award, Phone,
   LayoutGrid, List, Wifi, Car, Music, Wine, Leaf, Coffee, Calendar, Edit2, Check
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
@@ -20,6 +20,7 @@ import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const CUISINE_TYPES = ['African', 'French', 'Italian', 'Chinese', 'Lebanese', 'Seafood', 'Fast Food', 'Fusion'];
@@ -133,12 +134,13 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve, isFav, toggl
           {/* Favorite & Subscribe buttons */}
           <div className="absolute top-2 right-2 z-10 flex gap-1.5">
             <SubscribeButton operatorId={restaurant.operator_id} operatorName={restaurant.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(restaurant);  }}
+            <FavouriteButton
+              isFavourite={!!(isFav && isFav(restaurant._id || restaurant.id))}
+              onToggle={() => toggleFav && toggleFav(restaurant)}
+              testId={`favourite-${restaurant._id || restaurant.id}`}
               className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
-            >
-              <Heart className={`h-4 w-4 ${(isFav && isFav(restaurant._id || restaurant.id)) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
-            </button>
+              emptyClass="text-slate-600"
+            />
           </div>
           
           {/* Badges */}

@@ -13,7 +13,7 @@ import { format, differenceInDays } from 'date-fns';
 import {
   ArrowLeft, Star, MapPin, Wifi, Car, Utensils, Droplets, Dumbbell,
   SlidersHorizontal, Search, Loader2, ChevronLeft, ChevronRight, X, CalendarDays,
-  LayoutGrid, List, Heart, Coffee, Sparkles, Check, Users, Edit2, Hotel
+  LayoutGrid, List, Coffee, Sparkles, Check, Users, Edit2, Hotel
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
@@ -21,6 +21,7 @@ import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const AMENITIES = [
@@ -147,12 +148,13 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails, isFav, toggleFav }) => {
           {/* Favorite & Subscribe buttons */}
           <div className="absolute top-2 right-2 z-10 flex gap-1.5">
             <SubscribeButton operatorId={hotel.operator_id} operatorName={hotel.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFav(hotel); }}
+            <FavouriteButton
+              isFavourite={!!isFav(hotelId)}
+              onToggle={() => toggleFav(hotel)}
+              testId={`favourite-${hotelId}`}
               className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
-            >
-              <Heart className={`h-4 w-4 ${isFav(hotelId) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
-            </button>
+              emptyClass="text-slate-600"
+            />
           </div>
           
           {/* Badges */}

@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   ArrowLeft, Car, MapPin, Users, Fuel, Settings, Star, SlidersHorizontal,
-  Snowflake, Radio, Navigation, Shield, Heart, LayoutGrid, List, Search,
+  Snowflake, Radio, Navigation, Shield, LayoutGrid, List, Search,
   ChevronLeft, ChevronRight, X, Loader2, Gauge, Calendar, Check
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 import { differenceInDays, format } from 'date-fns';
 
@@ -64,12 +65,13 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
         <img src={image} alt={vehicle.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         <div className="absolute top-2 right-2 z-10 flex gap-1.5">
           <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name} variant="icon" />
-          <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(vehicle); }}
+          <FavouriteButton
+            isFavourite={!!(isFav && isFav(vehicle._id || vehicle.id))}
+            onToggle={() => toggleFav && toggleFav(vehicle)}
+            testId={`favourite-${vehicle._id || vehicle.id}`}
             className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
-          >
-            <Heart className={`h-4 w-4 ${(isFav && isFav(vehicle._id || vehicle.id)) ? 'fill-red-500 text-red-500' : 'text-slate-500'}`} />
-          </button>
+            emptyClass="text-slate-500"
+          />
         </div>
         <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 ${getVehicleTypeColor(vehicle.type)}`}>
           {vehicle.type}

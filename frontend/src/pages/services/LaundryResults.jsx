@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2, Search, LayoutGrid, List, SlidersHorizontal, Heart, Droplets, Wind, Scissors } from 'lucide-react';
+import { ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2, Search, LayoutGrid, List, SlidersHorizontal, Droplets, Wind, Scissors } from 'lucide-react';
 import { pressingApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
@@ -40,12 +41,13 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
         {/* Favorite & Subscribe buttons */}
         <div className="absolute top-3 right-3 z-10 flex gap-1.5">
           <SubscribeButton operatorId={service.operator_id} operatorName={service.operator_name} variant="icon" />
-          <button
-            onClick={(e) => { e.stopPropagation(); if(toggleFav) toggleFav(service);  }}
+          <FavouriteButton
+            isFavourite={!!(isFav && isFav(service._id || service.id))}
+            onToggle={() => toggleFav && toggleFav(service)}
+            testId={`favourite-${service._id || service.id}`}
             className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-          >
-            <Heart className={`h-5 w-5 ${(isFav && isFav(service._id || service.id)) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-          </button>
+            emptyClass="text-white"
+          />
         </div>
         
         {/* Badges */}
