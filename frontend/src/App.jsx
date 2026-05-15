@@ -4,6 +4,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
+import { resolveLandingPath } from './utils/operatorLandingPath';
 
 // Auth Pages
 import Login from './pages/Login';
@@ -11,14 +12,11 @@ import TrackPackage from './pages/TrackPackage';
 import Register from './pages/Register';
 import VerifyAccount from './pages/auth/VerifyAccount';
 
-// Smart redirect based on user role
+// Smart redirect based on user role + operator service type
 function RoleBasedRedirect() {
   const cachedUser = (() => { try { return JSON.parse(localStorage.getItem('user')); } catch { return null; } })();
-  const role = cachedUser?.role;
-  if (role === 'super_admin') return <Navigate to="/admin/analytics" replace />;
-  if (role === 'admin') return <Navigate to="/admin/admin-dashboard" replace />;
-  if (role === 'operator') return <Navigate to="/admin/analytics" replace />;
-  return <Navigate to="/dashboard" replace />;
+  if (!cachedUser) return <Navigate to="/dashboard" replace />;
+  return <Navigate to={resolveLandingPath(cachedUser)} replace />;
 }
 
 // Main Pages

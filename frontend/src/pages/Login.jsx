@@ -77,12 +77,9 @@ export default function AuthPage() {
     try {
       const result = await login(loginIdentifier, loginPassword);
       if (result.access_token) {
-        const userRole = result.user?.role;
-        const isOperator = userRole === 'operator' || result.user?.operator_context;
-        if (userRole === 'super_admin') navigate('/admin/analytics');
-        else if (userRole === 'admin') navigate('/admin/admin-dashboard');
-        else if (isOperator) navigate('/admin/analytics');
-        else navigate('/dashboard');
+        // Pick the best landing path per role / operator service type.
+        const { resolveLandingPath } = await import('@/utils/operatorLandingPath');
+        navigate(resolveLandingPath(result.user));
       } else if (result.requires_2fa) {
         setCurrentView(AUTH_VIEWS.TWO_FA);
       } else {

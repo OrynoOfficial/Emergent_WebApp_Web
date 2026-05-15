@@ -6,6 +6,10 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **🛬🔔 Operator landing path + Bell pulse (Feb 15 2026 — iter 175)** — Two small polish wins:
+  1. **Smarter operator landing**: Post-login redirects now use `resolveLandingPath(user)` from `/utils/operatorLandingPath.js`. Single-service operators (e.g. `mani-monroe@netflix.com` whose `operator_context.service_types === ['cinema']`) land directly on `/management/cinema` instead of the generic `/admin/analytics`. Multi-service operators (or operators with empty context) still fall back to `/admin/analytics`. Mapping covers cinema → /management/cinema, hotel → /management/hotels, restaurant → /management/restaurants, travel/bus → /management/travel, car_rental → /management/car-rental, events/laundry/pressing/banquet/packages/shipments. Wired into 3 call sites: `Login.jsx` (post-login), `Dashboard.jsx` (customer-dashboard guard), and `App.jsx#RoleBasedRedirect` (root path). Verified by 11/11 helper unit-test cases.
+  2. **Bell pulse on toggle**: `SubscribeButton.jsx` now plays a 700ms `animate-ping` ring (cyan when subscribing, dark navy when unsubscribing) plus a scale-110 icon bump on click. Gives instant visual feedback even if the parent page doesn't mount `<Toaster />` (which the testing agent flagged on `/services/cinema/results`). Pulse element has `data-testid="subscribe-pulse"` so it can be asserted in tests. Works for both `variant="icon"` (card decorations) and the legacy full-button variant.
+
 - **🧩 CinemaManagement refactor + operator-scoped Promo & Alerts stats (Feb 15 2026 — iter 173)** — Two-part delivery:
   1. **Refactor**: `pages/management/CinemaManagement.jsx` cut from ~2,300 → ~1,382 lines. Four dialogs extracted to dedicated components under `/components/cinema/`:
      - `CinemaFormDialog.jsx` (cinema venue create/edit with screens & seat layout builder)

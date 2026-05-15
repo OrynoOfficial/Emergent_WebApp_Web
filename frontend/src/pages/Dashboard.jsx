@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { analyticsAPI, ordersAPI } from '../api/client';
 import { formatCurrency } from '../utils/currency';
+import { resolveLandingPath } from '../utils/operatorLandingPath';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -65,12 +66,15 @@ export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Redirect operators/admins away from customer dashboard
+  // Redirect operators/admins away from customer dashboard to their best
+  // landing page (single-service operators → their management page).
   useEffect(() => {
-    if (user?.role === 'operator') navigate('/admin/analytics', { replace: true });
-    else if (user?.role === 'admin') navigate('/admin/admin-dashboard', { replace: true });
-    else if (user?.role === 'super_admin') navigate('/admin/analytics', { replace: true });
-  }, [user?.role, navigate]);
+    if (!user) return;
+    const role = user.role;
+    if (role === 'operator' || role === 'admin' || role === 'super_admin') {
+      navigate(resolveLandingPath(user), { replace: true });
+    }
+  }, [user, navigate]);
   const [dateFilter, setDateFilter] = useState('7days');
 
   useEffect(() => {
