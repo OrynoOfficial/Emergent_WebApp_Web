@@ -11,7 +11,7 @@ import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
   Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt,
-  Replace as ReplaceIcon, Sparkles, Phone, Mail,
+  Replace as ReplaceIcon, Sparkles, Phone, Mail, Armchair,
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
