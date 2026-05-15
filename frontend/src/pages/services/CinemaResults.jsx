@@ -88,7 +88,7 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
 
           {/* Top corners */}
-          <div className="absolute top-3 right-3 flex gap-1.5">
+          <div className="absolute top-3 right-3 flex gap-1.5 z-10">
             <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
             <button
               onClick={(e) => { e.stopPropagation(); toggleFav?.(film); }}
