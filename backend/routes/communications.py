@@ -12,6 +12,17 @@ import uuid
 router = APIRouter(prefix="/api/communications", tags=["Service Communications"])
 
 
+def _operator_id(current_user):
+    """Resolve the operator id for the current user, preferring operator_context
+    (used by team-member/scoped tokens) and falling back to the top-level field.
+    """
+    return (
+        (current_user.get("operator_context") or {}).get("operator_id")
+        or current_user.get("operator_id")
+    )
+
+
+
 @router.post("/announcements")
 async def create_announcement(
     title: str,
@@ -49,7 +60,7 @@ async def get_announcements(
 
     query = {"service_type": service_type}
     if current_user.get("role") == "operator":
-        query["operator_id"] = current_user.get("operator_id")
+        query["operator_id"] = _operator_id(current_user)
 
     announcements = await db.service_announcements.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
 
@@ -102,7 +113,7 @@ async def get_alerts(
     if status:
         query["status"] = status
     if current_user.get("role") == "operator":
-        query["operator_id"] = current_user.get("operator_id")
+        query["operator_id"] = _operator_id(current_user)
 
     alerts = await db.service_alerts.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
 
@@ -142,7 +153,7 @@ async def get_recent_communications(
 
     operator_filter = {}
     if current_user.get("role") == "operator":
-        operator_filter = {"operator_id": current_user.get("operator_id")}
+        operator_filter = {"operator_id": _operator_id(current_user)}
 
     # Recent announcements
     ann_query = {"service_type": service_type, **operator_filter}

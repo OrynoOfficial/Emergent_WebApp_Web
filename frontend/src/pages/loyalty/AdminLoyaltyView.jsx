@@ -88,9 +88,9 @@ export default function AdminLoyaltyView() {
     setLoading(true);
     try {
       const [rewardsRes, statsRes, membersRes, promosRes] = await Promise.all([
-        api.get('/loyalty/admin/rewards'),
-        api.get('/loyalty/admin/stats'),
-        api.get('/loyalty/admin/members'),
+        api.get('/loyalty/admin/rewards').catch(() => ({ data: { rewards: [] } })),
+        api.get('/loyalty/admin/stats').catch(() => ({ data: null })),
+        api.get('/loyalty/admin/members').catch(() => ({ data: { members: [] } })),
         api.get('/loyalty/admin/promo-codes').catch(() => ({ data: { promo_codes: [] } }))
       ]);
       if (rewardsRes.data?.rewards?.length > 0) setRewards(rewardsRes.data.rewards);

@@ -6,6 +6,22 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **🎬💸🎟️ Cinema customer-flow polish + Communications scoping (Feb 15 2026 — iter 170+171)** — Two-round delivery:
+  - **Round 1** (iter 170, 5/5 backend pytest + 11/11 frontend source verified):
+    - **FilmDetails movie-details**: right column wrapped in a cyan-tinted card (`bg-gradient-to-br from-cyan-50 via-white to-cyan-50/40 border-2 border-cyan-200`, data-testid `film-info-card`) — gives the cinema accent.
+    - **ShowtimeCard redesign**: white Movie-Card-style elevation with cyan top accent bar, prominent date block (DOW/Day/Mon in a cyan-50 chip), text-2xl time, screen-type badge + VIP badge, MapPin cinema, Monitor screen, From-price (cyan-700), seats-left chip.
+    - **CinemaBooking Movie-Card style**: "Select your seats" + "Tickets" cards get top accent bar + shadow + hover lift, matching the result-page Movie Cards.
+    - **Pricing decoupled from seats**: `calculatePricing()` rewritten — subtotal is purely `adult*adultPrice + child*childPrice + senior*seniorPrice`. Picking a regular seat does NOT mutate the subtotal. Only VIP-row seats add a `vipSurcharge = vipSeatCount * (vipPrice - adultPrice)` line ("VIP seats × N") in the order summary, explaining the bump.
+    - **Conditional ticket tiers**: Child/Senior counters only render when `showtime.child_price`/`senior_price` are non-null. Backend `cinema.py` `create_showtime` + `update_showtime` accept both fields, and the showtime modal in `/management/cinema` grows two optional inputs (`showtime-child-price-input`, `showtime-senior-price-input`).
+    - **Promo code (Hotel-style)**: Order summary now has a promo input + Apply (POST `/loyalty/promo/validate` — graceful error toast if 404) + Remove pill once applied; promo discount applies to the subtotal+VIP-surcharge before the service fee.
+    - **VIP seat visual**: `CinemaSeatMap.jsx` switches VIP rows to `bg-orange-200 border-orange-500 text-orange-900` with a bigger `Crown` icon (text-orange-600) and matching row-letter colour; legend updated.
+    - **Backend overlay**: `GET /api/cinema/showtimes/{id}/details` now overlays `vip_rows` from the cinema's matching screen onto the showtime's `seat_layout` when the showtime's own list is empty.
+  - **Round 2** (iter 171, 7/7 backend pytest + Playwright live):
+    - **Communications operator-scoping fix**: `/api/subscriptions/promotions`, `/api/communications/{announcements,alerts,*}`, `/api/support-tickets/` now all resolve the operator id via `operator_context.operator_id → operator_id` fallback and HARD-filter the query when `role=='operator'`. Operators cannot escape their tenant by passing `?operator_id=...`.
+    - **Promo & Alerts deep-link**: `ServiceCommunicationsHub.jsx` Promotions card header gets a "Manage in Loyalty" button (`manage-in-loyalty-btn`) and the Create-Promo dialog gets a footer link (`promo-modal-loyalty-link`) — both navigate to `/loyalty?tab=promotions`.
+    - **Loyalty deep-link router**: `AdminLoyaltyView.jsx` reads `?tab=promotions` (or `rewards/members/overview`) on mount and auto-activates the matching top-tab + sub-tab.
+    - **Operator access to /loyalty**: removed the "Access Restricted" guard — operators now land on `AdminLoyaltyView` (scoped to their data by the now-hardened backend) with title "Promotions & Rewards". The other admin loyalty calls (rewards/stats/members) are wrapped in `.catch()` so a 403 for operators doesn't break the page.
+
 - **🎬💎🔑 Cinema + Operator owner batch (Feb 14 2026 — iteration 169)** — 5-part release:
   1. **One owner per operator**: `operator_users.create_operator_user` rejects `operator_role='owner'` (400) and `update_operator_user` returns 409 with the existing owner's email when promoting a second user to owner. `operators.create_operator` adds a defensive single-owner check before inserting the owner record.
   2. **Light theme on customer Cinema pages**: `/services/cinema/results`, `/cinema/film/{id}`, `/cinema/booking/{id}` and `components/cinema/CinemaSeatMap.jsx` repainted to the Packages-style light surface (`bg-gradient-to-b from-slate-50 to-slate-100`, white cards, slate-900 text), keeping the cyan-400/600/700 accent on CTAs, prices and screen line. Seat map: bg-slate-100 available / cyan-500 selected / amber-100 VIP / slate-300 booked / slate-200 blocked.
