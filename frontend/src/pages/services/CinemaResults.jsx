@@ -111,16 +111,30 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
             </div>
           </div>
 
-          {/* IMDb / rating */}
-          {film.imdb_rating && (
-            <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-amber-500/90 text-slate-950 text-xs font-bold px-2 py-1 rounded-full shadow-md">
-              <Star className="w-3 h-3 fill-slate-950" /> {film.imdb_rating}
+          {/* Customer rating chip — pulled from the Ratings collection.
+              Falls back to imdb_rating only when no customer ratings exist yet,
+              so the operator's catalogue value isn't completely lost. */}
+          {(film.customer_rating != null || film.imdb_rating) && (
+            <div
+              className="absolute bottom-3 right-3 flex items-center gap-1 bg-amber-500/95 text-slate-950 text-xs font-bold px-2 py-1 rounded-full shadow-md"
+              data-testid={`film-customer-rating-${film.id || film._id}`}
+              title={
+                film.customer_rating != null
+                  ? `${film.customer_rating} from ${film.customer_rating_count} customer review${film.customer_rating_count === 1 ? '' : 's'}`
+                  : `IMDb ${film.imdb_rating} (no customer reviews yet)`
+              }
+            >
+              <Star className="w-3 h-3 fill-slate-950" />
+              {film.customer_rating != null ? film.customer_rating : film.imdb_rating}
+              {film.customer_rating != null && (
+                <span className="text-[9px] font-medium opacity-80">({film.customer_rating_count})</span>
+              )}
             </div>
           )}
         </div>
 
         {/* Info */}
-        <CardContent className="p-4 bg-gradient-to-b from-slate-900 to-slate-950">
+        <CardContent className="p-4 bg-white">
           <h3 className="font-bold text-base text-slate-900 line-clamp-1 mb-1.5 group-hover:text-cyan-700 transition-colors">{film.title}</h3>
           <div className="flex flex-wrap gap-1 mb-2.5">
             {film.genre?.slice(0, 3).map((g) => (
@@ -179,9 +193,33 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
           <Badge className={`absolute top-3 left-3 backdrop-blur-sm border ${isComingSoon ? 'bg-amber-500/30 text-amber-100 border-amber-400/40' : 'bg-cyan-500/30 text-cyan-100 border-cyan-400/40'}`}>
             {isComingSoon ? 'Coming Soon' : 'Now Showing'}
           </Badge>
-          {film.imdb_rating && (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-amber-500/90 text-slate-950 text-xs font-bold px-2 py-1 rounded-full">
-              <Star className="w-3 h-3 fill-slate-950" /> {film.imdb_rating}
+          {/* Subscribe + Favourite — same controls as Grid view */}
+          <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+            <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleFav?.(film); }}
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition border border-white/40"
+              data-testid={`favourite-list-${film.id || film._id}`}
+              aria-label="Toggle favourite"
+            >
+              <Heart className={`h-4 w-4 ${isFav?.(film._id || film.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-900'}`} />
+            </button>
+          </div>
+          {(film.customer_rating != null || film.imdb_rating) && (
+            <div
+              className="absolute bottom-3 left-3 flex items-center gap-1 bg-amber-500/90 text-slate-950 text-xs font-bold px-2 py-1 rounded-full"
+              data-testid={`film-customer-rating-list-${film.id || film._id}`}
+              title={
+                film.customer_rating != null
+                  ? `${film.customer_rating} from ${film.customer_rating_count} customer review${film.customer_rating_count === 1 ? '' : 's'}`
+                  : `IMDb ${film.imdb_rating} (no customer reviews yet)`
+              }
+            >
+              <Star className="w-3 h-3 fill-slate-950" />
+              {film.customer_rating != null ? film.customer_rating : film.imdb_rating}
+              {film.customer_rating != null && (
+                <span className="text-[9px] font-medium opacity-80">({film.customer_rating_count})</span>
+              )}
             </div>
           )}
         </div>
@@ -325,7 +363,12 @@ export default function CinemaResults() {
       case 'title':    return filtered.sort((a, b) => a.title.localeCompare(b.title));
       case 'duration': return filtered.sort((a, b) => a.duration_minutes - b.duration_minutes);
       case 'rating':
-      default:         return filtered.sort((a, b) => (b.imdb_rating || 0) - (a.imdb_rating || 0));
+      default: {
+        // Default sort: customer rating descending, falling back to imdb_rating.
+        return filtered.sort((a, b) =>
+          ((b.customer_rating ?? b.imdb_rating) || 0) - ((a.customer_rating ?? a.imdb_rating) || 0)
+        );
+      }
     }
   }, [films, sortBy, searchQuery, statusFilter, selectedGenres, ratingFilter, durationFilter]);
 
@@ -360,40 +403,55 @@ export default function CinemaResults() {
         <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-cyan-400/8 rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
-      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30">
+      {/* Header — cyan accent block matching restaurant results' orange treatment */}
+      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-5">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/cinema')} className="gap-2 text-cyan-700 hover:bg-cyan-50" data-testid="cinema-results-back">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
-            <div className="flex-1">
-              <p className="text-cyan-600/70 text-[11px] tracking-[0.3em] uppercase mb-0.5 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Now playing</p>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                Movies {city && <span className="text-cyan-700">in {city}</span>}
-              </h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {filteredFilms.length} movie{filteredFilms.length !== 1 ? 's' : ''} available · {dateValid ? format(parseISO(date), 'EEE, MMM d, yyyy') : date}
-              </p>
-            </div>
           </div>
+
+          {/* Highlighted Search Criteria Header — cyan gradient (cinema accent) */}
+          <Card className="shadow-md bg-gradient-to-r from-cyan-500 via-cyan-600 to-cyan-700 text-white mb-4 border-0" data-testid="cinema-results-hero">
+            <CardContent className="p-5">
+              <div className="flex items-start md:items-center gap-4 flex-col md:flex-row">
+                <div className="flex-1">
+                  <p className="text-white/80 text-[11px] tracking-[0.3em] uppercase mb-1 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Now playing</p>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white">
+                    Movies {city && <span className="text-cyan-100">in {city}</span>}
+                  </h1>
+                  <p className="text-sm text-white/85 mt-1">
+                    {filteredFilms.length} movie{filteredFilms.length !== 1 ? 's' : ''} available · {dateValid ? format(parseISO(date), 'EEE, MMM d, yyyy') : date}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-white/90">
+                  <div className="text-right hidden md:block">
+                    <div className="text-[10px] uppercase tracking-widest text-white/70">Showing for</div>
+                    <div className="text-sm font-semibold">{city || 'All cities'} · {dateValid ? format(parseISO(date), 'MMM d') : date}</div>
+                  </div>
+                  <PlayCircle className="w-9 h-9 text-white/70" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-600" />
               <Input
                 type="text"
                 placeholder="Search movies, genres…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus-visible:ring-cyan-500/40"
+                className="pl-10 bg-cyan-50/60 border-cyan-200 text-slate-900 placeholder:text-slate-500 focus-visible:ring-cyan-500/40 focus-visible:border-cyan-400"
                 data-testid="cinema-results-search"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44 bg-slate-50 border-slate-200 text-slate-900">
-                <Film className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-44 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40">
+                <Film className="w-4 h-4 mr-2 text-cyan-600" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-300 text-slate-900">
@@ -403,8 +461,8 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger className="w-32 bg-slate-50 border-slate-200 text-slate-900" data-testid="filter-rating">
-                <Star className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-32 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40" data-testid="filter-rating">
+                <Star className="w-4 h-4 mr-2 text-cyan-600" />
                 <SelectValue placeholder="Rating" />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-300 text-slate-900">
@@ -415,8 +473,8 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <Select value={durationFilter} onValueChange={setDurationFilter}>
-              <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-900" data-testid="filter-duration">
-                <Clock className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-40 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40" data-testid="filter-duration">
+                <Clock className="w-4 h-4 mr-2 text-cyan-600" />
                 <SelectValue placeholder="Duration" />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-300 text-slate-900">
@@ -427,8 +485,8 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-slate-50 border-slate-200 text-slate-900">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-48 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40">
+                <SlidersHorizontal className="w-4 h-4 mr-2 text-cyan-600" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent className="bg-white border-slate-300 text-slate-900">
@@ -437,7 +495,7 @@ export default function CinemaResults() {
                 <SelectItem value="duration">Duration</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
+            <div className="flex items-center bg-cyan-50/60 border border-cyan-200 rounded-lg p-1">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
             {(searchQuery || statusFilter !== 'all' || selectedGenres.length > 0 || ratingFilter !== 'all' || durationFilter !== 'all') && (
@@ -550,9 +608,17 @@ export default function CinemaResults() {
                       </td>
                       <td className="px-4 py-3 text-slate-600">{formatDuration(film.duration_minutes)}</td>
                       <td className="px-4 py-3">
-                        {film.imdb_rating ? (
-                          <span className="inline-flex items-center gap-1 text-amber-300 font-medium">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {film.imdb_rating}
+                        {film.customer_rating != null ? (
+                          <span
+                            className="inline-flex items-center gap-1 text-amber-600 font-semibold"
+                            title={`${film.customer_rating} from ${film.customer_rating_count} customer review${film.customer_rating_count === 1 ? '' : 's'}`}
+                          >
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {film.customer_rating}
+                            <span className="text-[10px] text-slate-500 ml-0.5">({film.customer_rating_count})</span>
+                          </span>
+                        ) : film.imdb_rating ? (
+                          <span className="inline-flex items-center gap-1 text-slate-500 font-medium" title="IMDb editorial rating (no customer reviews yet)">
+                            <Star className="h-3 w-3 fill-slate-400 text-slate-400" /> {film.imdb_rating}
                           </span>
                         ) : '—'}
                       </td>

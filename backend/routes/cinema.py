@@ -167,6 +167,24 @@ async def get_films(
             if agg.get("min_price") is not None:
                 f["price_from"] = agg["min_price"]
 
+        # Enrich each film with the **customer rating** aggregated from the
+        # /api/ratings endpoint (entity_type='film'). This is the rating the
+        # public results page should surface instead of `imdb_rating` (which is
+        # an editorial / catalogue value entered by the operator).
+        rating_agg = await db.ratings.aggregate([
+            {"$match": {"entity_type": "film", "entity_id": {"$in": film_ids}}},
+            {"$group": {"_id": "$entity_id", "avg": {"$avg": "$rating"}, "count": {"$sum": 1}}},
+        ]).to_list(len(film_ids))
+        rating_by_film = {r["_id"]: r for r in rating_agg}
+        for f in films_list:
+            r = rating_by_film.get(f["id"])
+            if r and r.get("count"):
+                f["customer_rating"] = round(float(r["avg"]), 1)
+                f["customer_rating_count"] = int(r["count"])
+            else:
+                f["customer_rating"] = None
+                f["customer_rating_count"] = 0
+
     return {"films": films_list, "total": total}
 
 @router.get("/films/{film_id}")
@@ -177,6 +195,17 @@ async def get_film(film_id: str):
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
     film["id"] = film.pop("_id")
+    # Inline customer-rating aggregation so FilmDetails can display it too.
+    rating_agg = await db.ratings.aggregate([
+        {"$match": {"entity_type": "film", "entity_id": film["id"]}},
+        {"$group": {"_id": "$entity_id", "avg": {"$avg": "$rating"}, "count": {"$sum": 1}}},
+    ]).to_list(1)
+    if rating_agg:
+        film["customer_rating"] = round(float(rating_agg[0]["avg"]), 1)
+        film["customer_rating_count"] = int(rating_agg[0]["count"])
+    else:
+        film["customer_rating"] = None
+        film["customer_rating_count"] = 0
     return film
 
 

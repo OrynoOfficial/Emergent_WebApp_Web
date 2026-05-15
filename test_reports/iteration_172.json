@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 172 — Cinema Results customer-rating + cyan hero + favourite/subscribe verification. BACKEND: 6/6 pytest pass. GET /api/cinema/films returns customer_rating + customer_rating_count for every film. Seeded Olympus has Fallen aggregates to 4.0 / count 3 (entity_type='film', operator_id 9f0179c6...); Avenger has 0 ratings so customer_rating=null and count=0. GET /api/cinema/films/{id} mirrors the same fields and 404s on unknown ids. FRONTEND (Playwright, customer@test.com logged in via localStorage access_token): data-testid='cinema-results-hero' renders with the cyan gradient classes (from-cyan-500 via-cyan-600 to-cyan-700). The Grid customer-rating chips render correctly: 'film-customer-rating-1edf5c04-f19a-4808-9b3c-b8e168e8dc02' shows '4(3)' with title='4 from 3 customer reviews'; 'film-customer-rating-a585484d-...' (Avenger, no reviews) shows '4.8' with title='IMDb 4.8 (no customer reviews yet)' — IMDb fallback works as spec'd. Both grid cards expose 'favourite-{id}' buttons. List & Table views were not interactively reachable on the second pass (Cloudflare interstitial returned a blank page on retry — covered by Loop Prevention).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "SubscribeButton (rendered on FilmCardGrid/FilmCardList)",
+        "issue": "data-testid is the literal 'subscribe-btn' (not parameterised per operator/film) — so every Subscribe button on the results grid shares the same testid, making it impossible for tests to target a specific card's subscribe button. The review-request explicitly asks for the Subscribe button on each card; please change to data-testid={`subscribe-btn-${operatorId}`} (or include the film id) in /app/frontend/src/components/shared/SubscribeButton.jsx lines 42 and 74.",
+        "selector": "[data-testid=\"subscribe-btn\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Favourite (Heart) click on a Grid card",
+        "issue": "In one Playwright pass, clicking the favourite Heart did not produce a POST /api/favourites/ network call AND the page navigated to /services/cinema/film/{id} (Avenger detail). The onClick handler calls e.stopPropagation() so this is suspicious. Most likely cause: GET /api/favourites/ids?service_type=cinema returned 403 (auth header missing on a hot-reload) so isFav was undefined and the toggle handler effectively was a no-op while the parent card div onClick still navigated. Worth verifying the click-through with a fresh page when the token is fully bootstrapped. Functional verification of the favourites endpoint itself (POST /api/favourites/ with service_type/item_id/item_name) succeeded via curl.",
+        "affected_selectors": ["[data-testid^=\"favourite-\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration172_cinema_customer_rating.py",
+    "/app/test_reports/pytest/iteration172.xml"
+  ],
+  "action_items": [
+    "Make SubscribeButton's data-testid unique per operator/film: data-testid={`subscribe-btn-${operatorId}`} so per-card subscribe controls are individually targetable in tests (matches the review-request expectation of a per-card subscribe interaction).",
+    "Sanity-check the favourite click flow with a fresh session: confirm GET /api/favourites/ids?service_type=cinema returns 200 on initial card mount (it was 403 on a Playwright reload — possibly a transient token-bootstrap race in /app/frontend/src/hooks/useFavourites.js)."
+  ],
+  "critical_code_review_comments": [
+    "SubscribeButton.jsx hard-codes data-testid='subscribe-btn' (lines 42 and 74). For any results grid this collides across cards. Switch to a per-operator/per-film testid.",
+    "CinemaResults.jsx FilmCardGrid uses isFav?.(film._id || film.id) but films from the list endpoint already expose .id (we transform _id→id server-side). The _id fallback is harmless but dead code in this path.",
+    "Cinema films enrichment loop (cinema.py lines 174-186) does the ratings aggregation only inside the `if films_list:` branch — correct, but consider returning customer_rating/customer_rating_count keys with default null/0 even for the empty-list path so the response shape is contract-stable across clients (currently the field only exists when at least one film is returned).",
+    "FilmCardList Heart button uses the same parent-card cursor-pointer onClick. The Heart's stopPropagation should hold, but the entire FilmCardList block is wrapped in a clickable div — confirm via a manual click that List-view favourite still keeps the user on /services/cinema/results."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration172_cinema_customer_rating.py"
+  ],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "Hero cyan ✓, Olympus '4(3)' chip ✓, Avenger IMDb fallback ✓, favourite testids present ✓; Subscribe-per-card testid is non-unique (see ui_bugs); favourite click integration not conclusively verified live (Cloudflare blanked the retry)"},
+  "test_credentials": "Customer: customer@test.com / testpassword123",
+  "seed_data_creation": "None (used existing seeded ratings for film 1edf5c04-f19a-4808-9b3c-b8e168e8dc02).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend test file /app/backend/tests/test_iteration172_cinema_customer_rating.py is reusable; it asserts the seeded Olympus film aggregates to count=3 and at least one other film has customer_rating=null. If Playwright is needed again, login by posting to /api/auth/login then writing access_token+token+user to localStorage BEFORE navigating to /services/cinema/results (use the public preview URL). Cloudflare interstitial blanked one of the runs — first navigation usually succeeds, retries may not.",
+  "rca of the issue": "Frontend chip rendering verified against the backend aggregation: db.ratings has 3 entries for entity_type='film', entity_id='1edf5c04-f19a-4808-9b3c-b8e168e8dc02' → cinema.py groups by entity_id, computes avg=4.0 / count=3 → API response carries customer_rating=4 and customer_rating_count=3 → CinemaResults.jsx renders chip 'film-customer-rating-1edf5c04-...' with text '4(3)' and the human-readable title attribute. Avenger has no ratings → API returns customer_rating=null + count=0 → frontend falls back to imdb_rating (4.8) with title 'IMDb 4.8 (no customer reviews yet)'. Both end-to-end paths confirmed live in Playwright."
+}
