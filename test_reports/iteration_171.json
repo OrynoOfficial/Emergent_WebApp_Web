@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 171 — Communications scoping + Manage-in-Loyalty deep-link verification. Backend: 7/7 pytest pass — (a) GET /api/subscriptions/promotions as cinema operator (mani-monroe@netflix.com) returns ONLY rows with operator_id == netflix operator_id (verified by creating a transient TEST_ITER171_PROMO and confirming admin sees it while operator only sees own); (b) operator cannot break out by passing operator_id=__not_real__ — server clamps to own operator (clamping comes from the operator_context → operator_id fallback in /app/backend/routes/subscriptions.py line 437-440); (c) GET /api/communications/announcements and (d) GET /api/support-tickets/ both properly scope to operator. Admin gets unscoped results on both. Frontend: live Playwright verified — manage-in-loyalty-btn renders on the Communications tab of /management/cinema with text 'Manage in Loyalty', clicking navigates to /loyalty?tab=promotions. The Create Promotion modal (opened via create-promotion-btn) contains promo-modal-loyalty-link ('Or manage all promotions in the Loyalty hub') which closes the dialog and navigates to /loyalty?tab=promotions. As ADMIN, /loyalty?tab=promotions auto-activates the operator-rewards-tab (data-state=active, aria-selected=true) AND the Promotions sub-tab (page renders 'Operator Rewards & Alerts → Promotions 4 / Alerts 0'). Required frontend restart once to pick up new bundle (initial run showed manage-in-loyalty-btn count=0; after `supervisorctl restart frontend`, count=1).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Operator clicks 'Manage in Loyalty' or promo-modal-loyalty-link",
+        "issue": "/loyalty is gated by an 'Access Restricted — The loyalty program is only available for customers.' guard for operator users, so although the navigation succeeds and the URL becomes /loyalty?tab=promotions, the cinema operator cannot actually SEE the operator-rewards tab/promotions sub-tab. The auto-activation effect only fires for admin/super_admin (who can see AdminLoyaltyView). For operators the deep-link is a dead end. Either (a) whitelist operators on /loyalty so they land on the operator-rewards tab, or (b) hide the manage-in-loyalty-btn / promo-modal-loyalty-link when user.role === 'operator', or (c) deep-link operators to a different operator-facing promotions page.",
+        "affected_selectors": ["[data-testid=\"manage-in-loyalty-btn\"]", "[data-testid=\"promo-modal-loyalty-link\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration171_comms_scoping.py",
+    "/app/test_reports/pytest/iteration171.xml"
+  ],
+  "action_items": [
+    "Decide whether operators should be allowed onto /loyalty?tab=promotions. The new 'Manage in Loyalty' button + promo-modal footer link are surfaced to operators (isOperator || isAdmin), but /loyalty currently renders 'Access Restricted' for non-customer roles. Pick one: (a) extend the loyalty page to render AdminLoyaltyView for operator role too (scoped to their own promotions), (b) hide both buttons when role==='operator' and only show them to admins, or (c) route operators to a service-management promotions surface instead.",
+    "Optional: /app/backend/routes/communications.py does NOT use the operator_context fallback (only top-level operator_id). It works for the seeded data but team-member/scoped-token operators would see nothing. Mirror the operator_context fallback used in subscriptions.py and support_tickets.py for consistency."
+  ],
+  "critical_code_review_comments": [
+    "Inconsistency: /api/communications/announcements and /api/communications/alerts scope by current_user.get('operator_id') only (lines 52, 105, 145 of communications.py), while /api/subscriptions/promotions and /api/support-tickets use the operator_context → operator_id fallback. Team-member operators with scoped tokens may see empty results on communications endpoints.",
+    "ServiceCommunicationsHub.jsx now 606 lines — still under 700-line guideline but creeping. The promotion CRUD block (createPromotion/deletePromotion/sendAlert/approvePromotion/rejectPromotion, lines 80-155) is a good extraction candidate into a usePromotions(serviceTag) hook.",
+    "AdminLoyaltyView.jsx useEffect map (line 36) hard-codes the synonym 'promotions' → 'operator-rewards' + opSubTab='promotions'. If the loyalty page later renames the operator-rewards tab value, this deep-link silently breaks. Add a comment + unit test.",
+    "Frontend hot-reload didn't pick up the new data-testid on first load — investigation suggests Vite kept a stale chunk. Not a code bug per se, but flag for the deployment pipeline.",
+    "Subscriptions promotions endpoint returns pending_approval_count globally (line 460) — even to operators — which leaks system-wide pending counts cross-tenant. Should scope the count to the operator when role=='operator'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration171_comms_scoping.py"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "Manage-in-Loyalty + promo-modal link + admin deep-link auto-activation all verified live in Playwright"},
+  "test_credentials": "Admin: admin@test.com / testpassword123; Cinema Operator: mani-monroe@netflix.com / testpassword123",
+  "seed_data_creation": "Backend test creates exactly one transient promotion (title='TEST_ITER171_PROMO', service_type='cinema', discount=10%) as the cinema operator and DELETEs it in the same test's finally block. No residue.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend bundle staleness — after E1 edits ServiceCommunicationsHub or AdminLoyaltyView, run `sudo supervisorctl restart frontend` before Playwright or you may see count=0 for newly-added data-testids even though the source has them. To reach /management/cinema → Communications tab as cinema operator: login as mani-monroe@netflix.com, go to /management/cinema, then click the Communications tab (role=tab, name contains 'Communications'). The communications-hub data-testid is on the wrapper div in ServiceCommunicationsHub.jsx. Cloudflare interstitial that blocked iter 168-170 was NOT triggered this run — direct goto worked fine.",
+  "rca of the issue": "Reported user-visible bug 'operator sees everything on management/*/communications' is FIXED on the backend: GET /api/subscriptions/promotions now resolves the operator id via current_user.get('operator_context',{}).get('operator_id') OR current_user.get('operator_id') and applies it as a hard filter regardless of any operator_id query param the client passes. Verified end-to-end by (i) creating a promo as the cinema operator, (ii) confirming admin sees that promo plus others, (iii) confirming the cinema operator only sees promos where operator_id matches their own — including with a deliberately bogus operator_id=__not_real__ query param. The new 'Manage in Loyalty' button and modal footer link both render and navigate correctly. ONE residual UX issue: operators hitting /loyalty are blocked by an 'Access Restricted — only available for customers' guard, so the new deep-link is non-functional FOR OPERATORS even though it is functional for admins (where operator-rewards-tab activates as designed)."
+}

@@ -150,7 +150,12 @@ async def get_operator_subscriber_count(
 
     op_id = operator_id
     if current_user.get("role") == "operator":
-        op_id = current_user.get("operator_id")
+        # Operators always see only their own promotions/alerts. We try operator_context
+        # first (used by team members / scoped tokens) and fall back to the top-level field.
+        op_id = (
+            current_user.get("operator_context", {}).get("operator_id")
+            or current_user.get("operator_id")
+        )
 
     if not op_id:
         return {"count": 0}
@@ -171,7 +176,12 @@ async def get_operator_subscribers(
 
     op_id = operator_id
     if current_user.get("role") == "operator":
-        op_id = current_user.get("operator_id")
+        # Operators always see only their own promotions/alerts. We try operator_context
+        # first (used by team members / scoped tokens) and fall back to the top-level field.
+        op_id = (
+            current_user.get("operator_context", {}).get("operator_id")
+            or current_user.get("operator_id")
+        )
 
     if not op_id:
         return {"subscribers": [], "total": 0}
@@ -422,7 +432,12 @@ async def get_promotions(
 
     op_id = operator_id
     if current_user.get("role") == "operator":
-        op_id = current_user.get("operator_id")
+        # Operators always see only their own promotions/alerts. We try operator_context
+        # first (used by team members / scoped tokens) and fall back to the top-level field.
+        op_id = (
+            current_user.get("operator_context", {}).get("operator_id")
+            or current_user.get("operator_id")
+        )
 
     query = {}
     if op_id:

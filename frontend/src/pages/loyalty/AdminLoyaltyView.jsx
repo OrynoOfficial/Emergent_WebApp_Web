@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import DatePickerField from '@/components/shared/DatePickerField';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -26,6 +27,19 @@ export default function AdminLoyaltyView() {
   const isReadOnly = user?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('overview');
+  // Honour ?tab=... deep links from other pages (e.g. Communications hub).
+  // Map "promotions" → the operator-rewards tab where ops promotions live.
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (!t) return;
+    const map = { promotions: 'operator-rewards', rewards: 'rewards', members: 'members', overview: 'overview', 'operator-rewards': 'operator-rewards' };
+    const target = map[t];
+    if (target) {
+      setActiveTab(target);
+      if (t === 'promotions') setOpSubTab('promotions');
+    }
+  }, [searchParams]);
   const [rewards, setRewards] = useState(DEFAULT_REWARDS);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);

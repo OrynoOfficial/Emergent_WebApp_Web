@@ -339,6 +339,16 @@ export default function ServiceCommunicationsHub({
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => navigate('/loyalty?tab=promotions')}
+                className="gap-1"
+                data-testid="manage-in-loyalty-btn"
+                title="Manage all promotions in the Loyalty hub"
+              >
+                <Megaphone className="h-3 w-3" /> Manage in Loyalty <ArrowRight className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={loadData}
                 disabled={loading}
                 className="gap-1"
@@ -506,6 +516,14 @@ export default function ServiceCommunicationsHub({
                 Promotions require admin approval before sending to <strong>{subscriberCount}</strong> subscribers.
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => { setShowPromoDialog(false); navigate('/loyalty?tab=promotions'); }}
+              className="w-full text-xs text-violet-700 hover:text-violet-900 underline-offset-4 hover:underline inline-flex items-center justify-center gap-1"
+              data-testid="promo-modal-loyalty-link"
+            >
+              Or manage all promotions in the Loyalty hub <ArrowRight className="h-3 w-3" />
+            </button>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPromoDialog(false)}>Cancel</Button>
