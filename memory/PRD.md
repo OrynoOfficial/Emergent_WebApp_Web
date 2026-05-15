@@ -6,6 +6,12 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **🎬💖⭐ Cinema Results polish (Feb 15 2026 — iter 172)** — Three deliverables in one batch:
+  1. **Cyan-accent header**: `/services/cinema/results` top area now sports a cyan gradient hero card (`bg-gradient-to-r from-cyan-500 via-cyan-600 to-cyan-700`, `data-testid='cinema-results-hero'`) plus cyan-tinted filter inputs (cyan-50/60 backgrounds, cyan-200 borders, cyan-600 icons) — same accent treatment that Restaurants Results uses with orange. Sticky header now also has a subtle shadow.
+  2. **Subscribe + Heart on List view**: previously only the Grid card exposed Subscribe + Favourite. List view now mirrors both buttons in the top-right of the poster (`favourite-list-<id>`). The SubscribeButton's `data-testid` was made unique per-operator (`subscribe-btn-${operatorId}` with fallback) so per-card subscribe controls are individually targetable.
+  3. **Customer ratings on cards**: `GET /api/cinema/films` and `GET /api/cinema/films/{id}` now enrich each film with `customer_rating` (avg, 1 dp) + `customer_rating_count` aggregated from `db.ratings` where `entity_type='film'`. Grid/List/Table all surface this chip first and gracefully fall back to `imdb_rating` when no customer reviews exist, with explanatory `title` attributes. Default sort key is now `customer_rating ?? imdb_rating` descending.
+  - Backend 6/6 pytest (`tests/test_iteration172_cinema_customer_rating.py`); frontend live-verified — Olympus has Fallen renders `★ 4 (3)` from 3 seeded reviews (avg=4.0), Avenger falls back to IMDb 4.8 with the "no customer reviews yet" tooltip.
+
 - **🎬💸🎟️ Cinema customer-flow polish + Communications scoping (Feb 15 2026 — iter 170+171)** — Two-round delivery:
   - **Round 1** (iter 170, 5/5 backend pytest + 11/11 frontend source verified):
     - **FilmDetails movie-details**: right column wrapped in a cyan-tinted card (`bg-gradient-to-br from-cyan-50 via-white to-cyan-50/40 border-2 border-cyan-200`, data-testid `film-info-card`) — gives the cinema accent.

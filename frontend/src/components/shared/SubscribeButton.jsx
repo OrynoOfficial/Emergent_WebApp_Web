@@ -39,7 +39,7 @@ export default function SubscribeButton({ operatorId, operatorName, size = 'sm',
                   ? 'bg-[#082c59] text-white hover:bg-[#082c59]/80'
                   : 'bg-white/80 hover:bg-white text-[#082c59]'
               } ${className}`}
-              data-testid="subscribe-btn"
+              data-testid={operatorId ? `subscribe-btn-${operatorId}` : 'subscribe-btn'}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -71,7 +71,7 @@ export default function SubscribeButton({ operatorId, operatorName, size = 'sm',
                 ? 'border border-[#082c59]/20 text-[#082c59] hover:bg-[#082c59]/5'
                 : 'bg-[#082c59] hover:bg-[#082c59]/90 text-white'
             } ${className}`}
-            data-testid="subscribe-btn"
+            data-testid={operatorId ? `subscribe-btn-${operatorId}` : 'subscribe-btn'}
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : isSubscribed ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
             {isSubscribed ? 'Subscribed' : 'Subscribe'}
