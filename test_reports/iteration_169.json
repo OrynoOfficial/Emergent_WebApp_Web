@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 169 backend tests: 10/10 passed. Verified (1) one-owner-per-operator: a) POST /api/operators/ with create_owner_account=true and fresh owner_email succeeds; b) POST /api/operators/{op_id}/users with operator_role='owner' returns 400 ('Invalid operator role. Must be local_admin or local_user'); c) PUT /api/operators/{op_id}/users/{uid} promoting a local_user to operator_role='owner' returns 409 whose detail mentions the existing owner email. (2) VIP pricing: POST /api/cinema/showtimes accepts and persists vip_price; PUT updates vip_price; POST /cinema/showtimes/{id}/book with mixed VIP+regular seats (A1, B2, C3 against vip_rows=['A','B'], price=5000, vip_price=9500) charges total_price=24000; seat_breakdown is stored on both cinema_bookings.seat_breakdown and orders.booking_details.seat_breakdown with correct per-seat tier+price. Frontend was source-inspected because Cloudflare 'Performing security verification' interstitial blocked Playwright after first navigation (same pattern as iter 168); all required data-testids, the openShowtimeDialog(st) edit-via-modal wiring, the Pagination usage gated on filteredShowtimes.length>0, the conditional VIP-price field driven by selectedScreen.seat_layout.vip_rows, the vip-surcharge-line in the order summary, and the light-theme classes (slate-50/bg-white/cyan-600|700/amber) are present in the four source files.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CinemaBooking", "issue": "VIP surcharge row uses text-amber-300 on a light/white card — extremely low contrast against bg-white. Other summary rows correctly use text-slate-600/500. Suggest text-amber-700 (matches the cyan-700 accent contrast on the same page) so the VIP-surcharge line is readable on the new light theme.", "selector": "[data-testid=\"vip-surcharge-line\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration169_owner_vip.py",
+    "/app/test_reports/pytest/iteration169.xml"
+  ],
+  "action_items": [
+    "Fix /app/frontend/src/pages/services/CinemaBooking.jsx:572 — change `text-amber-300` to `text-amber-700` (or similar dark amber) so the VIP-surcharge summary line is legible on the new light-theme white card."
+  ],
+  "critical_code_review_comments": [
+    "cinema.py:book_cinema_seats returns only {message, booking_id, order_id, order_number, total_price, seats} — it stores seat_breakdown on both documents but does NOT return it to the client. That is fine for the current contract, but front-end pages that want to render the breakdown immediately after booking would have to do a second GET /cinema/bookings/my. Consider adding seat_breakdown to the response for symmetry.",
+    "No GET endpoint exists for a single showtime (/api/cinema/showtimes/{id} returns 405). Update/Edit-via-modal in the UI works because the row data is already in state, but external clients / deep-links cannot fetch a single showtime. Consider adding GET /api/cinema/showtimes/{id} for symmetry with PUT/DELETE.",
+    "operators router still uses the un-slashed path '/api/operators' that 307s to '/api/operators/' and drops the Authorization header on POST. The fix in /api/operators-users tests was to call '/api/operators/' with a trailing slash and allow_redirects=False. Strongly recommend registering both paths or returning the canonical without-trailing-slash directly to prevent silent auth loss in real clients.",
+    "routes/cinema.py is 938 lines — still over the 700-line guideline (was flagged in iteration 168 too). Split into films/showtimes/bookings sub-routers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration169_owner_vip.py"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "source-verified (Cloudflare blocked live Playwright after first navigation)"},
+  "test_credentials": "Super Admin: superadmin@oryno.com / testpassword123; Cinema Operator: mani-monroe@netflix.com / testpassword123; Customer: customer@test.com / testpassword123 (from /app/memory/test_credentials.md).",
+  "seed_data_creation": "Created a transient operator (TEST_OP_*), local-user (TEST_lu_*), owner (TEST_owner_*), one showtime on Oryno-Cinema/Screen-1 (vip_rows=['A','B'], price=5000, vip_price=8000→9500) at film=Olympus, show_date=2099-12-30, plus a 3-seat booking [A1,B2,C3]. All test residue removed: db.showtimes.deleteMany({show_date:'2099-12-30'})→1; db.operators.deleteMany({name:/^TEST_OP_/})→1; db.users.deleteMany({email:/^TEST_/})→4; db.cinema_bookings.deleteMany({total_price:24000})→3. Orphan orders left behind (best-effort).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Cloudflare bot-protection interstitial still intermittently blocks Playwright on this preview domain on second-or-later navigation in the same session. First-load usually goes through, second navigation often does not. For UI testing, prefer a single long script that stays on the same tab and uses in-app navigation (router push / clicks) rather than page.goto() repeatedly. Backend pytest is unaffected. ORYNO_CINEMA_ID=7a84617c-4ba8-4186-bf6a-3b240407ff69 / Screen 1 has vip_rows=['A','B'] and is the only Netflix-operator screen with VIP rows pre-configured — useful for VIP regression. POST /api/operators requires the trailing slash '/api/operators/' + allow_redirects=False, otherwise the 307 drops the Authorization header. No direct GET single-showtime route exists; use /api/cinema/films/{film_id}/showtimes (returns 'id' field) to verify a created showtime.",
+  "rca of the issue": "Initial test failures were tooling-related, not product bugs: (a) POST /api/operators without trailing slash triggers a 307 → http downgrade that strips the Authorization header (fixed by '/operators/' + allow_redirects=False); (b) book endpoint stores seat_breakdown but doesn't return it (verified via GET /cinema/bookings/my); (c) there's no single-showtime GET endpoint — verified via /cinema/films/{film_id}/showtimes. Once the test harness was aligned to the real contract, all 10 assertions for one-owner-per-operator and VIP pricing pass. The only product-side observation is the low-contrast amber-300 in the new light-theme VIP-surcharge summary line."
+}

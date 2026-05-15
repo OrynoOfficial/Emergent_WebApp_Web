@@ -67,7 +67,7 @@ export default function CinemaSeatMap({
           className="h-2.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent rounded-full shadow-[0_0_40px_rgba(34,211,238,0.65)]"
           style={{ transform: 'perspective(120px) rotateX(-22deg)' }}
         />
-        <p className="text-center text-cyan-300/70 text-[11px] tracking-[0.4em] uppercase mt-3">Screen</p>
+        <p className="text-center text-cyan-700/70 text-[11px] tracking-[0.4em] uppercase mt-3">Screen</p>
       </div>
 
       {/* Seats grid */}
@@ -77,7 +77,7 @@ export default function CinemaSeatMap({
           const isVipRow = vipRows.has(rowLetter);
           return (
             <div key={rowLetter} className="flex items-center gap-1.5 select-none">
-              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-400' : 'text-slate-500'}`}>{rowLetter}</span>
+              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-600' : 'text-slate-400'}`}>{rowLetter}</span>
               <div className="flex gap-1">
                 {Array.from({ length: cols }, (_, cIdx) => {
                   const seatId = getSeatId(rIdx, cIdx);
@@ -98,15 +98,15 @@ export default function CinemaSeatMap({
                         'relative w-7 h-7 sm:w-8 sm:h-8 rounded-t-lg text-[10px] font-semibold transition-all duration-150',
                         'flex items-center justify-center border-b-2',
                         !readOnly && !isBlocked && !isBooked && 'hover:scale-110 hover:-translate-y-0.5 cursor-pointer',
-                        isBooked && 'bg-slate-700/70 border-slate-800 text-slate-500 cursor-not-allowed',
-                        isBlocked && !isBooked && 'bg-slate-800/40 border-slate-900 text-slate-600 cursor-not-allowed',
-                        isSelected && 'bg-cyan-400 border-cyan-600 text-slate-900 shadow-[0_0_18px_rgba(34,211,238,0.7)] ring-2 ring-cyan-300',
-                        !isSelected && !isBooked && !isBlocked && isVipRow && 'bg-amber-500/15 border-amber-500/60 text-amber-200 hover:bg-amber-500/25',
-                        !isSelected && !isBooked && !isBlocked && !isVipRow && 'bg-slate-700/60 border-slate-800 text-slate-300 hover:bg-slate-600/80',
+                        isBooked && 'bg-slate-300 border-slate-400 text-slate-500 cursor-not-allowed',
+                        isBlocked && !isBooked && 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed',
+                        isSelected && 'bg-cyan-500 border-cyan-700 text-white shadow-[0_0_18px_rgba(34,211,238,0.55)] ring-2 ring-cyan-300',
+                        !isSelected && !isBooked && !isBlocked && isVipRow && 'bg-amber-100 border-amber-400 text-amber-800 hover:bg-amber-200',
+                        !isSelected && !isBooked && !isBlocked && !isVipRow && 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-cyan-50 hover:border-cyan-400',
                       )}
                     >
                       {isVipRow && !isBlocked && !isBooked && (
-                        <Crown className="absolute -top-1.5 -right-1 h-2.5 w-2.5 text-amber-400" />
+                        <Crown className="absolute -top-1.5 -right-1 h-2.5 w-2.5 text-amber-500" />
                       )}
                       {cIdx + 1}
                     </button>
@@ -120,7 +120,7 @@ export default function CinemaSeatMap({
                   ) : seatBtn;
                 })}
               </div>
-              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-400' : 'text-slate-500'}`}>{rowLetter}</span>
+              <span className={`w-5 text-center text-[11px] font-bold ${isVipRow ? 'text-amber-600' : 'text-slate-400'}`}>{rowLetter}</span>
             </div>
           );
         })}
@@ -129,11 +129,11 @@ export default function CinemaSeatMap({
       {/* Legend */}
       {!hideLegend && (
         <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 mt-6 text-[11px]">
-          <LegendItem swatch="bg-slate-700/60 border-slate-800" label="Available" />
-          <LegendItem swatch="bg-cyan-400 border-cyan-600 ring-2 ring-cyan-300" label="Selected" />
-          <LegendItem swatch="bg-amber-500/15 border-amber-500/60" label="VIP" icon={<Crown className="h-3 w-3 text-amber-400" />} />
-          <LegendItem swatch="bg-slate-700/70 border-slate-800" label="Booked" muted />
-          <LegendItem swatch="bg-slate-800/40 border-slate-900" label="Blocked" muted />
+          <LegendItem swatch="bg-slate-100 border-slate-300" label="Available" />
+          <LegendItem swatch="bg-cyan-500 border-cyan-700 ring-2 ring-cyan-300" label="Selected" />
+          <LegendItem swatch="bg-amber-100 border-amber-400" label="VIP" icon={<Crown className="h-3 w-3 text-amber-500" />} />
+          <LegendItem swatch="bg-slate-300 border-slate-400" label="Booked" muted />
+          <LegendItem swatch="bg-slate-200 border-slate-300" label="Blocked" muted />
         </div>
       )}
     </div>
@@ -146,7 +146,7 @@ function LegendItem({ swatch, label, icon, muted = false }) {
       <span className={cn('relative w-5 h-5 rounded-t-md border-b-2', swatch, muted && 'opacity-60')}>
         {icon && <span className="absolute -top-1 -right-1">{icon}</span>}
       </span>
-      <span className={cn('text-slate-300', muted && 'text-slate-500')}>{label}</span>
+      <span className={cn('text-slate-700', muted && 'text-slate-400')}>{label}</span>
     </div>
   );
 }

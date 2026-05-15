@@ -65,26 +65,26 @@ function ShowtimeCard({ st, onSelect }) {
       data-testid={`showtime-card-${st.id}`}
       className={`text-left rounded-xl border transition-all p-4 group ${
         soldOut
-          ? 'bg-slate-800/40 border-slate-700/60 opacity-60 cursor-not-allowed'
-          : 'bg-slate-800/70 border-slate-700/60 hover:border-cyan-400/60 hover:bg-slate-800 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)] cursor-pointer'
+          ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed'
+          : 'bg-white border-slate-200 hover:border-cyan-400 hover:shadow-[0_0_24px_rgba(34,211,238,0.18)] cursor-pointer'
       }`}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xl font-bold text-white tabular-nums" data-testid={`showtime-time-${st.id}`}>
+        <div className="text-xl font-bold text-slate-900 tabular-nums" data-testid={`showtime-time-${st.id}`}>
           {st.show_time}
-          {st.end_time && <span className="text-xs text-slate-400 ml-2 font-normal">→ {st.end_time}</span>}
+          {st.end_time && <span className="text-xs text-slate-500 ml-2 font-normal">→ {st.end_time}</span>}
         </div>
         <Badge className={`text-[10px] ${screen.color}`} data-testid={`showtime-screen-${st.id}`}>
           {screen.label}
         </Badge>
       </div>
-      <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-2.5">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-2.5">
         <Monitor className="w-3.5 h-3.5" /> {st.screen_name || '—'}
       </div>
-      <div className="flex items-center justify-between pt-2.5 border-t border-slate-700/60">
+      <div className="flex items-center justify-between pt-2.5 border-t border-slate-200">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-slate-500">Price</div>
-          <div className="text-base font-bold text-cyan-300 tabular-nums" data-testid={`showtime-price-${st.id}`}>
+          <div className="text-base font-bold text-cyan-700 tabular-nums" data-testid={`showtime-price-${st.id}`}>
             {st.price != null ? formatFCFA(st.price) : '—'}
           </div>
         </div>
@@ -94,7 +94,7 @@ function ShowtimeCard({ st, onSelect }) {
           </div>
           <div
             className={`text-sm font-semibold tabular-nums ${
-              soldOut ? 'text-rose-400' : seatsLeft <= 5 ? 'text-amber-300' : 'text-emerald-300'
+              soldOut ? 'text-rose-500' : seatsLeft <= 5 ? 'text-amber-600' : 'text-emerald-600'
             }`}
             data-testid={`showtime-seats-${st.id}`}
           >
@@ -187,19 +187,19 @@ export default function FilmDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-cyan-400" />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-cyan-600" />
       </div>
     );
   }
 
   if (!film) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center text-white">
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center text-slate-900">
         <div className="text-center">
-          <Film className="w-16 h-16 mx-auto mb-4 text-slate-500" />
+          <Film className="w-16 h-16 mx-auto mb-4 text-slate-400" />
           <h2 className="text-xl font-semibold mb-2">Film not found</h2>
-          <Button onClick={() => navigate('/services/cinema')} className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold" data-testid="film-details-back-to-cinema">
+          <Button onClick={() => navigate('/services/cinema')} className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold" data-testid="film-details-back-to-cinema">
             Back to Cinema
           </Button>
         </div>
@@ -208,11 +208,11 @@ export default function FilmDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       {/* Top bar */}
-      <div className="bg-black/40 backdrop-blur-xl border-b border-cyan-500/10">
+      <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <Button variant="ghost" className="text-cyan-300 hover:bg-cyan-500/10" onClick={() => navigate(-1)} data-testid="film-details-back">
+          <Button variant="ghost" className="text-cyan-700 hover:bg-cyan-50" onClick={() => navigate(-1)} data-testid="film-details-back">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
         </div>
@@ -223,7 +223,7 @@ export default function FilmDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           {/* Poster */}
           <div className="w-full md:w-80 flex-shrink-0">
-            <div className="aspect-[2/3] rounded-xl overflow-hidden relative bg-slate-800 shadow-2xl shadow-cyan-500/10 border border-slate-800">
+            <div className="aspect-[2/3] rounded-xl overflow-hidden relative bg-slate-200 shadow-xl shadow-cyan-500/10 border border-slate-200">
               <img
                 src={resolvePoster(film.poster_url)}
                 alt={film.title}
@@ -232,9 +232,9 @@ export default function FilmDetails() {
                 data-testid="film-poster-image"
               />
               {film.imdb_rating != null && (
-                <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-amber-400/40">
-                  <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                  <span className="text-white font-bold">{film.imdb_rating}</span>
+                <div className="absolute top-4 right-4 flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-amber-400/60 shadow">
+                  <Star className="w-5 h-5 text-amber-500 fill-amber-400" />
+                  <span className="text-slate-900 font-bold">{film.imdb_rating}</span>
                 </div>
               )}
             </div>
@@ -242,17 +242,17 @@ export default function FilmDetails() {
 
           {/* Info */}
           <div className="flex-1">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4" data-testid="film-title">{film.title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4" data-testid="film-title">{film.title}</h1>
 
             {/* Genres */}
             <div className="flex flex-wrap gap-2 mb-4">
               {film.genre?.map((g) => (
-                <Badge key={g} className={GENRE_COLORS[g] || 'bg-slate-700 text-slate-200'}>{g}</Badge>
+                <Badge key={g} className={GENRE_COLORS[g] || 'bg-slate-200 text-slate-700'}>{g}</Badge>
               ))}
             </div>
 
             {/* Meta */}
-            <div className="flex flex-wrap gap-4 text-slate-300 mb-6 text-sm">
+            <div className="flex flex-wrap gap-4 text-slate-600 mb-6 text-sm">
               {film.duration_minutes && (
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
@@ -260,7 +260,7 @@ export default function FilmDetails() {
                 </span>
               )}
               {film.rating && (
-                <Badge variant="outline" className="border-slate-600 text-slate-300">{film.rating}</Badge>
+                <Badge variant="outline" className="border-slate-300 text-slate-700 bg-white">{film.rating}</Badge>
               )}
               {film.release_date && (
                 <span className="flex items-center gap-1">
@@ -271,7 +271,7 @@ export default function FilmDetails() {
 
             {/* Description */}
             {film.description && (
-              <p className="text-slate-300 mb-6 leading-relaxed">{film.description}</p>
+              <p className="text-slate-700 mb-6 leading-relaxed">{film.description}</p>
             )}
 
             {/* Cast & crew + Cinema */}
@@ -279,31 +279,31 @@ export default function FilmDetails() {
               {film.director && (
                 <div>
                   <span className="text-slate-500">Director:</span>
-                  <span className="ml-2 text-white">{film.director}</span>
+                  <span className="ml-2 text-slate-900 font-medium">{film.director}</span>
                 </div>
               )}
               {film.cast?.length > 0 && (
                 <div>
                   <span className="text-slate-500">Cast:</span>
-                  <span className="ml-2 text-white">{film.cast.join(', ')}</span>
+                  <span className="ml-2 text-slate-900 font-medium">{film.cast.join(', ')}</span>
                 </div>
               )}
               {cinemaNames.length > 0 && (
                 <div data-testid="film-cinema-names">
                   <span className="text-slate-500 inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Cinema:</span>
-                  <span className="ml-2 text-white">{cinemaNames.join(', ')}</span>
+                  <span className="ml-2 text-slate-900 font-medium">{cinemaNames.join(', ')}</span>
                 </div>
               )}
               {film.language && (
                 <div>
                   <span className="text-slate-500">Language:</span>
-                  <span className="ml-2 text-white">{film.language}</span>
+                  <span className="ml-2 text-slate-900 font-medium">{film.language}</span>
                 </div>
               )}
               {film.subtitles?.length > 0 && (
                 <div>
                   <span className="text-slate-500">Subtitles:</span>
-                  <span className="ml-2 text-white">{film.subtitles.join(', ')}</span>
+                  <span className="ml-2 text-slate-900 font-medium">{film.subtitles.join(', ')}</span>
                 </div>
               )}
             </div>
@@ -313,24 +313,24 @@ export default function FilmDetails() {
 
       {/* Showtimes */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
-        <Card className="bg-slate-900/60 border-slate-800 backdrop-blur-sm">
+        <Card className="bg-white border-slate-200 shadow-md">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Ticket className="w-5 h-5 text-cyan-400" /> Select Showtime
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-cyan-600" /> Select Showtime
               </h2>
 
               <div className="flex flex-wrap gap-3">
                 {/* Date filter — default "All dates" */}
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="showtime-date-filter">
-                    <Calendar className="w-4 h-4 mr-2" />
+                  <SelectTrigger className="w-48 bg-white border-slate-300 text-slate-900" data-testid="showtime-date-filter">
+                    <Calendar className="w-4 h-4 mr-2 text-cyan-600" />
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                    <SelectItem value="all" className="text-white hover:bg-slate-800">All dates</SelectItem>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    <SelectItem value="all">All dates</SelectItem>
                     {dateOptions.map((d) => (
-                      <SelectItem key={d} value={d} className="text-white hover:bg-slate-800">
+                      <SelectItem key={d} value={d}>
                         {formatDateLabel(d)}
                       </SelectItem>
                     ))}
@@ -339,14 +339,14 @@ export default function FilmDetails() {
 
                 {/* Screen filter — replaces the previous City filter */}
                 <Select value={screenFilter} onValueChange={setScreenFilter}>
-                  <SelectTrigger className="w-44 bg-slate-800 border-slate-700 text-white" data-testid="showtime-screen-filter">
-                    <Monitor className="w-4 h-4 mr-2" />
+                  <SelectTrigger className="w-44 bg-white border-slate-300 text-slate-900" data-testid="showtime-screen-filter">
+                    <Monitor className="w-4 h-4 mr-2 text-cyan-600" />
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
-                    <SelectItem value="all" className="text-white hover:bg-slate-800">All screens</SelectItem>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    <SelectItem value="all">All screens</SelectItem>
                     {screenOptions.map((s) => (
-                      <SelectItem key={s} value={s} className="text-white hover:bg-slate-800">
+                      <SelectItem key={s} value={s}>
                         {SCREEN_TYPE_LABELS[s]?.label || s.toUpperCase()}
                       </SelectItem>
                     ))}
@@ -357,16 +357,16 @@ export default function FilmDetails() {
 
             {groupedShowtimes.length === 0 ? (
               <div className="text-center py-12" data-testid="no-showtimes-message">
-                <Monitor className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">No showtimes match these filters.</p>
+                <Monitor className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">No showtimes match these filters.</p>
               </div>
             ) : (
               <div className="space-y-8" data-testid="showtime-groups">
                 {groupedShowtimes.map(({ date, showtimes: group }) => (
                   <div key={date} data-testid={`showtime-group-${date}`}>
                     <div className="flex items-center gap-3 mb-3">
-                      <Calendar className="w-4 h-4 text-cyan-400" />
-                      <h3 className="text-base font-semibold text-white">{formatDateLabel(date)}</h3>
+                      <Calendar className="w-4 h-4 text-cyan-600" />
+                      <h3 className="text-base font-semibold text-slate-900">{formatDateLabel(date)}</h3>
                       <span className="text-xs text-slate-500">
                         {group.length} showtime{group.length !== 1 ? 's' : ''}
                       </span>

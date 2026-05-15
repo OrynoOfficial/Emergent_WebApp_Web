@@ -32,11 +32,11 @@ const GENRE_COLORS = {
   Comedy:    'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
   Drama:     'bg-blue-500/20 text-blue-300 border-blue-500/40',
   Horror:    'bg-purple-500/20 text-purple-300 border-purple-500/40',
-  'Sci-Fi':  'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+  'Sci-Fi':  'bg-cyan-500/20 text-cyan-700 border-cyan-500/40',
   Romance:   'bg-pink-500/20 text-pink-300 border-pink-500/40',
   Animation: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
   Adventure: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
-  Crime:     'bg-slate-500/20 text-slate-200 border-slate-500/40',
+  Crime:     'bg-slate-500/20 text-slate-700 border-slate-500/40',
 };
 
 const RATING_COLORS = {
@@ -76,7 +76,7 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
       {/* Glow */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/0 via-cyan-500/40 to-cyan-500/0 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      <Card className="relative overflow-hidden bg-slate-900 border border-slate-800 group-hover:border-cyan-500/40 rounded-2xl transition-all duration-300 transform group-hover:-translate-y-1.5">
+      <Card className="relative overflow-hidden bg-white border border-slate-200 group-hover:border-cyan-500/40 rounded-2xl transition-all duration-300 transform group-hover:-translate-y-1.5">
         {/* Poster */}
         <div className="relative h-72 overflow-hidden">
           <img
@@ -92,10 +92,10 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
             <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
             <button
               onClick={(e) => { e.stopPropagation(); toggleFav?.(film); }}
-              className="p-2 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition border border-white/10"
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-black/60 transition border border-white/10"
               data-testid={`favourite-${film.id || film._id}`}
             >
-              <Heart className={`h-4 w-4 ${isFav?.(film._id || film.id) ? 'fill-rose-500 text-rose-500' : 'text-white'}`} />
+              <Heart className={`h-4 w-4 ${isFav?.(film._id || film.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-900'}`} />
             </button>
           </div>
           <Badge className={`absolute top-3 left-3 backdrop-blur-sm border ${
@@ -121,34 +121,34 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
 
         {/* Info */}
         <CardContent className="p-4 bg-gradient-to-b from-slate-900 to-slate-950">
-          <h3 className="font-bold text-base text-white line-clamp-1 mb-1.5 group-hover:text-cyan-300 transition-colors">{film.title}</h3>
+          <h3 className="font-bold text-base text-slate-900 line-clamp-1 mb-1.5 group-hover:text-cyan-700 transition-colors">{film.title}</h3>
           <div className="flex flex-wrap gap-1 mb-2.5">
             {film.genre?.slice(0, 3).map((g) => (
-              <Badge key={g} variant="outline" className={`text-[10px] border ${GENRE_COLORS[g] || 'bg-slate-700/40 text-slate-300 border-slate-600/40'}`}>{g}</Badge>
+              <Badge key={g} variant="outline" className={`text-[10px] border ${GENRE_COLORS[g] || 'bg-slate-700/40 text-slate-600 border-slate-600/40'}`}>{g}</Badge>
             ))}
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
+          <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{formatDuration(film.duration_minutes)}</span>
-            <Badge variant="outline" className={`text-[10px] border ${RATING_COLORS[film.rating] || 'border-slate-600/40 text-slate-300'}`}>{film.rating || 'NR'}</Badge>
+            <Badge variant="outline" className={`text-[10px] border ${RATING_COLORS[film.rating] || 'border-slate-600/40 text-slate-600'}`}>{film.rating || 'NR'}</Badge>
           </div>
           {film.description && (
-            <p className="text-xs text-slate-400 line-clamp-2 mb-3">{film.description}</p>
+            <p className="text-xs text-slate-500 line-clamp-2 mb-3">{film.description}</p>
           )}
           {formatCinemaNames(film.cinema_names) && (
             <div
-              className="flex items-start gap-1.5 text-[11px] text-cyan-200/90 mb-3"
+              className="flex items-start gap-1.5 text-[11px] text-cyan-700 mb-3"
               data-testid={`film-cinemas-${film.id || film._id}`}
               title={film.cinema_names.join(', ')}
             >
-              <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-400/70" />
+              <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-600/70" />
               <span className="line-clamp-1">{formatCinemaNames(film.cinema_names)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-200">
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider">From</div>
               <div
-                className="text-lg font-bold text-cyan-300 tabular-nums"
+                className="text-lg font-bold text-cyan-700 tabular-nums"
                 data-testid={`film-price-from-${film.id || film._id}`}
               >
                 {film.price_from != null ? formatFCFA(film.price_from) : '—'}
@@ -169,7 +169,7 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
   const isComingSoon = film.status === 'coming_soon';
   return (
     <Card
-      className="overflow-hidden bg-slate-900 border border-slate-800 hover:border-cyan-500/40 rounded-2xl transition-all cursor-pointer group"
+      className="overflow-hidden bg-white border border-slate-200 hover:border-cyan-500/40 rounded-2xl transition-all cursor-pointer group"
       onClick={() => onViewDetails(film)}
     >
       <div className="flex flex-col md:flex-row">
@@ -189,33 +189,33 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
           <div>
             <div className="flex flex-wrap gap-1 mb-2">
               {film.genre?.map((g) => (
-                <Badge key={g} variant="outline" className={`text-[10px] border ${GENRE_COLORS[g] || 'bg-slate-700/40 text-slate-300 border-slate-600/40'}`}>{g}</Badge>
+                <Badge key={g} variant="outline" className={`text-[10px] border ${GENRE_COLORS[g] || 'bg-slate-700/40 text-slate-600 border-slate-600/40'}`}>{g}</Badge>
               ))}
-              <Badge variant="outline" className={`text-[10px] border ${RATING_COLORS[film.rating] || 'border-slate-600/40 text-slate-300'}`}>{film.rating || 'NR'}</Badge>
+              <Badge variant="outline" className={`text-[10px] border ${RATING_COLORS[film.rating] || 'border-slate-600/40 text-slate-600'}`}>{film.rating || 'NR'}</Badge>
             </div>
-            <h3 className="font-bold text-xl text-white mb-2 group-hover:text-cyan-300 transition-colors">{film.title}</h3>
-            <p className="text-slate-400 mb-4 line-clamp-2 text-sm">{film.description}</p>
-            <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+            <h3 className="font-bold text-xl text-slate-900 mb-2 group-hover:text-cyan-700 transition-colors">{film.title}</h3>
+            <p className="text-slate-500 mb-4 line-clamp-2 text-sm">{film.description}</p>
+            <div className="flex flex-wrap gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{formatDuration(film.duration_minutes)}</span>
               {film.director && <span>Dir. {film.director}</span>}
               {film.language && <span>{film.language}</span>}
             </div>
             {formatCinemaNames(film.cinema_names) && (
               <div
-                className="flex items-start gap-1.5 text-xs text-cyan-200/90 mt-3"
+                className="flex items-start gap-1.5 text-xs text-cyan-700 mt-3"
                 data-testid={`film-cinemas-list-${film.id || film._id}`}
                 title={film.cinema_names.join(', ')}
               >
-                <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-400/70" />
+                <MapPin className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-cyan-600/70" />
                 <span className="line-clamp-1">Playing at {formatCinemaNames(film.cinema_names)}</span>
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between pt-4 border-t border-slate-800 mt-4">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-4">
             <div>
               <div className="text-[10px] text-slate-500 uppercase tracking-wider">Tickets from</div>
               <div
-                className="text-2xl font-bold text-cyan-300 tabular-nums"
+                className="text-2xl font-bold text-cyan-700 tabular-nums"
                 data-testid={`film-price-from-list-${film.id || film._id}`}
               >
                 {film.price_from != null ? formatFCFA(film.price_from) : '—'}
@@ -345,7 +345,7 @@ export default function CinemaResults() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-cyan-400 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-cyan-600 mx-auto mb-4" />
           <p className="text-cyan-200/80 tracking-wide uppercase text-xs">Loading movies…</p>
         </div>
       </div>
@@ -353,7 +353,7 @@ export default function CinemaResults() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       {/* Ambient cyan glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
@@ -361,18 +361,18 @@ export default function CinemaResults() {
       </div>
 
       {/* Header */}
-      <div className="relative bg-black/40 backdrop-blur-xl border-b border-cyan-500/10 sticky top-0 z-30">
+      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-5">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/cinema')} className="gap-2 text-cyan-300 hover:bg-cyan-500/10" data-testid="cinema-results-back">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/cinema')} className="gap-2 text-cyan-700 hover:bg-cyan-50" data-testid="cinema-results-back">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
             <div className="flex-1">
-              <p className="text-cyan-400/70 text-[11px] tracking-[0.3em] uppercase mb-0.5 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Now playing</p>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
-                Movies {city && <span className="text-cyan-300">in {city}</span>}
+              <p className="text-cyan-600/70 text-[11px] tracking-[0.3em] uppercase mb-0.5 flex items-center gap-1.5"><Sparkles className="w-3 h-3" /> Now playing</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                Movies {city && <span className="text-cyan-700">in {city}</span>}
               </h1>
-              <p className="text-sm text-slate-400 mt-0.5">
+              <p className="text-sm text-slate-500 mt-0.5">
                 {filteredFilms.length} movie{filteredFilms.length !== 1 ? 's' : ''} available · {dateValid ? format(parseISO(date), 'EEE, MMM d, yyyy') : date}
               </p>
             </div>
@@ -381,33 +381,33 @@ export default function CinemaResults() {
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative flex-1 min-w-[220px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <Input
                 type="text"
                 placeholder="Search movies, genres…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-800/60 border-slate-700/60 text-white placeholder:text-slate-500 focus-visible:ring-cyan-500/40"
+                className="pl-10 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-500 focus-visible:ring-cyan-500/40"
                 data-testid="cinema-results-search"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44 bg-slate-800/60 border-slate-700/60 text-white">
+              <SelectTrigger className="w-44 bg-slate-50 border-slate-200 text-slate-900">
                 <Film className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+              <SelectContent className="bg-white border-slate-300 text-slate-900">
                 <SelectItem value="all">All movies</SelectItem>
                 <SelectItem value="now_showing">Now Showing</SelectItem>
                 <SelectItem value="coming_soon">Coming Soon</SelectItem>
               </SelectContent>
             </Select>
             <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger className="w-32 bg-slate-800/60 border-slate-700/60 text-white" data-testid="filter-rating">
+              <SelectTrigger className="w-32 bg-slate-50 border-slate-200 text-slate-900" data-testid="filter-rating">
                 <Star className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Rating" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+              <SelectContent className="bg-white border-slate-300 text-slate-900">
                 <SelectItem value="all">Any rating</SelectItem>
                 {RATING_OPTIONS.map((r) => (
                   <SelectItem key={r} value={r}>{r}</SelectItem>
@@ -415,11 +415,11 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <Select value={durationFilter} onValueChange={setDurationFilter}>
-              <SelectTrigger className="w-40 bg-slate-800/60 border-slate-700/60 text-white" data-testid="filter-duration">
+              <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-900" data-testid="filter-duration">
                 <Clock className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Duration" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+              <SelectContent className="bg-white border-slate-300 text-slate-900">
                 <SelectItem value="all">Any length</SelectItem>
                 <SelectItem value="short">Under 90 min</SelectItem>
                 <SelectItem value="medium">90 – 120 min</SelectItem>
@@ -427,17 +427,17 @@ export default function CinemaResults() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-slate-800/60 border-slate-700/60 text-white">
+              <SelectTrigger className="w-48 bg-slate-50 border-slate-200 text-slate-900">
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700 text-white">
+              <SelectContent className="bg-white border-slate-300 text-slate-900">
                 <SelectItem value="rating">Top rated</SelectItem>
                 <SelectItem value="title">Title A-Z</SelectItem>
                 <SelectItem value="duration">Duration</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center bg-slate-800/60 border border-slate-700/60 rounded-lg p-1">
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg p-1">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </div>
             {(searchQuery || statusFilter !== 'all' || selectedGenres.length > 0 || ratingFilter !== 'all' || durationFilter !== 'all') && (
@@ -445,7 +445,7 @@ export default function CinemaResults() {
                 variant="ghost"
                 size="sm"
                 onClick={clearAllFilters}
-                className="text-cyan-300 hover:bg-cyan-500/10"
+                className="text-cyan-700 hover:bg-cyan-50"
                 data-testid="clear-filters-btn"
               >
                 <X className="w-3.5 h-3.5 mr-1" /> Clear
@@ -458,7 +458,7 @@ export default function CinemaResults() {
             <button
               type="button"
               onClick={() => setGenresExpanded((v) => !v)}
-              className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-300/80 hover:text-cyan-200 transition-colors"
+              className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-700/80 hover:text-cyan-200 transition-colors"
               data-testid="genre-filter-toggle"
             >
               <span>Genres</span>
@@ -482,7 +482,7 @@ export default function CinemaResults() {
                       className={`text-xs px-2.5 py-1 rounded-full border transition-all ${
                         active
                           ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm'
-                          : 'bg-slate-800/60 text-slate-300 border-slate-700 hover:border-cyan-500/60 hover:text-cyan-200'
+                          : 'bg-slate-50 text-slate-600 border-slate-300 hover:border-cyan-500/60 hover:text-cyan-200'
                       }`}
                     >
                       {g}
@@ -500,10 +500,10 @@ export default function CinemaResults() {
         {filteredFilms.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
-              <Film className="w-10 h-10 text-cyan-400/60" />
+              <Film className="w-10 h-10 text-cyan-600/60" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">No movies found</h3>
-            <p className="text-slate-400 mb-5">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">No movies found</h3>
+            <p className="text-slate-500 mb-5">Try adjusting your search or filters</p>
             <Button onClick={() => navigate('/services/cinema')} className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold">
               Modify search
             </Button>
@@ -521,10 +521,10 @@ export default function CinemaResults() {
             ))}
           </div>
         ) : (
-          <Card className="overflow-hidden bg-slate-900 border-slate-800" data-testid="cinema-results-list">
+          <Card className="overflow-hidden bg-white border-slate-200" data-testid="cinema-results-list">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-800/60 border-b border-slate-700 text-left text-xs uppercase tracking-wider text-slate-400">
+                <thead className="bg-slate-50 border-b border-slate-300 text-left text-xs uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Title</th>
                     <th className="px-4 py-3">Genre</th>
@@ -538,17 +538,17 @@ export default function CinemaResults() {
                 </thead>
                 <tbody>
                   {pagedFilms.map((film) => (
-                    <tr key={film.id || film._id} className="border-b border-slate-800 hover:bg-slate-800/40 cursor-pointer transition-colors" onClick={() => handleViewDetails(film)}>
-                      <td className="px-4 py-3 font-medium text-white">{film.title}</td>
-                      <td className="px-4 py-3 text-slate-300">{film.genre?.slice(0, 2).join(', ') || '—'}</td>
+                    <tr key={film.id || film._id} className="border-b border-slate-200 hover:bg-slate-100 cursor-pointer transition-colors" onClick={() => handleViewDetails(film)}>
+                      <td className="px-4 py-3 font-medium text-slate-900">{film.title}</td>
+                      <td className="px-4 py-3 text-slate-600">{film.genre?.slice(0, 2).join(', ') || '—'}</td>
                       <td
-                        className="px-4 py-3 text-slate-300 max-w-[220px]"
+                        className="px-4 py-3 text-slate-600 max-w-[220px]"
                         title={(film.cinema_names || []).join(', ')}
                         data-testid={`film-cinemas-row-${film.id || film._id}`}
                       >
                         <span className="line-clamp-1">{formatCinemaNames(film.cinema_names) || '—'}</span>
                       </td>
-                      <td className="px-4 py-3 text-slate-300">{formatDuration(film.duration_minutes)}</td>
+                      <td className="px-4 py-3 text-slate-600">{formatDuration(film.duration_minutes)}</td>
                       <td className="px-4 py-3">
                         {film.imdb_rating ? (
                           <span className="inline-flex items-center gap-1 text-amber-300 font-medium">
@@ -562,7 +562,7 @@ export default function CinemaResults() {
                         </Badge>
                       </td>
                       <td
-                        className="px-4 py-3 font-bold text-cyan-300 tabular-nums"
+                        className="px-4 py-3 font-bold text-cyan-700 tabular-nums"
                         data-testid={`film-price-from-row-${film.id || film._id}`}
                       >
                         {film.price_from != null ? formatFCFA(film.price_from) : '—'}

@@ -139,7 +139,24 @@ async def create_operator(
         existing_user = await db.users.find_one({"email": operator_data.owner_email})
         if existing_user:
             raise HTTPException(status_code=400, detail=f"User with email {operator_data.owner_email} already exists")
-        
+
+        # Single-owner invariant — this operator id is freshly minted above so a
+        # collision should never happen at this point, but we still verify the
+        # invariant defensively to lock in the contract for any future code
+        # path (re-runs, race conditions, manual seeds, etc.).
+        existing_owner = await db.users.find_one(
+            {"operator_id": operator_id, "operator_role": "owner"},
+            {"_id": 1, "email": 1},
+        )
+        if existing_owner:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"This operator already has an owner ({existing_owner.get('email')}). "
+                    "Only one owner is allowed per operator."
+                ),
+            )
+
         from utils.auth import get_password_hash
         import secrets
         owner_user_id = str(uuid.uuid4())

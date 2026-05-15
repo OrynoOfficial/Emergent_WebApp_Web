@@ -204,6 +204,24 @@ async def create_operator_user(
     if user_data.operator_role not in ["local_admin", "local_user"]:
         raise HTTPException(status_code=400, detail="Invalid operator role. Must be 'local_admin' or 'local_user'")
 
+    # Defensive: even though `local_admin`/`local_user` are the only accepted
+    # values above, future schema changes or upstream callers might attempt to
+    # create a second owner. We enforce a single-owner invariant here so the
+    # rule is co-located with the user-creation logic.
+    if user_data.operator_role == "owner":
+        existing_owner = await db.users.find_one(
+            {"operator_id": operator_id, "operator_role": "owner"},
+            {"_id": 1, "email": 1},
+        )
+        if existing_owner:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"This operator already has an owner ({existing_owner.get('email')}). "
+                    "Demote or transfer the existing owner before assigning a new one."
+                ),
+            )
+
     # Permission inheritance cap — owners can only grant what they themselves have.
     requested_perms = list(user_data.scoped_permissions or [])
     if current_user.get("operator_role") == "owner" and current_user.get("role") not in ("admin", "super_admin"):
@@ -424,6 +442,30 @@ async def update_operator_user(
     if update_data.operator_role:
         if update_data.operator_role not in ["owner", "local_admin", "local_user"]:
             raise HTTPException(status_code=400, detail="Invalid operator role")
+        # Single-owner invariant: promoting another user to "owner" is only
+        # allowed if no other owner currently exists for this operator (i.e.
+        # super_admin is transferring ownership after the previous owner has
+        # been demoted). Block the second-owner case cleanly with 409.
+        if (
+            update_data.operator_role == "owner"
+            and target_user.get("operator_role") != "owner"
+        ):
+            existing_owner = await db.users.find_one(
+                {
+                    "operator_id": operator_id,
+                    "operator_role": "owner",
+                    "_id": {"$ne": user_id},
+                },
+                {"_id": 1, "email": 1},
+            )
+            if existing_owner:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"This operator already has an owner ({existing_owner.get('email')}). "
+                        "Demote or transfer the existing owner before assigning a new one."
+                    ),
+                )
         update_fields["operator_role"] = update_data.operator_role
     
     if update_data.scoped_permissions is not None:

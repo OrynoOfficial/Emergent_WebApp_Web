@@ -43,20 +43,20 @@ function StepIndicator({ currentStep }) {
               <div
                 className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
                   reached
-                    ? 'bg-cyan-500 text-slate-900 shadow-[0_0_25px_rgba(34,211,238,0.55)]'
-                    : 'bg-slate-700/80 text-slate-400 border border-slate-600'
+                    ? 'bg-cyan-600 text-white shadow-[0_0_25px_rgba(34,211,238,0.35)]'
+                    : 'bg-slate-200 text-slate-500 border border-slate-300'
                 }`}
                 data-testid={`booking-step-${step.num}`}
               >
                 {passed ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
               </div>
-              <span className={`text-[11px] mt-2 font-medium tracking-wide uppercase ${reached ? 'text-cyan-300' : 'text-slate-500'}`}>
+              <span className={`text-[11px] mt-2 font-medium tracking-wide uppercase ${reached ? 'text-cyan-700' : 'text-slate-500'}`}>
                 {step.label}
               </span>
             </div>
             {idx < STEPS.length - 1 && (
               <div className={`w-16 h-0.5 mx-3 mt-[-18px] rounded-full transition-all ${
-                passed ? 'bg-cyan-500' : 'bg-slate-700'
+                passed ? 'bg-cyan-500' : 'bg-slate-200'
               }`} />
             )}
           </React.Fragment>
@@ -194,28 +194,54 @@ export default function CinemaBooking() {
 
   const totalTickets = ticketCounts.adult + ticketCounts.child + ticketCounts.senior;
 
+  // Detect VIP-tier seats: those whose row letter is in seat_layout.vip_rows.
+  // When showtime.vip_price is set we charge that price for VIP seats; the
+  // rest of the seats charge showtime.price. This mirrors the backend pricing
+  // logic in book_cinema_seats so the UI total matches the order amount.
+  const vipRowSet = new Set((seatLayout?.vip_rows || []).map((r) => String(r).toUpperCase()));
+  const isVipSeat = (seat) => {
+    const row = String(seat).replace(/[^A-Za-z]/g, '').toUpperCase();
+    return vipRowSet.has(row);
+  };
+  const hasVipPricing = vipRowSet.size > 0 && showtime?.vip_price != null;
+
   const calculatePricing = () => {
     const basePrice = showtime?.price || 0;
-    // VIP rows now use the same flat ticket price — no VIP markup
-    let seatsTotal = basePrice * selectedSeats.length;
-    // Apply ticket-type discounts proportionally to selected seats: child=0.5, senior=0.7, adult=1.
+    const vipPrice = hasVipPricing ? Number(showtime.vip_price) : basePrice;
+
+    // Per-seat unit price (VIP seats charge vipPrice).
+    const seatPrices = selectedSeats.map((s) => (hasVipPricing && isVipSeat(s)) ? vipPrice : basePrice);
+
+    // Apply ticket-type discounts proportionally: child=0.5, senior=0.7, adult=1.
     const slots = [
       ...Array(ticketCounts.child).fill(0.5),
       ...Array(ticketCounts.senior).fill(0.7),
       ...Array(ticketCounts.adult).fill(1),
     ];
     let subtotal = 0;
-    const seatPrices = selectedSeats.map(() => basePrice);
     seatPrices.forEach((p, i) => {
       const m = slots[i] ?? 1;
       subtotal += p * m;
     });
     if (selectedSeats.length === 0) {
+      // Pre-selection preview uses base price for tickets-counter math.
       subtotal = basePrice * (ticketCounts.adult + ticketCounts.child * 0.5 + ticketCounts.senior * 0.7);
     }
+    const vipSeatCount = selectedSeats.filter(isVipSeat).length;
+    const regularSeatCount = selectedSeats.length - vipSeatCount;
     const commissionRate = 5;
     const commission = subtotal * (commissionRate / 100);
-    return { subtotal, commission, commissionRate, total: subtotal + commission, basePrice, vipPrice: basePrice };
+    return {
+      subtotal,
+      commission,
+      commissionRate,
+      total: subtotal + commission,
+      basePrice,
+      vipPrice,
+      hasVipPricing,
+      vipSeatCount,
+      regularSeatCount,
+    };
   };
 
   const pricing = calculatePricing();
@@ -304,18 +330,18 @@ export default function CinemaBooking() {
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto">
             <div className="absolute inset-0 border-4 border-cyan-500/30 rounded-full animate-pulse" />
-            <Film className="h-10 w-10 text-cyan-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+            <Film className="h-10 w-10 text-cyan-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
           </div>
-          <p className="text-cyan-200 mt-4 font-medium tracking-wide uppercase text-xs">Loading showtime…</p>
+          <p className="text-cyan-700 mt-4 font-medium tracking-wide uppercase text-xs">Loading showtime…</p>
         </div>
       </div>
     );
   }
 
-  const vipRowSet = new Set(seatLayout?.vip_rows || []);
+  const vipRowSetForRender = vipRowSet;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       <PaymentProcessingOverlay isVisible={showPaymentOverlay} message="Processing your booking..." />
 
       {/* Ambient cyan glow */}
@@ -325,15 +351,15 @@ export default function CinemaBooking() {
       </div>
 
       {/* Header */}
-      <div className="relative bg-black/40 backdrop-blur-xl border-b border-cyan-500/10 sticky top-0 z-30">
+      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10" data-testid="cinema-booking-back">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-slate-900 hover:bg-white/10" data-testid="cinema-booking-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <p className="text-cyan-400/70 text-[11px] tracking-[0.3em] uppercase">Cinema Booking</p>
-              <h1 className="text-xl font-bold text-white">{film?.title || 'Book Your Seats'}</h1>
+              <p className="text-cyan-600/70 text-[11px] tracking-[0.3em] uppercase">Cinema Booking</p>
+              <h1 className="text-xl font-bold text-slate-900">{film?.title || 'Book Your Seats'}</h1>
             </div>
           </div>
         </div>
@@ -343,27 +369,27 @@ export default function CinemaBooking() {
         <StepIndicator currentStep={currentStep} />
 
         {/* Hero card */}
-        <Card className="relative overflow-hidden mb-8 border-cyan-500/20 bg-slate-900/60 backdrop-blur-md">
+        <Card className="relative overflow-hidden mb-8 border-cyan-500/20 bg-white backdrop-blur-md">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
           <CardContent className="relative p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                  <Film className="w-8 h-8 text-white" />
+                  <Film className="w-8 h-8 text-slate-900" />
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 leading-tight">{film?.title}</h2>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-slate-300">
-                    <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-cyan-400" />{showtime?.cinema_name}</span>
-                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-cyan-400" />{safeFmtDate(showtime?.show_date)}</span>
-                    <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-cyan-400" />{showtime?.show_time}</span>
-                    <Badge className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 uppercase text-[10px] tracking-wider">{showtime?.screen_type || '2d'}</Badge>
+                  <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-tight">{film?.title}</h2>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-slate-600">
+                    <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-cyan-600" />{showtime?.cinema_name}</span>
+                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-cyan-600" />{safeFmtDate(showtime?.show_date)}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-cyan-600" />{showtime?.show_time}</span>
+                    <Badge className="bg-cyan-100 text-cyan-700 border border-cyan-500/30 uppercase text-[10px] tracking-wider">{showtime?.screen_type || '2d'}</Badge>
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-cyan-400/70 text-[10px] tracking-[0.3em] uppercase mb-1">Starting from</p>
-                <p className="text-3xl font-bold text-white">{formatCurrency(showtime?.price)}</p>
+                <p className="text-cyan-600/70 text-[10px] tracking-[0.3em] uppercase mb-1">Starting from</p>
+                <p className="text-3xl font-bold text-slate-900">{formatCurrency(showtime?.price)}</p>
                 <p className="text-slate-500 text-xs">per ticket</p>
               </div>
             </div>
@@ -374,15 +400,15 @@ export default function CinemaBooking() {
           {/* Left — seats + tickets + booker */}
           <div className="lg:col-span-2 space-y-6">
             {/* Seat selection */}
-            <Card className="overflow-hidden border-cyan-500/15 bg-slate-900/70 backdrop-blur-md">
-              <div className="bg-gradient-to-r from-cyan-600/30 via-cyan-500/20 to-transparent border-b border-cyan-500/15 p-5">
+            <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
+              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-cyan-500/20 rounded-xl border border-cyan-400/30">
-                    <Armchair className="h-5 w-5 text-cyan-300" />
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-300">
+                    <Armchair className="h-5 w-5 text-cyan-700" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white">Select your seats</h3>
-                    <p className="text-xs text-cyan-200/70">Choose {totalTickets} seat{totalTickets !== 1 ? 's' : ''} from the layout below</p>
+                    <h3 className="font-bold text-slate-900">Select your seats</h3>
+                    <p className="text-xs text-cyan-700/80">Choose {totalTickets} seat{totalTickets !== 1 ? 's' : ''} from the layout below</p>
                   </div>
                 </div>
               </div>
@@ -398,23 +424,23 @@ export default function CinemaBooking() {
             </Card>
 
             {/* Tickets */}
-            <Card className="overflow-hidden border-cyan-500/15 bg-slate-900/70 backdrop-blur-md">
-              <div className="bg-gradient-to-r from-cyan-600/30 via-cyan-500/20 to-transparent border-b border-cyan-500/15 p-5">
+            <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
+              <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-cyan-500/20 rounded-xl border border-cyan-400/30">
-                    <Popcorn className="h-5 w-5 text-cyan-300" />
+                  <div className="p-2 bg-cyan-100 rounded-xl border border-cyan-300">
+                    <Popcorn className="h-5 w-5 text-cyan-700" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-white">Tickets</h3>
-                    <p className="text-xs text-cyan-200/70">Pick the categories — final price applies the discount to the seat price</p>
+                    <h3 className="font-bold text-slate-900">Tickets</h3>
+                    <p className="text-xs text-cyan-700/80">Pick the categories — final price applies the discount to the seat price</p>
                   </div>
                 </div>
               </div>
               <CardContent className="p-5 space-y-3">
                 {TICKET_TYPES.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between p-4 bg-slate-800/40 hover:bg-slate-800/60 rounded-xl border border-slate-700/50 transition">
+                  <div key={t.id} className="flex items-center justify-between p-4 bg-slate-100 hover:bg-slate-50 rounded-xl border border-slate-300/50 transition">
                     <div>
-                      <div className="flex items-center gap-2 text-white font-medium">
+                      <div className="flex items-center gap-2 text-slate-900 font-medium">
                         {t.name}
                         {t.id !== 'adult' && (
                           <Badge className={`text-[10px] ${t.id === 'child' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'} border`}>
@@ -422,7 +448,7 @@ export default function CinemaBooking() {
                           </Badge>
                         )}
                       </div>
-                      <div className="text-slate-400 text-xs mt-0.5">
+                      <div className="text-slate-500 text-xs mt-0.5">
                         {t.id === 'adult' ? `${formatCurrency(showtime?.price)} per ticket` : `Discount applies to seat price`}
                       </div>
                     </div>
@@ -430,17 +456,17 @@ export default function CinemaBooking() {
                       <Button
                         size="icon"
                         variant="outline"
-                        className="h-9 w-9 rounded-full border-slate-600 bg-slate-800 text-white hover:bg-slate-700 hover:border-cyan-400/40"
+                        className="h-9 w-9 rounded-full border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200 hover:border-cyan-400/40"
                         onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: Math.max(0, p[t.id] - 1) }))}
                         data-testid={`ticket-${t.id}-decrement`}
                       >
                         <Minus className="w-4 h-4" />
                       </Button>
-                      <span className="w-8 text-center text-white text-lg font-bold tabular-nums">{ticketCounts[t.id]}</span>
+                      <span className="w-8 text-center text-slate-900 text-lg font-bold tabular-nums">{ticketCounts[t.id]}</span>
                       <Button
                         size="icon"
                         variant="outline"
-                        className="h-9 w-9 rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                        className="h-9 w-9 rounded-full border-cyan-500/40 bg-cyan-500/10 text-cyan-700 hover:bg-cyan-100"
                         onClick={() => setTicketCounts((p) => ({ ...p, [t.id]: p[t.id] + 1 }))}
                         data-testid={`ticket-${t.id}-increment`}
                       >
@@ -453,7 +479,7 @@ export default function CinemaBooking() {
             </Card>
 
             {/* Contact info */}
-            <Card className="overflow-hidden border-cyan-500/15 bg-slate-900/70 backdrop-blur-md">
+            <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
               <div className="p-2">
                 <BookerInfoSection
                   title="Contact Information"
@@ -477,48 +503,48 @@ export default function CinemaBooking() {
             <div className="sticky top-24 space-y-6">
 
               {/* Order Summary card with poster header */}
-              <Card className="overflow-hidden border-cyan-500/20 bg-slate-900/70 backdrop-blur-md">
+              <Card className="overflow-hidden border-cyan-500/20 bg-white backdrop-blur-md">
                 <div className="relative h-44 bg-gradient-to-br from-cyan-700 via-cyan-600 to-slate-900 overflow-hidden">
                   {film?.poster_url ? (
                     <img src={resolvePoster(film.poster_url)} alt={film.title} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-70" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Film className="w-24 h-24 text-white/15" />
+                      <Film className="w-24 h-24 text-slate-900/15" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
                   <Badge className="absolute top-3 left-3 bg-cyan-500/30 text-cyan-100 border border-cyan-400/40 uppercase tracking-wider text-[10px] backdrop-blur-sm">{showtime?.screen_type || '2d'}</Badge>
                   <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-white font-bold text-base line-clamp-2">{film?.title}</h3>
-                    <p className="text-cyan-200/80 text-xs">{showtime?.screen_name}</p>
+                    <h3 className="text-slate-900 font-bold text-base line-clamp-2">{film?.title}</h3>
+                    <p className="text-cyan-700/80 text-xs">{showtime?.screen_name}</p>
                   </div>
                 </div>
 
                 <CardContent className="p-5 space-y-4">
                   {/* Show details */}
-                  <div className="space-y-1.5 text-sm pb-4 border-b border-slate-700/60">
-                    <div className="flex items-center gap-2 text-slate-300"><MapPin className="w-4 h-4 text-cyan-400" />{showtime?.cinema_name}</div>
-                    <div className="flex items-center gap-2 text-slate-300"><Calendar className="w-4 h-4 text-cyan-400" />{safeFmtDate(showtime?.show_date)}</div>
-                    <div className="flex items-center gap-2 text-slate-300"><Clock className="w-4 h-4 text-cyan-400" />{showtime?.show_time}</div>
+                  <div className="space-y-1.5 text-sm pb-4 border-b border-slate-200">
+                    <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-4 h-4 text-cyan-600" />{showtime?.cinema_name}</div>
+                    <div className="flex items-center gap-2 text-slate-600"><Calendar className="w-4 h-4 text-cyan-600" />{safeFmtDate(showtime?.show_date)}</div>
+                    <div className="flex items-center gap-2 text-slate-600"><Clock className="w-4 h-4 text-cyan-600" />{showtime?.show_time}</div>
                   </div>
 
                   {/* Selected seats */}
-                  <div className="pb-4 border-b border-slate-700/60">
+                  <div className="pb-4 border-b border-slate-200">
                     <div className="flex items-center justify-between mb-2.5">
-                      <h4 className="font-semibold text-white text-sm flex items-center gap-1.5">
-                        <Ticket className="w-4 h-4 text-cyan-400" /> Seats
+                      <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
+                        <Ticket className="w-4 h-4 text-cyan-600" /> Seats
                       </h4>
-                      <span className="text-xs text-slate-400 tabular-nums">{selectedSeats.length} / {totalTickets}</span>
+                      <span className="text-xs text-slate-500 tabular-nums">{selectedSeats.length} / {totalTickets}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {selectedSeats.length > 0 ? selectedSeats.map((seat) => {
-                        const isVip = vipRowSet.has(seat[0]);
+                        const isVip = vipRowSetForRender.has(seat[0]);
                         return (
                           <Badge
                             key={seat}
                             className={isVip
-                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 gap-1'
-                              : 'bg-cyan-500/20 text-cyan-200 border border-cyan-500/40'}
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300 gap-1'
+                              : 'bg-cyan-100 text-cyan-700 border border-cyan-500/40'}
                           >
                             {isVip && <Crown className="h-3 w-3" />}{seat}
                           </Badge>
@@ -529,23 +555,33 @@ export default function CinemaBooking() {
 
                   {/* Pricing breakdown */}
                   <div>
-                    <h4 className="font-semibold text-white text-sm mb-3 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-cyan-400" /> Order summary
+                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-cyan-600" /> Order summary
                     </h4>
                     <div className="space-y-1.5 text-sm">
                       {ticketCounts.adult > 0 && (
-                        <div className="flex justify-between text-slate-300"><span>Adult × {ticketCounts.adult}</span><span className="tabular-nums">{formatCurrency(ticketCounts.adult * (showtime?.price || 0))}</span></div>
+                        <div className="flex justify-between text-slate-600"><span>Adult × {ticketCounts.adult}</span><span className="tabular-nums">{formatCurrency(ticketCounts.adult * (showtime?.price || 0))}</span></div>
                       )}
                       {ticketCounts.child > 0 && (
-                        <div className="flex justify-between text-slate-300"><span>Child × {ticketCounts.child}</span><span className="tabular-nums">{formatCurrency(ticketCounts.child * (showtime?.price || 0) * 0.5)}</span></div>
+                        <div className="flex justify-between text-slate-600"><span>Child × {ticketCounts.child}</span><span className="tabular-nums">{formatCurrency(ticketCounts.child * (showtime?.price || 0) * 0.5)}</span></div>
                       )}
                       {ticketCounts.senior > 0 && (
-                        <div className="flex justify-between text-slate-300"><span>Senior × {ticketCounts.senior}</span><span className="tabular-nums">{formatCurrency(ticketCounts.senior * (showtime?.price || 0) * 0.7)}</span></div>
+                        <div className="flex justify-between text-slate-600"><span>Senior × {ticketCounts.senior}</span><span className="tabular-nums">{formatCurrency(ticketCounts.senior * (showtime?.price || 0) * 0.7)}</span></div>
                       )}
-                      <div className="flex justify-between text-slate-400"><span>Service fee ({pricing.commissionRate}%)</span><span className="tabular-nums">+{formatCurrency(pricing.commission)}</span></div>
-                      <div className="pt-3 mt-3 border-t border-slate-700/60 flex justify-between items-center">
-                        <span className="text-white font-semibold">Total</span>
-                        <span className="text-2xl font-bold text-cyan-300 tabular-nums" data-testid="cinema-booking-total">{formatCurrency(pricing.total)}</span>
+                      {pricing.hasVipPricing && pricing.vipSeatCount > 0 && (
+                        <div className="flex justify-between text-amber-300" data-testid="vip-surcharge-line">
+                          <span className="flex items-center gap-1">
+                            <Crown className="h-3 w-3" /> VIP surcharge × {pricing.vipSeatCount}
+                          </span>
+                          <span className="tabular-nums">
+                            +{formatCurrency(pricing.vipSeatCount * (pricing.vipPrice - pricing.basePrice))}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-slate-500"><span>Service fee ({pricing.commissionRate}%)</span><span className="tabular-nums">+{formatCurrency(pricing.commission)}</span></div>
+                      <div className="pt-3 mt-3 border-t border-slate-200 flex justify-between items-center">
+                        <span className="text-slate-900 font-semibold">Total</span>
+                        <span className="text-2xl font-bold text-cyan-700 tabular-nums" data-testid="cinema-booking-total">{formatCurrency(pricing.total)}</span>
                       </div>
                     </div>
                   </div>
@@ -553,15 +589,15 @@ export default function CinemaBooking() {
               </Card>
 
               {/* Payment Method (NOW BELOW Order Summary, per request) */}
-              <Card className="overflow-hidden border-cyan-500/15 bg-slate-900/70 backdrop-blur-md">
-                <div className="bg-gradient-to-r from-cyan-600/30 via-cyan-500/20 to-transparent border-b border-cyan-500/15 p-4">
+              <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
+                <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-400/30">
-                      <CreditCard className="h-4 w-4 text-cyan-300" />
+                    <div className="p-1.5 bg-cyan-100 rounded-lg border border-cyan-300">
+                      <CreditCard className="h-4 w-4 text-cyan-700" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-white text-sm">Payment method</h3>
-                      <p className="text-[11px] text-cyan-200/70">Secure checkout via Stripe / MoMo</p>
+                      <h3 className="font-bold text-slate-900 text-sm">Payment method</h3>
+                      <p className="text-[11px] text-cyan-700/80">Secure checkout via Stripe / MoMo</p>
                     </div>
                   </div>
                 </div>

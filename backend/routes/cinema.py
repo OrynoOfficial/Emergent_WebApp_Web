@@ -727,7 +727,35 @@ async def book_cinema_seats(
             taken.update(b.get("seats", []))
         raise HTTPException(status_code=400, detail=f"Seats already taken: {', '.join(taken & set(seats))}")
     
-    total_price = showtime["price"] * len(seats)
+    # Compute total price with VIP/regular split. When the showtime has a
+    # `vip_price` AND its screen's seat_layout marks one or more rows as VIP,
+    # seats whose row letter is in `vip_rows` charge the VIP rate; the rest
+    # charge the regular `price`. If either the VIP price or the VIP rows are
+    # missing we fall back to a flat regular price (preserves legacy behaviour).
+    regular_price = float(showtime.get("price") or 0)
+    vip_price_val = showtime.get("vip_price")
+    vip_rows = []
+    try:
+        screen_layout = next(
+            (s for s in (cinema.get("screens") or []) if s.get("name") == showtime.get("screen_name")),
+            None,
+        )
+        if screen_layout and isinstance(screen_layout.get("seat_layout"), dict):
+            vip_rows = list(screen_layout["seat_layout"].get("vip_rows") or [])
+    except Exception:  # noqa: BLE001 — never let pricing break booking
+        vip_rows = []
+
+    vip_set = {str(r).upper() for r in vip_rows}
+    use_vip_pricing = bool(vip_set) and vip_price_val is not None
+    seat_breakdown = []
+    total_price = 0.0
+    for seat in seats:
+        # Seat ids look like "A12" — the leading non-digit prefix is the row.
+        row_letter = "".join(ch for ch in str(seat) if ch.isalpha()).upper()
+        is_vip = use_vip_pricing and row_letter in vip_set
+        unit_price = float(vip_price_val) if is_vip else regular_price
+        seat_breakdown.append({"seat": seat, "tier": "vip" if is_vip else "regular", "price": unit_price})
+        total_price += unit_price
     booking_id = str(uuid.uuid4())
     order_id = str(uuid.uuid4())
     
@@ -744,6 +772,7 @@ async def book_cinema_seats(
         "film_id": showtime["film_id"],
         "user_id": current_user["_id"],
         "seats": seats,
+        "seat_breakdown": seat_breakdown,
         "total_price": total_price,
         "status": "reserved",
         "payment_status": "pending",
@@ -770,6 +799,7 @@ async def book_cinema_seats(
         "booking_details": {
             "showtime_id": showtime_id,
             "seats": seats,
+            "seat_breakdown": seat_breakdown,
             "show_date": showtime.get("date"),
             "show_time": showtime.get("time"),
             "film_title": film.get("title") if film else None

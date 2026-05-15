@@ -201,6 +201,12 @@ export default function CinemaManagement() {
   const [inlineShowtimeDraft, setInlineShowtimeDraft] = useState({});
   const [inlineShowtimeSaving, setInlineShowtimeSaving] = useState(false);
 
+  // Showtime filters + pagination state
+  const [showtimeSearch, setShowtimeSearch] = useState('');
+  const [showtimeCinemaFilter, setShowtimeCinemaFilter] = useState('all');
+  const [showtimeDateFilter, setShowtimeDateFilter] = useState('all');
+  const [showtimePage, setShowtimePage] = useState(1);
+
   // Use the cinema dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
@@ -234,8 +240,31 @@ export default function CinemaManagement() {
 
   useEffect(() => { setCinemaPage(1); }, [cinemaSearch]);
   useEffect(() => { setMoviePage(1); }, [movieSearch]);
+  useEffect(() => { setShowtimePage(1); }, [showtimeSearch, showtimeCinemaFilter, showtimeDateFilter]);
   const cinemaTotalPages = Math.max(1, Math.ceil(filteredCinemas.length / PAGE_SIZE));
   const movieTotalPages = Math.max(1, Math.ceil(filteredMovies.length / PAGE_SIZE));
+
+  const filteredShowtimes = useMemo(() => {
+    const q = showtimeSearch.trim().toLowerCase();
+    return (showtimes || []).filter((st) => {
+      if (q) {
+        const hay = `${st.film_title || ''} ${st.cinema_name || ''} ${st.screen_name || ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (showtimeCinemaFilter !== 'all' && st.cinema_id !== showtimeCinemaFilter) return false;
+      if (showtimeDateFilter !== 'all' && st.show_date !== showtimeDateFilter) return false;
+      return true;
+    });
+  }, [showtimes, showtimeSearch, showtimeCinemaFilter, showtimeDateFilter]);
+  const showtimeTotalPages = Math.max(1, Math.ceil(filteredShowtimes.length / PAGE_SIZE));
+  const pagedShowtimes = useMemo(
+    () => filteredShowtimes.slice((showtimePage - 1) * PAGE_SIZE, showtimePage * PAGE_SIZE),
+    [filteredShowtimes, showtimePage]
+  );
+  const showtimeDateOptions = useMemo(() => {
+    const set = new Set((showtimes || []).map((s) => s.show_date).filter(Boolean));
+    return Array.from(set).sort();
+  }, [showtimes]);
   const pagedCinemas = useMemo(
     () => filteredCinemas.slice((cinemaPage - 1) * PAGE_SIZE, cinemaPage * PAGE_SIZE),
     [filteredCinemas, cinemaPage]
@@ -512,6 +541,7 @@ export default function CinemaManagement() {
         show_time: showtime.show_time || '',
         end_time: showtime.end_time || '',
         price: showtime.price?.toString() || '',
+        vip_price: showtime.vip_price != null ? String(showtime.vip_price) : '',
         total_seats: showtime.total_seats || 100,
         repeat_mode: 'single',
         repeat_end_date: '',
@@ -584,6 +614,9 @@ export default function CinemaManagement() {
           screen_type: showtimeForm.screen_type || '2d',
           total_seats: parseInt(showtimeForm.total_seats, 10) || 100,
         };
+        if (showtimeForm.vip_price !== '' && showtimeForm.vip_price != null) {
+          payload.vip_price = parseFloat(showtimeForm.vip_price);
+        }
         await api.put(`/cinema/showtimes/${editingShowtime.id}`, payload);
         toast.success('Showtime updated');
       } else {
@@ -600,6 +633,9 @@ export default function CinemaManagement() {
           params.append('price', String(parseFloat(showtimeForm.price)));
           params.append('screen_type', showtimeForm.screen_type || '2d');
           params.append('total_seats', String(parseInt(showtimeForm.total_seats) || 100));
+          if (showtimeForm.vip_price !== '' && showtimeForm.vip_price != null) {
+            params.append('vip_price', String(parseFloat(showtimeForm.vip_price)));
+          }
           try {
             await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
             created += 1;
@@ -1118,9 +1154,59 @@ export default function CinemaManagement() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  {/* Filters row */}
+                  <div className="flex flex-col md:flex-row gap-2 md:items-center mb-4">
+                    <div className="relative md:w-72">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Search film, cinema, screen…"
+                        value={showtimeSearch}
+                        onChange={(e) => setShowtimeSearch(e.target.value)}
+                        className="pl-9 bg-white"
+                        data-testid="showtime-search-input"
+                      />
+                    </div>
+                    <Select value={showtimeCinemaFilter} onValueChange={setShowtimeCinemaFilter}>
+                      <SelectTrigger className="md:w-56 bg-white" data-testid="showtime-cinema-filter">
+                        <SelectValue placeholder="All cinemas" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">All cinemas</SelectItem>
+                        {(cinemas || []).map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={showtimeDateFilter} onValueChange={setShowtimeDateFilter}>
+                      <SelectTrigger className="md:w-44 bg-white" data-testid="showtime-date-filter">
+                        <SelectValue placeholder="All dates" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">All dates</SelectItem>
+                        {showtimeDateOptions.map((d) => (
+                          <SelectItem key={d} value={d}>{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(showtimeSearch || showtimeCinemaFilter !== 'all' || showtimeDateFilter !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setShowtimeSearch(''); setShowtimeCinemaFilter('all'); setShowtimeDateFilter('all'); }}
+                        data-testid="showtime-clear-filters"
+                      >
+                        Clear filters
+                      </Button>
+                    )}
+                  </div>
+
                   {showtimes.length === 0 ? (
                     <div className="text-center py-10 text-gray-500 text-sm">
                       No showtimes yet. Click <strong>"Add Showtime"</strong> to assign a film to a cinema, screen, date, time and price.
+                    </div>
+                  ) : filteredShowtimes.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500 text-sm">
+                      No showtimes match the current filters.
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -1138,7 +1224,7 @@ export default function CinemaManagement() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {showtimes.map((st) => {
+                          {pagedShowtimes.map((st) => {
                             const isEdit = inlineEditShowtimeId === st.id;
                             const draft = isEdit ? inlineShowtimeDraft : st;
                             const setDraft = (patch) => setInlineShowtimeDraft(p => ({ ...p, ...patch }));
@@ -1179,7 +1265,7 @@ export default function CinemaManagement() {
                                   )}
                                 </td>
                                 <td className="py-3 px-4">
-                                  {isEdit ? (
+                                {isEdit ? (
                                     <Input
                                       className="h-8 w-20"
                                       type="number"
@@ -1207,7 +1293,21 @@ export default function CinemaManagement() {
                                 </td>
                                 <td className="py-3 px-4">
                                   <div className="flex items-center gap-1 justify-end">
-                                    {isEdit ? (
+                                    {!isEdit && (
+                                      <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8"
+                                          onClick={() => openShowtimeDialog(st)}
+                                          data-testid={`edit-showtime-btn-${st.id}`}
+                                          title="Edit showtime"
+                                        >
+                                          <Edit className="w-4 h-4 mr-1" /> Edit
+                                        </Button>
+                                      </PermissionGate>
+                                    )}
+                                    {isEdit && (
                                       <>
                                         <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleInlineSaveShowtime(st)} disabled={inlineShowtimeSaving} data-testid={`inline-save-${st.id}`}>
                                           {inlineShowtimeSaving ? '...' : 'Save'}
@@ -1216,29 +1316,6 @@ export default function CinemaManagement() {
                                           Cancel
                                         </Button>
                                       </>
-                                    ) : (
-                                      <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-8"
-                                          onClick={() => {
-                                            setInlineEditShowtimeId(st.id);
-                                            setInlineShowtimeDraft({
-                                              screen_name: st.screen_name,
-                                              show_date: st.show_date,
-                                              show_time: st.show_time,
-                                              end_time: st.end_time,
-                                              total_seats: st.total_seats,
-                                              price: st.price,
-                                            });
-                                          }}
-                                          data-testid={`inline-edit-${st.id}`}
-                                          title="Quick edit"
-                                        >
-                                          <Edit className="w-4 h-4" />
-                                        </Button>
-                                      </PermissionGate>
                                     )}
                                     {!isEdit && (
                                       <>
@@ -1276,6 +1353,19 @@ export default function CinemaManagement() {
                           })}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {filteredShowtimes.length > 0 && (
+                    <div className="mt-4">
+                      <Pagination
+                        page={showtimePage}
+                        totalPages={showtimeTotalPages}
+                        onChange={setShowtimePage}
+                        total={filteredShowtimes.length}
+                        pageSize={PAGE_SIZE}
+                        itemLabel="showtime"
+                      />
                     </div>
                   )}
                 </CardContent>
@@ -1957,11 +2047,50 @@ export default function CinemaManagement() {
             {/* Section: PRICE */}
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 mb-3 flex items-center gap-1.5"><Banknote className="h-3 w-3" /> 4 · Pricing</p>
-              <div>
-                <Label className="text-xs">Ticket price (FCFA) *</Label>
-                <Input className="bg-white" type="number" value={showtimeForm.price} onChange={(e) => setShowtimeForm(p => ({ ...p, price: e.target.value }))} placeholder="3500" data-testid="showtime-price-input" />
-                <p className="text-[11px] text-emerald-700/80 mt-1.5">A single flat price applies to every seat on this showtime.</p>
-              </div>
+              {(() => {
+                // Detect VIP-eligible screen: a screen with non-empty vip_rows in
+                // its seat_layout. When found, we expose a VIP price field so
+                // operators can charge a premium for those rows.
+                const selectedCinema = cinemas.find((c) => c.id === showtimeForm.cinema_id);
+                const selectedScreen = (selectedCinema?.screens || []).find((s) => s.name === showtimeForm.screen_name);
+                const vipRows = selectedScreen?.seat_layout?.vip_rows || [];
+                const hasVip = vipRows.length > 0;
+                return (
+                  <>
+                    <div className={hasVip ? 'grid grid-cols-2 gap-3' : ''}>
+                      <div>
+                        <Label className="text-xs">Regular ticket price (FCFA) *</Label>
+                        <Input
+                          className="bg-white"
+                          type="number"
+                          value={showtimeForm.price}
+                          onChange={(e) => setShowtimeForm((p) => ({ ...p, price: e.target.value }))}
+                          placeholder="3500"
+                          data-testid="showtime-price-input"
+                        />
+                      </div>
+                      {hasVip && (
+                        <div data-testid="showtime-vip-price-block">
+                          <Label className="text-xs">VIP ticket price (FCFA) *</Label>
+                          <Input
+                            className="bg-white"
+                            type="number"
+                            value={showtimeForm.vip_price}
+                            onChange={(e) => setShowtimeForm((p) => ({ ...p, vip_price: e.target.value }))}
+                            placeholder="7500"
+                            data-testid="showtime-vip-price-input"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-emerald-700/80 mt-1.5">
+                      {hasVip
+                        ? `Row${vipRows.length === 1 ? '' : 's'} ${vipRows.join(', ')} are VIP on this screen — those seats charge the VIP price; every other seat uses the regular price.`
+                        : 'A single flat price applies to every seat on this showtime. To enable VIP pricing, mark rows as VIP in the Cinema → Screens & seat layout step.'}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
