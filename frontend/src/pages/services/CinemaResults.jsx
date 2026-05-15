@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Heart, Sparkles, PlayCircle,
+  ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Sparkles, PlayCircle,
   ChevronDown, ChevronUp, X, MapPin,
 } from 'lucide-react';
 import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
+import FavouriteButton from '@/components/shared/FavouriteButton';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import { formatFCFA } from '@/utils/currency';
@@ -90,13 +91,12 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
           {/* Top corners */}
           <div className="absolute top-3 right-3 flex gap-1.5 z-10">
             <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFav?.(film); }}
-              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-black/60 transition border border-white/10"
-              data-testid={`favourite-${film.id || film._id}`}
-            >
-              <Heart className={`h-4 w-4 ${isFav?.(film._id || film.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-900'}`} />
-            </button>
+            <FavouriteButton
+              isFavourite={!!isFav?.(film._id || film.id)}
+              onToggle={() => toggleFav?.(film)}
+              testId={`favourite-${film.id || film._id}`}
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition border border-white/10 shadow-sm"
+            />
           </div>
           <Badge className={`absolute top-3 left-3 backdrop-blur-sm border ${
             isComingSoon ? 'bg-amber-500/30 text-amber-100 border-amber-400/40' : 'bg-cyan-500/30 text-cyan-100 border-cyan-400/40'
@@ -196,14 +196,12 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
           {/* Subscribe + Favourite — same controls as Grid view */}
           <div className="absolute top-3 right-3 flex gap-1.5 z-10">
             <SubscribeButton operatorId={film.operator_id} operatorName={film.operator_name} variant="icon" />
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleFav?.(film); }}
-              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition border border-white/40"
-              data-testid={`favourite-list-${film.id || film._id}`}
-              aria-label="Toggle favourite"
-            >
-              <Heart className={`h-4 w-4 ${isFav?.(film._id || film.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-900'}`} />
-            </button>
+            <FavouriteButton
+              isFavourite={!!isFav?.(film._id || film.id)}
+              onToggle={() => toggleFav?.(film)}
+              testId={`favourite-list-${film.id || film._id}`}
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white transition border border-white/40 shadow-sm"
+            />
           </div>
           {(film.customer_rating != null || film.imdb_rating) && (
             <div
