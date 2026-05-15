@@ -154,7 +154,17 @@ export default function Layout({ children }) {
     { type: 'page', label: 'My Orders', description: 'View your orders', path: '/orders', icon: 'Ticket', color: '#9575CD', keywords: ['bookings', 'purchases', 'history'] },
     { type: 'page', label: 'Receipts', description: 'View your receipts', path: '/receipts', icon: 'Receipt', color: '#2962FF', keywords: ['invoice', 'payment', 'bill'] },
     { type: 'page', label: 'Transactions', description: 'Payment transactions history', path: '/transactions', icon: 'CreditCard', color: '#EC4899', keywords: ['payments', 'momo', 'card', 'history'] },
-    { type: 'page', label: 'Loyalty', description: 'Loyalty rewards & points', path: '/loyalty', icon: 'Award', color: '#AB47BC', keywords: ['points', 'rewards', 'benefits'] },
+    {
+      type: 'page',
+      label: (user?.role === 'operator' || isOperatorUser) ? 'Promo & Alerts' : 'Loyalty',
+      description: (user?.role === 'operator' || isOperatorUser)
+        ? 'Manage your promotions and alerts'
+        : 'Loyalty rewards & points',
+      path: '/loyalty',
+      icon: 'Award',
+      color: '#AB47BC',
+      keywords: ['points', 'rewards', 'benefits', 'promotions', 'alerts'],
+    },
     { type: 'page', label: 'My Ratings', description: 'Your reviews & ratings', path: '/ratings', icon: 'Star', color: '#FBBF24', keywords: ['review', 'feedback'] },
     { type: 'page', label: 'Support', description: 'Get help & support', path: '/support', icon: 'HelpCircle', color: '#22C55E', keywords: ['help', 'chat', 'contact', 'assistance'] },
     { type: 'page', label: 'Settings', description: 'Account settings', path: '/settings', icon: 'Settings', color: '#64748b', keywords: ['profile', 'account', 'preferences', 'password'] },

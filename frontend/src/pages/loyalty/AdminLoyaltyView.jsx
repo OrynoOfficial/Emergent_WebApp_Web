@@ -22,11 +22,14 @@ import { AdminModal, FormField, StyledInput } from '../../components/shared/Admi
 import { TIER_CONFIG, TIER_SYMBOLS, DEFAULT_REWARDS, REWARD_TYPE_ICONS } from './constants';
 
 export default function AdminLoyaltyView() {
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
   const isReadOnly = user?.role === 'admin';
+  // When the viewer is an operator they see a skewed view: only the Promo &
+  // Alerts (Operator Rewards) tab, scoped to their own tenant by the backend.
+  const isOperator = user?.role === 'operator' || isOperatorUser;
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(isOperator ? 'operator-rewards' : 'overview');
   // Honour ?tab=... deep links from other pages (e.g. Communications hub).
   // Map "promotions" → the operator-rewards tab where ops promotions live.
   const [searchParams] = useSearchParams();
@@ -42,7 +45,7 @@ export default function AdminLoyaltyView() {
   }, [searchParams]);
   const [rewards, setRewards] = useState(DEFAULT_REWARDS);
   const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showRewardDialog, setShowRewardDialog] = useState(false);
   const [editingReward, setEditingReward] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,7 +72,15 @@ export default function AdminLoyaltyView() {
     membersByTier: { bronze: 0, silver: 0, gold: 0, platinum: 0 }
   });
 
-  useEffect(() => { loadAdminData(); }, []);
+  useEffect(() => {
+    // Operators don't see Overview / Rewards / Members tabs, so skip the
+    // admin-only data load entirely — it would just 403 for them.
+    if (!isOperator) {
+      setLoading(true);
+      loadAdminData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOperator]);
 
   useEffect(() => {
     if (activeTab === 'operator-rewards' && opRewards.length === 0) loadOpRewards();
@@ -265,14 +276,20 @@ export default function AdminLoyaltyView() {
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — operators get a skewed view with only Promo & Alerts (their tenant scope). */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100">
-          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /> Overview</TabsTrigger>
-          <TabsTrigger value="rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Gift className="w-4 h-4" /> Rewards</TabsTrigger>
-          <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Op. Rewards</TabsTrigger>
-          <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Users className="w-4 h-4" /> Members</TabsTrigger>
-        </TabsList>
+        {isOperator ? (
+          <TabsList className="grid w-full grid-cols-1 mb-6 bg-slate-100">
+            <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Promo & Alerts</TabsTrigger>
+          </TabsList>
+        ) : (
+          <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100">
+            <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /> Overview</TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Gift className="w-4 h-4" /> Rewards</TabsTrigger>
+            <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Op. Rewards</TabsTrigger>
+            <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Users className="w-4 h-4" /> Members</TabsTrigger>
+          </TabsList>
+        )}
 
         {/* === OVERVIEW TAB === */}
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -488,7 +505,7 @@ export default function AdminLoyaltyView() {
               </SelectContent>
             </Select>
             <Select value={opOperatorFilter} onValueChange={setOpOperatorFilter}>
-              <SelectTrigger className="w-[160px] h-9 text-sm" data-testid="op-operator-filter"><SelectValue placeholder="Operator" /></SelectTrigger>
+              <SelectTrigger className={`w-[160px] h-9 text-sm ${isOperator ? 'hidden' : ''}`} data-testid="op-operator-filter"><SelectValue placeholder="Operator" /></SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Operators</SelectItem>
                 {opOperatorNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}

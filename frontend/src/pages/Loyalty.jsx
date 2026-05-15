@@ -16,13 +16,13 @@ export default function LoyaltyPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#082c59]" data-testid="loyalty-title">
-            {isAdmin ? 'Loyalty Program' : isOperator ? 'Promotions & Rewards' : 'Loyalty Rewards'}
+            {isAdmin ? 'Loyalty Program' : isOperator ? 'Promo & Alerts' : 'Loyalty Rewards'}
           </h1>
           <p className="text-slate-600">
             {isAdmin
               ? 'Manage and configure the loyalty program'
               : isOperator
-                ? 'Manage your operator promotions and alerts'
+                ? 'Manage your promotions and alerts — visible only to you'
                 : 'Earn points and redeem exclusive rewards'}
           </p>
         </div>

@@ -344,7 +344,7 @@ export default function ServiceCommunicationsHub({
                 data-testid="manage-in-loyalty-btn"
                 title="Manage all promotions in the Loyalty hub"
               >
-                <Megaphone className="h-3 w-3" /> Manage in Loyalty <ArrowRight className="h-3 w-3" />
+                <Megaphone className="h-3 w-3" /> Manage in Promo&Alerts <ArrowRight className="h-3 w-3" />
               </Button>
               <Button
                 variant="outline"
@@ -522,7 +522,7 @@ export default function ServiceCommunicationsHub({
               className="w-full text-xs text-violet-700 hover:text-violet-900 underline-offset-4 hover:underline inline-flex items-center justify-center gap-1"
               data-testid="promo-modal-loyalty-link"
             >
-              Or manage all promotions in the Loyalty hub <ArrowRight className="h-3 w-3" />
+              Or manage all promotions in Promo&Alerts <ArrowRight className="h-3 w-3" />
             </button>
           </div>
           <DialogFooter>

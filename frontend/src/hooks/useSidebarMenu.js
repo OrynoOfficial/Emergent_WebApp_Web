@@ -11,7 +11,7 @@ import {
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
   Percent, HeadphonesIcon, Film, Briefcase, FileText,
   QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus,
-  Monitor, BarChart3
+  Monitor, BarChart3, Megaphone
 } from 'lucide-react';
 
 const USER_ROLES = {
@@ -200,9 +200,13 @@ export default function useSidebarMenu() {
       items.push({ key: 'scanner', label: 'Ticket Scanner', icon: QrCode, path: '/scanner' });
     }
 
-    // Loyalty
+    // Loyalty / Promo & Alerts
     if (isSuperAdmin || isAdmin) {
       items.push({ key: 'loyalty', label: 'Loyalty Program', icon: Award, path: '/loyalty' });
+    } else if (isOperator) {
+      // Operators see a SKEWED view of /loyalty — just their own Promo & Alerts.
+      // The label and icon are scoped accordingly.
+      items.push({ key: 'loyalty', label: 'Promo & Alerts', icon: Megaphone, path: '/loyalty' });
     }
 
     // Admin Config (Reports first, no Validation — moved to standalone)
