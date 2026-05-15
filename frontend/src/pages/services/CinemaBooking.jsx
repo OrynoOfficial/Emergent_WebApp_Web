@@ -569,7 +569,7 @@ export default function CinemaBooking() {
                         <div className="flex justify-between text-slate-600"><span>Senior × {ticketCounts.senior}</span><span className="tabular-nums">{formatCurrency(ticketCounts.senior * (showtime?.price || 0) * 0.7)}</span></div>
                       )}
                       {pricing.hasVipPricing && pricing.vipSeatCount > 0 && (
-                        <div className="flex justify-between text-amber-300" data-testid="vip-surcharge-line">
+                        <div className="flex justify-between text-amber-700" data-testid="vip-surcharge-line">
                           <span className="flex items-center gap-1">
                             <Crown className="h-3 w-3" /> VIP surcharge × {pricing.vipSeatCount}
                           </span>
