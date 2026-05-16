@@ -130,7 +130,7 @@ async def get_films(
 
         showtimes = await db.showtimes.find(
             showtime_query,
-            {"film_id": 1, "cinema_id": 1, "cinema_name": 1, "price": 1, "_id": 0},
+            {"_id": 1, "film_id": 1, "cinema_id": 1, "cinema_name": 1, "price": 1, "total_seats": 1, "show_date": 1, "show_time": 1},
         ).to_list(2000)
 
         # Build a cinema_id → name lookup for showtimes missing cinema_name.
@@ -142,8 +142,38 @@ async def get_films(
             ):
                 cinema_name_by_id[c["_id"]] = c.get("name")
 
+        # Compute LIVE available_seats per showtime (mirrors /films/{id}/showtimes
+        # logic). We count seats actively held in BOTH the legacy
+        # `cinema_bookings` and the new unified `orders` pipelines, so the
+        # "min_available_seats" surfaced on the film card matches reality.
+        # We restrict the live count to UPCOMING showtimes (show_date >= today)
+        # — past showtimes never trigger a "selling out" sticker.
+        today_iso = datetime.utcnow().date().isoformat()
+        upcoming_showtime_ids = [
+            s["_id"] for s in showtimes
+            if s.get("_id") and (s.get("show_date") or "") >= today_iso
+        ]
+        booked_count = {sid: 0 for sid in upcoming_showtime_ids}
+        if upcoming_showtime_ids:
+            async for b in db.cinema_bookings.find(
+                {"showtime_id": {"$in": upcoming_showtime_ids},
+                 "status": {"$in": ["reserved", "confirmed", "paid"]}},
+                {"_id": 0, "showtime_id": 1, "seats": 1},
+            ):
+                booked_count[b["showtime_id"]] = booked_count.get(b["showtime_id"], 0) + len(b.get("seats") or [])
+            async for o in db.orders.find(
+                {"service_type": "cinema",
+                 "booking_details.showtime_id": {"$in": upcoming_showtime_ids},
+                 "status": {"$nin": ["cancelled", "abandoned", "failed"]}},
+                {"_id": 0, "booking_details.showtime_id": 1, "booking_details.seats": 1},
+            ):
+                bd = o.get("booking_details") or {}
+                sid = bd.get("showtime_id")
+                if sid in booked_count:
+                    booked_count[sid] = booked_count.get(sid, 0) + len(bd.get("seats") or [])
+
         # Aggregate per film
-        by_film = {fid: {"cinemas": set(), "min_price": None} for fid in film_ids}
+        by_film = {fid: {"cinemas": set(), "min_price": None, "min_avail": None} for fid in film_ids}
         for s in showtimes:
             fid = s.get("film_id")
             if fid not in by_film:
@@ -160,12 +190,22 @@ async def get_films(
                         by_film[fid]["min_price"] = p
                 except (TypeError, ValueError):
                     pass
+            # min_available_seats — only consider upcoming showtimes
+            sid = s.get("_id")
+            if sid in booked_count:
+                total = int(s.get("total_seats") or 0)
+                avail = max(0, total - booked_count.get(sid, 0))
+                cur_avail = by_film[fid]["min_avail"]
+                if cur_avail is None or avail < cur_avail:
+                    by_film[fid]["min_avail"] = avail
 
         for f in films_list:
             agg = by_film.get(f["id"], {})
             f["cinema_names"] = sorted(agg.get("cinemas") or [])
             if agg.get("min_price") is not None:
                 f["price_from"] = agg["min_price"]
+            if agg.get("min_avail") is not None:
+                f["min_available_seats"] = agg["min_avail"]
 
         # Enrich each film with the **customer rating** aggregated from the
         # /api/ratings endpoint (entity_type='film'). This is the rating the

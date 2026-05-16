@@ -10,6 +10,7 @@ import {
 import { format, parseISO, isValid } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 
 const GENRE_COLORS = {
   Action:    'bg-red-100 text-red-700',
@@ -101,6 +102,13 @@ function ShowtimeCard({ st, onSelect }) {
               <Badge className="text-[10px] bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-0.5">
                 <Crown className="h-2.5 w-2.5" /> VIP
               </Badge>
+            )}
+            {!soldOut && (
+              <AlmostSoldOutBadge
+                count={seatsLeft}
+                unit="seats"
+                testId={`showtime-fomo-${st.id}`}
+              />
             )}
           </div>
         </div>

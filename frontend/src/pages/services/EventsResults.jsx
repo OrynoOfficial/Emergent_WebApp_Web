@@ -11,6 +11,7 @@ import { eventsApi } from '@/api/services';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
@@ -104,11 +105,11 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
           {event.rating}
         </div>
         
-        {/* Urgency Badge - only show for future events */}
-        {!isEventPast && event.ticketsLeft < 200 && (
-          <Badge className="absolute bottom-3 right-3 bg-red-500 text-white animate-pulse">
-            Only {event.ticketsLeft} left!
-          </Badge>
+        {/* Urgency Badge — unified ≤11 FOMO sticker */}
+        {!isEventPast && (
+          <div className="absolute bottom-3 right-3" data-testid={`event-fomo-grid-${event._id || event.id}`}>
+            <AlmostSoldOutBadge count={event.ticketsLeft} unit="tickets" />
+          </div>
         )}
       </div>
       
@@ -212,8 +213,10 @@ const EventCardList = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
                 <Star className={`w-4 h-4 ml-2 ${isEventPast ? 'text-slate-300' : 'text-yellow-400 fill-yellow-400'}`} /> {event.rating}
               </div>
             </div>
-            {!isEventPast && event.ticketsLeft < 200 && (
-              <Badge variant="destructive" className="animate-pulse">Only {event.ticketsLeft} left!</Badge>
+            {!isEventPast && (
+              <div data-testid={`event-fomo-list-${event._id || event.id}`}>
+                <AlmostSoldOutBadge count={event.ticketsLeft} unit="tickets" />
+              </div>
             )}
           </div>
           

@@ -23,6 +23,7 @@ import api from '../../api/client';
 import { useFavourites } from '../../hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
@@ -131,6 +132,11 @@ const TripCardGrid = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
             {trip.vehicle_type}
           </Badge>
         </div>
+        {!isTripPast && (
+          <div className="absolute bottom-3 right-3 z-10" data-testid={`travel-fomo-grid-${tripId}`}>
+            <AlmostSoldOutBadge count={trip.available_seats} unit="seats" />
+          </div>
+        )}
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex items-center gap-2 text-white">
             <Bus className="w-5 h-5" />
@@ -275,6 +281,11 @@ const TripCardList = ({ trip, onSelect, tripDate, onImageClick, isFav, toggleFav
               {isTripPast ? 'N/A' : trip.available_seats === 0 ? 'Sold Out' : `${trip.available_seats ?? trip.total_seats ?? 40} seats`}
             </span>
           </div>
+          {!isTripPast && (
+            <div className="mt-2" data-testid={`travel-fomo-list-${trip.id || trip._id}`}>
+              <AlmostSoldOutBadge count={trip.available_seats} unit="seats" />
+            </div>
+          )}
         </div>
 
         {/* Middle Section - Route Details */}

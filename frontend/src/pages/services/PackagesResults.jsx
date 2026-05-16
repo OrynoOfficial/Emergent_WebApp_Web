@@ -21,6 +21,7 @@ import { packageServiceApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import LocationInput from '@/components/shared/LocationInput';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
@@ -79,6 +80,11 @@ const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => {
         <Badge className="absolute top-3 left-3 bg-yellow-400 text-red-800 hover:bg-yellow-400 z-10">
           <Truck className="w-3 h-3 mr-1" /> Logistics
         </Badge>
+        {service.slots_available != null && (
+          <div className="absolute bottom-3 right-3 z-10" data-testid={`package-fomo-grid-${service.id}`}>
+            <AlmostSoldOutBadge count={service.slots_available} unit="slots" />
+          </div>
+        )}
         {thumbs.length > 0 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
             {thumbs.map((t, i) => (

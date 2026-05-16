@@ -21,6 +21,7 @@ import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const CUISINE_TYPES = ['African', 'French', 'Italian', 'Chinese', 'Lebanese', 'Seafood', 'Fast Food', 'Fusion'];
@@ -160,6 +161,11 @@ const RestaurantCardGrid = ({ restaurant, onViewDetails, onReserve, isFav, toggl
             <div className="absolute bottom-2 right-2 bg-white/90 px-2 py-0.5 rounded flex items-center gap-1">
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
               <span className="text-xs font-bold">{restaurant.rating.toFixed(1)}</span>
+            </div>
+          )}
+          {restaurant.tables_available != null && (
+            <div className="absolute bottom-2 left-2 z-10" data-testid={`restaurant-fomo-grid-${restaurant._id || restaurant.id}`}>
+              <AlmostSoldOutBadge count={restaurant.tables_available} unit="tables" />
             </div>
           )}
         </div>

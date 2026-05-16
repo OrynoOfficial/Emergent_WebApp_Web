@@ -13,6 +13,7 @@ import { cinemaApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import { formatFCFA } from '@/utils/currency';
@@ -110,6 +111,13 @@ function FilmCardGrid({ film, onViewDetails, isFav, toggleFav }) {
               <PlayCircle className="w-8 h-8 text-slate-950" />
             </div>
           </div>
+
+          {/* Almost-sold-out FOMO badge — silent until backend exposes min_available_seats */}
+          {film.min_available_seats != null && (
+            <div className="absolute bottom-3 left-3 z-10" data-testid={`film-fomo-grid-${film.id || film._id}`}>
+              <AlmostSoldOutBadge count={film.min_available_seats} unit="seats" />
+            </div>
+          )}
 
           {/* Customer rating chip — pulled from the Ratings collection.
               Falls back to imdb_rating only when no customer ratings exist yet,
@@ -218,6 +226,11 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
               {film.customer_rating != null && (
                 <span className="text-[9px] font-medium opacity-80">({film.customer_rating_count})</span>
               )}
+            </div>
+          )}
+          {film.min_available_seats != null && (
+            <div className="absolute bottom-3 right-3 z-10" data-testid={`film-fomo-list-${film.id || film._id}`}>
+              <AlmostSoldOutBadge count={film.min_available_seats} unit="seats" />
             </div>
           )}
         </div>

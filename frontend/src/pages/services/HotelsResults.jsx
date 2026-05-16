@@ -22,6 +22,7 @@ import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 
 const AMENITIES = [
@@ -173,6 +174,11 @@ const HotelCardGrid = ({ hotel, nights, onViewDetails, isFav, toggleFav }) => {
               {hotel.guest_rating.toFixed(1)}
             </div>
           )}
+          {hotel.available_rooms != null && (
+            <div className="absolute bottom-2 left-2 z-10" data-testid={`hotel-fomo-grid-${hotelId}`}>
+              <AlmostSoldOutBadge count={hotel.available_rooms} unit="rooms" />
+            </div>
+          )}
         </div>
         
         {/* Content - Compact */}
@@ -316,6 +322,11 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
                 <Badge className="bg-emerald-500 text-white text-[10px] px-2 py-0.5">Free Cancel</Badge>
               )}
             </div>
+            {hotel.available_rooms != null && (
+              <div className="absolute bottom-2 left-2 z-10" data-testid={`hotel-fomo-list-${hotelId}`}>
+                <AlmostSoldOutBadge count={hotel.available_rooms} unit="rooms" />
+              </div>
+            )}
           </div>
           
           {/* Details Section - Compact */}

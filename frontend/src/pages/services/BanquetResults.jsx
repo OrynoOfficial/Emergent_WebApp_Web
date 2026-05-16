@@ -10,6 +10,7 @@ import { banquetApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
@@ -80,6 +81,11 @@ const VenueCardGrid = ({ venue, onBook, isFav, toggleFav }) => {
           <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
             <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
             {venue.rating}
+          </div>
+        )}
+        {venue.slots_available != null && (
+          <div className="absolute bottom-3 right-3 z-10" data-testid={`banquet-fomo-grid-${venue._id || venue.id}`}>
+            <AlmostSoldOutBadge count={venue.slots_available} unit="dates" />
           </div>
         )}
       </div>

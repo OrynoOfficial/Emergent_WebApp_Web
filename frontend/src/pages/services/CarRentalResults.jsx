@@ -16,6 +16,7 @@ import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 import { differenceInDays, format } from 'date-fns';
 
@@ -79,6 +80,11 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
         {vehicle.rating && (
           <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
             <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {vehicle.rating}
+          </div>
+        )}
+        {vehicle.units_available != null && (
+          <div className="absolute bottom-2 left-2 z-10" data-testid={`car-fomo-grid-${vehicle._id || vehicle.id}`}>
+            <AlmostSoldOutBadge count={vehicle.units_available} unit="cars" />
           </div>
         )}
       </div>

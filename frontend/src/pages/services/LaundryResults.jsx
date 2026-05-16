@@ -10,6 +10,7 @@ import { pressingApi } from '@/api/management';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
+import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 
@@ -69,6 +70,11 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
           <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
           {service.rating} ({service.reviews})
         </div>
+        {service.slots_available != null && (
+          <div className="absolute bottom-3 right-3 z-10" data-testid={`laundry-fomo-grid-${service._id || service.id}`}>
+            <AlmostSoldOutBadge count={service.slots_available} unit="slots" />
+          </div>
+        )}
       </div>
       
       {/* Content */}
