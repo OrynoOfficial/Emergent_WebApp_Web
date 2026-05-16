@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
@@ -133,6 +134,9 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      {/* Global toast portal — every `toast(...)` call from sonner across the
+          app surfaces through this single mounted instance. */}
+      <Toaster position="top-right" richColors closeButton expand={false} />
       <AuthProvider>
         <PermissionsProvider>
         <NotificationProvider>
