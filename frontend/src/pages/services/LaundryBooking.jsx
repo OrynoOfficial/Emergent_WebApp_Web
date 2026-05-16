@@ -22,6 +22,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
+import { rePayExisting } from '@/utils/paymentRetry';
 
 // Fallback catalog for laundry-only shops (per kg shops don't have items)
 const ITEM_TYPES = [
@@ -156,6 +158,15 @@ export default function LaundryBooking() {
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [triggerPayment, setTriggerPayment] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [orderId, setOrderId] = useState(null);
+
+  // Abandon any pending unpaid order on modal close / unmount / tab close
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   // Promo code state (mirrors TravelBooking pattern)
   const [promoCode, setPromoCode] = useState('');
@@ -298,6 +309,12 @@ export default function LaundryBooking() {
     setTriggerPayment(false);
     if (response.opening_modal) return;
     if (response.success || response.transactionRef) {
+      // Record promo code usage (non-blocking)
+      if (appliedPromo?.code && orderId && discount > 0) {
+        try {
+          await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${orderId}&discount_amount=${discount}`);
+        } catch { /* non-blocking */ }
+      }
       toast.success('Booking confirmed!');
       navigate('/orders');
     } else {
@@ -305,7 +322,7 @@ export default function LaundryBooking() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e?.preventDefault?.();
     if (totalItems === 0) {
       toast.error('Please add at least one item');
@@ -327,8 +344,70 @@ export default function LaundryBooking() {
       toast.error('Please choose a payment method');
       return;
     }
+
+    // If we already have a pending order for this checkout, just re-trigger payment.
+    if (orderId) {
+      rePayExisting(setTriggerPayment);
+      return;
+    }
+
+    setPaymentInProgress(true);
     setCurrentStep(3);
-    setTriggerPayment(true);
+
+    try {
+      const itemsBreakdown = Object.entries(items)
+        .map(([itemId, count]) => {
+          const item = itemCatalog.find((i) => i.id === itemId);
+          if (!item) return null;
+          return { id: itemId, name: item.name, quantity: count, unit_price: getItemPrice(item) };
+        })
+        .filter(Boolean);
+
+      const orderPayload = {
+        service_type: 'laundry',
+        service_id: service.id || service._id || id,
+        service_name: service.name,
+        total_amount: total,
+        currency: 'XAF',
+        status: 'pending',
+        payment_status: 'pending',
+        booking_details: {
+          firstName: booking.firstName,
+          lastName: booking.lastName,
+          email: booking.email,
+          phone: booking.phone,
+          address: pickupMethod === 'pickup' ? booking.address : '',
+          notes: booking.notes,
+          pickup_method: pickupMethod,
+          pickup_surcharge: pickupFee,
+          shop_id: service.id || service._id || id,
+          shop_name: service.name,
+          shop_type: service.shop_type || 'laundry',
+          service_type_selected: serviceType,
+          pickup_date: booking.pickup_date ? format(booking.pickup_date, 'yyyy-MM-dd') : null,
+          pickup_time: booking.pickup_time,
+          delivery_date: booking.delivery_date ? format(booking.delivery_date, 'yyyy-MM-dd') : null,
+          express: booking.express,
+          express_surcharge: expressSurcharge,
+          items: itemsBreakdown,
+          items_subtotal: itemsSubtotal,
+          service_fee: serviceFee,
+          promo_code: appliedPromo?.code,
+          promo_discount: discount,
+        },
+      };
+
+      const response = await api.post('/orders/create', orderPayload);
+      const newId = response.data?.order_id || response.data?._id || response.data?.id;
+      if (!newId) throw new Error('Failed to create order');
+      setOrderId(newId);
+      setTriggerPayment(true);
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      toast.error(error.response?.data?.detail || 'Failed to create order. Please try again.');
+      setPaymentInProgress(false);
+      setCurrentStep(2);
+    }
   };
 
   if (loading) {
@@ -868,10 +947,18 @@ export default function LaundryBooking() {
                 <div className="bg-slate-50 p-5">
                   <PaymentMethodsSelection
                     amount={total}
-                    orderId={null}
+                    orderId={orderId}
+                    customerPhone={booking.phone}
+                    customerEmail={booking.email}
+                    serviceDetails={{
+                      service_category: 'laundry',
+                      service_title: service?.name || 'Laundry',
+                      operator_id: service?.operator_id,
+                    }}
                     serviceName={service?.name || 'Laundry'}
                     onPaymentInitiated={handlePaymentInitiated}
                     onPaymentError={(error) => toast.error(error.message)}
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                     triggerPayment={triggerPayment}
                     onMethodSelected={setSelectedPaymentMethod}
                   />

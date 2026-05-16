@@ -304,12 +304,21 @@ async def create_direct_order(
     # Enrich laundry/pressing bookings with shop snapshot
     if order_data.service_type in ("laundry", "pressing") and order_data.service_id and not booking_details.get("pressing_info"):
         try:
-            pressing_id = booking_details.get("pressing_id") or order_data.service_id
-            shop = await db.pressing.find_one(
+            pressing_id = booking_details.get("pressing_id") or booking_details.get("shop_id") or order_data.service_id
+            # New shops live in db.pressings (plural); fall back to legacy db.pressing
+            shop = await db.pressings.find_one(
                 {"_id": pressing_id},
                 {"_id": 0, "name": 1, "address": 1, "city": 1, "phone": 1,
-                 "images": 1, "delivery_available": 1, "express_available": 1},
+                 "images": 1, "shop_type": 1, "item_prices": 1, "delivery_available": 1,
+                 "express_available": 1, "delivery_fee": 1, "turnaround_hours": 1,
+                 "operator_id": 1, "operator_name": 1},
             )
+            if not shop:
+                shop = await db.pressing.find_one(
+                    {"_id": pressing_id},
+                    {"_id": 0, "name": 1, "address": 1, "city": 1, "phone": 1,
+                     "images": 1, "delivery_available": 1, "express_available": 1},
+                )
             if shop:
                 booking_details["pressing_id"] = pressing_id
                 booking_details["pressing_info"] = shop
