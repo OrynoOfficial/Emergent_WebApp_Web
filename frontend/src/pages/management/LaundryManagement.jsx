@@ -536,7 +536,7 @@ export default function LaundryManagement() {
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <PermissionGate permission="pressing.edit">
-                        <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-pressing-btn-${pressing.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-cyan-700 hover:bg-cyan-50 border-cyan-200" data-testid={`replace-pressing-btn-${pressing.id}`}>
                           <ReplaceIcon className="w-3.5 h-3.5" />
                         </Button>
                       </PermissionGate>

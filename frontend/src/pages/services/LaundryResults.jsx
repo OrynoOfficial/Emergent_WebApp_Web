@@ -80,8 +80,19 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
       data-testid={`laundry-card-grid-${sid}`}
     >
       {/* Hero */}
-      <div className="h-48 relative overflow-hidden">
-        <img src={cover} alt={service.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+      <div className="h-48 relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700">
+        <img
+          src={cover}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          onError={(e) => { e.target.style.visibility = 'hidden'; }}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        {/* Brand-icon overlay (visible only when img has not painted yet or failed) */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-0">
+          <Shirt className="h-12 w-12 text-white/30" />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
 
         {/* Top-right: Favourite + Subscribe */}
@@ -208,8 +219,18 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
       <div className="flex flex-col md:flex-row">
         {/* Cover with thumbnails */}
         <div className="md:w-1/3 relative">
-          <div className="h-56 md:h-full relative">
-            <img src={cover} alt={service.name} className="w-full h-full object-cover" />
+          <div className="h-56 md:h-full relative bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700">
+            <img
+              src={cover}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              onError={(e) => { e.target.style.visibility = 'hidden'; }}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-0">
+              <Shirt className="h-12 w-12 text-white/30" />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent md:bg-gradient-to-r" />
             <div className="absolute top-3 left-3 flex flex-col gap-1.5">
               <Badge className={`${StBadge.cls} shadow-md`}>
