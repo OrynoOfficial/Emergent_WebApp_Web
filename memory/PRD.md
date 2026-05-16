@@ -6,6 +6,14 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Latest Changes (May 2026)
+- **🧹 Pending-order abandonment — CRITICAL bug fix (Feb 15 2026 — iter 177)** — User reported that Cinema bookings were creating "pending" orders as soon as the payment modal opened, leaving orphaned rows whenever the user closed the modal without paying. Full platform-wide fix in 4 layers:
+  1. **Backend endpoint**: new `DELETE /api/orders/{order_id}/abandon` (`/app/backend/routes/orders.py`) — hard-deletes pending unpaid orders owned by the caller. Returns `200 {success:true, deleted:true}` on first delete, `200 {success:true, already_gone:true}` on retry (idempotent), `409` for already-paid orders, `403` for cross-user attempts.
+  2. **PaymentMethodsSelection**: accepts new `onCheckoutAbandoned` prop, invoked from BOTH the Stripe modal `onClose` AND the MoMo `closeMoMoDialog` handler — covers both payment paths.
+  3. **`useOrderAbandonment(orderId, resetState)` hook** (`/app/frontend/src/hooks/useOrderAbandonment.js`): handles manual-abandon (modal close), unmount-abandon (route navigation), AND `beforeunload`-abandon (tab close). Uses `fetch keepalive` so the DELETE survives tab close.
+  4. **Wired into all 7 booking pages**: Cinema, Travel, Hotel, CarRental, Restaurant, Event, Package (Banquet & Laundry already skip this because they don't pre-create orders).
+- Bug caught + fixed by testing agent: hook initially read `localStorage.getItem('token')` but the app stores under `access_token` — would have caused 401s on tab-close. Patched.
+- **Verified**: 6/6 backend pytest pass, 7/7 booking pages wiring confirmed, **live UI-generated cinema order successfully hard-deleted** via the abandon endpoint (404 on subsequent GET).
+
 - **🎬 Cinema booking flow polish — filters, distinct screen chips, Travel-style Price Breakdown (Feb 15 2026 — iter 176)** — Three-pronged UI pass on the customer cinema flow:
   1. **FilmDetails `/services/cinema/film/{id}`**: added 2 new local filters next to the existing Date+Screen-type ones — **Cinema** (`showtime-cinema-filter`, renders only when >1 cinema serves the film) and **Time-of-day** (`showtime-time-filter` — Morning <12 / Afternoon 12–17 / Evening 17+). Each showtime card now shows its screen NAME as a distinct cyan-tinted chip (`showtime-screen-name-{id}`) instead of plain grey text — much easier to spot at a glance.
   2. **CinemaBooking hero card**: screen name now appears as a cyan `Monitor` chip (`hero-screen-name`) alongside the existing screen-type badge, both clearly visible against the white hero background.
