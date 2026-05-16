@@ -183,9 +183,14 @@
 - Customer: customer@test.com / testpassword123
 - Operator: operator@test.com / testpassword123
 
-## Upcoming
-- P3: Operator comparison dashboard (deferred — admin selects 2-3 operators to compare side-by-side)
-- P3: Scheduled report emails
-- P3: Add `data-testid` attributes to each method button inside `components/common/PaymentMethodsSelection.jsx` (e.g. `payment-method-mtn`, `payment-method-orange`, `payment-method-card`) so Playwright can complete the end-to-end booking POST chain in CI (instrumentation gap surfaced in iter 142).
-- P3: Expose inventory fields (`available_rooms`, `tables_available`, `units_available`, `slots_available`) on Hotels/Restaurants/Cars/Laundry/Banquets/Packages backends so the AlmostSoldOutBadge can fire on those services too.
-- Polish (optional, from iter124): migrate Settings timezone dropdown from native `<select>` to shadcn `Select` for visual parity with Language/Currency controls.
+## Backlog
+*(everything below is unprioritized — pick what you'd like next)*
+
+- **P3**: Operator comparison dashboard — admin selects 2-3 operators to compare performance metrics side-by-side
+- **P3**: Scheduled/automated report emails for admins (weekly / monthly)
+- **P3**: Add `data-testid` attributes to each method button inside `components/common/PaymentMethodsSelection.jsx` (`payment-method-mtn`, `payment-method-orange`, `payment-method-card`) — CI instrumentation gap surfaced in iter 142
+- **P3**: Expose inventory fields on backends so the AlmostSoldOutBadge fires on more services — `available_rooms` (Hotels), `tables_available` (Restaurants), `units_available` (Cars), `slots_available` (Laundry / Banquets / Packages)
+- **P3**: Surface `assigned_role_ids` on the Users management list (currently persisted, not displayed) — show role chips per user row
+- **P3**: Drag-and-drop user → role assignment from `/admin/permissions` (chip-list per role, live "this user will gain/lose these N permissions" preview)
+- **P3**: 30-minute "Hold my seat" countdown on Cinema booking page — locks inventory while user pays, pairs with the ⚡ Almost-sold-out FOMO badge
+- **Polish**: Migrate Settings timezone dropdown from native `<select>` to shadcn `Select` for visual parity with Language/Currency controls (from iter124)
