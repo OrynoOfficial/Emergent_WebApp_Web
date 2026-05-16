@@ -259,6 +259,32 @@ async def get_film_showtimes(film_id: str, city: Optional[str] = None):
         ):
             cinema_lookup[c["_id"]] = {"name": c.get("name"), "city": c.get("city")}
 
+    # Compute live `available_seats` for every showtime in ONE round-trip per
+    # source collection. Counting seats actively held by orders/bookings is
+    # the source of truth — the stored `available_seats` field drifts when
+    # abandoned/cancelled orders are deleted, so we deliberately ignore it.
+    showtime_ids = [s.get("_id") for s in showtimes if s.get("_id")]
+    booked_count = {sid: 0 for sid in showtime_ids}
+    if showtime_ids:
+        # (a) Legacy /cinema/.../book bookings live in `cinema_bookings`.
+        async for b in db.cinema_bookings.find(
+            {"showtime_id": {"$in": showtime_ids},
+             "status": {"$in": ["reserved", "confirmed", "paid"]}},
+            {"_id": 0, "showtime_id": 1, "seats": 1},
+        ):
+            booked_count[b["showtime_id"]] = booked_count.get(b["showtime_id"], 0) + len(b.get("seats") or [])
+        # (b) New unified orders pipeline stores seats under booking_details.
+        async for o in db.orders.find(
+            {"service_type": "cinema",
+             "booking_details.showtime_id": {"$in": showtime_ids},
+             "status": {"$nin": ["cancelled", "abandoned", "failed"]}},
+            {"_id": 0, "booking_details.showtime_id": 1, "booking_details.seats": 1},
+        ):
+            bd = o.get("booking_details") or {}
+            sid = bd.get("showtime_id")
+            if sid in booked_count:
+                booked_count[sid] = booked_count.get(sid, 0) + len(bd.get("seats") or [])
+
     for s in showtimes:
         raw_id = s.pop("_id", None)
         s["id"] = str(raw_id) if raw_id is not None else None
@@ -267,6 +293,11 @@ async def get_film_showtimes(film_id: str, city: Optional[str] = None):
             if lk:
                 s["cinema_name"] = lk["name"]
                 s.setdefault("cinema_city", lk["city"])
+        # Recompute available_seats from the live booked tally.
+        taken = booked_count.get(raw_id, 0)
+        total = int(s.get("total_seats") or 0)
+        s["available_seats"] = max(0, total - taken)
+        s["booked_seats_count"] = taken
 
     return {"showtimes": showtimes, "total": len(showtimes)}
 
@@ -735,15 +766,24 @@ async def get_showtime_details(showtime_id: str):
                 if cinema_vip_rows and not (seat_layout.get("vip_rows") or []):
                     seat_layout = {**seat_layout, "vip_rows": cinema_vip_rows}
 
-    # Aggregate booked / reserved seats for this showtime
-    booked_cursor = db.cinema_bookings.find(
+    # Aggregate booked / reserved seats for this showtime — from BOTH the
+    # legacy cinema_bookings collection AND the new unified orders pipeline.
+    booked_seats: list = []
+    async for b in db.cinema_bookings.find(
         {"showtime_id": showtime_id, "status": {"$in": ["reserved", "confirmed", "paid"]}},
         {"_id": 0, "seats": 1},
-    )
-    booked_seats: list = []
-    async for b in booked_cursor:
+    ):
         booked_seats.extend(b.get("seats", []) or [])
+    async for o in db.orders.find(
+        {"service_type": "cinema",
+         "booking_details.showtime_id": showtime_id,
+         "status": {"$nin": ["cancelled", "abandoned", "failed"]}},
+        {"_id": 0, "booking_details.seats": 1},
+    ):
+        booked_seats.extend(((o.get("booking_details") or {}).get("seats") or []))
+    booked_seats = sorted(set(booked_seats))
 
+    total_seats_val = int(st.get("total_seats") or 0)
     showtime_out = {
         "id": st.get("_id"),
         "cinema_id": st.get("cinema_id"),
@@ -760,15 +800,16 @@ async def get_showtime_details(showtime_id: str):
         "vip_price": st.get("vip_price"),
         "child_price": st.get("child_price"),
         "senior_price": st.get("senior_price"),
-        "total_seats": st.get("total_seats"),
-        "available_seats": st.get("available_seats"),
+        "total_seats": total_seats_val,
+        # Live availability — drift-free, derived from the live booking tally.
+        "available_seats": max(0, total_seats_val - len(booked_seats)),
     }
 
     return {
         "showtime": showtime_out,
         "film": film,
         "seat_layout": seat_layout,
-        "booked_seats": sorted(set(booked_seats)),
+        "booked_seats": booked_seats,
     }
 
 

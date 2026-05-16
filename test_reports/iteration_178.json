@@ -1,0 +1,39 @@
+{
+  "summary": "Validated end-to-end the live `available_seats` computation for cinema showtimes. Backend 10/10 pytest pass: (a) GET /api/cinema/films/1edf5c04.../showtimes returns available_seats=30 for the 2026-05-16 18:00 showtime (33 total - 3 pre-booked B1/C1/C2) and 33 for the other 14 showtimes; (b) GET /api/cinema/showtimes/58702e65.../details returns the SAME live available_seats=30 AND booked_seats=['B1','C1','C2'] (sorted, deduped); (c) Creating a fresh cinema order via POST /api/orders/create with booking_details.seats=['G5','G6'] immediately drops available_seats to 28 on BOTH endpoints and adds G5,G6 to the booked_seats list; (d) DELETE /api/orders/{id}/abandon hard-deletes the order so the next showtime fetch shows available_seats back at 30 and booked_seats back to the original 3. Frontend Playwright: customer@test.com login → /services/cinema/film/1edf5c04... → confirmed the May 16 18:00 ShowtimeCard renders '30 left' in text-emerald-600 (data-testid='showtime-seats-58702e65...'), 14 other ShowtimeCards render '33 left'. Regression: 404 for unknown film_id, 404 for unknown showtime_id/details, no drift on untouched showtimes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration178_cinema_seat_availability.py",
+    "/app/test_reports/pytest/iter178.xml"
+  ],
+  "action_items": [
+    "(Optional, low-priority drift sweep) The legacy POST /api/cinema/showtimes/{id}/book endpoint at routes/cinema.py:816-942 still uses `$inc available_seats -N` on the showtimes document — that stored field is now ignored by the read path (good, no user-visible bug), but it's dead writes. Consider removing the $inc to avoid future confusion.",
+    "(Optional cleanup) routes/cinema.py:522 and routes/cinema.py:722 still initialize `available_seats: total_seats` on showtime creation. Same as above — harmless since reads recompute, but worth a one-line comment noting the field is now informational only."
+  ],
+  "critical_code_review_comments": [
+    "GET /api/cinema/films/{film_id}/showtimes (routes/cinema.py:247-300) — clean implementation: 2 round-trips (one per source collection), per-showtime tally dict, single pass to recompute available_seats. Status excludes 'cancelled'/'abandoned'/'failed' on the orders side and 'reserved'/'confirmed'/'paid' is the inclusion list on cinema_bookings — both filters look correct.",
+    "GET /api/cinema/showtimes/{showtime_id}/details (routes/cinema.py:736-813) — booked_seats list combines both collections, dedupes via set(), sorts, and uses len() to recompute available_seats. Consistent with the listing endpoint.",
+    "REGRESSION SAFE: the existing /book endpoint still does the `$inc available_seats` update — but since both reads ignore the stored field, the legacy write is now harmless dead-code. The seat-selection grid on CinemaBooking reads booked_seats from /details, so it correctly excludes the 3 pre-booked seats AND any new pending-order seats.",
+    "ShowtimeCard at FilmDetails.jsx:58 reads `st.available_seats ?? st.total_seats ?? 0` — gracefully falls back if the backend ever omits the field. The color tiering at line 137 (rose/amber/emerald) works as documented."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration178_cinema_seat_availability.py (new — 10 tests covering Backend #1/#2/#3/#4 + regression)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 pytest)",
+    "frontend": "100% (FilmDetails ShowtimeCard renders correct counts and colors for the target film)"
+  },
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "Test creates ONE transient cinema order with booking_details.seats=['G5','G6'] via POST /api/orders/create then immediately hard-deletes it via DELETE /api/orders/{id}/abandon — no data left behind. Pre-existing B1/C1/C2 booking from earlier iterations is untouched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The new dynamic-availability code paths live at routes/cinema.py:262-302 (listing) and routes/cinema.py:769-806 (details). Both ignore the stored `available_seats` field and recompute from cinema_bookings + orders. The single-showtime endpoint is /api/cinema/showtimes/{id}/details (NOT /api/cinema/showtimes/{id} — that 405s). For Playwright the gateway login flow needs an extra click: click 'Login to Your Account' BEFORE filling email/password fields. Country-selector modal does NOT appear for customer@test.com after first login (location already saved).",
+  "rca of the issue": "Originally the showtime row stored a `available_seats` field that was decremented on booking creation but never reconstituted when pending/abandoned orders were deleted (DELETE /api/orders/{id}/abandon hard-deletes the order). Result: the stored counter drifted permanently downward and the customer-facing showtime ladder displayed phantom '29 left' / '28 left' values even after the orders were gone. Fix: stop trusting the stored counter — recompute on every read by counting active seats in cinema_bookings (legacy) AND orders (new pipeline). Confirmed working: a freshly-created order drops the count, abandoning it restores the count, and the UI text + color tier update on the next refetch."
+}
