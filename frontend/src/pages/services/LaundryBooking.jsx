@@ -877,8 +877,8 @@ export default function LaundryBooking() {
                   />
                   <Button
                     onClick={handleSubmit}
-                    disabled={!selectedPaymentMethod || paymentInProgress || totalItems === 0}
-                    className="w-full mt-4 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 text-white h-12 font-semibold rounded-xl shadow-md shadow-purple-300/40"
+                    disabled={paymentInProgress}
+                    className="w-full mt-4 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 text-white h-12 font-semibold rounded-xl shadow-md shadow-purple-300/40 disabled:opacity-60"
                     data-testid="confirm-booking-btn"
                   >
                     {paymentInProgress ? (
