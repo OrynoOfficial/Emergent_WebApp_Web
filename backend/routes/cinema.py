@@ -455,7 +455,24 @@ async def create_showtime(
     film = await db.films.find_one({"_id": film_id})
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
-    
+
+    # Idempotency: refuse to create a row that already exists for the same
+    # (cinema, film, screen, date, time) — prevents duplicates when an admin
+    # double-clicks "Schedule" or retries a partially-failed recurring batch.
+    existing = await db.showtimes.find_one({
+        "cinema_id": cinema_id,
+        "film_id": film_id,
+        "screen_name": screen_name,
+        "show_date": show_date,
+        "show_time": show_time,
+        "is_active": {"$ne": False},
+    })
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"A showtime already exists for {screen_name} on {show_date} at {show_time}",
+        )
+
     showtime = {
         "_id": str(uuid.uuid4()),
         "cinema_id": cinema_id,

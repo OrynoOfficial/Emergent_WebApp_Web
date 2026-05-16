@@ -480,7 +480,10 @@ export default function CinemaManagement() {
     setIsShowtimeDialogOpen(true);
   };
 
+  const [savingShowtime, setSavingShowtime] = useState(false);
+
   const handleSaveShowtime = async () => {
+    if (savingShowtime) return; // hard debounce — recurring loops can take 3-5s
     if (!showtimeForm.cinema_id || !showtimeForm.film_id || !showtimeForm.screen_name || !showtimeForm.show_date || !showtimeForm.show_time || !showtimeForm.end_time || !showtimeForm.price) {
       toast.error('Cinema, film, screen, date, time, end time and price are required');
       return;
@@ -534,6 +537,7 @@ export default function CinemaManagement() {
       } else {
         // Create one showtime per resolved date
         let created = 0;
+        let skipped = 0; // already-existing rows (backend 409)
         const failures = [];
         for (const d of datesToCreate) {
           const params = new URLSearchParams();
@@ -558,15 +562,21 @@ export default function CinemaManagement() {
             await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);
             created += 1;
           } catch (e) {
-            failures.push(d);
+            if (e.response?.status === 409) skipped += 1;
+            else failures.push(d);
           }
         }
-        if (created > 0 && failures.length === 0) {
+        if (created > 0 && failures.length === 0 && skipped === 0) {
           toast.success(created === 1 ? 'Showtime scheduled' : `Scheduled ${created} showtimes`);
+        } else if (created > 0 && skipped > 0 && failures.length === 0) {
+          toast.success(`Scheduled ${created} new — ${skipped} already existed (skipped).`);
         } else if (created > 0 && failures.length > 0) {
-          toast.warning(`Scheduled ${created} showtimes, ${failures.length} failed`);
+          toast.warning(`Scheduled ${created}, skipped ${skipped}, ${failures.length} failed`);
+        } else if (created === 0 && skipped > 0 && failures.length === 0) {
+          toast.info(`No new showtimes — all ${skipped} already existed.`);
         } else {
           toast.error('Failed to schedule any showtimes');
+          setSavingShowtime(false);
           return;
         }
       }
@@ -574,6 +584,8 @@ export default function CinemaManagement() {
       loadShowtimes();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save showtime');
+    } finally {
+      setSavingShowtime(false);
     }
   };
 
@@ -1339,6 +1351,7 @@ export default function CinemaManagement() {
         cinemas={cinemas}
         movies={movies}
         onSubmit={handleSaveShowtime}
+        submitting={savingShowtime}
       />
 
       <CinemaViewDialog

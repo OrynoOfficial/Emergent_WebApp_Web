@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Ticket, Monitor, Clock, Banknote } from 'lucide-react';
+import { Ticket, Monitor, Clock, Banknote, Loader2 } from 'lucide-react';
 import { WEEKDAY_OPTIONS, computeRecurringDates } from '@/components/cinema/cinemaConstants';
 
 /**
@@ -20,6 +20,7 @@ export default function ShowtimeFormDialog({
   cinemas,
   movies,
   onSubmit,
+  submitting = false,
 }) {
   // Detect VIP-eligible screen so we can conditionally render the VIP price field.
   const selectedCinema = cinemas.find((c) => c.id === showtimeForm.cinema_id);
@@ -332,8 +333,24 @@ export default function ShowtimeFormDialog({
         </div>
 
         <DialogFooter className="px-6 py-4 border-t bg-slate-50">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onSubmit} className="bg-[#082c59]" data-testid="save-showtime-btn">{editingShowtime ? 'Update showtime' : 'Schedule showtime'}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button
+            onClick={onSubmit}
+            disabled={submitting}
+            className="bg-[#082c59] disabled:opacity-60"
+            data-testid="save-showtime-btn"
+          >
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {showtimeForm.repeat_mode === 'recurring' && !editingShowtime
+                  ? 'Scheduling…'
+                  : (editingShowtime ? 'Updating…' : 'Scheduling…')}
+              </span>
+            ) : (
+              editingShowtime ? 'Update showtime' : 'Schedule showtime'
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
