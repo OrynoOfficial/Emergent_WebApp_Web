@@ -634,10 +634,11 @@ async def abandon_pending_order(
     # Only allow abandon while the order is still pending + unpaid.
     payment_status = (order.get("payment_status") or "pending").lower()
     order_status = (order.get("status") or "pending").lower()
-    if payment_status in ("paid", "verified", "captured", "succeeded") or order_status in (
+    if payment_status in ("paid", "verified", "captured", "succeeded", "completed", "processing") or order_status in (
         "completed",
         "confirmed",
         "in_progress",
+        "paid",
         "cancelled",
     ):
         raise HTTPException(
