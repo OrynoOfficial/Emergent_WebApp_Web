@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Users, Droplets, Eye, Banknote, Receipt, Replace as ReplaceIcon
+  Bell, Send, Users, Droplets, Eye, Banknote, Receipt, Replace as ReplaceIcon,
+  Phone, Truck, Sparkles, Wallet, CreditCard
 } from 'lucide-react';
 import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
@@ -358,7 +359,7 @@ export default function LaundryManagement() {
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="pressing.create">
-                <Button onClick={() => openPressingDialog()} className="bg-[#082c59]" data-testid="add-pressing-btn">
+                <Button onClick={() => openPressingDialog()} className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 shadow-md shadow-cyan-500/20" data-testid="add-pressing-btn">
                   <Plus className="w-4 h-4 mr-2" /> Add Shop
                 </Button>
               </PermissionGate>
@@ -431,59 +432,122 @@ export default function LaundryManagement() {
                 const st = pressing.shop_type || 'laundry';
                 const items = Array.isArray(pressing.item_prices) ? pressing.item_prices : [];
                 const minItem = items.map(i => Number(i.price)).filter(n => n > 0);
+                const cover = (pressing.images || [])[0];
+                const typeBadge = st === 'pressing' ? 'bg-violet-500 text-white border-transparent'
+                  : st === 'both' ? 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white border-transparent'
+                  : 'bg-cyan-500 text-white border-transparent';
+                const typeLabel = st === 'both' ? 'Laundry + Pressing' : st;
+                const priceMain = st === 'pressing'
+                  ? (minItem.length ? `from ${formatFCFA(Math.min(...minItem))} / item` : 'No prices')
+                  : st === 'both'
+                    ? `${formatFCFA(pressing.price_per_kg || 0)}/kg · ${items.length} items`
+                    : `${formatFCFA(pressing.price_per_kg || 0)} / kg`;
                 return (
-                <Card key={pressing.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold flex-1 truncate">{pressing.name}</h3>
-                      <Badge variant="outline" className={`capitalize text-[10px] ${
-                        st === 'pressing' ? 'bg-violet-50 text-violet-700 border-violet-200'
-                          : st === 'both' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          : 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                      }`}>
-                        {st === 'both' ? 'Both' : st}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{pressing.city}</div>
-                      <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{pressing.phone}</div>
-                      {viewMode === 'details' && pressing.address && (
-                        <div className="text-slate-600 pt-2 border-t border-slate-100">{pressing.address}</div>
+                <Card
+                  key={pressing.id}
+                  className="overflow-hidden border-cyan-100/50 hover:shadow-xl hover:shadow-cyan-500/10 hover:border-cyan-300 transition-all"
+                  data-testid={`pressing-card-${pressing.id}`}
+                >
+                  {/* Cover photo (or gradient fallback when no images yet) */}
+                  <div className={`h-32 relative ${viewMode === 'details' ? 'md:hidden' : ''}`}>
+                    {cover ? (
+                      <img src={cover} alt={pressing.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700 flex items-center justify-center">
+                        <Shirt className="h-10 w-10 text-white/40" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
+                    <Badge className={`absolute top-2 left-2 capitalize text-[10px] shadow-md ${typeBadge}`}>
+                      {typeLabel}
+                    </Badge>
+                    {(pressing.images || []).length > 1 && (
+                      <div className="absolute bottom-2 left-2 flex gap-1">
+                        {(pressing.images || []).slice(1, 3).map((thumb, i) => (
+                          <div key={i} className="w-9 h-9 rounded border-2 border-white/80 overflow-hidden shadow">
+                            <img src={thumb} alt={`${pressing.name} ${i + 2}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="absolute bottom-2 right-2 text-white text-sm font-semibold truncate max-w-[60%] text-right drop-shadow" title={pressing.name}>{pressing.name}</p>
+                  </div>
+
+                  <CardContent className="pt-4 pb-4 space-y-2.5">
+                    {viewMode === 'details' && (
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold flex-1 truncate text-slate-900">{pressing.name}</h3>
+                        <Badge className={`capitalize text-[10px] ${typeBadge}`}>{typeLabel}</Badge>
+                      </div>
+                    )}
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-cyan-700" />{[pressing.address, pressing.city].filter(Boolean).join(' · ') || '—'}</div>
+                      {pressing.phone && <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-cyan-700" />{pressing.phone}</div>}
+                      {pressing.turnaround_hours && <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-cyan-700" />{pressing.turnaround_hours}h turnaround</div>}
+                      {viewMode === 'details' && pressing.description && (
+                        <div className="text-slate-600 pt-2 border-t border-cyan-100/60 line-clamp-2">{pressing.description}</div>
                       )}
                     </div>
+
+                    {/* Service-type chips */}
                     {pressing.services?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {pressing.services.slice(0, viewMode === 'details' ? 8 : 3).map((s, idx) => (
-                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
-                            {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
+                      <div className="flex flex-wrap gap-1">
+                        {pressing.services.slice(0, viewMode === 'details' ? 8 : 4).map((s, idx) => (
+                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-[10px] capitalize bg-cyan-50 text-cyan-800 border-cyan-200">
+                            {typeof s === 'string' ? s.replace(/_/g, ' ') : s?.name || s?.type || 'Service'}
                           </Badge>
                         ))}
                       </div>
                     )}
-                    <div className="mt-3 font-bold text-green-600">
-                      {st === 'pressing'
-                        ? (minItem.length ? `from ${formatFCFA(Math.min(...minItem))} / item` : 'No prices set')
-                        : st === 'both'
-                          ? `${formatFCFA(pressing.price_per_kg || 0)}/kg · ${items.length} items`
-                          : `${formatFCFA(pressing.price_per_kg || 0)} / kg`}
+
+                    {/* Per-item prices preview for pressing/both */}
+                    {st !== 'laundry' && items.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {items.slice(0, viewMode === 'details' ? 6 : 3).map((ip, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-50 border border-violet-100 text-[10px] rounded">
+                            <span className="text-violet-900 font-medium">{ip.item}</span>
+                            <span className="text-violet-700">·</span>
+                            <span className="text-violet-900 font-bold">{formatFCFA(Number(ip.price))}</span>
+                          </span>
+                        ))}
+                        {items.length > (viewMode === 'details' ? 6 : 3) && (
+                          <span className="text-[10px] text-slate-400 self-center">+{items.length - (viewMode === 'details' ? 6 : 3)}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Logistics quick-info row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {pressing.delivery_available && (
+                        <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-800 border-emerald-200"><Truck className="w-2.5 h-2.5 mr-1" /> Delivery</Badge>
+                      )}
+                      {pressing.express_available && (
+                        <Badge variant="outline" className="text-[10px] bg-orange-50 text-orange-800 border-orange-200"><Sparkles className="w-2.5 h-2.5 mr-1" /> Express</Badge>
+                      )}
+                      {pressing.accepts_momo && <Wallet className="w-3.5 h-3.5 text-slate-400" title="Mobile money" />}
+                      {pressing.accepts_card && <CreditCard className="w-3.5 h-3.5 text-slate-400" title="Card" />}
+                      {pressing.accepts_cash && <Banknote className="w-3.5 h-3.5 text-slate-400" title="Cash" />}
                     </div>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details">
-                        <Eye className="w-4 h-4" />
+
+                    <div className="font-bold text-cyan-700 pt-2 border-t border-cyan-100/60">{priceMain}</div>
+
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details" className="border-cyan-200 text-cyan-700 hover:bg-cyan-50">
+                        <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <PermissionGate permission="pressing.edit">
                         <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-pressing-btn-${pressing.id}`}>
-                          <ReplaceIcon className="w-4 h-4" />
+                          <ReplaceIcon className="w-3.5 h-3.5" />
                         </Button>
                       </PermissionGate>
                       <PermissionGate permission="pressing.edit">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openPressingDialog(pressing)}>
-                          <Edit className="w-4 h-4 mr-1" /> Edit
+                        <Button size="sm" variant="outline" className="flex-1 border-cyan-200 text-cyan-700 hover:bg-cyan-50" onClick={() => openPressingDialog(pressing)}>
+                          <Edit className="w-3.5 h-3.5 mr-1" /> Edit
                         </Button>
                       </PermissionGate>
                       <PermissionGate permission="pressing.delete">
-                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeletePressing(pressing.id)}>
-                          <Trash2 className="w-4 h-4" />
+                        <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleDeletePressing(pressing.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </PermissionGate>
                     </div>
