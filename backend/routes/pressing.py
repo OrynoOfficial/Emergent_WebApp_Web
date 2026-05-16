@@ -2,12 +2,29 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_any_permission
-from models.pressing import PressingCreate, PressingUpdate, LaundryStatus
+from models.pressing import (
+    PressingCreate, PressingUpdate, LaundryStatus, ShopType,
+    DEFAULT_PRESSING_ITEM_PRESETS,
+)
 from typing import Optional, List
 from datetime import datetime
 import uuid
 
 router = APIRouter(prefix="/api/pressing", tags=["Laundry/Pressing"])
+
+
+def _sanitize_pricing(payload: dict) -> dict:
+    """Make sure the pricing fields stored on the shop document are coherent
+    with the chosen `shop_type`. A laundry-only shop has no item_prices; a
+    pressing-only shop has no price_per_kg. This is enforced server-side so we
+    can't end up with leftover stale data if the operator flips between modes
+    in the UI."""
+    st = payload.get("shop_type")
+    if st == ShopType.LAUNDRY.value or st == ShopType.LAUNDRY:
+        payload["item_prices"] = []
+    elif st == ShopType.PRESSING.value or st == ShopType.PRESSING:
+        payload["price_per_kg"] = None
+    return payload
 
 @router.post("/")
 async def create_pressing(
@@ -20,9 +37,11 @@ async def create_pressing(
     operator_id = pressing_data.operator_id or current_user.get("operator_id")
     operator_name = pressing_data.operator_name or current_user.get("operator_name", "")
     
+    payload = pressing_data.dict(exclude={"operator_id", "operator_name"})
+    payload = _sanitize_pricing(payload)
     pressing = {
         "_id": str(uuid.uuid4()),
-        **pressing_data.dict(exclude={"operator_id", "operator_name"}),
+        **payload,
         "operator_id": operator_id,
         "operator_name": operator_name,
         "status": LaundryStatus.ACTIVE,
@@ -34,7 +53,19 @@ async def create_pressing(
     
     await db.pressings.insert_one(pressing)
     
-    return {"message": "Pressing service created", "pressing_id": pressing["_id"]}
+    return {
+        "message": "Pressing service created",
+        "pressing_id": pressing["_id"],
+        "shop_id": pressing["_id"],
+    }
+
+
+@router.get("/item-presets")
+async def get_pressing_item_presets():
+    """Return the default catalog of per-item pressing labels surfaced as
+    quick-add suggestions on the create-shop modal. The frontend renders these
+    as clickable chips; operators can still type custom items."""
+    return {"presets": DEFAULT_PRESSING_ITEM_PRESETS}
 
 @router.get("/")
 async def get_pressings(
@@ -102,6 +133,8 @@ async def update_pressing(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     update_data = {k: v for k, v in pressing_data.dict().items() if v is not None}
+    if "shop_type" in update_data:
+        update_data = _sanitize_pricing(update_data)
     
     if current_user["role"] == "operator":
         update_data.pop("status", None)
@@ -266,9 +299,14 @@ async def get_my_laundry_shops(
     current_user: dict = Depends(get_current_active_user)
 ):
     """
-    Get laundry shops for the current user's operator (operator-scoped).
+    Get laundry/pressing shops for the current user's operator (operator-scoped).
     Super admin and admin can see all shops.
     Operator users can only see shops belonging to their operator.
+
+    Reads from `db.pressings` — the same collection POST/PUT/DELETE write to.
+    (Historically, an older `db.laundry_shops` collection was used here, but
+    nothing wrote to it, so the management list was always empty regardless of
+    how many shops the operator had created.)
     """
     from middleware.auth import get_operator_filter
     
@@ -288,12 +326,22 @@ async def get_my_laundry_shops(
     if city:
         query["city"] = {"$regex": city, "$options": "i"}
     
-    shops = await db.laundry_shops.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
-    total = await db.laundry_shops.count_documents(query)
+    shops = await db.pressings.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.pressings.count_documents(query)
     
-    # Transform _id to id
+    # Transform _id to id (mirrors GET / behaviour). Default missing modern
+    # fields so legacy rows render cleanly on the new UI.
     for shop in shops:
         shop["id"] = str(shop.pop("_id", ""))
+        shop.setdefault("shop_type", "laundry")
+        shop.setdefault("item_prices", [])
+        shop.setdefault("services", [])
+        shop.setdefault("operating_hours", {})
+        shop.setdefault("images", [])
+        shop.setdefault("accepts_momo", True)
+        shop.setdefault("accepts_cash", True)
+        shop.setdefault("accepts_card", False)
+        shop.setdefault("turnaround_hours", 24)
     
     return {
         "shops": shops, 

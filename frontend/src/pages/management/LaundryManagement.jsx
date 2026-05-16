@@ -10,7 +10,6 @@ import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
@@ -33,6 +32,7 @@ import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import PressingFormBody from '@/components/management/laundry/PressingFormBody';
 import { Search } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -42,23 +42,40 @@ import {
 const PAGE_SIZE = 12;
 
 const CHART_COLORS = ['#06B6D4', '#8B5CF6', '#F59E0B', '#10B981', '#EF4444', '#3B82F6'];
-const SERVICES = ['washing', 'dry_cleaning', 'ironing', 'folding', 'express', 'pickup_delivery'];
 
 const DEFAULT_PRESSING_FORM = {
+  // Identity
   name: '',
   description: '',
+  // Pricing model
+  shop_type: 'laundry',          // 'laundry' | 'pressing' | 'both'
+  price_per_kg: '',              // used when shop_type ∈ {laundry, both}
+  item_prices: [],               // [{item, price}] — used when shop_type ∈ {pressing, both}
+  // Location & contact
   address: '',
   city: '',
   phone: '',
   email: '',
+  whatsapp: '',
+  instagram: '',
+  website: '',
+  // Storefront
+  images: [],
   services: [],
   operating_hours: {},
+  turnaround_hours: 24,
+  // Delivery / pickup
   delivery_available: false,
   delivery_fee: 0,
+  pickup_radius_km: 0,
   express_available: false,
   express_surcharge: 50,
   min_order_amount: 0,
-  images: [],
+  // Accepted payments
+  accepts_card: false,
+  accepts_momo: true,
+  accepts_cash: true,
+  // Operator scope
   operator_id: '',
   operator_name: ''
 };
@@ -181,34 +198,87 @@ export default function LaundryManagement() {
 
   const openPressingDialog = (pressing = null) => {
     setEditingPressing(pressing);
-    setPressingForm(pressing ? { 
-      ...pressing, 
-      price_per_kg: pressing.price_per_kg?.toString() || '',
-      operator_id: pressing.operator_id || '',
-      operator_name: pressing.operator_name || ''
-    } : DEFAULT_PRESSING_FORM);
+    if (pressing) {
+      setPressingForm({
+        ...DEFAULT_PRESSING_FORM,
+        ...pressing,
+        price_per_kg: pressing.price_per_kg != null ? String(pressing.price_per_kg) : '',
+        item_prices: Array.isArray(pressing.item_prices) ? pressing.item_prices : [],
+        // Legacy rows: coerce services into list of strings (badge keys)
+        services: (pressing.services || []).map((s) => (typeof s === 'string' ? s : (s?.type || s?.name || ''))).filter(Boolean),
+        operator_id: pressing.operator_id || '',
+        operator_name: pressing.operator_name || '',
+      });
+    } else {
+      setPressingForm(DEFAULT_PRESSING_FORM);
+    }
     setIsPressingDialogOpen(true);
   };
 
   const handleSavePressing = async () => {
+    // Client-side validation up-front so the user gets a clear toast instead of
+    // a vague 422 from the backend.
+    if (!pressingForm.name?.trim() || !pressingForm.address?.trim() || !pressingForm.city?.trim()) {
+      toast.error('Name, address and city are required.');
+      return;
+    }
+    const st = pressingForm.shop_type || 'laundry';
+    const kg = parseFloat(pressingForm.price_per_kg);
+    if ((st === 'laundry' || st === 'both') && !(kg > 0)) {
+      toast.error('Price per kg is required for a laundry shop.');
+      return;
+    }
+    const items = (pressingForm.item_prices || []).filter((i) => (i.item || '').trim() && Number(i.price) > 0);
+    if ((st === 'pressing' || st === 'both') && items.length === 0) {
+      toast.error('Add at least one priced item for a pressing shop.');
+      return;
+    }
     try {
-      const operator = operators.find(op => (op._id || op.id) === pressingForm.operator_id);
-      const data = { 
-        ...pressingForm, 
-        price_per_kg: parseFloat(pressingForm.price_per_kg) || 0,
-        operator_name: operator?.name || pressingForm.operator_name || ''
+      const operator = operators.find((op) => (op._id || op.id) === pressingForm.operator_id);
+      const payload = {
+        name: pressingForm.name.trim(),
+        description: pressingForm.description || '',
+        shop_type: st,
+        price_per_kg: st === 'pressing' ? null : (kg > 0 ? kg : 0),
+        item_prices: st === 'laundry' ? [] : items.map((i) => ({ item: i.item.trim(), price: Number(i.price) })),
+        address: pressingForm.address.trim(),
+        city: pressingForm.city.trim(),
+        phone: pressingForm.phone || '',
+        email: pressingForm.email || '',
+        whatsapp: pressingForm.whatsapp || '',
+        instagram: pressingForm.instagram || '',
+        website: pressingForm.website || '',
+        images: pressingForm.images || [],
+        services: (pressingForm.services || []).map((s) => (typeof s === 'string' ? s : s?.type || s?.name || '')).filter(Boolean),
+        operating_hours: pressingForm.operating_hours || {},
+        turnaround_hours: Number(pressingForm.turnaround_hours) || 24,
+        delivery_available: !!pressingForm.delivery_available,
+        delivery_fee: Number(pressingForm.delivery_fee) || 0,
+        pickup_radius_km: Number(pressingForm.pickup_radius_km) || 0,
+        express_available: !!pressingForm.express_available,
+        express_surcharge: Number(pressingForm.express_surcharge) || 0,
+        min_order_amount: Number(pressingForm.min_order_amount) || 0,
+        accepts_card: !!pressingForm.accepts_card,
+        accepts_momo: !!pressingForm.accepts_momo,
+        accepts_cash: !!pressingForm.accepts_cash,
+        operator_id: pressingForm.operator_id || undefined,
+        operator_name: operator?.name || pressingForm.operator_name || '',
       };
       if (editingPressing) {
-        await api.put(`/pressing/${editingPressing.id}`, data);
-        toast.success('Updated');
+        await api.put(`/pressing/${editingPressing.id}`, payload);
+        toast.success('Shop updated');
       } else {
-        await api.post('/pressing/', data);
-        toast.success('Created');
+        await api.post('/pressing/', payload);
+        toast.success('Shop created');
       }
       setIsPressingDialogOpen(false);
       loadPressings();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save');
+      const detail = error.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => `${d.loc?.slice(-1)[0] || 'field'}: ${d.msg}`).join('; ')
+        : (detail || 'Failed to save');
+      toast.error(msg);
     }
   };
 
@@ -309,21 +379,38 @@ export default function LaundryManagement() {
                   <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-4 py-3">Shop</th>
+                      <th className="px-4 py-3">Type</th>
                       <th className="px-4 py-3">City</th>
                       <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3">Services</th>
-                      <th className="px-4 py-3">Price/kg</th>
+                      <th className="px-4 py-3">Pricing</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedPressings.map(p => (
+                    {pagedPressings.map(p => {
+                      const st = p.shop_type || 'laundry';
+                      const items = Array.isArray(p.item_prices) ? p.item_prices : [];
+                      const minItem = items.map(i => Number(i.price)).filter(n => n > 0);
+                      const priceCell = st === 'pressing'
+                        ? (minItem.length ? `from ${formatFCFA(Math.min(...minItem))} / item` : '—')
+                        : st === 'both'
+                          ? `${formatFCFA(p.price_per_kg || 0)}/kg · ${items.length} items`
+                          : `${formatFCFA(p.price_per_kg || 0)} / kg`;
+                      return (
                       <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
                         <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={`capitalize ${
+                            st === 'pressing' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                              : st === 'both' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                          }`} data-testid={`shop-type-badge-${p.id}`}>
+                            {st === 'both' ? 'Laundry + Pressing' : st}
+                          </Badge>
+                        </td>
                         <td className="px-4 py-3 text-slate-700">{p.city || '—'}</td>
                         <td className="px-4 py-3 text-slate-700">{p.phone || '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{(p.services || []).length} services</td>
-                        <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(p.price_per_kg || 0)}</td>
+                        <td className="px-4 py-3 font-semibold text-emerald-700">{priceCell}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="inline-flex gap-1">
                             <Button size="sm" variant="ghost" onClick={() => handleViewPressing(p)}>View</Button>
@@ -333,17 +420,30 @@ export default function LaundryManagement() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               </div>
             </Card>
           ) : (
             <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`pressings-${viewMode}-view`}>
-              {pagedPressings.map(pressing => (
+              {pagedPressings.map(pressing => {
+                const st = pressing.shop_type || 'laundry';
+                const items = Array.isArray(pressing.item_prices) ? pressing.item_prices : [];
+                const minItem = items.map(i => Number(i.price)).filter(n => n > 0);
+                return (
                 <Card key={pressing.id} className="hover:shadow-lg transition-shadow">
                   <CardContent className="pt-6">
-                    <h3 className="font-semibold mb-2">{pressing.name}</h3>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="font-semibold flex-1 truncate">{pressing.name}</h3>
+                      <Badge variant="outline" className={`capitalize text-[10px] ${
+                        st === 'pressing' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                          : st === 'both' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                          : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                      }`}>
+                        {st === 'both' ? 'Both' : st}
+                      </Badge>
+                    </div>
                     <div className="space-y-2 text-sm text-gray-500">
                       <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{pressing.city}</div>
                       <div className="flex items-center gap-2"><Clock className="w-4 h-4" />{pressing.phone}</div>
@@ -360,7 +460,13 @@ export default function LaundryManagement() {
                         ))}
                       </div>
                     )}
-                    <div className="mt-3 font-bold text-green-600">{formatFCFA(pressing.price_per_kg)}/kg</div>
+                    <div className="mt-3 font-bold text-green-600">
+                      {st === 'pressing'
+                        ? (minItem.length ? `from ${formatFCFA(Math.min(...minItem))} / item` : 'No prices set')
+                        : st === 'both'
+                          ? `${formatFCFA(pressing.price_per_kg || 0)}/kg · ${items.length} items`
+                          : `${formatFCFA(pressing.price_per_kg || 0)} / kg`}
+                    </div>
                     <div className="flex gap-2 mt-4">
                       <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details">
                         <Eye className="w-4 h-4" />
@@ -383,7 +489,7 @@ export default function LaundryManagement() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );})}
             </div>
           )}
 
@@ -415,17 +521,17 @@ export default function LaundryManagement() {
         title={editingPressing ? 'Edit Shop' : 'Add Pressing Shop'}
         subtitle={editingPressing
           ? 'Update services, pricing, contact and storefront photos.'
-          : 'Register a new pressing shop — photos, services and pricing.'}
+          : 'Register a new shop — pricing model, contact, logistics and storefront photos.'}
         editing={!!editingPressing}
         accent="blue"
         leftColumn={
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Storefront photos</Label>
               <div className="mt-2">
                 <MiniImageUploader
                   images={pressingForm.images || []}
-                  onChange={(imgs) => setPressingForm(p => ({ ...p, images: imgs }))}
+                  onChange={(imgs) => setPressingForm((p) => ({ ...p, images: imgs }))}
                   max={3}
                   folder="pressing"
                   accent="blue"
@@ -433,62 +539,18 @@ export default function LaundryManagement() {
                 />
               </div>
             </div>
-            <div>
-              <Label>Shop Name</Label>
-              <Input value={pressingForm.name} onChange={e => setPressingForm(p => ({ ...p, name: e.target.value }))} placeholder="Shop name" />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>City</Label>
-                <Input value={pressingForm.city} onChange={e => setPressingForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
-              </div>
-              <div>
-                <Label>Phone</Label>
-                <Input value={pressingForm.phone} onChange={e => setPressingForm(p => ({ ...p, phone: e.target.value }))} placeholder="+237..." />
-              </div>
-            </div>
-            <div>
-              <Label>Address</Label>
-              <Input value={pressingForm.address} onChange={e => setPressingForm(p => ({ ...p, address: e.target.value }))} placeholder="Full address" />
-            </div>
-            <div>
-              <Label>Price per Kg (FCFA)</Label>
-              <Input type="number" value={pressingForm.price_per_kg} onChange={e => setPressingForm(p => ({ ...p, price_per_kg: e.target.value }))} placeholder="1500" />
-            </div>
-            <div>
-              <Label>Services</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {SERVICES.map(service => {
-                  const serviceTypes = (pressingForm.services || []).map(s => typeof s === 'string' ? s : s?.type || s?.name || '');
-                  const isSelected = serviceTypes.includes(service);
-                  return (
-                    <Badge
-                      key={service}
-                      variant={isSelected ? 'default' : 'outline'}
-                      className="cursor-pointer capitalize"
-                      onClick={() => {
-                        setPressingForm(p => ({
-                          ...p,
-                          services: isSelected
-                            ? (p.services || []).filter(s => (typeof s === 'string' ? s : s?.type || s?.name) !== service)
-                            : [...(p.services || []), service]
-                        }));
-                      }}
-                    >
-                      {service.replace('_', ' ')}
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <OperatorSelector
-                value={pressingForm.operator_id || ''}
-                onChange={(id, name) => setPressingForm(p => ({ ...p, operator_id: id, operator_name: name }))}
-                operators={operators}
-                testId="pressing-operator-selector"
-              />
-            </div>
+            <PressingFormBody
+              form={pressingForm}
+              setForm={setPressingForm}
+              operatorSelector={
+                <OperatorSelector
+                  value={pressingForm.operator_id || ''}
+                  onChange={(id, name) => setPressingForm((p) => ({ ...p, operator_id: id, operator_name: name }))}
+                  operators={operators}
+                  testId="pressing-operator-selector"
+                />
+              }
+            />
           </div>
         }
         preview={
@@ -496,16 +558,33 @@ export default function LaundryManagement() {
             cover={(pressingForm.images || [])[0]}
             thumbs={(pressingForm.images || []).slice(1, 3)}
             icon={Shirt}
-            badgeText="Pressing"
+            badgeText={
+              pressingForm.shop_type === 'pressing' ? 'Pressing'
+                : pressingForm.shop_type === 'both' ? 'Laundry + Pressing'
+                : 'Laundry'
+            }
             badgeClass="bg-blue-500 text-white"
             placeholderColor="from-blue-700 via-blue-600 to-sky-500"
             title={pressingForm.name || 'Shop name'}
-            subtitle={pressingForm.phone || 'Contact phone'}
+            subtitle={pressingForm.phone || pressingForm.whatsapp || 'Contact phone'}
             location={[pressingForm.address, pressingForm.city].filter(Boolean).join(' · ') || 'Address · City'}
-            tags={(pressingForm.services || []).map(s => typeof s === 'string' ? s : s?.type || s?.name || '').filter(Boolean)}
+            tags={(pressingForm.services || []).map((s) => (typeof s === 'string' ? s : s?.type || s?.name || '')).filter(Boolean)}
             tagsAccentClass="bg-blue-50 text-blue-700"
-            priceLabel="Per Kg"
-            priceValue={pressingForm.price_per_kg ? `${Number(pressingForm.price_per_kg).toLocaleString()} FCFA` : '—'}
+            priceLabel={
+              pressingForm.shop_type === 'pressing' ? 'Starts at'
+                : pressingForm.shop_type === 'both' ? 'Per kg · items'
+                : 'Per Kg'
+            }
+            priceValue={(() => {
+              if (pressingForm.shop_type === 'pressing') {
+                const valid = (pressingForm.item_prices || [])
+                  .map((i) => Number(i.price))
+                  .filter((n) => n > 0);
+                return valid.length ? `${Math.min(...valid).toLocaleString()} FCFA` : '—';
+              }
+              const kg = Number(pressingForm.price_per_kg);
+              return kg > 0 ? `${kg.toLocaleString()} FCFA` : '—';
+            })()}
             accentTextClass="text-blue-700"
           />
         }
@@ -515,60 +594,126 @@ export default function LaundryManagement() {
         submitDataTestId="save-pressing-btn"
       />
 
-      {/* View Laundry Dialog */}
+      {/* View Laundry/Pressing Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg bg-white">
+        <DialogContent className="max-w-2xl bg-white max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shirt className="h-5 w-5 text-cyan-600" />
-              Laundry Service Details
+              Shop Details
             </DialogTitle>
           </DialogHeader>
-          {viewingPressing && (
-            <div className="space-y-4 py-4">
-              <div className="bg-cyan-50 rounded-lg p-4">
-                <h3 className="font-bold text-lg text-cyan-900">{viewingPressing.name}</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500">Location</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <MapPin className="h-4 w-4" /> {viewingPressing.city || 'N/A'}
-                  </p>
+          {viewingPressing && (() => {
+            const st = viewingPressing.shop_type || 'laundry';
+            const items = Array.isArray(viewingPressing.item_prices) ? viewingPressing.item_prices : [];
+            return (
+              <div className="space-y-4 py-2" data-testid="view-shop-content">
+                <div className="bg-cyan-50 rounded-lg p-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-lg text-cyan-900">{viewingPressing.name}</h3>
+                    {viewingPressing.description && (
+                      <p className="text-sm text-cyan-800/80 mt-1">{viewingPressing.description}</p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className={`capitalize whitespace-nowrap ${
+                    st === 'pressing' ? 'bg-violet-100 text-violet-700 border-violet-300'
+                      : st === 'both' ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                      : 'bg-cyan-100 text-cyan-700 border-cyan-300'
+                  }`}>
+                    {st === 'both' ? 'Laundry + Pressing' : st}
+                  </Badge>
                 </div>
-                <div>
-                  <p className="text-slate-500">Address</p>
-                  <p className="font-medium">{viewingPressing.address || 'N/A'}</p>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">City</p>
+                    <p className="font-medium flex items-center gap-1"><MapPin className="h-4 w-4" /> {viewingPressing.city || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">Address</p>
+                    <p className="font-medium">{viewingPressing.address || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">Phone</p>
+                    <p className="font-medium">{viewingPressing.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide">Turnaround</p>
+                    <p className="font-medium">{viewingPressing.turnaround_hours || 24}h</p>
+                  </div>
+                  {(viewingPressing.email || viewingPressing.whatsapp || viewingPressing.instagram || viewingPressing.website) && (
+                    <div className="col-span-2 grid grid-cols-2 gap-2 text-xs text-slate-600 border-t pt-2">
+                      {viewingPressing.email     && <div><span className="text-slate-400">Email</span> · {viewingPressing.email}</div>}
+                      {viewingPressing.whatsapp  && <div><span className="text-slate-400">WhatsApp</span> · {viewingPressing.whatsapp}</div>}
+                      {viewingPressing.instagram && <div><span className="text-slate-400">Instagram</span> · {viewingPressing.instagram}</div>}
+                      {viewingPressing.website   && <div><span className="text-slate-400">Web</span> · {viewingPressing.website}</div>}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-slate-500">Phone</p>
-                  <p className="font-medium">{viewingPressing.phone || 'N/A'}</p>
+
+                {/* Pricing card — adapts to shop_type */}
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Pricing</p>
+                  {(st === 'laundry' || st === 'both') && (
+                    <div className="flex items-center justify-between text-sm py-1.5">
+                      <span className="text-slate-700">Per kilo</span>
+                      <span className="font-bold text-emerald-700">{formatFCFA(viewingPressing.price_per_kg || 0)}</span>
+                    </div>
+                  )}
+                  {(st === 'pressing' || st === 'both') && (
+                    <div className="space-y-1 mt-1">
+                      {items.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No per-item prices configured.</p>
+                      ) : (
+                        items.map((i, idx) => (
+                          <div key={`${i.item}-${idx}`} className="flex items-center justify-between text-sm py-1 border-t border-slate-100 first:border-t-0">
+                            <span className="text-slate-700">{i.item}</span>
+                            <span className="font-semibold text-slate-900">{formatFCFA(Number(i.price))}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-slate-500">Price/Kg</p>
-                  <p className="font-bold text-green-600">{formatFCFA(viewingPressing.price_per_kg)}</p>
-                </div>
-              </div>
-              {viewingPressing.services?.length > 0 && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-2">Services Offered</p>
-                  <div className="flex flex-wrap gap-1">
-                    {viewingPressing.services.map((s, idx) => (
-                      <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
-                        {typeof s === 'string' ? s.replace('_', ' ') : s?.name || s?.type || 'Service'}
-                      </Badge>
-                    ))}
+
+                {viewingPressing.services?.length > 0 && (
+                  <div>
+                    <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">Services offered</p>
+                    <div className="flex flex-wrap gap-1">
+                      {viewingPressing.services.map((s, idx) => (
+                        <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
+                          {typeof s === 'string' ? s.replace(/_/g, ' ') : s?.name || s?.type || 'Service'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Logistics & payments */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-md border border-slate-200 p-2.5">
+                    <p className="text-xs text-slate-500 mb-1">Pickup &amp; delivery</p>
+                    <p className="font-medium">{viewingPressing.delivery_available ? `Yes — ${formatFCFA(viewingPressing.delivery_fee || 0)} (≤${viewingPressing.pickup_radius_km || 0} km)` : 'No'}</p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 p-2.5">
+                    <p className="text-xs text-slate-500 mb-1">Express</p>
+                    <p className="font-medium">{viewingPressing.express_available ? `+${viewingPressing.express_surcharge || 0}%` : 'No'}</p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 p-2.5 col-span-2">
+                    <p className="text-xs text-slate-500 mb-1">Accepted payments</p>
+                    <div className="flex flex-wrap gap-1">
+                      {viewingPressing.accepts_momo && <Badge variant="outline" className="text-[10px]">Mobile money</Badge>}
+                      {viewingPressing.accepts_card && <Badge variant="outline" className="text-[10px]">Card</Badge>}
+                      {viewingPressing.accepts_cash && <Badge variant="outline" className="text-[10px]">Cash</Badge>}
+                      {!viewingPressing.accepts_momo && !viewingPressing.accepts_card && !viewingPressing.accepts_cash && (
+                        <span className="text-xs italic text-slate-400">None configured</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-              {viewingPressing.description && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-1">Description</p>
-                  <p className="text-sm bg-slate-50 p-3 rounded">{viewingPressing.description}</p>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => { openPressingDialog(viewingPressing); setIsViewDialogOpen(false); }}>
               <Edit className="w-4 h-4 mr-2" /> Edit
