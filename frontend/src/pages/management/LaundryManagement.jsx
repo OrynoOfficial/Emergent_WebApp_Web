@@ -296,14 +296,14 @@ export default function LaundryManagement() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Laundry & Pressing Management</h1>
+          <h1 className="text-2xl font-bold text-purple-800">Laundry & Pressing Management</h1>
           <p className="text-gray-600">Manage shops, orders, analytics, and communications</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />
           <Button
             onClick={() => setIsWalkInOpen(true)}
-            className="bg-[#082c59] hover:bg-[#0a366d]"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
             data-testid="open-walkin-booking-btn"
           >
             <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking

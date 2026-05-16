@@ -97,22 +97,25 @@ async def get_hotels(
     hotels = await db.hotels.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.hotels.count_documents(query)
     
-    # Transform _id to id and add minimum room price for each hotel
+    # Transform _id to id and add minimum room price + live available_rooms for each hotel
     for hotel in hotels:
         hotel["id"] = str(hotel.pop("_id", ""))
         
-        # Get minimum room price for this hotel
+        # Get minimum room price AND aggregate live availability for this hotel
         rooms = await db.rooms.find(
             {"hotel_id": hotel["id"], "is_active": {"$ne": False}},
-            {"base_price": 1}
-        ).to_list(100)
+            {"base_price": 1, "price_per_night": 1, "available_rooms": 1, "total_rooms": 1}
+        ).to_list(200)
         
         if rooms:
             min_price = min(r.get("base_price", 0) or r.get("price_per_night", 0) for r in rooms)
             hotel["price_per_night"] = min_price if min_price > 0 else hotel.get("base_price", 50000)
+            # Aggregate available_rooms across all active room types -> drives AlmostSoldOutBadge
+            hotel["available_rooms"] = sum(int(r.get("available_rooms") or 0) for r in rooms)
         else:
             # Fallback to a default price or hotel's stored price
             hotel["price_per_night"] = hotel.get("base_price", 50000)
+            hotel["available_rooms"] = int(hotel.get("available_rooms") or 0)
     
     return {"hotels": hotels, "total": total}
 

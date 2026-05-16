@@ -121,9 +121,33 @@ async def get_restaurants(
     restaurants = await db.restaurants.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.restaurants.count_documents(query)
     
-    # Transform _id to id for each restaurant
+    # Compute live tables_available for today across all restaurants in one query.
+    # Uses today's confirmed orders to subtract from total_tables -> drives AlmostSoldOutBadge.
+    from datetime import datetime as _dt
+    today_iso = _dt.utcnow().strftime("%Y-%m-%d")
+    restaurant_ids = [r["_id"] for r in restaurants]
+    booked_today_by_restaurant: dict = {}
+    if restaurant_ids:
+        pipeline = [
+            {"$match": {
+                "service_type": "restaurant",
+                "service_id": {"$in": restaurant_ids},
+                "status": {"$nin": ["cancelled", "abandoned", "failed"]},
+                "booking_details.date": today_iso,
+            }},
+            {"$group": {"_id": "$service_id", "count": {"$sum": 1}}},
+        ]
+        async for row in db.orders.aggregate(pipeline):
+            booked_today_by_restaurant[row["_id"]] = row["count"]
+    
+    # Transform _id to id for each restaurant + attach tables_available
     for r in restaurants:
+        rid = r["_id"]
         r["id"] = str(r.pop("_id", ""))
+        total_tables = int(r.get("total_tables") or 0)
+        booked = int(booked_today_by_restaurant.get(rid, 0))
+        if total_tables > 0:
+            r["tables_available"] = max(0, total_tables - booked)
     
     return {"restaurants": restaurants, "total": total}
 
