@@ -719,6 +719,7 @@ async def create_showtime_body(
         "price": float(body.get("price", 0)),
         "vip_price": body.get("vip_price"),
         "total_seats": total_seats,
+        # Informational only — read path computes live availability.
         "available_seats": total_seats,
         "is_active": True,
         "created_at": datetime.utcnow(),
@@ -925,13 +926,14 @@ async def book_cinema_seats(
     }
     
     await db.orders.insert_one(order)
-    
-    # Update available seats
-    await db.showtimes.update_one(
-        {"_id": showtime_id},
-        {"$inc": {"available_seats": -len(seats)}}
-    )
-    
+
+    # NOTE: We deliberately do NOT $inc available_seats on the showtime
+    # document. The read path (GET /films/{id}/showtimes and
+    # GET /showtimes/{id}) computes `available_seats` live from the union
+    # of cinema_bookings + orders, which is drift-free against abandoned /
+    # cancelled / deleted orders. Mutating the stored field here would
+    # cause double-counting and stale-restore bugs.
+
     return {
         "message": "Seats reserved",
         "booking_id": booking_id,
