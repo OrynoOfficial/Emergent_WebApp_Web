@@ -107,15 +107,17 @@ function ShowtimeCard({ st, onSelect }) {
       </div>
 
       {/* MIDDLE: cinema + screen line */}
-      <div className="space-y-1 mb-3 text-xs">
+      <div className="space-y-1.5 mb-3 text-xs">
         {st.cinema_name && (
           <div className="flex items-center gap-1.5 text-slate-700 font-medium">
             <MapPin className="w-3.5 h-3.5 text-cyan-600" /> {st.cinema_name}
           </div>
         )}
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <Monitor className="w-3.5 h-3.5" /> {st.screen_name || '—'}
-        </div>
+        {st.screen_name && (
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-50 border border-cyan-300/60 text-cyan-800 font-semibold text-[11px] uppercase tracking-wide" data-testid={`showtime-screen-name-${st.id}`}>
+            <Monitor className="w-3 h-3" /> {st.screen_name}
+          </div>
+        )}
       </div>
 
       {/* FOOTER: price + seats-left */}
@@ -155,6 +157,8 @@ export default function FilmDetails() {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('all');
   const [screenFilter, setScreenFilter] = useState('all');
+  const [cinemaFilter, setCinemaFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all'); // morning / afternoon / evening / all
 
   useEffect(() => {
     let cancelled = false;
@@ -188,10 +192,27 @@ export default function FilmDetails() {
     return Array.from(set).sort();
   }, [showtimes]);
 
+  const cinemaOptions = useMemo(() => {
+    const set = new Set(showtimes.map((s) => s.cinema_name).filter(Boolean));
+    return Array.from(set).sort();
+  }, [showtimes]);
+
+  // Local helper — bucket "HH:MM" into morning/afternoon/evening.
+  const bucketForTime = (hhmm) => {
+    if (!hhmm) return null;
+    const h = parseInt(hhmm.split(':')[0], 10);
+    if (Number.isNaN(h)) return null;
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    return 'evening';
+  };
+
   const groupedShowtimes = useMemo(() => {
     const list = showtimes
       .filter((s) => dateFilter === 'all' || s.show_date === dateFilter)
-      .filter((s) => screenFilter === 'all' || s.screen_type === screenFilter);
+      .filter((s) => screenFilter === 'all' || s.screen_type === screenFilter)
+      .filter((s) => cinemaFilter === 'all' || s.cinema_name === cinemaFilter)
+      .filter((s) => timeFilter === 'all' || bucketForTime(s.show_time) === timeFilter);
     const byDate = new Map();
     for (const s of list) {
       const d = s.show_date || 'TBD';
@@ -204,7 +225,7 @@ export default function FilmDetails() {
       result.push({ date, showtimes: group });
     }
     return result;
-  }, [showtimes, dateFilter, screenFilter]);
+  }, [showtimes, dateFilter, screenFilter, cinemaFilter, timeFilter]);
 
   const cinemaNames = useMemo(() => {
     const set = new Set();
@@ -361,7 +382,7 @@ export default function FilmDetails() {
               <div className="flex flex-wrap gap-3">
                 {/* Date filter — default "All dates" */}
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-48 bg-white border-slate-300 text-slate-900" data-testid="showtime-date-filter">
+                  <SelectTrigger className="w-44 bg-white border-slate-300 text-slate-900" data-testid="showtime-date-filter">
                     <Calendar className="w-4 h-4 mr-2 text-cyan-600" />
                     <SelectValue />
                   </SelectTrigger>
@@ -375,9 +396,39 @@ export default function FilmDetails() {
                   </SelectContent>
                 </Select>
 
-                {/* Screen filter — replaces the previous City filter */}
+                {/* Cinema filter — only render when there's more than one to choose from */}
+                {cinemaOptions.length > 1 && (
+                  <Select value={cinemaFilter} onValueChange={setCinemaFilter}>
+                    <SelectTrigger className="w-44 bg-white border-slate-300 text-slate-900" data-testid="showtime-cinema-filter">
+                      <MapPin className="w-4 h-4 mr-2 text-cyan-600" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      <SelectItem value="all">All cinemas</SelectItem>
+                      {cinemaOptions.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Time-of-day filter */}
+                <Select value={timeFilter} onValueChange={setTimeFilter}>
+                  <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900" data-testid="showtime-time-filter">
+                    <Clock className="w-4 h-4 mr-2 text-cyan-600" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-900">
+                    <SelectItem value="all">Any time</SelectItem>
+                    <SelectItem value="morning">Morning (before 12)</SelectItem>
+                    <SelectItem value="afternoon">Afternoon (12–17)</SelectItem>
+                    <SelectItem value="evening">Evening (17+)</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Screen-type filter */}
                 <Select value={screenFilter} onValueChange={setScreenFilter}>
-                  <SelectTrigger className="w-44 bg-white border-slate-300 text-slate-900" data-testid="showtime-screen-filter">
+                  <SelectTrigger className="w-40 bg-white border-slate-300 text-slate-900" data-testid="showtime-screen-filter">
                     <Monitor className="w-4 h-4 mr-2 text-cyan-600" />
                     <SelectValue />
                   </SelectTrigger>

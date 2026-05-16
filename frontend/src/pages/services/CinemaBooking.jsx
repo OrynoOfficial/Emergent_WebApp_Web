@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Film, Clock, MapPin, ArrowLeft, Calendar, Armchair, Plus, Minus, Loader2,
-  CreditCard, User, CheckCircle2, Popcorn, Crown, Sparkles, Ticket,
+  CreditCard, User, CheckCircle2, Popcorn, Crown, Sparkles, Ticket, Monitor, X,
 } from 'lucide-react';
 import api from '@/api/client';
 import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
@@ -428,11 +428,16 @@ export default function CinemaBooking() {
                 </div>
                 <div>
                   <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-tight">{film?.title}</h2>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-slate-600">
                     <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-cyan-600" />{showtime?.cinema_name}</span>
                     <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-cyan-600" />{safeFmtDate(showtime?.show_date)}</span>
                     <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-cyan-600" />{showtime?.show_time}</span>
-                    <Badge className="bg-cyan-100 text-cyan-700 border border-cyan-500/30 uppercase text-[10px] tracking-wider">{showtime?.screen_type || '2d'}</Badge>
+                    {showtime?.screen_name && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-50 border border-cyan-400/60 text-cyan-800 font-semibold text-[11px] uppercase tracking-wide" data-testid="hero-screen-name">
+                        <Monitor className="w-3 h-3" /> {showtime.screen_name}
+                      </span>
+                    )}
+                    <Badge className="bg-cyan-600 text-white border border-cyan-700/40 uppercase text-[10px] tracking-wider">{showtime?.screen_type || '2d'}</Badge>
                   </div>
                 </div>
               </div>
@@ -578,21 +583,42 @@ export default function CinemaBooking() {
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
                   <Badge className="absolute top-3 left-3 bg-cyan-500/30 text-cyan-100 border border-cyan-400/40 uppercase tracking-wider text-[10px] backdrop-blur-sm">{showtime?.screen_type || '2d'}</Badge>
                   <div className="absolute bottom-3 left-4 right-4">
-                    <h3 className="text-slate-900 font-bold text-base line-clamp-2">{film?.title}</h3>
-                    <p className="text-cyan-700/80 text-xs">{showtime?.screen_name}</p>
+                    <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow">{film?.title}</h3>
+                    {showtime?.screen_name && (
+                      <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/95 text-cyan-800 font-semibold text-[11px] uppercase tracking-wide shadow-sm" data-testid="sidebar-screen-name">
+                        <Monitor className="w-3 h-3" /> {showtime.screen_name}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <CardContent className="p-5 space-y-4">
-                  {/* Show details */}
-                  <div className="space-y-1.5 text-sm pb-4 border-b border-slate-200">
-                    <div className="flex items-center gap-2 text-slate-600"><MapPin className="w-4 h-4 text-cyan-600" />{showtime?.cinema_name}</div>
-                    <div className="flex items-center gap-2 text-slate-600"><Calendar className="w-4 h-4 text-cyan-600" />{safeFmtDate(showtime?.show_date)}</div>
-                    <div className="flex items-center gap-2 text-slate-600"><Clock className="w-4 h-4 text-cyan-600" />{showtime?.show_time}</div>
+                  {/* Show details — bigger, clearer grid layout */}
+                  <div className="grid grid-cols-2 gap-3 pb-4 border-b border-slate-200">
+                    <div className="col-span-2">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-cyan-600" /> Cinema
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">{showtime?.cinema_name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-cyan-600" /> Date
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">{safeFmtDate(showtime?.show_date)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-cyan-600" /> Showtime
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">
+                        {showtime?.show_time || '—'}{showtime?.end_time ? ` – ${showtime.end_time}` : ''}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Selected seats */}
-                  <div className="pb-4 border-b border-slate-200">
+                  <div>
                     <div className="flex items-center justify-between mb-2.5">
                       <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
                         <Ticket className="w-4 h-4 text-cyan-600" /> Seats
@@ -615,95 +641,115 @@ export default function CinemaBooking() {
                       }) : <span className="text-slate-500 text-sm italic">No seats selected yet</span>}
                     </div>
                   </div>
-
-                  {/* Pricing breakdown — Hotel-style summary */}
-                  <div>
-                    <h4 className="font-semibold text-slate-900 text-sm mb-3 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-cyan-600" /> Order summary
-                    </h4>
-                    <div className="space-y-1.5 text-sm">
-                      {ticketCounts.adult > 0 && (
-                        <div className="flex justify-between text-slate-600" data-testid="summary-adult-line">
-                          <span>Adult × {ticketCounts.adult}</span>
-                          <span className="tabular-nums">{formatCurrency(ticketCounts.adult * pricing.adultPrice)}</span>
-                        </div>
-                      )}
-                      {ticketCounts.child > 0 && pricing.hasChildTier && (
-                        <div className="flex justify-between text-slate-600" data-testid="summary-child-line">
-                          <span>Child × {ticketCounts.child}</span>
-                          <span className="tabular-nums">{formatCurrency(ticketCounts.child * pricing.childPrice)}</span>
-                        </div>
-                      )}
-                      {ticketCounts.senior > 0 && pricing.hasSeniorTier && (
-                        <div className="flex justify-between text-slate-600" data-testid="summary-senior-line">
-                          <span>Senior × {ticketCounts.senior}</span>
-                          <span className="tabular-nums">{formatCurrency(ticketCounts.senior * pricing.seniorPrice)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-slate-500 text-xs pt-1 border-t border-slate-100" data-testid="summary-subtotal-line">
-                        <span>Subtotal</span>
-                        <span className="tabular-nums">{formatCurrency(pricing.subtotal)}</span>
-                      </div>
-                      {pricing.hasVipPricing && pricing.vipSeatCount > 0 && (
-                        <div className="flex justify-between text-amber-700" data-testid="vip-surcharge-line">
-                          <span className="flex items-center gap-1">
-                            <Crown className="h-3 w-3" /> VIP seats × {pricing.vipSeatCount}
-                          </span>
-                          <span className="tabular-nums">
-                            +{formatCurrency(pricing.vipSurcharge)}
-                          </span>
-                        </div>
-                      )}
-                      {pricing.promoDiscount > 0 && (
-                        <div className="flex justify-between text-emerald-600" data-testid="summary-promo-discount-line">
-                          <span>Promo ({promoApplied?.code})</span>
-                          <span className="tabular-nums">−{formatCurrency(pricing.promoDiscount)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-slate-500"><span>Service fee ({pricing.commissionRate}%)</span><span className="tabular-nums">+{formatCurrency(pricing.commission)}</span></div>
-
-                      {/* Promo code field — Hotel-style apply/clear */}
-                      <div className="pt-2 mt-1" data-testid="cinema-booking-promo-section">
-                        {!promoApplied ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={promoCode}
-                              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                              placeholder="Promo code"
-                              className="h-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 uppercase text-xs"
-                              data-testid="cinema-booking-promo-input"
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyPromoCode(); } }}
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={applyPromoCode}
-                              disabled={!promoCode.trim() || promoSubmitting}
-                              className="h-9 bg-cyan-600 hover:bg-cyan-700 text-white text-xs"
-                              data-testid="cinema-booking-promo-apply"
-                            >
-                              {promoSubmitting ? '...' : 'Apply'}
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5" data-testid="cinema-booking-promo-applied">
-                            <div className="flex items-center gap-2 text-emerald-700 text-xs font-medium">
-                              <Sparkles className="h-3 w-3" />
-                              {promoApplied.code} applied
-                            </div>
-                            <button type="button" onClick={clearPromoCode} className="text-emerald-700 hover:text-emerald-900 text-xs underline" data-testid="cinema-booking-promo-clear">Remove</button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="pt-3 mt-3 border-t border-slate-200 flex justify-between items-center">
-                        <span className="text-slate-900 font-semibold">Total</span>
-                        <span className="text-2xl font-bold text-cyan-700 tabular-nums" data-testid="cinema-booking-total">{formatCurrency(pricing.total)}</span>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
+
+              {/* Price Breakdown — Travel-style dedicated card. All pricing
+                  (tickets + VIP + service fee + promo + total) lives HERE and
+                  ONLY here so there's no duplication with the show-info card. */}
+              <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100" data-testid="cinema-price-breakdown">
+                <div className="bg-[#082c59] p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Price Breakdown
+                  </h4>
+                </div>
+                <div className="bg-white p-5">
+                  <div className="space-y-2 text-sm">
+                    {ticketCounts.adult > 0 && (
+                      <div className="flex justify-between text-slate-600" data-testid="summary-adult-line">
+                        <span>Adult × {ticketCounts.adult}</span>
+                        <span className="font-medium text-slate-800 tabular-nums">{formatCurrency(ticketCounts.adult * pricing.adultPrice)}</span>
+                      </div>
+                    )}
+                    {ticketCounts.child > 0 && pricing.hasChildTier && (
+                      <div className="flex justify-between text-slate-600" data-testid="summary-child-line">
+                        <span>Child × {ticketCounts.child}</span>
+                        <span className="font-medium text-slate-800 tabular-nums">{formatCurrency(ticketCounts.child * pricing.childPrice)}</span>
+                      </div>
+                    )}
+                    {ticketCounts.senior > 0 && pricing.hasSeniorTier && (
+                      <div className="flex justify-between text-slate-600" data-testid="summary-senior-line">
+                        <span>Senior × {ticketCounts.senior}</span>
+                        <span className="font-medium text-slate-800 tabular-nums">{formatCurrency(ticketCounts.senior * pricing.seniorPrice)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-500 text-xs pt-1 border-t border-slate-100" data-testid="summary-subtotal-line">
+                      <span>Subtotal</span>
+                      <span className="tabular-nums">{formatCurrency(pricing.subtotal)}</span>
+                    </div>
+                    {pricing.hasVipPricing && pricing.vipSeatCount > 0 && (
+                      <div className="flex justify-between text-amber-700" data-testid="vip-surcharge-line">
+                        <span className="flex items-center gap-1">
+                          <Crown className="h-3 w-3" /> VIP seats × {pricing.vipSeatCount}
+                        </span>
+                        <span className="font-medium tabular-nums">
+                          +{formatCurrency(pricing.vipSurcharge)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-500" data-testid="summary-service-fee-line">
+                      <span>Service fee ({pricing.commissionRate}%)</span>
+                      <span className="font-medium tabular-nums">+{formatCurrency(pricing.commission)}</span>
+                    </div>
+
+                    {/* Promo Code */}
+                    <div className="pt-2" data-testid="cinema-booking-promo-section">
+                      {!promoApplied ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                            placeholder="Promo code"
+                            className="flex-1 bg-slate-50 border-slate-200 text-sm uppercase"
+                            data-testid="cinema-booking-promo-input"
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyPromoCode(); } }}
+                          />
+                          <Button
+                            type="button"
+                            onClick={applyPromoCode}
+                            disabled={!promoCode.trim() || promoSubmitting}
+                            variant="outline"
+                            size="sm"
+                            className="shrink-0"
+                            data-testid="cinema-booking-promo-apply"
+                          >
+                            {promoSubmitting ? '...' : 'Apply'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg" data-testid="cinema-booking-promo-applied">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-emerald-600" />
+                            <span className="text-sm text-emerald-700 font-medium">{promoApplied.code}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearPromoCode}
+                            className="text-red-500 hover:text-red-600 h-7 px-2"
+                            data-testid="cinema-booking-promo-clear"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {pricing.promoDiscount > 0 && promoApplied && (
+                      <div className="flex justify-between text-emerald-600" data-testid="summary-promo-discount-line">
+                        <span>Discount ({promoApplied.code})</span>
+                        <span className="tabular-nums">−{formatCurrency(pricing.promoDiscount)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
+                      <span className="font-bold text-slate-900">Total</span>
+                      <span className="text-2xl font-bold text-[#082c59] tabular-nums" data-testid="cinema-booking-total">{formatCurrency(pricing.total)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Payment Method (NOW BELOW Order Summary, per request) */}
               <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
