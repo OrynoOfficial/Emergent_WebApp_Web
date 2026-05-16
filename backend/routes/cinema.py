@@ -223,7 +223,17 @@ async def get_film_showtimes(film_id: str, city: Optional[str] = None):
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
 
-    query = {"film_id": film_id, "is_active": {"$ne": False}}
+    query = {
+        "film_id": film_id,
+        "is_active": {"$ne": False},
+        # Defensive: never surface rows with missing required fields to
+        # customers — they cannot be booked and look like fictive entries.
+        "price": {"$ne": None, "$exists": True},
+        "screen_name": {"$nin": [None, ""], "$exists": True},
+        "show_date": {"$nin": [None, ""], "$exists": True},
+        "show_time": {"$nin": [None, ""], "$exists": True},
+        "end_time": {"$nin": [None, ""], "$exists": True},
+    }
 
     # Optional city scope
     if city:
