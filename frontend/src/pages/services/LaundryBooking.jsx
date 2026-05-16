@@ -53,18 +53,18 @@ const StepIndicator = ({ currentStep }) => {
           <div className="flex flex-col items-center">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
               currentStep >= step.num 
-                ? 'bg-[#0e7490] text-white shadow-lg shadow-blue-200' 
+                ? 'bg-[#7e22ce] text-white shadow-lg shadow-blue-200' 
                 : 'bg-slate-200 text-slate-500'
             }`}>
               {currentStep > step.num ? <CheckCircle2 className="w-5 h-5" /> : step.num}
             </div>
             <span className={`text-xs mt-2 font-medium ${
-              currentStep >= step.num ? 'text-[#0e7490]' : 'text-slate-400'
+              currentStep >= step.num ? 'text-[#7e22ce]' : 'text-slate-400'
             }`}>{step.label}</span>
           </div>
           {idx < steps.length - 1 && (
             <div className={`w-20 h-1 mx-2 rounded-full transition-all ${
-              currentStep > step.num ? 'bg-[#0e7490]' : 'bg-slate-200'
+              currentStep > step.num ? 'bg-[#7e22ce]' : 'bg-slate-200'
             }`} />
           )}
         </React.Fragment>
@@ -231,8 +231,8 @@ export default function LaundryBooking() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
           <div className="relative">
-            <div className="w-20 h-20 border-4 border-[#0e7490]/20 rounded-full animate-pulse"></div>
-            <Shirt className="h-10 w-10 text-[#0e7490] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+            <div className="w-20 h-20 border-4 border-[#7e22ce]/20 rounded-full animate-pulse"></div>
+            <Shirt className="h-10 w-10 text-[#7e22ce] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
           </div>
           <p className="text-slate-600 mt-4 font-medium">Loading service details...</p>
         </div>
@@ -245,7 +245,7 @@ export default function LaundryBooking() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <Card className="max-w-md mx-auto text-center p-8 shadow-xl">
           <p className="text-slate-600 mb-4">Service not found.</p>
-          <Button onClick={() => navigate('/services/laundry')} className="bg-[#0e7490]">
+          <Button onClick={() => navigate('/services/laundry')} className="bg-[#7e22ce]">
             Back to Search
           </Button>
         </Card>
@@ -254,7 +254,7 @@ export default function LaundryBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-cyan-50/40">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/40">
       <DatePickerModal
         isOpen={isPickupDateOpen}
         onClose={() => setIsPickupDateOpen(false)}
@@ -271,23 +271,23 @@ export default function LaundryBooking() {
       />
 
       {/* Header */}
-      <div className="bg-white border-b border-cyan-100 sticky top-0 z-20 shadow-sm">
+      <div className="bg-white border-b border-purple-100 sticky top-0 z-20 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-cyan-50">
-              <ArrowLeft className="h-5 w-5 text-cyan-700" />
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-purple-50">
+              <ArrowLeft className="h-5 w-5 text-purple-700" />
             </Button>
             <div className="flex items-center gap-3 min-w-0 flex-1">
               {(service.images && service.images[0]) && (
-                <img src={service.images[0]} alt={service.name} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow ring-2 ring-cyan-200" data-testid="booking-shop-thumb" />
+                <img src={service.images[0]} alt={service.name} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow ring-2 ring-purple-200" data-testid="booking-shop-thumb" />
               )}
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-slate-900 truncate">{service.name}</h1>
                 <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5 flex-wrap">
                   <Badge className={`text-[10px] ${
-                    service.shop_type === 'pressing' ? 'bg-violet-500 text-white border-transparent'
-                      : service.shop_type === 'both' ? 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white border-transparent'
-                      : 'bg-cyan-500 text-white border-transparent'
+                    service.shop_type === 'pressing' ? 'bg-fuchsia-500 text-white border-transparent'
+                      : service.shop_type === 'both' ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-transparent'
+                      : 'bg-purple-500 text-white border-transparent'
                   }`}>
                     {service.shop_type === 'pressing' ? 'Pressing'
                       : service.shop_type === 'both' ? 'Laundry + Pressing'
@@ -314,7 +314,7 @@ export default function LaundryBooking() {
                 breakdown does not apply. */}
             {!isPressingShop && (
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-[#0e7490] to-[#0891b2] p-5">
+              <div className="bg-gradient-to-r from-[#7e22ce] to-[#a855f7] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <Sparkles className="h-6 w-6" />
@@ -337,12 +337,12 @@ export default function LaundryBooking() {
                         onClick={() => setServiceType(type.id)}
                         className={`p-4 rounded-xl border-2 transition-all ${
                           isSelected 
-                            ? 'border-[#0e7490] bg-cyan-50' 
-                            : 'border-slate-200 hover:border-cyan-300'
+                            ? 'border-[#7e22ce] bg-purple-50' 
+                            : 'border-slate-200 hover:border-purple-300'
                         }`}
                       >
-                        <TypeIcon className={`w-6 h-6 mx-auto mb-2 ${isSelected ? 'text-[#0e7490]' : 'text-slate-400'}`} />
-                        <p className={`text-sm font-medium ${isSelected ? 'text-[#0e7490]' : 'text-slate-600'}`}>{type.name}</p>
+                        <TypeIcon className={`w-6 h-6 mx-auto mb-2 ${isSelected ? 'text-[#7e22ce]' : 'text-slate-400'}`} />
+                        <p className={`text-sm font-medium ${isSelected ? 'text-[#7e22ce]' : 'text-slate-600'}`}>{type.name}</p>
                       </button>
                     );
                   })}
@@ -370,7 +370,7 @@ export default function LaundryBooking() {
 
             {/* Item Selection */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-[#0e7490] to-[#0891b2] p-5">
+              <div className="bg-gradient-to-r from-[#7e22ce] to-[#a855f7] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <Shirt className="h-6 w-6" />
@@ -390,10 +390,10 @@ export default function LaundryBooking() {
                     if (price === 0) return null;
                     
                     return (
-                      <div key={item.id} className="flex items-center justify-between p-4 bg-cyan-50/40 rounded-xl border border-cyan-100">
+                      <div key={item.id} className="flex items-center justify-between p-4 bg-purple-50/40 rounded-xl border border-purple-100">
                         <div>
                           <h4 className="font-medium text-slate-800">{item.name}</h4>
-                          <p className="text-sm text-cyan-700 font-semibold">{formatFCFA(price)}</p>
+                          <p className="text-sm text-purple-700 font-semibold">{formatFCFA(price)}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <Button
@@ -401,17 +401,17 @@ export default function LaundryBooking() {
                             size="icon"
                             onClick={() => updateItemCount(item.id, -1)}
                             disabled={count === 0}
-                            className="h-9 w-9 rounded-full border-cyan-300 hover:bg-cyan-50"
+                            className="h-9 w-9 rounded-full border-purple-300 hover:bg-purple-50"
                             data-testid={`item-dec-${item.id}`}
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
-                          <span className="w-8 text-center font-bold text-lg text-cyan-700" data-testid={`item-count-${item.id}`}>{count}</span>
+                          <span className="w-8 text-center font-bold text-lg text-purple-700" data-testid={`item-count-${item.id}`}>{count}</span>
                           <Button
                             variant="outline"
                             size="icon"
                             onClick={() => updateItemCount(item.id, 1)}
-                            className="h-9 w-9 rounded-full border-cyan-300 hover:bg-cyan-50"
+                            className="h-9 w-9 rounded-full border-purple-300 hover:bg-purple-50"
                             data-testid={`item-inc-${item.id}`}
                           >
                             <Plus className="w-4 h-4" />
@@ -426,7 +426,7 @@ export default function LaundryBooking() {
 
             {/* Pickup Details */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-[#0e7490] to-[#0891b2] p-5">
+              <div className="bg-gradient-to-r from-[#7e22ce] to-[#a855f7] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <Truck className="h-6 w-6" />
@@ -447,7 +447,7 @@ export default function LaundryBooking() {
                       className={cn("w-full justify-start text-left h-12 bg-slate-50", !booking.pickup_date && "text-muted-foreground")}
                       onClick={() => setIsPickupDateOpen(true)}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4 text-[#0e7490]" />
+                      <CalendarIcon className="mr-2 h-4 w-4 text-[#7e22ce]" />
                       {booking.pickup_date ? format(booking.pickup_date, 'PPP') : 'Select date'}
                     </Button>
                   </div>
@@ -503,7 +503,7 @@ export default function LaundryBooking() {
 
             {/* Payment Section */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="bg-[#0e7490] p-5">
+              <div className="bg-[#7e22ce] p-5">
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl">
                     <CreditCard className="h-6 w-6" />
@@ -533,7 +533,7 @@ export default function LaundryBooking() {
             <div className="sticky top-24">
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 {/* Service Preview */}
-                <div className="relative h-32 bg-gradient-to-br from-[#0e7490] to-[#0891b2] p-5">
+                <div className="relative h-32 bg-gradient-to-br from-[#7e22ce] to-[#a855f7] p-5">
                   <div className="flex items-center gap-1 text-amber-400 mb-2">
                     {[...Array(Math.floor(service.rating || 4))].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-current" />
@@ -556,12 +556,12 @@ export default function LaundryBooking() {
                       <h4 className="font-semibold text-slate-800 mb-3">Schedule</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2 text-slate-600">
-                          <CalendarIcon className="w-4 h-4 text-[#0e7490]" />
+                          <CalendarIcon className="w-4 h-4 text-[#7e22ce]" />
                           <span>Pickup: {format(booking.pickup_date, 'MMM d')} at {booking.pickup_time}</span>
                         </div>
                         {booking.delivery_date && (
                           <div className="flex items-center gap-2 text-slate-600">
-                            <Truck className="w-4 h-4 text-[#0e7490]" />
+                            <Truck className="w-4 h-4 text-[#7e22ce]" />
                             <span>Delivery: {format(booking.delivery_date, 'MMM d, yyyy')}</span>
                           </div>
                         )}
@@ -616,7 +616,7 @@ export default function LaundryBooking() {
                     <Button 
                       onClick={handleSubmit}
                       disabled={!selectedPaymentMethod || paymentInProgress || getTotalItems() === 0}
-                      className="w-full mt-4 bg-[#0e7490] hover:bg-[#0891b2] text-white h-12 font-semibold rounded-xl"
+                      className="w-full mt-4 bg-[#7e22ce] hover:bg-[#a855f7] text-white h-12 font-semibold rounded-xl"
                     >
                       {paymentInProgress ? (
                         <>

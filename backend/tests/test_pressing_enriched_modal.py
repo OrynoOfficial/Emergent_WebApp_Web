@@ -223,3 +223,29 @@ def test_update_flipping_shop_type_resets_irrelevant_pricing(admin_token, cleanu
     assert g["shop_type"] == "pressing"
     assert g["price_per_kg"] in (None, 0)
     assert len(g["item_prices"]) == 1
+
+
+def test_item_prices_persist_image_url(admin_token, cleanup_shops):
+    """Each ItemPrice can now carry an optional image_url. The backend must
+    persist it round-trip — this powers the per-item thumbnails in the
+    Pressing menu gallery (View dialog + pre-booking modal)."""
+    img = "/api/uploads/pressing-items/shirt-thumb.jpg"
+    payload = {
+        "name": f"Itemimg-{uuid.uuid4().hex[:8]}",
+        "address": "1 Photo Av",
+        "city": "Douala",
+        "shop_type": "pressing",
+        "item_prices": [
+            {"item": "Shirt", "price": 500, "image_url": img},
+            {"item": "Trousers", "price": 750},                 # no image
+        ],
+    }
+    r = requests.post(f"{BASE_URL}/api/pressing/", json=payload, headers=_h(admin_token), timeout=20)
+    assert r.status_code == 200, r.text
+    sid = r.json()["shop_id"]
+    cleanup_shops.append(sid)
+
+    g = requests.get(f"{BASE_URL}/api/pressing/{sid}", timeout=10).json()
+    items = {i["item"]: i for i in g["item_prices"]}
+    assert items["Shirt"]["image_url"] == img
+    assert items["Trousers"].get("image_url") in (None, "")

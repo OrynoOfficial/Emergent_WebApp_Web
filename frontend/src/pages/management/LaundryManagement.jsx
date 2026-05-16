@@ -241,14 +241,15 @@ export default function LaundryManagement() {
         description: pressingForm.description || '',
         shop_type: st,
         price_per_kg: st === 'pressing' ? null : (kg > 0 ? kg : 0),
-        item_prices: st === 'laundry' ? [] : items.map((i) => ({ item: i.item.trim(), price: Number(i.price) })),
+        item_prices: st === 'laundry' ? [] : items.map((i) => ({
+          item: i.item.trim(),
+          price: Number(i.price),
+          image_url: i.image_url || null,
+        })),
         address: pressingForm.address.trim(),
         city: pressingForm.city.trim(),
         phone: pressingForm.phone || '',
         email: pressingForm.email || '',
-        whatsapp: pressingForm.whatsapp || '',
-        instagram: pressingForm.instagram || '',
-        website: pressingForm.website || '',
         images: pressingForm.images || [],
         services: (pressingForm.services || []).map((s) => (typeof s === 'string' ? s : s?.type || s?.name || '')).filter(Boolean),
         operating_hours: pressingForm.operating_hours || {},
@@ -259,9 +260,6 @@ export default function LaundryManagement() {
         express_available: !!pressingForm.express_available,
         express_surcharge: Number(pressingForm.express_surcharge) || 0,
         min_order_amount: Number(pressingForm.min_order_amount) || 0,
-        accepts_card: !!pressingForm.accepts_card,
-        accepts_momo: !!pressingForm.accepts_momo,
-        accepts_cash: !!pressingForm.accepts_cash,
         operator_id: pressingForm.operator_id || undefined,
         operator_name: operator?.name || pressingForm.operator_name || '',
       };
@@ -359,7 +357,7 @@ export default function LaundryManagement() {
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="pressing.create">
-                <Button onClick={() => openPressingDialog()} className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 shadow-md shadow-cyan-500/20" data-testid="add-pressing-btn">
+                <Button onClick={() => openPressingDialog()} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-md shadow-purple-500/20" data-testid="add-pressing-btn">
                   <Plus className="w-4 h-4 mr-2" /> Add Shop
                 </Button>
               </PermissionGate>
@@ -402,9 +400,9 @@ export default function LaundryManagement() {
                         <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={`capitalize ${
-                            st === 'pressing' ? 'bg-violet-50 text-violet-700 border-violet-200'
+                            st === 'pressing' ? 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
                               : st === 'both' ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                              : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                              : 'bg-purple-50 text-purple-700 border-purple-200'
                           }`} data-testid={`shop-type-badge-${p.id}`}>
                             {st === 'both' ? 'Laundry + Pressing' : st}
                           </Badge>
@@ -433,9 +431,9 @@ export default function LaundryManagement() {
                 const items = Array.isArray(pressing.item_prices) ? pressing.item_prices : [];
                 const minItem = items.map(i => Number(i.price)).filter(n => n > 0);
                 const cover = (pressing.images || [])[0];
-                const typeBadge = st === 'pressing' ? 'bg-violet-500 text-white border-transparent'
-                  : st === 'both' ? 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white border-transparent'
-                  : 'bg-cyan-500 text-white border-transparent';
+                const typeBadge = st === 'pressing' ? 'bg-fuchsia-500 text-white border-transparent'
+                  : st === 'both' ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-transparent'
+                  : 'bg-purple-500 text-white border-transparent';
                 const typeLabel = st === 'both' ? 'Laundry + Pressing' : st;
                 const priceMain = st === 'pressing'
                   ? (minItem.length ? `from ${formatFCFA(Math.min(...minItem))} / item` : 'No prices')
@@ -445,7 +443,7 @@ export default function LaundryManagement() {
                 return (
                 <Card
                   key={pressing.id}
-                  className="overflow-hidden border-cyan-100/50 hover:shadow-xl hover:shadow-cyan-500/10 hover:border-cyan-300 transition-all"
+                  className="overflow-hidden border-purple-100/50 hover:shadow-xl hover:shadow-purple-500/10 hover:border-purple-300 transition-all"
                   data-testid={`pressing-card-${pressing.id}`}
                 >
                   {/* Cover photo (or gradient fallback when no images yet) */}
@@ -453,7 +451,7 @@ export default function LaundryManagement() {
                     {cover ? (
                       <img src={cover} alt={pressing.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700 flex items-center justify-center">
+                      <div className="w-full h-full bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 flex items-center justify-center">
                         <Shirt className="h-10 w-10 text-white/40" />
                       </div>
                     )}
@@ -481,11 +479,11 @@ export default function LaundryManagement() {
                       </div>
                     )}
                     <div className="space-y-1.5 text-xs text-slate-600">
-                      <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-cyan-700" />{[pressing.address, pressing.city].filter(Boolean).join(' · ') || '—'}</div>
-                      {pressing.phone && <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-cyan-700" />{pressing.phone}</div>}
-                      {pressing.turnaround_hours && <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-cyan-700" />{pressing.turnaround_hours}h turnaround</div>}
+                      <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-purple-700" />{[pressing.address, pressing.city].filter(Boolean).join(' · ') || '—'}</div>
+                      {pressing.phone && <div className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-purple-700" />{pressing.phone}</div>}
+                      {pressing.turnaround_hours && <div className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-purple-700" />{pressing.turnaround_hours}h turnaround</div>}
                       {viewMode === 'details' && pressing.description && (
-                        <div className="text-slate-600 pt-2 border-t border-cyan-100/60 line-clamp-2">{pressing.description}</div>
+                        <div className="text-slate-600 pt-2 border-t border-purple-100/60 line-clamp-2">{pressing.description}</div>
                       )}
                     </div>
 
@@ -493,7 +491,7 @@ export default function LaundryManagement() {
                     {pressing.services?.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {pressing.services.slice(0, viewMode === 'details' ? 8 : 4).map((s, idx) => (
-                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-[10px] capitalize bg-cyan-50 text-cyan-800 border-cyan-200">
+                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-[10px] capitalize bg-purple-50 text-purple-800 border-purple-200">
                             {typeof s === 'string' ? s.replace(/_/g, ' ') : s?.name || s?.type || 'Service'}
                           </Badge>
                         ))}
@@ -504,10 +502,10 @@ export default function LaundryManagement() {
                     {st !== 'laundry' && items.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {items.slice(0, viewMode === 'details' ? 6 : 3).map((ip, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-50 border border-violet-100 text-[10px] rounded">
-                            <span className="text-violet-900 font-medium">{ip.item}</span>
-                            <span className="text-violet-700">·</span>
-                            <span className="text-violet-900 font-bold">{formatFCFA(Number(ip.price))}</span>
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-fuchsia-50 border border-fuchsia-100 text-[10px] rounded">
+                            <span className="text-fuchsia-900 font-medium">{ip.item}</span>
+                            <span className="text-fuchsia-700">·</span>
+                            <span className="text-fuchsia-900 font-bold">{formatFCFA(Number(ip.price))}</span>
                           </span>
                         ))}
                         {items.length > (viewMode === 'details' ? 6 : 3) && (
@@ -529,19 +527,19 @@ export default function LaundryManagement() {
                       {pressing.accepts_cash && <Banknote className="w-3.5 h-3.5 text-slate-400" title="Cash" />}
                     </div>
 
-                    <div className="font-bold text-cyan-700 pt-2 border-t border-cyan-100/60">{priceMain}</div>
+                    <div className="font-bold text-purple-700 pt-2 border-t border-purple-100/60">{priceMain}</div>
 
                     <div className="flex gap-1.5">
-                      <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details" className="border-cyan-200 text-cyan-700 hover:bg-cyan-50">
+                      <Button size="sm" variant="outline" onClick={() => handleViewPressing(pressing)} title="View Details" className="border-purple-200 text-purple-700 hover:bg-purple-50">
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                       <PermissionGate permission="pressing.edit">
-                        <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-cyan-700 hover:bg-cyan-50 border-cyan-200" data-testid={`replace-pressing-btn-${pressing.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => setReplacePressing(pressing)} title="Migrate bookings" className="text-purple-700 hover:bg-purple-50 border-purple-200" data-testid={`replace-pressing-btn-${pressing.id}`}>
                           <ReplaceIcon className="w-3.5 h-3.5" />
                         </Button>
                       </PermissionGate>
                       <PermissionGate permission="pressing.edit">
-                        <Button size="sm" variant="outline" className="flex-1 border-cyan-200 text-cyan-700 hover:bg-cyan-50" onClick={() => openPressingDialog(pressing)}>
+                        <Button size="sm" variant="outline" className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50" onClick={() => openPressingDialog(pressing)}>
                           <Edit className="w-3.5 h-3.5 mr-1" /> Edit
                         </Button>
                       </PermissionGate>
@@ -572,7 +570,7 @@ export default function LaundryManagement() {
             serviceType="Laundry"
             serviceTag="pressing"
             operatorId={scopeOperatorId}
-            serviceIcon={<Shirt className="h-5 w-5 text-cyan-600" />}
+            serviceIcon={<Shirt className="h-5 w-5 text-purple-600" />}
             primaryColor="teal"
           />
         </TabsContent>
@@ -587,7 +585,7 @@ export default function LaundryManagement() {
           ? 'Update services, pricing, contact and storefront photos.'
           : 'Register a new shop — pricing model, contact, logistics and storefront photos.'}
         editing={!!editingPressing}
-        accent="blue"
+        accent="purple"
         leftColumn={
           <div className="space-y-5">
             <div>
@@ -598,7 +596,7 @@ export default function LaundryManagement() {
                   onChange={(imgs) => setPressingForm((p) => ({ ...p, images: imgs }))}
                   max={3}
                   folder="pressing"
-                  accent="blue"
+                  accent="purple"
                   helperText="Up to 3 photos. The first is the cover."
                 />
               </div>
@@ -627,13 +625,13 @@ export default function LaundryManagement() {
                 : pressingForm.shop_type === 'both' ? 'Laundry + Pressing'
                 : 'Laundry'
             }
-            badgeClass="bg-blue-500 text-white"
-            placeholderColor="from-blue-700 via-blue-600 to-sky-500"
+            badgeClass="bg-purple-500 text-white"
+            placeholderColor="from-purple-700 via-purple-600 to-fuchsia-500"
             title={pressingForm.name || 'Shop name'}
-            subtitle={pressingForm.phone || pressingForm.whatsapp || 'Contact phone'}
+            subtitle={pressingForm.phone || 'Contact phone'}
             location={[pressingForm.address, pressingForm.city].filter(Boolean).join(' · ') || 'Address · City'}
             tags={(pressingForm.services || []).map((s) => (typeof s === 'string' ? s : s?.type || s?.name || '')).filter(Boolean)}
-            tagsAccentClass="bg-blue-50 text-blue-700"
+            tagsAccentClass="bg-purple-50 text-purple-700"
             priceLabel={
               pressingForm.shop_type === 'pressing' ? 'Starts at'
                 : pressingForm.shop_type === 'both' ? 'Per kg · items'
@@ -649,7 +647,7 @@ export default function LaundryManagement() {
               const kg = Number(pressingForm.price_per_kg);
               return kg > 0 ? `${kg.toLocaleString()} FCFA` : '—';
             })()}
-            accentTextClass="text-blue-700"
+            accentTextClass="text-purple-700"
           />
         }
         submitting={false}
@@ -659,131 +657,177 @@ export default function LaundryManagement() {
       />
 
       {/* View Laundry/Pressing Dialog */}
+      {/* View Laundry/Pressing Dialog — rebuilt: hero photo gallery, per-item gallery */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shirt className="h-5 w-5 text-cyan-600" />
-              Shop Details
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-4xl bg-white max-h-[92vh] overflow-y-auto p-0 sm:rounded-2xl">
           {viewingPressing && (() => {
             const st = viewingPressing.shop_type || 'laundry';
             const items = Array.isArray(viewingPressing.item_prices) ? viewingPressing.item_prices : [];
+            const imgs = (viewingPressing.images || []).slice(0, 4);
+            const stBadge = st === 'pressing' ? 'bg-fuchsia-500 text-white border-transparent'
+              : st === 'both' ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-transparent'
+              : 'bg-purple-500 text-white border-transparent';
+            const stLabel = st === 'both' ? 'Laundry + Pressing' : st;
             return (
-              <div className="space-y-4 py-2" data-testid="view-shop-content">
-                <div className="bg-cyan-50 rounded-lg p-4 flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-lg text-cyan-900">{viewingPressing.name}</h3>
-                    {viewingPressing.description && (
-                      <p className="text-sm text-cyan-800/80 mt-1">{viewingPressing.description}</p>
-                    )}
-                  </div>
-                  <Badge variant="outline" className={`capitalize whitespace-nowrap ${
-                    st === 'pressing' ? 'bg-violet-100 text-violet-700 border-violet-300'
-                      : st === 'both' ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
-                      : 'bg-cyan-100 text-cyan-700 border-cyan-300'
-                  }`}>
-                    {st === 'both' ? 'Laundry + Pressing' : st}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide">City</p>
-                    <p className="font-medium flex items-center gap-1"><MapPin className="h-4 w-4" /> {viewingPressing.city || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide">Address</p>
-                    <p className="font-medium">{viewingPressing.address || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide">Phone</p>
-                    <p className="font-medium">{viewingPressing.phone || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide">Turnaround</p>
-                    <p className="font-medium">{viewingPressing.turnaround_hours || 24}h</p>
-                  </div>
-                  {(viewingPressing.email || viewingPressing.whatsapp || viewingPressing.instagram || viewingPressing.website) && (
-                    <div className="col-span-2 grid grid-cols-2 gap-2 text-xs text-slate-600 border-t pt-2">
-                      {viewingPressing.email     && <div><span className="text-slate-400">Email</span> · {viewingPressing.email}</div>}
-                      {viewingPressing.whatsapp  && <div><span className="text-slate-400">WhatsApp</span> · {viewingPressing.whatsapp}</div>}
-                      {viewingPressing.instagram && <div><span className="text-slate-400">Instagram</span> · {viewingPressing.instagram}</div>}
-                      {viewingPressing.website   && <div><span className="text-slate-400">Web</span> · {viewingPressing.website}</div>}
-                    </div>
-                  )}
-                </div>
-
-                {/* Pricing card — adapts to shop_type */}
-                <div className="rounded-lg border border-slate-200 bg-white p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">Pricing</p>
-                  {(st === 'laundry' || st === 'both') && (
-                    <div className="flex items-center justify-between text-sm py-1.5">
-                      <span className="text-slate-700">Per kilo</span>
-                      <span className="font-bold text-emerald-700">{formatFCFA(viewingPressing.price_per_kg || 0)}</span>
-                    </div>
-                  )}
-                  {(st === 'pressing' || st === 'both') && (
-                    <div className="space-y-1 mt-1">
-                      {items.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic">No per-item prices configured.</p>
-                      ) : (
-                        items.map((i, idx) => (
-                          <div key={`${i.item}-${idx}`} className="flex items-center justify-between text-sm py-1 border-t border-slate-100 first:border-t-0">
-                            <span className="text-slate-700">{i.item}</span>
-                            <span className="font-semibold text-slate-900">{formatFCFA(Number(i.price))}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {viewingPressing.services?.length > 0 && (
-                  <div>
-                    <p className="text-slate-500 text-xs uppercase tracking-wide mb-1">Services offered</p>
-                    <div className="flex flex-wrap gap-1">
-                      {viewingPressing.services.map((s, idx) => (
-                        <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize">
-                          {typeof s === 'string' ? s.replace(/_/g, ' ') : s?.name || s?.type || 'Service'}
-                        </Badge>
+              <div data-testid="view-shop-content">
+                {/* Hero gallery */}
+                <div className="relative bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-500">
+                  {imgs.length > 0 ? (
+                    <div className={`grid gap-1 ${imgs.length === 1 ? 'grid-cols-1' : imgs.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                      <div className={`${imgs.length >= 3 ? 'col-span-2 row-span-2' : ''} h-64 relative`}>
+                        <img src={imgs[0]} alt={viewingPressing.name} className="w-full h-full object-cover" />
+                      </div>
+                      {imgs.slice(1, 4).map((src, idx) => (
+                        <div key={idx} className="h-32 hidden sm:block">
+                          <img src={src} alt={`${viewingPressing.name} ${idx + 2}`} className="w-full h-full object-cover" />
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Logistics & payments */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-md border border-slate-200 p-2.5">
-                    <p className="text-xs text-slate-500 mb-1">Pickup &amp; delivery</p>
-                    <p className="font-medium">{viewingPressing.delivery_available ? `Yes — ${formatFCFA(viewingPressing.delivery_fee || 0)} (≤${viewingPressing.pickup_radius_km || 0} km)` : 'No'}</p>
-                  </div>
-                  <div className="rounded-md border border-slate-200 p-2.5">
-                    <p className="text-xs text-slate-500 mb-1">Express</p>
-                    <p className="font-medium">{viewingPressing.express_available ? `+${viewingPressing.express_surcharge || 0}%` : 'No'}</p>
-                  </div>
-                  <div className="rounded-md border border-slate-200 p-2.5 col-span-2">
-                    <p className="text-xs text-slate-500 mb-1">Accepted payments</p>
-                    <div className="flex flex-wrap gap-1">
-                      {viewingPressing.accepts_momo && <Badge variant="outline" className="text-[10px]">Mobile money</Badge>}
-                      {viewingPressing.accepts_card && <Badge variant="outline" className="text-[10px]">Card</Badge>}
-                      {viewingPressing.accepts_cash && <Badge variant="outline" className="text-[10px]">Cash</Badge>}
-                      {!viewingPressing.accepts_momo && !viewingPressing.accepts_card && !viewingPressing.accepts_cash && (
-                        <span className="text-xs italic text-slate-400">None configured</span>
-                      )}
+                  ) : (
+                    <div className="h-56 flex items-center justify-center">
+                      <Shirt className="h-16 w-16 text-white/40" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent pointer-events-none" />
+                  <button
+                    onClick={() => setIsViewDialogOpen(false)}
+                    className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/15 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition"
+                    aria-label="Close"
+                  >
+                    <span className="text-white text-lg leading-none">×</span>
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <Badge className={`capitalize text-[10px] mb-2 ${stBadge}`}>{stLabel}</Badge>
+                        <h2 className="text-2xl font-bold drop-shadow">{viewingPressing.name}</h2>
+                        <p className="text-sm text-white/85 mt-1 flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {[viewingPressing.address, viewingPressing.city].filter(Boolean).join(' · ') || 'Address unavailable'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-wider text-white/70 font-semibold">
+                          {st === 'pressing' ? 'Starts at' : 'Per kg'}
+                        </p>
+                        <p className="text-2xl font-bold">
+                          {st === 'pressing'
+                            ? (items.filter(i => Number(i.price) > 0).length
+                                ? formatFCFA(Math.min(...items.map(i => Number(i.price)).filter(n => n > 0)))
+                                : '—')
+                            : formatFCFA(viewingPressing.price_per_kg || 0)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Body */}
+                <div className="p-6 space-y-5">
+                  {viewingPressing.description && (
+                    <p className="text-slate-700 text-sm leading-relaxed">{viewingPressing.description}</p>
+                  )}
+
+                  {/* Quick info row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-sm">
+                    <div className="rounded-lg bg-purple-50/60 border border-purple-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-purple-700/70 font-semibold mb-0.5">Phone</p>
+                      <p className="font-medium text-slate-900">{viewingPressing.phone || '—'}</p>
+                    </div>
+                    <div className="rounded-lg bg-purple-50/60 border border-purple-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-purple-700/70 font-semibold mb-0.5">Email</p>
+                      <p className="font-medium text-slate-900 truncate" title={viewingPressing.email}>{viewingPressing.email || '—'}</p>
+                    </div>
+                    <div className="rounded-lg bg-purple-50/60 border border-purple-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-purple-700/70 font-semibold mb-0.5">Turnaround</p>
+                      <p className="font-medium text-slate-900">{viewingPressing.turnaround_hours || 24}h</p>
+                    </div>
+                    <div className="rounded-lg bg-purple-50/60 border border-purple-100 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-purple-700/70 font-semibold mb-0.5">Rating</p>
+                      <p className="font-medium text-slate-900">{viewingPressing.rating ? `${viewingPressing.rating} (${viewingPressing.total_reviews || 0})` : 'No reviews yet'}</p>
+                    </div>
+                  </div>
+
+                  {/* Services */}
+                  {viewingPressing.services?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">Services offered</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewingPressing.services.map((s, idx) => (
+                          <Badge key={typeof s === 'string' ? s : s?.name || idx} variant="outline" className="text-xs capitalize bg-purple-50 text-purple-700 border-purple-200">
+                            {typeof s === 'string' ? s.replace(/_/g, ' ') : s?.name || s?.type || 'Service'}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per-item gallery — the key new section */}
+                  {st !== 'laundry' && items.length > 0 && (
+                    <div data-testid="view-items-gallery">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">Pressing menu &amp; prices</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {items.map((i, idx) => (
+                          <div key={`${i.item}-${idx}`} className="rounded-xl border border-purple-100 bg-white overflow-hidden hover:shadow-md hover:border-purple-300 transition" data-testid={`view-item-card-${idx}`}>
+                            <div className="aspect-square bg-gradient-to-br from-purple-100 via-purple-50 to-fuchsia-100 relative">
+                              {i.image_url ? (
+                                <img src={i.image_url} alt={i.item} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Shirt className="h-8 w-8 text-purple-400/50" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-2.5">
+                              <p className="text-xs font-semibold text-slate-900 truncate" title={i.item}>{i.item}</p>
+                              <p className="text-sm font-bold text-purple-700 mt-0.5">{formatFCFA(Number(i.price))}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {(st === 'laundry' || st === 'both') && (
+                    <div className="rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-4 flex items-center justify-between" data-testid="view-per-kg-banner">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-purple-700/80 font-semibold">Laundry — pay per kilo</p>
+                        <p className="text-xs text-slate-600 mt-0.5">Drop off your laundry — billed on the total weight.</p>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-700">{formatFCFA(viewingPressing.price_per_kg || 0)}<span className="text-xs text-slate-500 font-normal ml-1">/kg</span></p>
+                    </div>
+                  )}
+
+                  {/* Logistics row */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-md border border-slate-200 p-3 flex items-center gap-3">
+                      <Truck className={`h-5 w-5 ${viewingPressing.delivery_available ? 'text-emerald-600' : 'text-slate-300'}`} />
+                      <div>
+                        <p className="text-xs text-slate-500">Pickup &amp; delivery</p>
+                        <p className="font-medium text-slate-900">{viewingPressing.delivery_available ? `Yes — ${formatFCFA(viewingPressing.delivery_fee || 0)} (≤${viewingPressing.pickup_radius_km || 0} km)` : 'No delivery'}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 p-3 flex items-center gap-3">
+                      <Sparkles className={`h-5 w-5 ${viewingPressing.express_available ? 'text-orange-500' : 'text-slate-300'}`} />
+                      <div>
+                        <p className="text-xs text-slate-500">Express service</p>
+                        <p className="font-medium text-slate-900">{viewingPressing.express_available ? `+${viewingPressing.express_surcharge || 0}%` : 'Standard only'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="px-6 pb-5 pt-2 border-t border-purple-100/60 bg-purple-50/30 rounded-b-2xl">
+                  <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                    Close
+                  </Button>
+                  <Button onClick={() => { openPressingDialog(viewingPressing); setIsViewDialogOpen(false); }} className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white">
+                    <Edit className="w-4 h-4 mr-2" /> Edit shop
+                  </Button>
+                </DialogFooter>
               </div>
             );
           })()}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { openPressingDialog(viewingPressing); setIsViewDialogOpen(false); }}>
-              <Edit className="w-4 h-4 mr-2" /> Edit
-            </Button>
-            <Button onClick={() => setIsViewDialogOpen(false)} className="bg-[#082c59]">Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

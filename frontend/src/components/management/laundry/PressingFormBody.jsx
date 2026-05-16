@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
-  Shirt, Droplets, Trash2, Plus, X, Sparkles, Truck, Clock, Banknote, CreditCard, Wallet,
+  Shirt, Droplets, Plus, X, Sparkles, Truck, Clock, ImagePlus, Loader2,
 } from 'lucide-react';
 import api from '@/api/client';
+import { toast } from 'sonner';
 
 const SHOP_TYPES = [
   { value: 'laundry',  label: 'Laundry',  hint: 'Bulk wash priced per kilo',          icon: Droplets },
@@ -18,25 +19,93 @@ const SHOP_TYPES = [
 
 const SERVICE_TAGS = ['washing', 'dry_cleaning', 'ironing', 'folding', 'express', 'pickup_delivery'];
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+const resolveImg = (u) => (u?.startsWith('/api') ? `${backendUrl}${u}` : u);
+
+// ── Tiny single-image uploader used inline per-item-row ────────────────────
+function ItemThumbUploader({ value, onChange, testId }) {
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error(`${file.name} is not an image`);
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error('Item thumbnail must be ≤ 3MB');
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'pressing-items');
+      const res = await api.post('/uploads/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data?.success && res.data?.file_url) onChange(res.data.file_url);
+    } catch (e) {
+      toast.error('Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => fileRef.current?.click()}
+      className={`relative h-9 w-9 rounded-md overflow-hidden border-2 transition shrink-0 ${
+        value ? 'border-purple-300' : 'border-dashed border-purple-200 hover:border-purple-400 bg-purple-50/40'
+      } ${uploading ? 'opacity-60' : ''}`}
+      title={value ? 'Replace thumbnail' : 'Upload thumbnail'}
+      data-testid={testId}
+      disabled={uploading}
+    >
+      {value ? (
+        <>
+          <img src={resolveImg(value)} alt="" className="w-full h-full object-cover" />
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => { e.stopPropagation(); onChange(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onChange(null); } }}
+            className="absolute top-0 right-0 m-0.5 inline-flex items-center justify-center bg-red-500/90 rounded-full p-0.5 cursor-pointer hover:bg-red-600"
+            aria-label="Remove image"
+          >
+            <X className="h-2.5 w-2.5 text-white" />
+          </span>
+        </>
+      ) : uploading ? (
+        <Loader2 className="h-4 w-4 text-purple-500 animate-spin m-auto" />
+      ) : (
+        <ImagePlus className="h-4 w-4 text-purple-500 m-auto" />
+      )}
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileRef}
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+    </button>
+  );
+}
+
 /**
- * The form body rendered inside the Add/Edit Pressing Shop modal.
- *
- * Owns no fetching of its own EXCEPT loading the preset item-catalog from
- * `/api/pressing/item-presets` — used purely as quick-add suggestions when the
- * shop type is "pressing" or "both".
+ * Modal body for the Add/Edit Pressing-Shop dialog.
  *
  * Props:
- *   form          — the controlled form state
- *   setForm       — the React setter for the form state
- *   OperatorSelector — JSX element (we receive it from the parent so this
- *                     component doesn't need to know about its imports)
+ *   form              — controlled form state (see DEFAULT_PRESSING_FORM in LaundryManagement)
+ *   setForm           — React state setter
+ *   operatorSelector  — JSX element (the OperatorSelector pre-bound to onChange)
  */
 export default function PressingFormBody({ form, setForm, operatorSelector }) {
   const [presets, setPresets] = useState([]);
   const [newItemLabel, setNewItemLabel] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
 
-  // Lazy-load presets only when the shop_type uses per-item pricing.
   useEffect(() => {
     if (presets.length > 0) return;
     if (form.shop_type === 'laundry') return;
@@ -50,14 +119,14 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
     if (exists) {
       setForm((p) => ({ ...p, item_prices: (p.item_prices || []).filter((i) => i.item !== label) }));
     } else {
-      setForm((p) => ({ ...p, item_prices: [...(p.item_prices || []), { item: label, price: 0 }] }));
+      setForm((p) => ({ ...p, item_prices: [...(p.item_prices || []), { item: label, price: 0, image_url: null }] }));
     }
   };
 
-  const updateItemPrice = (idx, value) => {
+  const updateItemField = (idx, field, value) => {
     setForm((p) => ({
       ...p,
-      item_prices: (p.item_prices || []).map((i, k) => (k === idx ? { ...i, price: value } : i)),
+      item_prices: (p.item_prices || []).map((i, k) => (k === idx ? { ...i, [field]: value } : i)),
     }));
   };
 
@@ -75,7 +144,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
       setNewItemPrice('');
       return;
     }
-    setForm((p) => ({ ...p, item_prices: [...(p.item_prices || []), { item: label, price }] }));
+    setForm((p) => ({ ...p, item_prices: [...(p.item_prices || []), { item: label, price, image_url: null }] }));
     setNewItemLabel('');
     setNewItemPrice('');
   };
@@ -85,7 +154,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
 
   return (
     <div className="space-y-6">
-      {/* ── SECTION 1: Shop type ─────────────────────────────────────────── */}
+      {/* ── SECTION 1: Shop type ────────────────────────────────────────── */}
       <section data-testid="shop-type-section">
         <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Shop type</Label>
         <div className="mt-2 grid grid-cols-3 gap-2">
@@ -99,7 +168,6 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
                 onClick={() => setForm((p) => ({
                   ...p,
                   shop_type: opt.value,
-                  // Clean up the now-irrelevant slot to keep the preview honest.
                   price_per_kg: opt.value === 'pressing' ? '' : p.price_per_kg,
                   item_prices: opt.value === 'laundry' ? [] : p.item_prices,
                 }))}
@@ -107,13 +175,13 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
                 aria-pressed={active}
                 className={`rounded-lg border px-3 py-3 text-left transition ${
                   active
-                    ? 'border-blue-600 bg-blue-50 shadow-sm ring-1 ring-blue-600/20'
+                    ? 'border-purple-600 bg-purple-50 shadow-sm ring-1 ring-purple-600/20'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <Icon className={`h-4 w-4 ${active ? 'text-blue-700' : 'text-slate-500'}`} />
-                  <span className={`text-sm font-semibold ${active ? 'text-blue-900' : 'text-slate-800'}`}>{opt.label}</span>
+                  <Icon className={`h-4 w-4 ${active ? 'text-purple-700' : 'text-slate-500'}`} />
+                  <span className={`text-sm font-semibold ${active ? 'text-purple-900' : 'text-slate-800'}`}>{opt.label}</span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1 leading-snug">{opt.hint}</p>
               </button>
@@ -122,7 +190,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
         </div>
       </section>
 
-      {/* ── SECTION 2: Pricing ───────────────────────────────────────────── */}
+      {/* ── SECTION 2: Pricing ──────────────────────────────────────────── */}
       <section data-testid="pricing-section">
         <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Pricing</Label>
 
@@ -148,10 +216,9 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
               <span className="text-[11px] text-slate-400">{(form.item_prices || []).length} item{(form.item_prices || []).length === 1 ? '' : 's'}</span>
             </div>
 
-            {/* Preset chips */}
             {presets.length > 0 && (
               <div>
-                <p className="text-[11px] text-slate-500 mb-1.5">Quick add — tick what you offer, then set the price below:</p>
+                <p className="text-[11px] text-slate-500 mb-1.5">Quick add — tick what you offer, then set price &amp; upload a photo:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {presets.map((label) => {
                     const selected = (form.item_prices || []).some((i) => i.item === label);
@@ -160,7 +227,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
                         key={label}
                         variant={selected ? 'default' : 'outline'}
                         onClick={() => togglePreset(label)}
-                        className={`cursor-pointer ${selected ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                        className={`cursor-pointer ${selected ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                         data-testid={`preset-chip-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`}
                       >
                         {label}
@@ -171,7 +238,6 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
               </div>
             )}
 
-            {/* Per-item rows */}
             {(form.item_prices || []).length === 0 ? (
               <div className="rounded-md border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-500">
                 No items yet — pick from the chips above or add your own below.
@@ -180,13 +246,19 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
               <div className="space-y-1.5" data-testid="item-price-rows">
                 {(form.item_prices || []).map((row, idx) => (
                   <div key={`${row.item}-${idx}`} className="flex items-center gap-2" data-testid={`item-price-row-${idx}`}>
+                    {/* Per-item thumbnail */}
+                    <ItemThumbUploader
+                      value={row.image_url}
+                      onChange={(url) => updateItemField(idx, 'image_url', url)}
+                      testId={`item-thumb-${idx}`}
+                    />
                     <span className="flex-1 text-sm text-slate-800 truncate" title={row.item}>{row.item}</span>
-                    <div className="relative w-32">
+                    <div className="relative w-28">
                       <Input
                         type="number"
                         min={0}
                         value={row.price}
-                        onChange={(e) => updateItemPrice(idx, e.target.value)}
+                        onChange={(e) => updateItemField(idx, 'price', e.target.value)}
                         placeholder="0"
                         className="pr-12 h-8 text-sm"
                         data-testid={`item-price-input-${idx}`}
@@ -240,7 +312,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
         )}
       </section>
 
-      {/* ── SECTION 3: Identity ─────────────────────────────────────────── */}
+      {/* ── SECTION 3: Identity ────────────────────────────────────────── */}
       <section>
         <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Shop identity</Label>
         <div className="mt-2 space-y-3">
@@ -261,9 +333,9 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
         </div>
       </section>
 
-      {/* ── SECTION 4: Contact & location ───────────────────────────────── */}
+      {/* ── SECTION 4: Location & contact ──────────────────────────────── */}
       <section>
-        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Location & contact</Label>
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Location &amp; contact</Label>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <div className="col-span-2">
             <Label className="text-xs">Address *</Label>
@@ -277,26 +349,14 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
             <Label className="text-xs">Phone</Label>
             <Input value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} placeholder="+237 6XX XX XX XX" data-testid="shop-phone-input" />
           </div>
-          <div>
+          <div className="col-span-2">
             <Label className="text-xs">Email</Label>
             <Input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="contact@shop.cm" data-testid="shop-email-input" />
-          </div>
-          <div>
-            <Label className="text-xs">WhatsApp</Label>
-            <Input value={form.whatsapp} onChange={(e) => setForm((p) => ({ ...p, whatsapp: e.target.value }))} placeholder="+237…" data-testid="shop-whatsapp-input" />
-          </div>
-          <div>
-            <Label className="text-xs">Instagram handle</Label>
-            <Input value={form.instagram} onChange={(e) => setForm((p) => ({ ...p, instagram: e.target.value }))} placeholder="@yourshop" data-testid="shop-instagram-input" />
-          </div>
-          <div>
-            <Label className="text-xs">Website</Label>
-            <Input value={form.website} onChange={(e) => setForm((p) => ({ ...p, website: e.target.value }))} placeholder="https://" data-testid="shop-website-input" />
           </div>
         </div>
       </section>
 
-      {/* ── SECTION 5: Service tags ──────────────────────────────────────── */}
+      {/* ── SECTION 5: Service tags ────────────────────────────────────── */}
       <section>
         <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Services offered</Label>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -306,7 +366,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
               <Badge
                 key={service}
                 variant={selected ? 'default' : 'outline'}
-                className={`cursor-pointer capitalize ${selected ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                className={`cursor-pointer capitalize ${selected ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
                 onClick={() =>
                   setForm((p) => ({
                     ...p,
@@ -324,9 +384,9 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
         </div>
       </section>
 
-      {/* ── SECTION 6: Logistics ─────────────────────────────────────────── */}
+      {/* ── SECTION 6: Logistics ───────────────────────────────────────── */}
       <section>
-        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Logistics & turnaround</Label>
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Logistics &amp; turnaround</Label>
         <div className="mt-2 space-y-2">
           <div className="rounded-lg border border-slate-200 bg-white p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -350,7 +410,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-slate-500" />
-                <span className="text-sm text-slate-800">Pickup & delivery</span>
+                <span className="text-sm text-slate-800">Pickup &amp; delivery</span>
               </div>
               <Switch
                 checked={!!form.delivery_available}
@@ -400,39 +460,7 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
         </div>
       </section>
 
-      {/* ── SECTION 7: Accepted payments ────────────────────────────────── */}
-      <section>
-        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Accepted payments</Label>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {[
-            { key: 'accepts_momo', label: 'Mobile money', icon: Wallet },
-            { key: 'accepts_card', label: 'Card',          icon: CreditCard },
-            { key: 'accepts_cash', label: 'Cash',          icon: Banknote },
-          ].map((opt) => {
-            const Icon = opt.icon;
-            const active = !!form[opt.key];
-            return (
-              <button
-                type="button"
-                key={opt.key}
-                onClick={() => setForm((p) => ({ ...p, [opt.key]: !p[opt.key] }))}
-                data-testid={`payment-${opt.key}`}
-                aria-pressed={active}
-                className={`rounded-lg border px-3 py-2 flex items-center gap-2 text-sm transition ${
-                  active
-                    ? 'border-blue-600 bg-blue-50 text-blue-900'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── SECTION 8: Operator selector ────────────────────────────────── */}
+      {/* ── SECTION 7: Operator selector ──────────────────────────────── */}
       {operatorSelector && (
         <section>
           <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Operator</Label>

@@ -15,6 +15,7 @@ import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
+import LaundryShopDetailsModal from '@/components/services/LaundryShopDetailsModal';
 import { formatFCFA } from '@/utils/currency';
 
 // ── Service-type icon helpers ────────────────────────────────────────────────
@@ -29,9 +30,9 @@ const getServiceIcon = (service) => {
 
 // ── Shop-type styling ────────────────────────────────────────────────────────
 const SHOP_TYPE_BADGE = {
-  laundry:  { label: 'Laundry',           cls: 'bg-cyan-500 text-white border-cyan-500',           icon: Droplets },
-  pressing: { label: 'Pressing',          cls: 'bg-violet-500 text-white border-violet-500',       icon: Sparkles },
-  both:     { label: 'Laundry + Pressing', cls: 'bg-gradient-to-r from-cyan-500 to-violet-500 text-white border-transparent', icon: Shirt },
+  laundry:  { label: 'Laundry',           cls: 'bg-purple-500 text-white border-purple-500',           icon: Droplets },
+  pressing: { label: 'Pressing',          cls: 'bg-fuchsia-500 text-white border-fuchsia-500',       icon: Sparkles },
+  both:     { label: 'Laundry + Pressing', cls: 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-transparent', icon: Shirt },
 };
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=900&q=70';
@@ -76,11 +77,11 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
 
   return (
     <Card
-      className="group overflow-hidden bg-white rounded-2xl border border-cyan-100/50 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 hover:border-cyan-300 transition-all duration-300 transform hover:-translate-y-1"
+      className="group overflow-hidden bg-white rounded-2xl border border-purple-100/50 shadow-md hover:shadow-2xl hover:shadow-purple-500/10 hover:border-purple-300 transition-all duration-300 transform hover:-translate-y-1"
       data-testid={`laundry-card-grid-${sid}`}
     >
       {/* Hero */}
-      <div className="h-48 relative overflow-hidden bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700">
+      <div className="h-48 relative overflow-hidden bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700">
         <img
           src={cover}
           alt=""
@@ -142,7 +143,7 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
 
       <CardContent className="p-5 space-y-3.5">
         <div>
-          <h3 className="font-bold text-lg text-slate-900 line-clamp-1 group-hover:text-cyan-700 transition-colors">{service.name}</h3>
+          <h3 className="font-bold text-lg text-slate-900 line-clamp-1 group-hover:text-purple-700 transition-colors">{service.name}</h3>
           <div className="flex items-center text-slate-500 text-sm mt-0.5 gap-1">
             <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="truncate" title={`${service.address || ''}${service.city ? ' · ' + service.city : ''}`}>
@@ -156,9 +157,9 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
           {(service.services || []).slice(0, 3).map((s, idx) => {
             const Icon = getServiceIcon(s);
             return (
-              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-50 border border-cyan-100 rounded-full">
-                <Icon className="h-3 w-3 text-cyan-700" />
-                <span className="text-[11px] text-cyan-800 capitalize">{(s || '').replace(/_/g, ' ')}</span>
+              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 border border-purple-100 rounded-full">
+                <Icon className="h-3 w-3 text-purple-700" />
+                <span className="text-[11px] text-purple-800 capitalize">{(s || '').replace(/_/g, ' ')}</span>
               </span>
             );
           })}
@@ -174,23 +175,23 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
           <div className="flex items-center gap-2 text-[11px] text-slate-500">
             <span className="uppercase tracking-wide">Pays:</span>
             <div className="flex items-center gap-1.5">
-              {service.accepts_momo && <Wallet className="w-3.5 h-3.5 text-cyan-700" title="Mobile money" />}
-              {service.accepts_card && <CreditCard className="w-3.5 h-3.5 text-cyan-700" title="Card" />}
-              {service.accepts_cash && <Banknote className="w-3.5 h-3.5 text-cyan-700" title="Cash" />}
+              {service.accepts_momo && <Wallet className="w-3.5 h-3.5 text-purple-700" title="Mobile money" />}
+              {service.accepts_card && <CreditCard className="w-3.5 h-3.5 text-purple-700" title="Card" />}
+              {service.accepts_cash && <Banknote className="w-3.5 h-3.5 text-purple-700" title="Cash" />}
             </div>
           </div>
         )}
 
         {/* Price & CTA */}
-        <div className="flex items-end justify-between pt-3 border-t border-cyan-100/60">
+        <div className="flex items-end justify-between pt-3 border-t border-purple-100/60">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">From</div>
-            <div className="text-2xl font-bold text-cyan-700 leading-tight" data-testid={`price-${sid}`}>{pricing.headline}</div>
+            <div className="text-2xl font-bold text-purple-700 leading-tight" data-testid={`price-${sid}`}>{pricing.headline}</div>
             <div className="text-[11px] text-slate-500">{pricing.unitLabel} · {pricing.footnote}</div>
           </div>
           <Button
             onClick={() => onBook(service)}
-            className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-xl shadow-md shadow-cyan-500/20"
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-md shadow-purple-500/20"
             data-testid={`book-btn-${sid}`}
           >
             <ServiceIcon className="w-4 h-4 mr-2" /> Book
@@ -213,13 +214,13 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
 
   return (
     <Card
-      className="overflow-hidden bg-white rounded-2xl border border-cyan-100/50 shadow-md hover:shadow-xl hover:border-cyan-300 transition-all"
+      className="overflow-hidden bg-white rounded-2xl border border-purple-100/50 shadow-md hover:shadow-xl hover:border-purple-300 transition-all"
       data-testid={`laundry-card-list-${sid}`}
     >
       <div className="flex flex-col md:flex-row">
         {/* Cover with thumbnails */}
         <div className="md:w-1/3 relative">
-          <div className="h-56 md:h-full relative bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700">
+          <div className="h-56 md:h-full relative bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700">
             <img
               src={cover}
               alt=""
@@ -268,7 +269,7 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
         <div className="md:w-2/3 p-6">
           <div className="flex justify-between items-start mb-3 gap-3">
             <div className="min-w-0 flex-1">
-              <h3 className="text-xl font-bold text-slate-900 group-hover:text-cyan-700">{service.name}</h3>
+              <h3 className="text-xl font-bold text-slate-900 group-hover:text-purple-700">{service.name}</h3>
               <div className="flex items-center text-sm text-slate-500 mt-0.5 gap-3 flex-wrap">
                 <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {[service.address, service.city].filter(Boolean).join(' · ') || 'Unknown'}</span>
                 {service.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {service.phone}</span>}
@@ -294,7 +295,7 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
               {(service.services || []).map((s, idx) => {
                 const Icon = getServiceIcon(s);
                 return (
-                  <Badge key={idx} variant="outline" className="bg-cyan-50 text-cyan-800 border-cyan-200 capitalize">
+                  <Badge key={idx} variant="outline" className="bg-purple-50 text-purple-800 border-purple-200 capitalize">
                     <Icon className="w-3 h-3 mr-1" />
                     {(s || '').replace(/_/g, ' ')}
                   </Badge>
@@ -307,11 +308,11 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
           {pricing.shop_type !== 'laundry' && (service.item_prices || []).length > 0 && (
             <div className="mb-3 flex flex-wrap gap-1">
               {(service.item_prices || []).slice(0, 4).map((ip, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-50 border border-violet-100 text-[11px] rounded-md">
-                  <Tag className="w-3 h-3 text-violet-700" />
-                  <span className="text-violet-900 font-medium">{ip.item}</span>
-                  <span className="text-violet-700">·</span>
-                  <span className="text-violet-900 font-bold">{formatFCFA(Number(ip.price))}</span>
+                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-fuchsia-50 border border-fuchsia-100 text-[11px] rounded-md">
+                  <Tag className="w-3 h-3 text-fuchsia-700" />
+                  <span className="text-fuchsia-900 font-medium">{ip.item}</span>
+                  <span className="text-fuchsia-700">·</span>
+                  <span className="text-fuchsia-900 font-bold">{formatFCFA(Number(ip.price))}</span>
                 </span>
               ))}
               {(service.item_prices || []).length > 4 && (
@@ -325,24 +326,24 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
             <div className="flex items-center gap-2 mb-3 text-xs text-slate-500">
               <span className="uppercase tracking-wide">Pays:</span>
               <div className="flex items-center gap-2">
-                {service.accepts_momo && <span className="inline-flex items-center gap-1"><Wallet className="w-3.5 h-3.5 text-cyan-700" /> MoMo</span>}
-                {service.accepts_card && <span className="inline-flex items-center gap-1"><CreditCard className="w-3.5 h-3.5 text-cyan-700" /> Card</span>}
-                {service.accepts_cash && <span className="inline-flex items-center gap-1"><Banknote className="w-3.5 h-3.5 text-cyan-700" /> Cash</span>}
+                {service.accepts_momo && <span className="inline-flex items-center gap-1"><Wallet className="w-3.5 h-3.5 text-purple-700" /> MoMo</span>}
+                {service.accepts_card && <span className="inline-flex items-center gap-1"><CreditCard className="w-3.5 h-3.5 text-purple-700" /> Card</span>}
+                {service.accepts_cash && <span className="inline-flex items-center gap-1"><Banknote className="w-3.5 h-3.5 text-purple-700" /> Cash</span>}
               </div>
             </div>
           )}
 
           {/* Price + CTA */}
-          <div className="flex items-center justify-between pt-3 border-t border-cyan-100/60">
+          <div className="flex items-center justify-between pt-3 border-t border-purple-100/60">
             <div>
               <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">From</span>
-              <span className="text-2xl font-bold text-cyan-700 ml-2" data-testid={`list-price-${sid}`}>{pricing.headline}</span>
+              <span className="text-2xl font-bold text-purple-700 ml-2" data-testid={`list-price-${sid}`}>{pricing.headline}</span>
               <span className="text-xs text-slate-500 ml-1">{pricing.unitLabel}</span>
               <p className="text-[11px] text-slate-500 mt-0.5">{pricing.footnote}</p>
             </div>
             <Button
               onClick={() => onBook(service)}
-              className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white rounded-xl shadow-md shadow-cyan-500/20"
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-md shadow-purple-500/20"
               data-testid={`book-list-btn-${sid}`}
             >
               <Shirt className="w-4 h-4 mr-2" /> Book Now
@@ -366,6 +367,10 @@ export default function LaundryResults() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deliveryFilter, setDeliveryFilter] = useState('all');
   const [shopTypeFilter, setShopTypeFilter] = useState('all');
+  // Pre-booking modal — clicking "Book" opens the info modal first; the
+  // explicit "Continue to booking" CTA inside is what navigates to the
+  // booking page (mirrors the Packages flow).
+  const [previewShop, setPreviewShop] = useState(null);
 
   const city = searchParams.get('city') || '';
 
@@ -415,15 +420,22 @@ export default function LaundryResults() {
   }, [services, sortBy, searchQuery, deliveryFilter, shopTypeFilter]);
 
   const handleBook = (service) => {
+    // Open the pre-booking info modal first — only the explicit CTA inside
+    // navigates to the booking page.
+    setPreviewShop(service);
+  };
+
+  const handleContinueToBooking = (service) => {
     sessionStorage.setItem('selectedLaundry', JSON.stringify(service));
+    setPreviewShop(null);
     navigate(`/services/laundry/booking/${service.id || service._id}`);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-cyan-50 via-white to-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 via-white to-slate-50">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-cyan-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
           <p className="text-slate-600">Finding laundry &amp; pressing services...</p>
         </div>
       </div>
@@ -431,22 +443,22 @@ export default function LaundryResults() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cyan-50 via-white to-slate-50">
-      {/* Header (cyan-accented) */}
-      <div className="bg-white border-b border-cyan-100 shadow-sm sticky top-0 z-20" data-testid="laundry-results-header">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-slate-50">
+      {/* Header (purple-accented) */}
+      <div className="bg-white border-b border-purple-100 shadow-sm sticky top-0 z-20" data-testid="laundry-results-header">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/laundry')} className="gap-2 text-cyan-700 hover:bg-cyan-50">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/laundry')} className="gap-2 text-purple-700 hover:bg-purple-50">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-md shadow-cyan-500/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-md shadow-purple-500/20">
                 <Shirt className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-slate-900">Laundry &amp; Pressing</h1>
                 <p className="text-sm text-slate-500">
-                  <span className="text-cyan-700 font-semibold">{filteredServices.length}</span> shop{filteredServices.length === 1 ? '' : 's'} found
+                  <span className="text-purple-700 font-semibold">{filteredServices.length}</span> shop{filteredServices.length === 1 ? '' : 's'} found
                   {city && <span className="text-slate-400"> · in <span className="text-slate-600">{city}</span></span>}
                 </p>
               </div>
@@ -455,18 +467,18 @@ export default function LaundryResults() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-600/60" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-600/60" />
               <Input
                 type="text"
                 placeholder="Search by name, area or city..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-cyan-50/40 border-cyan-200 focus-visible:ring-cyan-400"
+                className="pl-10 bg-purple-50/40 border-purple-200 focus-visible:ring-purple-400"
               />
             </div>
             <Select value={shopTypeFilter} onValueChange={setShopTypeFilter}>
-              <SelectTrigger className="w-40 bg-white border-cyan-200" data-testid="shop-type-filter">
-                <Shirt className="w-4 h-4 mr-2 text-cyan-700" />
+              <SelectTrigger className="w-40 bg-white border-purple-200" data-testid="shop-type-filter">
+                <Shirt className="w-4 h-4 mr-2 text-purple-700" />
                 <SelectValue placeholder="Shop type" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -477,8 +489,8 @@ export default function LaundryResults() {
               </SelectContent>
             </Select>
             <Select value={deliveryFilter} onValueChange={setDeliveryFilter}>
-              <SelectTrigger className="w-40 bg-white border-cyan-200">
-                <Truck className="w-4 h-4 mr-2 text-cyan-700" />
+              <SelectTrigger className="w-40 bg-white border-purple-200">
+                <Truck className="w-4 h-4 mr-2 text-purple-700" />
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -488,8 +500,8 @@ export default function LaundryResults() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white border-cyan-200">
-                <SlidersHorizontal className="w-4 h-4 mr-2 text-cyan-700" />
+              <SelectTrigger className="w-48 bg-white border-purple-200">
+                <SlidersHorizontal className="w-4 h-4 mr-2 text-purple-700" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -499,12 +511,12 @@ export default function LaundryResults() {
                 <SelectItem value="price_high">Price: high to low</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center bg-cyan-50 rounded-lg p-1 border border-cyan-200">
+            <div className="flex items-center bg-purple-50 rounded-lg p-1 border border-purple-200">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm text-cyan-700' : 'text-slate-500'}
+                className={viewMode === 'grid' ? 'bg-white shadow-sm text-purple-700' : 'text-slate-500'}
                 data-testid="view-mode-grid"
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -513,7 +525,7 @@ export default function LaundryResults() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm text-cyan-700' : 'text-slate-500'}
+                className={viewMode === 'list' ? 'bg-white shadow-sm text-purple-700' : 'text-slate-500'}
                 data-testid="view-mode-list"
               >
                 <List className="w-4 h-4" />
@@ -527,12 +539,12 @@ export default function LaundryResults() {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {filteredServices.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-16 h-16 rounded-full bg-cyan-100 mx-auto mb-4 flex items-center justify-center">
-              <Shirt className="w-8 h-8 text-cyan-600" />
+            <div className="w-16 h-16 rounded-full bg-purple-100 mx-auto mb-4 flex items-center justify-center">
+              <Shirt className="w-8 h-8 text-purple-600" />
             </div>
             <h3 className="text-xl font-semibold text-slate-700 mb-2">No services found</h3>
             <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
-            <Button onClick={() => navigate('/services/laundry')} className="bg-cyan-700 hover:bg-cyan-800">
+            <Button onClick={() => navigate('/services/laundry')} className="bg-purple-700 hover:bg-purple-800">
               Modify Search
             </Button>
           </div>
@@ -550,6 +562,13 @@ export default function LaundryResults() {
           </div>
         )}
       </div>
+
+      <LaundryShopDetailsModal
+        open={!!previewShop}
+        onOpenChange={(v) => { if (!v) setPreviewShop(null); }}
+        shop={previewShop}
+        onContinue={handleContinueToBooking}
+      />
     </div>
   );
 }

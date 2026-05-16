@@ -30,6 +30,9 @@ class ShopType(str, Enum):
 class ItemPrice(BaseModel):
     item: str = Field(..., min_length=1, description="Item label, e.g. 'Shirt'")
     price: float = Field(..., ge=0, description="Unit price in shop currency")
+    # Optional thumbnail — uploaded via `POST /api/uploads/`. Helps customers
+    # spot what they're paying for at a glance on the booking page.
+    image_url: Optional[str] = Field(default=None, description="Thumbnail URL for this item")
 
 
 # A common operating-hours payload — kept loose for legacy compatibility.
