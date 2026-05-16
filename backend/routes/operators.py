@@ -390,24 +390,27 @@ async def get_operators(
         op["id"] = op_id
         op.pop("_id", None)
         
-        # Get owner user info - try owner_user_id first, then created_by, then match operator users
-        owner_user_id = op.get("owner_user_id") or op.get("created_by")
+        # Get owner info — ALWAYS prefer the live user with `operator_role='owner'`
+        # (that's the single source of truth for ownership; `owner_user_id` on
+        # the operator document can drift when ownership is transferred). Fall
+        # back to the legacy `owner_user_id`/`created_by` only when no live
+        # owner user exists.
         op["owner_name"] = ""
         op["owner_email"] = ""
-        if owner_user_id:
-            owner = await db.users.find_one({"_id": owner_user_id}, {"_id": 0, "full_name": 1, "email": 1})
-            if owner:
-                op["owner_name"] = owner.get("full_name", "")
-                op["owner_email"] = owner.get("email", "")
-        # If still empty, try finding a user linked to this operator with role=owner
-        if not op["owner_name"]:
-            op_user = await db.users.find_one(
-                {"operator_id": op_id, "operator_role": "owner"},
-                {"_id": 0, "full_name": 1, "email": 1}
-            )
-            if op_user:
-                op["owner_name"] = op_user.get("full_name", "")
-                op["owner_email"] = op_user.get("email", "")
+        op_user = await db.users.find_one(
+            {"operator_id": op_id, "operator_role": "owner"},
+            {"_id": 0, "full_name": 1, "email": 1}
+        )
+        if op_user:
+            op["owner_name"] = op_user.get("full_name", "")
+            op["owner_email"] = op_user.get("email", "")
+        else:
+            legacy_owner_id = op.get("owner_user_id") or op.get("created_by")
+            if legacy_owner_id:
+                owner = await db.users.find_one({"_id": legacy_owner_id}, {"_id": 0, "full_name": 1, "email": 1})
+                if owner:
+                    op["owner_name"] = owner.get("full_name", "")
+                    op["owner_email"] = owner.get("email", "")
         
         # Calculate total revenue from orders for this operator
         try:

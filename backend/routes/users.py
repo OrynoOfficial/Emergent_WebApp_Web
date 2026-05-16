@@ -487,6 +487,23 @@ async def create_user(
         import secrets as _secrets
         raw_password = _secrets.token_urlsafe(24)
 
+    # Resolve assigned custom roles → merge their bundled permissions into the
+    # user's `permissions[]` so role membership has real teeth at runtime.
+    # `assigned_role_ids` itself is also persisted for future inspection/UI.
+    requested_role_ids = list(user_data.get("assigned_role_ids") or [])
+    merged_permissions = list(user_data.get("permissions") or [])
+    if requested_role_ids:
+        role_docs = await db.roles.find(
+            {"id": {"$in": requested_role_ids}},
+            {"_id": 0, "id": 1, "permissions": 1}
+        ).to_list(len(requested_role_ids))
+        # Drop any role_ids that didn't resolve so we don't persist phantoms.
+        requested_role_ids = [r["id"] for r in role_docs]
+        for r in role_docs:
+            for p in (r.get("permissions") or []):
+                if p not in merged_permissions:
+                    merged_permissions.append(p)
+
     user_id = str(uuid.uuid4())
     user = {
         "_id": user_id,
@@ -497,7 +514,8 @@ async def create_user(
         "full_name": user_data.get("full_name"),
         "phone": user_data.get("phone"),
         "role": new_role,
-        "permissions": user_data.get("permissions") or [],
+        "permissions": merged_permissions,
+        "assigned_role_ids": requested_role_ids,
         "status": "pending_verification" if send_invite else user_data.get("status", "active"),
         "email_verified": False if send_invite else True,
         "two_fa_enabled": False,
@@ -522,6 +540,13 @@ async def create_user(
             user["operator_role"] = user_data["operator_role"]
 
     await db.users.insert_one(user)
+
+    # Bump the user_count on each assigned role for UI display.
+    if requested_role_ids:
+        await db.roles.update_many(
+            {"id": {"$in": requested_role_ids}},
+            {"$inc": {"user_count": 1}}
+        )
 
     invite_link = None
     invite_email_status = None

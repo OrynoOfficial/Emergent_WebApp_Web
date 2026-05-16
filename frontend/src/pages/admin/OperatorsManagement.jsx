@@ -23,6 +23,8 @@ import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/s
 import AddOperatorWizard from '@/components/admin/AddOperatorWizard';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotel', 'travel', 'car_rental', 'restaurant', 'events', 'cinema', 'laundry', 'banquet', 'package'];
@@ -64,6 +66,7 @@ export default function OperatorsManagement() {
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState('list');  // 'list' | 'grid' | 'details'
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -505,6 +508,9 @@ export default function OperatorsManagement() {
               <XIcon className="h-3.5 w-3.5" /> Clear
             </Button>
           )}
+          <div className="ml-auto">
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          </div>
         </div>
         {showFilters && (
           <div className="flex flex-wrap gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="expanded-filters">
@@ -524,150 +530,257 @@ export default function OperatorsManagement() {
         )}
       </div>
 
-      {/* Operators Table */}
+      {/* Operators — list / grid / details */}
       {loading ? (
         <div className="text-center py-10 text-slate-500">Loading operators...</div>
+      ) : filteredOperators.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border p-10 text-center text-slate-500" data-testid="operators-empty-state">
+          No operators found
+        </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Services</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Location</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Owner</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Date Joined</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Revenue</th>
-                <th className="py-4 px-6 text-right text-sm font-semibold text-slate-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {paginatedOperators.map((operator) => (
-                <tr key={operator.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
-                        <Building className="h-5 w-5 text-[#082c59]" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{operator.name}</p>
-                        <p className="text-sm text-slate-500">{operator.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex flex-wrap gap-1 max-w-[180px]">
-                      {operator.service_types?.slice(0, 2).map(s => getServiceBadge(s))}
-                      {operator.service_types?.length > 2 && (
-                        <div className="relative group">
-                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">+{operator.service_types.length - 2}</Badge>
-                          <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover:flex flex-wrap gap-1 p-2 bg-white border rounded-lg shadow-lg min-w-[160px]">
-                            {operator.service_types.slice(2).map(s => getServiceBadge(s))}
+        <>
+          {viewMode === 'list' && (
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden" data-testid="operators-list-view">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Services</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Location</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Owner</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Date Joined</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Revenue</th>
+                    <th className="py-4 px-6 text-right text-sm font-semibold text-slate-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {paginatedOperators.map((operator) => (
+                    <tr key={operator.id} className="hover:bg-slate-50 transition-colors" data-testid={`operator-row-${operator.id}`}>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
+                            <Building className="h-5 w-5 text-[#082c59]" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-900">{operator.name}</p>
+                            <p className="text-sm text-slate-500">{operator.email}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-wrap gap-1 max-w-[180px]">
+                          {operator.service_types?.slice(0, 2).map(s => getServiceBadge(s))}
+                          {operator.service_types?.length > 2 && (
+                            <div className="relative group">
+                              <Badge variant="outline" className="text-xs cursor-pointer hover:bg-slate-100">+{operator.service_types.length - 2}</Badge>
+                              <div className="absolute z-50 left-0 top-full mt-1 hidden group-hover:flex flex-wrap gap-1 p-2 bg-white border rounded-lg shadow-lg min-w-[160px]">
+                                {operator.service_types.slice(2).map(s => getServiceBadge(s))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-sm">
+                          <p className="font-medium text-slate-700">{getCountryName(operator.country)}</p>
+                          {operator.region && <p className="text-xs text-slate-500">{getRegionName(operator.region)}</p>}
+                          {operator.market_segment && getSegmentBadge(operator.market_segment)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6" data-testid={`operator-owner-cell-${operator.id}`}>
+                        <div className="text-sm">
+                          <p className="font-medium text-slate-700">{operator.owner_name || <span className="italic text-slate-400">No owner assigned</span>}</p>
+                          <p className="text-slate-500 text-xs">{operator.owner_email || ''}</p>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-1 text-slate-600 text-sm">
+                          <Calendar className="h-4 w-4" />
+                          {operator.created_at ? formatDate(operator.created_at) : operator.joined_date || '-'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        {getStatusBadge(operator.status)}
+                      </td>
+                      <td className="py-4 px-6 font-medium text-slate-900">
+                        {formatFCFA(operator.revenue || 0)}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => handleView(operator)} className="p-2 hover:bg-blue-100 rounded-lg transition-colors" title="View Details" data-testid={`view-operator-${operator.id}`}>
+                            <Eye className="h-4 w-4 text-blue-600" />
+                          </button>
+                          {canManageOperators && (
+                            <>
+                              <button onClick={() => handleEdit(operator)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Edit">
+                                <Edit className="h-4 w-4 text-slate-600" />
+                              </button>
+                              <button onClick={() => handleSuspend(operator)} className={`p-2 rounded-lg transition-colors ${operator.status === 'suspended' ? 'hover:bg-green-100' : 'hover:bg-red-100'}`} title={operator.status === 'suspended' ? 'Activate' : 'Suspend'}>
+                                {operator.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Ban className="h-4 w-4 text-red-600" />}
+                              </button>
+                              <button onClick={() => handleDelete(operator)} className="p-2 hover:bg-red-100 rounded-lg transition-colors" title="Delete">
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="operators-grid-view">
+              {paginatedOperators.map((operator) => (
+                <Card
+                  key={operator.id}
+                  className="bg-white border-slate-200 hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
+                  onClick={() => handleView(operator)}
+                  data-testid={`operator-card-${operator.id}`}
+                >
+                  <div className="h-1.5 bg-gradient-to-r from-[#082c59] via-blue-500 to-indigo-500" />
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Building className="h-5 w-5 text-[#082c59]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 truncate" title={operator.name}>{operator.name}</p>
+                          <p className="text-xs text-slate-500 truncate" title={operator.email}>{operator.email}</p>
+                        </div>
+                      </div>
+                      {getStatusBadge(operator.status)}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {operator.service_types?.slice(0, 3).map((s) => getServiceBadge(s))}
+                      {operator.service_types?.length > 3 && (
+                        <Badge variant="outline" className="text-xs">+{operator.service_types.length - 3}</Badge>
                       )}
                     </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm">
-                      <p className="font-medium text-slate-700">{getCountryName(operator.country)}</p>
-                      {operator.region && <p className="text-xs text-slate-500">{getRegionName(operator.region)}</p>}
-                      {operator.market_segment && getSegmentBadge(operator.market_segment)}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      <span className="truncate">{getCountryName(operator.country)}{operator.region ? ` · ${getRegionName(operator.region)}` : ''}</span>
                     </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm">
-                      <p className="font-medium text-slate-700">{operator.owner_name || '-'}</p>
-                      <p className="text-slate-500 text-xs">{operator.owner_email || ''}</p>
+                    <div
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                      data-testid={`operator-owner-card-${operator.id}`}
+                    >
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">Owner</p>
+                      <p className="text-sm font-medium text-slate-800 truncate" title={operator.owner_name}>
+                        {operator.owner_name || <span className="italic text-slate-400">No owner assigned</span>}
+                      </p>
+                      {operator.owner_email && <p className="text-[11px] text-slate-500 truncate">{operator.owner_email}</p>}
                     </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-1 text-slate-600 text-sm">
-                      <Calendar className="h-4 w-4" />
-                      {operator.created_at ? formatDate(operator.created_at) : operator.joined_date || '-'}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {operator.created_at ? formatDate(operator.created_at) : '-'}
+                      </span>
+                      <span className="text-sm font-bold text-[#082c59]">{formatFCFA(operator.revenue || 0)}</span>
                     </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    {getStatusBadge(operator.status)}
-                  </td>
-                  <td className="py-4 px-6 font-medium text-slate-900">
-                    {formatFCFA(operator.revenue || 0)}
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => handleView(operator)}
-                        className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4 text-blue-600" />
-                      </button>
+                    <div className="flex items-center justify-end gap-1 -mb-1" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => handleView(operator)} className="p-1.5 hover:bg-blue-100 rounded-md transition-colors" title="View"><Eye className="h-4 w-4 text-blue-600" /></button>
                       {canManageOperators && (
                         <>
-                          <button
-                            onClick={() => handleEdit(operator)}
-                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4 text-slate-600" />
+                          <button onClick={() => handleEdit(operator)} className="p-1.5 hover:bg-slate-100 rounded-md transition-colors" title="Edit"><Edit className="h-4 w-4 text-slate-600" /></button>
+                          <button onClick={() => handleSuspend(operator)} className={`p-1.5 rounded-md transition-colors ${operator.status === 'suspended' ? 'hover:bg-green-100' : 'hover:bg-red-100'}`} title={operator.status === 'suspended' ? 'Activate' : 'Suspend'}>
+                            {operator.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Ban className="h-4 w-4 text-red-600" />}
                           </button>
-                          <button
-                            onClick={() => handleSuspend(operator)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              operator.status === 'suspended' 
-                                ? 'hover:bg-green-100' 
-                                : 'hover:bg-red-100'
-                            }`}
-                            title={operator.status === 'suspended' ? 'Activate' : 'Suspend'}
-                          >
-                            {operator.status === 'suspended' ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Ban className="h-4 w-4 text-red-600" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(operator)}
-                            className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </button>
+                          <button onClick={() => handleDelete(operator)} className="p-1.5 hover:bg-red-100 rounded-md transition-colors" title="Delete"><Trash2 className="h-4 w-4 text-red-600" /></button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </CardContent>
+                </Card>
               ))}
-            </tbody>
-          </table>
-          {filteredOperators.length === 0 && (
-            <div className="text-center py-10 text-slate-500">No operators found</div>
-          )}
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t" data-testid="pagination">
-              <p className="text-sm text-slate-600">
-                Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredOperators.length)} of {filteredOperators.length}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} data-testid="prev-page">
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button key={page} variant={page === currentPage ? 'default' : 'outline'} size="sm" className={page === currentPage ? 'bg-[#082c59]' : ''} onClick={() => setCurrentPage(page)}>
-                    {page}
-                  </Button>
-                ))}
-                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} data-testid="next-page">
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           )}
-        </div>
+
+          {viewMode === 'details' && (
+            <div className="space-y-3" data-testid="operators-details-view">
+              {paginatedOperators.map((operator) => (
+                <Card
+                  key={operator.id}
+                  className="bg-white border-slate-200 hover:shadow-md transition-all overflow-hidden"
+                  data-testid={`operator-detail-${operator.id}`}
+                >
+                  <CardContent className="p-0">
+                    <div className="flex flex-col md:flex-row">
+                      <div className="md:w-48 bg-gradient-to-br from-[#082c59] to-blue-700 p-5 text-white flex flex-col justify-between">
+                        <div>
+                          <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
+                            <Building className="h-6 w-6 text-white" />
+                          </div>
+                          <p className="font-bold text-lg leading-tight" title={operator.name}>{operator.name}</p>
+                          <p className="text-xs text-blue-100/80 truncate mt-0.5">{operator.email}</p>
+                        </div>
+                        <div className="mt-4">
+                          {getStatusBadge(operator.status)}
+                        </div>
+                      </div>
+                      <div className="flex-1 p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Services</p>
+                          <div className="flex flex-wrap gap-1">
+                            {operator.service_types?.length > 0 ? operator.service_types.slice(0, 4).map((s) => getServiceBadge(s)) : <span className="text-xs text-slate-400 italic">No services</span>}
+                            {operator.service_types?.length > 4 && <Badge variant="outline" className="text-xs">+{operator.service_types.length - 4}</Badge>}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Location</p>
+                          <p className="text-sm font-medium text-slate-700">{getCountryName(operator.country)}</p>
+                          {operator.region && <p className="text-xs text-slate-500">{getRegionName(operator.region)}</p>}
+                          {operator.market_segment && <div className="mt-1">{getSegmentBadge(operator.market_segment)}</div>}
+                        </div>
+                        <div data-testid={`operator-owner-detail-${operator.id}`}>
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Owner</p>
+                          <p className="text-sm font-medium text-slate-800 truncate" title={operator.owner_name}>
+                            {operator.owner_name || <span className="italic text-slate-400">No owner assigned</span>}
+                          </p>
+                          {operator.owner_email && <p className="text-xs text-slate-500 truncate">{operator.owner_email}</p>}
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Revenue</p>
+                          <p className="text-lg font-bold text-[#082c59]">{formatFCFA(operator.revenue || 0)}</p>
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Calendar className="h-3 w-3" /> joined {operator.created_at ? formatDate(operator.created_at) : '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="md:w-auto p-5 md:border-l border-slate-100 flex flex-row md:flex-col items-center md:justify-center gap-1">
+                        <button onClick={() => handleView(operator)} className="p-2 hover:bg-blue-100 rounded-lg transition-colors" title="View"><Eye className="h-4 w-4 text-blue-600" /></button>
+                        {canManageOperators && (
+                          <>
+                            <button onClick={() => handleEdit(operator)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Edit"><Edit className="h-4 w-4 text-slate-600" /></button>
+                            <button onClick={() => handleSuspend(operator)} className={`p-2 rounded-lg transition-colors ${operator.status === 'suspended' ? 'hover:bg-green-100' : 'hover:bg-red-100'}`} title={operator.status === 'suspended' ? 'Activate' : 'Suspend'}>
+                              {operator.status === 'suspended' ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Ban className="h-4 w-4 text-red-600" />}
+                            </button>
+                            <button onClick={() => handleDelete(operator)} className="p-2 hover:bg-red-100 rounded-lg transition-colors" title="Delete"><Trash2 className="h-4 w-4 text-red-600" /></button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Shared pagination footer (works across all 3 view modes) */}
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            onChange={setCurrentPage}
+            total={filteredOperators.length}
+            pageSize={ITEMS_PER_PAGE}
+            itemLabel="operator"
+          />
+        </>
       )}
 
       {/* View Operator Dialog */}

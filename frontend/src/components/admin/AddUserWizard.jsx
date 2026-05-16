@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Shield, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 
 // Operator-scoped permissions (same set as AddOperatorWizard for symmetry)
@@ -52,7 +54,9 @@ const DEFAULT_DATA = {
   role: 'customer',         // customer | operator | admin | super_admin
   operator_id: '',
   operator_role: 'staff',    // owner | manager | staff
-  // Step 3
+  // Step 3 — NEW: custom roles assigned from /admin/permissions (operator-scoped users only)
+  assigned_role_ids: [],
+  // Step 4 — fine-tune scoped permissions
   permissions: [],
   role_preset: 'customer',
 };
@@ -61,6 +65,8 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
   const [data, setData] = useState(DEFAULT_DATA);
   const [operators, setOperators] = useState([]);
   const [operatorsLoading, setOperatorsLoading] = useState(false);
+  const [customRoles, setCustomRoles] = useState([]);
+  const [customRolesLoading, setCustomRolesLoading] = useState(false);
 
   useEffect(() => { if (open) setData(DEFAULT_DATA); }, [open]);
 
@@ -74,6 +80,19 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
       setOperators(res.data?.operators || res.data || []);
     }).catch(() => setOperators([])).finally(() => setOperatorsLoading(false));
   }, [open, data.role, operators.length]);
+
+  // Fetch custom roles from /admin/permissions whenever we enter the wizard.
+  // Lazy-loaded the first time the Role-Assignment step is reachable (i.e.
+  // after the user has picked an operator-scoped role).
+  useEffect(() => {
+    if (!open) return;
+    if (data.role !== 'operator') return;
+    if (customRoles.length > 0) return;
+    setCustomRolesLoading(true);
+    api.get('/access/roles').then((res) => {
+      setCustomRoles(res.data?.roles || []);
+    }).catch(() => setCustomRoles([])).finally(() => setCustomRolesLoading(false));
+  }, [open, data.role, customRoles.length]);
 
   // Step renderers ───────────────────────────────────────────────────────────
   const renderBasics = ({ data, setData }) => (
@@ -142,6 +161,9 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
                       operator_role: preset.requires === 'operator' ? key : data.operator_role,
                       role_preset: key,
                       permissions: preset.perms,
+                      // Clear role assignments when switching to a non-operator role
+                      // — custom roles are operator/staff-only per product spec.
+                      assigned_role_ids: preset.requires === 'operator' ? data.assigned_role_ids : [],
                     })}
                     data-testid={`wiz-user-role-${key}`}
                     className={`text-left rounded-lg border p-3 transition ${
@@ -173,6 +195,68 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
               </SelectContent>
             </Select>
           </div>
+        )}
+      </div>
+    );
+  };
+
+  // NEW: Step 3 — multi-select custom roles defined in /admin/permissions.
+  // Only rendered when role==='operator' (per product spec); the operator/staff
+  // user will inherit the union of permissions across the picked roles.
+  const renderAssignRoles = ({ data, setData }) => {
+    const toggleRoleId = (id) => setData((p) => ({
+      ...p,
+      assigned_role_ids: (p.assigned_role_ids || []).includes(id)
+        ? (p.assigned_role_ids || []).filter((x) => x !== id)
+        : [...(p.assigned_role_ids || []), id],
+    }));
+    return (
+      <div className="space-y-3">
+        <div className="rounded-md bg-violet-50 border border-violet-200 px-3 py-2 text-xs text-violet-800">
+          <p className="font-semibold flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Pick one or more custom roles</p>
+          <p className="mt-0.5 text-violet-700/80">Roles are defined in <strong>Admin → Permissions</strong>. The user inherits the union of permissions across every role you tick. You can fine-tune on the next step.</p>
+        </div>
+        {customRolesLoading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-500 py-6 justify-center">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading roles…
+          </div>
+        ) : customRoles.length === 0 ? (
+          <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-4 text-sm text-slate-600 text-center">
+            No custom roles exist yet. <a href="/admin/permissions" target="_blank" rel="noreferrer" className="text-[#082c59] underline">Create one in Admin → Permissions</a> first, or skip this step to fine-tune permissions manually.
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1" data-testid="wiz-user-roles-list">
+            {customRoles.map((r) => {
+              const checked = (data.assigned_role_ids || []).includes(r.id);
+              const permCount = (r.permissions || []).length;
+              return (
+                <label
+                  key={r.id}
+                  className={`flex items-start gap-3 rounded-md border px-3 py-2 cursor-pointer transition ${
+                    checked
+                      ? 'border-[#082c59] bg-[#082c59]/5'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
+                  }`}
+                  data-testid={`wiz-user-role-checkbox-${r.id}`}
+                >
+                  <Checkbox checked={checked} onCheckedChange={() => toggleRoleId(r.id)} className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-slate-900">{r.name}</span>
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5">{permCount} permission{permCount === 1 ? '' : 's'}</Badge>
+                      {r.is_system && <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-slate-50">system</Badge>}
+                    </div>
+                    {r.description && <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{r.description}</p>}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        )}
+        {(data.assigned_role_ids || []).length > 0 && (
+          <p className="text-[11px] text-slate-500" data-testid="wiz-user-roles-selected-count">
+            {(data.assigned_role_ids || []).length} role{(data.assigned_role_ids || []).length === 1 ? '' : 's'} selected.
+          </p>
         )}
       </div>
     );
@@ -235,9 +319,16 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
     return errs.length ? errs : null;
   };
 
+  // Dynamic step list — the Role-Assignment step is only inserted when the
+  // current account-role is operator (i.e. for operator owners / staff /
+  // managers, per product spec). For admin/customer accounts the wizard
+  // collapses back to the original 3-step flow.
   const steps = [
     { id: 'basics',      title: 'User basics',          description: 'Name, email, invite',     validate: validateBasics, render: renderBasics },
     { id: 'role',        title: 'Role & operator',     description: 'What can they access?',    validate: validateRole,   render: renderRoleAndOperator },
+    ...(data.role === 'operator'
+      ? [{ id: 'assign-roles', title: 'Assign Roles', description: 'Pull from Admin → Permissions', render: renderAssignRoles }]
+      : []),
     { id: 'permissions', title: 'Permissions',         description: 'Fine-tune access',         render: renderPermissions },
   ];
 
@@ -265,6 +356,10 @@ export default function AddUserWizard({ open, onOpenChange, onCreate, currentUse
         if (payload.role === 'operator') {
           apiPayload.operator_id = payload.operator_id;
           apiPayload.operator_role = payload.operator_role;
+          // Only forward role assignments when they're operator-scoped.
+          if ((payload.assigned_role_ids || []).length > 0) {
+            apiPayload.assigned_role_ids = payload.assigned_role_ids;
+          }
         }
         await onCreate(apiPayload);
       }}
