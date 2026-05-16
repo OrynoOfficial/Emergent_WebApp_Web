@@ -322,6 +322,68 @@ export default function LaundryBooking() {
     }
   };
 
+  // Extract reusable order-creation logic. Used by both Confirm Booking
+  // and (defensively) by PaymentMethodsSelection's lazy-create fallback.
+  const ensureOrderId = async () => {
+    if (orderId) return orderId;
+    if (totalItems === 0) throw new Error('Please add at least one item');
+    if (!booking.pickup_date) throw new Error('Please select a date');
+    if (!booking.firstName || !booking.lastName || !booking.phone) {
+      throw new Error('Please fill in your information (name + phone)');
+    }
+    if (pickupMethod === 'pickup' && !booking.address) {
+      throw new Error('Please enter a pickup address');
+    }
+
+    const itemsBreakdown = Object.entries(items)
+      .map(([itemId, count]) => {
+        const item = itemCatalog.find((i) => i.id === itemId);
+        if (!item) return null;
+        return { id: itemId, name: item.name, quantity: count, unit_price: getItemPrice(item) };
+      })
+      .filter(Boolean);
+
+    const orderPayload = {
+      service_type: 'laundry',
+      service_id: service.id || service._id || id,
+      service_name: service.name,
+      total_amount: total,
+      currency: 'XAF',
+      status: 'pending',
+      payment_status: 'pending',
+      booking_details: {
+        firstName: booking.firstName,
+        lastName: booking.lastName,
+        email: booking.email,
+        phone: booking.phone,
+        address: pickupMethod === 'pickup' ? booking.address : '',
+        notes: booking.notes,
+        pickup_method: pickupMethod,
+        pickup_surcharge: pickupFee,
+        shop_id: service.id || service._id || id,
+        shop_name: service.name,
+        shop_type: service.shop_type || 'laundry',
+        service_type_selected: serviceType,
+        pickup_date: booking.pickup_date ? format(booking.pickup_date, 'yyyy-MM-dd') : null,
+        pickup_time: booking.pickup_time,
+        delivery_date: booking.delivery_date ? format(booking.delivery_date, 'yyyy-MM-dd') : null,
+        express: booking.express,
+        express_surcharge: expressSurcharge,
+        items: itemsBreakdown,
+        items_subtotal: itemsSubtotal,
+        service_fee: serviceFee,
+        promo_code: appliedPromo?.code,
+        promo_discount: discount,
+      },
+    };
+
+    const response = await api.post('/orders/create', orderPayload);
+    const newId = response.data?.order_id || response.data?._id || response.data?.id;
+    if (!newId) throw new Error('Failed to create order');
+    setOrderId(newId);
+    return newId;
+  };
+
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
     if (totalItems === 0) {
@@ -355,58 +417,24 @@ export default function LaundryBooking() {
     setCurrentStep(3);
 
     try {
-      const itemsBreakdown = Object.entries(items)
-        .map(([itemId, count]) => {
-          const item = itemCatalog.find((i) => i.id === itemId);
-          if (!item) return null;
-          return { id: itemId, name: item.name, quantity: count, unit_price: getItemPrice(item) };
-        })
-        .filter(Boolean);
-
-      const orderPayload = {
-        service_type: 'laundry',
-        service_id: service.id || service._id || id,
-        service_name: service.name,
-        total_amount: total,
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
-        booking_details: {
-          firstName: booking.firstName,
-          lastName: booking.lastName,
-          email: booking.email,
-          phone: booking.phone,
-          address: pickupMethod === 'pickup' ? booking.address : '',
-          notes: booking.notes,
-          pickup_method: pickupMethod,
-          pickup_surcharge: pickupFee,
-          shop_id: service.id || service._id || id,
-          shop_name: service.name,
-          shop_type: service.shop_type || 'laundry',
-          service_type_selected: serviceType,
-          pickup_date: booking.pickup_date ? format(booking.pickup_date, 'yyyy-MM-dd') : null,
-          pickup_time: booking.pickup_time,
-          delivery_date: booking.delivery_date ? format(booking.delivery_date, 'yyyy-MM-dd') : null,
-          express: booking.express,
-          express_surcharge: expressSurcharge,
-          items: itemsBreakdown,
-          items_subtotal: itemsSubtotal,
-          service_fee: serviceFee,
-          promo_code: appliedPromo?.code,
-          promo_discount: discount,
-        },
-      };
-
-      const response = await api.post('/orders/create', orderPayload);
-      const newId = response.data?.order_id || response.data?._id || response.data?.id;
-      if (!newId) throw new Error('Failed to create order');
-      setOrderId(newId);
+      await ensureOrderId();
       setTriggerPayment(true);
     } catch (error) {
       console.error('Order creation failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to create order. Please try again.');
+      toast.error(error.response?.data?.detail || error.message || 'Failed to create order. Please try again.');
       setPaymentInProgress(false);
       setCurrentStep(2);
+    }
+  };
+
+  // Lazy-create fallback for PaymentMethodsSelection — if user somehow
+  // triggers MoMo/Stripe without orderId, create the order on demand.
+  const handleRequestCreateOrder = async () => {
+    try {
+      return await ensureOrderId();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || error.message || 'Failed to create order');
+      throw error;
     }
   };
 
@@ -959,6 +987,7 @@ export default function LaundryBooking() {
                     onPaymentInitiated={handlePaymentInitiated}
                     onPaymentError={(error) => toast.error(error.message)}
                     onCheckoutAbandoned={handleCheckoutAbandoned}
+                    onRequestCreateOrder={handleRequestCreateOrder}
                     triggerPayment={triggerPayment}
                     onMethodSelected={setSelectedPaymentMethod}
                   />

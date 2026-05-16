@@ -23,6 +23,7 @@ const PaymentMethodsSelection = ({
   onProcessingChange, // Callback to inform parent about processing state
   onMethodSelected, // Callback when a payment method is selected
   onCheckoutAbandoned, // Called when the Stripe checkout modal is closed without paying
+  onRequestCreateOrder, // Optional: async () => orderId. Lazy-create the order if MoMo/Stripe is triggered without one.
 }) => {
   const [selectedMethodInternal, setSelectedMethodInternal] = useState(null);
   const [isProcessingInternal, setIsProcessingInternal] = useState(false);
@@ -172,7 +173,16 @@ const PaymentMethodsSelection = ({
   }, [momoTransactionId, momoStatus, momoPollCount, onPaymentInitiated, onProcessingChange]);
 
   const initiateMoMoPayment = async () => {
-    if (!orderId) {
+    let effectiveOrderId = orderId;
+    if (!effectiveOrderId && typeof onRequestCreateOrder === 'function') {
+      try {
+        effectiveOrderId = await onRequestCreateOrder();
+      } catch (e) {
+        setError(e?.message || 'Failed to prepare order for payment');
+        return;
+      }
+    }
+    if (!effectiveOrderId) {
       setError('Order ID is required for MoMo payment');
       return;
     }
@@ -200,7 +210,7 @@ const PaymentMethodsSelection = ({
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         },
         body: JSON.stringify({
-          order_id: orderId,
+          order_id: effectiveOrderId,
           phone_number: momoPhoneNumber.replace(/\s/g, ''),
           payer_message: serviceDetails?.service_title ? `Payment for ${serviceDetails.service_title}` : 'Payment',
           payee_note: ''
