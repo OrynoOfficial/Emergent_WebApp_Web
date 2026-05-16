@@ -21,6 +21,7 @@ import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const TICKET_TYPES = [
   { id: 'standard', name: 'Standard', multiplier: 1, color: 'bg-slate-500' },
@@ -35,6 +36,16 @@ const StepIndicator = ({ currentStep }) => {
     { num: 2, label: 'Details' },
     { num: 3, label: 'Payment' }
   ];
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   return (
     <div className="flex items-center justify-center mb-8">
@@ -443,6 +454,7 @@ export default function EventBooking() {
                       </h4>
                     </div>
                     <PaymentMethodsSelection
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                       amount={pricing.total}
                       orderId={orderId}
                       serviceName={event?.name || 'Event'}

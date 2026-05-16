@@ -21,6 +21,7 @@ import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { rePayExisting } from '@/utils/paymentRetry';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const formatHours = (h) => {
   if (!h && h !== 0) return '—';
@@ -36,6 +37,16 @@ const StepIndicator = ({ currentStep }) => {
     { num: 2, label: 'Package' },
     { num: 3, label: 'Payment' },
   ];
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
+
   return (
     <div className="flex items-center justify-center mb-8">
       {steps.map((step, idx) => (
@@ -542,6 +553,7 @@ export default function PackageBooking() {
                   )}
                   <div className={!isFormValid ? 'pointer-events-none opacity-50' : ''}>
                     <PaymentMethodsSelection
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                       amount={getTotalPrice()}
                       orderId={orderId}
                       serviceName={service?.name || 'Package Delivery'}

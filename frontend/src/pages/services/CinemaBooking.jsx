@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import { rePayExisting } from '@/utils/paymentRetry';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import CinemaSeatMap, { buildDefaultLayout } from '@/components/cinema/CinemaSeatMap';
 import { format, parseISO, isValid } from 'date-fns';
@@ -372,6 +373,20 @@ export default function CinemaBooking() {
       setCurrentStep((s) => Math.max(s, 2));
     }
   }, [selectedSeats, totalTickets]);
+
+  // Centralised abandonment safety net: hard-deletes the pending order if the
+  // user closes the payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    setShowPaymentOverlay(false);
+    setCurrentStep(2);
+  });
+
+  // Called when the customer closes the Stripe/MoMo modal WITHOUT a
+  // successful payment.
+  const handleCheckoutAbandoned = ({ orderId: abandonedId } = {}) => abandonOrder(abandonedId);
 
   if (loading) {
     return (
@@ -773,6 +788,7 @@ export default function CinemaBooking() {
                     onPaymentError={handlePaymentError}
                     triggerPayment={triggerPayment}
                     onMethodSelected={setSelectedPaymentMethod}
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                   />
                 </CardContent>
               </Card>

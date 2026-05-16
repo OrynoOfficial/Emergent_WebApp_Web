@@ -17,6 +17,7 @@ import LiveSeatMap from '../../components/travel/LiveSeatMap';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { toast } from 'sonner';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 // Step indicator for travel booking
 const TravelStepIndicator = ({ currentStep }) => {
@@ -25,6 +26,16 @@ const TravelStepIndicator = ({ currentStep }) => {
     { number: 2, label: 'Seats & Extras', icon: Armchair },
     { number: 3, label: 'Payment', icon: CreditCard },
   ];
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
@@ -924,6 +935,7 @@ export default function TravelBooking() {
                   </div>
                   <div className="bg-slate-50 p-5">
                     <PaymentMethodsSelection
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                       amount={pricing.total}
                       customerPhone={passengers[0]?.phoneNumber}
                       customerEmail={user?.email}

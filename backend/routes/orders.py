@@ -604,6 +604,41 @@ async def cancel_order(
     )
 
 
+@router.delete("/{order_id}/abandon")
+async def abandon_pending_order(
+    order_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Hard-delete a pending unpaid order the user is walking away from.
+
+    Used when the customer closes the payment modal without paying — keeps
+    `db.orders` clean of orphaned "pending" rows that would otherwise pile
+    up forever. Refuses to delete anything already paid or in-flight.
+    """
+    db = get_database()
+    order = await db.orders.find_one({"_id": order_id})
+    if not order:
+        # Idempotent — already gone is success
+        return {"success": True, "already_gone": True}
+    if order.get("user_id") != current_user["_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your order")
+    # Only allow abandon while the order is still pending + unpaid.
+    payment_status = (order.get("payment_status") or "pending").lower()
+    order_status = (order.get("status") or "pending").lower()
+    if payment_status in ("paid", "verified", "captured", "succeeded") or order_status in (
+        "completed",
+        "confirmed",
+        "in_progress",
+        "cancelled",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Order is already paid or processed — cannot abandon",
+        )
+    await db.orders.delete_one({"_id": order_id})
+    return {"success": True, "deleted": True}
+
+
 @router.get("/analytics/payment-methods")
 async def get_payment_methods_analytics(
     time_range: str = Query("30d", description="Time range: today, 7d, 30d, 90d, 1y"),

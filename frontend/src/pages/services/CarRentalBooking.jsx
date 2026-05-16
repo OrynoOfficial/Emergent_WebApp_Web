@@ -21,6 +21,7 @@ import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
+import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const EXTRAS = [
   { id: 'none', name: 'No Extras', price: 0, icon: Check, description: 'Continue without extras' },
@@ -37,6 +38,16 @@ const StepIndicator = ({ currentStep }) => {
     { num: 2, label: 'Details' },
     { num: 3, label: 'Payment' }
   ];
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   return (
     <div className="flex items-center justify-center mb-8">
@@ -611,6 +622,7 @@ export default function CarRentalBooking() {
                 <div className="bg-white p-5">
                   <div className={!canSelectPayment ? 'opacity-50 pointer-events-none' : ''}>
                     <PaymentMethodsSelection
+                    onCheckoutAbandoned={handleCheckoutAbandoned}
                       amount={pricing.total}
                       orderId={orderId}
                       serviceName={car?.name || 'Car Rental'}

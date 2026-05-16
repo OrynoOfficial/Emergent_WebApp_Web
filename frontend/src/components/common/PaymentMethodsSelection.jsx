@@ -21,7 +21,8 @@ const PaymentMethodsSelection = ({
   orderId, // For Stripe and MoMo Checkout
   onMoMoDialogOpen, // Callback when MoMo dialog opens
   onProcessingChange, // Callback to inform parent about processing state
-  onMethodSelected // Callback when a payment method is selected
+  onMethodSelected, // Callback when a payment method is selected
+  onCheckoutAbandoned, // Called when the Stripe checkout modal is closed without paying
 }) => {
   const [selectedMethodInternal, setSelectedMethodInternal] = useState(null);
   const [isProcessingInternal, setIsProcessingInternal] = useState(false);
@@ -248,7 +249,13 @@ const PaymentMethodsSelection = ({
   const closeMoMoDialog = () => {
     if (momoStatus !== 'pending') {
       setMomoDialogOpen(false);
+      const wasUnpaid = momoStatus !== 'completed';
       resetMoMoPayment();
+      // If the user closed the dialog WITHOUT a successful payment, ask the
+      // parent to abandon the pending order so it doesn't pile up in the DB.
+      if (wasUnpaid && typeof onCheckoutAbandoned === 'function') {
+        onCheckoutAbandoned({ orderId, method: 'momo' });
+      }
     }
   };
 
@@ -716,7 +723,16 @@ const PaymentMethodsSelection = ({
       {/* Premium in-foreground Stripe checkout modal (replaces the old /payment/checkout redirect) */}
       <StripeCheckoutModal
         open={stripeModalOpen}
-        onClose={() => setStripeModalOpen(false)}
+        onClose={() => {
+          // If the modal is closing and we still have an unpaid order, tell
+          // the parent so it can abandon (delete) it. Triggered both by the
+          // dialog X / overlay click AND by "Choose a different payment
+          // method" inside the panel.
+          setStripeModalOpen(false);
+          if (typeof onCheckoutAbandoned === 'function') {
+            onCheckoutAbandoned({ orderId, method: 'stripe' });
+          }
+        }}
         orderId={orderId}
       />
     </div>
