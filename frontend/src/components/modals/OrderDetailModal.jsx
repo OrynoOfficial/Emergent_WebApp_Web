@@ -32,6 +32,9 @@ import {
   Users as UsersIcon,
   RefreshCw,
   Info,
+  Film,
+  Ticket,
+  Monitor,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
@@ -246,6 +249,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                       const d = order.booking_details?.travel_date
                         || order.booking_details?.service_date
                         || order.booking_details?.check_in
+                        || order.booking_details?.show_date
+                        || order.booking_details?.showtime_info?.show_date
                         || order.service_date;
                       return d ? formatDate(d) : 'N/A';
                     })()}
@@ -254,20 +259,25 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               </div>
 
               {/* Service Time: prefer operator/customer-selected service_time, else route departure_time */}
-              {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.arrival_time) && (
+              {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.arrival_time || order.booking_details?.show_time || order.booking_details?.showtime_info?.show_time) && (
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time) && (
+                  {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.show_time || order.booking_details?.showtime_info?.show_time) && (
                     <div>
                       <p className="text-xs text-slate-500">Service Time</p>
                       <p className="text-sm font-medium" data-testid="service-time">
-                        {order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time}
+                        {order.service_time
+                          || order.booking_details?.service_time
+                          || order.booking_details?.travel_time
+                          || order.booking_details?.departure_time
+                          || order.booking_details?.show_time
+                          || order.booking_details?.showtime_info?.show_time}
                       </p>
                     </div>
                   )}
-                  {order.booking_details?.arrival_time && (
+                  {(order.booking_details?.arrival_time || order.booking_details?.end_time || order.booking_details?.showtime_info?.end_time) && (
                     <div>
-                      <p className="text-xs text-slate-500">Arrival Time</p>
-                      <p className="text-sm font-medium">{order.booking_details.arrival_time}</p>
+                      <p className="text-xs text-slate-500">{order.booking_details?.arrival_time ? 'Arrival Time' : 'End Time'}</p>
+                      <p className="text-sm font-medium">{order.booking_details?.arrival_time || order.booking_details?.end_time || order.booking_details?.showtime_info?.end_time}</p>
                     </div>
                   )}
                 </div>
@@ -370,6 +380,133 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                     </div>
                     <p className="mt-3 text-xs text-slate-500 italic">
                       Show this ticket and the plate number to the agent at boarding.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          {/* Screening Info — for cinema bookings */}
+          {(order.service_type === 'cinema' || order.service_category === 'cinema') && (
+            (() => {
+              const si = order.booking_details?.showtime_info || {};
+              const bd = order.booking_details || {};
+              const filmTitle = si.film_title || bd.film_title || order.service_name;
+              const cinemaName = si.cinema_name || bd.cinema || order.operator_name;
+              const cinemaCity = si.cinema_city || bd.cinema_city;
+              const screenName = si.screen_name || bd.screen;
+              const screenType = si.screen_type || bd.screen_type;
+              const showDate = si.show_date || bd.show_date;
+              const showTime = si.show_time || bd.show_time;
+              const endTime = si.end_time || bd.end_time;
+              const seats = bd.seats || bd.selected_seats || [];
+              const counts = bd.ticket_counts || {};
+              const poster = si.poster_url || bd.poster_url;
+              if (!filmTitle && !cinemaName && !screenName && seats.length === 0) return null;
+              return (
+                <div data-testid="order-screening-info">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Film className="h-4 w-4 text-[#082c59]" /> Your Screening
+                  </h3>
+                  <div className="rounded-xl border-2 border-cyan-500/15 bg-gradient-to-br from-cyan-50 to-white p-4">
+                    <div className="flex gap-4 items-start">
+                      {poster ? (
+                        <img
+                          src={poster}
+                          alt={filmTitle || 'Film'}
+                          className="w-20 h-28 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-20 h-28 rounded-lg bg-gradient-to-br from-red-700 to-rose-600 flex items-center justify-center flex-shrink-0">
+                          <Film className="h-8 w-8 text-white/80" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        {filmTitle && <p className="font-bold text-slate-900 text-base leading-tight">{filmTitle}</p>}
+                        {cinemaName && (
+                          <p className="text-sm text-slate-600 flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            {cinemaName}{cinemaCity ? ` · ${cinemaCity}` : ''}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {screenName && (
+                            <Badge className="bg-[#082c59] text-white text-xs gap-1" data-testid="ticket-screen-name">
+                              <Monitor className="h-3 w-3" /> {screenName}
+                            </Badge>
+                          )}
+                          {screenType && (
+                            <Badge variant="outline" className="text-xs uppercase tracking-wide bg-cyan-50 border-cyan-200 text-cyan-700">
+                              {screenType.replace('_', ' ')}
+                            </Badge>
+                          )}
+                          {seats.length > 0 && (
+                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs gap-1" data-testid="ticket-seats">
+                              <Armchair className="h-3 w-3" /> Seat{seats.length > 1 ? 's' : ''} {seats.join(', ')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* When */}
+                    {(showDate || showTime) && (
+                      <div className="mt-3 pt-3 border-t border-cyan-200/60 grid grid-cols-2 gap-3 text-sm">
+                        {showDate && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-cyan-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-[11px] text-slate-500 leading-none mb-0.5">Date</p>
+                              <p className="font-semibold text-slate-900 leading-none">{formatDate(showDate)}</p>
+                            </div>
+                          </div>
+                        )}
+                        {showTime && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-cyan-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-[11px] text-slate-500 leading-none mb-0.5">Showtime</p>
+                              <p className="font-semibold text-slate-900 leading-none">
+                                {showTime}{endTime ? ` – ${endTime}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Ticket type breakdown — only when the booking captured it */}
+                    {(counts.adult || counts.child || counts.senior || counts.vip) && (
+                      <div className="mt-3 pt-3 border-t border-cyan-200/60">
+                        <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5">Tickets</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {counts.adult > 0 && (
+                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
+                              <Ticket className="h-3 w-3" /> {counts.adult} Adult{counts.adult > 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                          {counts.child > 0 && (
+                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
+                              <Ticket className="h-3 w-3" /> {counts.child} Child{counts.child > 1 ? 'ren' : ''}
+                            </Badge>
+                          )}
+                          {counts.senior > 0 && (
+                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
+                              <Ticket className="h-3 w-3" /> {counts.senior} Senior{counts.senior > 1 ? 's' : ''}
+                            </Badge>
+                          )}
+                          {counts.vip > 0 && (
+                            <Badge className="text-xs bg-amber-400 text-amber-950 gap-1">
+                              <Ticket className="h-3 w-3" /> {counts.vip} VIP
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="mt-3 text-xs text-slate-500 italic">
+                      Present this ticket (or the QR code below) at the cinema entrance.
                     </p>
                   </div>
                 </div>
