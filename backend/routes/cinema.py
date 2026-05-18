@@ -477,6 +477,8 @@ async def update_film(
     release_date: Optional[str] = None,
     imdb_rating: Optional[float] = None,
     status: Optional[str] = None,
+    operator_id: Optional[str] = None,
+    operator_name: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "cinema.edit"]))
 ):
     """Update a film"""
@@ -484,16 +486,27 @@ async def update_film(
     film = await db.films.find_one({"_id": film_id})
     if not film:
         raise HTTPException(status_code=404, detail="Film not found")
-    
+
+    # Operators cannot reassign their films to another operator
+    is_operator = current_user.get("role") == "operator"
+    if is_operator and film.get("operator_id") and film["operator_id"] != current_user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     update_data = {}
     for field, value in [("title", title), ("duration_minutes", duration_minutes), ("genre", genre),
                          ("description", description), ("language", language), ("rating", rating),
                          ("director", director), ("cast", cast), ("poster_url", poster_url),
                          ("trailer_url", trailer_url), ("release_date", release_date),
-                         ("imdb_rating", imdb_rating), ("status", status)]:
+                         ("imdb_rating", imdb_rating), ("status", status),
+                         ("operator_id", operator_id), ("operator_name", operator_name)]:
         if value is not None:
             update_data[field] = value
-    
+
+    if is_operator:
+        # Strip operator reassignment attempts from non-admins
+        update_data.pop("operator_id", None)
+        update_data.pop("operator_name", None)
+
     update_data["updated_at"] = datetime.utcnow()
     await db.films.update_one({"_id": film_id}, {"$set": update_data})
     return {"message": "Film updated"}
