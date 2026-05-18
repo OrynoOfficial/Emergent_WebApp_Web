@@ -371,6 +371,9 @@ async def update_cinema(
     update_data = {k: v for k, v in cinema_data.dict().items() if v is not None}
     
     if current_user["role"] == "operator":
+        # Operators cannot reassign their cinemas to another operator
+        update_data.pop("operator_id", None)
+        update_data.pop("operator_name", None)
         update_data.pop("status", None)
         if {k for k in update_data if k not in ("updated_at",)}:
             update_data["status"] = "pending"

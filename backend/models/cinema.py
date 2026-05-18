@@ -93,6 +93,8 @@ class CinemaCreate(BaseModel):
 class CinemaUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
     phone: Optional[str] = None
