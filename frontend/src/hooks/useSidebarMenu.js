@@ -195,8 +195,15 @@ export default function useSidebarMenu() {
         ]
       });
     } else if (isOperator) {
-      items.push({ key: 'orders', label: 'My Orders', icon: Ticket, path: '/orders' });
-      items.push({ key: 'receipts', label: 'Receipts', icon: Receipt, path: '/receipts' });
+      // Operators get a scoped Transactions submenu — Bookings + Bills only.
+      // Customer "My Orders" / "Receipts" are intentionally hidden for operators.
+      items.push({
+        key: 'transactions', label: 'Transactions', icon: Receipt, isDropdown: true,
+        submenu: [
+          { key: 'all-bookings', label: 'All Bookings', path: '/admin/bookings', icon: QrCode },
+          { key: 'all-bills', label: 'All Bills', path: '/admin/bills', icon: CreditCard },
+        ]
+      });
       items.push({ key: 'scanner', label: 'Ticket Scanner', icon: QrCode, path: '/scanner' });
     }
 

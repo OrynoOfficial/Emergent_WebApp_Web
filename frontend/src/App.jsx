@@ -681,7 +681,7 @@ function App() {
           <Route
             path="/admin/bills"
             element={
-              <ProtectedRoute requiredRoles={['admin']}>
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
                 <BillsManagement />
               </ProtectedRoute>
             }
