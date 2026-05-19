@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { MapPin, Search, Shirt, Truck, Clock, Sparkles, Droplets } from 'lucide-react';
+import { Search, Shirt, Truck, Clock, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 
@@ -41,19 +41,19 @@ export default function LaundrySearch() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white">
-      {/* Hero Section — purple accent */}
-      <div className="bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-600 text-white py-16">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      {/* Hero Section — original Oryno blue */}
+      <div className="bg-[#082c59] text-white py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Shirt className="w-16 h-16 mx-auto mb-4 text-purple-100" />
+          <Shirt className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
           <h1 className="text-4xl font-bold mb-4">Laundry &amp; Pressing</h1>
-          <p className="text-lg text-purple-100">Professional cleaning services at your doorstep</p>
+          <p className="text-lg text-cyan-100">Professional cleaning services at your doorstep</p>
         </div>
       </div>
 
       {/* Search Form */}
       <div className="max-w-4xl mx-auto px-4 -mt-8">
-        <Card className="shadow-xl border-purple-100">
+        <Card className="shadow-xl">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -70,7 +70,7 @@ export default function LaundrySearch() {
                     required
                     error={errors.city}
                     shake={shakeFields.city}
-                    iconColor="text-purple-600"
+                    iconColor="text-cyan-500"
                   />
                 </div>
 
@@ -84,8 +84,8 @@ export default function LaundrySearch() {
                       className={cn(
                         'h-12 rounded-lg border-2 text-sm font-semibold flex items-center justify-center gap-2 transition-all',
                         searchParams.shop_type === 'laundry'
-                          ? 'border-purple-600 bg-purple-50 text-purple-800 shadow-md shadow-purple-200'
-                          : 'border-slate-200 text-slate-600 hover:border-purple-300',
+                          ? 'border-[#082c59] bg-[#082c59] text-white shadow-md'
+                          : 'border-slate-200 text-slate-600 hover:border-[#082c59]/60',
                       )}
                       data-testid="service-type-laundry"
                     >
@@ -97,8 +97,8 @@ export default function LaundrySearch() {
                       className={cn(
                         'h-12 rounded-lg border-2 text-sm font-semibold flex items-center justify-center gap-2 transition-all',
                         searchParams.shop_type === 'pressing'
-                          ? 'border-fuchsia-600 bg-fuchsia-50 text-fuchsia-800 shadow-md shadow-fuchsia-200'
-                          : 'border-slate-200 text-slate-600 hover:border-fuchsia-300',
+                          ? 'border-[#082c59] bg-[#082c59] text-white shadow-md'
+                          : 'border-slate-200 text-slate-600 hover:border-[#082c59]/60',
                       )}
                       data-testid="service-type-pressing"
                     >
@@ -111,7 +111,7 @@ export default function LaundrySearch() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 h-12 text-lg shadow-md shadow-purple-300/40"
+                className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 text-lg"
                 data-testid="laundry-search-submit"
               >
                 <Search className="w-5 h-5 mr-2" /> Search Services
@@ -123,25 +123,25 @@ export default function LaundrySearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-purple-800">Why Choose Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Choose Us?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="text-center p-6 border-purple-100">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-6 h-6 text-purple-700" />
+          <Card className="text-center p-6">
+            <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-6 h-6 text-cyan-600" />
             </div>
             <h3 className="font-semibold mb-2">Expert Cleaning</h3>
             <p className="text-gray-600 text-sm">Professional care for all fabric types</p>
           </Card>
-          <Card className="text-center p-6 border-purple-100">
-            <div className="w-12 h-12 bg-fuchsia-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Truck className="w-6 h-6 text-fuchsia-700" />
+          <Card className="text-center p-6">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Truck className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="font-semibold mb-2">Free Pickup</h3>
             <p className="text-gray-600 text-sm">We come to you for pickup and delivery</p>
           </Card>
-          <Card className="text-center p-6 border-purple-100">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-6 h-6 text-purple-700" />
+          <Card className="text-center p-6">
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-6 h-6 text-orange-600" />
             </div>
             <h3 className="font-semibold mb-2">Express Service</h3>
             <p className="text-gray-600 text-sm">Same day turnaround available</p>
