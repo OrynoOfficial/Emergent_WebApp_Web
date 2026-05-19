@@ -395,6 +395,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               const filmTitle = si.film_title || bd.film_title || order.service_name;
               const cinemaName = si.cinema_name || bd.cinema || order.operator_name;
               const cinemaCity = si.cinema_city || bd.cinema_city;
+              const cinemaAddress = si.cinema_address;
+              const cinemaPhone = si.cinema_phone;
+              const cinemaAmenities = si.cinema_amenities || [];
               const screenName = si.screen_name || bd.screen;
               const screenType = si.screen_type || bd.screen_type;
               const showDate = si.show_date || bd.show_date;
@@ -403,6 +406,16 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               const seats = bd.seats || bd.selected_seats || [];
               const counts = bd.ticket_counts || {};
               const poster = si.poster_url || bd.poster_url;
+              // Rich film metadata (added by backend enrichment)
+              const filmDuration = si.film_duration_minutes;
+              const filmGenre = si.film_genre || [];
+              const filmLanguage = si.film_language || si.language;
+              const filmRating = si.film_rating;
+              const filmDirector = si.film_director;
+              const filmCast = si.film_cast || [];
+              const filmSynopsis = si.film_synopsis;
+              const filmImdb = si.film_imdb_rating;
+              const filmTrailerUrl = si.film_trailer_url;
               if (!filmTitle && !cinemaName && !screenName && seats.length === 0) return null;
               return (
                 <div data-testid="order-screening-info">
@@ -415,19 +428,54 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                         <img
                           src={poster}
                           alt={filmTitle || 'Film'}
-                          className="w-20 h-28 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                          className="w-24 h-36 rounded-lg object-cover border border-slate-200 flex-shrink-0 shadow-sm"
                         />
                       ) : (
-                        <div className="w-20 h-28 rounded-lg bg-gradient-to-br from-red-700 to-rose-600 flex items-center justify-center flex-shrink-0">
-                          <Film className="h-8 w-8 text-white/80" />
+                        <div className="w-24 h-36 rounded-lg bg-gradient-to-br from-red-700 to-rose-600 flex items-center justify-center flex-shrink-0">
+                          <Film className="h-10 w-10 text-white/80" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0 space-y-1.5">
-                        {filmTitle && <p className="font-bold text-slate-900 text-base leading-tight">{filmTitle}</p>}
+                        {filmTitle && (
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <p className="font-bold text-slate-900 text-base leading-tight" data-testid="ticket-film-title">{filmTitle}</p>
+                            {filmRating && (
+                              <Badge variant="outline" className="text-[10px] bg-slate-100 border-slate-300 text-slate-700 uppercase">{filmRating}</Badge>
+                            )}
+                          </div>
+                        )}
+                        {/* Film meta line — duration / language / IMDB */}
+                        {(filmDuration || filmLanguage || filmImdb) && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                            {filmDuration && (
+                              <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {filmDuration} min</span>
+                            )}
+                            {filmLanguage && (
+                              <span className="inline-flex items-center gap-1 capitalize">{filmLanguage}</span>
+                            )}
+                            {filmImdb && (
+                              <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">★ {Number(filmImdb).toFixed(1)} IMDb</span>
+                            )}
+                          </div>
+                        )}
+                        {/* Genres */}
+                        {filmGenre.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-0.5" data-testid="ticket-film-genres">
+                            {filmGenre.slice(0, 4).map((g, idx) => (
+                              <Badge key={idx} variant="outline" className="text-[10px] capitalize bg-purple-50 border-purple-200 text-purple-700 px-1.5 py-0">
+                                {(g || '').replace(/_/g, ' ')}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         {cinemaName && (
-                          <p className="text-sm text-slate-600 flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                            {cinemaName}{cinemaCity ? ` · ${cinemaCity}` : ''}
+                          <p className="text-sm text-slate-700 flex items-start gap-1 pt-0.5">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                            <span>
+                              <span className="font-medium">{cinemaName}</span>
+                              {cinemaAddress && <span className="text-slate-500"> · {cinemaAddress}</span>}
+                              {cinemaCity && <span className="text-slate-500"> · {cinemaCity}</span>}
+                            </span>
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2 pt-1">
@@ -450,6 +498,45 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                       </div>
                     </div>
 
+                    {/* Director + cast — pulled from the enriched film snapshot */}
+                    {(filmDirector || filmCast.length > 0) && (
+                      <div className="mt-3 pt-3 border-t border-cyan-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" data-testid="ticket-film-credits">
+                        {filmDirector && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Director</p>
+                            <p className="text-slate-800 font-medium mt-0.5">{filmDirector}</p>
+                          </div>
+                        )}
+                        {filmCast.length > 0 && (
+                          <div>
+                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Starring</p>
+                            <p className="text-slate-800 font-medium mt-0.5 truncate" title={filmCast.join(', ')}>
+                              {filmCast.slice(0, 4).join(', ')}{filmCast.length > 4 ? '…' : ''}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Synopsis — short description from the film row */}
+                    {filmSynopsis && (
+                      <div className="mt-3 pt-3 border-t border-cyan-200/60" data-testid="ticket-film-synopsis">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Synopsis</p>
+                        <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{filmSynopsis}</p>
+                        {filmTrailerUrl && (
+                          <a
+                            href={filmTrailerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-cyan-700 hover:text-cyan-800 underline mt-1.5 inline-flex items-center gap-1"
+                            data-testid="ticket-film-trailer-link"
+                          >
+                            Watch trailer →
+                          </a>
+                        )}
+                      </div>
+                    )}
+
                     {/* When */}
                     {(showDate || showTime) && (
                       <div className="mt-3 pt-3 border-t border-cyan-200/60 grid grid-cols-2 gap-3 text-sm">
@@ -471,6 +558,27 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                                 {showTime}{endTime ? ` – ${endTime}` : ''}
                               </p>
                             </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cinema phone + amenities — pulled from cinema snapshot */}
+                    {(cinemaPhone || cinemaAmenities.length > 0) && (
+                      <div className="mt-3 pt-3 border-t border-cyan-200/60 space-y-2 text-xs" data-testid="ticket-cinema-extras">
+                        {cinemaPhone && (
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <Phone className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0" />
+                            <span>{cinemaPhone}</span>
+                          </div>
+                        )}
+                        {cinemaAmenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {cinemaAmenities.slice(0, 6).map((a, idx) => (
+                              <Badge key={idx} variant="outline" className="text-[10px] capitalize bg-white border-slate-200 text-slate-600 px-1.5 py-0">
+                                {(a || '').replace(/_/g, ' ')}
+                              </Badge>
+                            ))}
                           </div>
                         )}
                       </div>

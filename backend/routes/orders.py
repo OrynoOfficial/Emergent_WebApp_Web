@@ -344,8 +344,10 @@ async def create_direct_order(
         except Exception:
             pass
 
-    # Enrich cinema bookings with showtime snapshot
-    if order_data.service_type == "cinema" and not booking_details.get("showtime_info"):
+    # Enrich cinema bookings with full showtime + cinema + film snapshot
+    # so the OrderDetailModal can render rich screening info even if the
+    # frontend only sends the showtime_id.
+    if order_data.service_type == "cinema":
         try:
             st_id = booking_details.get("showtime_id") or order_data.service_id
             if st_id:
@@ -354,11 +356,54 @@ async def create_direct_order(
                     {"_id": 0, "cinema_id": 1, "cinema_name": 1, "film_id": 1,
                      "film_title": 1, "screen_name": 1, "screen_type": 1,
                      "show_date": 1, "show_time": 1, "end_time": 1,
-                     "price": 1, "vip_price": 1},
+                     "price": 1, "vip_price": 1, "language": 1, "subtitles": 1},
                 )
                 if st:
                     booking_details["showtime_id"] = st_id
-                    booking_details["showtime_info"] = st
+
+                    # Pull the film snapshot — adds the poster + rich metadata
+                    film_doc = None
+                    if st.get("film_id"):
+                        film_doc = await db.films.find_one(
+                            {"_id": st["film_id"]},
+                            {"_id": 0, "title": 1, "poster_url": 1, "duration_minutes": 1,
+                             "genre": 1, "language": 1, "rating": 1, "director": 1,
+                             "cast": 1, "synopsis": 1, "description": 1, "trailer_url": 1,
+                             "release_date": 1, "imdb_rating": 1},
+                        )
+
+                    # Pull the cinema snapshot — adds address + amenities
+                    cinema_doc = None
+                    if st.get("cinema_id"):
+                        cinema_doc = await db.cinemas.find_one(
+                            {"_id": st["cinema_id"]},
+                            {"_id": 0, "name": 1, "address": 1, "city": 1, "phone": 1,
+                             "email": 1, "images": 1, "amenities": 1, "operator_id": 1,
+                             "operator_name": 1},
+                        )
+
+                    # Compose a rich showtime_info that the modal already
+                    # consumes via si.* lookups.
+                    info = dict(st)
+                    if cinema_doc:
+                        info["cinema_address"] = cinema_doc.get("address")
+                        info["cinema_city"] = cinema_doc.get("city")
+                        info["cinema_phone"] = cinema_doc.get("phone")
+                        info["cinema_amenities"] = cinema_doc.get("amenities") or []
+                        info["cinema_images"] = cinema_doc.get("images") or []
+                    if film_doc:
+                        info["film_title"] = info.get("film_title") or film_doc.get("title")
+                        info["poster_url"] = film_doc.get("poster_url")
+                        info["film_duration_minutes"] = film_doc.get("duration_minutes")
+                        info["film_genre"] = film_doc.get("genre") or []
+                        info["film_language"] = film_doc.get("language")
+                        info["film_rating"] = film_doc.get("rating")
+                        info["film_director"] = film_doc.get("director")
+                        info["film_cast"] = film_doc.get("cast") or []
+                        info["film_synopsis"] = film_doc.get("synopsis") or film_doc.get("description")
+                        info["film_trailer_url"] = film_doc.get("trailer_url")
+                        info["film_imdb_rating"] = film_doc.get("imdb_rating")
+                    booking_details["showtime_info"] = info
         except Exception:
             pass
     
