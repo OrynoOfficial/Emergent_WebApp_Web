@@ -1,7 +1,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Calendar, MapPin, Phone, Mail, User, CreditCard, Clock,
   Package, Film, Shirt, Hotel, Utensils, Car, Plane, PartyPopper,
@@ -104,6 +103,14 @@ const CinemaSummary = ({ bd }) => {
 const LaundrySummary = ({ bd }) => {
   const items = bd.items || [];
   const pickupMethod = bd.pickup_method || 'pickup';
+  // Build a quick lookup of item.image_url by name from the shop snapshot,
+  // so each item card can render its thumbnail.
+  const itemImageByName = {};
+  (bd.pressing_info?.item_prices || []).forEach((ip) => {
+    if (ip?.item && ip?.image_url) itemImageByName[ip.item.toLowerCase()] = ip.image_url;
+  });
+  const totalQty = items.reduce((s, i) => s + (i.quantity || 0), 0);
+
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -123,15 +130,48 @@ const LaundrySummary = ({ bd }) => {
         {bd.express && <KV label="Express" value={<Badge className="bg-orange-100 text-orange-800 border border-orange-200">Yes (+50%)</Badge>} />}
       </div>
       {items.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-slate-200">
-          <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1.5">Items ordered ({items.reduce((s, i) => s + (i.quantity || 0), 0)})</p>
-          <div className="space-y-1 max-h-44 overflow-y-auto pr-1">
-            {items.map((it, idx) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span className="text-slate-700"><span className="font-semibold text-purple-700">{it.quantity || 1}×</span> {it.name}</span>
-                <span className="text-slate-800 font-medium">{formatFCFA((it.unit_price || it.price || 0) * (it.quantity || 1))}</span>
-              </div>
-            ))}
+        <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-purple-800">
+              Items to service · <span className="text-purple-600">{totalQty}</span>
+            </p>
+            <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-[11px]">
+              {items.length} item type{items.length === 1 ? '' : 's'}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" data-testid="booking-items-grid">
+            {items.map((it, idx) => {
+              const qty = it.quantity || 1;
+              const unit = it.unit_price || it.price || 0;
+              const thumb = it.image_url || itemImageByName[(it.name || '').toLowerCase()];
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 rounded-xl border border-purple-100 bg-white p-2.5 hover:border-purple-300 hover:shadow-sm transition-all"
+                  data-testid={`booking-item-${idx}`}
+                >
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gradient-to-br from-purple-100 to-fuchsia-100 flex-shrink-0 border border-purple-200">
+                    {thumb ? (
+                      <img src={thumb} alt={it.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Shirt className="h-6 w-6 text-purple-400" />
+                      </div>
+                    )}
+                    <span className="absolute -top-1 -right-1 bg-purple-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+                      ×{qty}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900 truncate" title={it.name}>{it.name}</p>
+                    <p className="text-[11px] text-slate-500">{formatFCFA(unit)} / unit</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-purple-700">{formatFCFA(unit * qty)}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -305,50 +345,107 @@ export default function BookingDetailModal({ isOpen, onClose, order }) {
             {opHint.text}
           </div>
 
-          {/* Customer block — biggest, most prominent for operators */}
+          {/* Customer block — HERO: large prominent card with rich info */}
           <section>
-            <SectionHeader icon={User} accent="text-blue-600">Customer</SectionHeader>
-            <div className="rounded-xl border-2 border-blue-500/15 bg-gradient-to-br from-blue-50 to-white p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0">
+            <SectionHeader icon={User} accent="text-blue-600">Customer details</SectionHeader>
+            <div className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-blue-50/40 p-5 shadow-sm" data-testid="booking-customer-card">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-md shadow-blue-300/40">
                   {customerName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-900 text-base truncate" data-testid="booking-customer-name">{customerName}</p>
-                  <p className="text-xs text-slate-500">Booked via {channelLabel}</p>
+                  <p className="font-bold text-slate-900 text-lg leading-tight truncate" data-testid="booking-customer-name">{customerName}</p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] bg-white border-blue-200 text-blue-700 capitalize">{channelLabel}</Badge>
+                    {order.user_id && (
+                      <Badge variant="outline" className="text-[10px] bg-white border-slate-200 text-slate-500 font-mono">
+                        ID: {(order.user_id || '').slice(0, 8)}
+                      </Badge>
+                    )}
+                    {order.created_at && (
+                      <span className="text-[11px] text-slate-500">Booked {fmtDateTime(order.created_at)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {customerPhone && (
-                  <a href={`tel:${customerPhone}`} className="flex items-center gap-2 text-slate-700 hover:text-blue-700 transition-colors truncate" data-testid="booking-customer-phone">
-                    <Phone className="h-4 w-4 text-blue-600 flex-shrink-0" /> {customerPhone}
+                  <a
+                    href={`tel:${customerPhone}`}
+                    className="flex items-center gap-2.5 rounded-xl bg-white border border-blue-100 p-3 hover:bg-blue-50 hover:border-blue-300 transition-all group"
+                    data-testid="booking-customer-phone"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Phone · tap to call</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{customerPhone}</p>
+                    </div>
                   </a>
                 )}
                 {customerEmail && (
-                  <a href={`mailto:${customerEmail}`} className="flex items-center gap-2 text-slate-700 hover:text-blue-700 transition-colors truncate" data-testid="booking-customer-email">
-                    <Mail className="h-4 w-4 text-blue-600 flex-shrink-0" /> {customerEmail}
+                  <a
+                    href={`mailto:${customerEmail}`}
+                    className="flex items-center gap-2.5 rounded-xl bg-white border border-blue-100 p-3 hover:bg-blue-50 hover:border-blue-300 transition-all group"
+                    data-testid="booking-customer-email"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition">
+                      <Mail className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Email · tap to write</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{customerEmail}</p>
+                    </div>
                   </a>
                 )}
                 {customerAddress && (
-                  <div className="flex items-start gap-2 text-slate-700 truncate" title={customerAddress}>
-                    <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" /> <span className="truncate">{customerAddress}</span>
+                  <div className="flex items-start gap-2.5 rounded-xl bg-white border border-blue-100 p-3" title={customerAddress}>
+                    <div className="w-9 h-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Pickup address</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{customerAddress}</p>
+                    </div>
                   </div>
                 )}
               </div>
+
+              {/* Quick action helpers — visible when phone/email exist */}
+              {(customerPhone || customerEmail) && (
+                <div className="mt-3 pt-3 border-t border-blue-100/80 flex items-center gap-2 flex-wrap text-xs">
+                  <span className="text-slate-500 font-medium">Need to reach the customer?</span>
+                  {customerPhone && (
+                    <>
+                      <a href={`tel:${customerPhone}`} className="text-blue-700 hover:underline font-medium">Call</a>
+                      <a href={`https://wa.me/${(customerPhone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline font-medium">WhatsApp</a>
+                      <a href={`sms:${customerPhone}`} className="text-slate-700 hover:underline font-medium">SMS</a>
+                    </>
+                  )}
+                  {customerEmail && <a href={`mailto:${customerEmail}`} className="text-blue-700 hover:underline font-medium">Email</a>}
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Service details */}
+          {/* Service details — HIGHLIGHTED: operator's core info */}
           <section>
             <SectionHeader icon={ServiceIcon} accent="text-slate-700">Service booked</SectionHeader>
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
-                <div className="min-w-0">
-                  <p className="font-bold text-slate-900 truncate">{order.service_name || order.service_title || serviceType}</p>
-                  <p className="text-xs text-slate-500 capitalize">{serviceType.replace('_', ' ')}</p>
+            <div className="rounded-2xl border-2 border-slate-300 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 shadow-sm" data-testid="booking-service-card">
+              <div className="flex items-start justify-between gap-3 mb-4 pb-4 border-b-2 border-slate-200/60">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+                    <ServiceIcon className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-lg leading-tight">{order.service_name || order.service_title || serviceType}</p>
+                    <p className="text-xs text-slate-500 capitalize mt-0.5">{serviceType.replace('_', ' ')} service</p>
+                  </div>
                 </div>
                 {order.operator_name && (
-                  <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-300 flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px] bg-white border-slate-300 flex items-center gap-1 flex-shrink-0">
                     <Building2 className="h-3 w-3" /> {order.operator_name}
                   </Badge>
                 )}
@@ -357,79 +454,68 @@ export default function BookingDetailModal({ isOpen, onClose, order }) {
             </div>
           </section>
 
-          {/* Customer notes / special instructions */}
+          {/* Customer notes / special instructions — pop-out callout */}
           {bd.notes && (
             <section data-testid="booking-customer-notes">
               <SectionHeader icon={FileText} accent="text-amber-600">Customer notes</SectionHeader>
-              <div className="rounded-lg border-l-4 border-amber-400 bg-amber-50/60 p-3">
-                <p className="text-sm text-slate-700 italic leading-relaxed">"{bd.notes}"</p>
+              <div className="rounded-xl border-l-4 border-amber-400 bg-amber-50 p-4 shadow-sm">
+                <p className="text-sm text-slate-800 italic leading-relaxed font-medium">"{bd.notes}"</p>
               </div>
             </section>
           )}
 
-          {/* Financial summary — operator needs to know what they're owed */}
+          {/* Payment — COMPACT strip, deliberately quieter */}
           <section>
-            <SectionHeader icon={CreditCard} accent="text-emerald-600">Payment</SectionHeader>
-            <div className="rounded-xl border border-emerald-500/15 bg-gradient-to-br from-emerald-50 to-white p-4">
-              <div className="grid grid-cols-2 gap-3 text-sm mb-3">
-                <KV label="Method" value={
-                  order.payment_method
-                    ? <span className="capitalize">{(order.payment_method || '').replace(/_/g, ' ')}</span>
-                    : '—'
-                } />
-                <KV label="Status" value={
-                  <span className="inline-flex items-center gap-1.5">
+            <SectionHeader icon={CreditCard} accent="text-slate-500">Payment</SectionHeader>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3" data-testid="booking-payment-strip">
+              <div className="flex items-center justify-between gap-3 flex-wrap text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 text-slate-500">
                     <PayIcon className="h-3.5 w-3.5" />
-                    <span className={pStatus === 'paid' || pStatus === 'completed' ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
+                    <span className={pStatus === 'paid' || pStatus === 'completed' ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-semibold'}>
                       {payBadge.label}
                     </span>
                   </span>
-                } />
-                {order.paid_at && <KV label="Paid at" value={fmtDateTime(order.paid_at)} />}
-                {order.transaction_id && <KV label="Transaction ID" value={order.transaction_id} valueClass="font-mono text-xs" testId="booking-transaction-id" />}
-              </div>
-
-              {/* Surcharges (if present) */}
-              {(bd.items_subtotal > 0 || bd.service_fee > 0 || bd.express_surcharge > 0 || bd.pickup_surcharge > 0 || bd.promo_discount > 0) && (
-                <div className="pt-3 border-t border-emerald-200/60 space-y-1 text-xs">
-                  {bd.items_subtotal > 0 && (
-                    <div className="flex justify-between text-slate-600">
-                      <span>Items subtotal</span><span>{formatFCFA(bd.items_subtotal)}</span>
-                    </div>
+                  {order.payment_method && (
+                    <span className="text-slate-500">·</span>
                   )}
-                  {bd.express_surcharge > 0 && (
-                    <div className="flex justify-between text-orange-700">
-                      <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Express</span>
-                      <span>+{formatFCFA(bd.express_surcharge)}</span>
-                    </div>
+                  {order.payment_method && (
+                    <span className="capitalize text-slate-700">{(order.payment_method || '').replace(/_/g, ' ')}</span>
                   )}
-                  {bd.pickup_surcharge > 0 && (
-                    <div className="flex justify-between text-purple-700">
-                      <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Pickup</span>
-                      <span>+{formatFCFA(bd.pickup_surcharge)}</span>
-                    </div>
+                  {order.paid_at && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-500">{fmtDateTime(order.paid_at)}</span>
+                    </>
                   )}
-                  {bd.service_fee > 0 && (
-                    <div className="flex justify-between text-slate-600">
-                      <span>Service fee</span><span>+{formatFCFA(bd.service_fee)}</span>
-                    </div>
-                  )}
-                  {bd.promo_discount > 0 && (
-                    <div className="flex justify-between text-emerald-700">
-                      <span>🎟️ Promo {bd.promo_code ? `(${bd.promo_code})` : ''}</span>
-                      <span>-{formatFCFA(bd.promo_discount)}</span>
-                    </div>
+                  {order.transaction_id && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <span className="font-mono text-[10px] text-slate-500" data-testid="booking-transaction-id">{order.transaction_id}</span>
+                    </>
                   )}
                 </div>
-              )}
-
-              <Separator className="my-3 bg-emerald-200/40" />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-600 font-medium">Total amount</span>
-                <span className="text-2xl font-bold text-emerald-700" data-testid="booking-total">
-                  {formatFCFA(order.total_amount || 0)} <span className="text-xs font-normal text-slate-500">{order.currency || 'XAF'}</span>
-                </span>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider">Total</span>
+                  <span className="ml-1.5 text-base font-bold text-slate-800" data-testid="booking-total">
+                    {formatFCFA(order.total_amount || 0)}
+                  </span>
+                </div>
               </div>
+
+              {/* Breakdown — collapsible-looking, very low contrast */}
+              {(bd.items_subtotal > 0 || bd.service_fee > 0 || bd.express_surcharge > 0 || bd.pickup_surcharge > 0 || bd.promo_discount > 0) && (
+                <details className="mt-2 pt-2 border-t border-slate-200/80">
+                  <summary className="text-[11px] text-slate-500 cursor-pointer hover:text-slate-700 select-none">View breakdown</summary>
+                  <div className="space-y-0.5 text-[11px] text-slate-500 mt-1.5">
+                    {bd.items_subtotal > 0 && <div className="flex justify-between"><span>Items subtotal</span><span>{formatFCFA(bd.items_subtotal)}</span></div>}
+                    {bd.express_surcharge > 0 && <div className="flex justify-between"><span>Express surcharge</span><span>+{formatFCFA(bd.express_surcharge)}</span></div>}
+                    {bd.pickup_surcharge > 0 && <div className="flex justify-between"><span>Pickup surcharge</span><span>+{formatFCFA(bd.pickup_surcharge)}</span></div>}
+                    {bd.service_fee > 0 && <div className="flex justify-between"><span>Service fee</span><span>+{formatFCFA(bd.service_fee)}</span></div>}
+                    {bd.promo_discount > 0 && <div className="flex justify-between text-emerald-700"><span>Promo {bd.promo_code ? `(${bd.promo_code})` : ''}</span><span>-{formatFCFA(bd.promo_discount)}</span></div>}
+                  </div>
+                </details>
+              )}
             </div>
           </section>
 
