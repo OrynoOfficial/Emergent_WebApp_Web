@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ArrowLeft, MapPin, Star, Clock, Truck, Shirt, Sparkles, Loader2, Search,
+  ArrowLeft, MapPin, Star, Clock, Shirt, Sparkles, Loader2, Search,
   LayoutGrid, List, SlidersHorizontal, Droplets, Wind, Scissors, Phone,
   Wallet, CreditCard, Banknote, Tag, ChevronLeft, ChevronRight, Edit2, Check, X,
 } from 'lucide-react';
@@ -143,10 +143,7 @@ const ServiceCardGrid = ({ service, onBook, isFav, toggleFav }) => {
   const pricing = derivePricing(service);
   const StBadge = SHOP_TYPE_BADGE[pricing.shop_type] || SHOP_TYPE_BADGE.laundry;
   const StIcon = StBadge.icon;
-  const cover = (service.images && service.images[0]) || service.image || PLACEHOLDER_IMG;
   const sid = service._id || service.id;
-  const deliveryEnabled = !!(service.delivery_available ?? service.delivery);
-  const expressEnabled  = !!(service.express_available ?? service.express);
   const turnaround = service.turnaround_hours;
 
   return (
@@ -269,10 +266,7 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
   const pricing = derivePricing(service);
   const StBadge = SHOP_TYPE_BADGE[pricing.shop_type] || SHOP_TYPE_BADGE.laundry;
   const StIcon = StBadge.icon;
-  const cover = (service.images && service.images[0]) || service.image || PLACEHOLDER_IMG;
   const sid = service._id || service.id;
-  const deliveryEnabled = !!(service.delivery_available ?? service.delivery);
-  const expressEnabled  = !!(service.express_available ?? service.express);
 
   return (
     <Card
