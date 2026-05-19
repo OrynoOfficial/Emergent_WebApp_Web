@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 183 — Frontend-only verification of the Laundry SEARCH + RESULTS + PRE-BOOKING MODAL redesign. First Playwright run confirmed the search page live (no Pickup Date, two service-type toggle buttons present, no Delivery/Express filter UI, purple submit button, pressing toggle activates fuchsia state, URL after submit lands on /services/laundry/results). Follow-up runs hit the documented Cloudflare burst-block on the preview URL (blank white page, identical to iter181), so the deeper Results page + Modal assertions were verified by code-level inspection per the request's explicit allowance ('Code-level verification is acceptable if Cloudflare blocks Playwright again').",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_matrix": {
+    "search_page_live_playwright": {
+      "no_pickup_date_field": "PASS — body text does not contain 'Pickup Date'",
+      "service_type_toggle_two_cards": "PASS — service-type-laundry + service-type-pressing testids both present and clickable",
+      "no_delivery_filter": "PASS — 'Delivery' absent from the search form area",
+      "no_express_filter": "PASS — 'Express' absent from the search form area",
+      "purple_themed_submit": "PASS — laundry-search-submit has bg-gradient from-purple-700 to-purple-600",
+      "pressing_toggle_activates_fuchsia": "PASS — pressing button gains fuchsia styling when active",
+      "url_routes_to_results_with_params": "PASS — clicking submit with Yaoundé+Pressing routed to /services/laundry/results?city=Yaound%C3%A9&shop_type=pressing (deeper page render blocked by CF)"
+    },
+    "results_page_code_review": {
+      "mild_purple_background": "PASS — LaundryResults.jsx lines 508,520 use 'bg-purple-50/60' for both loading + main container (NOT white, NOT dark)",
+      "enhanced_search_criteria_header": "PASS — Card at line 531 uses 'bg-gradient-to-r from-purple-700 to-fuchsia-600' with data-testid='laundry-search-criteria', renders '{shopTypeLabel} in {city}' + filteredServices.length + ' shops found'",
+      "inline_edit_form": "PASS — clicking laundry-edit-search-btn (line 589) toggles isEditingSearch; form has LocationInput (City), Select with all/laundry/pressing items, Update + Cancel buttons (lines 533-565)",
+      "swipeable_image_galleries": "PASS — SwipeableImages component lines 23-93 with data-testid='laundry-card-swipe-{sid}'; for 2+ images shows ChevronLeft/Right buttons (lines 63-78) with opacity-0 group-hover:opacity-100 + dot indicators (lines 79-87); scrollTo() advances via smooth scroll",
+      "no_express_delivery_flags_on_card": "PASS — grid card top-left absolute area (lines 179-184) renders ONLY the shop-type Badge; old Express/Delivery flag <Badge>s removed from listing card",
+      "pronounced_address_block_grid": "PASS — lines 204-214 wrap address in 'rounded-lg bg-purple-50/70 px-3 py-2 border border-purple-100' with MapPin icon, font-semibold text-slate-900 for street, text-xs text-purple-700 font-medium for city",
+      "pronounced_address_block_list": "PASS — lines 315-325 mirror the same boxed/bold address treatment",
+      "shop_type_url_filter": "PASS — filteredServices memo (lines 472-476): shopType==='laundry' shows laundry OR both; shopType==='pressing' shows pressing OR both"
+    },
+    "prebooking_modal_code_review": {
+      "max_w_2xl_smaller_than_4xl": "PASS — LaundryShopDetailsModal.jsx line 41: 'max-w-2xl w-[94vw] ... max-h-[88vh]' (no max-w-4xl)",
+      "h_40_hero_gallery": "PASS — line 48 uses 'h-40' (smaller hero); thumbnails in lines 51-55 use h-[78px]",
+      "md_grid_cols_5_items": "PASS — line 115 grid 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2' with aspect-square thumbs (line 118) and text-[11px] item names + prices (lines 126-127)",
+      "laundry_fallback_block": "PASS — lines 135-143 'Laundry — pay per kilo / Drop off — billed by total weight.' rendered when st==='laundry' OR 'both'",
+      "continue_cta_navigates": "PASS — laundry-prebooking-continue button (line 173) invokes onContinue; LaundryResults.handleContinueToBooking (line 500) navigates to /services/laundry/booking/{id}",
+      "tighter_spacing": "PASS — body 'p-4 space-y-3.5' (line 93) vs prior larger spacing; description text-xs, badges text-[10px], logistics grid-cols-2 with compact p-2"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "LaundrySearch.jsx (145 lines) — Spec-compliant: NO 'Pickup Date' anywhere, binary toggle works (lines 81-106 with two buttons that allow re-click to deselect/clear), URL builder (lines 37-40) only emits 'shop_type' when truthy. The 'Features' section retains the marketing labels 'Free Pickup' and 'Express Service' (lines 137-148) — these are MARKETING copy, not search filter UI, and the spec says only filter options need to be removed. Confirmed non-issue.",
+    "LaundryResults.jsx (682 lines) — Above 700-line guideline at 682 lines, getting close. SwipeableImages, ServiceCardGrid and ServiceCardList sub-components are good candidates for extraction into /components/services/laundry/* in a future refactor. Non-blocking. Imports for Truck (line 9) is still imported but the Express/Delivery flag JSX was removed — unused import. Lines 148-149,274-275 still derive deliveryEnabled/expressEnabled variables that are no longer rendered (dead code) — safe but should be cleaned.",
+    "LaundryShopDetailsModal.jsx (187 lines) — Clean, well-isolated. The hero collage logic (lines 47-56) handles 1 vs 2-3 vs 4 images gracefully with col-span tricks. Pressing menu only renders if shop_type !== 'laundry' AND items exist (line 112) — correct fallback path to the per-kg block (lines 135-143) for shop_type==='laundry'.",
+    "Cloudflare burst-blocking on the preview URL is reproducible — when running 3+ Playwright sessions in <5min the third+ session gets a blank-render. Login API endpoint stays accessible. Recommendation: testing agents should keep to ≤2 page goto's per validation and rely on code review for deeper checks (as documented in iter181)."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "n/a (frontend-only per request)",
+    "frontend": "100% — 7/7 live search-page assertions PASSED, all 14 results-page + modal spec items code-verified against /app/frontend/src/pages/services/LaundrySearch.jsx, /app/frontend/src/pages/services/LaundryResults.jsx and /app/frontend/src/components/services/LaundryShopDetailsModal.jsx"
+  },
+  "test_credentials": "customer@test.com / testpassword123 (used; login OK)",
+  "seed_data_creation": "None — relies on existing Royal Fresh (74e62cd9-64a3-4efa-899a-ab1c970e1c28) pressing shop in Yaoundé for modal validation",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "CF burst-blocking on the preview URL was triggered after 2 consecutive Playwright sessions in this iteration. If you need to retest interactively, wait 5+ minutes between full sessions, keep page.goto() calls under 3 per run, and rely on code-level review for deep DOM assertions. The first run reliably verified the search page (no Pickup Date, both toggles, no Delivery/Express filter, purple submit, pressing→fuchsia state, URL routing). All deeper results-page + modal spec items were verified by reading the three reference files which are fully aligned with the user's spec. Useful selectors: data-testid=service-type-laundry, service-type-pressing, laundry-search-submit, laundry-search-criteria, laundry-edit-search-btn, laundry-card-swipe-{id}, laundry-card-grid-{id}, book-btn-{id}, laundry-prebooking-modal, laundry-prebooking-continue.",
+  "rca of the issue": "No functional bugs. Two code-quality nits worth flagging to E1: (1) LaundryResults.jsx imports Truck from lucide-react (line 9) and defines deliveryEnabled/expressEnabled (lines 148-149,274-275) which are no longer rendered anywhere — dead code, safe to remove. (2) LaundryResults.jsx is 682 lines, close to the 700-line guideline; consider extracting SwipeableImages, ServiceCardGrid and ServiceCardList sub-components."
+}
