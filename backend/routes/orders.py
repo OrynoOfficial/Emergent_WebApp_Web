@@ -6,6 +6,7 @@ from middleware.auth import get_current_active_user
 from utils.permissions import require_permission, require_any_permission
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+import logging
 import uuid
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
@@ -192,15 +193,33 @@ async def create_direct_order(
             'restaurant': 'restaurants', 'event': 'events', 'package': 'packages',
             'cinema': 'cinemas', 'laundry': 'pressings', 'banquet': 'banquets'
         }
-        col_name = svc_collection_map.get(order_data.service_type)
-        if col_name:
-            svc = await db[col_name].find_one(
-                {"$or": [{"_id": order_data.service_id}, {"id": order_data.service_id}]},
-                {"operator_id": 1, "operator_name": 1}
+        # Cinema is special: service_id is the showtime_id; we resolve the
+        # operator through showtime -> cinema (drift-free against operator
+        # reassignments because we always read the cinema row at write time).
+        if order_data.service_type == "cinema":
+            st = await db.showtimes.find_one(
+                {"_id": order_data.service_id},
+                {"cinema_id": 1}
             )
-            if svc:
-                operator_id = svc.get("operator_id")
-                operator_name = operator_name or svc.get("operator_name", "")
+            cinema_id = st.get("cinema_id") if st else None
+            if cinema_id:
+                cin = await db.cinemas.find_one(
+                    {"_id": cinema_id},
+                    {"operator_id": 1, "operator_name": 1}
+                )
+                if cin:
+                    operator_id = cin.get("operator_id")
+                    operator_name = operator_name or cin.get("operator_name", "")
+        else:
+            col_name = svc_collection_map.get(order_data.service_type)
+            if col_name:
+                svc = await db[col_name].find_one(
+                    {"$or": [{"_id": order_data.service_id}, {"id": order_data.service_id}]},
+                    {"operator_id": 1, "operator_name": 1}
+                )
+                if svc:
+                    operator_id = svc.get("operator_id")
+                    operator_name = operator_name or svc.get("operator_name", "")
 
     # Enrich travel bookings with vehicle info so the customer ticket can display it
     if order_data.service_type == "travel" and order_data.service_id:
@@ -475,7 +494,14 @@ async def create_direct_order(
     }
     
     await db.orders.insert_one(order)
-    
+
+    # Fan-out notifications: operator team + admins/superadmins.
+    # Best-effort, never blocks order creation.
+    try:
+        await _notify_new_booking(db, order)
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("notify_new_booking failed: %s", exc)
+
     return {
         "success": True,
         "message": "Order created successfully",
@@ -483,6 +509,80 @@ async def create_direct_order(
         "order_number": order["order_number"],
         "total_amount": order_data.total_amount
     }
+
+
+async def _notify_new_booking(db, order: dict):
+    """Notify operator team + admins/superadmins of a new booking.
+
+    Operators receive "New booking received" so they can prepare the service.
+    Admins/superadmins receive "Pending validation" so they can review.
+    Safe to call on every order — recipients are deduped on user_id.
+    """
+    order_id = order["_id"]
+    order_number = order.get("order_number", "")
+    service_type = order.get("service_type", "service")
+    service_name = order.get("service_name", "Service")
+    total_amount = order.get("total_amount", 0)
+    currency = order.get("currency", "XAF")
+    operator_id = order.get("operator_id")
+    operator_name = order.get("operator_name", "")
+
+    now = datetime.now(timezone.utc)
+    notifications: list = []
+    user_ids_added: set = set()
+
+    def _push(user_id: str, title: str, message: str, ntype: str):
+        if not user_id or user_id in user_ids_added:
+            return
+        user_ids_added.add(user_id)
+        notifications.append({
+            "_id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "title": title,
+            "message": message,
+            "type": ntype,
+            "source": "booking",
+            "order_id": order_id,
+            "order_number": order_number,
+            "service_type": service_type,
+            "is_read": False,
+            "created_at": now,
+        })
+
+    # 1. Notify the operator team
+    if operator_id:
+        op_message = f"New {service_type} booking #{order_number} for {service_name} ({total_amount:,.0f} {currency})."
+        # Owner of the operator
+        operator_doc = await db.operators.find_one(
+            {"_id": operator_id},
+            {"owner_user_id": 1, "user_id": 1, "primary_user_id": 1},
+        )
+        if operator_doc:
+            for key in ("owner_user_id", "user_id", "primary_user_id"):
+                uid = operator_doc.get(key)
+                if uid:
+                    _push(uid, "New Booking Received", op_message, "new_booking")
+        # Team members scoped to this operator
+        async for team_user in db.users.find(
+            {"operator_id": operator_id, "is_active": {"$ne": False}},
+            {"_id": 1},
+        ):
+            _push(team_user["_id"], "New Booking Received", op_message, "new_booking")
+
+    # 2. Notify admins + super admins
+    admin_message = (
+        f"New {service_type} booking #{order_number} pending validation"
+        + (f" for {operator_name}" if operator_name else "")
+        + f" — {total_amount:,.0f} {currency}."
+    )
+    async for admin in db.users.find(
+        {"role": {"$in": ["admin", "super_admin", "superadmin"]}, "is_active": {"$ne": False}},
+        {"_id": 1},
+    ):
+        _push(admin["_id"], "Booking Awaiting Validation", admin_message, "validation_required")
+
+    if notifications:
+        await db.notifications.insert_many(notifications)
 
 
 @router.get("/")
