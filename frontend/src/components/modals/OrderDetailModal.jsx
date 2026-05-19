@@ -938,8 +938,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             </div>
           </div>
 
-          {/* QR Code Section - Show for confirmed/reserved orders */}
-          {['confirmed', 'reserved', 'completed'].includes(order.status) && (
+          {/* QR Code Section — only for confirmed orders that are actually paid.
+              Pending / unpaid orders MUST NOT show a QR because the ticket
+              hasn't been issued yet. */}
+          {['confirmed', 'reserved', 'completed'].includes(order.status)
+            && ['paid', 'verified', 'captured', 'completed', 'succeeded'].includes((order.payment_status || '').toLowerCase()) && (
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Your Ticket</h3>
               <div className="bg-slate-50 rounded-lg p-4 text-center">

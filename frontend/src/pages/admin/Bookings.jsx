@@ -17,7 +17,7 @@ import OperatorScopeFilter from '../../components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '../../components/common/QuickDateRangeFilter';
 import ViewModeToggle from '../../components/common/ViewModeToggle';
 import Pagination from '../../components/common/Pagination';
-import OrderDetailModal from '../../components/modals/OrderDetailModal';
+import BookingDetailModal from '../../components/modals/BookingDetailModal';
 import { toast } from 'sonner';
 
 const CATEGORY_ICONS = {
@@ -409,8 +409,8 @@ export default function AdminBookings() {
         className="mt-2"
       />
 
-      {/* Detail Modal */}
-      <OrderDetailModal
+      {/* Booking Detail Modal — operator-focused (not the customer's ticket view) */}
+      <BookingDetailModal
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         order={selectedOrder}
