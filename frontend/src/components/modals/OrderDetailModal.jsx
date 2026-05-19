@@ -35,6 +35,10 @@ import {
   Film,
   Ticket,
   Monitor,
+  Shirt,
+  Droplets,
+  Sparkles,
+  Home,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
@@ -615,6 +619,203 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
 
                     <p className="mt-3 text-xs text-slate-500 italic">
                       Present this ticket (or the QR code below) at the cinema entrance.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
+          {/* Laundry / Pressing Order Info */}
+          {(order.service_type === 'laundry' || order.service_type === 'pressing' || order.service_category === 'laundry' || order.service_category === 'pressing') && (
+            (() => {
+              const bd = order.booking_details || {};
+              const pi = bd.pressing_info || {};
+              const shopName = pi.name || bd.shop_name || order.service_name;
+              const shopAddress = pi.address;
+              const shopCity = pi.city;
+              const shopPhone = pi.phone;
+              const turnaround = pi.turnaround_hours;
+              const operatorName = pi.operator_name || order.operator_name;
+              const heroImg = (pi.images && pi.images[0]) || null;
+              const shopType = pi.shop_type || bd.shop_type || 'laundry';
+              const isPressing = shopType === 'pressing' || shopType === 'both';
+
+              const pickupMethod = bd.pickup_method || 'pickup';
+              const pickupDate = bd.pickup_date;
+              const pickupTime = bd.pickup_time;
+              const deliveryDate = bd.delivery_date;
+              const items = bd.items || [];
+              const itemsSubtotal = bd.items_subtotal || 0;
+              const expressOn = !!bd.express;
+              const expressSurcharge = bd.express_surcharge || 0;
+              const pickupSurcharge = bd.pickup_surcharge || 0;
+              const serviceFee = bd.service_fee || 0;
+              const promoCode = bd.promo_code;
+              const promoDiscount = bd.promo_discount || 0;
+
+              const stBadge = shopType === 'pressing'
+                ? 'bg-fuchsia-500 text-white'
+                : shopType === 'both'
+                ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white'
+                : 'bg-purple-500 text-white';
+              const stLabel = shopType === 'pressing' ? 'Pressing' : shopType === 'both' ? 'Laundry + Pressing' : 'Laundry';
+
+              if (!shopName && items.length === 0) return null;
+
+              return (
+                <div data-testid="order-laundry-info">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-purple-700" /> Your {isPressing ? 'Pressing' : 'Laundry'} Order
+                  </h3>
+                  <div className="rounded-xl border-2 border-purple-500/15 bg-gradient-to-br from-purple-50 to-white p-4">
+                    {/* Header — shop card */}
+                    <div className="flex gap-4 items-start">
+                      {heroImg ? (
+                        <img
+                          src={heroImg}
+                          alt={shopName || 'Shop'}
+                          className="w-24 h-24 rounded-lg object-cover border border-purple-200 flex-shrink-0 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
+                          <Shirt className="h-10 w-10 text-white/80" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <p className="font-bold text-slate-900 text-base leading-tight" data-testid="laundry-shop-name">{shopName}</p>
+                          <Badge className={`text-[10px] capitalize ${stBadge} border-transparent`} data-testid="laundry-shop-type">{stLabel}</Badge>
+                        </div>
+                        {operatorName && (
+                          <p className="text-xs text-slate-500">by {operatorName}</p>
+                        )}
+                        {(shopAddress || shopCity) && (
+                          <p className="text-sm text-slate-700 flex items-start gap-1 pt-0.5">
+                            <MapPin className="h-3.5 w-3.5 text-purple-700 mt-0.5 flex-shrink-0" />
+                            <span>
+                              {shopAddress && <span className="font-medium">{shopAddress}</span>}
+                              {shopAddress && shopCity && <span className="text-slate-500"> · </span>}
+                              {shopCity && <span className="text-slate-500">{shopCity}</span>}
+                            </span>
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600">
+                          {shopPhone && (
+                            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {shopPhone}</span>
+                          )}
+                          {turnaround && (
+                            <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {turnaround}h turnaround</span>
+                          )}
+                          {pi.delivery_available && (
+                            <span className="inline-flex items-center gap-1 text-emerald-700"><Truck className="h-3 w-3" /> Pickup &amp; delivery</span>
+                          )}
+                          {pi.express_available && (
+                            <span className="inline-flex items-center gap-1 text-orange-700"><Sparkles className="h-3 w-3" /> Express</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pickup vs drop-off + dates */}
+                    <div className="mt-3 pt-3 border-t border-purple-200/60 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        {pickupMethod === 'pickup' ? <Truck className="h-4 w-4 text-purple-700 flex-shrink-0" /> : <Home className="h-4 w-4 text-purple-700 flex-shrink-0" />}
+                        <div>
+                          <p className="text-[11px] text-slate-500 leading-none mb-0.5">Logistics</p>
+                          <p className="font-semibold text-slate-900 leading-none text-xs">
+                            {pickupMethod === 'pickup' ? 'Pickup from customer' : 'Customer drops off'}
+                          </p>
+                        </div>
+                      </div>
+                      {pickupDate && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-purple-700 flex-shrink-0" />
+                          <div>
+                            <p className="text-[11px] text-slate-500 leading-none mb-0.5">{pickupMethod === 'pickup' ? 'Pickup date' : 'Drop-off date'}</p>
+                            <p className="font-semibold text-slate-900 leading-none text-xs">{formatDate(pickupDate)}{pickupTime ? ` · ${pickupTime}` : ''}</p>
+                          </div>
+                        </div>
+                      )}
+                      {deliveryDate && (
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-fuchsia-700 flex-shrink-0" />
+                          <div>
+                            <p className="text-[11px] text-slate-500 leading-none mb-0.5">Delivery date</p>
+                            <p className="font-semibold text-slate-900 leading-none text-xs">{formatDate(deliveryDate)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Items breakdown — for pressing or pay-per-item */}
+                    {items.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-purple-200/60" data-testid="laundry-items-list">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5">Items ({items.reduce((s, i) => s + (i.quantity || 0), 0)})</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                          {items.map((it, idx) => {
+                            const qty = it.quantity || 1;
+                            const unit = it.unit_price || it.price || 0;
+                            return (
+                              <div key={idx} className="flex justify-between text-xs">
+                                <span className="text-slate-700 truncate"><span className="font-medium">{qty}×</span> {it.name}</span>
+                                <span className="text-slate-800 font-medium ml-2 whitespace-nowrap">{formatFCFA(unit * qty)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Special instructions */}
+                    {bd.notes && (
+                      <div className="mt-3 pt-3 border-t border-purple-200/60" data-testid="laundry-notes">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Special Instructions</p>
+                        <p className="text-xs text-slate-700 italic leading-relaxed">"{bd.notes}"</p>
+                      </div>
+                    )}
+
+                    {/* Price breakdown — surcharges + promo */}
+                    {(expressSurcharge > 0 || pickupSurcharge > 0 || serviceFee > 0 || promoDiscount > 0) && (
+                      <div className="mt-3 pt-3 border-t border-purple-200/60 space-y-1 text-xs" data-testid="laundry-price-summary">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Order Breakdown</p>
+                        {itemsSubtotal > 0 && (
+                          <div className="flex justify-between text-slate-600">
+                            <span>Items subtotal</span>
+                            <span className="font-medium">{formatFCFA(itemsSubtotal)}</span>
+                          </div>
+                        )}
+                        {expressSurcharge > 0 && (
+                          <div className="flex justify-between text-orange-700">
+                            <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Express surcharge</span>
+                            <span className="font-medium">+{formatFCFA(expressSurcharge)}</span>
+                          </div>
+                        )}
+                        {pickupSurcharge > 0 && (
+                          <div className="flex justify-between text-purple-700">
+                            <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Pickup surcharge</span>
+                            <span className="font-medium">+{formatFCFA(pickupSurcharge)}</span>
+                          </div>
+                        )}
+                        {serviceFee > 0 && (
+                          <div className="flex justify-between text-slate-600">
+                            <span>Service fee</span>
+                            <span className="font-medium">+{formatFCFA(serviceFee)}</span>
+                          </div>
+                        )}
+                        {promoDiscount > 0 && (
+                          <div className="flex justify-between text-emerald-700">
+                            <span className="inline-flex items-center gap-1">🎟️ Promo {promoCode ? `(${promoCode})` : ''}</span>
+                            <span className="font-medium">-{formatFCFA(promoDiscount)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="mt-3 text-xs text-slate-500 italic">
+                      {pickupMethod === 'pickup'
+                        ? 'A rider will collect your items at the agreed time.'
+                        : 'Please drop off your items at the shop on the scheduled date.'}
                     </p>
                   </div>
                 </div>
