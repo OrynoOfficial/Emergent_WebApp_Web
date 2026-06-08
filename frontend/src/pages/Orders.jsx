@@ -86,7 +86,7 @@ export default function Orders() {
   const [showFilters, setShowFilters] = useState(false);
   const [operatorFilter, setOperatorFilter] = useState('');
   const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
-  const [viewMode, setViewMode] = useState('list'); // list | grid | details
+  const [viewMode, setViewMode] = useState('grid'); // list | grid | details
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -593,36 +593,52 @@ export default function Orders() {
             {paginatedOrders.map((order) => (
               <Card
                 key={order.id || order._id}
-                className="group bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                className="group bg-slate-100 border-2 border-slate-300 hover:border-[#082c59]/40 hover:shadow-xl transition-all duration-200 overflow-hidden"
+                data-testid={`order-card-grid-${order.id || order._id}`}
               >
                 <div className={`h-1.5 ${getCategoryColor(order.service_category || order.service_type)}`} />
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-lg shrink-0">
+                      <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-200 flex items-center justify-center text-lg shrink-0">
                         {getCategoryIcon(order.service_category || order.service_type)}
                       </div>
                       <span className="font-mono text-xs font-bold text-[#082c59] truncate">#{order.order_number}</span>
                     </div>
-                    <Badge variant="outline" className={`text-[10px] ${getStatusColor(order.status)}`}>{order.status}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-bold uppercase tracking-wider shadow-sm ring-1 ring-black/5 ${getStatusColor(order.status)}`}
+                      data-testid={`order-status-${order.id || order._id}`}
+                    >
+                      {order.status}
+                    </Badge>
                   </div>
                   <h3 className="font-semibold text-slate-900 truncate">{order.service_name || order.service_title || 'Service'}</h3>
-                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3" /> {formatDate(order.created_at)}
+                  <div
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-full px-2.5 py-1 shadow-sm"
+                    data-testid={`order-date-${order.id || order._id}`}
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-[#082c59]" />
+                    {formatDateTime(order.created_at)}
                   </div>
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-[10px] uppercase text-slate-400">Total</p>
-                    <p className="text-xl font-bold text-[#082c59]">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
+                  <div className="pt-2 border-t border-slate-300">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Total</p>
+                    <p
+                      className="text-2xl font-extrabold text-emerald-600"
+                      data-testid={`order-total-${order.id || order._id}`}
+                    >
+                      {formatFCFA(order.total_amount || order.final_amount || 0)}
+                    </p>
                   </div>
                   <div className="flex gap-2 pt-1">
-                    <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="flex-1" data-testid={`order-view-${order.id || order._id}`}>
+                    <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="flex-1 bg-white" data-testid={`order-view-${order.id || order._id}`}>
                       <Eye className="h-3.5 w-3.5 mr-1" /> View
                     </Button>
                     {order.status === 'pending' && (
                       <Button
                         onClick={() => handleCancelOrder(order.id || order._id)}
                         variant="outline" size="sm"
-                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                        className="flex-1 bg-white border-red-200 text-red-600 hover:bg-red-50"
                       >
                         <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
                       </Button>
@@ -635,69 +651,69 @@ export default function Orders() {
         ) : viewMode === 'details' ? (
           <div className="space-y-3" data-testid="orders-details-view">
             {paginatedOrders.map((order) => (
-              <Card key={order.id || order._id} className="bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-md transition-all">
+              <Card key={order.id || order._id} className="bg-slate-100 border-2 border-slate-300 hover:border-[#082c59]/40 hover:shadow-lg transition-all">
                 <CardContent className="p-0">
                   <div className="flex items-stretch">
                     <div className={`w-1.5 ${getCategoryColor(order.service_category || order.service_type)}`} />
                     <div className="flex-1 p-5 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-sm font-bold text-[#082c59]">#{order.order_number}</span>
-                        <Badge variant="outline" className={`text-xs ${getStatusColor(order.status)}`}>{order.status}</Badge>
+                        <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider shadow-sm ring-1 ring-black/5 ${getStatusColor(order.status)}`}>{order.status}</Badge>
                         {(order.service_category || order.service_type) && (
-                          <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 capitalize">{(order.service_category || order.service_type).replace('_', ' ')}</Badge>
+                          <Badge variant="outline" className="text-xs bg-white text-slate-700 border-slate-300 capitalize font-semibold">{(order.service_category || order.service_type).replace('_', ' ')}</Badge>
                         )}
                         {order.channel === 'on_site' && (
                           <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-xs">Walk-in</Badge>
                         )}
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-full px-2.5 py-1 shadow-sm ml-auto">
+                          <Calendar className="h-3.5 w-3.5 text-[#082c59]" />
+                          {formatDateTime(order.created_at)}
+                        </span>
                       </div>
                       <h3 className="font-semibold text-slate-900">{order.service_name || order.service_title || 'Service'}</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                        <div>
-                          <p className="text-slate-400 uppercase tracking-wide">Date</p>
-                          <p className="text-slate-700 font-medium flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(order.created_at)}</p>
-                        </div>
                         {order.customer_name && (
                           <div>
-                            <p className="text-slate-400 uppercase tracking-wide">Customer</p>
-                            <p className="text-slate-700 font-medium flex items-center gap-1"><User className="h-3 w-3" /> {order.customer_name}</p>
+                            <p className="text-slate-500 uppercase tracking-wide font-semibold">Customer</p>
+                            <p className="text-slate-800 font-medium flex items-center gap-1"><User className="h-3 w-3" /> {order.customer_name}</p>
                           </div>
                         )}
                         {order.operator_name && (
                           <div>
-                            <p className="text-slate-400 uppercase tracking-wide">Operator</p>
-                            <p className="text-slate-700 font-medium flex items-center gap-1"><Building2 className="h-3 w-3" /> {order.operator_name}</p>
+                            <p className="text-slate-500 uppercase tracking-wide font-semibold">Operator</p>
+                            <p className="text-slate-800 font-medium flex items-center gap-1"><Building2 className="h-3 w-3" /> {order.operator_name}</p>
                           </div>
                         )}
                         {order.payment_method && (
                           <div>
-                            <p className="text-slate-400 uppercase tracking-wide">Payment</p>
-                            <p className="text-slate-700 font-medium capitalize">{order.payment_method.replace('_', ' ')}</p>
+                            <p className="text-slate-500 uppercase tracking-wide font-semibold">Payment</p>
+                            <p className="text-slate-800 font-medium capitalize">{order.payment_method.replace('_', ' ')}</p>
                           </div>
                         )}
                         <div>
-                          <p className="text-slate-400 uppercase tracking-wide">Subtotal</p>
-                          <p className="text-slate-700 font-medium">{formatFCFA(order.subtotal || order.total_amount || 0)}</p>
+                          <p className="text-slate-500 uppercase tracking-wide font-semibold">Subtotal</p>
+                          <p className="text-slate-800 font-medium">{formatFCFA(order.subtotal || order.total_amount || 0)}</p>
                         </div>
                         {order.tax > 0 && (
                           <div>
-                            <p className="text-slate-400 uppercase tracking-wide">Tax</p>
-                            <p className="text-slate-700 font-medium">{formatFCFA(order.tax)}</p>
+                            <p className="text-slate-500 uppercase tracking-wide font-semibold">Tax</p>
+                            <p className="text-slate-800 font-medium">{formatFCFA(order.tax)}</p>
                           </div>
                         )}
                         {(order.discount > 0 || order.promo_discount > 0) && (
                           <div>
-                            <p className="text-slate-400 uppercase tracking-wide">Discount</p>
-                            <p className="text-emerald-600 font-medium">-{formatFCFA(order.discount || order.promo_discount)}</p>
+                            <p className="text-slate-500 uppercase tracking-wide font-semibold">Discount</p>
+                            <p className="text-emerald-600 font-semibold">-{formatFCFA(order.discount || order.promo_discount)}</p>
                           </div>
                         )}
                       </div>
                       {order.customer_notes && (
-                        <div className="p-2 bg-slate-50 rounded-lg border-l-2 border-slate-300">
+                        <div className="p-2 bg-white rounded-lg border-l-2 border-slate-400">
                           <p className="text-sm text-slate-600 italic">&ldquo;{order.customer_notes}&rdquo;</p>
                         </div>
                       )}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <p className="text-2xl font-bold text-[#082c59]">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-300">
+                        <p className="text-2xl font-extrabold text-emerald-600">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
                         <div className="flex gap-2">
                           <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm">
                             <Eye className="h-4 w-4 mr-1" /> View
@@ -720,7 +736,7 @@ export default function Orders() {
           {paginatedOrders.map((order) => (
             <Card
               key={order.id || order._id}
-              className="group bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-md transition-all duration-200 overflow-hidden"
+              className="group bg-slate-100 border-2 border-slate-300 hover:border-[#082c59]/40 hover:shadow-lg transition-all duration-200 overflow-hidden"
             >
               <CardContent className="p-0">
                 <div className="flex items-stretch">
@@ -732,7 +748,7 @@ export default function Orders() {
                       {/* Left side - Icon and Info */}
                       <div className="flex gap-4 flex-1 min-w-0">
                         {/* Category Icon */}
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform duration-200">
+                        <div className="w-14 h-14 rounded-xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform duration-200">
                           {getCategoryIcon(order.service_category || order.service_type)}
                         </div>
 
@@ -742,11 +758,11 @@ export default function Orders() {
                             <span className="font-mono text-sm font-bold text-[#082c59]">
                               #{order.order_number}
                             </span>
-                            <Badge variant="outline" className={`text-xs ${getStatusColor(order.status)}`}>
+                            <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider shadow-sm ring-1 ring-black/5 ${getStatusColor(order.status)}`}>
                               {order.status}
                             </Badge>
                             {(order.service_category || order.service_type) && (
-                              <Badge variant="outline" className="text-xs bg-slate-100 text-slate-600 border-slate-200 capitalize">
+                              <Badge variant="outline" className="text-xs bg-white text-slate-700 border-slate-300 capitalize font-semibold">
                                 {(order.service_category || order.service_type).replace('_', ' ')}
                               </Badge>
                             )}
@@ -756,29 +772,29 @@ export default function Orders() {
                             {order.service_name || order.service_title || 'Service'}
                           </h3>
 
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
-                            <span className="flex items-center gap-1.5">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {formatDate(order.created_at)}
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-full px-2.5 py-1 shadow-sm">
+                              <Calendar className="h-3.5 w-3.5 text-[#082c59]" />
+                              {formatDateTime(order.created_at)}
                             </span>
                           </div>
 
                           {/* Price breakdown - compact */}
                           <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
                             <div>
-                              <span className="text-slate-400">Subtotal:</span>
-                              <span className="ml-1 font-medium text-slate-700">{formatFCFA(order.subtotal || order.total_amount || 0)}</span>
+                              <span className="text-slate-500 font-semibold">Subtotal:</span>
+                              <span className="ml-1 font-medium text-slate-800">{formatFCFA(order.subtotal || order.total_amount || 0)}</span>
                             </div>
                             {order.tax > 0 && (
                               <div>
-                                <span className="text-slate-400">Tax:</span>
-                                <span className="ml-1 font-medium text-slate-700">{formatFCFA(order.tax)}</span>
+                                <span className="text-slate-500 font-semibold">Tax:</span>
+                                <span className="ml-1 font-medium text-slate-800">{formatFCFA(order.tax)}</span>
                               </div>
                             )}
                             {(order.discount > 0 || order.promo_discount > 0) && (
                               <div>
-                                <span className="text-slate-400">Discount:</span>
-                                <span className="ml-1 font-medium text-emerald-600">-{formatFCFA(order.discount || order.promo_discount)}</span>
+                                <span className="text-slate-500 font-semibold">Discount:</span>
+                                <span className="ml-1 font-semibold text-emerald-600">-{formatFCFA(order.discount || order.promo_discount)}</span>
                               </div>
                             )}
                           </div>
@@ -788,8 +804,8 @@ export default function Orders() {
                       {/* Right side - Total & Actions */}
                       <div className="flex items-center gap-4 sm:gap-6 lg:flex-col lg:items-end lg:gap-3">
                         <div className="text-right">
-                          <p className="text-xs text-slate-400 uppercase tracking-wide">Total</p>
-                          <p className="text-xl sm:text-2xl font-bold text-[#082c59]">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total</p>
+                          <p className="text-xl sm:text-2xl font-extrabold text-emerald-600">
                             {formatFCFA(order.total_amount || order.final_amount || 0)}
                           </p>
                         </div>
@@ -803,7 +819,7 @@ export default function Orders() {
                               }}
                               variant="outline"
                               size="sm"
-                              className="border-red-200 text-red-600 hover:bg-red-50"
+                              className="bg-white border-red-200 text-red-600 hover:bg-red-50"
                             >
                               <XCircle className="h-4 w-4 sm:mr-1.5" />
                               <span className="hidden sm:inline">Cancel</span>
@@ -813,7 +829,7 @@ export default function Orders() {
                             onClick={() => handleViewOrder(order)}
                             variant="outline"
                             size="sm"
-                            className="border-slate-200 hover:border-[#082c59] hover:text-[#082c59]"
+                            className="bg-white border-slate-200 hover:border-[#082c59] hover:text-[#082c59]"
                           >
                             <Eye className="h-4 w-4 sm:mr-1.5" />
                             <span className="hidden sm:inline">View</span>
@@ -822,7 +838,7 @@ export default function Orders() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-amber-200 text-amber-600 hover:bg-amber-50"
+                              className="bg-white border-amber-200 text-amber-600 hover:bg-amber-50"
                             >
                               <Star className="h-4 w-4 sm:mr-1.5" />
                               <span className="hidden sm:inline">Review</span>
@@ -834,7 +850,7 @@ export default function Orders() {
 
                     {/* Customer notes */}
                     {order.customer_notes && (
-                      <div className="mt-3 p-2 bg-slate-50 rounded-lg border-l-2 border-slate-300">
+                      <div className="mt-3 p-2 bg-white rounded-lg border-l-2 border-slate-400">
                         <p className="text-sm text-slate-600 italic">&ldquo;{order.customer_notes}&rdquo;</p>
                       </div>
                     )}
