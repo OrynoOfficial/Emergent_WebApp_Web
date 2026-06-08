@@ -5,6 +5,23 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Latest Changes (Jun 2026)
+- **Deployment readiness hardening (Jun 8 2026)** — Cleared all three deployment-agent blockers:
+  - `.gitignore` (80 lines, down from 166) — removed 14 duplicated `*.env`/`.env.*` block entries that were preventing `.env` files from reaching the build context.
+  - `backend/routes/auth.py` line 98 — replaced hardcoded `http://localhost:3000/verify-email?token=…` with `os.environ.get('FRONTEND_URL', 'http://localhost:3000')` (key already present in `backend/.env`).
+  - `frontend/src/api/client.js` line 4 — hardcoded preview-domain fallback (`https://cinema-management-p0.preview.emergentagent.com/api`) replaced with relative `/api`. Production now resolves via `VITE_API_URL` env var, fallback safe across all environments.
+  - Deployment health re-run: status now **warn** (deployable). Remaining non-blocking warnings are MongoDB query optimisation suggestions in `backend/routes/analytics.py` (replace `.to_list(10000)` with aggregation pipelines) — earmarked for future tuning.
+
+- **Orders page visual polish (Jun 8 2026 — iter 184)** — Final UX iteration on `/app/frontend/src/pages/Orders.jsx`:
+  - Default `viewMode` flipped from `'list'` → `'grid'` (line 89).
+  - All three view modes (grid/list/details) now render cards with `bg-slate-100 border-2 border-slate-300` and hover-elevate to `border-[#082c59]/40 shadow-xl` — the requested "slate-400 look" without compromising text legibility.
+  - Status badges are now `uppercase font-bold tracking-wider shadow-sm ring-1 ring-black/5` (striking, scannable).
+  - Booking date/time is rendered as a white pill chip (`bg-white border-slate-300 rounded-full px-2.5 py-1 shadow-sm`) with a navy `<Calendar/>` icon — pulled from muted slate-400 text to a striking surface.
+  - Monetary `Total` is now `text-2xl font-extrabold text-emerald-600` (was `text-xl font-bold text-[#082c59]`).
+  - New testids added on each card: `order-card-grid-{id}`, `order-status-{id}`, `order-date-{id}`, `order-total-{id}`.
+  - Verified by testing agent iter184 (100% spec compliance on source review + live Playwright DOM inspection across all 225 admin orders).
+
+
 ## Latest Changes (May 2026)
 - **AlmostSoldOutBadge inventory enrichment — Hotels + Restaurants (Feb 16 2026 — iter 181)** — Backend now emits the FOMO inventory fields that the existing AlmostSoldOutBadge wires were waiting on.
   - **Hotels** (`GET /api/hotels/` in `backend/routes/hotels.py` line ~97-117): each hotel now carries `available_rooms` aggregated from the `db.rooms` collection (sum of `available_rooms` across all `is_active != false` rooms). One bulk read per page, no N+1. Frontend `HotelsResults.jsx` already passes `hotel.available_rooms` to `<AlmostSoldOutBadge unit="rooms" />` — pill now renders automatically when count is 1-11.
