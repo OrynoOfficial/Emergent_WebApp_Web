@@ -95,7 +95,8 @@ async def register(user_data: UserCreate, request: Request):
     
     # Send verification email only for email registrations
     if has_valid_email:
-        verification_link = f"http://localhost:3000/verify-email?token={user['email_verification_token']}"
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        verification_link = f"{frontend_url}/verify-email?token={user['email_verification_token']}"
         await send_verification_email(user["email"], verification_link)
         return {
             "message": "User registered successfully. Please check your email to verify your account.",
