@@ -153,7 +153,12 @@ export default function WalkInBookingModal({
       onSuccess?.(res.data);
       onClose();
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Failed to record booking');
+      // Pydantic 422s return `detail` as an array of error objects; coerce to string.
+      const raw = err?.response?.data?.detail;
+      const msg = Array.isArray(raw)
+        ? raw.map((e) => e?.msg || String(e)).join('; ')
+        : (typeof raw === 'string' ? raw : 'Failed to record booking');
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

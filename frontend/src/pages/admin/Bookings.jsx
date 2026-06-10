@@ -88,17 +88,18 @@ export default function AdminBookings() {
     setWalkinLoadingServices(true);
     setWalkinOpen(true);
     try {
-      // Fetch services of the picked type — backend scopes them to the operator owner automatically
+      // Fetch services of the picked type — backend scopes them to the operator owner automatically.
+      // Several endpoints cap `limit` at 100 so we stay at that ceiling.
       const endpointMap = {
-        hotel: '/hotels/?limit=200',
-        travel: '/travel/routes?limit=200',
-        restaurant: '/restaurants/?limit=200',
-        cinema: '/cinema/films?limit=200',
-        event: '/events/?limit=200',
-        car_rental: '/car-rental/?limit=200',
-        laundry: '/pressing/?limit=200',
-        banquet: '/banquets/?limit=200',
-        package: '/package-services/?limit=200',
+        hotel: '/hotels/?limit=100',
+        travel: '/travel/routes?limit=100',
+        restaurant: '/restaurants/?limit=100',
+        cinema: '/cinema/films?limit=100',
+        event: '/events/?limit=100',
+        car_rental: '/car-rental/?limit=100',
+        laundry: '/pressing/?limit=100',
+        banquet: '/banquets/?limit=100',
+        package: '/package-services/?limit=100',
       };
       const respKey = {
         hotel: 'hotels', travel: 'routes', restaurant: 'restaurants',
@@ -114,7 +115,13 @@ export default function AdminBookings() {
       const list = r.data?.[respKey[serviceType]] || r.data?.services || r.data?.items || [];
       setWalkinServices(list);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not load services for walk-in');
+      // Pydantic 422s return `detail` as an array of error objects — extract a
+      // string for the toast (sonner crashes when given an object/array).
+      const raw = err.response?.data?.detail;
+      const msg = Array.isArray(raw)
+        ? raw.map((e) => e?.msg || String(e)).join('; ')
+        : (typeof raw === 'string' ? raw : 'Could not load services for walk-in');
+      toast.error(msg);
     } finally {
       setWalkinLoadingServices(false);
     }
