@@ -5,7 +5,7 @@ Handles user assignment, creation, and management within operators
 from fastapi import APIRouter, HTTPException, status as http_status, Depends, Query
 from pydantic import BaseModel, EmailStr
 from config.database import get_database
-from middleware.auth import get_current_active_user
+from middleware.auth import get_current_active_user, invalidate_user_cache
 from utils.permissions import require_permission
 from models.user import UserRole, UserStatus, OperatorUserRole, OPERATOR_ROLE_HIERARCHY
 from typing import Optional, List
@@ -382,6 +382,7 @@ async def assign_existing_user(
     }
     
     await db.users.update_one({"_id": assignment.user_id}, {"$set": update_data})
+    await invalidate_user_cache(assignment.user_id)
     
     # Create activity log
     activity = {
@@ -477,6 +478,7 @@ async def update_operator_user(
         update_fields["status"] = update_data.status
     
     await db.users.update_one({"_id": user_id}, {"$set": update_fields})
+    await invalidate_user_cache(user_id)
     
     return {"message": "User updated successfully", "user_id": user_id}
 
@@ -527,6 +529,7 @@ async def remove_operator_user(
     }
     
     await db.users.update_one({"_id": user_id}, {"$set": update_fields})
+    await invalidate_user_cache(user_id)
     
     # Create activity log
     activity = {

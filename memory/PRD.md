@@ -6,6 +6,50 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 - iter 205: Phase 2 Scale Hardening)
+
+### JWT → User cache (in-process TTL, Redis-ready)
+- New `backend/utils/cache.py` exposes a thin namespaced `cache_get/cache_set/cache_delete` abstraction backed by `cachetools.TTLCache` (in-process today, swappable to Redis later — only that one file changes).
+- `middleware/auth.py:get_current_user` now caches the fully-assembled user payload (with operator context + effective permissions) for 60s, eliminating 3-4 Mongo round-trips per authenticated request.
+- New `invalidate_user_cache(user_id)` helper called on every individual user mutation: `routes/users.py` (update, role, status, /me preferences), `routes/operator_users.py` (assign, update, remove), `routes/operator_roles.py` (permission delegation, role assignment).
+- Bulk mutations (operator suspend/approve/reactivate) accept the 60s TTL window for staleness — admin-rare paths don't need per-user invalidation.
+
+### Idempotency keys on `POST /api/orders/create`
+- Endpoint now accepts `Idempotency-Key` header (UUID, ≤128 chars). Same key + same user within 24h → returns the original response verbatim; no duplicate order created.
+- Persisted in new `idempotency_keys` collection keyed by `{user_id}:{key}` with a TTL index (`expires_at`) so Mongo auto-evicts records after 24h.
+- Verified via `test_phase2_scale_hardening.py`: same-key replay returns identical `order_id`; different-user same-key creates two distinct orders (namespace is per-user).
+
+### Pre-aggregated `analytics_daily_rollup`
+- New `backend/utils/analytics_rollup.py` materialises orders into one doc per (date × operator × service_category × status). One aggregation pass replaces the per-dashboard re-scan of `orders`.
+- Two new admin endpoints:
+  - `POST /api/analytics/admin/rollup/rebuild?days_back=7` — recompute the rollup for the last N days (idempotent: deletes + reinserts within the window). Intended for a 00:05 UTC cron.
+  - `GET /api/analytics/admin/rollup/summary?days=30&operator_id=…&service_category=…` — cheap `$group` over the rollup. Returns `{orders, revenue, days}` in O(days × operators) time, not O(orders).
+- Indexes added: `ix_rollup_date`, `ix_rollup_operator_date`, `ix_rollup_category_date`.
+- Phase-3 todo (documented in the module): switch from nightly rebuild to live `$inc` upserts on every order create.
+
+### Object Storage — Emergent backend support
+- New `backend/services/emergent_storage_service.py` adapter implementing the same upload/delete contract as `LocalStorageService` + `S3Service`. Uses the playbook's `init` flow (with auto-reinit on 403) + path convention `oryno/{folder}/{uuid}.{ext}`.
+- `routes/uploads.py` rewritten to select a backend via env var `STORAGE_BACKEND={emergent|s3|local}` (falls back to the legacy `USE_LOCAL_STORAGE` toggle if unset).
+- New `GET /api/uploads/serve/{path}` streams Emergent-stored bytes back to the browser (auth via Bearer header **or** `?auth=` query for `<img src>` tags). Other backends keep serving via `/api/static/...` unchanged.
+- Switch to Emergent by setting `STORAGE_BACKEND=emergent` in `backend/.env` — no code change needed. Existing files on disk continue to serve from `/api/static/...` until a migration script copies them.
+
+### Index catalog grew: 86 → 91
+- Added: `ix_idemp_user`, `ix_idemp_ttl` (TTL), `ix_rollup_date`, `ix_rollup_operator_date`, `ix_rollup_category_date`.
+
+### Regression
+- All 30 backend tests pass: 26 existing + 4 new Phase-2 tests (`test_phase2_scale_hardening.py`):
+  - `test_jwt_cache_returns_consistent_user`
+  - `test_idempotency_replays_same_order`
+  - `test_idempotency_namespaced_per_user`
+  - `test_rollup_rebuild_and_summary`
+
+### Still TODO from Phase-2 backlog
+- Real Redis (replaces in-process cache for cross-pod consistency). Today the cache is per-pod — fine for single worker, must be Redis the moment we scale out.
+- Live incremental rollup updates on order writes (Phase-3 once we have a queue).
+- One-shot migration script to move existing `/app/backend/uploads/*` files into Emergent storage and rewrite DB references.
+
+
+
 ## Latest Changes (Feb 2026 - iter 204: Phase 1 Scale Hardening)
 
 ### MongoDB Index Bootstrap — 86 indexes auto-created on boot

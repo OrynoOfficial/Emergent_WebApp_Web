@@ -1,10 +1,18 @@
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from utils.auth import decode_token
+from utils.cache import cache_get, cache_set, cache_delete
 from config.database import get_database
 from typing import Optional, List
 
 security = HTTPBearer()
+
+async def invalidate_user_cache(user_id: str) -> None:
+    """Drop the cached user payload — call this from any code path that
+    mutates a user/operator doc (role change, status flip, permission grant).
+    The next request will rebuild a fresh entry from Mongo."""
+    await cache_delete("user", user_id)
+
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Get current authenticated user from JWT token"""
@@ -33,18 +41,26 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Invalid token payload",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    # Fast path: serve the fully-assembled user dict from the in-process TTL
+    # cache. This skips the (user → operator → permissions) fan-out for the
+    # vast majority of requests (60s TTL). Invalidate via `invalidate_user_cache`
+    # whenever the underlying doc mutates (role change, suspension, etc.).
+    cached = await cache_get("user", user_id)
+    if cached is not None:
+        return cached
+
     # Get user from database
     db = get_database()
     user = await db.users.find_one({"_id": user_id})
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Inject operator context if user is assigned to an operator
     if user.get("operator_id"):
         operator = await db.operators.find_one({"_id": user["operator_id"]})
@@ -61,17 +77,20 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "region": operator.get("region"),
                 "market_segment": operator.get("market_segment"),
             }
-        
+
         # Calculate effective permissions
         user["_effective_permissions"] = await calculate_effective_permissions(user, db)
     else:
         user["_operator_context"] = None
         user["_effective_permissions"] = await calculate_effective_permissions(user, db)
-    
+
     # Build authorization context for platform employees
     if user.get("role") == "admin":
         user["_authorization_context"] = await build_employee_authorization_context(user, db)
-    
+
+    # Store the fully-assembled user payload under its id so the next request
+    # within the TTL window completes auth without touching Mongo at all.
+    await cache_set("user", user_id, user)
     return user
 
 

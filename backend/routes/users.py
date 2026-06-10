@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
-from middleware.auth import get_current_active_user
+from middleware.auth import get_current_active_user, invalidate_user_cache
 from utils.permissions import require_permission, require_any_permission
 from models.user import UserRole, UserStatus, can_manage_role, ROLE_HIERARCHY
 from typing import Optional
@@ -232,6 +232,7 @@ async def update_user(
     filtered_data["updated_at"] = datetime.utcnow()
     
     await db.users.update_one({"_id": user_id}, {"$set": filtered_data})
+    await invalidate_user_cache(user_id)
     
     return {"message": "User updated successfully"}
 
@@ -295,6 +296,7 @@ async def update_user_role(
         {"$or": [{"id": user_id}, {"_id": user_id}]},
         update_op,
     )
+    await invalidate_user_cache(user_id)
 
     return {
         "message": f"User role updated to {new_role}",
@@ -336,6 +338,7 @@ async def update_user_status(
         {"_id": user_id},
         {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
     )
+    await invalidate_user_cache(user_id)
     
     action = "suspended" if new_status == "suspended" else "activated"
     return {"message": f"User {action} successfully"}
@@ -700,6 +703,7 @@ async def update_notification_preferences(
         {"_id": current_user["_id"]},
         {"$set": update_data}
     )
+    await invalidate_user_cache(current_user["_id"])
     
     return {"message": "Notification preferences updated successfully"}
 
@@ -726,5 +730,6 @@ async def update_user_preferences(
         {"_id": current_user["_id"]},
         {"$set": update_data}
     )
+    await invalidate_user_cache(current_user["_id"])
     
     return {"message": "Preferences updated successfully"}

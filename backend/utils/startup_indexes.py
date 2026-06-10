@@ -168,6 +168,19 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
              "ix_payments_user_created"),
     IndexSpec("payment_transactions", [("order_id", ASCENDING)], "ix_payments_order", sparse=True),
     IndexSpec("payment_transactions", [("session_id", ASCENDING)], "ix_payments_session", sparse=True),
+
+    # ── idempotency keys (TTL self-clean) ─────────────────────────────
+    # Mongo auto-evicts an idempotency record once `expires_at` is in the past.
+    IndexSpec("idempotency_keys", [("user_id", ASCENDING)], "ix_idemp_user"),
+    IndexSpec("idempotency_keys", [("expires_at", ASCENDING)], "ix_idemp_ttl",
+             expire_after_seconds=0),
+
+    # ── analytics rollup (materialised view of orders) ────────────────
+    IndexSpec("analytics_daily_rollup", [("date", ASCENDING)], "ix_rollup_date"),
+    IndexSpec("analytics_daily_rollup", [("operator_id", ASCENDING), ("date", ASCENDING)],
+             "ix_rollup_operator_date", sparse=True),
+    IndexSpec("analytics_daily_rollup", [("service_category", ASCENDING), ("date", ASCENDING)],
+             "ix_rollup_category_date"),
 ]
 
 

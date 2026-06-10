@@ -5,7 +5,7 @@ Handles custom roles, permission delegation, and access control within operators
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from config.database import get_database
-from middleware.auth import get_current_active_user
+from middleware.auth import get_current_active_user, invalidate_user_cache
 from utils.permissions_config import (
     OPERATOR_PERMISSIONS, DEFAULT_OPERATOR_ROLES, SERVICE_TYPES,
     get_role_permissions, get_delegatable_permissions, can_delegate_permission
@@ -352,6 +352,7 @@ async def delegate_permissions_to_user(
             }
         }
     )
+    await invalidate_user_cache(user_id)
     
     return {"message": "Permissions delegated successfully", "permissions": delegation.permissions}
 
@@ -418,6 +419,7 @@ async def assign_role_to_user(
         update_fields["granted_permissions"] = role_assignment.additional_permissions
     
     await db.users.update_one({"_id": user_id}, {"$set": update_fields})
+    await invalidate_user_cache(user_id)
     
     return {"message": "Role assigned successfully"}
 

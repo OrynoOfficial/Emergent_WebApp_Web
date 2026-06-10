@@ -650,3 +650,42 @@ async def get_operator_comparison(
         })
 
     return {"operators": operators, "period": period, "days": days}
+
+
+
+@router.post("/admin/rollup/rebuild")
+async def rebuild_rollup_endpoint(
+    days_back: int = Query(7, ge=1, le=90),
+    current_user: dict = Depends(require_permission("analytics.view_dashboard")),
+):
+    """Admin-only: rebuild the analytics_daily_rollup for the last `days_back` days.
+
+    Run on a daily cron (00:05 UTC) — or call manually after a backfill / data
+    correction. The first call on a fresh deploy seeds the rollup so dashboards
+    can read from the cheap materialised view instead of scanning all orders.
+    """
+    from utils.analytics_rollup import rebuild_daily_rollup
+    db = get_database()
+    stats = await rebuild_daily_rollup(db, days_back=days_back)
+    return stats
+
+
+@router.get("/admin/rollup/summary")
+async def get_rollup_summary_endpoint(
+    days: int = Query(30, ge=1, le=365),
+    operator_id: Optional[str] = None,
+    service_category: Optional[str] = None,
+    current_user: dict = Depends(require_permission("analytics.view_dashboard")),
+):
+    """Cheap dashboard read: reads pre-aggregated orders + revenue for the window.
+
+    Falls back to zeros when the rollup is empty — admin should `POST
+    /admin/rollup/rebuild` once on a fresh deploy. The point of this endpoint
+    is to expose the rollup so the frontend can show totals without
+    re-aggregating the orders collection.
+    """
+    from utils.analytics_rollup import get_rollup_summary
+    db = get_database()
+    return await get_rollup_summary(
+        db, days=days, operator_id=operator_id, service_category=service_category
+    )

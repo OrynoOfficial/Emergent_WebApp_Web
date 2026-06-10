@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Header
 from pydantic import BaseModel
 from models.order import Order, OrderCreate, OrderStatus, PaymentStatus
 from config.database import get_database
@@ -10,6 +10,12 @@ import logging
 import uuid
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
+
+
+# How long an Idempotency-Key remains valid for replay protection. 24h is the
+# Stripe-standard window — long enough to cover client retries, short enough
+# that admins can re-use the same key after a day if they need to.
+IDEMPOTENCY_TTL_HOURS = 24
 
 
 async def _enrich_order_with_route(order: dict, db) -> dict:
@@ -165,15 +171,35 @@ class DirectOrderCreate(BaseModel):
 @router.post("/create", response_model=dict)
 async def create_direct_order(
     order_data: DirectOrderCreate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ):
     """
     Create an order directly without service lookup.
     For round trips, creates 2 separate tickets (orders) linked by trip_group_id, plus a single receipt.
+
+    Idempotency:
+        Clients SHOULD send an `Idempotency-Key` header (any UUID, max 128
+        chars). The server stores the (user_id, key) pair after the first
+        successful create — any later request with the same key returns the
+        original response instead of inserting a duplicate order. This
+        protects against slow-client retries on flaky networks.
     """
     db = get_database()
-    
+
     user_id = current_user.get("_id") or current_user.get("id")
+
+    # ── Idempotency replay protection ─────────────────────────────────────
+    # If the caller sends an Idempotency-Key we've already processed for this
+    # user within the TTL window, replay the original response verbatim.
+    if idempotency_key:
+        if len(idempotency_key) > 128:
+            raise HTTPException(status_code=400, detail="Idempotency-Key must be ≤ 128 chars")
+        existing = await db.idempotency_keys.find_one({
+            "_id": f"{user_id}:{idempotency_key}",
+        })
+        if existing:
+            return existing.get("response") or {"message": "Order already created (replay)"}
     
     service_prefix_map = {
         'hotel': 'HTL', 'travel': 'TRV', 'car_rental': 'CAR', 'restaurant': 'RST',
@@ -543,7 +569,7 @@ async def create_direct_order(
         }
         await db.receipts.insert_one(receipt)
         
-        return {
+        result = {
             "success": True,
             "message": "Round trip orders created (2 tickets, 1 receipt)",
             "order_id": outbound_id,
@@ -554,6 +580,9 @@ async def create_direct_order(
             "return_order_number": return_number,
             "total_amount": order_data.total_amount
         }
+        if idempotency_key:
+            await _store_idempotency(db, user_id, idempotency_key, result)
+        return result
     
     # Single trip order
     order_number = f"{service_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
@@ -592,13 +621,41 @@ async def create_direct_order(
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning("notify_new_booking failed: %s", exc)
 
-    return {
+    result = {
         "success": True,
         "message": "Order created successfully",
         "order_id": order["_id"],
         "order_number": order["order_number"],
         "total_amount": order_data.total_amount
     }
+    if idempotency_key:
+        await _store_idempotency(db, user_id, idempotency_key, result)
+    return result
+
+
+async def _store_idempotency(db, user_id: str, key: str, response: dict) -> None:
+    """Persist the (user_id, Idempotency-Key) -> response mapping.
+
+    Expires automatically after IDEMPOTENCY_TTL_HOURS via the TTL index that
+    `utils.startup_indexes` ensures on boot (or — if we forget that — Mongo
+    just keeps the docs forever; the TTL index makes them self-clean)."""
+    try:
+        await db.idempotency_keys.insert_one({
+            "_id": f"{user_id}:{key}",
+            "user_id": user_id,
+            "idempotency_key": key,
+            "response": response,
+            "created_at": datetime.now(timezone.utc),
+            # TTL anchor — the startup_indexes module installs an expireAfterSeconds=0
+            # index on this field so Mongo evicts the doc once `expires_at`
+            # is in the past.
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=IDEMPOTENCY_TTL_HOURS),
+        })
+    except Exception as exc:  # noqa: BLE001
+        # If insert collides on a race (two parallel inserts) we simply lose
+        # the cache for this key — the order is already created so the
+        # second writer's response is fine to return as-is.
+        logging.getLogger(__name__).debug("idempotency_keys insert skipped: %s", exc)
 
 
 async def _notify_new_booking(db, order: dict):
