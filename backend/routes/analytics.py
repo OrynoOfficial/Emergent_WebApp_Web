@@ -532,3 +532,121 @@ async def get_operator_dashboard_analytics(
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"],
         "operator_name": operator_context.get("operator_name") if operator_context else None
     }
+
+
+
+@router.get("/admin/operator-comparison")
+async def get_operator_comparison(
+    operator_ids: str = Query(..., description="Comma-separated operator IDs (2-3)"),
+    period: str = Query("30days"),
+    current_user: dict = Depends(require_permission("analytics.view_dashboard"))
+):
+    """Side-by-side comparison of 2-3 operators across the same period.
+
+    Returns per-operator metrics suitable for stacked KPI cards + a shared
+    daily-revenue chart on the admin dashboard.
+    """
+    db = get_database()
+    ids = [oid.strip() for oid in (operator_ids or "").split(",") if oid.strip()]
+    if len(ids) < 2 or len(ids) > 3:
+        raise HTTPException(status_code=400, detail="Pick 2 or 3 operator_ids to compare")
+
+    days = get_period_days(period)
+    start_date = datetime.utcnow() - timedelta(days=days)
+
+    # Look up operator display names once
+    operator_docs = await db.operators.find(
+        {"_id": {"$in": ids}}, {"_id": 1, "name": 1, "operator_name": 1, "company_name": 1}
+    ).to_list(len(ids))
+    name_by_id = {
+        d["_id"]: d.get("name") or d.get("operator_name") or d.get("company_name") or d["_id"]
+        for d in operator_docs
+    }
+
+    # ---- One aggregation pass over orders for all operators ----------
+    pipeline = [
+        {"$match": {
+            "operator_id": {"$in": ids},
+            "created_at": {"$gte": start_date},
+        }},
+        {"$group": {
+            "_id": {
+                "operator_id": "$operator_id",
+                "day": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}},
+                "status": "$status",
+                "category": {"$ifNull": ["$service_category", "other"]},
+            },
+            "count": {"$sum": 1},
+            "revenue": {"$sum": {"$ifNull": ["$total_amount", 0]}},
+        }},
+    ]
+    rows = await db.orders.aggregate(pipeline).to_list(None)
+
+    # Initialise per-operator buckets
+    out = {}
+    for oid in ids:
+        out[oid] = {
+            "operator_id": oid,
+            "operator_name": name_by_id.get(oid, oid),
+            "total_orders": 0,
+            "total_revenue": 0,
+            "completed_orders": 0,
+            "pending_orders": 0,
+            "cancelled_orders": 0,
+            "_daily": defaultdict(lambda: {"revenue": 0, "orders": 0}),
+            "_categories": defaultdict(lambda: {"orders": 0, "revenue": 0}),
+        }
+
+    for row in rows:
+        key = row["_id"] or {}
+        oid = key.get("operator_id")
+        if oid not in out:
+            continue
+        bucket = out[oid]
+        order_status = key.get("status") or ""
+        cnt = row.get("count", 0)
+        rev = row.get("revenue", 0)
+
+        bucket["total_orders"] += cnt
+        bucket["_daily"][key.get("day")]["orders"] += cnt
+        bucket["_categories"][key.get("category")]["orders"] += cnt
+        if order_status in SUCCESS_STATUSES:
+            bucket["total_revenue"] += rev
+            bucket["completed_orders"] += cnt
+            bucket["_daily"][key.get("day")]["revenue"] += rev
+            bucket["_categories"][key.get("category")]["revenue"] += rev
+        elif order_status == "pending":
+            bucket["pending_orders"] += cnt
+        elif order_status in ("cancelled", "refunded", "abandoned", "failed"):
+            bucket["cancelled_orders"] += cnt
+
+    # Materialise per-operator response
+    operators = []
+    for oid in ids:
+        b = out[oid]
+        total_orders = b["total_orders"]
+        total_revenue = b["total_revenue"]
+        avg = (total_revenue / total_orders) if total_orders > 0 else 0
+        comp_rate = (b["completed_orders"] / total_orders * 100) if total_orders > 0 else 0
+        daily_sorted = sorted(b["_daily"].keys())
+        operators.append({
+            "operator_id": oid,
+            "operator_name": b["operator_name"],
+            "total_orders": total_orders,
+            "total_revenue": total_revenue,
+            "completed_orders": b["completed_orders"],
+            "pending_orders": b["pending_orders"],
+            "cancelled_orders": b["cancelled_orders"],
+            "avg_order_value": round(avg, 2),
+            "completion_rate": round(comp_rate, 1),
+            "daily_data": [
+                {"date": d, "revenue": b["_daily"][d]["revenue"], "orders": b["_daily"][d]["orders"]}
+                for d in daily_sorted
+            ],
+            "by_category": [
+                {"category": cat, **vals}
+                for cat, vals in b["_categories"].items()
+            ],
+        })
+
+    return {"operators": operators, "period": period, "days": days}

@@ -122,6 +122,7 @@ import RestaurantMenu from './pages/services/RestaurantMenu';
 
 // Admin Pages
 import Analytics from './pages/admin/Analytics';
+import OperatorComparison from './pages/admin/OperatorComparison';
 import AdminBookings from './pages/admin/Bookings';
 import UserManagement from './pages/admin/Users';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -665,6 +666,15 @@ function App() {
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
                 <BookingAnalytics />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/operator-comparison"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                <OperatorComparison />
               </ProtectedRoute>
             }
           />

@@ -128,6 +128,7 @@ export default function useSidebarMenu() {
         key: 'dashboards', label: 'Dashboards', icon: LayoutDashboard, isDropdown: true,
         submenu: [
           { key: 'analytics-dash', label: 'Analytics Dashboard', path: '/admin/analytics', icon: BarChart },
+          { key: 'operator-compare', label: 'Operator Comparison', path: '/admin/operator-comparison', icon: BarChart },
           ...(isSuperAdmin ? [{ key: 'admin-dash', label: 'Admin Dashboard', path: '/admin/admin-dashboard', icon: LayoutDashboard }] : []),
         ]
       });
