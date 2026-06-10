@@ -1,0 +1,30 @@
+{
+  "summary": "Retested rich-picker WalkInBookingModal on /admin/bookings as superadmin@oryno.com. With /app/frontend/dist deleted, Vite dev now serves the rewritten modal. All 4 rich pickers (travel/cinema/hotel/laundry) render the expected service-specific UI and the auto-amount math is correct. The 4th iteration_200 'stale bundle' blocker is RESOLVED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_features": [
+    "Travel walk-in: 'Travel — pick seats' header renders; walkin-selected-seats testid present; route picker has 13 routes; LiveSeatMap renders 25 seat buttons with legend (Available/Selection/Reserved/Booked) once route+date set.",
+    "Cinema walk-in: walkin-cinema-showtime-* grid renders 7 showtimes after picking a film; walkin-cinema-tickets numeric input present; CinemaSeatMap renders the seat grid (87 seat elements) after picking a showtime.",
+    "Hotel walk-in: walkin-hotel-room-* cards render with price + 'X avail.' badge (Deluxe 55k, Family 70k, Standard 45k); picking Deluxe with 2-night range auto-computed amount = 2 × 55,000 = 110,000 XAF.",
+    "Laundry walk-in (Royal Fresh): walkin-laundry-item-* grid renders 5 items (Shirt 2,500 / Jeans 3,000 / Suit 7,499 / Dress 1,300 / Pullover 2,700) with +/- steppers; tapping +2 on Shirt auto-set amount=5,000 XAF.",
+    "Walk-in launcher dropdown shows all 9 service types for super_admin (hotel, travel, restaurant, cinema, event, car_rental, laundry, banquet, package)."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "WalkInBookingModal.jsx is ~1115 lines with 11 useEffects — split into per-service sub-components (TravelBlock / CinemaBlock / HotelBlock / LaundryBlock / RestaurantBlock / etc.) for maintainability.",
+    "Auth rate-limit (HTTP 429) on /api/auth/login is aggressive and disruptive for testing — consider per-IP burst allowance or test-mode bypass."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100% on the 4 rich-picker flows"},
+  "test_credentials": "superadmin@oryno.com / testpassword123",
+  "seed_data_creation": "none — relied on existing seed (13 travel routes, 9 hotels, 5 cinema films incl. Avengers w/ 7 showtimes & seat layout, 1 laundry shop Royal Fresh w/ 5 priced items).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Booking submission was NOT exercised (only renders + auto-amount math). If the submit happy-path is required, fill the name field + submit. Cinema films must have showtimes with seat_layout configured for seat map to render. Be mindful of /api/auth/login 429 rate limit — wait ~60s between login bursts.",
+  "rca of the issue": "Iter 200 root cause confirmed-resolved: removing /app/frontend/dist restored Vite dev to serving /src/main.jsx with the rewritten WalkInBookingModal.jsx. Live DOM now contains 'Travel — pick seats' and the four expected testid families."
+}
