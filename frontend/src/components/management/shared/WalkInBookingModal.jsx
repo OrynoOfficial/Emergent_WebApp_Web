@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { UserCheck, UserPlus, Banknote, CreditCard, Loader2, Search, Plus, Minus, BedDouble, Armchair } from 'lucide-react';
+import { UserCheck, UserPlus, Banknote, CreditCard, Loader2, Plus, Minus, BedDouble, Armchair, Calendar as CalendarIcon, Film, Sparkles, MapPin, Users as UsersIcon } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import CinemaSeatMap from '@/components/cinema/CinemaSeatMap';
@@ -55,6 +55,19 @@ export default function WalkInBookingModal({
   const [bookingDetails, setBookingDetails] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
+  // ─── Rich-picker state ──────────────────────────────────────────────
+  // Cinema: list of showtimes for the picked film + the chosen one + seat layout
+  const [cinemaShowtimes, setCinemaShowtimes] = useState([]);
+  const [cinemaShowtimesLoading, setCinemaShowtimesLoading] = useState(false);
+  const [selectedShowtimeId, setSelectedShowtimeId] = useState('');
+  const [cinemaSeatPayload, setCinemaSeatPayload] = useState(null); // {seat_layout, booked_seats, showtime}
+  const [cinemaSeatLoading, setCinemaSeatLoading] = useState(false);
+  // Hotel: list of rooms for the picked hotel + the chosen room id
+  const [hotelRooms, setHotelRooms] = useState([]);
+  const [hotelRoomsLoading, setHotelRoomsLoading] = useState(false);
+  // Laundry: item id → qty map (item_prices[].item is the key)
+  const [laundryQty, setLaundryQty] = useState({});
+
   const selectedService = useMemo(
     () => services.find((s) => s.id === serviceId || s._id === serviceId),
     [services, serviceId]
@@ -73,8 +86,35 @@ export default function WalkInBookingModal({
       setServiceTime('');
       setPassengers(1);
       setBookingDetails({});
+      setCinemaShowtimes([]);
+      setSelectedShowtimeId('');
+      setCinemaSeatPayload(null);
+      setHotelRooms([]);
+      setLaundryQty({});
     }
   }, [open]);
+
+  // When the operator picks a different service, drop any picker selections
+  // that belong to the previous service to avoid mixing seat ids / room ids.
+  useEffect(() => {
+    setSelectedShowtimeId('');
+    setCinemaSeatPayload(null);
+    setHotelRooms([]);
+    setLaundryQty({});
+    setBookingDetails((bd) => ({
+      ...bd,
+      seat_numbers: undefined,
+      seats: undefined,
+      showtime_id: undefined,
+      showtime_label: undefined,
+      tickets_count: undefined,
+      room_id: undefined,
+      room_label: undefined,
+      room_type: undefined,
+      laundry_items: undefined,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceId]);
 
   // Auto-fill price and scheduled time when a service is picked
   useEffect(() => {
@@ -116,12 +156,135 @@ export default function WalkInBookingModal({
     return () => clearTimeout(handle);
   }, [customer.phone, customer.email]);
 
+  // ─── Cinema: fetch showtimes when a film is picked ──────────────────
+  useEffect(() => {
+    if (serviceType !== 'cinema' || !serviceId) {
+      setCinemaShowtimes([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        setCinemaShowtimesLoading(true);
+        const { data } = await api.get(`/cinema/films/${serviceId}/showtimes`);
+        if (!cancelled) setCinemaShowtimes(data?.showtimes || []);
+      } catch {
+        if (!cancelled) setCinemaShowtimes([]);
+      } finally {
+        if (!cancelled) setCinemaShowtimesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serviceType, serviceId]);
+
+  // ─── Cinema: fetch seat layout + booked seats once a showtime is picked ──
+  useEffect(() => {
+    if (serviceType !== 'cinema' || !selectedShowtimeId) {
+      setCinemaSeatPayload(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        setCinemaSeatLoading(true);
+        const { data } = await api.get(`/cinema/showtimes/${selectedShowtimeId}/details`);
+        if (cancelled) return;
+        setCinemaSeatPayload(data);
+        // Auto-fill date/time + amount based on the showtime when fresh
+        const st = data?.showtime || {};
+        setServiceDate((d) => d || st.show_date || '');
+        setServiceTime((t) => t || st.show_time || '');
+        setBookingDetails((bd) => ({
+          ...bd,
+          showtime_id: st.id || selectedShowtimeId,
+          showtime_label: [st.show_date, st.show_time, st.screen_name].filter(Boolean).join(' · '),
+          seats: bd.seats || [],
+          tickets_count: bd.tickets_count || 1,
+        }));
+      } catch {
+        if (!cancelled) setCinemaSeatPayload(null);
+      } finally {
+        if (!cancelled) setCinemaSeatLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serviceType, selectedShowtimeId]);
+
+  // ─── Cinema: recompute amount = tickets × showtime price ────────────
+  useEffect(() => {
+    if (serviceType !== 'cinema') return;
+    const st = cinemaSeatPayload?.showtime;
+    const tickets = Number(bookingDetails.tickets_count || (bookingDetails.seats?.length) || 0);
+    if (st?.price && tickets > 0) {
+      setAmount(String(Math.round(tickets * Number(st.price))));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceType, cinemaSeatPayload, bookingDetails.tickets_count, bookingDetails.seats]);
+
+  // ─── Hotel: fetch rooms when hotel + check-in + check-out are set ───
+  useEffect(() => {
+    if (serviceType !== 'hotel' || !serviceId) {
+      setHotelRooms([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        setHotelRoomsLoading(true);
+        const params = { hotel_id: serviceId, limit: 100 };
+        if (bookingDetails.check_in_date) params.check_in = bookingDetails.check_in_date;
+        if (bookingDetails.check_out_date) params.check_out = bookingDetails.check_out_date;
+        const { data } = await api.get('/rooms/', { params });
+        if (!cancelled) setHotelRooms(data?.rooms || []);
+      } catch {
+        if (!cancelled) setHotelRooms([]);
+      } finally {
+        if (!cancelled) setHotelRoomsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serviceType, serviceId, bookingDetails.check_in_date, bookingDetails.check_out_date]);
+
+  // ─── Hotel: recompute amount = nights × picked room price ────────────
+  useEffect(() => {
+    if (serviceType !== 'hotel') return;
+    const room = hotelRooms.find((r) => r.id === bookingDetails.room_id);
+    const ci = bookingDetails.check_in_date;
+    const co = bookingDetails.check_out_date;
+    if (!room || !ci || !co) return;
+    const nights = Math.max(1, Math.round((new Date(co) - new Date(ci)) / 86400000));
+    const unit = Number(room.base_price || room.price_per_night || 0);
+    if (unit > 0) setAmount(String(nights * unit));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceType, bookingDetails.room_id, bookingDetails.check_in_date, bookingDetails.check_out_date, hotelRooms]);
+
+  // ─── Laundry: recompute amount from item × qty whenever it changes ──
+  useEffect(() => {
+    if (serviceType !== 'laundry') return;
+    const items = selectedService?.item_prices || [];
+    if (!items.length) return;
+    const total = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(laundryQty[it.item]) || 0), 0);
+    if (total > 0) setAmount(String(Math.round(total)));
+    const itemsList = items
+      .filter((it) => (laundryQty[it.item] || 0) > 0)
+      .map((it) => ({ item: it.item, qty: laundryQty[it.item], unit_price: it.price }));
+    setBookingDetails((bd) => ({
+      ...bd,
+      laundry_items: itemsList,
+      items_count: itemsList.reduce((s, i) => s + (i.qty || 0), 0) || bd.items_count,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceType, laundryQty, selectedService]);
+
   const canSubmit =
     !!customer.name.trim() &&
     !!serviceId &&
     Number(amount) > 0 &&
     !!paymentMethod &&
-    (serviceType !== 'travel' || !!serviceDate);
+    (serviceType !== 'travel' || !!serviceDate) &&
+    (serviceType !== 'cinema' || !!selectedShowtimeId) &&
+    (serviceType !== 'hotel' || !!bookingDetails.check_in_date) &&
+    (serviceType !== 'hotel' || !!bookingDetails.check_out_date);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) {
@@ -169,7 +332,10 @@ export default function WalkInBookingModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto" data-testid="walk-in-booking-modal">
+      <DialogContent
+        className={`${['cinema', 'travel', 'hotel', 'laundry'].includes(serviceType) ? 'max-w-4xl' : 'max-w-xl'} max-h-[90vh] overflow-y-auto`}
+        data-testid="walk-in-booking-modal"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-[#082c59]" />
@@ -293,7 +459,16 @@ export default function WalkInBookingModal({
           {/* Service-specific fields — curated per service type */}
           {serviceType === 'travel' && (
             <div className="space-y-3 p-3 bg-blue-50/50 border border-blue-200 rounded-lg">
-              <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Travel details</p>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider flex items-center gap-1">
+                  <Armchair className="h-3 w-3" /> Travel — pick seats
+                </p>
+                {selectedService?.total_seats && (
+                  <span className="text-[11px] text-slate-500">
+                    Vehicle capacity: <strong>{selectedService.total_seats}</strong> seats
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-sm font-semibold">Passengers *</Label>
@@ -305,37 +480,73 @@ export default function WalkInBookingModal({
                   />
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold">Seat Numbers <span className="text-xs font-normal text-slate-500">(optional)</span></Label>
-                  <Input
-                    placeholder="e.g., 12, 13"
-                    value={(bookingDetails.seat_numbers || []).join(', ')}
-                    onChange={(e) => {
-                      const seats = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
-                      setBookingDetails({ ...bookingDetails, seat_numbers: seats });
-                    }}
-                    data-testid="walkin-seat-numbers"
-                  />
+                  <Label className="text-sm font-semibold">Selected seats</Label>
+                  <div className="px-3 py-2 rounded border bg-white text-sm min-h-[38px] flex items-center" data-testid="walkin-selected-seats">
+                    {(bookingDetails.seat_numbers || []).length > 0 ? (
+                      <span className="font-mono text-slate-700">{(bookingDetails.seat_numbers || []).join(', ')}</span>
+                    ) : (
+                      <span className="text-slate-400">Tap seats on the map below…</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              {selectedService?.total_seats && (
-                <p className="text-xs text-slate-500">Vehicle capacity: {selectedService.total_seats} seats.</p>
+              {serviceId && serviceDate ? (
+                <LiveSeatMap
+                  routeId={serviceId}
+                  departureDate={serviceDate}
+                  maxSeats={Number(passengers) || 1}
+                  selectedSeats={(bookingDetails.seat_numbers || []).map(String)}
+                  onSeatsChange={(seats) =>
+                    setBookingDetails((bd) => ({ ...bd, seat_numbers: seats.map(String) }))
+                  }
+                  autoRefresh={false}
+                />
+              ) : (
+                <p className="text-xs text-slate-500 italic">Pick a route + service date above to load the live seat map.</p>
               )}
             </div>
           )}
 
           {serviceType === 'cinema' && (
             <div className="space-y-3 p-3 bg-violet-50/60 border border-violet-200 rounded-lg">
-              <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider">Cinema details</p>
+              <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider flex items-center gap-1">
+                <Film className="h-3 w-3" /> Cinema — pick showtime & seats
+              </p>
+
+              {/* Showtime picker */}
+              <div>
+                <Label className="text-sm font-semibold">Showtime *</Label>
+                {!serviceId ? (
+                  <p className="text-xs text-slate-500 italic">Pick a film above first.</p>
+                ) : cinemaShowtimesLoading ? (
+                  <div className="text-xs text-slate-500 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Loading showtimes…
+                  </div>
+                ) : cinemaShowtimes.length === 0 ? (
+                  <p className="text-xs text-amber-600">No active showtimes for this film.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
+                    {cinemaShowtimes.map((st) => {
+                      const active = selectedShowtimeId === st.id;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setSelectedShowtimeId(st.id)}
+                          className={`text-left p-2 rounded-md border text-xs transition ${active ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300' : 'border-slate-200 bg-white hover:border-violet-300'}`}
+                          data-testid={`walkin-cinema-showtime-${st.id}`}
+                        >
+                          <p className="font-semibold text-slate-700">{st.show_date} · {st.show_time}</p>
+                          <p className="text-slate-500 truncate">{st.screen_name || st.cinema_name}</p>
+                          <p className="text-violet-600 font-medium">{formatFCFA(st.price || 0)}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-sm font-semibold">Showtime *</Label>
-                  <Input
-                    placeholder="e.g., 19:30 — Hall 2"
-                    value={bookingDetails.showtime_label || ''}
-                    onChange={(e) => setBookingDetails({ ...bookingDetails, showtime_label: e.target.value })}
-                    data-testid="walkin-cinema-showtime"
-                  />
-                </div>
                 <div>
                   <Label className="text-sm font-semibold">Tickets *</Label>
                   <Input
@@ -345,25 +556,48 @@ export default function WalkInBookingModal({
                     data-testid="walkin-cinema-tickets"
                   />
                 </div>
+                <div>
+                  <Label className="text-sm font-semibold">Selected seats</Label>
+                  <div className="px-3 py-2 rounded border bg-white text-sm min-h-[38px] flex items-center" data-testid="walkin-cinema-selected-seats">
+                    {(bookingDetails.seats || []).length > 0 ? (
+                      <span className="font-mono text-slate-700">{(bookingDetails.seats || []).join(', ')}</span>
+                    ) : (
+                      <span className="text-slate-400">Tap seats below…</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label className="text-sm font-semibold">Seat Numbers <span className="text-xs font-normal text-slate-500">(comma-separated)</span></Label>
-                <Input
-                  placeholder="e.g., A12, A13, A14"
-                  value={(bookingDetails.seat_numbers || []).join(', ')}
-                  onChange={(e) => {
-                    const seats = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
-                    setBookingDetails({ ...bookingDetails, seat_numbers: seats });
-                  }}
-                  data-testid="walkin-cinema-seats"
-                />
-              </div>
+
+              {/* Seat map */}
+              {selectedShowtimeId && (
+                cinemaSeatLoading ? (
+                  <div className="flex items-center justify-center py-8 text-slate-500 text-sm">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading seat layout…
+                  </div>
+                ) : cinemaSeatPayload?.seat_layout ? (
+                  <div className="bg-white rounded border p-3">
+                    <CinemaSeatMap
+                      layout={cinemaSeatPayload.seat_layout}
+                      bookedSeats={cinemaSeatPayload.booked_seats || []}
+                      selectedSeats={bookingDetails.seats || []}
+                      maxSeats={Number(bookingDetails.tickets_count) || 1}
+                      onChange={(seats) =>
+                        setBookingDetails((bd) => ({ ...bd, seats, seat_numbers: seats }))
+                      }
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-600">No seat layout configured for this showtime.</p>
+                )
+              )}
             </div>
           )}
 
           {serviceType === 'hotel' && (
             <div className="space-y-3 p-3 bg-indigo-50/60 border border-indigo-200 rounded-lg">
-              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider">Hotel stay</p>
+              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider flex items-center gap-1">
+                <BedDouble className="h-3 w-3" /> Hotel stay
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <Label className="text-sm font-semibold">Check-in *</Label>
@@ -393,14 +627,54 @@ export default function WalkInBookingModal({
                   />
                 </div>
               </div>
+
+              {/* Room picker */}
               <div>
-                <Label className="text-sm font-semibold">Room Type / Number <span className="text-xs font-normal text-slate-500">(optional)</span></Label>
-                <Input
-                  placeholder="e.g., Deluxe Suite #204"
-                  value={bookingDetails.room_label || ''}
-                  onChange={(e) => setBookingDetails({ ...bookingDetails, room_label: e.target.value })}
-                  data-testid="walkin-hotel-room"
-                />
+                <Label className="text-sm font-semibold">Choose room *</Label>
+                {!serviceId ? (
+                  <p className="text-xs text-slate-500 italic">Pick a hotel above.</p>
+                ) : hotelRoomsLoading ? (
+                  <div className="text-xs text-slate-500 flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Loading rooms…
+                  </div>
+                ) : hotelRooms.length === 0 ? (
+                  <p className="text-xs text-amber-600">No rooms configured for this hotel{bookingDetails.check_in_date && bookingDetails.check_out_date ? ' for these dates' : ''}.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {hotelRooms.map((r) => {
+                      const active = bookingDetails.room_id === r.id;
+                      const price = r.base_price || r.price_per_night || 0;
+                      const avail = Number(r.available_rooms || 0);
+                      const disabled = avail <= 0;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() =>
+                            setBookingDetails((bd) => ({
+                              ...bd,
+                              room_id: r.id,
+                              room_label: r.room_name || r.room_type,
+                              room_type: r.room_type,
+                            }))
+                          }
+                          className={`text-left p-3 rounded-md border text-sm transition ${active ? 'border-indigo-500 bg-indigo-100 ring-2 ring-indigo-300' : 'border-slate-200 bg-white hover:border-indigo-300'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          data-testid={`walkin-hotel-room-${r.id}`}
+                        >
+                          <p className="font-semibold text-slate-800">{r.room_name || r.room_type}</p>
+                          <p className="text-xs text-slate-500 capitalize">{r.room_type}{r.max_guests ? ` · sleeps ${r.max_guests}` : ''}</p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-indigo-600 font-semibold">{formatFCFA(price)} <span className="text-[10px] text-slate-400">/ night</span></span>
+                            <Badge variant="outline" className={`text-[10px] ${avail > 0 ? 'border-emerald-300 text-emerald-700' : 'border-red-300 text-red-600'}`}>
+                              {avail > 0 ? `${avail} avail.` : 'Sold out'}
+                            </Badge>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -457,17 +731,10 @@ export default function WalkInBookingModal({
 
           {serviceType === 'laundry' && (
             <div className="space-y-3 p-3 bg-sky-50/60 border border-sky-200 rounded-lg">
-              <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Laundry / pressing</p>
+              <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> Laundry / pressing
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-sm font-semibold">Items / Pieces *</Label>
-                  <Input
-                    type="number" min="1"
-                    value={bookingDetails.items_count || 1}
-                    onChange={(e) => setBookingDetails({ ...bookingDetails, items_count: Number(e.target.value) || 1 })}
-                    data-testid="walkin-laundry-items"
-                  />
-                </div>
                 <div>
                   <Label className="text-sm font-semibold">Service Type *</Label>
                   <Select
@@ -483,9 +750,67 @@ export default function WalkInBookingModal({
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label className="text-sm font-semibold">Ready by</Label>
+                  <Input
+                    type="date"
+                    value={bookingDetails.ready_date || ''}
+                    onChange={(e) => setBookingDetails({ ...bookingDetails, ready_date: e.target.value })}
+                    data-testid="walkin-laundry-ready"
+                  />
+                </div>
               </div>
+
+              {/* Item grid with qty steppers (uses shop's configured item_prices) */}
+              {(selectedService?.item_prices?.length || 0) > 0 ? (
+                <div>
+                  <Label className="text-sm font-semibold">Items & quantities</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1 max-h-56 overflow-y-auto pr-1">
+                    {selectedService.item_prices.map((it) => {
+                      const qty = Number(laundryQty[it.item]) || 0;
+                      return (
+                        <div key={it.item} className={`flex items-center justify-between p-2 rounded border ${qty > 0 ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white'}`} data-testid={`walkin-laundry-item-${it.item}`}>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{it.item}</p>
+                            <p className="text-xs text-slate-500">{formatFCFA(it.price || 0)} <span className="text-[10px]">/ piece</span></p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button" variant="outline" size="icon" className="h-7 w-7"
+                              onClick={() => setLaundryQty((q) => ({ ...q, [it.item]: Math.max(0, (q[it.item] || 0) - 1) }))}
+                              data-testid={`walkin-laundry-minus-${it.item}`}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-7 text-center text-sm font-semibold" data-testid={`walkin-laundry-qty-${it.item}`}>{qty}</span>
+                            <Button
+                              type="button" variant="outline" size="icon" className="h-7 w-7"
+                              onClick={() => setLaundryQty((q) => ({ ...q, [it.item]: (q[it.item] || 0) + 1 }))}
+                              data-testid={`walkin-laundry-plus-${it.item}`}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label className="text-sm font-semibold">Items / Pieces *</Label>
+                  <Input
+                    type="number" min="1"
+                    value={bookingDetails.items_count || 1}
+                    onChange={(e) => setBookingDetails({ ...bookingDetails, items_count: Number(e.target.value) || 1 })}
+                    data-testid="walkin-laundry-items"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">This shop hasn&apos;t configured per-item pricing — record items as a single bundle.</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 mt-6">
+                <div className="flex items-center gap-2 mt-1">
                   <input
                     type="checkbox"
                     id="walkin-laundry-pickup"
@@ -497,24 +822,14 @@ export default function WalkInBookingModal({
                   <Label htmlFor="walkin-laundry-pickup" className="text-sm">Pickup required</Label>
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold">Ready by <span className="text-xs font-normal text-slate-500">(date)</span></Label>
+                  <Label className="text-sm font-semibold">Notes <span className="text-xs font-normal text-slate-500">(optional)</span></Label>
                   <Input
-                    type="date"
-                    value={bookingDetails.ready_date || ''}
-                    onChange={(e) => setBookingDetails({ ...bookingDetails, ready_date: e.target.value })}
-                    data-testid="walkin-laundry-ready"
+                    placeholder="e.g., fragile, stain on collar"
+                    value={bookingDetails.items_description || ''}
+                    onChange={(e) => setBookingDetails({ ...bookingDetails, items_description: e.target.value })}
+                    data-testid="walkin-laundry-description"
                   />
                 </div>
-              </div>
-              <div>
-                <Label className="text-sm font-semibold">Items Description <span className="text-xs font-normal text-slate-500">(optional)</span></Label>
-                <Textarea
-                  placeholder="e.g., 3× shirts, 2× trousers, 1× blanket"
-                  rows={2}
-                  value={bookingDetails.items_description || ''}
-                  onChange={(e) => setBookingDetails({ ...bookingDetails, items_description: e.target.value })}
-                  data-testid="walkin-laundry-description"
-                />
               </div>
             </div>
           )}
