@@ -13,7 +13,6 @@ import {
   DollarSign, ChevronLeft, Building2, Banknote, Receipt,
   Replace as ReplaceIcon
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -272,7 +271,6 @@ export default function RestaurantManagement() {
   const [editingMenuItem, setEditingMenuItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceRestaurant, setReplaceRestaurant] = useState(null);
 
@@ -495,15 +493,7 @@ export default function RestaurantManagement() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />
-              <Button
-                onClick={() => setIsWalkInOpen(true)}
-                className="bg-[#082c59] hover:bg-[#0a366d]"
-                data-testid="open-walkin-booking-btn"
-              >
-                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-              </Button>
-              <Button variant="outline" onClick={loadRestaurants} disabled={loading}>
+              <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button variant="outline" onClick={loadRestaurants} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -912,16 +902,6 @@ export default function RestaurantManagement() {
         isSubmitting={saving}
       />
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="restaurant"
-        services={restaurants.map((r) => ({ id: r.id || r._id, name: r.name, price: r.average_price || r.base_price }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceRestaurant}

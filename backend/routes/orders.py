@@ -221,6 +221,51 @@ async def create_direct_order(
                     operator_id = svc.get("operator_id")
                     operator_name = operator_name or svc.get("operator_name", "")
 
+    # ── Anti-self-booking safeguard ────────────────────────────────────────
+    # Operators (owners + team members) must not book in their own name —
+    # either as a customer self-booking on /services/*/booking (blocked at
+    # the frontend) OR disguised as a "walk-in" customer carrying their own
+    # email/phone. We reject the order when the customer's email or phone
+    # matches the operator owner's contact details.
+    if operator_id:
+        op_doc = await db.operators.find_one(
+            {"_id": operator_id},
+            {"_id": 0, "email": 1, "phone": 1, "owner_user_id": 1, "business_name": 1, "name": 1}
+        )
+        if op_doc:
+            owner_email = (op_doc.get("email") or "").strip().lower()
+            owner_phone = "".join(ch for ch in (op_doc.get("phone") or "") if ch.isdigit())
+            # The owner's user record (additional fallback for emails diverged from the operator doc)
+            owner_user = None
+            if op_doc.get("owner_user_id"):
+                owner_user = await db.users.find_one(
+                    {"_id": op_doc["owner_user_id"]},
+                    {"_id": 0, "email": 1, "phone": 1}
+                )
+            owner_user_email = ((owner_user or {}).get("email") or "").strip().lower()
+            owner_user_phone = "".join(ch for ch in ((owner_user or {}).get("phone") or "") if ch.isdigit())
+            forbidden_emails = {e for e in (owner_email, owner_user_email) if e}
+            forbidden_phones = {p for p in (owner_phone, owner_user_phone) if p}
+            customer_email = ((booking_details.get("customer_email") or "")).strip().lower()
+            customer_phone = "".join(ch for ch in (booking_details.get("customer_phone") or "") if ch.isdigit())
+            if forbidden_emails and customer_email and customer_email in forbidden_emails:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An operator cannot book services for themselves. Please use a different customer email."
+                )
+            if forbidden_phones and customer_phone and customer_phone in forbidden_phones:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An operator cannot book services for themselves. Please use a different customer phone."
+                )
+            # Also block if the logged-in user IS the operator owner and is trying
+            # to set themselves as customer (covers the disguised customer-mode case).
+            if op_doc.get("owner_user_id") == user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Operators cannot book their own services."
+                )
+
     # Enrich travel bookings with vehicle info so the customer ticket can display it
     if order_data.service_type == "travel" and order_data.service_id:
         try:

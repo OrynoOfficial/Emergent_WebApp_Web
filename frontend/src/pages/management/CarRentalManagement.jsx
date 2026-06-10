@@ -17,7 +17,6 @@ import {
   Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2,
   Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -309,7 +308,6 @@ export default function CarRentalManagement() {
   const [carForm, setCarForm] = useState(DEFAULT_CAR_FORM);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceCar, setReplaceCar] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
@@ -439,15 +437,7 @@ export default function CarRentalManagement() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="car_rental" value={scopeOperatorId} onChange={setScopeOperatorId} />
-              <Button
-                onClick={() => setIsWalkInOpen(true)}
-                className="bg-[#082c59] hover:bg-[#0a366d]"
-                data-testid="open-walkin-booking-btn"
-              >
-                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-              </Button>
-              <Button onClick={loadCars} variant="outline" disabled={loading}>
+              <OperatorScopeFilter serviceType="car_rental" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button onClick={loadCars} variant="outline" disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -882,20 +872,6 @@ export default function CarRentalManagement() {
         </DialogContent>
       </Dialog>
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="car_rental"
-        services={cars.map((c) => ({
-          id: c._id || c.id,
-          name: `${c.brand || ''} ${c.model || ''}`.trim() || c.name,
-          price: c.price_per_day,
-        }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceCar}

@@ -12,7 +12,6 @@ import {
   DollarSign, Fuel, Settings, Wifi, Tv, Power, Coffee, Building2, ChevronLeft, ChevronRight,
   Receipt, Banknote, Replace as ReplaceIcon
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import { travelRouteApi, vehicleApi, operatorApi } from '@/api/management';
 import api from '@/api/client';
@@ -423,7 +422,6 @@ export default function TravelManagement() {
   const [selectedOperator, setSelectedOperator] = useState({ id: '', name: '' });
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceVehicle, setReplaceVehicle] = useState(null);
 
@@ -653,15 +651,7 @@ export default function TravelManagement() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />
-              <Button
-                onClick={() => setIsWalkInOpen(true)}
-                className="bg-[#082c59] hover:bg-[#0a366d]"
-                data-testid="open-walkin-booking-btn"
-              >
-                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-              </Button>
-              <Button onClick={loadData} variant="outline" disabled={loading}>
+              <OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button onClick={loadData} variant="outline" disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -1087,23 +1077,6 @@ export default function TravelManagement() {
       />
 
       {/* Walk-in Booking Modal */}
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="travel"
-        services={routes.map((r) => ({
-          id: r.id,
-          _id: r.id,
-          name: `${r.from_city || ''} → ${r.to_city || ''}${r.departure_time ? ` · ${r.departure_time}` : ''}`.trim(),
-          price: r.price,
-          total_seats: r.total_seats,
-          departure_time: r.departure_time,
-        }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       {/* Replace Resource Modal */}
       <ReplaceResourceModal

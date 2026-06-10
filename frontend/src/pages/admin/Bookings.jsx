@@ -8,16 +8,21 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search, Package, Check, X, Eye, Calendar, User, Mail, Building2,
-  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, RefreshCw
+  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, RefreshCw, Plus
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import { formatDate } from '../../utils/dateUtils';
 import api from '../../api/client';
+import { useAuth } from '../../contexts/AuthContext';
 import OperatorScopeFilter from '../../components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '../../components/common/QuickDateRangeFilter';
 import ViewModeToggle from '../../components/common/ViewModeToggle';
 import Pagination from '../../components/common/Pagination';
 import BookingDetailModal from '../../components/modals/BookingDetailModal';
+import WalkInBookingModal from '../../components/management/shared/WalkInBookingModal';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 
 const CATEGORY_ICONS = {
@@ -40,9 +45,70 @@ const CHANNEL_META = {
 
 export default function AdminBookings() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Walk-in modal state
+  const [walkinOpen, setWalkinOpen] = useState(false);
+  const [walkinServiceType, setWalkinServiceType] = useState(null);
+  const [walkinServices, setWalkinServices] = useState([]);
+  const [walkinLoadingServices, setWalkinLoadingServices] = useState(false);
+
+  // Allow walk-in launcher for operators + admins
+  const canRecordWalkIn = user?.role === 'operator' || user?.role === 'admin' || user?.role === 'super_admin';
+
+  // Services available for walk-in (scoped to the operator owner automatically server-side)
+  const SERVICE_TYPES = [
+    { value: 'hotel', label: 'Hotel', icon: '🏨' },
+    { value: 'travel', label: 'Travel / Bus', icon: '🚌' },
+    { value: 'restaurant', label: 'Restaurant', icon: '🍽️' },
+    { value: 'cinema', label: 'Cinema', icon: '🎬' },
+    { value: 'event', label: 'Event', icon: '🎫' },
+    { value: 'car_rental', label: 'Car Rental', icon: '🚗' },
+    { value: 'laundry', label: 'Laundry / Pressing', icon: '👔' },
+    { value: 'banquet', label: 'Banquet', icon: '🎊' },
+    { value: 'package', label: 'Package / Courier', icon: '📦' },
+  ];
+
+  const openWalkin = async (serviceType) => {
+    setWalkinServiceType(serviceType);
+    setWalkinServices([]);
+    setWalkinLoadingServices(true);
+    setWalkinOpen(true);
+    try {
+      // Fetch services of the picked type — backend scopes them to the operator owner automatically
+      const endpointMap = {
+        hotel: '/hotels/?limit=200',
+        travel: '/travel/routes?limit=200',
+        restaurant: '/restaurants/?limit=200',
+        cinema: '/cinema/films?limit=200',
+        event: '/events/?limit=200',
+        car_rental: '/car-rental/?limit=200',
+        laundry: '/pressing/?limit=200',
+        banquet: '/banquets/?limit=200',
+        package: '/package-services/?limit=200',
+      };
+      const respKey = {
+        hotel: 'hotels', travel: 'routes', restaurant: 'restaurants',
+        cinema: 'films', event: 'events', car_rental: 'cars',
+        laundry: 'pressings', banquet: 'banquets', package: 'services',
+      };
+      const url = endpointMap[serviceType];
+      if (!url) {
+        setWalkinServices([]);
+        return;
+      }
+      const r = await api.get(url);
+      const list = r.data?.[respKey[serviceType]] || r.data?.services || r.data?.items || [];
+      setWalkinServices(list);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not load services for walk-in');
+    } finally {
+      setWalkinLoadingServices(false);
+    }
+  };
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,6 +207,28 @@ export default function AdminBookings() {
         <div className="flex items-center gap-2 flex-wrap">
           <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
+          {canRecordWalkIn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" data-testid="walkin-launcher">
+                  <Banknote className="h-4 w-4" /> Walk-in Booking <Plus className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white">
+                {SERVICE_TYPES.map((s) => (
+                  <DropdownMenuItem
+                    key={s.value}
+                    onClick={() => openWalkin(s.value)}
+                    className="cursor-pointer gap-2"
+                    data-testid={`walkin-launcher-${s.value}`}
+                  >
+                    <span className="text-lg">{s.icon}</span>
+                    <span>{s.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button variant="outline" size="icon" onClick={() => setRefreshKey(k => k + 1)} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -415,6 +503,22 @@ export default function AdminBookings() {
         onClose={() => setDetailOpen(false)}
         order={selectedOrder}
       />
+
+      {/* Walk-in Booking Modal — service-type-aware */}
+      {walkinServiceType && (
+        <WalkInBookingModal
+          open={walkinOpen}
+          onClose={() => { setWalkinOpen(false); setWalkinServiceType(null); }}
+          serviceType={walkinServiceType}
+          services={walkinLoadingServices ? [] : walkinServices}
+          onSuccess={() => {
+            setWalkinOpen(false);
+            setWalkinServiceType(null);
+            setRefreshKey((k) => k + 1);
+            toast.success('Walk-in booking recorded');
+          }}
+        />
+      )}
     </div>
   );
 }

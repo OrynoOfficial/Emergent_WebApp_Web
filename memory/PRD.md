@@ -5,6 +5,30 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Latest Changes (Jun 2026 - iter 186)
+
+### Bug Fixes
+- **5 broken `/services/*/booking` pages restored (Hotel, Travel, Restaurant, Package, Event)**
+  Root cause: `useOrderAbandonment` hook + `handleCheckoutAbandoned` handler were accidentally placed inside the inner `StepIndicator` helper component instead of the main booking component. Inner component referenced `orderId`, `setOrderId`, `setTriggerPayment`, `setPaymentInProgress`, `setShowPaymentOverlay`, and crashed on every render with `ReferenceError`. Moved both into the parent component right after the state declarations. Hotel Booking confirmed via screenshot.
+- **Promo codes on Cinema were never working** — Cinema's `applyPromoCode` was hitting `/api/loyalty/promo/validate` which doesn't exist (404). Switched to `/api/promo-codes/validate` with the correct payload (`code`, `service_type`, `order_amount`, `operator_id`). Verified via curl: returns valid + correct 15% discount.
+- **Promo codes on Laundry returned 0 discount** — `validatePromoCode` was sending `amount` instead of `order_amount` (Pydantic silently dropped the field) and was missing `operator_id` (required for operator-scoped promos). Fixed both.
+
+### Feature: Promo + Alert creation moved into `/loyalty`
+- The "New Promotion" + "Send Alert" buttons + their dialogs have been pulled out of `ServiceCommunicationsHub` (which lived on every Management page) and re-implemented inside `AdminLoyaltyView` on the operator-rewards/promotions tab.
+- The Management hub now shows a single "New Promotion / Alert" link that deep-links to `/loyalty?tab=promotions` — single source of truth, no duplicated creation paths across the platform.
+- New service-type selector inside both dialogs lets the operator/admin scope the promotion/alert to one of 9 services or to "General (all services)".
+- Promo dialog now enforces 1-100% discount validation, character-count display, and a violet "Submit for Approval" CTA (admin approval required to broadcast). Alert dialog ships instantly with an amber "Send Now" CTA.
+
+### Feature: Operator anti-self-booking, two-tier defense
+- **Frontend hard block (per-service)** — New `<OperatorBookingBlock>` interstitial wired into all 9 `/services/*/booking` pages (Hotel, Travel, Restaurant, Package, Cinema, Laundry, Banquet, CarRental, Event). Shows a clean amber card "Operator cannot self book" with a Back button — no walk-in redirect (per product policy: operators must not access the customer booking funnel). Guard is placed AFTER all React hooks to respect the rules-of-hooks.
+- **Backend safeguard** — `POST /api/orders/create` now rejects with HTTP 400 if:
+  1. `booking_details.customer_email` matches the operator owner's email (operator doc OR linked owner user doc)
+  2. `booking_details.customer_phone` (normalised — digits-only) matches the operator owner's phone
+  3. The logged-in user IS the operator owner (covers a determined operator trying to disguise self-booking as a walk-in)
+- **Walk-in launcher migrated** — All 7 `<Button>Walk-in Booking</Button>` triggers were stripped from the per-service Management pages (TravelMgmt, EventsMgmt, BanquetMgmt, HotelMgmt, CarRentalMgmt, LaundryMgmt, RestaurantMgmt, CinemaMgmt) and consolidated into a single new dropdown launcher on `/admin/bookings`. Operators + admins click "Walk-in Booking +" → pick a service type (9 options) → modal loads the operator's services for that type. The modal renders only when a service type is chosen.
+- **Backend tests**: `/app/backend/tests/test_self_booking_safeguard.py` 4/4 PASS — blocks owner-email match, blocks normalised-phone match (with arbitrary spacing), blocks logged-in-owner case, and allows a legitimate walk-in with a genuinely different customer through.
+
+
 ## Latest Changes (Jun 2026 - iter 185)
 
 - **P1 perf: analytics.py aggregation rewrite (Jun 10 2026)** — Eliminated 5 of the deployment-agent-flagged `.to_list(10000)` calls in `backend/routes/analytics.py`. Strategy:

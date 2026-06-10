@@ -16,7 +16,6 @@ import {
   LayoutDashboard, MessageSquare, RefreshCw,
   Bell, Send, Ticket, Music, Mic, Eye, Banknote, Receipt, Replace as ReplaceIcon
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -79,7 +78,6 @@ export default function EventsManagement() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState(DEFAULT_EVENT_FORM);
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('grid');
   const [eventPage, setEventPage] = useState(1);
@@ -252,15 +250,7 @@ export default function EventsManagement() {
           <p className="text-gray-600">Manage events, tickets, and communications</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="events" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button
-            onClick={() => setIsWalkInOpen(true)}
-            className="bg-[#082c59] hover:bg-[#0a366d]"
-            data-testid="open-walkin-booking-btn"
-          >
-            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-          </Button>
-          <Button onClick={loadEvents} variant="outline" disabled={loading}>
+          <OperatorScopeFilter serviceType="events" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadEvents} variant="outline" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -636,16 +626,6 @@ export default function EventsManagement() {
         </DialogContent>
       </Dialog>
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="event"
-        services={events.map((e) => ({ id: e.id || e._id, name: e.title || e.name, price: e.ticket_price }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceEvent}

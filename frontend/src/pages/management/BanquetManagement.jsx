@@ -17,7 +17,6 @@ import {
   Bell, Send, Calendar, PartyPopper, Sparkles, Eye, Banknote, Receipt,
   Replace as ReplaceIcon,
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -121,7 +120,6 @@ export default function BanquetManagement() {
   const [viewingBanquet, setViewingBanquet] = useState(null);
   const [editingBanquet, setEditingBanquet] = useState(null);
   const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [replaceBanquet, setReplaceBanquet] = useState(null);
 
@@ -235,15 +233,7 @@ export default function BanquetManagement() {
           <p className="text-gray-600">Manage halls, events, analytics, and communications</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button
-            onClick={() => setIsWalkInOpen(true)}
-            className="bg-[#082c59] hover:bg-[#0a366d]"
-            data-testid="open-walkin-booking-btn"
-          >
-            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-          </Button>
-          <Button onClick={loadBanquets} variant="outline" disabled={loading}>
+          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadBanquets} variant="outline" disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
           </Button>
@@ -595,16 +585,6 @@ export default function BanquetManagement() {
         </DialogContent>
       </Dialog>
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="banquet"
-        services={banquets.map((b) => ({ id: b.id, name: b.name, price: b.price_per_person }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceBanquet}

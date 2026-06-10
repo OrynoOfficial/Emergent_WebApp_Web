@@ -13,7 +13,6 @@ import {
   Bell, Send, Monitor, Ticket, Users, Star, Eye, Banknote, Receipt,
   Replace as ReplaceIcon, Sparkles, Phone, Mail, Armchair,
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import CinemaFormDialog from '@/components/cinema/CinemaFormDialog';
@@ -134,7 +133,6 @@ export default function CinemaManagement() {
 
   // Use the cinema dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [cinemaViewMode, setCinemaViewMode] = useState('grid');
   const [movieViewMode, setMovieViewMode] = useState('grid');
@@ -1367,16 +1365,6 @@ export default function CinemaManagement() {
       />
 
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="cinema"
-        services={cinemas.map((c) => ({ id: c.id, name: c.name, price: c.ticket_price }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceShowtime}

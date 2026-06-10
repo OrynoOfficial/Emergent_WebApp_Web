@@ -16,7 +16,6 @@ import {
   Bell, Send, Users, Droplets, Eye, Banknote, Receipt, Replace as ReplaceIcon,
   Phone, Truck, Sparkles, Wallet, CreditCard
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -141,7 +140,6 @@ export default function LaundryManagement() {
 
   // Use the laundry dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('grid');
   const [pressingSearch, setPressingSearch] = useState('');
@@ -300,15 +298,7 @@ export default function LaundryManagement() {
           <p className="text-gray-600">Manage shops, orders, analytics, and communications</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button
-            onClick={() => setIsWalkInOpen(true)}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-            data-testid="open-walkin-booking-btn"
-          >
-            <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-          </Button>
-          <Button onClick={loadPressings} variant="outline" disabled={loading}>
+          <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadPressings} variant="outline" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -831,16 +821,6 @@ export default function LaundryManagement() {
         </DialogContent>
       </Dialog>
 
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="laundry"
-        services={pressings.map((p) => ({ id: p.id, name: p.name, price: p.starting_price }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replacePressing}

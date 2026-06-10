@@ -14,7 +14,6 @@ import {
   MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save, Building2,
   Banknote, Receipt
 } from 'lucide-react';
-import WalkInBookingModal from '@/components/management/shared/WalkInBookingModal';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
@@ -98,7 +97,6 @@ export default function HotelManagement() {
   const [saving, setSaving] = useState(false);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
   const dashboardData = useRealDashboardData('hotels', '30days', scopeOperatorId);
 
@@ -321,15 +319,7 @@ export default function HotelManagement() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="hotel" value={scopeOperatorId} onChange={setScopeOperatorId} />
-              <Button
-                onClick={() => setIsWalkInOpen(true)}
-                className="bg-[#082c59] hover:bg-[#0a366d]"
-                data-testid="open-walkin-booking-btn"
-              >
-                <Banknote className="h-4 w-4 mr-2" /> Walk-in Booking
-              </Button>
-              <Button variant="outline" onClick={loadHotels} disabled={loading}>
+              <OperatorScopeFilter serviceType="hotel" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button variant="outline" onClick={loadHotels} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
@@ -832,16 +822,6 @@ export default function HotelManagement() {
       />
 
       {/* Walk-in Booking Modal */}
-      <WalkInBookingModal
-        open={isWalkInOpen}
-        onClose={() => setIsWalkInOpen(false)}
-        serviceType="hotel"
-        services={hotels.map((h) => ({ id: h.id, name: h.name, price: h.base_price }))}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          setActiveTab('bookings');
-        }}
-      />
 
       <ReplaceResourceModal
         open={!!replaceRoom}
