@@ -6,7 +6,9 @@ from utils.order_package_sync import sync_package_payment_from_order
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/validation", tags=["Validation"])
 
 import uuid
@@ -721,47 +723,33 @@ async def approve_promotion_validation(
         }}
     )
     
-    # Send notifications to subscribers — streamed in batches to bound memory.
-    # NOTE: This is still on the request path; should be moved to a background
-    # queue (Phase 3) when we have ~100k+ subscribers per operator.
+    # Send notifications to subscribers — DEFERRED to the background queue
+    # so a promotion approval returns instantly regardless of subscriber count.
+    # The queue worker streams subscribers in batches and inserts notifications;
+    # we already use the same logic as the previous synchronous path.
     import uuid
-    operator_id = promo.get("operator_id")
-    operator_name = promo.get("operator_name", "Operator")
 
-    BATCH = 500
-    batch: list = []
-    subscribers_notified = 0
+    try:
+        from utils.task_queue import enqueue
+        await enqueue("send_promotion_fanout", promotion_id=promotion_id)
+        fanout_status = "queued"
+    except Exception as exc:  # noqa: BLE001
+        # If the queue is down, fall back to inline streaming so the admin
+        # at least sees the fanout complete (slower, but correct).
+        logger.warning("Promotion fanout enqueue failed, running inline: %s", exc)
+        from utils.task_queue import send_promotion_fanout
+        await send_promotion_fanout(None, promotion_id=promotion_id)
+        fanout_status = "inline"
 
-    async for sub in db.subscriptions.find({"operator_id": operator_id}):
-        batch.append({
-            "_id": str(uuid.uuid4()),
-            "user_id": sub["user_id"],
-            "title": f"New from {operator_name}: {promo['title']}",
-            "message": promo.get("message", ""),
-            "type": "promotion",
-            "source": "operator_promotion",
-            "promotion_id": promotion_id,
-            "operator_id": operator_id,
-            "operator_name": operator_name,
-            "is_read": False,
-            "created_at": datetime.now(timezone.utc),
-        })
-        if len(batch) >= BATCH:
-            await db.notifications.insert_many(batch)
-            subscribers_notified += len(batch)
-            batch = []
-    if batch:
-        await db.notifications.insert_many(batch)
-        subscribers_notified += len(batch)
-
-    # Notify the operator that their promotion was approved
+    # Notify the operator that their promotion was approved (this single
+    # notification is cheap and useful in-line so the admin sees it).
     created_by = promo.get("created_by")
     if created_by:
         await db.notifications.insert_one({
             "_id": str(uuid.uuid4()),
             "user_id": created_by,
             "title": "Promotion Approved",
-            "message": f"Your promotion '{promo['title']}' has been approved and sent to {subscribers_notified} subscribers.",
+            "message": f"Your promotion '{promo['title']}' has been approved. Subscribers will be notified shortly.",
             "type": "promotion_approved",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
@@ -769,11 +757,11 @@ async def approve_promotion_validation(
 
     await log_validation_action(db, "approved", "promotion", promotion_id,
         promo.get("title", ""), current_user, None,
-        {"operator_name": promo.get("operator_name", ""), "subscribers_notified": subscribers_notified})
-    
+        {"operator_name": promo.get("operator_name", ""), "fanout_status": fanout_status})
+
     return {
-        "message": f"Promotion approved and sent to {subscribers_notified} subscribers",
-        "notified_count": subscribers_notified,
+        "message": "Promotion approved. Subscribers are being notified in the background.",
+        "fanout_status": fanout_status,
     }
 
 

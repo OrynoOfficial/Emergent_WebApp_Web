@@ -3,19 +3,27 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from config.settings import settings
 from jinja2 import Template
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 # Check if we're in mock mode
 MOCK_MODE = getattr(settings, 'SMTP_MOCK_MODE', 'false').lower() == 'true'
 
-async def send_email(
+
+async def _smtp_send_raw(
     to_email: str,
     subject: str,
     body: str,
     html: bool = False
 ) -> bool:
-    """Send an email via SMTP or mock it"""
-    
+    """Low-level SMTP delivery. This is what the queue worker calls.
+
+    The public `send_email(...)` below enqueues onto Arq so the request
+    thread doesn't block on a slow SMTP handshake. If you genuinely need
+    inline delivery (rare), call `_smtp_send_raw` directly.
+    """
     # Mock mode - just log the email
     if MOCK_MODE:
         print(f"\n{'='*60}")
@@ -26,21 +34,21 @@ async def send_email(
         print(f"Body:\n{body[:200]}..." if len(body) > 200 else f"Body:\n{body}")
         print(f"{'='*60}\n")
         return True
-    
+
     # Real email sending
     try:
         message = MIMEMultipart("alternative")
         message["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
         message["To"] = to_email
         message["Subject"] = subject
-        
+
         if html:
             part = MIMEText(body, "html")
         else:
             part = MIMEText(body, "plain")
-        
+
         message.attach(part)
-        
+
         await aiosmtplib.send(
             message,
             hostname=settings.SMTP_HOST,
@@ -51,8 +59,35 @@ async def send_email(
         )
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logger.warning("SMTP send failed for %s: %s", to_email, e)
         return False
+
+
+async def send_email(
+    to_email: str,
+    subject: str,
+    body: str,
+    html: bool = False
+) -> bool:
+    """Public SMTP send helper — enqueues onto Arq so callers don't block.
+
+    Returns True if the job landed in the queue (or ran inline successfully
+    on fallback). Note: queued delivery is best-effort; the caller can't
+    distinguish "queued + later sent" from "queued + later failed". For
+    cases that need delivery confirmation (rare — usually compliance), call
+    `_smtp_send_raw` directly.
+    """
+    # Mock mode preserves the immediate, deterministic feedback used by tests.
+    if MOCK_MODE:
+        return await _smtp_send_raw(to_email, subject, body, html=html)
+
+    try:
+        from utils.task_queue import enqueue
+        await enqueue("send_email_smtp", to=to_email, subject=subject, html=body)
+        return True
+    except Exception as e:
+        logger.warning("SMTP enqueue failed, falling back to inline send: %s", e)
+        return await _smtp_send_raw(to_email, subject, body, html=html)
 
 async def send_verification_email(to_email: str, verification_link: str) -> bool:
     """Send email verification link"""

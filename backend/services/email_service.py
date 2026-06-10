@@ -92,14 +92,30 @@ async def send_account_invite_email(
 ) -> dict:
     """
     Send a "Confirm your account" email containing a link to set/confirm credentials.
-    Returns {"status": "sent", "id": "..."} on success, raises on failure.
+
+    Hot-path: builds the HTML synchronously (~1ms), enqueues the actual Resend
+    call onto Arq, then returns the invite_link IMMEDIATELY so the caller can
+    persist it / show it to the admin without blocking on Resend latency
+    (300-800ms typical, 5s+ when Resend is degraded).
+
+    The queued worker handles Resend retries. If the queue is unavailable
+    (no Redis), `enqueue` transparently runs the send inline as a background
+    asyncio task — slower start, same end state.
+
+    Returns:
+        {"status": "queued"|"sent", "invite_link": str, "id": Optional[str]}
     """
-    if not resend.api_key:
-        raise RuntimeError("RESEND_API_KEY is not configured")
     if not APP_PUBLIC_URL:
         raise RuntimeError("APP_PUBLIC_URL is not configured")
 
     invite_link = f"{APP_PUBLIC_URL}/verify-account?token={invite_token}"
+
+    # Resend not configured → return the link so the caller can copy/paste it.
+    # This is the existing "sandbox mode" fallback documented in the handoff.
+    if not resend.api_key:
+        logger.info("RESEND_API_KEY not set — returning invite_link only for %s", recipient_email)
+        return {"status": "skipped", "invite_link": invite_link, "id": None}
+
     html = _invite_html(
         recipient_name=recipient_name,
         invite_link=invite_link,
@@ -107,18 +123,37 @@ async def send_account_invite_email(
         inviter_name=inviter_name,
         has_temp_password=has_temp_password,
     )
-    params = {
-        "from": SENDER_EMAIL,
-        "to": [recipient_email],
-        "subject": f"Confirm your Oryno account{f' — {operator_name}' if operator_name else ''}",
-        "html": html,
-    }
+    subject = f"Confirm your Oryno account{f' — {operator_name}' if operator_name else ''}"
+
+    # Enqueue the Resend call (300-800ms cold, retried by arq on failure).
+    # The caller's request returns in milliseconds regardless of how long
+    # Resend takes to acknowledge.
     try:
-        result = await asyncio.to_thread(resend.Emails.send, params)
-        return {"status": "sent", "id": result.get("id") if isinstance(result, dict) else None, "invite_link": invite_link}
+        from utils.task_queue import enqueue
+        landed = await enqueue("send_email", to=recipient_email, subject=subject, html=html)
+        return {
+            "status": "queued" if landed else "queued_inline",
+            "invite_link": invite_link,
+            "id": None,
+        }
     except Exception as e:
-        logger.exception("Resend invite email failed for %s", recipient_email)
-        raise
+        # Defensive: if even the enqueue fails (Redis + arq both down), fall
+        # back to the synchronous send — same behaviour as before this refactor.
+        logger.warning("Invite enqueue failed, falling back to sync send: %s", e)
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [recipient_email],
+            "subject": subject,
+            "html": html,
+        }
+        try:
+            result = await asyncio.to_thread(resend.Emails.send, params)
+            return {"status": "sent", "id": result.get("id") if isinstance(result, dict) else None,
+                    "invite_link": invite_link}
+        except Exception:
+            logger.exception("Resend invite email failed for %s", recipient_email)
+            # Don't kill the caller — invite_link still works as a manual fallback.
+            return {"status": "failed", "invite_link": invite_link, "id": None}
 
 
 

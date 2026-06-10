@@ -60,6 +60,19 @@ async def send_email(ctx, *, to: str, subject: str, html: str, sender: str | Non
         logger.warning("send_email task failed for %s: %s", to, e)
 
 
+async def send_email_smtp(ctx, *, to: str, subject: str, html: str):
+    """Send a transactional email via SMTP (legacy path used for OTP/verify).
+    Routed onto the queue so login/2FA requests return immediately instead
+    of waiting for the SMTP handshake."""
+    try:
+        # Import the low-level SMTP sender, NOT `send_email` (which would
+        # recurse into this same task). The helper lives in utils.email.
+        from utils.email import _smtp_send_raw  # type: ignore[attr-defined]
+        await _smtp_send_raw(to_email=to, subject=subject, body=html, html=True)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("send_email_smtp task failed for %s: %s", to, e)
+
+
 async def send_promotion_fanout(ctx, *, promotion_id: str):
     """Re-runs the per-subscriber notification fan-out outside the request path.
 
@@ -111,6 +124,7 @@ async def send_promotion_fanout(ctx, *, promotion_id: str):
 # without needing to import the function reference everywhere.
 _TASK_REGISTRY: dict[str, Callable[..., Awaitable[Any]]] = {
     "send_email": send_email,
+    "send_email_smtp": send_email_smtp,
     "send_promotion_fanout": send_promotion_fanout,
 }
 
