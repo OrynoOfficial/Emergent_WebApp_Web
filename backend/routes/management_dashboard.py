@@ -58,8 +58,13 @@ async def get_dashboard_stats(
     if resolved_operator_id:
         order_query["operator_id"] = resolved_operator_id
 
-    # --- Fetch orders ---
-    all_orders = await db.orders.find(order_query).to_list(10000)
+    # --- Fetch orders (capped + DB-filtered for scale) ---
+    # We need both the current period AND the previous period (for growth %).
+    # Push the date floor down into Mongo so we don't drag the whole history
+    # into Python memory on operators with thousands of historical orders.
+    fetch_floor = start_date - timedelta(days=days)
+    scoped_order_query = {**order_query, "created_at": {"$gte": fetch_floor}}
+    all_orders = await db.orders.find(scoped_order_query).sort("created_at", -1).to_list(5000)
 
     def make_aware(dt):
         if dt and dt.tzinfo is None:
@@ -82,11 +87,11 @@ async def get_dashboard_stats(
     completed = status_counts.get("completed", 0)
     cancelled = status_counts.get("cancelled", 0) + status_counts.get("refunded", 0)
 
-    # --- Average rating ---
-    rating_query = {"entity_type": {"$in": categories}}
+    # --- Average rating (capped — newest 1000 within the period window) ---
+    rating_query = {"entity_type": {"$in": categories}, "created_at": {"$gte": fetch_floor}}
     if resolved_operator_id:
         rating_query["operator_id"] = resolved_operator_id
-    ratings = await db.ratings.find(rating_query).to_list(10000)
+    ratings = await db.ratings.find(rating_query).sort("created_at", -1).to_list(1000)
     avg_rating = round(sum(r.get("rating", 0) for r in ratings) / len(ratings), 1) if ratings else 0
 
     # --- Growth (compare to previous period) ---
@@ -125,7 +130,6 @@ async def get_dashboard_stats(
         if resolved_operator_id:
             item_query["operator_id"] = resolved_operator_id
         item_count = await db[primary_col].count_documents(item_query)
-        active_query = {**item_query}
         # Try status-based active count
         active_items = await db[primary_col].count_documents({**item_query, "status": "active"})
         if active_items == 0:

@@ -721,15 +721,19 @@ async def approve_promotion_validation(
         }}
     )
     
-    # Send notifications to subscribers
+    # Send notifications to subscribers — streamed in batches to bound memory.
+    # NOTE: This is still on the request path; should be moved to a background
+    # queue (Phase 3) when we have ~100k+ subscribers per operator.
     import uuid
     operator_id = promo.get("operator_id")
     operator_name = promo.get("operator_name", "Operator")
-    subscribers = await db.subscriptions.find({"operator_id": operator_id}).to_list(10000)
-    
-    notifications = []
-    for sub in subscribers:
-        notifications.append({
+
+    BATCH = 500
+    batch: list = []
+    subscribers_notified = 0
+
+    async for sub in db.subscriptions.find({"operator_id": operator_id}):
+        batch.append({
             "_id": str(uuid.uuid4()),
             "user_id": sub["user_id"],
             "title": f"New from {operator_name}: {promo['title']}",
@@ -742,10 +746,14 @@ async def approve_promotion_validation(
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
-    
-    if notifications:
-        await db.notifications.insert_many(notifications)
-    
+        if len(batch) >= BATCH:
+            await db.notifications.insert_many(batch)
+            subscribers_notified += len(batch)
+            batch = []
+    if batch:
+        await db.notifications.insert_many(batch)
+        subscribers_notified += len(batch)
+
     # Notify the operator that their promotion was approved
     created_by = promo.get("created_by")
     if created_by:
@@ -753,19 +761,19 @@ async def approve_promotion_validation(
             "_id": str(uuid.uuid4()),
             "user_id": created_by,
             "title": "Promotion Approved",
-            "message": f"Your promotion '{promo['title']}' has been approved and sent to {len(subscribers)} subscribers.",
+            "message": f"Your promotion '{promo['title']}' has been approved and sent to {subscribers_notified} subscribers.",
             "type": "promotion_approved",
             "is_read": False,
             "created_at": datetime.now(timezone.utc),
         })
-    
+
     await log_validation_action(db, "approved", "promotion", promotion_id,
         promo.get("title", ""), current_user, None,
-        {"operator_name": promo.get("operator_name", ""), "subscribers_notified": len(subscribers)})
+        {"operator_name": promo.get("operator_name", ""), "subscribers_notified": subscribers_notified})
     
     return {
-        "message": f"Promotion approved and sent to {len(subscribers)} subscribers",
-        "notified_count": len(subscribers),
+        "message": f"Promotion approved and sent to {subscribers_notified} subscribers",
+        "notified_count": subscribers_notified,
     }
 
 

@@ -85,6 +85,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Attach the global rate limiter (used by auth/OTP routes via @limiter.limit).
+# 429 responses are emitted automatically with Retry-After.
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
+from utils.rate_limit import limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -133,6 +141,23 @@ async def startup_event():
                 logger.info("Notifications deduped: %s", stats)
     except Exception as e:
         logger.warning("Notification bootstrap skipped: %s", e)
+
+    # Bootstrap performance indexes for every hot collection. Idempotent: safe
+    # to call on every restart — Motor short-circuits on identical specs.
+    try:
+        from utils.startup_indexes import ensure_all_indexes
+        db = get_database()
+        if db is not None:
+            ix_stats = await ensure_all_indexes(db)
+            logger.info(
+                "Indexes bootstrapped: created=%d existed=%d failed=%d",
+                ix_stats["created"], ix_stats["existed"], len(ix_stats["failed"]),
+            )
+            for coll, name, err in ix_stats["failed"][:10]:
+                logger.warning("  Index conflict %s.%s: %s", coll, name, err)
+    except Exception as e:
+        logger.warning("Index bootstrap skipped: %s", e)
+
     logger.info("Application started successfully")
 
 async def seed_test_users():

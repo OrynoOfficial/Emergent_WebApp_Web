@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from pydantic import BaseModel
@@ -669,6 +669,7 @@ async def export_ratings(
     format: str = "json",
     service_type: Optional[str] = None,
     flagged_only: bool = False,
+    limit: int = Query(5000, ge=1, le=50000, description="Max ratings to export (cap=50000)"),
     current_user: dict = Depends(get_current_active_user)
 ):
     """Export ratings data as JSON for admin reporting."""
@@ -683,7 +684,7 @@ async def export_ratings(
     if flagged_only:
         query["is_flagged"] = True
 
-    ratings = await db.ratings.find(query).sort("created_at", -1).to_list(10000)
+    ratings = await db.ratings.find(query).sort("created_at", -1).to_list(limit)
 
     export_data = []
     for r in ratings:

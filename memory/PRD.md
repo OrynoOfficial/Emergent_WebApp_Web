@@ -6,6 +6,38 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 - iter 204: Phase 1 Scale Hardening)
+
+### MongoDB Index Bootstrap — 86 indexes auto-created on boot
+- New `backend/utils/startup_indexes.py` declares a single catalog of `IndexSpec` entries covering every hot collection: `users`, `orders`, `operators`, `ratings`, `rooms`, `room_bookings`, `films`, `showtimes`, `cinema_bookings`, `cinemas`, `travel_routes`, `seat_bookings`, `hotels`, `restaurants`, `car_rentals`, `vehicles`, `events`, `packages`, `pressings`, `banquets`, `verification_tokens`, `invitations`, `support_tickets`, `loyalty_programs`, `promotions`, `promo_codes`, `pods`, `pod_memberships`, `employees`, `employee_access_scopes`, `operator_roles`, `subscriptions`, `payment_transactions`.
+- Idempotent — `create_index` short-circuits when the name + spec already exist. Logged on every restart as `Indexes bootstrapped: created=N existed=M failed=0`.
+- Includes 2 TTL indexes (`verification_tokens.expires_at`, `seat_bookings.expires_at`) so expired records auto-evict.
+- Includes 3 unique indexes (`users.email`, `orders.order_number`, `promo_codes.code`).
+- Wired into `server.py`'s `startup_event` after notification index bootstrap.
+- **Impact**: every list endpoint that was doing a full COLLSCAN now hits an index. Estimated 10×-100× headroom for catalog browsing, order history, and operator dashboards.
+
+### Application-Level Rate Limiting (SlowAPI)
+- Added `slowapi==0.1.9` to requirements.
+- New `backend/utils/rate_limit.py` exports a global `Limiter` with named rate constants (`AUTH_LOGIN_RATE=60/minute`, `AUTH_REGISTER_RATE=30/minute`, `AUTH_RESEND_RATE=5/minute`, `AUTH_VERIFY_RATE=30/minute`).
+- Wired into `server.py` via `app.state.limiter` + `RateLimitExceeded` handler.
+- Decorated `/api/auth/login`, `/api/auth/register`, `/api/auth/verify-account`, `/api/auth/resend-invite/{id}` with `@limiter.limit(...)`.
+- Returns HTTP 429 with `Retry-After` header on overflow. Verified: 43/80 parallel logins blocked when above limit.
+- Respects `RATE_LIMIT_ENABLED=false` env var so test suites running same-IP bursts don't trip the protection.
+- **Caveat**: in-process storage = per-pod counter. When we add Redis (Phase 2), set `storage_uri="redis://…"` for cluster-wide limits.
+
+### Bounded `to_list(...)` calls (memory ceiling)
+- `routes/management_dashboard.py`: order fetch now scoped to `created_at >= start_date - days` floor and capped at 5000 (was unbounded 10000); ratings fetch capped at 1000 with date floor.
+- `routes/validation.py:approve_promotion`: subscriber notification fan-out streamed via async cursor + `insert_many` in batches of 500 (was loading 10k into Python).
+- `routes/ratings.py:export_ratings`: now exposes `limit` query param (default 5000, max 50000) instead of a hardcoded 10000.
+
+### Regression
+- All 26 existing pytest tests pass (`test_self_booking_safeguard`, `test_post_checkin_rating_flow`, `test_operator_comparison`, `test_analytics_aggregation_rewrite`, `test_inventory_badge_remaining_services`).
+
+### Still-pending Phase 1 work surfaced for platform team
+- **Multi-worker uvicorn**: `/etc/supervisor/conf.d/supervisord.conf` still runs `--workers 1 --reload`. Production should run `--workers $(nproc) --no-reload`. NOT done here because the file is platform-managed.
+
+
+
 ## Latest Changes (Feb 2026 - iter 203)
 
 ### Walk-In Booking Modal — Rich, Personalized Pickers (DONE)

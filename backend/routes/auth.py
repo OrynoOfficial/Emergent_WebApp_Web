@@ -14,6 +14,10 @@ from utils.auth import (
 )
 from utils.geolocation import get_country_from_ip, get_location_data
 from utils.email import send_verification_email, send_otp_email
+from utils.rate_limit import (
+    limiter,
+    AUTH_LOGIN_RATE, AUTH_REGISTER_RATE, AUTH_RESEND_RATE, AUTH_VERIFY_RATE,
+)
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from datetime import datetime, timedelta
@@ -23,12 +27,12 @@ import os
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=dict)
+@limiter.limit(AUTH_REGISTER_RATE)
 async def register(user_data: UserCreate, request: Request):
     """Register a new user - Always assigns 'customer' role for self-registration"""
     db = get_database()
     
     # Validate that at least email or phone is provided
-    is_phone_registration = user_data.email and '@phone.local' in user_data.email
     has_valid_email = user_data.email and '@phone.local' not in user_data.email
     has_phone = user_data.phone and len(user_data.phone.replace(" ", "").replace("-", "")) >= 9
     
@@ -112,6 +116,7 @@ async def register(user_data: UserCreate, request: Request):
     }
 
 @router.post("/login")
+@limiter.limit(AUTH_LOGIN_RATE)
 async def login(credentials: UserLogin, request: Request):
     """Login user with email or phone number"""
     db = get_database()
@@ -441,7 +446,8 @@ async def get_verification_token_info(token: str):
 
 
 @router.post("/verify-account")
-async def verify_account(body: VerifyAccountRequest):
+@limiter.limit(AUTH_VERIFY_RATE)
+async def verify_account(body: VerifyAccountRequest, request: Request):
     """
     Confirm an invited account.
     - If has_temp_password=True, the invitee just confirms (password optional, only updates if provided).
@@ -487,7 +493,8 @@ async def verify_account(body: VerifyAccountRequest):
 
 
 @router.post("/resend-invite/{user_id}")
-async def resend_invite(user_id: str, current_user: dict = Depends(get_current_active_user)):
+@limiter.limit(AUTH_RESEND_RATE)
+async def resend_invite(user_id: str, request: Request, current_user: dict = Depends(get_current_active_user)):
     """Resend the invite email for a user still pending verification. Admin/super-admin only."""
     if current_user["role"] not in ("admin", "super_admin"):
         raise HTTPException(status_code=403, detail="Not authorized")
