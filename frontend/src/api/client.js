@@ -201,8 +201,11 @@ export const eventsAPI = {
 // Ratings API
 export const ratingsAPI = {
   create: (data) => api.post('/ratings/', data),
+  createRating: (data) => api.post('/ratings/', data),
   getMyRatings: () => api.get('/ratings/my'),
+  getPending: () => api.get('/ratings/pending'),
   getServiceRatings: (serviceId) => api.get(`/ratings/service/${serviceId}`),
+  updateRating: (id, data) => api.put(`/ratings/${id}`, data),
 };
 
 // Payments API

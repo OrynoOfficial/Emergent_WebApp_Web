@@ -5,6 +5,20 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Latest Changes (Jun 2026 - iter 188)
+
+### Post-Check-in Customer Rating Flow
+- **Backend gate (`POST /api/ratings/`)**: A rating is now REJECTED with HTTP 400 unless the user has a `checked_in: true` order matching either the explicit `order_id` (preferred) or the `entity_id` (fallback). Eliminates fake reviews from non-customers.
+- **Enriched rating documents**: Every rating now persists `order_id`, `order_number`, `entity_name`, `operator_id`, `operator_name`, `service_type`, and `checked_in_at` — so operator-side review feeds can filter/route without N+1 lookups against orders.
+- **`GET /api/ratings/pending`**: New endpoint returns the customer's checked-in orders that haven't been rated yet. Used to drive the "Awaiting rating / review" section on `/ratings`.
+- **`GET /api/ratings/my`**: Response now carries operator_id, operator_name, order_id, order_number alongside the existing fields.
+- **Frontend (`Ratings.jsx`)**: New amber "Awaiting rating / review" card surfaces every checked-in service as a tile with a single "Rate & Review" CTA. Clicking opens a dedicated star-rating modal (1-5 stars + textarea, 500-char cap) which posts to `/ratings/` carrying full metadata. On success both `/my` and `/pending` lists refresh.
+- **Tests**: `/app/backend/tests/test_post_checkin_rating_flow.py` 4/4 PASS — verifies the rejection path, the acceptance path (with metadata persistence), the pending listing, and the auto-exclusion once a rating is filed.
+
+### Walk-in Operator-Scoped Dropdown — VERIFIED working
+The filter (added in iter 187) is functioning correctly. Verified via screenshot as `mani-monroe@netflix.com` (Netflix, cinema-only operator) — dropdown shows ONLY "🎬 Cinema". Admins continue to see the full 9-service list by design (they handle every operator). If the user previously saw all 9 options as an operator, that was the stale Vite bundle prior to the iter-187 deploy.
+
+
 ## Latest Changes (Jun 2026 - iter 187)
 
 ### Per-Service Walk-in Personalization

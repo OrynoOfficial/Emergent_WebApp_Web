@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
+import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
@@ -85,57 +86,77 @@ const StarRating = ({ rating, size = 'md', interactive = false, onChange }) => {
 // Customer View Component
 function CustomerRatingsView() {
   const [ratings, setRatings] = useState([]);
+  const [pendingRatings, setPendingRatings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingRating, setEditingRating] = useState(null);
   const [editComment, setEditComment] = useState('');
 
+  // New-rating modal (triggered from the "Awaiting rating" list)
+  const [ratingTarget, setRatingTarget] = useState(null); // pending item being rated
+  const [newRating, setNewRating] = useState(5);
+  const [newReview, setNewReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+
   useEffect(() => {
     fetchRatings();
+    fetchPending();
   }, []);
 
   const fetchRatings = async () => {
     try {
       const response = await ratingsAPI.getMyRatings();
       setRatings(response.data?.ratings || []);
-    } catch (error) {
-      console.error('Failed to fetch ratings:', error);
-      // Mock data for demo
-      setRatings([
-        {
-          id: '1',
-          service_name: 'Hilton Douala',
-          service_category: 'hotel',
-          rating: 5,
-          comment: 'Excellent stay! The room was spacious and the staff was incredibly helpful.',
-          created_at: '2024-12-15',
-          helpful_count: 12,
-          operator_response: {
-            message: 'Thank you for your wonderful review! We are delighted you enjoyed your stay.',
-            responded_at: '2024-12-16',
-            responder_name: 'Hotel Manager'
-          }
-        },
-        {
-          id: '2',
-          service_name: 'La Belle Époque',
-          service_category: 'restaurant',
-          rating: 4,
-          comment: 'Great food, excellent ambiance. The wait time was a bit long but worth it.',
-          created_at: '2024-12-10',
-          helpful_count: 5
-        },
-        {
-          id: '3',
-          service_name: 'Douala → Yaoundé Express',
-          service_category: 'travel',
-          rating: 5,
-          comment: 'Very comfortable bus, arrived on time. Will definitely use again!',
-          created_at: '2024-12-05',
-          helpful_count: 8
-        }
-      ]);
+    } catch {
+      setRatings([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPending = async () => {
+    try {
+      const r = await api.get('/ratings/pending');
+      setPendingRatings(r.data?.pending || []);
+    } catch {
+      setPendingRatings([]);
+    }
+  };
+
+  const openRatingModal = (pending) => {
+    setRatingTarget(pending);
+    setNewRating(5);
+    setNewReview('');
+  };
+
+  const submitNewRating = async () => {
+    if (!ratingTarget) return;
+    if (!newReview.trim()) {
+      toast.error('Please add a short review to help others');
+      return;
+    }
+    setSubmittingRating(true);
+    try {
+      await ratingsAPI.createRating({
+        entity_type: ratingTarget.entity_type || ratingTarget.service_type,
+        entity_id: ratingTarget.entity_id,
+        rating: newRating,
+        review: newReview.trim(),
+        order_id: ratingTarget.order_id,
+        order_number: ratingTarget.order_number,
+        entity_name: ratingTarget.service_name,
+        operator_id: ratingTarget.operator_id,
+        operator_name: ratingTarget.operator_name,
+        service_type: ratingTarget.service_type,
+      });
+      toast.success('Thanks! Your review is live.');
+      setRatingTarget(null);
+      // Refresh both lists
+      await Promise.all([fetchRatings(), fetchPending()]);
+    } catch (err) {
+      const raw = err?.response?.data?.detail;
+      toast.error(typeof raw === 'string' ? raw : 'Could not submit your review');
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -219,6 +240,131 @@ function CustomerRatingsView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Awaiting rating section ───────────────────────────────────── */}
+      {pendingRatings.length > 0 && (
+        <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 mb-4" data-testid="awaiting-rating-section">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center">
+                  <Star className="h-5 w-5" fill="currentColor" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Awaiting rating / review
+                    <Badge className="bg-amber-500 text-white">{pendingRatings.length}</Badge>
+                  </CardTitle>
+                  <p className="text-xs text-slate-600 mt-0.5">You&apos;ve used these services — share your experience to help other customers.</p>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {pendingRatings.map((p) => (
+                <div
+                  key={p.order_id}
+                  className="p-4 bg-white rounded-xl border border-amber-200 shadow-sm hover:shadow-md transition-all"
+                  data-testid={`pending-rating-${p.order_id}`}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="text-2xl">{SERVICE_ICONS[p.service_type] || '⭐'}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{p.service_name}</p>
+                      <p className="text-xs text-slate-500 truncate">{p.operator_name || '—'}</p>
+                      {p.checked_in_at && (
+                        <p className="text-xs text-emerald-700 font-semibold mt-1 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Checked in {new Date(p.checked_in_at).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => openRatingModal(p)}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                    size="sm"
+                    data-testid={`rate-now-btn-${p.order_id}`}
+                  >
+                    <Star className="h-4 w-4 mr-1.5" fill="currentColor" />
+                    Rate &amp; Review
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Rate Now Modal ────────────────────────────────────────────── */}
+      <Dialog open={!!ratingTarget} onOpenChange={(open) => !open && setRatingTarget(null)}>
+        <DialogContent className="bg-white max-w-md" data-testid="rating-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" fill="currentColor" />
+              Rate &amp; Review
+            </DialogTitle>
+          </DialogHeader>
+          {ratingTarget && (
+            <div className="space-y-4 py-2">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <p className="text-sm font-bold text-slate-900">{ratingTarget.service_name}</p>
+                <p className="text-xs text-slate-500">{ratingTarget.operator_name}</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-semibold">Your rating</Label>
+                <div className="flex gap-1 mt-2" data-testid="rating-stars">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNewRating(n)}
+                      className="transition-transform hover:scale-110"
+                      data-testid={`rating-star-${n}`}
+                    >
+                      <Star
+                        className={`h-8 w-8 ${n <= newRating ? 'text-amber-500' : 'text-slate-300'}`}
+                        fill={n <= newRating ? 'currentColor' : 'none'}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {newRating === 5 ? 'Excellent!' : newRating === 4 ? 'Great' : newRating === 3 ? 'Good' : newRating === 2 ? 'Okay' : 'Disappointing'}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-semibold">Your review *</Label>
+                <Textarea
+                  value={newReview}
+                  onChange={(e) => setNewReview(e.target.value)}
+                  placeholder="What stood out about this service?"
+                  rows={4}
+                  className="mt-1"
+                  maxLength={500}
+                  data-testid="rating-review-input"
+                />
+                <p className="text-xs text-slate-400 mt-1">{newReview.length}/500</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRatingTarget(null)}>Cancel</Button>
+            <Button
+              onClick={submitNewRating}
+              disabled={submittingRating || !newReview.trim()}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              data-testid="rating-submit-btn"
+            >
+              {submittingRating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Star className="h-4 w-4 mr-2" fill="currentColor" />}
+              Submit review
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reviews List */}
       {ratings.length === 0 ? (

@@ -13,6 +13,14 @@ class RatingCreate(BaseModel):
     entity_id: str
     rating: float  # 1-5
     review: Optional[str] = None
+    # Enriched metadata so the operator-side review feed can route + display
+    # the review against the correct service/operator without N+1 lookups.
+    order_id: Optional[str] = None
+    order_number: Optional[str] = None
+    entity_name: Optional[str] = None
+    operator_id: Optional[str] = None
+    operator_name: Optional[str] = None
+    service_type: Optional[str] = None
 
 class RatingResponse(BaseModel):
     message: str
@@ -27,46 +35,144 @@ async def create_rating(
     rating_data: RatingCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a rating/review"""
+    """Create a rating/review.
+
+    Ratings can ONLY be left after the customer has been checked in for the
+    service. The frontend "Awaiting rating" list surfaces exactly those
+    checked-in orders to encourage post-service reviews.
+    """
     db = get_database()
-    
-    # Check if user already rated this entity
+
+    # ── Check-in gate ──────────────────────────────────────────────────────
+    # The customer must have a checked-in order matching this entity. We
+    # accept either `order_id` (preferred — directly linked) or fall back to
+    # "any checked-in order this user has for this entity/service".
+    check_in_query = {
+        "user_id": current_user["_id"],
+        "checked_in": True,
+    }
+    if rating_data.order_id:
+        check_in_query["_id"] = rating_data.order_id
+    else:
+        check_in_query["$or"] = [
+            {"service_id": rating_data.entity_id},
+            {"booking_details.service_id": rating_data.entity_id},
+            {"booking_details.operator_id": rating_data.entity_id},
+        ]
+    checked_in_order = await db.orders.find_one(check_in_query)
+    if not checked_in_order:
+        raise HTTPException(
+            status_code=400,
+            detail="You can only rate a service after being checked in for it."
+        )
+
+    # Resolve enriched metadata from the order if the frontend didn't send it
+    operator_id = rating_data.operator_id or checked_in_order.get("operator_id")
+    operator_name = rating_data.operator_name or checked_in_order.get("operator_name")
+    entity_name = rating_data.entity_name or checked_in_order.get("service_name")
+    service_type = rating_data.service_type or checked_in_order.get("service_type") or checked_in_order.get("service_category")
+    order_id = rating_data.order_id or checked_in_order.get("_id") or checked_in_order.get("id")
+    order_number = rating_data.order_number or checked_in_order.get("order_number")
+
+    # One review per (user, entity)
     existing = await db.ratings.find_one({
         "user_id": current_user["_id"],
         "entity_type": rating_data.entity_type,
         "entity_id": rating_data.entity_id
     })
-    
     if existing:
         raise HTTPException(status_code=400, detail="Already rated")
-    
+
     rating = {
         "_id": str(uuid.uuid4()),
-        **rating_data.dict(),
+        "entity_type": rating_data.entity_type,
+        "entity_id": rating_data.entity_id,
+        "rating": rating_data.rating,
+        "review": rating_data.review,
+        # Enriched metadata so operator-side filtering works at query-time
+        "order_id": order_id,
+        "order_number": order_number,
+        "entity_name": entity_name,
+        "operator_id": operator_id,
+        "operator_name": operator_name,
+        "service_type": service_type,
         "user_id": current_user["_id"],
         "user_name": current_user.get("full_name", "Anonymous"),
-        "created_at": datetime.now(timezone.utc)
+        "created_at": datetime.now(timezone.utc),
+        "checked_in_at": checked_in_order.get("checked_in_at"),
     }
-    
+
     await db.ratings.insert_one(rating)
-    
+
     # Update entity average rating
     collection_name = rating_data.entity_type + "s" if not rating_data.entity_type.endswith('s') else rating_data.entity_type
-    
-    # Calculate new average
     ratings = await db.ratings.find({
         "entity_type": rating_data.entity_type,
         "entity_id": rating_data.entity_id
     }).to_list(1000)
-    
-    avg_rating = sum(r["rating"] for r in ratings) / len(ratings)
-    
-    await db[collection_name].update_one(
-        {"_id": rating_data.entity_id},
-        {"$set": {"average_rating": avg_rating, "total_ratings": len(ratings)}}
-    )
-    
+    if ratings:
+        avg_rating = sum(r["rating"] for r in ratings) / len(ratings)
+        await db[collection_name].update_one(
+            {"_id": rating_data.entity_id},
+            {"$set": {"average_rating": avg_rating, "total_ratings": len(ratings)}}
+        )
+
     return {"message": "Rating submitted", "rating_id": rating["_id"]}
+
+
+@router.get("/pending")
+async def get_pending_ratings(current_user: dict = Depends(get_current_active_user)):
+    """Return the user's checked-in orders that have NOT been rated yet.
+
+    Surfaced as the "Awaiting rating / review" section on the customer
+    Ratings page.
+    """
+    db = get_database()
+    # All checked-in orders for this user
+    checked_in_orders = await db.orders.find(
+        {"user_id": current_user["_id"], "checked_in": True},
+        {
+            "_id": 1, "order_number": 1, "service_id": 1, "service_name": 1,
+            "service_type": 1, "service_category": 1, "operator_id": 1,
+            "operator_name": 1, "checked_in_at": 1, "created_at": 1,
+            "booking_details": 1,
+        }
+    ).sort("checked_in_at", -1).to_list(200)
+
+    if not checked_in_orders:
+        return {"pending": []}
+
+    # All entity_ids the user has already rated — exclude those
+    user_ratings = await db.ratings.find(
+        {"user_id": current_user["_id"]},
+        {"_id": 0, "entity_id": 1, "entity_type": 1, "order_id": 1}
+    ).to_list(1000)
+    rated_keys = {(r.get("entity_type"), r.get("entity_id")) for r in user_ratings}
+    rated_order_ids = {r.get("order_id") for r in user_ratings if r.get("order_id")}
+
+    pending = []
+    for o in checked_in_orders:
+        order_id = o.get("_id")
+        if order_id in rated_order_ids:
+            continue
+        service_id = o.get("service_id") or (o.get("booking_details") or {}).get("service_id")
+        service_type = o.get("service_type") or o.get("service_category") or "service"
+        entity_type = service_type  # canonical entity_type maps to service_type
+        if service_id and (entity_type, service_id) in rated_keys:
+            continue
+        pending.append({
+            "order_id": order_id,
+            "order_number": o.get("order_number"),
+            "entity_id": service_id,
+            "entity_type": entity_type,
+            "service_name": o.get("service_name") or "Service",
+            "service_type": service_type,
+            "operator_id": o.get("operator_id"),
+            "operator_name": o.get("operator_name"),
+            "checked_in_at": (o.get("checked_in_at").isoformat() if hasattr(o.get("checked_in_at", ""), "isoformat") else o.get("checked_in_at")),
+            "created_at": (o.get("created_at").isoformat() if hasattr(o.get("created_at", ""), "isoformat") else o.get("created_at")),
+        })
+    return {"pending": pending}
 
 @router.get("/")
 async def get_ratings(
@@ -104,12 +210,17 @@ async def get_my_ratings(
         enriched = {
             "id": rating.get("id", str(uuid.uuid4())),
             "service_name": rating.get("entity_name", "Service"),
-            "service_category": rating.get("entity_type", "service"),
+            "service_category": rating.get("service_type") or rating.get("entity_type", "service"),
             "rating": rating.get("rating", 0),
             "comment": rating.get("review", ""),
             "created_at": rating.get("created_at"),
             "helpful_count": rating.get("helpful_count", 0),
-            "operator_response": rating.get("operator_response")
+            "operator_response": rating.get("operator_response"),
+            # Metadata so the operator-side feed can filter / drill in
+            "operator_id": rating.get("operator_id"),
+            "operator_name": rating.get("operator_name"),
+            "order_id": rating.get("order_id"),
+            "order_number": rating.get("order_number"),
         }
         enriched_ratings.append(enriched)
     
