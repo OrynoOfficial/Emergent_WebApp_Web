@@ -63,16 +63,18 @@ export default function AdminBookings() {
   // Services available for walk-in — for operators we ONLY show the types
   // they're actually assigned to (e.g. an op offering Laundry + Cinema won't
   // see Hotel/Travel/etc.). Admins always see the full list.
+  // Service icons + gradient colors mirror /services category pane so the
+  // walk-in dropdown feels like a continuation of the public service catalog.
   const ALL_SERVICE_TYPES = [
-    { value: 'hotel', label: 'Hotel', icon: '🏨' },
-    { value: 'travel', label: 'Travel / Bus', icon: '🚌' },
-    { value: 'restaurant', label: 'Restaurant', icon: '🍽️' },
-    { value: 'cinema', label: 'Cinema', icon: '🎬' },
-    { value: 'event', label: 'Event', icon: '🎫' },
-    { value: 'car_rental', label: 'Car Rental', icon: '🚗' },
-    { value: 'laundry', label: 'Laundry / Pressing', icon: '👔' },
-    { value: 'banquet', label: 'Banquet', icon: '🎊' },
-    { value: 'package', label: 'Package / Courier', icon: '📦' },
+    { value: 'hotel',       label: 'Hotel',                icon: '🏨', gradient: 'from-pink-500 to-rose-500' },
+    { value: 'travel',      label: 'Travel / Bus',         icon: '🚌', gradient: 'from-blue-500 to-cyan-500' },
+    { value: 'restaurant',  label: 'Restaurant',           icon: '🍽️', gradient: 'from-orange-500 to-amber-500' },
+    { value: 'cinema',      label: 'Cinema',               icon: '🎬', gradient: 'from-cyan-500 to-blue-500' },
+    { value: 'event',       label: 'Event',                icon: '🎫', gradient: 'from-purple-500 to-violet-500' },
+    { value: 'car_rental',  label: 'Car Rental',           icon: '🚗', gradient: 'from-emerald-500 to-green-500' },
+    { value: 'laundry',     label: 'Laundry / Pressing',   icon: '🧹', gradient: 'from-fuchsia-500 to-pink-500' },
+    { value: 'banquet',     label: 'Banquet',              icon: '🎉', gradient: 'from-amber-500 to-yellow-500' },
+    { value: 'package',     label: 'Package / Courier',    icon: '📦', gradient: 'from-red-500 to-pink-500' },
   ];
   const operatorServiceTypes = (operatorContext?.service_types || []).map((t) =>
     // Normalise common synonyms to the canonical service_type used in orders
@@ -243,20 +245,22 @@ export default function AdminBookings() {
           {canRecordWalkIn && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" data-testid="walkin-launcher">
+                <Button className="bg-slate-900 hover:bg-slate-800 text-white gap-2 shadow-sm" data-testid="walkin-launcher">
                   <Banknote className="h-4 w-4" /> Walk-in Booking <Plus className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white">
+              <DropdownMenuContent align="end" className="w-64 bg-white p-1.5">
                 {SERVICE_TYPES.map((s) => (
                   <DropdownMenuItem
                     key={s.value}
                     onClick={() => openWalkin(s.value)}
-                    className="cursor-pointer gap-2"
+                    className="cursor-pointer gap-3 py-2.5 px-2 rounded-lg focus:bg-slate-50"
                     data-testid={`walkin-launcher-${s.value}`}
                   >
-                    <span className="text-lg">{s.icon}</span>
-                    <span>{s.label}</span>
+                    <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white text-lg shadow-sm shrink-0`}>
+                      {s.icon}
+                    </div>
+                    <span className="font-medium text-slate-800">{s.label}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

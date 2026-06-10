@@ -8,9 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { UserCheck, UserPlus, Banknote, CreditCard, Loader2, Search } from 'lucide-react';
+import { UserCheck, UserPlus, Banknote, CreditCard, Loader2, Search, Plus, Minus, BedDouble, Armchair } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import CinemaSeatMap from '@/components/cinema/CinemaSeatMap';
+import LiveSeatMap from '@/components/travel/LiveSeatMap';
+import { formatFCFA } from '@/utils/currency';
 
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash', icon: Banknote },
