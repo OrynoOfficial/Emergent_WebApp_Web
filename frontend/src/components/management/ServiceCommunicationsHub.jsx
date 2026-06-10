@@ -33,11 +33,6 @@ export default function ServiceCommunicationsHub({
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showPromoDialog, setShowPromoDialog] = useState(false);
-  const [promoForm, setPromoForm] = useState({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '' });
-  const [submitting, setSubmitting] = useState(false);
-  const [showAlertDialog, setShowAlertDialog] = useState(false);
-  const [alertForm, setAlertForm] = useState({ title: '', message: '', target_type: 'subscribers', target_user_id: '', target_user_name: '' });
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
@@ -77,63 +72,12 @@ export default function ServiceCommunicationsHub({
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const createPromotion = async () => {
-    if (!promoForm.title.trim() || !promoForm.message.trim()) {
-      toast.error('Please fill in title and message');
-      return;
-    }
-    if (!promoForm.discount_value || isNaN(Number(promoForm.discount_value)) || Number(promoForm.discount_value) <= 0 || Number(promoForm.discount_value) > 100) {
-      toast.error('Please enter a valid discount percentage (1-100)');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await api.post('/subscriptions/promotions', {
-        ...promoForm,
-        promotion_type: 'discount',
-        discount_value: `${promoForm.discount_value}%`,
-        service_type: serviceTag,
-        valid_until: promoForm.valid_until || null,
-      });
-      toast.success(res.data.status === 'pending_approval' ? 'Promotion submitted for admin approval' : 'Promotion created');
-      setShowPromoDialog(false);
-      setPromoForm({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '' });
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create promotion');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const deletePromotion = async (id) => {
     try {
       await api.delete(`/subscriptions/promotions/${id}`);
       toast.success('Deleted');
       loadData();
     } catch { toast.error('Failed to delete'); }
-  };
-
-  const sendAlert = async () => {
-    if (!alertForm.title.trim() || !alertForm.message.trim()) {
-      toast.error('Please fill in title and message');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await api.post('/subscriptions/alerts', {
-        ...alertForm,
-        service_type: serviceTag,
-      });
-      toast.success(`Alert sent to ${res.data.notified_count} user(s)`);
-      setShowAlertDialog(false);
-      setAlertForm({ title: '', message: '', target_type: 'subscribers', target_user_id: '', target_user_name: '' });
-      loadData();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send alert');
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const approvePromotion = async (id) => {
@@ -356,25 +300,15 @@ export default function ServiceCommunicationsHub({
                 <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               {(isOperator || isAdmin) && (
-                <>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1"
-                  onClick={() => setShowAlertDialog(true)}
-                  data-testid="create-alert-btn"
+                  className="gap-1.5"
+                  onClick={() => navigate('/loyalty?tab=promotions')}
+                  data-testid="manage-promotions-in-loyalty"
                 >
-                  <Bell className="h-3 w-3" /> Send Alert
+                  <Megaphone className="h-3 w-3" /> New Promotion / Alert
                 </Button>
-                <Button
-                  size="sm"
-                  className={`${c.accent} hover:opacity-90 text-white gap-1`}
-                  onClick={() => setShowPromoDialog(true)}
-                  data-testid="create-promotion-btn"
-                >
-                  <Megaphone className="h-3 w-3" /> New Promotion
-                </Button>
-                </>
               )}
             </div>
           </div>
@@ -445,162 +379,6 @@ export default function ServiceCommunicationsHub({
         </CardContent>
       </Card>
 
-      {/* Create Promotion Dialog */}
-      <Dialog open={showPromoDialog} onOpenChange={setShowPromoDialog}>
-        <DialogContent className="bg-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-violet-600" />
-              Create Promotion
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Title * <span className="text-xs text-slate-400 ml-1">{promoForm.title.length}/50</span></Label>
-              <Input
-                value={promoForm.title}
-                onChange={(e) => { if (e.target.value.length <= 50) setPromoForm(f => ({ ...f, title: e.target.value })); }}
-                placeholder="e.g. 25% Off Weekend Special"
-                maxLength={50}
-                className="mt-1"
-                data-testid="promo-title-input"
-              />
-            </div>
-            <div>
-              <Label>Message * <span className="text-xs text-slate-400 ml-1">{promoForm.message.length}/300</span></Label>
-              <Textarea
-                value={promoForm.message}
-                onChange={(e) => { if (e.target.value.length <= 300) setPromoForm(f => ({ ...f, message: e.target.value })); }}
-                placeholder="Describe your promotion..."
-                maxLength={300}
-                rows={3}
-                className="mt-1"
-                data-testid="promo-message-input"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Type</Label>
-                <div className="mt-1 h-9 rounded-md border border-slate-200 px-3 text-sm bg-slate-50 flex items-center text-slate-600">
-                  Discount
-                </div>
-              </div>
-              <div>
-                <Label>Discount (%)</Label>
-                <div className="relative mt-1">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={promoForm.discount_value}
-                    onChange={(e) => setPromoForm(f => ({ ...f, discount_value: e.target.value }))}
-                    placeholder="e.g. 25"
-                    className="pr-8"
-                    data-testid="promo-discount-input"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">%</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <Label>Valid Until</Label>
-              <Input
-                type="date"
-                value={promoForm.valid_until}
-                onChange={(e) => setPromoForm(f => ({ ...f, valid_until: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-            <div className={`p-3 ${c.light} rounded-lg ${c.border} border`}>
-              <p className={`text-xs ${c.text}`}>
-                Promotions require admin approval before sending to <strong>{subscriberCount}</strong> subscribers.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setShowPromoDialog(false); navigate('/loyalty?tab=promotions'); }}
-              className="w-full text-xs text-violet-700 hover:text-violet-900 underline-offset-4 hover:underline inline-flex items-center justify-center gap-1"
-              data-testid="promo-modal-loyalty-link"
-            >
-              Or manage all promotions in Promo&Alerts <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPromoDialog(false)}>Cancel</Button>
-            <Button onClick={createPromotion} disabled={submitting} className={`${c.accent} text-white`}>
-              {submitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit for Approval
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Send Alert Dialog */}
-      <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
-        <DialogContent className="bg-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5 text-amber-600" />
-              Send Alert
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Send To</Label>
-              <select
-                value={alertForm.target_type}
-                onChange={(e) => setAlertForm(f => ({ ...f, target_type: e.target.value }))}
-                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
-              >
-                <option value="subscribers">All Subscribers ({subscriberCount})</option>
-                <option value="specific_user">Specific User</option>
-              </select>
-            </div>
-            {alertForm.target_type === 'specific_user' && (
-              <div>
-                <Label>User ID</Label>
-                <Input
-                  value={alertForm.target_user_id}
-                  onChange={(e) => setAlertForm(f => ({ ...f, target_user_id: e.target.value }))}
-                  placeholder="Enter user ID or email"
-                  className="mt-1"
-                />
-              </div>
-            )}
-            <div>
-              <Label>Title *</Label>
-              <Input
-                value={alertForm.title}
-                onChange={(e) => setAlertForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="e.g. Order Update, Service Notice"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Message *</Label>
-              <Textarea
-                value={alertForm.message}
-                onChange={(e) => setAlertForm(f => ({ ...f, message: e.target.value }))}
-                placeholder="Alert message..."
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <p className="text-xs text-amber-700">
-                Alerts are sent immediately without approval. Use for urgent communications.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAlertDialog(false)}>Cancel</Button>
-            <Button onClick={sendAlert} disabled={submitting} className="bg-amber-600 hover:bg-amber-700 text-white">
-              {submitting ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Send Now
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

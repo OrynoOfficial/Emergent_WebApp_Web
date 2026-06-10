@@ -18,6 +18,7 @@ import api from '@/api/client';
 import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
@@ -69,7 +70,7 @@ const StepIndicator = ({ currentStep }) => {
 export default function BanquetBooking() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
@@ -243,6 +244,9 @@ export default function BanquetBooking() {
     );
   }
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50">
       <DatePickerModal

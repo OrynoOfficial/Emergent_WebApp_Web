@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -77,7 +78,7 @@ const StepIndicator = ({ currentStep }) => {
 };
 
 export default function CarRentalBooking() {
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -331,6 +332,9 @@ export default function CarRentalBooking() {
     );
   }
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
       <PaymentProcessingOverlay 

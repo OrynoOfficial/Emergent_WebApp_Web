@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -178,7 +179,7 @@ const PassengerForm = ({ passenger, onChange, onRemove, isPrimary = false, user,
 };
 
 export default function TravelBooking() {
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -531,6 +532,9 @@ export default function TravelBooking() {
   const { outbound, return: returnTrip, isRoundTrip } = bookingData;
   const outboundDate = outbound.tripDate ? new Date(outbound.tripDate) : new Date();
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Payment Processing Overlay */}

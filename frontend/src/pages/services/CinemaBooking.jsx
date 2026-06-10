@@ -12,6 +12,7 @@ import api from '@/api/client';
 import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import { rePayExisting } from '@/utils/paymentRetry';
@@ -87,7 +88,7 @@ export default function CinemaBooking() {
   const { showtimeId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
 
   const [showtime, setShowtime] = useState(null);
   const [film, setFilm] = useState(null);
@@ -117,21 +118,30 @@ export default function CinemaBooking() {
     if (!code) return;
     setPromoSubmitting(true);
     try {
-      // Try the loyalty promo validation endpoint. If it's missing or returns
-      // an error, we surface a clear toast and keep the existing total.
-      const res = await api.post('/loyalty/promo/validate', { code, service_type: 'cinema' });
+      // Validate against the unified promo-codes endpoint. Pass the order_amount
+      // so the backend computes the discount, and the operator_id so operator-scoped
+      // codes accept the booking.
+      const pricing = calculatePricing();
+      const orderAmount = (pricing?.subtotal || 0) + (pricing?.vipSurcharge || 0);
+      const operatorId = film?.operator_id || showtime?.operator_id;
+      const res = await api.post('/promo-codes/validate', {
+        code,
+        service_type: 'cinema',
+        order_amount: orderAmount,
+        operator_id: operatorId,
+      });
       const data = res.data || {};
       if (data.valid === false) {
         toast.error(data.message || 'Promo code is not valid');
         setPromoApplied(null);
       } else {
         setPromoApplied({
-          code,
-          discount_percent: data.discount_percent ?? null,
-          discount_amount: data.discount_amount ?? null,
-          message: data.message,
+          code: data.code || code,
+          discount_percent: data.discount_type === 'percentage' ? data.discount_value : null,
+          discount_amount: data.discount_amount ?? (data.discount_type === 'fixed' ? data.discount_value : null),
+          message: data.name || `Promo "${code}" applied`,
         });
-        toast.success(data.message || `Promo "${code}" applied`);
+        toast.success(data.name || `Promo "${code}" applied`);
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Could not validate promo code');
@@ -404,6 +414,9 @@ export default function CinemaBooking() {
 
   const vipRowSetForRender = vipRowSet;
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       <PaymentProcessingOverlay isVisible={showPaymentOverlay} message="Processing your booking..." />

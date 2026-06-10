@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import api from '@/api/client';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
@@ -63,7 +64,7 @@ const StepIndicator = ({ currentStep }) => {
 
 export default function PackageBooking() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
   const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
 
@@ -349,6 +350,9 @@ export default function PackageBooking() {
 
   const cover = service.images?.[0];
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       <PaymentProcessingOverlay isVisible={showPaymentOverlay} message="Processing your delivery booking..." />

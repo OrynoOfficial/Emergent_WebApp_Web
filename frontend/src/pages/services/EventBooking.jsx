@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -37,16 +38,6 @@ const StepIndicator = ({ currentStep }) => {
     { num: 3, label: 'Payment' }
   ];
 
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
-
   return (
     <div className="flex items-center justify-center mb-8">
       {steps.map((step, idx) => (
@@ -75,7 +66,7 @@ const StepIndicator = ({ currentStep }) => {
 };
 
 export default function EventBooking() {
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +76,16 @@ export default function EventBooking() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [orderId, setOrderId] = useState(null);
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -260,6 +261,9 @@ export default function EventBooking() {
     );
   }
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-pink-50">
       <PaymentProcessingOverlay 

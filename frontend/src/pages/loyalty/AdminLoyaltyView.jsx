@@ -12,13 +12,16 @@ import { Textarea } from '../../components/ui/textarea';
 import {
   TrendingUp, Gift, Star, Users, Crown, Trophy, Zap, Sparkles, Coins,
   Clock, ArrowRight, Loader2, Plus, Edit2, Trash2, Search, BarChart3,
-  Target, Percent, User, Tag, Copy, Check, Megaphone, Bell, Store, X, Filter
+  Target, Percent, User, Tag, Copy, Check, Megaphone, Bell, Store, X, Filter,
+  Send, RefreshCw
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate, formatDateShort } from '../../utils/dateUtils';
 import api from '../../api/client';
 import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput } from '../../components/shared/AdminModal';
+import { Label } from '../../components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { TIER_CONFIG, TIER_SYMBOLS, DEFAULT_REWARDS, REWARD_TYPE_ICONS } from './constants';
 
 export default function AdminLoyaltyView() {
@@ -66,6 +69,62 @@ export default function AdminLoyaltyView() {
   const [opSearch, setOpSearch] = useState('');
   const [opStatusFilter, setOpStatusFilter] = useState('all');
   const [opOperatorFilter, setOpOperatorFilter] = useState('all');
+
+  // ── Create-Promotion + Send-Alert flows (moved from ServiceCommunicationsHub) ──
+  const [showPromoDialog, setShowPromoDialog] = useState(false);
+  const [promoForm, setPromoForm] = useState({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '', service_type: 'general' });
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [alertForm, setAlertForm] = useState({ title: '', message: '', target_type: 'subscribers', target_user_id: '', service_type: 'general' });
+  const [submittingComm, setSubmittingComm] = useState(false);
+  const [opSubscriberCount, setOpSubscriberCount] = useState(0);
+
+  const createPromotion = async () => {
+    if (!promoForm.title.trim() || !promoForm.message.trim()) {
+      toast.error('Please fill in title and message');
+      return;
+    }
+    const dv = Number(promoForm.discount_value);
+    if (!promoForm.discount_value || isNaN(dv) || dv <= 0 || dv > 100) {
+      toast.error('Please enter a valid discount percentage (1-100)');
+      return;
+    }
+    setSubmittingComm(true);
+    try {
+      const res = await api.post('/subscriptions/promotions', {
+        ...promoForm,
+        promotion_type: 'discount',
+        discount_value: `${promoForm.discount_value}%`,
+        valid_until: promoForm.valid_until || null,
+      });
+      toast.success(res.data.status === 'pending_approval' ? 'Promotion submitted for admin approval' : 'Promotion created');
+      setShowPromoDialog(false);
+      setPromoForm({ title: '', message: '', promotion_type: 'discount', discount_value: '', valid_until: '', service_type: 'general' });
+      loadOpRewards();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to create promotion');
+    } finally {
+      setSubmittingComm(false);
+    }
+  };
+
+  const sendAlert = async () => {
+    if (!alertForm.title.trim() || !alertForm.message.trim()) {
+      toast.error('Please fill in title and message');
+      return;
+    }
+    setSubmittingComm(true);
+    try {
+      const res = await api.post('/subscriptions/alerts', { ...alertForm });
+      toast.success(`Alert sent to ${res.data.notified_count} user(s)`);
+      setShowAlertDialog(false);
+      setAlertForm({ title: '', message: '', target_type: 'subscribers', target_user_id: '', service_type: 'general' });
+      loadOpRewards();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send alert');
+    } finally {
+      setSubmittingComm(false);
+    }
+  };
 
   const [programStats, setProgramStats] = useState({
     totalMembers: 0, totalPointsIssued: 0, totalPointsRedeemed: 0, activeRewards: 0,
@@ -525,9 +584,32 @@ export default function AdminLoyaltyView() {
               </h3>
               <p className="text-sm text-slate-500">All promotions and alerts from operators across the platform</p>
             </div>
-            <Button variant="outline" size="sm" onClick={loadOpRewards} disabled={opRewardsLoading} className="gap-1.5">
-              {opRewardsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              {(user?.role === 'admin' || user?.role === 'super_admin' || isOperator) && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setShowAlertDialog(true)}
+                    data-testid="loyalty-create-alert-btn"
+                  >
+                    <Bell className="h-3.5 w-3.5" /> Send Alert
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5"
+                    onClick={() => setShowPromoDialog(true)}
+                    data-testid="loyalty-create-promotion-btn"
+                  >
+                    <Megaphone className="h-3.5 w-3.5" /> New Promotion
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" size="sm" onClick={loadOpRewards} disabled={opRewardsLoading} className="gap-1.5">
+                {opRewardsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />} Refresh
+              </Button>
+            </div>
           </div>
 
           {/* Sub-tabs: Promotions / Alerts */}
@@ -842,6 +924,197 @@ export default function AdminLoyaltyView() {
           </div>
         )}
       </AdminModal>
+
+      {/* === Create Promotion Dialog (moved from ServiceCommunicationsHub) === */}
+      <Dialog open={showPromoDialog} onOpenChange={setShowPromoDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-violet-600" />
+              Create Promotion
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Service</Label>
+              <select
+                value={promoForm.service_type}
+                onChange={(e) => setPromoForm(f => ({ ...f, service_type: e.target.value }))}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                data-testid="promo-service-type"
+              >
+                <option value="general">General (all services)</option>
+                <option value="cinema">Cinema</option>
+                <option value="hotel">Hotels</option>
+                <option value="restaurant">Restaurants</option>
+                <option value="travel">Travel</option>
+                <option value="laundry">Laundry / Pressing</option>
+                <option value="car_rental">Car Rental</option>
+                <option value="event">Events</option>
+                <option value="banquet">Banquets</option>
+                <option value="package">Packages</option>
+              </select>
+            </div>
+            <div>
+              <Label>Title * <span className="text-xs text-slate-400 ml-1">{promoForm.title.length}/50</span></Label>
+              <Input
+                value={promoForm.title}
+                onChange={(e) => { if (e.target.value.length <= 50) setPromoForm(f => ({ ...f, title: e.target.value })); }}
+                placeholder="e.g. 25% Off Weekend Special"
+                maxLength={50}
+                className="mt-1"
+                data-testid="loyalty-promo-title-input"
+              />
+            </div>
+            <div>
+              <Label>Message * <span className="text-xs text-slate-400 ml-1">{promoForm.message.length}/300</span></Label>
+              <Textarea
+                value={promoForm.message}
+                onChange={(e) => { if (e.target.value.length <= 300) setPromoForm(f => ({ ...f, message: e.target.value })); }}
+                placeholder="Describe your promotion..."
+                maxLength={300}
+                rows={3}
+                className="mt-1"
+                data-testid="loyalty-promo-message-input"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Type</Label>
+                <div className="mt-1 h-9 rounded-md border border-slate-200 px-3 text-sm bg-slate-50 flex items-center text-slate-600">
+                  Discount
+                </div>
+              </div>
+              <div>
+                <Label>Discount (%)</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={promoForm.discount_value}
+                    onChange={(e) => setPromoForm(f => ({ ...f, discount_value: e.target.value }))}
+                    placeholder="e.g. 25"
+                    className="pr-8"
+                    data-testid="loyalty-promo-discount-input"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400 font-medium">%</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Valid Until</Label>
+              <Input
+                type="date"
+                value={promoForm.valid_until}
+                onChange={(e) => setPromoForm(f => ({ ...f, valid_until: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div className="p-3 bg-violet-50 rounded-lg border border-violet-200">
+              <p className="text-xs text-violet-700">
+                Promotions require admin approval before being broadcast to subscribers.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPromoDialog(false)}>Cancel</Button>
+            <Button onClick={createPromotion} disabled={submittingComm} className="bg-violet-600 hover:bg-violet-700 text-white" data-testid="loyalty-promo-submit-btn">
+              {submittingComm ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Submit for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* === Send Alert Dialog (moved from ServiceCommunicationsHub) === */}
+      <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
+        <DialogContent className="bg-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-amber-600" />
+              Send Alert
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Service</Label>
+              <select
+                value={alertForm.service_type}
+                onChange={(e) => setAlertForm(f => ({ ...f, service_type: e.target.value }))}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                data-testid="alert-service-type"
+              >
+                <option value="general">General (all services)</option>
+                <option value="cinema">Cinema</option>
+                <option value="hotel">Hotels</option>
+                <option value="restaurant">Restaurants</option>
+                <option value="travel">Travel</option>
+                <option value="laundry">Laundry / Pressing</option>
+                <option value="car_rental">Car Rental</option>
+                <option value="event">Events</option>
+                <option value="banquet">Banquets</option>
+                <option value="package">Packages</option>
+              </select>
+            </div>
+            <div>
+              <Label>Send To</Label>
+              <select
+                value={alertForm.target_type}
+                onChange={(e) => setAlertForm(f => ({ ...f, target_type: e.target.value }))}
+                className="mt-1 w-full h-9 rounded-md border border-slate-200 px-3 text-sm bg-white"
+              >
+                <option value="subscribers">All Subscribers</option>
+                <option value="specific_user">Specific User</option>
+              </select>
+            </div>
+            {alertForm.target_type === 'specific_user' && (
+              <div>
+                <Label>User ID or Email</Label>
+                <Input
+                  value={alertForm.target_user_id}
+                  onChange={(e) => setAlertForm(f => ({ ...f, target_user_id: e.target.value }))}
+                  placeholder="Enter user ID or email"
+                  className="mt-1"
+                />
+              </div>
+            )}
+            <div>
+              <Label>Title *</Label>
+              <Input
+                value={alertForm.title}
+                onChange={(e) => setAlertForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. Order Update, Service Notice"
+                className="mt-1"
+                data-testid="loyalty-alert-title-input"
+              />
+            </div>
+            <div>
+              <Label>Message *</Label>
+              <Textarea
+                value={alertForm.message}
+                onChange={(e) => setAlertForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="Alert message..."
+                rows={3}
+                className="mt-1"
+                data-testid="loyalty-alert-message-input"
+              />
+            </div>
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs text-amber-700">
+                Alerts are sent immediately without approval. Use for urgent communications.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAlertDialog(false)}>Cancel</Button>
+            <Button onClick={sendAlert} disabled={submittingComm} className="bg-amber-600 hover:bg-amber-700 text-white" data-testid="loyalty-alert-submit-btn">
+              {submittingComm ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Send Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { pressingApi } from '@/api/management';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
@@ -134,7 +135,7 @@ const ItemCard = ({ item, count, price, onInc, onDec }) => {
 export default function LaundryBooking() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
@@ -287,7 +288,8 @@ export default function LaundryBooking() {
       const response = await api.post('/promo-codes/validate', {
         code: promoCode.toUpperCase(),
         service_type: 'laundry',
-        amount: subtotalBeforeDiscount + serviceFee,
+        order_amount: subtotalBeforeDiscount + serviceFee,
+        operator_id: service?.operator_id,
       });
       const promo = response.data;
       setAppliedPromo({
@@ -470,6 +472,9 @@ export default function LaundryBooking() {
     : service.shop_type === 'both' ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white border-transparent'
     : 'bg-purple-500 text-white border-transparent';
 
+
+  // Operator self-booking is hard-blocked at this point (after all hooks have run).
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50/40">
       <DatePickerModal
