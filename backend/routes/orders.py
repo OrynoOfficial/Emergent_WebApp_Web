@@ -147,7 +147,20 @@ async def create_order(
     }
     
     await db.orders.insert_one(order)
-    
+    # Live rollup increment — fire-and-forget; rollup drift is recoverable.
+    try:
+        from utils.analytics_rollup import increment_rollup
+        await increment_rollup(
+            db,
+            operator_id=order.get("operator_id"),
+            service_category=service.get("category") if service else order.get("service_type"),
+            status=order.get("status", "pending"),
+            amount=order.get("total_amount", total_amount),
+            created_at=order.get("created_at"),
+        )
+    except Exception as _exc:  # noqa: BLE001
+        logging.getLogger(__name__).debug("rollup increment skipped: %s", _exc)
+
     return {
         "message": "Order created successfully",
         "order_id": order["_id"],
@@ -548,6 +561,20 @@ async def create_direct_order(
         }
         
         await db.orders.insert_many([outbound_order, return_order])
+        # Live rollup increment for both legs.
+        try:
+            from utils.analytics_rollup import increment_rollup
+            for _ord in (outbound_order, return_order):
+                await increment_rollup(
+                    db,
+                    operator_id=_ord.get("operator_id"),
+                    service_category=_ord.get("service_category") or _ord.get("service_type"),
+                    status=_ord.get("status", "pending"),
+                    amount=_ord.get("total_amount", 0),
+                    created_at=_ord.get("created_at"),
+                )
+        except Exception as _exc:  # noqa: BLE001
+            logging.getLogger(__name__).debug("rollup increment skipped: %s", _exc)
         
         # Create a single receipt for both legs
         receipt_number = f"RCT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
@@ -613,6 +640,19 @@ async def create_direct_order(
     }
     
     await db.orders.insert_one(order)
+    # Live rollup increment.
+    try:
+        from utils.analytics_rollup import increment_rollup
+        await increment_rollup(
+            db,
+            operator_id=order.get("operator_id"),
+            service_category=order.get("service_category") or order.get("service_type"),
+            status=order.get("status", "pending"),
+            amount=order.get("total_amount", 0),
+            created_at=order.get("created_at"),
+        )
+    except Exception as _exc:  # noqa: BLE001
+        logging.getLogger(__name__).debug("rollup increment skipped: %s", _exc)
 
     # Fan-out notifications: operator team + admins/superadmins.
     # Best-effort, never blocks order creation.
@@ -858,6 +898,25 @@ async def cancel_order(
             "updated_at": datetime.utcnow()
         }}
     )
+    # Rollup transition: decrement the OLD bucket (status was non-cancelled),
+    # increment the new "cancelled" bucket. Keeps the rollup eventually
+    # consistent with no nightly rebuild needed.
+    try:
+        from utils.analytics_rollup import increment_rollup
+        cat = order.get("service_category") or order.get("service_type")
+        amt = order.get("total_amount", 0)
+        await increment_rollup(
+            db, operator_id=order.get("operator_id"), service_category=cat,
+            status=order.get("status"), amount=-amt, orders_delta=-1,
+            created_at=order.get("created_at"),
+        )
+        await increment_rollup(
+            db, operator_id=order.get("operator_id"), service_category=cat,
+            status=OrderStatus.CANCELLED.value if hasattr(OrderStatus.CANCELLED, "value") else "cancelled",
+            amount=amt, orders_delta=1, created_at=order.get("created_at"),
+        )
+    except Exception as _exc:  # noqa: BLE001
+        logging.getLogger(__name__).debug("rollup cancel-delta skipped: %s", _exc)
 
 
 @router.delete("/{order_id}/abandon")

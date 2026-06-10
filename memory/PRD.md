@@ -6,6 +6,49 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 - iter 207: Phase 3 final hardening — in-pod items + platform artifacts)
+
+### Live incremental rollup (replaces nightly rebuild for hot data)
+- New `utils/analytics_rollup.py:increment_rollup(...)` does an atomic `$inc` upsert on `analytics_daily_rollup` bucket keyed by `(day, operator, category, status)`.
+- Wired into every `db.orders.insert_one` / `insert_many` call in `routes/orders.py` (3 spots: single order, round-trip pair, direct order).
+- Wired into `cancel_order`: decrements OLD-status bucket (`orders_delta=-1, amount=-amount`), increments `cancelled` bucket. Net zero drift.
+- All increment calls swallow errors — rollup drift is recoverable, booking failures aren't.
+- Verified end-to-end: `POST /api/orders/create` → `GET /api/analytics/admin/rollup/summary` shows immediate delta (+1 order / +amount revenue).
+
+### Mongo client production-tuned (`config/database.py`)
+- `maxPoolSize=200`, `minPoolSize=10`, `serverSelectionTimeoutMS=3000`.
+- `read_preference=secondaryPreferred` (env-overridable via `MONGO_READ_PREFERENCE`). No-op on single-node; reads drain to replicas automatically once the Atlas connection string points at a replica set.
+- `retryWrites=True`, `retryReads=True`.
+- Boot log confirms: `Connected to MongoDB: oryno_webapp (pool=200, read_pref=secondary_preferred)`.
+
+### Stand-alone Arq worker artifact
+- New `backend/scripts/run_worker.py` — production entrypoint: `python -m scripts.run_worker` (or `arq utils.task_queue.WorkerSettings`).
+- New `backend/scripts/supervisor-worker.conf.template` — paste into a worker pod's `/etc/supervisor/conf.d/` for a separate-process sidecar deployment.
+
+### One-shot uploads migration script
+- New `backend/scripts/migrate_uploads_to_emergent.py`. Default = dry-run; pass `--apply` to commit.
+- Walks `/app/backend/uploads/` recursively, uploads each file to Emergent storage under `oryno/migrated/...`, and rewrites every matching URL in users/operators/films/hotels/events/cinemas/restaurants/car_rentals/pressings/banquets/packages/vehicles (scalar + list fields).
+- Re-runnable safely (deterministic object paths via SHA1 of rel path; idempotent DB rewrites).
+- Verified dry-run on current data: **157 files would migrate, 10 DB URL rewrites** across users/films/hotels/vehicles.
+
+### Platform-team docs — `/app/PLATFORM_DEPLOYMENT_NOTES.md`
+- Multi-worker uvicorn supervisor config (paste-ready).
+- Cloudflare Cache Rule expression for `/api/services/*` (paste-ready, excludes authed requests).
+- MongoDB Atlas connection string template + env-var tunables table.
+- Stand-alone Arq worker deployment recipe + the `API_ROLE` env-var trick to avoid duplicate in-process workers when scaling to multi-worker uvicorn.
+
+### Test suite: 40 passed, 1 skipped
+- New `tests/test_phase3_final_hardening.py`: live rollup increment verification + Mongo client config assertions.
+
+### What still requires platform/infra action (not codable here)
+- Apply the multi-worker uvicorn supervisor config (template provided).
+- Create the Cloudflare Cache Rule (expression + settings provided).
+- Provision a 3-node MongoDB Atlas cluster + point `MONGO_URL` at it.
+- Spin a worker sidecar container/pod with `scripts/supervisor-worker.conf.template`.
+- Run `python -m scripts.migrate_uploads_to_emergent --apply` once in production, then flip `STORAGE_BACKEND=emergent`.
+
+
+
 ## Latest Changes (Feb 2026 - iter 206: Phase 3 Scale Hardening)
 
 ### Redis: installed + supervised

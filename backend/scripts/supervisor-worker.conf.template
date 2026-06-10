@@ -1,0 +1,29 @@
+; ─────────────────────────────────────────────────────────────────────────
+; Stand-alone Arq worker supervisor config
+; ─────────────────────────────────────────────────────────────────────────
+;
+; Drop this into /etc/supervisor/conf.d/ on a WORKER pod (separate from the
+; API pod) to run a dedicated background worker. It uses the same task code
+; as the API's in-process worker — only the runtime is split.
+;
+; For prod multi-pod topologies you typically want 2-3 worker replicas per
+; API pod. Each replica runs this same supervisor program; concurrency
+; inside a single worker is controlled by `WorkerSettings.max_jobs`.
+;
+; Ensure REDIS_URL is set in the worker pod's env. The worker reuses the same
+; arq settings as the API's in-process worker (utils.task_queue.WorkerSettings).
+
+[program:arq-worker]
+command=/root/.venv/bin/python -m scripts.run_worker
+directory=/app/backend
+autostart=true
+autorestart=true
+startsecs=5
+startretries=3
+stopsignal=TERM
+stopwaitsecs=15
+stderr_logfile=/var/log/supervisor/arq-worker.err.log
+stdout_logfile=/var/log/supervisor/arq-worker.out.log
+environment=PYTHONUNBUFFERED=1
+; Increase priority so worker boots AFTER redis but BEFORE accepting traffic.
+priority=20
