@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Header
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Header, Request
 from pydantic import BaseModel
 from models.order import Order, OrderCreate, OrderStatus, PaymentStatus
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.permissions import require_permission, require_any_permission
+from utils.rate_limit import limiter, user_or_ip_key, WRITE_ORDER_RATE
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import logging
@@ -86,8 +87,10 @@ async def _enrich_order_with_route(order: dict, db) -> dict:
 
 
 @router.post("/", response_model=dict)
+@limiter.limit(WRITE_ORDER_RATE, key_func=user_or_ip_key)
 async def create_order(
     order_data: OrderCreate,
+    request: Request,
     current_user: dict = Depends(get_current_active_user)
 ):
     """Create a new order"""
@@ -182,8 +185,10 @@ class DirectOrderCreate(BaseModel):
 
 
 @router.post("/create", response_model=dict)
+@limiter.limit(WRITE_ORDER_RATE, key_func=user_or_ip_key)
 async def create_direct_order(
     order_data: DirectOrderCreate,
+    request: Request,
     current_user: dict = Depends(get_current_active_user),
     idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
 ):

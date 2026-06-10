@@ -4,6 +4,7 @@ from services.mtn_momo_service import MTNMoMoService
 from config.database import get_database
 from middleware.auth import get_current_active_user
 from utils.order_package_sync import sync_package_payment_from_order
+from utils.rate_limit import limiter, user_or_ip_key, WRITE_PAYMENT_RATE
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
@@ -257,8 +258,10 @@ async def process_payment_success(db, order_id: str, user_id: str, payment_metho
         logger.error(f"Error processing payment success chain reactions: {e}")
 
 @router.post("/create-payment-intent")
+@limiter.limit(WRITE_PAYMENT_RATE, key_func=user_or_ip_key)
 async def create_payment_intent(
     payment_request: PaymentRequest,
+    request: Request,
     current_user: dict = Depends(get_current_active_user)
 ):
     """Create a payment intent"""
@@ -335,8 +338,10 @@ async def create_payment_intent(
 
 
 @router.post("/initiate")
+@limiter.limit(WRITE_PAYMENT_RATE, key_func=user_or_ip_key)
 async def initiate_payment(
     payment_request: PaymentInitiateRequest,
+    request: Request,
     current_user: dict = Depends(get_current_active_user)
 ):
     """

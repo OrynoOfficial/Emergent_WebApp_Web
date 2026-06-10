@@ -86,12 +86,30 @@ app = FastAPI(
 )
 
 # Attach the global rate limiter (used by auth/OTP routes via @limiter.limit).
-# 429 responses are emitted automatically with Retry-After.
+# Custom 429 handler injects a Retry-After header so well-behaved clients
+# (browsers, mobile apps with exponential backoff) wait the right amount.
 from slowapi.errors import RateLimitExceeded
-from slowapi import _rate_limit_exceeded_handler
 from utils.rate_limit import limiter
+from fastapi.responses import JSONResponse
+
+
+async def _rate_limit_handler(request, exc: RateLimitExceeded):
+    """429 response with explicit Retry-After (defaults to 60 if SlowAPI
+    didn't compute one). Polite clients (incl. browsers' fetch retry,
+    mobile clients with exponential backoff, and CDNs) rely on this header
+    to back off correctly."""
+    retry_after = getattr(exc, "retry_after", None)
+    headers = {"Retry-After": str(retry_after or 60)}
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Rate limit exceeded: {exc.detail}",
+                 "retry_after_seconds": retry_after or 60},
+        headers=headers,
+    )
+
+
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 # Configure logging
 logging.basicConfig(

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, Header
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, Header, Request
 from fastapi.responses import Response
 from services.s3_service import S3Service
 from services.local_storage_service import LocalStorageService
 from services.emergent_storage_service import EmergentStorageService
 from middleware.auth import get_current_active_user
 from utils.auth import decode_token
+from utils.rate_limit import limiter, user_or_ip_key, WRITE_UPLOAD_RATE
 from config.settings import settings
 from typing import List, Optional
 import os
@@ -38,7 +39,9 @@ logger.info("Upload backend = %s", storage_label)
 
 
 @router.post("/")
+@limiter.limit(WRITE_UPLOAD_RATE, key_func=user_or_ip_key)
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     folder: Optional[str] = Form(None),
     folder_query: Optional[str] = Query(None, alias="folder"),
@@ -73,7 +76,9 @@ async def upload_file(
 
 
 @router.post("/multiple")
+@limiter.limit(WRITE_UPLOAD_RATE, key_func=user_or_ip_key)
 async def upload_multiple_files(
+    request: Request,
     files: List[UploadFile] = File(...),
     folder: str = "uploads",
     current_user: dict = Depends(get_current_active_user)

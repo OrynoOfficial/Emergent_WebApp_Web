@@ -6,6 +6,35 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 - iter 209: Phase 5 — write-endpoint rate limiting)
+
+### New rate-limit coverage on write endpoints
+- `utils/rate_limit.py` adds a `user_or_ip_key` function — per-user keys for authenticated requests, IP fallback otherwise (so a corporate office sharing one IP isn't collectively rate-limited).
+- New per-endpoint caps (all configurable):
+  - `POST /api/orders/` and `POST /api/orders/create` → **30/minute/user**
+  - `POST /api/payments/initiate` and `POST /api/payments/create-payment-intent` → **15/minute/user**
+  - `POST /api/checkout/session` (Stripe) → **15/minute/user**
+  - `POST /api/uploads/` and `POST /api/uploads/multiple` → **20/minute/user**
+- Storage moved to Redis db 1 (`RATE_LIMIT_STORAGE=redis://localhost:6379/1` in `.env`) — counters now shared across uvicorn workers AND, once we scale out, across pods.
+
+### Custom 429 handler with `Retry-After`
+- `server.py` now uses a custom `_rate_limit_handler` that always injects a `Retry-After` header (defaults to 60s).
+- Verified live: `HTTP/2 429 / retry-after: 60`.
+- Polite clients (browser fetch retry, mobile exponential backoff, Cloudflare's CDN) now back off correctly.
+
+### Phase-5 regression suite (`tests/test_phase5_write_rate_limits.py`)
+- `test_order_create_rate_limit_fires` — burst of 45 → some 429s, capped at 30/min.
+- `test_payment_initiate_rate_limit_fires` — burst of 25 → capped at 15/min.
+- **`test_different_users_have_separate_budgets`** — Customer saturates their budget; Admin's first call still succeeds. Proves key function is per-USER, not per-IP.
+- `test_429_includes_retry_after_header` — header always present.
+
+### Test infra hardening (`tests/conftest.py`)
+- New autouse fixture flushes Redis db 1 before each test so saturation tests don't poison subsequent tests' budgets.
+
+### Full suite: 47 passed, 1 skipped.
+
+
+
 ## Latest Changes (Feb 2026 - iter 207: Phase 3 final hardening — in-pod items + platform artifacts)
 
 ### Live incremental rollup (replaces nightly rebuild for hot data)

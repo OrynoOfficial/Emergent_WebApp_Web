@@ -7,6 +7,7 @@ from config.database import get_database
 from middleware.auth import get_current_active_user
 from services.stripe_checkout_service import stripe_checkout_service
 from utils.order_package_sync import sync_package_payment_from_order
+from utils.rate_limit import limiter, user_or_ip_key, WRITE_PAYMENT_RATE
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
@@ -32,6 +33,7 @@ class CheckoutStatusRequest(BaseModel):
 # ==================== CHECKOUT SESSION ENDPOINTS ====================
 
 @router.post("/session")
+@limiter.limit(WRITE_PAYMENT_RATE, key_func=user_or_ip_key)
 async def create_checkout_session(
     request: Request,
     checkout_request: CheckoutRequest,
