@@ -7,6 +7,11 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 import uuid
 import asyncio
+import logging
+
+from utils.pubsub import publish as pubsub_publish, start_subscriber, CHANNEL_PREFIX_SEATS
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/seat-bookings", tags=["Seat Bookings"])
 
@@ -21,16 +26,53 @@ class SeatSyncRequest(BaseModel):
     travel_date: str
     desired_seats: List[str]  # The FULL list of seats the user wants
 
-# WebSocket connections registry
+# WebSocket connections registry (this pod's sockets only)
 _ws_connections: dict = {}
 
-async def _notify_seat_change(route_id: str, travel_date: str):
+
+def _channel(route_id: str, travel_date: str) -> str:
+    return f"{CHANNEL_PREFIX_SEATS}:{route_id}:{travel_date}"
+
+
+async def _fanout_locally(route_id: str, travel_date: str):
+    """Send the seat_update event to every WebSocket on THIS pod."""
     key = f"{route_id}:{travel_date}"
     for ws in list(_ws_connections.get(key, [])):
         try:
             await ws.send_json({"type": "seat_update", "route_id": route_id, "travel_date": travel_date})
         except Exception:
             _ws_connections.get(key, set()).discard(ws)
+
+
+async def _notify_seat_change(route_id: str, travel_date: str):
+    """Fan out a seat-update to local WS subscribers AND every other pod
+    via Redis Pub/Sub. Falls back to local-only when Redis is offline."""
+    await _fanout_locally(route_id, travel_date)
+    await pubsub_publish(
+        _channel(route_id, travel_date),
+        {"type": "seat_update", "route_id": route_id, "travel_date": travel_date},
+    )
+
+
+async def _handle_remote_seat_event(payload: dict):
+    """Callback for events published by OTHER pods. Strictly forwards to
+    this pod's local WebSocket subscribers — we never re-publish (would
+    cause an infinite echo)."""
+    route_id = payload.get("route_id")
+    travel_date = payload.get("travel_date")
+    if route_id and travel_date:
+        await _fanout_locally(route_id, travel_date)
+
+
+async def init_seat_pubsub_subscriber():
+    """Start the long-lived pubsub subscriber for `seats:*` events.
+
+    Called once from server.py's startup hook. Safe to call multiple times —
+    `start_subscriber` returns the existing task on repeat invocations only
+    if the caller tracks it; we just create a new one and trust shutdown to
+    cancel them all.
+    """
+    await start_subscriber(f"{CHANNEL_PREFIX_SEATS}:*", _handle_remote_seat_event)
 
 # =========== GET seat map ===========
 @router.get("/")

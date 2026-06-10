@@ -119,3 +119,34 @@ async def send_account_invite_email(
     except Exception as e:
         logger.exception("Resend invite email failed for %s", recipient_email)
         raise
+
+
+
+async def send_raw_email(
+    *,
+    to: str,
+    subject: str,
+    html: str,
+    sender: Optional[str] = None,
+) -> dict:
+    """Generic, fire-and-forget transactional email.
+
+    Designed to be called from a background queue worker so the request
+    thread never blocks on Resend. Errors are logged and re-raised so the
+    queue can retry per its policy.
+    """
+    if not resend.api_key:
+        logger.warning("send_raw_email skipped — RESEND_API_KEY not configured")
+        return {"status": "skipped"}
+    params = {
+        "from": sender or SENDER_EMAIL,
+        "to": [to],
+        "subject": subject,
+        "html": html,
+    }
+    try:
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        return {"status": "sent", "id": result.get("id") if isinstance(result, dict) else None}
+    except Exception:
+        logger.exception("send_raw_email failed for %s", to)
+        raise

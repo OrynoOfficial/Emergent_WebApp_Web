@@ -158,6 +158,21 @@ async def startup_event():
     except Exception as e:
         logger.warning("Index bootstrap skipped: %s", e)
 
+    # Start cross-pod pub/sub subscribers (seat updates today; more channels
+    # can join the bus by following the same `start_subscriber` pattern).
+    try:
+        from routes.seat_bookings import init_seat_pubsub_subscriber
+        await init_seat_pubsub_subscriber()
+    except Exception as e:
+        logger.warning("PubSub bridge init skipped: %s", e)
+
+    # Boot the background work queue if Redis + arq are available.
+    try:
+        from utils.task_queue import start_worker_in_process
+        await start_worker_in_process()
+    except Exception as e:
+        logger.warning("Background queue init skipped: %s", e)
+
     logger.info("Application started successfully")
 
 async def seed_test_users():

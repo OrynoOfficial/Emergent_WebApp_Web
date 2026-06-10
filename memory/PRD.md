@@ -6,6 +6,58 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 - iter 206: Phase 3 Scale Hardening)
+
+### Redis: installed + supervised
+- Installed `redis-server` (Debian package) + Python clients `redis==5.3.1`, `hiredis==3.4.0`, `arq==0.28.0`.
+- New `/etc/supervisor/conf.d/redis.conf` runs `redis-server --bind 127.0.0.1 --port 6379 --maxmemory 256mb --maxmemory-policy allkeys-lru` — supervised, auto-restart.
+- `REDIS_URL=redis://localhost:6379/0` added to `backend/.env`.
+
+### `utils/cache.py` rewritten — Redis-first with in-process fallback
+- Same `cache_get/cache_set/cache_delete/cache_clear/stats` API as Phase 2.
+- Tries Redis on every call; if Redis is unreachable, falls back to `cachetools.TTLCache` transparently.
+- The JWT→user cache now spans every uvicorn worker and (once we scale) every pod.
+- Verified via `tests/test_phase3_redis_layer.py::test_cache_stats_reflects_redis`.
+
+### `utils/pubsub.py` — Redis Pub/Sub bridge for cross-pod WebSocket fan-out
+- New `publish(channel, payload)` and `start_subscriber(pattern, handler)` primitives.
+- `routes/seat_bookings.py` rewritten: `_notify_seat_change` now does (a) local fan-out THEN (b) `publish("seats:{route}:{date}", ...)`. Every other pod's subscriber forwards the event to its own local WebSockets.
+- `init_seat_pubsub_subscriber()` wired into `server.py:startup_event` — logs `PubSub subscriber started on pattern seats:*` on boot.
+- Verified end-to-end via `test_pubsub_cross_process_fanout` (publish on one client → handler on subscriber pattern receives the payload).
+
+### `utils/task_queue.py` — Arq background queue
+- Tasks registered: `send_email`, `send_promotion_fanout` (with room to grow).
+- `enqueue("send_email", to=..., subject=..., html=...)` drops work into Redis. Worker is in-process today (single-pod) — production should run `arq utils.task_queue.WorkerSettings` in a sidecar container instead.
+- Boot log confirms: `Starting worker for 2 functions: send_email, send_promotion_fanout`.
+- New `services/email_service.py:send_raw_email` generic helper backing the email task.
+- Verified via `test_task_queue_enqueues_to_redis_when_available`.
+
+### CDN edge-cache headers on public catalog endpoints
+- New `utils/cache_headers.py:edge_cache(s_maxage, stale_while_revalidate)` helper.
+- `GET /api/services/` → `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=600` (1-min edge cache, 10-min SWR).
+- `GET /api/services/{id}` → 5-min edge cache, 1-hour SWR.
+- Authenticated endpoints (`/api/auth/me`) NOT cached. Verified via test asserting absence of `s-maxage` on authenticated responses.
+
+### Caveat surfaced for platform team
+- **Cloudflare ingress strips `Cache-Control` and overrides to `no-store`** on the preview URL. Origin emits the right headers (verified at `http://localhost:8001` — `cache-control: public, max-age=0, s-maxage=60, stale-while-revalidate=600`). To realise the edge-cache benefit, the platform team needs to set a Page Rule / Cache Rule on Cloudflare that *respects origin Cache-Control headers* for paths matching `/api/services/*` (and exempts paths containing an `Authorization` header).
+
+### Index catalog still: 91 (unchanged this phase)
+
+### Test suite: 39 / 39 pass
+- Phase-1: indexes + memory caps
+- Phase-2 (4 tests): JWT cache replay consistency, idempotency replay, idempotency namespace, rollup endpoints
+- Phase-3 (5 new tests in `test_phase3_redis_layer.py`): cache stats reflects redis, CDN header on services list, no edge-cache on authed endpoints, task queue enqueue, cross-process pub/sub fan-out
+
+### Still pending (next horizons)
+- **Multi-worker uvicorn** in supervisor (platform-team change)
+- **Cloudflare Cache Rule** for `/api/services/*` (platform-team change)
+- **Live incremental rollup** (`$inc` upserts on order writes — now trivially queueable with Arq)
+- **One-shot uploads migration script** (`/app/backend/uploads/*` → Emergent storage)
+- **Mongo read replicas + `readPreference=secondaryPreferred`** (Atlas config)
+- **Stand-alone Arq worker container** for production (today the worker is in-process)
+
+
+
 ## Latest Changes (Feb 2026 - iter 205: Phase 2 Scale Hardening)
 
 ### JWT → User cache (in-process TTL, Redis-ready)

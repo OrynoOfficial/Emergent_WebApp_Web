@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 from models.service import Service, ServiceCreate, ServiceCategory, ServiceStatus
 from config.database import get_database
 from middleware.auth import get_current_active_user
+from utils.cache_headers import edge_cache
 from typing import Optional, List
 from datetime import datetime
 import uuid
@@ -41,6 +42,7 @@ async def create_service(
 
 @router.get("/")
 async def get_services(
+    response: Response,
     category: Optional[ServiceCategory] = None,
     city: Optional[str] = None,
     country: Optional[str] = None,
@@ -65,6 +67,9 @@ async def get_services(
     services = await db.services.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.services.count_documents(query)
     
+    # Allow CDN edge to cache the catalog list for 60s (stale-while-revalidate
+    # 10min). No auth header == anonymous public read.
+    response.headers["Cache-Control"] = edge_cache(60, 600)
     return {
         "services": services,
         "total": total,
@@ -73,7 +78,7 @@ async def get_services(
     }
 
 @router.get("/{service_id}")
-async def get_service(service_id: str):
+async def get_service(service_id: str, response: Response):
     """Get a specific service"""
     db = get_database()
     
@@ -84,6 +89,8 @@ async def get_service(service_id: str):
             detail="Service not found"
         )
     
+    # Detail pages change rarely; cache 5min at edge with 1h stale.
+    response.headers["Cache-Control"] = edge_cache(300, 3600)
     return service
 
 @router.put("/{service_id}")
