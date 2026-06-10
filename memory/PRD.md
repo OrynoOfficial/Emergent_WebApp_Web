@@ -5,6 +5,31 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+
+## Latest Changes (Feb 2026 - iter 203)
+
+### Walk-In Booking Modal — Rich, Personalized Pickers (DONE)
+`WalkInBookingModal.jsx` now uses service-specific rich UI instead of generic text inputs:
+- **Travel**: integrated `LiveSeatMap` — operators see the live bus seat grid; tapping seats updates `bookingDetails.seat_numbers` and the "Selected seats" preview.
+- **Cinema**: showtime tile picker (fetched via `/api/cinema/films/{film_id}/showtimes`) → on selection, full `CinemaSeatMap` renders (auto-fetches seat layout + booked seats via `/api/cinema/showtimes/{id}/details`). Amount auto-computes = tickets × showtime price.
+- **Hotel**: room-card picker (fetched via `/api/rooms/?hotel_id=...&check_in=...&check_out=...`) showing per-night price + live availability badge. Amount auto-computes = nights × picked room price.
+- **Laundry**: per-item grid with +/- quantity steppers (driven by the shop's configured `item_prices`). Amount auto-computes from line totals. Falls back to a single bundle input if the shop hasn't configured item-level pricing.
+- Dialog widens to `max-w-4xl` for the four rich service types; existing curated blocks (Restaurant/Car Rental/Banquet/Package/Event) preserved.
+- Submission still flows through `/api/operator/manual-bookings`.
+- Verified: iter 201 frontend tests 100% on all 4 rich pickers (seed: 13 routes, 9 hotels, Avengers w/ 7 showtimes, Royal Fresh w/ 5 priced items).
+
+### Operator Comparison Dashboard (NEW)
+- **Backend**: `GET /api/analytics/admin/operator-comparison?operator_ids=...&period=...` returns per-operator KPIs (revenue, orders, AOV, completion rate, daily-revenue series, by-category breakdown). Requires `analytics.view_dashboard` permission. Rejects <2 or >3 ids with HTTP 400. One MongoDB aggregation pass (`operator_id × day × status × category`) keeps the query cheap.
+- **Frontend**: New page `/admin/operator-comparison` (admin + super_admin) with:
+  - 2-3 operator slot pickers (`comparison-operator-slot-{idx}`) + "Add a third operator" button (`comparison-add-operator`)
+  - Period selector (`comparison-period`: 7d / 30d / 3m / 6m / 1y)
+  - Stacked KPI cards (`comparison-card-{operatorId}`) with Trophy badge on the leader for each metric
+  - Daily revenue overlay line chart (`comparison-chart-card`) using recharts
+  - Pivoted category revenue table
+- Sidebar: new "Operator Comparison" entry under the Dashboards submenu (admin-only).
+- Verified: iter 203 — 100% backend (6/6 pytest) + 100% frontend (all 6 review items).
+
+
 ## Latest Changes (Jun 2026 - iter 188)
 
 ### Post-Check-in Customer Rating Flow
