@@ -32,7 +32,7 @@ export default function OperatorComparison() {
     (async () => {
       try {
         setOpsLoading(true);
-        const { data } = await api.get('/operators/?limit=200');
+        const { data } = await api.get('/operators/?limit=100');
         const list = (data?.operators || []).map((o) => ({
           id: o.id || o._id,
           name: o.name || o.operator_name || o.company_name || o.id,
