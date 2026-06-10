@@ -5,6 +5,52 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Latest Changes (Jun 2026 - iter 187)
+
+### Per-Service Walk-in Personalization
+`WalkInBookingModal` now renders curated field sections for ALL 9 services (previously only Travel had dedicated fields). Customer block stays constant; each service shows its own personalized panel:
+- **Cinema** (violet): showtime label, ticket count, comma-separated seat numbers
+- **Hotel** (indigo): check-in/check-out date pickers, guest count, room label
+- **Restaurant** (orange): party size, table label, dining service (dine-in/takeaway/delivery), order summary textarea
+- **Laundry/Pressing** (sky): items count, service type (wash & fold / dry-clean / ironing / express), pickup-required checkbox, ready-by date, items description
+- **Banquet** (pink): event date, guest count, event type (wedding/birthday/corporate/conference/anniversary/other), catering (included/external/none)
+- **Car Rental** (emerald): pickup & return dates, with-driver checkbox, driver license #
+- **Package/Courier** (amber): origin, destination, weight (kg), receiver name & phone, package description
+- **Event** (fuchsia): ticket type (Standard/VIP/VVIP/Early Bird), quantity, section label
+- **Travel** (blue): kept passengers + seat numbers; gained vehicle-capacity hint
+
+### Operator-Scoped Walk-in Launcher
+`/admin/bookings` dropdown menu now filters service options to ONLY those the operator is actually assigned to (e.g. an op offering Laundry + Cinema sees just those two). Admins (`admin` / `super_admin`) continue to see the full 9-service list. Synonym normalisation handles `pressing` → `laundry` and dashed/spaced variants.
+
+### Recent walk-ins quick-filter chip
+Pill chip next to the channel tabs on `/admin/bookings` — single click shows just the operator's last 5 walk-in bookings (the end-of-shift receipt-run cohort).
+
+### Channel filter count bug — FIXED
+**Root cause**: `fetchBookings` was passing `channel` as a backend query param, so the local `counts` memo computed totals from the FILTERED dataset only — clicking "Walk-in" zeroed out the All/Online badges. **Fix**: always fetch the full dataset (no channel param), apply the channel filter client-side. Badge counts now stay accurate across tabs.
+
+### Carter Entertainment revenue parsing — FIXED (cross-cutting)
+**Root cause**: `analytics.py` was filtering `status == "completed"` exclusively when computing revenue, completed-orders count, and conversion rate. But the platform-wide convention uses `status: "confirmed"` once payment clears (and `completed` only after the service is rendered). Carter's 137k FCFA of confirmed-paid orders never appeared in any dashboard.
+**Fix**: Introduced a `SUCCESS_STATUSES = ["confirmed", "completed", "delivered", "checked_in", "fulfilled"]` constant. All five revenue/completion query sites now match against this set. Live verified: admin overview total revenue jumped from ~10,500 FCFA to 4,105,929 FCFA — exposing 207 confirmed orders that were previously invisible. Affects ALL operators, not just Carter.
+
+### Cinema Management "Screens" card — FIXED
+**Root cause**: `management_dashboard.py` collection_map had `cinema: ("cinemas", None)` — the secondary count was never queried. Cinemas store screens as an embedded `screens` array, not a separate collection.
+**Fix**: Cinema-specific aggregation pipeline computes `secondary_count` as `$sum` of either `total_screens` field OR `$size` of the `screens` array (whichever is present), scoped to the operator. Live verified: returns 8 screens across 3 cinemas instead of 0.
+
+### Ticket scanner stale-data bug — FIXED
+**Root cause**: `ReplaceResourceModal` commits a reassignment that updates nested `booking_details.*` paths (vehicle_name, room_name, etc.) but never refreshes the order's top-level `service_name` — the very field the scanner displays. So scanning a replaced ticket showed the OLD resource label.
+**Fix**: (a) `resource_reassignments.py` commit now mirrors the new resource's best-available label onto `order.service_name`; (b) `/scan/validate` response also derives `service_name` from `booking_details.{vehicle_name|room_name|car_name|event_name|showtime_label}` falling back to the top-level — defensive double-cover. The scanner now ALWAYS shows fresh data.
+
+### Check-in notifications + visible "Checked In" tag
+- `POST /orders/scan/check-in` now inserts a `notifications` doc of type `ticket_checked_in` for the order's customer — surfaces in their notifications bell + email digest.
+- Customer-facing ticket view (`OrderDetailModal`) gains a striking emerald gradient "CHECKED IN" tag with timestamp at the top of the Service Information block when `order.checked_in === true`.
+- Orders grid cards also get a small "Checked In" pill below the status badge.
+
+### Two-tier anti-self-booking safeguard
+- Frontend `<OperatorBookingBlock>` interstitial across all 9 `/services/*/booking` pages
+- Backend `POST /api/orders/create` rejects when customer email/phone matches operator owner OR when the logged-in user IS the operator owner
+- 4/4 regression tests pass in `tests/test_self_booking_safeguard.py`
+
+
 ## Latest Changes (Jun 2026 - iter 186)
 
 ### Bug Fixes

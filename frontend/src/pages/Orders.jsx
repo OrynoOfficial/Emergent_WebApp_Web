@@ -613,6 +613,12 @@ export default function Orders() {
                       {order.status}
                     </Badge>
                   </div>
+                  {order.checked_in && (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 w-fit" data-testid={`order-checked-in-${order.id || order._id}`}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      Checked In
+                    </div>
+                  )}
                   <h3 className="font-semibold text-slate-900 truncate">{order.service_name || order.service_title || 'Service'}</h3>
                   <div
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-full px-2.5 py-1 shadow-sm"

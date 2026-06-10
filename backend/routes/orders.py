@@ -1022,6 +1022,19 @@ async def validate_ticket_scan(
     booking = order.get("booking_details") or {}
     order_id = order.get("id") or str(order.get("_id", ""))
 
+    # Prefer the most-recently-updated label coming from booking_details (which
+    # is what a "replace/swap" mutates). Falls back to top-level service_name.
+    # This guarantees the scanner shows fresh data after a ticket is updated.
+    fresh_service_name = (
+        booking.get("vehicle_name")
+        or booking.get("room_name")
+        or booking.get("car_name")
+        or booking.get("event_name")
+        or booking.get("showtime_label")
+        or order.get("service_name", "")
+    )
+    last_reassign = (order.get("reassignment_history") or [])[-1] if order.get("reassignment_history") else None
+
     return {
         "valid": True,
         "code": order.get("order_number") or order_id,
@@ -1031,7 +1044,9 @@ async def validate_ticket_scan(
         "checked_in": order.get("checked_in", False),
         "checked_in_at": order.get("checked_in_at"),
         "service_type": order.get("service_type", ""),
-        "service_name": order.get("service_name", ""),
+        "service_name": fresh_service_name,
+        "last_reassignment": last_reassign,
+        "updated_at": order.get("updated_at").isoformat() if hasattr(order.get("updated_at", ""), "isoformat") else str(order.get("updated_at", "")),
         "operator_name": order.get("operator_name", ""),
         "total_amount": order.get("total_amount", 0),
         "currency": order.get("currency", "XAF"),
@@ -1102,6 +1117,30 @@ async def check_in_ticket(
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }}
     )
+
+    # Notify the customer (in-app) that they've been checked in. The Notifications
+    # bell + email digest will pick this up automatically.
+    try:
+        if order.get("user_id"):
+            await db.notifications.insert_one({
+                "_id": str(uuid.uuid4()),
+                "user_id": order["user_id"],
+                "type": "ticket_checked_in",
+                "title": "You've been checked in!",
+                "message": f"Welcome to {order.get('service_name') or order.get('operator_name') or 'your booking'}. Enjoy!",
+                "data": {
+                    "order_id": order.get("id") or order["_id"],
+                    "order_number": order.get("order_number"),
+                    "service_name": order.get("service_name"),
+                    "operator_name": order.get("operator_name"),
+                    "checked_in_at": datetime.now(timezone.utc).isoformat(),
+                },
+                "read": False,
+                "created_at": datetime.now(timezone.utc),
+            })
+    except Exception as exc:
+        # Non-fatal — the check-in itself already succeeded.
+        print(f"[check-in] failed to notify customer: {exc}")
 
     return {
         "message": "Ticket checked in successfully",

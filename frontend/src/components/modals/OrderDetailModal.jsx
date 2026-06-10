@@ -39,6 +39,7 @@ import {
   Droplets,
   Sparkles,
   Home,
+  CheckCircle2,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
@@ -211,6 +212,22 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           {/* Service Info */}
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Service Information</h3>
+            {order.checked_in && (
+              <div
+                className="mb-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-300"
+                data-testid="ticket-checked-in-tag"
+              >
+                <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/40">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold uppercase tracking-wider">Checked In</p>
+                  <p className="text-xs opacity-90">
+                    {order.checked_in_at ? new Date(order.checked_in_at).toLocaleString() : 'Successfully verified'}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="bg-slate-50 rounded-lg p-4 space-y-3">
               {/* Show departure and destination for travel */}
               {(order.booking_details?.departure_city && order.booking_details?.destination_city) ? (

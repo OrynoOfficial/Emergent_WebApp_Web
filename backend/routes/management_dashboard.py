@@ -137,6 +137,27 @@ async def get_dashboard_stats(
             sec_query["operator_id"] = resolved_operator_id
         secondary_count = await db[secondary_col].count_documents(sec_query)
 
+    # Cinema-specific: "Screens" are embedded as a `screens` array on each cinema
+    # document (no separate collection). Sum the sizes — fallback to total_screens
+    # field if present, else array length.
+    if service_type == "cinema":
+        cin_query = {}
+        if resolved_operator_id:
+            cin_query["operator_id"] = resolved_operator_id
+        screen_agg = await db.cinemas.aggregate([
+            {"$match": cin_query},
+            {"$project": {
+                "n": {
+                    "$ifNull": [
+                        "$total_screens",
+                        {"$size": {"$ifNull": ["$screens", []]}}
+                    ]
+                }
+            }},
+            {"$group": {"_id": None, "total": {"$sum": "$n"}}}
+        ]).to_list(1)
+        secondary_count = screen_agg[0]["total"] if screen_agg else 0
+
     # --- Daily trend (last 7 days) ---
     daily_trend = []
     for i in range(6, -1, -1):

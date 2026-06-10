@@ -626,6 +626,20 @@ async def reassign_resource(
     for path, res_field in spec["extra_order_mirrors"].items():
         if res_field in new_resource and new_resource[res_field] is not None:
             set_payload[path] = new_resource[res_field]
+    # Mirror the new resource onto the order's TOP-LEVEL `service_name` so the
+    # ticket scanner and order details views reflect the replacement (otherwise
+    # the scanner would keep showing the OLD resource label even after a swap).
+    new_label = (
+        new_resource.get("vehicle_name")
+        or new_resource.get("plate_number")
+        or new_resource.get("room_name")
+        or new_resource.get("room_number")
+        or new_resource.get("name")
+        or new_resource.get("title")
+        or new_resource.get("model")
+    )
+    if new_label:
+        set_payload["service_name"] = new_label
 
     history_entry = {
         "event_id": event_id,

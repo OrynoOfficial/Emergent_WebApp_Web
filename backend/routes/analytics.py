@@ -8,6 +8,11 @@ from collections import defaultdict
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
+# Statuses that count as a "successful" booking for revenue & completion-rate
+# computations. Operators use `confirmed` (paid + acknowledged) and `completed`
+# (after service rendered) interchangeably across services — both flow money.
+SUCCESS_STATUSES = ["confirmed", "completed", "delivered", "checked_in", "fulfilled"]
+
 def get_period_days(period: str) -> int:
     """Convert period string to number of days"""
     periods = {
@@ -35,7 +40,7 @@ async def get_dashboard_analytics(
                 "_id": None,
                 "total_orders": {"$sum": 1},
                 "total_spent": {"$sum": {"$ifNull": ["$total_amount", 0]}},
-                "completed": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+                "completed": {"$sum": {"$cond": [{"$in": ["$status", SUCCESS_STATUSES]}, 1, 0]}},
                 "pending": {"$sum": {"$cond": [{"$eq": ["$status", "pending"]}, 1, 0]}},
                 "recent": {"$sum": {"$cond": [{"$gt": ["$created_at", week_ago]}, 1, 0]}},
             }}],
@@ -80,9 +85,11 @@ async def get_admin_analytics(
     total_services = await db.services.count_documents({})
     total_revenue = 0
     
-    # Calculate revenue via MongoDB aggregation (no document transfer)
+    # Calculate revenue via MongoDB aggregation (no document transfer).
+    # Revenue counts any "successful" status — operators primarily use `confirmed`
+    # while `completed` is set post-service-rendered. Both flow money.
     revenue_agg = await db.orders.aggregate([
-        {"$match": {"status": "completed"}},
+        {"$match": {"status": {"$in": SUCCESS_STATUSES}}},
         {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_amount", 0]}}}}
     ]).to_list(1)
     total_revenue = revenue_agg[0]["total"] if revenue_agg else 0
@@ -154,7 +161,7 @@ async def get_data_analytics_overview(
     total_bookings = len(all_orders)
     total_revenue = sum(o.get("total_amount", 0) for o in all_orders)
     avg_order_value = total_revenue / total_bookings if total_bookings > 0 else 0
-    completed_orders = len([o for o in all_orders if o.get("status") == "completed"])
+    completed_orders = len([o for o in all_orders if o.get("status") in SUCCESS_STATUSES])
     conversion_rate = (completed_orders / total_bookings * 100) if total_bookings > 0 else 0
     
     # Calculate growth rate (compare to previous period) - with same operator filter
@@ -447,7 +454,7 @@ async def get_operator_dashboard_analytics(
     # Calculate summary stats
     total_orders = len(orders)
     total_revenue = sum(o.get("total_amount", 0) for o in orders)
-    completed_orders = len([o for o in orders if o.get("status") == "completed"])
+    completed_orders = len([o for o in orders if o.get("status") in SUCCESS_STATUSES])
     pending_orders = len([o for o in orders if o.get("status") == "pending"])
     cancelled_orders = len([o for o in orders if o.get("status") in ["cancelled", "refunded"]])
     

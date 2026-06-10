@@ -73,7 +73,10 @@ async def test_dashboard_aggregation_matches_in_memory(db):
 
     expected_total = len(orders)
     expected_spent = sum(o.get("total_amount", 0) for o in orders)
-    expected_completed = len([o for o in orders if o.get("status") == "completed"])
+    # "completed_orders" counts any successful status — confirmed | completed |
+    # delivered | checked_in | fulfilled — to match the corrected analytics.
+    SUCCESS = {"confirmed", "completed", "delivered", "checked_in", "fulfilled"}
+    expected_completed = len([o for o in orders if o.get("status") in SUCCESS])
     expected_pending = len([o for o in orders if o.get("status") == "pending"])
 
     assert resp["total_orders"] == expected_total
@@ -95,7 +98,9 @@ async def test_admin_overview_revenue_and_status_counts(db):
     token = await _login("admin@test.com")
     resp = await _get("/api/analytics/admin/overview", token)
 
-    completed = await db.orders.find({"status": "completed"}).to_list(None)
+    # Revenue counts any successful status — confirmed | completed | …
+    SUCCESS = ["confirmed", "completed", "delivered", "checked_in", "fulfilled"]
+    completed = await db.orders.find({"status": {"$in": SUCCESS}}).to_list(None)
     expected_revenue = sum(o.get("total_amount", 0) for o in completed)
     assert resp["total_revenue"] == expected_revenue
 

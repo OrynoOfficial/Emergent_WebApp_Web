@@ -45,7 +45,7 @@ const CHANNEL_META = {
 
 export default function AdminBookings() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, operatorContext } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -58,9 +58,12 @@ export default function AdminBookings() {
 
   // Allow walk-in launcher for operators + admins
   const canRecordWalkIn = user?.role === 'operator' || user?.role === 'admin' || user?.role === 'super_admin';
+  const isAdminRole = user?.role === 'admin' || user?.role === 'super_admin';
 
-  // Services available for walk-in (scoped to the operator owner automatically server-side)
-  const SERVICE_TYPES = [
+  // Services available for walk-in — for operators we ONLY show the types
+  // they're actually assigned to (e.g. an op offering Laundry + Cinema won't
+  // see Hotel/Travel/etc.). Admins always see the full list.
+  const ALL_SERVICE_TYPES = [
     { value: 'hotel', label: 'Hotel', icon: '🏨' },
     { value: 'travel', label: 'Travel / Bus', icon: '🚌' },
     { value: 'restaurant', label: 'Restaurant', icon: '🍽️' },
@@ -71,6 +74,13 @@ export default function AdminBookings() {
     { value: 'banquet', label: 'Banquet', icon: '🎊' },
     { value: 'package', label: 'Package / Courier', icon: '📦' },
   ];
+  const operatorServiceTypes = (operatorContext?.service_types || []).map((t) =>
+    // Normalise common synonyms to the canonical service_type used in orders
+    String(t).toLowerCase().replace(/[-\s]+/g, '_').replace('pressing', 'laundry')
+  );
+  const SERVICE_TYPES = isAdminRole
+    ? ALL_SERVICE_TYPES
+    : ALL_SERVICE_TYPES.filter((s) => operatorServiceTypes.includes(s.value));
 
   const openWalkin = async (serviceType) => {
     setWalkinServiceType(serviceType);
@@ -118,6 +128,7 @@ export default function AdminBookings() {
   const [operatorFilter, setOperatorFilter] = useState('');
   const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
   const [viewMode, setViewMode] = useState('list');
+  const [recentWalkinsOnly, setRecentWalkinsOnly] = useState(false);
 
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -125,14 +136,16 @@ export default function AdminBookings() {
 
   useEffect(() => {
     fetchBookings();
-  }, [refreshKey, channelFilter]);
+  }, [refreshKey]);
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      // Uses the unified endpoint that already supports channel + operator filters
+      // Always fetch the full dataset; channel/all/online/walk-in filtering
+      // is done client-side so the count badges reflect the TRUE totals
+      // across all channels, not just the active tab.
       const res = await api.get('/operator/manual-bookings/', {
-        params: { channel: channelFilter, limit: 500 },
+        params: { limit: 500 },
       });
       setBookings(res.data?.bookings || []);
     } catch (err) {
@@ -152,6 +165,19 @@ export default function AdminBookings() {
 
   const filtered = useMemo(() => {
     let r = [...bookings];
+    // Channel filter — now applied client-side so the badge counts above stay accurate.
+    if (channelFilter === 'online') r = r.filter(b => (b.channel || 'online') === 'online');
+    else if (channelFilter === 'on_site') r = r.filter(b => b.channel === 'on_site');
+    // "Recent walk-ins" quick filter — last 5 walk-in bookings (end-of-shift use case).
+    if (recentWalkinsOnly) {
+      const walkins = bookings
+        .filter(b => b.channel === 'on_site')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .slice(0, 5)
+        .map(b => b.order_number || b.id || b._id);
+      const walkinSet = new Set(walkins);
+      r = r.filter(b => walkinSet.has(b.order_number || b.id || b._id));
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       r = r.filter(b =>
@@ -165,7 +191,7 @@ export default function AdminBookings() {
     if (operatorFilter) r = r.filter(b => b.operator_id === operatorFilter);
     if (dateRange.from || dateRange.to) r = r.filter(b => inRange(b.created_at, dateRange.from, dateRange.to));
     return r.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [bookings, searchQuery, statusFilter, categoryFilter, operatorFilter, dateRange]);
+  }, [bookings, channelFilter, recentWalkinsOnly, searchQuery, statusFilter, categoryFilter, operatorFilter, dateRange]);
 
   // Pagination — keep the view scoped to a single page so admin lists don't blow up
   const PAGE_SIZE = 25;
@@ -251,6 +277,19 @@ export default function AdminBookings() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        <button
+          type="button"
+          onClick={() => setRecentWalkinsOnly((v) => !v)}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all ${
+            recentWalkinsOnly
+              ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200'
+              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+          }`}
+          data-testid="recent-walkins-chip"
+          title="Show only the last 5 walk-in bookings — end-of-shift receipt run"
+        >
+          <Store className="h-3.5 w-3.5" /> Recent walk-ins (5)
+        </button>
       </div>
 
       {/* Search + filters */}
