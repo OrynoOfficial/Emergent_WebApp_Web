@@ -605,7 +605,9 @@ async def get_showtimes(
     if film_id:
         query["film_id"] = film_id
     
-    showtimes = await db.showtimes.find(query, {"_id": 0}).sort("show_time", 1).to_list(100)
+    showtimes = await db.showtimes.find(query).sort("show_time", 1).to_list(100)
+    for s in showtimes:
+        s["id"] = s.pop("_id", "")
     
     return {"showtimes": showtimes}
 

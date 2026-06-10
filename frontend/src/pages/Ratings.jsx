@@ -262,14 +262,22 @@ function CustomerRatingsView() {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pendingRatings.map((p) => (
+              {pendingRatings.map((p) => {
+                const PIcon = SERVICE_ICONS[p.service_type] || Package;
+                const pColor = SERVICE_COLORS[p.service_type] || '#F59E0B';
+                return (
                 <div
                   key={p.order_id}
                   className="p-4 bg-white rounded-xl border border-amber-200 shadow-sm hover:shadow-md transition-all"
                   data-testid={`pending-rating-${p.order_id}`}
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="text-2xl">{SERVICE_ICONS[p.service_type] || '⭐'}</div>
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${pColor}15` }}
+                    >
+                      <PIcon className="h-5 w-5" style={{ color: pColor }} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-slate-900 truncate">{p.service_name}</p>
                       <p className="text-xs text-slate-500 truncate">{p.operator_name || '—'}</p>
@@ -291,7 +299,8 @@ function CustomerRatingsView() {
                     Rate &amp; Review
                   </Button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>

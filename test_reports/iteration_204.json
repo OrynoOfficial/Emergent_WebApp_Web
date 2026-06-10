@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only test of (A) /ratings blank-page fix and (B) Walk-in Booking modal 7 refinements. Ratings was LIVE-tested as customer@test.com — page renders correctly (NOT blank): 'My Ratings & Reviews' header + 3 stat cards + awaiting-rating-section + 4 pending-rating-{order_id} cards (1 Scream-7 cinema + 3 Bus Yaounde->Bafoussam) + 4 rate-now-btn-{order_id} buttons. Modal opens with 5 rating-star-{n} + rating-review-input + Submit Review button. PIcon JSX fix (Ratings.jsx L266/L279) is correct. WalkInBookingModal source-verified (admin live nav blocked by HTTP 429). All 7 refinements + required data-testids present: cinema cascade /cinema/{id}/showtimes with walkin-cinema-showtime-{st.id} -> CinemaSeatMap; hotel walkin-hotel-room-{id} with 80px thumb + auto-total nights*price; travel LiveSeatMap wrapped in 'max-w-md mx-auto scale-90'; restaurant walkin-rest-{plus,minus,qty}-{id} 64px thumb + auto-total; laundry walkin-laundry-mode-{pickup|delivery} with conditional delivery_address/city/phone; package MapPin Origin->Destination prefill + walkin-pkg-tier-{idx} + receiver{,-phone,-address,-city,-postal}. ALL service blocks use 'border-l-2 border-slate-200 pl-4' (zero bg-{color}-50 card wrappers). admin/Bookings.jsx uses /cinema/?limit=100 + respKey 'cinemas'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Admin live walk-in modal", "issue": "admin@test.com dashboard XHRs return HTTP 429 immediately after login; modal verified by source", "affected_selectors": ["walkin-launcher", "walk-in-booking-modal"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Investigate 429 rate-limit on admin@test.com dashboard load.",
+    "Optional: data-testid='rating-error-toast' on empty-review toast for automated assertions."
+  ],
+  "critical_code_review_comments": [
+    "WalkInBookingModal.jsx 1416 lines — split per-service section.",
+    "Ratings.jsx 2576 lines — split Customer/Operator/Admin views.",
+    "Bookings.jsx services dropdown capped at limit=100 — silently truncates for large operators.",
+    "Confirm /operator/manual-bookings/ works without trailing-slash 307 dropping Authorization."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "Ratings live 100%; WalkInModal source-verified 100%"},
+  "test_credentials": "customer@test.com / testpassword123 (live ok); admin@test.com / testpassword123 (429 after login).",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "For live Walk-in modal validation use operator creds (operator@test.com, mani-monroe@netflix.com) to bypass admin 429. All required data-testids exist in source.",
+  "rca of the issue": "(A) Ratings blank caused by lucide forwardRef object used as React child; fixed via PIcon = SERVICE_ICONS[..]||Package + <PIcon/>. (B) Walk-in cinema cascade: admin/Bookings.jsx now fetches /cinema/?limit=100 (was /cinema/films) and backend /cinema/{id}/showtimes returns 'id' so walkin-cinema-showtime-{st.id} keys are stable; CinemaSeatMap loaded via /cinema/showtimes/{id}/details."
+}

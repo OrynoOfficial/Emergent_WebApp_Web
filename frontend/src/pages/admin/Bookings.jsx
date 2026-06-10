@@ -96,7 +96,7 @@ export default function AdminBookings() {
         hotel: '/hotels/?limit=100',
         travel: '/travel/routes?limit=100',
         restaurant: '/restaurants/?limit=100',
-        cinema: '/cinema/films?limit=100',
+        cinema: '/cinema/?limit=100',
         event: '/events/?limit=100',
         car_rental: '/car-rental/?limit=100',
         laundry: '/pressing/?limit=100',
@@ -105,7 +105,7 @@ export default function AdminBookings() {
       };
       const respKey = {
         hotel: 'hotels', travel: 'routes', restaurant: 'restaurants',
-        cinema: 'films', event: 'events', car_rental: 'cars',
+        cinema: 'cinemas', event: 'events', car_rental: 'cars',
         laundry: 'pressings', banquet: 'banquets', package: 'services',
       };
       const url = endpointMap[serviceType];
