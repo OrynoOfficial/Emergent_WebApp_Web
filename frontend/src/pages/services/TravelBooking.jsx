@@ -27,16 +27,6 @@ const TravelStepIndicator = ({ currentStep }) => {
     { number: 3, label: 'Payment', icon: CreditCard },
   ];
 
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
-
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
       {steps.map((step, idx) => (
@@ -198,6 +188,16 @@ export default function TravelBooking() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [travelCurrentStep, setTravelCurrentStep] = useState(1);
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
   
   // Passengers
   const [passengers, setPassengers] = useState([]);

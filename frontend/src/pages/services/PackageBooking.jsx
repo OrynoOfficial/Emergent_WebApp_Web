@@ -37,15 +37,6 @@ const StepIndicator = ({ currentStep }) => {
     { num: 2, label: 'Package' },
     { num: 3, label: 'Payment' },
   ];
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   return (
     <div className="flex items-center justify-center mb-8">
@@ -85,6 +76,16 @@ export default function PackageBooking() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [orderId, setOrderId] = useState(null);
   const [trackingNumber, setTrackingNumber] = useState(null);
+
+  // Abandon any pending unpaid order when the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   const [isSenderSelf, setIsSenderSelf] = useState(false);
 
