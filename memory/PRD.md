@@ -6,6 +6,29 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Latest Changes (Feb 2026 — iter 204: Ratings blank-page fix + Walk-in Modal 7 UI refinements)
+
+### Fixed: Customer Ratings page blank
+- **Root cause**: `Ratings.jsx` line 272 rendered `{SERVICE_ICONS[p.service_type] || '⭐'}` — a bare lucide-react `forwardRef` component reference (not JSX), which React rejects with "Objects are not valid as a React child (object with keys {$$typeof, render})". This crashed the entire `CustomerRatingsView` whenever the customer had ≥1 pending rating.
+- **Fix**: Resolved icon to a local `PIcon` variable (defaults to `Package`) and rendered `<PIcon className="h-5 w-5" style={{ color: pColor }} />`. Live-tested with `customer@test.com` — 4 pending-rating cards now render properly.
+
+### Walk-in Booking Modal — 7 UI refinements (`WalkInBookingModal.jsx`)
+1. **Plain icons / left-rail style** — replaced every per-service colored card wrapper (`bg-violet-50/60 border-violet-200 rounded-lg`, etc.) with `border-l-2 border-slate-200 pl-4 space-y-3`; section icons reduced to neutral slate `h-3.5 w-3.5` and the upper-case label sits inline next to the icon (no more colored chip headings).
+2. **Hotel rooms with thumbnails** — each room button now has an 80×80 left-aligned `<img>` using `r.images[0]` (falls back to `BedDouble` icon); selecting a room continues to auto-fill Total = `nights × room.base_price`.
+3. **Travel/Bus seatmap shrink** — `LiveSeatMap` wrapped in `<div className="max-w-md mx-auto scale-90 origin-top">`, dramatically reducing visual footprint inside the modal.
+4. **Restaurant menu items + auto-total** — new `useEffect` fetches `/restaurants/{id}/menu` on service-pick, renders qty steppers (`walkin-rest-{plus,minus,qty}-{id}`) with 64×64 thumbnails. Total amount recomputes live from `Σ(item.price × qty)`; auto-fills the Order Summary text.
+5. **Cinema cascading selection** — `admin/Bookings.jsx` now fetches **cinemas** (`/cinema/?limit=100`) for the cinema service-list; modal then loads showtimes via `/cinema/{cinema_id}/showtimes` (backend updated to return `id` field in each showtime), displays showtimes as tiles with `film_title · show_date · show_time · screen_name · price`, and finally loads the existing `CinemaSeatMap` from `/cinema/showtimes/{id}/details`.
+6. **Laundry thumbnails + Pickup/Delivery toggle** — items rendered with `it.image_url` thumbnail (or Sparkles fallback). New 2-button toggle replaces the lone checkbox; selecting **Delivery** reveals a compact address card (`delivery_address`, `delivery_city`, `delivery_phone`).
+7. **Package route prefill + tier picker + recipient address** — selecting a package service offering auto-fills Origin/Destination from `selectedService.origin_city/destination_city`, shows a `MapPin` route summary card. If `pricing_model='tiered'` and `tiers[]` is non-empty, a tier-button grid (`walkin-pkg-tier-{idx}`) renders each tier's label + weight range + price; clicking auto-fills Total Amount. Recipient panel expanded to require `receiver_name`, `receiver_phone`, `receiver_address`, `receiver_city`, `receiver_postal_code` (optional).
+
+### Backend
+- `routes/cinema.py` — `GET /api/cinema/{cinema_id}/showtimes` now returns each showtime with its `id` (was previously stripped via `{_id: 0}` projection), enabling stable React keys + downstream `/cinema/showtimes/{id}/details` calls.
+
+### Testing
+- `iteration_204.json`: Ratings page live-tested 100% (4 pending cards render); WalkInBookingModal source-verified 100% (all 7 refinements + every data-testid in place). No retest needed.
+
+
+
 ## Latest Changes (Feb 2026 - iter 209: Phase 5 — write-endpoint rate limiting)
 
 ### New rate-limit coverage on write endpoints
