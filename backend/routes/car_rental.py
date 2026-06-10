@@ -87,7 +87,63 @@ async def get_cars(
     
     cars = await db.car_rentals.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.car_rentals.count_documents(query)
-    
+
+    # --- FOMO inventory enrichment ---------------------------------------
+    # Each car_rentals row = 1 vehicle. For the "Almost sold out" badge to be
+    # meaningful, we expose `units_available` per (operator_id, vehicle_type)
+    # bucket — i.e. "how many comparable vehicles are still bookable right now".
+    # Computed with a single aggregation across all buckets present on this page.
+    buckets = {(c.get("operator_id"), c.get("vehicle_type")) for c in cars}
+    buckets.discard((None, None))
+    if buckets:
+        bucket_filter = {
+            "$or": [
+                {"operator_id": op, "vehicle_type": vt}
+                for (op, vt) in buckets if op and vt
+            ]
+        }
+        # Total available vehicles per bucket
+        total_by_bucket_agg = await db.car_rentals.aggregate([
+            {"$match": {**bucket_filter, "is_available": True}},
+            {"$group": {
+                "_id": {"op": "$operator_id", "vt": "$vehicle_type"},
+                "total": {"$sum": 1},
+            }}
+        ]).to_list(None)
+        total_by_bucket = {
+            (row["_id"]["op"], row["_id"]["vt"]): row["total"]
+            for row in total_by_bucket_agg
+        }
+        # Active bookings (orders) per car_id today
+        active_booked_agg = await db.orders.aggregate([
+            {"$match": {
+                "service_category": "car_rental",
+                "status": {"$nin": ["cancelled", "abandoned", "failed", "refunded"]},
+            }},
+            {"$group": {"_id": "$service_id"}}
+        ]).to_list(None)
+        booked_car_ids = {row["_id"] for row in active_booked_agg if row.get("_id")}
+        # Booked counts per bucket: re-query car_rentals filtered to booked_car_ids
+        booked_by_bucket: dict = {}
+        if booked_car_ids:
+            booked_by_bucket_agg = await db.car_rentals.aggregate([
+                {"$match": {"_id": {"$in": list(booked_car_ids)}, **bucket_filter}},
+                {"$group": {
+                    "_id": {"op": "$operator_id", "vt": "$vehicle_type"},
+                    "booked": {"$sum": 1},
+                }}
+            ]).to_list(None)
+            booked_by_bucket = {
+                (row["_id"]["op"], row["_id"]["vt"]): row["booked"]
+                for row in booked_by_bucket_agg
+            }
+        # Attach units_available to each car
+        for c in cars:
+            key = (c.get("operator_id"), c.get("vehicle_type"))
+            if key in total_by_bucket:
+                avail = max(0, total_by_bucket[key] - booked_by_bucket.get(key, 0))
+                c["units_available"] = avail
+
     return {"cars": cars, "total": total}
 
 @router.get("/{car_id}")
@@ -332,5 +388,3 @@ async def get_my_vehicles(
         "total": total,
         "is_operator_scoped": current_user.get("role") not in ["super_admin", "admin"]
     }
-
-    return {"bookings": bookings, "total": total}

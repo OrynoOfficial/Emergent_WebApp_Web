@@ -75,6 +75,31 @@ async def get_banquets(
     # Transform _id to id for each banquet
     for banquet in banquets:
         banquet["id"] = str(banquet.pop("_id", ""))
+
+    # --- FOMO inventory enrichment ---------------------------------------
+    # Banquets are typically single-event-per-day venues. We expose
+    # `slots_available` = number of free days in the upcoming 30-day window
+    # (today + 29). A day is "taken" if there's an active banquet order whose
+    # `booking_details.date` falls on it. Field is only emitted for venues
+    # whose orders actually intersect the window (and capped at 30).
+    if banquets:
+        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        window_iso_dates = {(today + timedelta(days=i)).date().isoformat() for i in range(30)}
+        banquet_ids = [b["id"] for b in banquets]
+        bookings = await db.orders.find({
+            "service_category": "banquet",
+            "service_id": {"$in": banquet_ids},
+            "status": {"$nin": ["cancelled", "abandoned", "failed", "refunded"]},
+        }, {"_id": 0, "service_id": 1, "booking_details.date": 1}).to_list(None)
+        taken_by_venue: dict = {}
+        for o in bookings:
+            sid = o.get("service_id")
+            date_str = (o.get("booking_details") or {}).get("date")
+            if sid and date_str and date_str in window_iso_dates:
+                taken_by_venue.setdefault(sid, set()).add(date_str)
+        for b in banquets:
+            taken = len(taken_by_venue.get(b["id"], set()))
+            b["slots_available"] = max(0, 30 - taken)
     
     return {"banquets": banquets, "total": total}
 

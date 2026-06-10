@@ -7,7 +7,7 @@ from models.pressing import (
     DEFAULT_PRESSING_ITEM_PRESETS,
 )
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 router = APIRouter(prefix="/api/pressing", tags=["Laundry/Pressing"])
@@ -103,6 +103,36 @@ async def get_pressings(
     # Transform _id to id for each pressing
     for pressing in pressings:
         pressing["id"] = str(pressing.pop("_id", ""))
+
+    # --- FOMO inventory enrichment ---------------------------------------
+    # Pressings can configure `max_orders_per_day` (or legacy
+    # `pickup_slots_per_day`) on their shop document. If present, we expose
+    # `slots_available` = max(0, capacity - today's active orders). Shops
+    # without a daily-capacity field gracefully omit the field — badge
+    # renders nothing until they configure it.
+    if pressings:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = today_start + timedelta(days=1)
+        capacity_by_shop = {}
+        for p in pressings:
+            cap = p.get("max_orders_per_day") or p.get("pickup_slots_per_day")
+            if isinstance(cap, (int, float)) and cap > 0:
+                capacity_by_shop[p["id"]] = int(cap)
+        if capacity_by_shop:
+            taken_agg = await db.orders.aggregate([
+                {"$match": {
+                    "service_category": {"$in": ["pressing", "laundry"]},
+                    "service_id": {"$in": list(capacity_by_shop.keys())},
+                    "created_at": {"$gte": today_start, "$lt": tomorrow},
+                    "status": {"$nin": ["cancelled", "abandoned", "failed", "refunded"]},
+                }},
+                {"$group": {"_id": "$service_id", "count": {"$sum": 1}}}
+            ]).to_list(None)
+            taken_by_shop = {row["_id"]: row["count"] for row in taken_agg}
+            for p in pressings:
+                cap = capacity_by_shop.get(p["id"])
+                if cap is not None:
+                    p["slots_available"] = max(0, cap - taken_by_shop.get(p["id"], 0))
     
     return {"pressings": pressings, "total": total}
 

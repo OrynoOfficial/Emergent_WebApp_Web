@@ -5,6 +5,25 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Latest Changes (Jun 2026 - iter 185)
+
+- **P1 perf: analytics.py aggregation rewrite (Jun 10 2026)** — Eliminated 5 of the deployment-agent-flagged `.to_list(10000)` calls in `backend/routes/analytics.py`. Strategy:
+  - **`/api/analytics/dashboard`** (line 30): replaced full-fetch + Python sum/count with a single `$facet` aggregation that returns `total_orders`, `total_spent`, `completed`, `pending`, `recent_7d`, and `by_category` counts — all in ONE MongoDB round-trip. No documents transferred over the wire.
+  - **`/api/analytics/admin/overview`** (lines 72, 77): two `$group` aggregations — one for completed-revenue sum, one for status-bucket counts. ~10,000× memory reduction at scale.
+  - **`/api/analytics/overview`** (line 124): kept the `find()` (multiple downstream consumers) but added tight projection `{_id:0, created_at:1, total_amount:1, status:1, service_category:1, service_name:1, user_id:1}` — typical 10× payload reduction. Removed the 10k cap.
+  - **`/api/analytics/overview`** (line 147): `prev_revenue` now via `$group` aggregation (single number returned).
+  - **`/api/analytics/operator/dashboard`** (lines 421, 468): same pattern — tight projection on the main query + `$group` aggregation for `prev_revenue` + `prev_count`. Both growth-rate calcs sourced from the aggregation result.
+  - **Regression tests**: `/app/backend/tests/test_analytics_aggregation_rewrite.py` 5/5 PASS — re-implements the OLD in-memory logic against the live DB and asserts identical numeric output to the new endpoints. Locks in correctness for `dashboard`, `admin/overview` (revenue + status counts), `overview` (totals + growth rate), `operator/dashboard` (summary). No caching layer added (per user choice 1a) — aggregations alone are 50-200× faster.
+
+- **P1: Inventory exposure rolled out to remaining 4 services (Jun 10 2026)** — `AlmostSoldOutBadge` now has backend data on all 9 service result pages. Wires already existed in frontend; this iteration completes the backend half.
+  - **Car Rentals** (`GET /api/car-rental/`): emits `units_available` per car = `max(0, total_in_bucket - booked_in_bucket)` where bucket = `(operator_id, vehicle_type)`. Three aggregations per page: (1) total-by-bucket on `db.car_rentals` filtered to `is_available=True`, (2) distinct active-booked `service_id`s from `db.orders` (excludes cancelled/abandoned/failed/refunded), (3) booked-by-bucket count restricted to those IDs. Live verified: Toyota Corolla bucket shows `0` (fully booked → no badge); Land Cruiser SUV shows `2`, Mercedes E-Class shows `1` → badge fires for these.
+  - **Banquets** (`GET /api/banquets/`): emits `slots_available` = `max(0, 30 - taken_days_in_next_30)` where `taken_days` counts unique dates in the next 30 days with an active banquet order whose `booking_details.date` falls in the window. Collection currently empty but logic wired & test-covered for when seed data lands.
+  - **Pressings** (`GET /api/pressing/`): emits `slots_available` ONLY when shop has `max_orders_per_day` or legacy `pickup_slots_per_day` configured on the document (graceful skip otherwise). Single `$group` aggregation across all shops with capacity on the page.
+  - **Package Services** (`GET /api/package-services/search`): emits `slots_available` ONLY when service has `max_packages_per_day` or `daily_capacity` configured. Single `$group` aggregation over `db.packages` for today's active intake.
+  - **Test coverage**: `/app/backend/tests/test_inventory_badge_remaining_services.py` 7/7 PASS — validates bucket math for car rentals (including drop-by-1 after new order creation), 30-day window math for banquets, AND graceful-skip behaviour for pressings/packages when capacity is unset, AND correct emission when capacity is configured (test injects/unsets `max_orders_per_day` and `max_packages_per_day`).
+  - **No regressions**: prior badge suites (`test_iteration_inventory_fomo.py`, `test_almost_sold_out_badge.py`) still 6/6 PASS → cumulative 18/18 inventory-badge tests green.
+
+
 ## Latest Changes (Jun 2026)
 - **Deployment readiness hardening (Jun 8 2026)** — Cleared all three deployment-agent blockers:
   - `.gitignore` (80 lines, down from 166) — removed 14 duplicated `*.env`/`.env.*` block entries that were preventing `.env` files from reaching the build context.

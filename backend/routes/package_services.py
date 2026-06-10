@@ -16,7 +16,7 @@ from models.package import (
     PricingModel,
 )
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import re
 import unicodedata
@@ -212,6 +212,35 @@ async def search_services(
 
     # Sort by price (lowest first), then delivery time
     enriched.sort(key=lambda x: (x.get("calculated_price", 0) or 0, x.get("delivery_time_hours", 9999)))
+
+    # --- FOMO inventory enrichment ---------------------------------------
+    # Courier offerings can configure `max_packages_per_day` to throttle daily
+    # intake. If present, we expose `slots_available` = max(0, capacity -
+    # today's confirmed shipments). Offerings without daily capacity gracefully
+    # omit the field — badge stays dormant until they configure it.
+    if enriched:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = today_start + timedelta(days=1)
+        capacity_by_service = {}
+        for s in enriched:
+            cap = s.get("max_packages_per_day") or s.get("daily_capacity")
+            if isinstance(cap, (int, float)) and cap > 0:
+                capacity_by_service[s.get("id") or s.get("_id")] = int(cap)
+        if capacity_by_service:
+            taken_agg = await db.packages.aggregate([
+                {"$match": {
+                    "package_service_id": {"$in": list(capacity_by_service.keys())},
+                    "created_at": {"$gte": today_start, "$lt": tomorrow},
+                    "status": {"$nin": ["cancelled", "abandoned", "failed", "refunded"]},
+                }},
+                {"$group": {"_id": "$package_service_id", "count": {"$sum": 1}}}
+            ]).to_list(None)
+            taken_by_service = {row["_id"]: row["count"] for row in taken_agg}
+            for s in enriched:
+                sid = s.get("id") or s.get("_id")
+                cap = capacity_by_service.get(sid)
+                if cap is not None:
+                    s["slots_available"] = max(0, cap - taken_by_service.get(sid, 0))
 
     return {"services": enriched, "total": len(enriched)}
 

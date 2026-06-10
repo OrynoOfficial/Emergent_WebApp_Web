@@ -26,24 +26,36 @@ async def get_dashboard_analytics(
     """Get dashboard analytics for current user - public for logged-in users"""
     db = get_database()
     
-    # Get user's orders
-    user_orders = await db.orders.find({"user_id": current_user["_id"]}).to_list(1000)
-    
-    # Calculate stats
-    total_orders = len(user_orders)
-    total_spent = sum(order.get("total_amount", 0) for order in user_orders)
-    completed_orders = len([o for o in user_orders if o.get("status") == "completed"])
-    pending_orders = len([o for o in user_orders if o.get("status") == "pending"])
-    
-    # Orders by category
-    orders_by_category = {}
-    for order in user_orders:
-        category = order.get("service_category", "other")
-        orders_by_category[category] = orders_by_category.get(category, 0) + 1
-    
-    # Recent orders (last 7 days)
+    # Single aggregation pipeline computes all stats in MongoDB
     week_ago = datetime.utcnow() - timedelta(days=7)
-    recent_orders = [o for o in user_orders if o.get("created_at", datetime.min) > week_ago]
+    pipeline = [
+        {"$match": {"user_id": current_user["_id"]}},
+        {"$facet": {
+            "totals": [{"$group": {
+                "_id": None,
+                "total_orders": {"$sum": 1},
+                "total_spent": {"$sum": {"$ifNull": ["$total_amount", 0]}},
+                "completed": {"$sum": {"$cond": [{"$eq": ["$status", "completed"]}, 1, 0]}},
+                "pending": {"$sum": {"$cond": [{"$eq": ["$status", "pending"]}, 1, 0]}},
+                "recent": {"$sum": {"$cond": [{"$gt": ["$created_at", week_ago]}, 1, 0]}},
+            }}],
+            "by_category": [
+                {"$group": {
+                    "_id": {"$ifNull": ["$service_category", "other"]},
+                    "count": {"$sum": 1}
+                }}
+            ]
+        }}
+    ]
+    agg_result = await db.orders.aggregate(pipeline).to_list(1)
+    facet = agg_result[0] if agg_result else {"totals": [], "by_category": []}
+    totals = facet["totals"][0] if facet["totals"] else {}
+    total_orders = totals.get("total_orders", 0)
+    total_spent = totals.get("total_spent", 0)
+    completed_orders = totals.get("completed", 0)
+    pending_orders = totals.get("pending", 0)
+    recent_orders_count = totals.get("recent", 0)
+    orders_by_category = {row["_id"]: row["count"] for row in facet["by_category"]}
     
     return {
         "total_orders": total_orders,
@@ -52,7 +64,7 @@ async def get_dashboard_analytics(
         "pending_orders": pending_orders,
         "average_order_value": total_spent / total_orders if total_orders > 0 else 0,
         "orders_by_category": orders_by_category,
-        "recent_orders_count": len(recent_orders)
+        "recent_orders_count": recent_orders_count
     }
 
 @router.get("/admin/overview")
@@ -68,16 +80,18 @@ async def get_admin_analytics(
     total_services = await db.services.count_documents({})
     total_revenue = 0
     
-    # Calculate revenue
-    orders = await db.orders.find({"status": "completed"}).to_list(10000)
-    total_revenue = sum(order.get("total_amount", 0) for order in orders)
+    # Calculate revenue via MongoDB aggregation (no document transfer)
+    revenue_agg = await db.orders.aggregate([
+        {"$match": {"status": "completed"}},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_amount", 0]}}}}
+    ]).to_list(1)
+    total_revenue = revenue_agg[0]["total"] if revenue_agg else 0
     
-    # Orders by status
-    orders_by_status = {}
-    all_orders = await db.orders.find({}).to_list(10000)
-    for order in all_orders:
-        order_status = order.get("status", "unknown")
-        orders_by_status[order_status] = orders_by_status.get(order_status, 0) + 1
+    # Orders by status via MongoDB aggregation
+    status_agg = await db.orders.aggregate([
+        {"$group": {"_id": {"$ifNull": ["$status", "unknown"]}, "count": {"$sum": 1}}}
+    ]).to_list(None)
+    orders_by_status = {row["_id"]: row["count"] for row in status_agg}
     
     return {
         "total_users": total_users,
@@ -120,8 +134,12 @@ async def get_data_analytics_overview(
         # Admin/super admin can filter by specific operator
         order_query["operator_id"] = operator_id
     
-    # Get all orders in period
-    all_orders = await db.orders.find(order_query).to_list(10000)
+    # Get all orders in period — projection trims payload to just the fields we use
+    all_orders = await db.orders.find(
+        order_query,
+        {"_id": 0, "created_at": 1, "total_amount": 1, "status": 1,
+         "service_category": 1, "service_name": 1, "user_id": 1}
+    ).to_list(None)
     
     # Get users - for operators, only count users in their operator
     user_query = {}
@@ -144,8 +162,11 @@ async def get_data_analytics_overview(
     prev_query = {"created_at": {"$gte": prev_start, "$lt": start_date}}
     if effective_operator_id:
         prev_query["operator_id"] = effective_operator_id
-    prev_orders = await db.orders.find(prev_query).to_list(10000)
-    prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders)
+    prev_revenue_agg = await db.orders.aggregate([
+        {"$match": prev_query},
+        {"$group": {"_id": None, "total": {"$sum": {"$ifNull": ["$total_amount", 0]}}}}
+    ]).to_list(1)
+    prev_revenue = prev_revenue_agg[0]["total"] if prev_revenue_agg else 0
     growth_rate = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
     
     # Revenue by service category
@@ -416,9 +437,12 @@ async def get_operator_dashboard_analytics(
     # Build base query with operator filter
     base_filter = get_operator_filter(current_user)
     
-    # Get orders for this operator
+    # Get orders for this operator — projection trims unused fields
     order_query = {**base_filter, "created_at": {"$gte": start_date}}
-    orders = await db.orders.find(order_query).to_list(10000)
+    orders = await db.orders.find(
+        order_query,
+        {"_id": 0, "created_at": 1, "total_amount": 1, "status": 1, "service_category": 1}
+    ).to_list(None)
     
     # Calculate summary stats
     total_orders = len(orders)
@@ -465,11 +489,19 @@ async def get_operator_dashboard_analytics(
     # Calculate growth (compare to previous period)
     prev_start = start_date - timedelta(days=days)
     prev_query = {**base_filter, "created_at": {"$gte": prev_start, "$lt": start_date}}
-    prev_orders = await db.orders.find(prev_query).to_list(10000)
-    prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders)
+    prev_agg = await db.orders.aggregate([
+        {"$match": prev_query},
+        {"$group": {
+            "_id": None,
+            "total_revenue": {"$sum": {"$ifNull": ["$total_amount", 0]}},
+            "count": {"$sum": 1}
+        }}
+    ]).to_list(1)
+    prev_revenue = prev_agg[0]["total_revenue"] if prev_agg else 0
+    prev_count = prev_agg[0]["count"] if prev_agg else 0
     
     revenue_growth = ((total_revenue - prev_revenue) / prev_revenue * 100) if prev_revenue > 0 else 0
-    orders_growth = ((total_orders - len(prev_orders)) / len(prev_orders) * 100) if len(prev_orders) > 0 else 0
+    orders_growth = ((total_orders - prev_count) / prev_count * 100) if prev_count > 0 else 0
     
     # Get operator context info
     operator_context = current_user.get("_operator_context", {})
