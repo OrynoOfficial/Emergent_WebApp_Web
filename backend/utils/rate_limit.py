@@ -73,6 +73,13 @@ limiter = Limiter(
     key_func=get_remote_address,  # default key — IP-based (used by /auth/*)
     enabled=_enabled,
     storage_uri=os.environ.get("RATE_LIMIT_STORAGE", "memory://"),
+    # Fail-open if the configured storage (e.g. Redis) becomes unreachable:
+    # automatically fall back to in-process memory and swallow the connection
+    # exception so requests still succeed. Critical for keeping /auth/login
+    # alive when Redis is down — better to be slightly more permissive than
+    # to return 500s to legitimate users.
+    in_memory_fallback_enabled=True,
+    swallow_errors=True,
 )
 
 
