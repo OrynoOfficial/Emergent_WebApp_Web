@@ -292,13 +292,13 @@ async def get_operator_ratings(
     # Find ratings for these service types
     query = {"entity_type": {"$in": service_types}}
     
-    ratings = await db.ratings.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    ratings = await db.ratings.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Enrich with service and customer details
     enriched_ratings = []
     for rating in ratings:
         enriched = {
-            "id": rating.get("id", str(uuid.uuid4())),
+            "id": rating.get("_id") or rating.get("id"),
             "service_name": rating.get("entity_name", "Service"),
             "service_id": rating.get("entity_id"),
             "service_category": rating.get("entity_type"),
