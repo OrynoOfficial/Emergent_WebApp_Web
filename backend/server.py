@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -118,24 +120,87 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# CORS Configuration
-cors_origins = os.environ.get('CORS_ORIGINS', '*')
+# ─── CORS Configuration ────────────────────────────────────────────────
+# `CORS_ORIGINS` in .env can be:
+#   - `*` (dev only) — we mirror origins via regex so allow_credentials=True
+#     still works (the spec forbids `*` + credentials).
+#   - JSON array `["https://app.example.com","https://admin.example.com"]`.
+#   - Comma-separated `https://app.example.com,https://admin.example.com`.
+# Production: list ONLY your real custom domains (apex + www + any subdomain
+# that hosts the SPA / admin panel). This is what unlocks Cloudflare's
+# "Full (Strict)" SSL mode without breaking cross-origin XHR.
+cors_origins = os.environ.get('CORS_ORIGINS', '*').strip()
+cors_origin_regex = None
 if cors_origins == '*':
-    origins = ["*"]
+    # Mirror any origin while still allowing credentials. Equivalent to
+    # `Access-Control-Allow-Origin: <request Origin>` instead of `*`.
+    origins = []
+    cors_origin_regex = ".*"
 else:
     try:
         import json
-        origins = json.loads(cors_origins) if cors_origins.startswith('[') else cors_origins.split(',')
+        origins = (
+            json.loads(cors_origins)
+            if cors_origins.startswith('[')
+            else [o.strip() for o in cors_origins.split(',') if o.strip()]
+        )
     except Exception:
-        origins = ["*"]
+        origins = []
+        cors_origin_regex = ".*"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Headers the browser is allowed to READ from cross-origin XHR responses.
+    # `Retry-After` is required so frontend exponential backoff sees the
+    # SlowAPI hint; `Idempotency-Key` round-trips it for safe POST retries.
+    expose_headers=["Retry-After", "Idempotency-Key", "X-Request-ID"],
 )
+
+# ─── Trusted hosts ─────────────────────────────────────────────────────
+# Reject requests whose `Host:` header isn't in our allowlist. Defends
+# against Host-header poisoning, password-reset link smuggling, and stops
+# bots that scan the cluster's raw pod IPs from reaching the app.
+#
+# `ALLOWED_HOSTS` in .env: comma-separated; `*` disables the check (dev).
+# Production: `app.yourdomain.com,api.yourdomain.com,yourdomain.com`.
+_allowed_hosts_raw = os.environ.get("ALLOWED_HOSTS", "*").strip()
+_allowed_hosts = (
+    ["*"] if _allowed_hosts_raw == "*"
+    else [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
+)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts)
+
+# ─── Proxy headers (Cloudflare / k8s ingress in front of uvicorn) ──────
+# Without this, `request.url.scheme` is "http" and `request.client.host`
+# is the proxy IP — breaking Stripe success_url, secure-cookie checks, and
+# SlowAPI per-IP keys. We trust `X-Forwarded-Proto` / `X-Forwarded-For` /
+# `X-Forwarded-Host` from ANY upstream (`trusted_hosts="*"`) because in
+# k8s the only thing that can reach uvicorn on :8001 is the ingress.
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+# ─── Default no-store on /api/* (CDN safety) ───────────────────────────
+# Cloudflare aggressively caches anything with `Cache-Control: public` (or
+# nothing). Any route that opts in to edge caching MUST set its own header
+# (see `utils.cache_headers.edge_cache`). Everything else defaults to
+# `no-store` so a JWT-authenticated user's data never leaks across pops.
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class APINoStoreMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/api/") and "cache-control" not in (k.lower() for k in response.headers.keys()):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
+app.add_middleware(APINoStoreMiddleware)
+
 
 # Mount static files for uploads (at /api/static to avoid conflict with /api/uploads router)
 uploads_path = Path(__file__).parent / "uploads"
