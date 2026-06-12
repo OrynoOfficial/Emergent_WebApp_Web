@@ -57,10 +57,10 @@ async def connect_to_mongo():
         retryWrites=True,
         retryReads=True,
     )
-    db.db = db.client[settings.MONGO_DB_NAME]
+    db.db = db.client[settings.effective_db_name]
     logger.info(
         "Connected to MongoDB: %s (pool=%s, read_pref=%s)",
-        settings.MONGO_DB_NAME, db.client.options.pool_options.max_pool_size, pref_name,
+        settings.effective_db_name, db.client.options.pool_options.max_pool_size, pref_name,
     )
 
 

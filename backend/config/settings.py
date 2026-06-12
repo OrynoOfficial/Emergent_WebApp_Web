@@ -8,8 +8,12 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     
     # MongoDB Configuration
+    # Database name resolution order (Emergent platform-injects `DB_NAME`
+    # automatically per app; we keep `MONGO_DB_NAME` as a manual override
+    # for local dev). At runtime use `settings.effective_db_name`.
     MONGO_URL: str
-    MONGO_DB_NAME: str = "oryno_webapp"
+    DB_NAME: str = ""                      # ← Emergent-injected (per-app prefix)
+    MONGO_DB_NAME: str = "oryno_webapp"    # ← manual fallback (local dev)
     
     # JWT Configuration
     SECRET_KEY: str
@@ -66,6 +70,17 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         return json.loads(self.CORS_ORIGINS)
+
+    @property
+    def effective_db_name(self) -> str:
+        """Database name actually used at runtime.
+
+        Emergent injects `DB_NAME` per deployment (e.g.
+        `cinema-management-p0-oryno_webapp`) and the Atlas user is only
+        authorized on that prefixed name. When present we MUST use it;
+        otherwise (local dev / preview) fall back to `MONGO_DB_NAME`.
+        """
+        return self.DB_NAME.strip() or self.MONGO_DB_NAME
     
     class Config:
         env_file = ".env"
