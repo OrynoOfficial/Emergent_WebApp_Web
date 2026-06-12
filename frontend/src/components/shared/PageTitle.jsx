@@ -15,7 +15,7 @@
  *      from the current pathname. Any page that calls usePageTitle / mounts
  *      <PageTitle> overrides this fallback.
  *
- * Output format: "<Page Name> · Oryno"  (or just "Oryno" on the root).
+ * Output format: "Oryno · <Page Name>"  (or just "Oryno" on the root).
  */
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -23,7 +23,7 @@ import { useLocation } from 'react-router-dom';
 const APP_NAME = 'Oryno';
 
 const setTitle = (title) => {
-  const next = title && String(title).trim() ? `${title} · ${APP_NAME}` : APP_NAME;
+  const next = title && String(title).trim() ? `${APP_NAME} · ${title}` : APP_NAME;
   if (typeof document !== 'undefined' && document.title !== next) {
     document.title = next;
   }
