@@ -130,11 +130,13 @@ import InvitationsManagement from './pages/admin/InvitationsManagement';
 import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentCancel from './pages/payment/PaymentCancel';
 import StripeCheckoutConfirm from './pages/payment/StripeCheckoutConfirm';
+import { RouteTitleSync } from './components/shared/PageTitle';
 
 function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <RouteTitleSync />
       {/* Global toast portal — every `toast(...)` call from sonner across the
           app surfaces through this single mounted instance. */}
       <Toaster position="top-right" richColors closeButton expand={false} />
