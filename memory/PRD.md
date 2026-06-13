@@ -5,6 +5,15 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Mobile-App Strategy & "Use the App" Gate (Feb 2026)
+- **Capacitor 7.x scaffold** installed in `/app/frontend/` (`@capacitor/core`, `ios`, `android`, plus `preferences`, `network`, `app`, `status-bar`, `splash-screen`). `capacitor.config.ts` pins `appId=tech.oryno.app`, `appName=Oryno`, `webDir=dist`. Runbook lives at `/app/MOBILE_APP_SETUP.md` — first-time `npx cap add ios && npx cap add android` once the user has Xcode/Android Studio.
+- **Backend gate** `middleware/mobile_gate.py` → `MobileAccessGateMiddleware` registered in `server.py`. Returns HTTP 426 to phone/tablet web traffic (User-Agent regex) when `mobile_access_policy == "mobile_only"`. Bypasses: `/api/auth/*`, super-admin tokens, and any request carrying `X-Oryno-Client: mobile-app/<ver>` (Capacitor sends this automatically from `api/client.js`).
+- **Policy storage**: `routes/system_settings.py` adds `mobile_access_policy: hybrid | mobile_only | web_only` to the same `system_settings` doc. New endpoints: `PUT /api/system-settings/mobile-access-policy` (super-admin only) and `GET /api/system-settings/public/mobile-access-policy` (no-auth — the frontend gate reads it on every page boot, even pre-login).
+- **Frontend gate** `components/MobileAppGate.jsx` + hooks in `utils/mobileGate.js`. Rendered at the root of `App.jsx` so the takeover fires on every route including `/login` and `/register`. Detects mobile via UA regex + coarse pointer + viewport ≤ 1024, AND `!isCapacitorNative` AND `!isStandalonePWA`. Auto-signs-out the user when the gate fires (Salesforce parity).
+- **Super-admin UI**: `Settings → System → Mobile Access Policy` card with three radio-cards (Hybrid / Mobile-app-only / Web-only). Disabled for non-super-admins with an inline notice.
+- Verified end-to-end via Playwright + curl: mobile UA → takeover renders + backend returns 426; desktop UA → no gate, 200; native shell (Capacitor flag injected) → no gate, 200; super-admin on mobile UA → no gate, 200 (escape hatch).
+
+
 ## Protected Super-Admin (Feb 2026)
 - `server.py::ensure_protected_super_admin()` runs on every startup. Idempotent — if a user with `PROTECTED_SUPER_ADMIN_EMAIL` (default `superadmin@oryno.com`) is missing, it is re-created with `role=super_admin, status=active, is_system_account=True, is_protected=True, must_reset_password=True`. Existing accounts only get the flags re-asserted; the password is never overwritten so admins can safely rotate it.
 - Password seed: `PROTECTED_SUPER_ADMIN_PASSWORD` env var (default `testpassword123` for first deploy — the `must_reset_password` flag forces the operator to choose a new password on first sign-in).

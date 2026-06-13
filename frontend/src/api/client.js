@@ -4,11 +4,27 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 console.log('API_URL:', API_URL);
 
+// Build the version-tagged X-Oryno-Client header sent on every request from
+// inside the native Capacitor shell (iOS/Android). The backend mobile-gate
+// middleware uses this header to tell the native app apart from a phone web
+// browser. On the web build `window.Capacitor` is undefined and the header
+// is simply omitted — the same React bundle works in both environments.
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || '0.0.0-dev';
+const isCapacitorNative =
+  typeof window !== 'undefined' &&
+  !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
+const baseHeaders = {
+  'Content-Type': 'application/json',
+};
+if (isCapacitorNative) {
+  const platform = (window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'mobile';
+  baseHeaders['X-Oryno-Client'] = `mobile-app/${APP_VERSION} (${platform})`;
+}
+
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: baseHeaders,
   timeout: 30000, // 30 second timeout
 });
 

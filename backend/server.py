@@ -201,6 +201,13 @@ class APINoStoreMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(APINoStoreMiddleware)
 
+# Salesforce-style "mobile-app-only" gate. Returns HTTP 426 to phone/tablet
+# *web* browsers (never to the native Capacitor shell) whenever the global
+# `mobile_access_policy` setting is set to `mobile_only`. Defense-in-depth:
+# the frontend renders the takeover UI, the backend refuses the request.
+from middleware.mobile_gate import MobileAccessGateMiddleware
+app.add_middleware(MobileAccessGateMiddleware)
+
 
 # Mount static files for uploads (at /api/static to avoid conflict with /api/uploads router)
 uploads_path = Path(__file__).parent / "uploads"

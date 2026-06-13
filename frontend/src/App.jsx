@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import MobileAppGate from './components/MobileAppGate';
 import ScrollToTop from './components/ScrollToTop';
 import { resolveLandingPath } from './utils/operatorLandingPath';
 
@@ -144,6 +145,11 @@ function App() {
       <AuthProvider>
         <PermissionsProvider>
         <NotificationProvider>
+          {/* Salesforce-style mobile gate. Lives at the root so it can fire on
+              every route — login, signup, dashboards — the moment the global
+              policy is `mobile_only` and the user is on a phone/tablet web
+              browser. Self-renders to `null` otherwise. */}
+          <MobileAppGate />
           <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />

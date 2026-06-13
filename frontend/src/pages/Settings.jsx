@@ -311,6 +311,14 @@ export default function Settings() {
     saveSuccess: false,
   });
 
+  // Mobile access policy (Salesforce-style "use the app" gate)
+  const [mobilePolicy, setMobilePolicy] = useState({
+    mobile_access_policy: 'hybrid',
+    loading: true,
+    saving: false,
+    saveSuccess: false,
+  });
+
   // Content data (Data Protection, Legal, About)
   const [contentData, setContentData] = useState({
     data_protection: { title: '', content: '' },
@@ -375,9 +383,9 @@ export default function Settings() {
     }
   }, [user]);
 
-  // Load session timeout settings for admins
+  // Load session timeout & mobile policy settings for admins
   useEffect(() => {
-    const loadSessionTimeoutSettings = async () => {
+    const loadSystemSettings = async () => {
       if (user?.role === 'admin' || user?.role === 'super_admin') {
         try {
           const response = await api.get('/system-settings/');
@@ -389,15 +397,21 @@ export default function Settings() {
               max_session_timeout: response.data.max_session_timeout,
               loading: false,
             }));
+            setMobilePolicy(prev => ({
+              ...prev,
+              mobile_access_policy: response.data.mobile_access_policy || 'hybrid',
+              loading: false,
+            }));
           }
         } catch (error) {
-          console.log('Could not load session timeout settings:', error);
+          console.log('Could not load system settings:', error);
           setSessionTimeoutConfig(prev => ({ ...prev, loading: false }));
+          setMobilePolicy(prev => ({ ...prev, loading: false }));
         }
       }
     };
     
-    loadSessionTimeoutSettings();
+    loadSystemSettings();
   }, [user?.role]);
 
   // Handle avatar upload
@@ -576,6 +590,33 @@ export default function Settings() {
       toast.error(error.response?.data?.detail || 'Failed to update session timeout');
     } finally {
       setSessionTimeoutConfig(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleSaveMobilePolicy = async (nextValue) => {
+    const prevValue = mobilePolicy.mobile_access_policy;
+    setMobilePolicy(prev => ({
+      ...prev,
+      mobile_access_policy: nextValue,
+      saving: true,
+      saveSuccess: false,
+    }));
+    try {
+      await api.put('/system-settings/mobile-access-policy', {
+        mobile_access_policy: nextValue,
+      });
+      toast.success(`Mobile access policy set to "${nextValue.replace('_', ' ')}"`);
+      setMobilePolicy(prev => ({ ...prev, saveSuccess: true }));
+      setTimeout(() => {
+        setMobilePolicy(prev => ({ ...prev, saveSuccess: false }));
+      }, 3000);
+    } catch (error) {
+      console.error('Mobile policy save error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to update mobile access policy');
+      // Roll back the optimistic update on failure
+      setMobilePolicy(prev => ({ ...prev, mobile_access_policy: prevValue }));
+    } finally {
+      setMobilePolicy(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -1364,6 +1405,100 @@ export default function Settings() {
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Mobile Access Policy — Salesforce-style "use the app" gate */}
+            <div className="bg-gradient-to-br from-slate-50 to-indigo-50/50 rounded-xl border border-slate-200 overflow-hidden" data-testid="mobile-access-policy-card">
+              <div className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-indigo-100 rounded-lg">
+                      <Smartphone className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">Mobile Access Policy</h4>
+                      <p className="text-sm text-slate-500 mt-0.5">
+                        Control whether phones and tablets can use the web app or must use the native Oryno app.
+                      </p>
+                    </div>
+                  </div>
+                  {mobilePolicy.saveSuccess && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium animate-pulse">
+                      <Check className="h-4 w-4" />
+                      Saved
+                    </div>
+                  )}
+                </div>
+
+                {mobilePolicy.loading ? (
+                  <div className="flex items-center gap-2 text-slate-500 mt-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Loading policy...</span>
+                  </div>
+                ) : (
+                  <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      {
+                        value: 'hybrid',
+                        label: 'Hybrid',
+                        desc: 'Phones, tablets & desktops all welcome on web. (Default — keep this until the native apps ship.)',
+                        accent: 'border-slate-200 bg-white',
+                        active: 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/60',
+                      },
+                      {
+                        value: 'mobile_only',
+                        label: 'Mobile-app-only',
+                        desc: 'Phones & tablets must use the Oryno app. Web browser on those devices gets a takeover screen.',
+                        accent: 'border-slate-200 bg-white',
+                        active: 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/60',
+                      },
+                      {
+                        value: 'web_only',
+                        label: 'Web only (emergency)',
+                        desc: 'Disable the gate entirely. Use this only if the native apps go down.',
+                        accent: 'border-slate-200 bg-white',
+                        active: 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-50/60',
+                      },
+                    ].map(opt => {
+                      const isActive = mobilePolicy.mobile_access_policy === opt.value;
+                      const disabled = user?.role !== 'super_admin' || mobilePolicy.saving;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => handleSaveMobilePolicy(opt.value)}
+                          data-testid={`mobile-policy-option-${opt.value}`}
+                          className={`text-left p-4 rounded-xl border transition-all ${
+                            isActive ? opt.active : opt.accent
+                          } ${disabled ? 'cursor-not-allowed opacity-60' : 'hover:border-indigo-400 hover:shadow-sm'}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-slate-900 text-sm">{opt.label}</span>
+                            {isActive && <Check className="h-4 w-4 text-indigo-600" />}
+                          </div>
+                          <p className="text-xs text-slate-600 leading-relaxed">{opt.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {user?.role !== 'super_admin' && !mobilePolicy.loading && (
+                  <div className="flex items-center gap-2 p-3 mt-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <p className="text-sm text-amber-700">
+                      Only Super Admins can modify the mobile access policy.
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500 mt-4">
+                  Super-admins are always allowed through the gate as an escape hatch. The native app sends a
+                  signed <code className="bg-slate-100 px-1.5 py-0.5 rounded">X-Oryno-Client</code> header so the
+                  backend can tell it apart from a phone web browser.
+                </p>
               </div>
             </div>
 
