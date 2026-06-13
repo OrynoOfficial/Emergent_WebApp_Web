@@ -23,6 +23,9 @@ from middleware.auth import get_current_active_user, invalidate_user_cache
 from datetime import datetime, timedelta
 import uuid
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -356,11 +359,32 @@ async def forgot_password(payload: ForgotPasswordRequest, request: Request):
             # lets the user copy it from the modal as a fallback.
             resp["dispatched"] = False
     else:
-        # SMS dispatch is not yet wired (no Twilio integration). Surface
-        # the OTP in the response so dev/QA can test; production should
-        # toggle this off via `SMS_DISPATCH_ENABLED`.
-        resp["otp"] = token if os.environ.get("SMS_DISPATCH_ENABLED", "false").lower() != "true" else None
+        # Phone branch. Production behaviour controlled by `SMS_DISPATCH_ENABLED`:
+        #   • OFF (default) → return the OTP in the JSON response so dev/QA can
+        #     complete the flow without a real handset.
+        #   • ON → never expose the OTP. Dispatch via Infobip SMS instead and
+        #     report `dispatched=true|false` so the frontend can render a
+        #     "code on its way" toast vs. an "SMS service unavailable" error.
+        sms_dispatch = os.environ.get("SMS_DISPATCH_ENABLED", "false").lower() == "true"
         resp["dispatched"] = False
+        if sms_dispatch:
+            phone_number = user.get("phone")
+            if phone_number:
+                try:
+                    from services.infobip_service import get_infobip_service
+                    result = await get_infobip_service().send_sms_otp(phone_number, token)
+                    resp["dispatched"] = (result.get("status") == "success")
+                except Exception as exc:  # pragma: no cover — defensive
+                    logger.exception("SMS dispatch failed for %s: %s", user.get("_id"), exc)
+            if not resp["dispatched"]:
+                # Don't leak the OTP via the error — surface a generic failure.
+                raise HTTPException(
+                    status_code=503,
+                    detail="SMS service is temporarily unavailable. Please try again shortly or use email reset.",
+                )
+        else:
+            # Sandbox: return the OTP so the agent / QA can complete the flow.
+            resp["otp"] = token
 
     return resp
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Smartphone, Download, Monitor, ShieldCheck } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { Smartphone, Monitor, Apple, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -38,7 +38,7 @@ export default function MobileAppGate() {
   const isNative = useIsCapacitorNative();
   const isMobileWeb = useIsMobileWebBrowser();
   const { policy, loading } = useMobileAccessPolicy();
-  const [signedOut, setSignedOut] = useState(false);
+  const signedOutRef = useRef(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
   const shouldGate =
@@ -47,21 +47,19 @@ export default function MobileAppGate() {
   // Sign the user out (once) as soon as we decide to gate them. Matches
   // Salesforce's "you can't be here, here's your boot" behaviour.
   useEffect(() => {
-    if (shouldGate && !signedOut && user) {
+    if (shouldGate && !signedOutRef.current && user) {
+      signedOutRef.current = true;
       try {
         logout();
       } catch {
         // best-effort — even if logout throws, we still render the takeover
       }
-      setSignedOut(true);
     }
-  }, [shouldGate, signedOut, user, logout]);
+  }, [shouldGate, user, logout]);
 
   if (!shouldGate) return null;
 
   const os = detectMobileOS();
-  const storeHref = os === 'android' ? PLAY_STORE_URL : APP_STORE_URL;
-  const storeLabel = os === 'android' ? 'Get it on Google Play' : 'Download on the App Store';
 
   return (
     <div
@@ -75,65 +73,52 @@ export default function MobileAppGate() {
           <div className="mx-auto h-16 w-16 rounded-2xl bg-white/15 flex items-center justify-center mb-4">
             <Smartphone className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Oryno is mobile-app-only</h1>
-          <p className="mt-2 text-sm text-white/80 leading-relaxed">
-            For security &amp; performance, your organisation requires the
-            Oryno app on phones and tablets.
+          <h1 className="text-2xl font-semibold tracking-tight">Get the Oryno app</h1>
+          <p className="mt-2 text-sm text-white/85 leading-relaxed">
+            On phones, Oryno runs as a native app.
           </p>
         </div>
 
         <div className="px-6 py-6 space-y-4">
-          <a
-            href={storeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-            data-testid="mobile-gate-install-cta"
-          >
-            <Button className="w-full h-12 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl">
-              <Download className="mr-2 h-5 w-5" /> {storeLabel}
-            </Button>
-          </a>
-
-          {os === 'unknown' && (
-            <div className="flex gap-3">
-              <a
-                href={APP_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
-                data-testid="mobile-gate-app-store"
+          {/* Always show both store buttons so iOS and Android users can grab the
+              right one on the spot. */}
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mobile-gate-app-store"
+            >
+              <Button
+                variant={os === 'android' ? 'outline' : 'default'}
+                className={`w-full h-12 rounded-xl font-medium ${
+                  os === 'ios' ? 'bg-[#082c59] hover:bg-[#0a3a75] text-white' : ''
+                }`}
               >
-                <Button variant="outline" className="w-full h-11 rounded-xl">
-                  iOS · App Store
-                </Button>
-              </a>
-              <a
-                href={PLAY_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1"
-                data-testid="mobile-gate-play-store"
+                <Apple className="mr-2 h-5 w-5" /> App Store
+              </Button>
+            </a>
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mobile-gate-play-store"
+            >
+              <Button
+                variant={os === 'ios' ? 'outline' : 'default'}
+                className={`w-full h-12 rounded-xl font-medium ${
+                  os === 'android' ? 'bg-[#082c59] hover:bg-[#0a3a75] text-white' : ''
+                }`}
               >
-                <Button variant="outline" className="w-full h-11 rounded-xl">
-                  Android · Play Store
-                </Button>
-              </a>
-            </div>
-          )}
-
-          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 flex items-start gap-3">
-            <Monitor className="h-5 w-5 text-slate-500 flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-slate-600 leading-relaxed">
-              Need to keep working right now? Open <span className="font-medium">app.oryno.tech</span> from a desktop or laptop — the web app stays available there.
-            </div>
+                <Play className="mr-2 h-5 w-5" /> Google Play
+              </Button>
+            </a>
           </div>
 
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-start gap-3">
-            <ShieldCheck className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-emerald-800 leading-relaxed">
-              You&apos;ve been signed out of this browser session for security.
-              Sign back in inside the Oryno app once installed.
+          <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 flex items-center gap-3">
+            <Monitor className="h-5 w-5 text-slate-500 flex-shrink-0" />
+            <div className="text-sm text-slate-700">
+              On a laptop? Use <span className="font-medium text-[#082c59]">app.oryno.tech</span>.
             </div>
           </div>
         </div>
