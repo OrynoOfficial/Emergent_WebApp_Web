@@ -17,7 +17,7 @@ export const AUTH_VIEWS = {
 // one constant.
 export const MARKETING_SITE = 'https://oryno.tech';
 export const MARKETING_LINKS = {
-  HOME:     MARKETING_SITE,
+  HOME:     `${MARKETING_SITE}/hero`,
   TERMS:    `${MARKETING_SITE}/terms`,
   PRIVACY:  `${MARKETING_SITE}/privacy`,
   CONTACT:  `${MARKETING_SITE}/contact`,

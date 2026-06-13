@@ -14,7 +14,7 @@
 - **Customer self-service password reset** — new `/api/auth/forgot-password` + `/api/auth/reset-password` endpoints. Both **email magic-link** (Resend) and **phone OTP** (`generate_phone_otp`, surfaced as sandbox-OTP until SMS provider is wired). Operators / team members are blocked by role-check + `operator_id` presence → HTTP 403.
 - **New `pages/auth/ForgotPasswordView.jsx`** modal: stage machine `request → sent | reset → done`. Used from the in-modal "Forgot password?" link inside step 2 of login.
 - **New `pages/auth/ResetPassword.jsx`** standalone page (`/reset-password?token=…`) — landing page for the email magic link.
-- **MARKETING_LINKS constant** in `pages/auth/AuthConstants.jsx` — `HOME/TERMS/PRIVACY/CONTACT` all pinned to `https://oryno.tech/...`. Every Welcome/Signup/OperatorContact CTA now opens in a new tab via `target=_blank rel="noopener noreferrer"`.
+- **MARKETING_LINKS constant** in `pages/auth/AuthConstants.jsx` — `HOME/TERMS/PRIVACY/CONTACT` all pinned to `https://oryno.tech/...`. `HOME` points to `/hero` (anchor on marketing site) to bypass 301 redirect in production. Every Welcome/Signup/OperatorContact CTA now opens in a new tab via `target=_blank rel="noopener noreferrer"`.
 
 ### Phase B — Page-fill (full-width layouts)
 - Mass surgical edit across **49 files** in `pages/` + `components/`: removed `max-w-{3,4,5,6,7}xl mx-auto` wrappers from page roots. `max-w-md` and `max-w-lg` cards (empty-states, narrow forms) preserved.
