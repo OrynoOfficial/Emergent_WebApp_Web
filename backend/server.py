@@ -213,6 +213,9 @@ async def startup_event():
     """Connect to MongoDB on startup and seed test users"""
     await connect_to_mongo()
     await seed_test_users()
+    # Always ensure a protected, un-deletable super-admin exists. Idempotent — safe
+    # to re-run on every restart in both preview and production.
+    await ensure_protected_super_admin()
     # Bootstrap notification indexes + one-shot dedupe (safe on every restart)
     try:
         from utils.notifications import ensure_notification_indexes, dedupe_existing_notifications
@@ -365,6 +368,76 @@ async def seed_test_users():
         upsert=True
     )
     logger.info("User seeding marked as complete")
+
+async def ensure_protected_super_admin():
+    """Guarantee a protected, un-deletable super-admin exists in every environment.
+
+    Behaviour (idempotent — safe on every startup):
+      • Reads ``PROTECTED_SUPER_ADMIN_EMAIL`` and ``PROTECTED_SUPER_ADMIN_PASSWORD``
+        from the environment. Falls back to ``superadmin@oryno.com`` /
+        ``testpassword123`` so first-deploys work without manual config.
+      • If a user with that email already exists, it is *upgraded* in place:
+        role bumped to ``super_admin``, ``is_system_account=True``,
+        ``status=active``. The password is **never** overwritten on an existing
+        account — the operator/super-admin can rotate it via the regular reset
+        flow.
+      • If no such user exists, a fresh super-admin row is inserted with the
+        password hash derived from ``PROTECTED_SUPER_ADMIN_PASSWORD``.
+      • Deletion of any user with ``is_system_account=True`` is blocked by the
+        ``DELETE /api/users/{id}`` route, so production can never end up with
+        zero super-admin accounts.
+    """
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    db = get_database()
+    if db is None:
+        logger.warning("Database not available — skipping protected super-admin seed")
+        return
+
+    email = os.environ.get("PROTECTED_SUPER_ADMIN_EMAIL", "superadmin@oryno.com").strip().lower()
+    password = os.environ.get("PROTECTED_SUPER_ADMIN_PASSWORD", "testpassword123")
+    if not email or not password:
+        logger.warning("PROTECTED_SUPER_ADMIN_* env vars empty — skipping seed")
+        return
+
+    now = datetime.now(timezone.utc)
+    existing = await db.users.find_one({"email": email})
+
+    if existing:
+        # Upgrade in place — never clobber the password an admin may have rotated.
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "role": "super_admin",
+                "status": "active",
+                "email_verified": True,
+                "is_system_account": True,
+                "is_protected": True,
+                "updated_at": now,
+            }}
+        )
+        logger.info("Protected super-admin %s already present — flags reasserted", email)
+        return
+
+    user_doc = {
+        "_id": str(uuid.uuid4()),
+        "email": email,
+        "username": email.split("@")[0],
+        "password_hash": pwd_context.hash(password),
+        "full_name": "Super Admin",
+        "phone": "+237600000000",
+        "role": "super_admin",
+        "status": "active",
+        "email_verified": True,
+        "two_fa_enabled": False,
+        "is_system_account": True,
+        "is_protected": True,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.users.insert_one(user_doc)
+    logger.info("Protected super-admin %s provisioned (system account, un-deletable)", email)
 
 @app.on_event("shutdown")
 async def shutdown_event():

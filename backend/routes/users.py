@@ -629,6 +629,15 @@ async def delete_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Block deletion of protected system accounts (e.g. bootstrap super-admin).
+    # These are seeded on startup and must always exist so a tenant can never
+    # accidentally lock themselves out of the platform.
+    if target_user.get("is_system_account") is True or target_user.get("is_protected") is True:
+        raise HTTPException(
+            status_code=403,
+            detail="This is a protected system account and cannot be deleted."
+        )
+    
     # Check role hierarchy - can only delete users with lower role
     if not can_manage_role(current_user["role"], target_user.get("role", "customer")):
         raise HTTPException(status_code=403, detail="Cannot delete user with equal or higher role")

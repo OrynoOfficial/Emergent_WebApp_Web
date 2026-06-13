@@ -5,6 +5,11 @@
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
+## Protected Super-Admin (Feb 2026)
+- `server.py::ensure_protected_super_admin()` runs on every startup. Idempotent — if a user with `PROTECTED_SUPER_ADMIN_EMAIL` (default `superadmin@oryno.com`) is missing, it is re-created with `role=super_admin, status=active, is_system_account=True, is_protected=True`. Existing accounts only get the flags re-asserted; the password is never overwritten so admins can safely rotate it.
+- Password seed: `PROTECTED_SUPER_ADMIN_PASSWORD` env var (default `testpassword123` for first deploy — must be rotated in production via the reset-password flow).
+- Deletion guard: `DELETE /api/users/{id}` returns HTTP 403 "This is a protected system account and cannot be deleted." whenever the target row carries either `is_system_account` or `is_protected` set to `True`. Verified via curl test.
+
 
 ## Phase A / B / C — Login UX + Page-fill + Bigger Modals (iter 205)
 
