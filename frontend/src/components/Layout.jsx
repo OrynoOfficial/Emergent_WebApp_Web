@@ -580,7 +580,7 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 lg:ml-72">
         {/* Top bar */}
-        <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 lg:px-8 py-4 sticky top-0 z-30 shadow-sm">
+        <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 lg:px-8 py-4 sticky top-0 z-30 shadow-sm safe-area-top">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button

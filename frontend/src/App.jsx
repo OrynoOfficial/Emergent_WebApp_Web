@@ -5,6 +5,8 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MobileAppGate from './components/MobileAppGate';
+import OfflineBanner from './components/OfflineBanner';
+import NativeBridge from './components/NativeBridge';
 import ScrollToTop from './components/ScrollToTop';
 import { resolveLandingPath } from './utils/operatorLandingPath';
 
@@ -138,6 +140,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <NativeBridge />
       <RouteTitleSync />
       {/* Global toast portal — every `toast(...)` call from sonner across the
           app surfaces through this single mounted instance. */}
@@ -150,6 +153,10 @@ function App() {
               policy is `mobile_only` and the user is on a phone/tablet web
               browser. Self-renders to `null` otherwise. */}
           <MobileAppGate />
+          {/* Native-aware offline strip. Renders null whenever the device is
+              online; on Capacitor it listens to true network status, on web
+              it falls back to navigator.onLine. */}
+          <OfflineBanner />
           <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
