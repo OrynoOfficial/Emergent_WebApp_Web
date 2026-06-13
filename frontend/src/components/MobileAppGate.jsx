@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Monitor } from 'lucide-react';
+import { Home } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   useIsCapacitorNative,
@@ -89,6 +89,13 @@ export default function MobileAppGate() {
   const shouldGate =
     !loading && !isNative && isMobileWeb && policy === 'mobile_only' && !isSuperAdmin;
 
+  // Anti-flash curtain: while we're still resolving the policy on a mobile-web
+  // browser, drop an opaque background over the page so the user never gets
+  // to see the signin form blink past. If the policy ends up being `hybrid`,
+  // the curtain unmounts the moment `loading` flips to false and the rest of
+  // the app renders normally underneath.
+  const showLoadingCurtain = loading && !isNative && isMobileWeb && !isSuperAdmin;
+
   // Sign the user out (once) as soon as we decide to gate them. Matches
   // Salesforce's "you can't be here, here's your boot" behaviour.
   useEffect(() => {
@@ -101,6 +108,18 @@ export default function MobileAppGate() {
       }
     }
   }, [shouldGate, user, logout]);
+
+  // Curtain while we're resolving the policy on a mobile UA — prevents the
+  // login form from flashing on screen before the gate renders.
+  if (showLoadingCurtain) {
+    return (
+      <div
+        className="fixed inset-0 z-[9999] bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#082c59]"
+        data-testid="mobile-app-gate-curtain"
+        aria-hidden="true"
+      />
+    );
+  }
 
   if (!shouldGate) return null;
 
@@ -179,11 +198,33 @@ export default function MobileAppGate() {
             target="_blank"
             rel="noopener noreferrer"
             data-testid="mobile-gate-homepage"
-            className="mt-1 flex items-center justify-center gap-2 w-full h-11 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
+            aria-label="Visit the Oryno homepage"
+            className="mx-auto mt-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:text-[#082c59] hover:border-[#082c59] hover:bg-slate-50 transition-all"
           >
-            <Monitor className="h-4 w-4" />
-            Visit the Oryno homepage
+            <Home className="h-4 w-4" />
           </a>
+
+          <div className="flex items-center justify-center gap-3 pt-1 text-[11px] text-slate-500">
+            <a
+              href={MARKETING_LINKS.TERMS}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mobile-gate-terms"
+              className="hover:text-[#082c59] hover:underline"
+            >
+              Terms of Use
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href={MARKETING_LINKS.PRIVACY}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mobile-gate-privacy"
+              className="hover:text-[#082c59] hover:underline"
+            >
+              Privacy Policy
+            </a>
+          </div>
         </div>
       </div>
     </div>

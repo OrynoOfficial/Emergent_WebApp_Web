@@ -70,10 +70,24 @@ export function useIsMobileWebBrowser() {
 }
 
 export function useMobileAccessPolicy() {
-  // Default to 'hybrid' so the gate stays OFF unless we successfully fetch a
-  // stricter policy from the server. Failing closed here would lock everyone
-  // out the moment the backend hiccups — failing open is the right default.
-  const [policy, setPolicy] = useState('hybrid');
+  // Cache the last-known policy in localStorage so repeat visits don't flash
+  // the login page before the gate decision lands. First-ever visit to a
+  // device still defaults to 'hybrid' (fail-open), but the MobileAppGate
+  // component renders an extra "curtain" while loading on a mobile UA so
+  // even that first visit doesn't expose the signin page.
+  const CACHE_KEY = 'oryno_mobile_policy';
+  const initial = (() => {
+    if (typeof window === 'undefined') return 'hybrid';
+    try {
+      const cached = window.localStorage.getItem(CACHE_KEY);
+      return cached === 'mobile_only' || cached === 'web_only' || cached === 'hybrid'
+        ? cached
+        : 'hybrid';
+    } catch {
+      return 'hybrid';
+    }
+  })();
+  const [policy, setPolicy] = useState(initial);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,9 +95,13 @@ export function useMobileAccessPolicy() {
     (async () => {
       try {
         const { data } = await api.get('/system-settings/public/mobile-access-policy');
-        if (!cancelled) setPolicy(data?.mobile_access_policy || 'hybrid');
+        const next = data?.mobile_access_policy || 'hybrid';
+        if (!cancelled) {
+          setPolicy(next);
+          try { window.localStorage.setItem(CACHE_KEY, next); } catch { /* ignore */ }
+        }
       } catch {
-        if (!cancelled) setPolicy('hybrid');
+        if (!cancelled) setPolicy(prev => prev || 'hybrid');
       } finally {
         if (!cancelled) setLoading(false);
       }
