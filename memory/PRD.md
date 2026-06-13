@@ -6,9 +6,11 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 ## Protected Super-Admin (Feb 2026)
-- `server.py::ensure_protected_super_admin()` runs on every startup. Idempotent — if a user with `PROTECTED_SUPER_ADMIN_EMAIL` (default `superadmin@oryno.com`) is missing, it is re-created with `role=super_admin, status=active, is_system_account=True, is_protected=True`. Existing accounts only get the flags re-asserted; the password is never overwritten so admins can safely rotate it.
-- Password seed: `PROTECTED_SUPER_ADMIN_PASSWORD` env var (default `testpassword123` for first deploy — must be rotated in production via the reset-password flow).
+- `server.py::ensure_protected_super_admin()` runs on every startup. Idempotent — if a user with `PROTECTED_SUPER_ADMIN_EMAIL` (default `superadmin@oryno.com`) is missing, it is re-created with `role=super_admin, status=active, is_system_account=True, is_protected=True, must_reset_password=True`. Existing accounts only get the flags re-asserted; the password is never overwritten so admins can safely rotate it.
+- Password seed: `PROTECTED_SUPER_ADMIN_PASSWORD` env var (default `testpassword123` for first deploy — the `must_reset_password` flag forces the operator to choose a new password on first sign-in).
 - Deletion guard: `DELETE /api/users/{id}` returns HTTP 403 "This is a protected system account and cannot be deleted." whenever the target row carries either `is_system_account` or `is_protected` set to `True`. Verified via curl test.
+- **Forced rotation modal** (`components/ForcePasswordResetModal.jsx` + `ProtectedRoute`): a non-dismissible dialog (Escape / overlay click blocked) appears on every protected route while `user.must_reset_password === true`. Calls `POST /api/auth/change-password` (which now invalidates the 60s per-user cache via `invalidate_user_cache`) then `reAuthenticate()` so the flag flips to false instantly and the dialog unmounts. Frontend rules enforced live: 8+ chars, upper, lower, digit, symbol, and new ≠ current.
+- `ui/dialog.jsx` now accepts `showCloseButton={false}` to support truly blocking dialogs without an X corner.
 
 
 ## Phase A / B / C — Login UX + Page-fill + Bigger Modals (iter 205)

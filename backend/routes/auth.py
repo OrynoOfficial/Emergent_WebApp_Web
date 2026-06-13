@@ -19,7 +19,7 @@ from utils.rate_limit import (
     AUTH_LOGIN_RATE, AUTH_REGISTER_RATE, AUTH_RESEND_RATE, AUTH_VERIFY_RATE,
 )
 from config.database import get_database
-from middleware.auth import get_current_active_user
+from middleware.auth import get_current_active_user, invalidate_user_cache
 from datetime import datetime, timedelta
 import uuid
 import os
@@ -580,12 +580,32 @@ async def change_password(
                 detail="New password must be at least 8 characters"
             )
         
-        # Update password
+        # Prevent reusing the same password (especially important for forced rotation)
+        if new_password == current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from your current password"
+            )
+        
+        # Update password and clear any pending forced-rotation flag
         new_hash = get_password_hash(new_password)
         await db.users.update_one(
             {"_id": current_user["_id"]},
-            {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}}
+            {"$set": {
+                "password_hash": new_hash,
+                "must_reset_password": False,
+                "password_rotated_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }}
         )
+
+        # Drop the per-user cache so the next /auth/me reflects the new state
+        # immediately (otherwise the frontend would still see the old
+        # `must_reset_password=True` for up to 60s).
+        try:
+            await invalidate_user_cache(str(current_user["_id"]))
+        except Exception:
+            pass
         
         return {"message": "Password changed successfully"}
         

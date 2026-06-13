@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from './Layout';
+import ForcePasswordResetModal from './ForcePasswordResetModal';
 import { useState, useEffect } from 'react';
 
 // Role hierarchy - super_admin should have access to all admin routes
@@ -79,5 +80,15 @@ export default function ProtectedRoute({ children, requiredRoles = [], bare = fa
     );
   }
 
-  return bare ? <>{children}</> : <Layout>{children}</Layout>;
+  return bare ? (
+    <>
+      {children}
+      {effectiveUser?.must_reset_password && <ForcePasswordResetModal />}
+    </>
+  ) : (
+    <Layout>
+      {children}
+      {effectiveUser?.must_reset_password && <ForcePasswordResetModal />}
+    </Layout>
+  );
 }

@@ -433,6 +433,7 @@ async def ensure_protected_super_admin():
         "two_fa_enabled": False,
         "is_system_account": True,
         "is_protected": True,
+        "must_reset_password": True,   # force rotation on first sign-in
         "created_at": now,
         "updated_at": now,
     }
