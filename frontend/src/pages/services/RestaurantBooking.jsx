@@ -311,7 +311,7 @@ export default function RestaurantBooking() {
       
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-4">
+        <div className="max-w-[1344px] mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
             <div>
@@ -322,7 +322,7 @@ export default function RestaurantBooking() {
         </div>
       </div>
       
-      <div className="px-4 py-8">
+      <div className="max-w-[1344px] mx-auto px-4 py-8">
         {/* Step Indicator */}
         <RestaurantStepIndicator currentStep={restaurantCurrentStep} />
 

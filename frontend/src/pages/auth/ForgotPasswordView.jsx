@@ -16,15 +16,17 @@
  * mode. In production we render them only as a fallback notice — never
  * the OTP itself in the success card.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Mail, Phone, ArrowLeft, Loader2, Eye, EyeOff, Lock, CheckCircle2, KeyRound,
+  Mail, Phone, ArrowLeft, Loader2, Eye, EyeOff, Lock, CheckCircle2, KeyRound, RotateCw,
 } from 'lucide-react';
 import { FormModal, AUTH_VIEWS } from './AuthConstants';
 import api from '../../api/client';
+
+const RESEND_COOLDOWN_SEC = 45;  // ← hide brute-force; mirrors AUTH_RESEND_RATE
 
 export function ForgotPasswordView({ setCurrentView }) {
   const [stage, setStage] = useState('request');  // request → sent → reset → done
@@ -38,6 +40,26 @@ export function ForgotPasswordView({ setCurrentView }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState(null);   // { reset_link?, otp?, dispatched }
+
+  // ─── Resend OTP countdown ─────────────────────────────────────────
+  // Re-arms whenever the OTP request succeeds. The button is disabled
+  // until the countdown hits 0 so the user can't hammer SMS dispatch.
+  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+  const tickRef = useRef(null);
+
+  useEffect(() => {
+    if (cooldown <= 0) {
+      if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+      return;
+    }
+    tickRef.current = setInterval(() => {
+      setCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => {
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+  }, [cooldown]);
 
   const submitRequest = useCallback(async (e) => {
     e?.preventDefault();
@@ -56,6 +78,7 @@ export function ForgotPasswordView({ setCurrentView }) {
       // Email → user clicks the link in their inbox. We surface the link
       // here only as a sandbox fallback. Phone → continue inline.
       setStage(method === 'phone' ? 'reset' : 'sent');
+      if (method === 'phone') setCooldown(RESEND_COOLDOWN_SEC);
     } catch (err) {
       const detail = err?.response?.data?.detail;
       setError(detail || 'Something went wrong. Please try again.');
@@ -63,6 +86,29 @@ export function ForgotPasswordView({ setCurrentView }) {
       setBusy(false);
     }
   }, [method, identifier]);
+
+  const resendOtp = useCallback(async () => {
+    if (cooldown > 0 || resending) return;
+    setError('');
+    setResending(true);
+    try {
+      const { data } = await api.post('/auth/forgot-password', {
+        method: 'phone',
+        identifier: identifier.trim(),
+      });
+      // Keep the user's currently-typed OTP — they likely just want a
+      // fresh code because the old one expired / never arrived. Surface
+      // the new sandbox code if any so dev can re-enter it.
+      setInfo(data);
+      setOtp('');
+      setCooldown(RESEND_COOLDOWN_SEC);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      setError(detail || 'Could not resend code. Please try again in a moment.');
+    } finally {
+      setResending(false);
+    }
+  }, [cooldown, resending, identifier]);
 
   const submitReset = useCallback(async (e) => {
     e?.preventDefault();
@@ -205,7 +251,21 @@ export function ForgotPasswordView({ setCurrentView }) {
           </div>
 
           <div>
-            <Label className="text-slate-700 text-sm">Verification Code</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-slate-700 text-sm">Verification Code</Label>
+              <button
+                type="button"
+                onClick={resendOtp}
+                disabled={cooldown > 0 || resending}
+                className="text-xs font-medium text-[#082c59] disabled:text-slate-400 disabled:cursor-not-allowed inline-flex items-center gap-1 hover:underline disabled:no-underline"
+                data-testid="forgot-resend-otp-btn"
+              >
+                <RotateCw className={`h-3 w-3 ${resending ? 'animate-spin' : ''}`} />
+                {cooldown > 0
+                  ? `Resend in ${cooldown}s`
+                  : (resending ? 'Sending…' : 'Resend code')}
+              </button>
+            </div>
             <Input
               inputMode="numeric"
               pattern="[0-9]{6}"

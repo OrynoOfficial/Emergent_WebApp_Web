@@ -53,7 +53,7 @@ export default function CinemaSearch() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
       <div className="bg-[#082c59] text-white py-16">
-        <div className="px-4 text-center">
+        <div className="max-w-4xl mx-auto px-4 text-center">
           <Film className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
           <h1 className="text-4xl font-bold mb-4">Cinema & Movies</h1>
           <p className="text-lg text-slate-200">Find movies and book tickets at cinemas near you</p>
@@ -61,7 +61,7 @@ export default function CinemaSearch() {
       </div>
 
       {/* Search Form */}
-      <div className="px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-8">
         <Card className="shadow-xl">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="space-y-6">
@@ -134,7 +134,7 @@ export default function CinemaSearch() {
       </div>
 
       {/* Features Section */}
-      <div className="px-4 py-16">
+      <div className="max-w-6xl mx-auto px-4 py-16">
         <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Book With Us?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">

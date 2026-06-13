@@ -184,42 +184,45 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-5xl w-[95vw] max-h-[92vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80 [&>button]:hidden"
+        className="max-w-5xl w-[95vw] max-h-[92vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-white [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <div className="px-6 py-4 border-b border-slate-200/60 bg-gradient-to-r from-[#082c59]/[0.06] to-slate-100/50">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+        {/* ── Header — deep navy banner with strong contrast against body ── */}
+        <div className="px-6 py-5 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#082c59] text-white relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_white_0%,_transparent_60%)]" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="font-mono text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-md border border-slate-200/50">{ticket.ticket_number}</span>
-                <Badge className={`${priorityConfig.bg} ${priorityConfig.text} gap-1 text-xs`}><span className={`w-1.5 h-1.5 rounded-full ${priorityConfig.dot}`} />{ticket.priority}</Badge>
-                <Badge className={`${statusConfig.bg} ${statusConfig.text} gap-1 text-xs`}>{statusConfig.icon}{ticket.status.replace('_', ' ')}</Badge>
-                {ticket.user_type === 'operator' && <Badge className="bg-indigo-50 text-indigo-700 border border-indigo-100"><Building2 className="w-3 h-3 mr-1" />Operator</Badge>}
+                <span className="font-mono text-xs text-white/90 bg-white/15 backdrop-blur-sm px-2 py-1 rounded-md border border-white/20">{ticket.ticket_number}</span>
+                <Badge className={`${priorityConfig.bg} ${priorityConfig.text} gap-1 text-xs border-0`}><span className={`w-1.5 h-1.5 rounded-full ${priorityConfig.dot}`} />{ticket.priority}</Badge>
+                <Badge className={`${statusConfig.bg} ${statusConfig.text} gap-1 text-xs border-0`}>{statusConfig.icon}{ticket.status.replace('_', ' ')}</Badge>
+                {ticket.user_type === 'operator' && <Badge className="bg-indigo-500/20 text-indigo-100 border border-indigo-300/30"><Building2 className="w-3 h-3 mr-1" />Operator</Badge>}
               </div>
-              <DialogTitle className="text-lg">{ticket.subject}</DialogTitle>
-              <DialogDescription className="mt-1 text-xs">Created {getTimeAgo(ticket.created_at)} by {ticket.customer_name}</DialogDescription>
+              <DialogTitle className="text-xl text-white">{ticket.subject}</DialogTitle>
+              <DialogDescription className="mt-1 text-xs text-white/70">Created {getTimeAgo(ticket.created_at)} by {ticket.customer_name}</DialogDescription>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="text-slate-400 hover:text-slate-600">Close</Button>
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="text-white/80 hover:bg-white/15 hover:text-white">Close</Button>
           </div>
           {(ticket.tags?.length > 0 || ticket.product_involved) && (
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {ticket.product_involved && <Badge className="bg-blue-50 text-blue-700 border border-blue-100 text-xs gap-1"><Package className="w-3 h-3" />{ticket.product_involved}</Badge>}
-              {ticket.tags?.map((tag,i) => <Badge key={i} className={`text-[10px] border ${getTagColor(tag)}`}><Tag className="w-2.5 h-2.5 mr-1" />{tag}</Badge>)}
+            <div className="relative flex items-center gap-1.5 mt-3 flex-wrap">
+              {ticket.product_involved && <Badge className="bg-blue-500/25 text-blue-50 border border-blue-300/30 text-xs gap-1"><Package className="w-3 h-3" />{ticket.product_involved}</Badge>}
+              {ticket.tags?.map((tag,i) => <Badge key={i} className="text-[10px] bg-white/15 text-white border border-white/20"><Tag className="w-2.5 h-2.5 mr-1" />{tag}</Badge>)}
             </div>
           )}
         </div>
-        <div className="flex flex-1 overflow-hidden">
+        {/* ── Body — main conversation + 2-col detail sidebar on lg ──── */}
+        <div className="flex flex-1 overflow-hidden bg-slate-50">
           {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-5 min-h-0">
+          <div className="flex-1 flex flex-col overflow-hidden bg-white">
+            <div className="flex-1 overflow-y-auto p-6 min-h-0">
               {/* Original message */}
-              <div className="mb-5 p-4 rounded-xl bg-white/50 border border-slate-200/40 shadow-sm">
-                <div className="flex items-start gap-3 mb-2">
-                  <Avatar className="w-8 h-8"><AvatarFallback className="bg-[#082c59] text-white text-xs">{ticket.customer_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
+              <div className="mb-5 p-5 rounded-xl bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 shadow-sm">
+                <div className="flex items-start gap-3 mb-3">
+                  <Avatar className="w-10 h-10 ring-2 ring-[#082c59]/10"><AvatarFallback className="bg-[#082c59] text-white text-sm font-semibold">{ticket.customer_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between"><span className="font-semibold text-sm">{ticket.customer_name}</span><span className="text-[10px] text-slate-400">{getTimeAgo(ticket.created_at)}</span></div>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                    <div className="flex items-center justify-between"><span className="font-semibold text-sm text-slate-900">{ticket.customer_name}</span><span className="text-[11px] text-slate-500">{getTimeAgo(ticket.created_at)}</span></div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
                       {ticket.customer_email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{ticket.customer_email}</span>}
                     </div>
                   </div>
@@ -229,7 +232,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
               {/* Responses */}
               {ticket.messages?.length > 1 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.messages.length - 1})</h4>
+                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5" />Conversation ({ticket.messages.length - 1})</h4>
                   {ticket.messages.slice(1).map((r, idx) => (
                     r.is_system ? (
                       <div key={idx} className="flex items-center gap-2 py-0.5 pl-8">
@@ -237,19 +240,19 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
                         <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full border ${getTagColor(r.tag?.toLowerCase().replace(/ /g, '-') || '')}`}>{r.tag || r.message}</span>
                       </div>
                     ) : (
-                    <div key={idx} className={`p-3.5 rounded-xl shadow-sm ${r.is_internal ? 'bg-amber-50/70 border border-amber-200/50 ml-2' : r.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'}`}>
-                      <div className="flex items-start gap-2.5">
-                        <Avatar className="w-6 h-6"><AvatarFallback className={`text-[9px] ${r.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-200'}`}>{r.sender_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
+                    <div key={idx} className={`p-4 rounded-xl shadow-sm border-2 ${r.is_internal ? 'bg-amber-50 border-amber-300 ml-2' : r.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border-[#082c59]/20 ml-6' : 'bg-white border-slate-200 mr-6'}`}>
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-8 h-8"><AvatarFallback className={`text-[10px] font-semibold ${r.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-300 text-slate-700'}`}>{r.sender_name?.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-xs">{r.sender_name}</span>
-                              {r.is_internal && <Badge className="bg-amber-100 text-amber-700 text-[9px] h-4">Internal</Badge>}
-                              {r.sender_type === 'agent' && !r.is_internal && <Badge className="bg-[#082c59]/10 text-[#082c59] text-[9px] h-4">Staff</Badge>}
+                              <span className="font-semibold text-xs text-slate-900">{r.sender_name}</span>
+                              {r.is_internal && <Badge className="bg-amber-200 text-amber-800 text-[9px] h-4 border-0">Internal</Badge>}
+                              {r.sender_type === 'agent' && !r.is_internal && <Badge className="bg-[#082c59] text-white text-[9px] h-4 border-0">Staff</Badge>}
                             </div>
                             <span className="text-[10px] text-slate-400">{getTimeAgo(r.created_at)}</span>
                           </div>
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{r.message}</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.message}</p>
                           {r.attachments?.length > 0 && (
                             <div className="flex gap-2 flex-wrap mt-2">
                               {r.attachments.map((att, ai) => (
@@ -270,42 +273,46 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
             {/* Reply */}
             <TicketReplyBox ticketId={ticket.id} showInternalToggle onReplySent={onRefreshTicket} />
           </div>
-          {/* Sidebar */}
-          <div className="w-56 border-l border-slate-200/40 bg-slate-50/30 p-4 overflow-auto hidden lg:block">
-            <h4 className="font-semibold text-[10px] text-slate-400 uppercase tracking-wider mb-3">Details</h4>
-            <div className="space-y-3">
-              <div><label className="text-[10px] text-slate-400 block mb-1">Status</label>
-                <div className={`p-1.5 rounded-lg border ${statusColors[ticket.status] || ''}`}>
-                  <Select value={ticket.status} onValueChange={onStatusChange}><SelectTrigger className="h-7 text-xs bg-transparent border-0 shadow-none"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white">{TICKET_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_',' ')}</SelectItem>)}</SelectContent></Select>
-                </div>
+          {/* Sidebar — 2-col details on lg+ to use the new 5xl width */}
+          <div className="w-[22rem] border-l border-slate-200 bg-slate-100 p-5 overflow-auto hidden lg:block">
+            <h4 className="font-semibold text-[11px] text-slate-500 uppercase tracking-wider mb-3">Ticket details</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-xl border border-sky-200 shadow-sm p-3 col-span-2">
+                <label className="text-[10px] font-semibold text-sky-700 uppercase tracking-wider block mb-1">Status</label>
+                <Select value={ticket.status} onValueChange={onStatusChange}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">{TICKET_STATUSES.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{s.replace('_',' ')}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <div><label className="text-[10px] text-slate-400 block mb-1">Priority</label>
-                <div className={`p-1.5 rounded-lg border ${priorityColors[ticket.priority] || ''}`}>
-                  <Select value={ticket.priority} onValueChange={onPriorityChange}><SelectTrigger className="h-7 text-xs bg-transparent border-0 shadow-none"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white">{TICKET_PRIORITIES.map(p => <SelectItem key={p} value={p} className="text-xs capitalize">{p}</SelectItem>)}</SelectContent></Select>
-                </div>
+              <div className="bg-white rounded-xl border border-orange-200 shadow-sm p-3">
+                <label className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider block mb-1">Priority</label>
+                <Select value={ticket.priority} onValueChange={onPriorityChange}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">{TICKET_PRIORITIES.map(p => <SelectItem key={p} value={p} className="text-xs capitalize">{p}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <div><label className="text-[10px] text-slate-400 block mb-1">Assigned To</label>
+              <div className="bg-white rounded-xl border border-amber-200 shadow-sm p-3">
+                <label className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block mb-1">Category</label>
+                <div className="flex items-center gap-2 text-xs text-slate-700">{getCategoryIcon(ticket.category)}<span className="capitalize truncate">{ticket.category}</span></div>
+              </div>
+              <div className="bg-white rounded-xl border border-violet-200 shadow-sm p-3 col-span-2">
+                <label className="text-[10px] font-semibold text-violet-700 uppercase tracking-wider block mb-1">Assigned To</label>
                 {ticket.assigned_to_name ? (
-                  <div className="flex items-center gap-2 p-2 bg-[#082c59]/5 rounded-lg border border-[#082c59]/10 text-xs">
-                    <Avatar className="w-5 h-5"><AvatarFallback className="text-[8px] bg-[#082c59] text-white">{ticket.assigned_to_name.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
-                    <span>{ticket.assigned_to_name}</span>
+                  <div className="flex items-center gap-2 text-xs text-slate-800">
+                    <Avatar className="w-6 h-6"><AvatarFallback className="text-[9px] bg-violet-600 text-white">{ticket.assigned_to_name.split(' ').map(n=>n[0]).join('').slice(0,2)}</AvatarFallback></Avatar>
+                    <span className="font-medium truncate">{ticket.assigned_to_name}</span>
                   </div>
-                ) : <Button variant="outline" className="w-full justify-start h-7 text-xs" onClick={onAssign}><UserPlus className="w-3 h-3 mr-1" />Assign</Button>}
+                ) : <Button variant="outline" size="sm" className="w-full justify-start h-8 text-xs border-violet-200 text-violet-700 hover:bg-violet-50" onClick={onAssign}><UserPlus className="w-3 h-3 mr-1" />Assign agent</Button>}
               </div>
-              <div><label className="text-[10px] text-slate-400 block mb-1">Requester</label>
-                <div className="p-2 bg-indigo-50/50 rounded-lg border border-indigo-100/50 text-xs space-y-0.5">
-                  <p className="font-medium">{ticket.customer_name}</p>
-                  {ticket.customer_email && <p className="text-slate-500 truncate">{ticket.customer_email}</p>}
-                  <Badge className="text-[9px] bg-slate-100 text-slate-600 capitalize">{ticket.user_type || 'customer'}</Badge>
+              <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-3 col-span-2">
+                <label className="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider block mb-2">Requester</label>
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-slate-900">{ticket.customer_name}</p>
+                  {ticket.customer_email && <p className="text-slate-500 truncate flex items-center gap-1"><Mail className="w-3 h-3" />{ticket.customer_email}</p>}
+                  <Badge className="text-[9px] bg-indigo-100 text-indigo-700 border-0 capitalize">{ticket.user_type || 'customer'}</Badge>
                 </div>
               </div>
-              <div><label className="text-[10px] text-slate-400 block mb-1">Category</label>
-                <div className="flex items-center gap-2 p-2 bg-amber-50/50 rounded-lg border border-amber-100/50 text-xs">{getCategoryIcon(ticket.category)}<span className="capitalize">{ticket.category}</span></div>
-              </div>
-              <div><label className="text-[10px] text-slate-400 block mb-1">Created</label>
-                <div className="flex items-center gap-2 p-2 bg-white/60 rounded-lg border border-slate-200/40 text-xs"><Calendar className="w-3 h-3 text-slate-400" />{new Date(ticket.created_at).toLocaleDateString()}</div>
+              <div className="bg-white rounded-xl border border-emerald-200 shadow-sm p-3 col-span-2">
+                <label className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block mb-1">Created</label>
+                <div className="flex items-center gap-2 text-xs text-slate-700"><Calendar className="w-3 h-3 text-emerald-600" />{new Date(ticket.created_at).toLocaleString()}</div>
               </div>
             </div>
           </div>
