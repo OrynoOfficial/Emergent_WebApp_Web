@@ -262,6 +262,9 @@ async def create_operator_user(
         "operator_role": user_data.operator_role,
         "operator_type": operator.get("operator_type"),
         "scoped_permissions": requested_perms,
+        # Admin-provisioned credentials → force rotation on first sign-in.
+        # `verify-account` clears this when the invitee picks their own password.
+        "must_reset_password": True,
         # Metadata
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),

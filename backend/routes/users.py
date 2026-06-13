@@ -522,6 +522,9 @@ async def create_user(
         "status": "pending_verification" if send_invite else user_data.get("status", "active"),
         "email_verified": False if send_invite else True,
         "two_fa_enabled": False,
+        # Admin-provisioned credentials → force rotation on first sign-in.
+        # `verify-account` clears this when the invitee chooses their own password.
+        "must_reset_password": True,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }

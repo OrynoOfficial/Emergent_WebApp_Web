@@ -179,6 +179,9 @@ async def create_operator(
             "permissions": operator_data.owner_permissions or [],
             "status": "pending_verification",
             "email_verified": False,
+            # Admin-provisioned credentials → force rotation on first sign-in.
+            # `verify-account` clears this when the invitee picks their own password.
+            "must_reset_password": True,
             "country": operator_data.country,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()

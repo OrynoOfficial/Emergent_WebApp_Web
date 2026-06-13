@@ -682,11 +682,20 @@ async def verify_account(body: VerifyAccountRequest, request: Request):
             raise HTTPException(status_code=400, detail="A password of at least 8 characters is required")
         from utils.auth import get_password_hash
         update_fields["password_hash"] = get_password_hash(body.password)
+        # User just chose their own password — no need to force another rotation.
+        update_fields["must_reset_password"] = False
     elif body.password:
         if len(body.password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
         from utils.auth import get_password_hash
         update_fields["password_hash"] = get_password_hash(body.password)
+        # User opted to override the admin-issued temp password during verify —
+        # treat as a fresh, user-owned credential.
+        update_fields["must_reset_password"] = False
+    else:
+        # Account was confirmed using the admin-issued *temporary* password as-is.
+        # Force a rotation on first sign-in so the temp credential can't linger.
+        update_fields["must_reset_password"] = True
 
     await db.users.update_one({"_id": user["_id"]}, {"$set": update_fields})
     await db.verification_tokens.update_one(

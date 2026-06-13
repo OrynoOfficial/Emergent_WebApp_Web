@@ -12,6 +12,9 @@
 - **Forced rotation modal** (`components/ForcePasswordResetModal.jsx` + `ProtectedRoute`): a non-dismissible dialog (Escape / overlay click blocked) appears on every protected route while `user.must_reset_password === true`. Calls `POST /api/auth/change-password` (which now invalidates the 60s per-user cache via `invalidate_user_cache`) then `reAuthenticate()` so the flag flips to false instantly and the dialog unmounts. Frontend rules enforced live: 8+ chars, upper, lower, digit, symbol, and new ≠ current.
 - `ui/dialog.jsx` now accepts `showCloseButton={false}` to support truly blocking dialogs without an X corner.
 
+### Forced rotation extended to invited accounts
+All admin-provisioned accounts (operator owners via `routes/operators.py`, team members via `routes/operator_users.py`, platform admins via `routes/users.py`) are now created with `must_reset_password: True`. The `/api/auth/verify-account` endpoint resets it to `False` **only** when the invitee chooses their own password during account confirmation; if the invitee just confirms using the admin-issued temp password, the flag persists and the forced-rotation modal blocks the app on their first sign-in. Verified end-to-end via curl: both branches (override vs. confirm-with-temp) behave correctly.
+
 
 ## Phase A / B / C — Login UX + Page-fill + Bigger Modals (iter 205)
 
