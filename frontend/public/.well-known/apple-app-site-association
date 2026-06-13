@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["HW8J5D45GC.tech.oryno.app"],
+        "components": [
+          { "/": "/verify-account*", "comment": "Email-invite confirmation deep link" },
+          { "/": "/reset-password*", "comment": "Password-reset link from email" },
+          { "/": "/booking/*",       "comment": "Booking confirmations from email" },
+          { "/": "/cinema/*",        "comment": "Showtime share links" },
+          { "/": "/hotels/*",        "comment": "Hotel detail share links" },
+          { "/": "/restaurants/*",   "comment": "Restaurant detail share links" },
+          { "/": "/track/*",         "comment": "Parcel tracking links" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["HW8J5D45GC.tech.oryno.app"]
+  }
+}

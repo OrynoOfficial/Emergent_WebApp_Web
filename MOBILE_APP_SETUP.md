@@ -81,6 +81,11 @@ VITE_PLAY_STORE_URL=https://play.google.com/store/apps/details?id=tech.oryno.app
 
 `VITE_APP_VERSION` is what the backend sees on the `X-Oryno-Client` header — bump it on each release.
 
+### Store / developer account IDs (already configured)
+- **Apple Team ID** — `HW8J5D45GC`  → already wired into `frontend/public/.well-known/apple-app-site-association`
+- **Google Play Developer ID** — `7088193941340351931` → used in Play Console; no code reference needed
+- **Bundle ID** — `tech.oryno.app` → wired in `capacitor.config.ts`
+
 ---
 
 ## 📲 Store-listing checklist
@@ -125,14 +130,36 @@ And reference it from `frontend/android/app/build.gradle`. Losing this keystore 
 
 ---
 
-## 🔗 Deep links (post-MVP)
+## 🔗 Deep links — already wired
 
-To make password-reset / verify-account emails open the app on tap:
+The deep-link manifest files are committed under `frontend/public/.well-known/`:
+- `apple-app-site-association` — uses **Team ID `HW8J5D45GC`** + bundle `tech.oryno.app`. Routes that open in the app: `/verify-account*`, `/reset-password*`, `/booking/*`, `/cinema/*`, `/hotels/*`, `/restaurants/*`, `/track/*`. Email magic-links will open the native app automatically on tap, with browser fallback.
+- `assetlinks.json` — has the right package name. **Two SHA-256 fingerprints still need to be filled in** once you have:
+  1. A release keystore (run `keytool -list -v -keystore oryno-release.keystore` → grab the SHA256 line, paste into slot 1).
+  2. Play App Signing enrolled (Play Console → App integrity → "App signing key certificate" → copy the SHA-256, paste into slot 2). Without slot 2, links won't verify for users who installed via the Play Store.
 
-- **iOS — Universal Links**: serve `https://app.oryno.tech/.well-known/apple-app-site-association` (JSON) with the team-id and bundle-id mapped to `/*`.
-- **Android — App Links**: serve `https://app.oryno.tech/.well-known/assetlinks.json` and add an `<intent-filter>` to the main Activity for `android:host="app.oryno.tech"`.
+### ⚠️ Deployment caveat — verify Content-Type after every prod release
+The SPA host can intercept `/.well-known/*` paths and serve `index.html` (SPA fallback) instead of the real file. After redeploy, run:
+```
+curl -I https://app.oryno.tech/.well-known/apple-app-site-association
+curl -I https://app.oryno.tech/.well-known/assetlinks.json
+```
+You should see `Content-Type: application/json` (or `application/octet-stream` for AASA in some hosts — Apple accepts both). If you see `text/html` → the SPA fallback is intercepting; contact Emergent Support to add a `/.well-known/*` routing exception, or set up a `_routes.json` / `_headers` rule on the CDN.
 
-The backend already serves these as plain static files if dropped into `frontend/public/.well-known/`.
+Once content-type is correct, test with: `https://search.app/oryno.tech` (Google's verifier) for Android, and force a re-fetch on a test iPhone by reinstalling the app.
+
+## 🎨 App icons & splashes — already generated
+
+```bash
+python3 frontend/scripts/generate_app_icons.py
+```
+Reads `frontend/public/images/logo.png` (1024×1024 master) and emits:
+- `frontend/resources/icon.png` + `splash.png` — masters for Capacitor's `capacitor-assets` CLI
+- `frontend/public/icons/ios/AppIcon-*.png` — 12 explicit Apple sizes
+- `frontend/public/icons/android/mipmap-*` — 5 densities × 4 variants (legacy, round, adaptive foreground, adaptive background)
+- `frontend/public/icons/splash/` — 2732×2732 iOS + 2160×2160 Android masters
+
+Re-run any time the logo changes. After running, drag the contents of `public/icons/ios/` into Xcode's `Assets.xcassets/AppIcon.appiconset/`, and copy `public/icons/android/mipmap-*` over the equivalents under `android/app/src/main/res/`.
 
 ---
 
