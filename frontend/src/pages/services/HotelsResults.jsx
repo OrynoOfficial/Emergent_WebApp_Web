@@ -729,7 +729,7 @@ export default function HotelsResults() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/services/hotels')} className="hover:bg-slate-100">
               <ArrowLeft className="h-5 w-5" />
@@ -837,7 +837,7 @@ export default function HotelsResults() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {/* Search & Filters Bar */}
         <div className="bg-white rounded-xl shadow-sm p-3 mb-5">
           <div className="flex flex-col lg:flex-row gap-3">

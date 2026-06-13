@@ -76,7 +76,7 @@ export default function PackagesSearch() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
       <div className="bg-[#082c59] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+        <div className="px-4 text-center">
           <Truck className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
           <h1 className="text-4xl font-bold mb-4">Package Delivery Services</h1>
           <p className="text-lg text-slate-200">Fast and reliable package delivery across Cameroon</p>
@@ -84,7 +84,7 @@ export default function PackagesSearch() {
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="px-4 -mt-8">
         <Card className="shadow-xl">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="space-y-6">
@@ -282,7 +282,7 @@ export default function PackagesSearch() {
       </div>
 
       {/* Features Section */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center p-6 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="w-12 h-12 bg-[#082c59]/10 rounded-full flex items-center justify-center mx-auto mb-4">

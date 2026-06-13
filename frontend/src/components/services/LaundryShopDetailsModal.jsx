@@ -38,25 +38,25 @@ export default function LaundryShopDetailsModal({ open, onOpenChange, shop, onCo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-2xl w-[94vw] bg-white p-0 sm:rounded-2xl max-h-[88vh] overflow-y-auto"
+        className="max-w-5xl w-[95vw] bg-white p-0 sm:rounded-2xl max-h-[92vh] overflow-y-auto"
         data-testid="laundry-prebooking-modal"
       >
-        {/* Hero gallery — compact */}
+        {/* Hero gallery — wider modal */}
         <div className="relative bg-gradient-to-br from-purple-700 via-purple-600 to-fuchsia-500">
           {imgs.length > 0 ? (
             <div className={`grid gap-1 ${imgs.length === 1 ? 'grid-cols-1' : 'grid-cols-3'}`}>
-              <div className={`${imgs.length >= 3 ? 'col-span-2 row-span-2' : ''} h-40 relative`}>
+              <div className={`${imgs.length >= 3 ? 'col-span-2 row-span-2' : ''} h-56 relative`}>
                 <img src={imgs[0]} alt="" className="w-full h-full object-cover" />
               </div>
               {imgs.slice(1, 3).map((src, idx) => (
-                <div key={idx} className="h-[78px] hidden sm:block">
+                <div key={idx} className="h-[110px] hidden sm:block">
                   <img src={src} alt="" className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="h-36 flex items-center justify-center">
-              <Shirt className="h-12 w-12 text-white/40" />
+            <div className="h-48 flex items-center justify-center">
+              <Shirt className="h-16 w-16 text-white/40" />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/10 to-transparent pointer-events-none" />
@@ -89,8 +89,8 @@ export default function LaundryShopDetailsModal({ open, onOpenChange, shop, onCo
           </div>
         </div>
 
-        {/* Body — tighter spacing */}
-        <div className="p-4 space-y-3.5">
+        {/* Body — wider modal, looser spacing */}
+        <div className="p-6 space-y-5">
           {shop.description && (
             <p className="text-slate-700 text-xs leading-relaxed">{shop.description}</p>
           )}
@@ -112,7 +112,7 @@ export default function LaundryShopDetailsModal({ open, onOpenChange, shop, onCo
           {st !== 'laundry' && items.length > 0 && (
             <div data-testid="laundry-prebooking-items">
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">Pressing menu &amp; prices</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {items.map((i, idx) => (
                   <div key={`${i.item}-${idx}`} className="rounded-lg border border-purple-100 bg-white overflow-hidden hover:shadow-sm hover:border-purple-300 transition">
                     <div className="aspect-square bg-gradient-to-br from-purple-100 via-purple-50 to-fuchsia-100 relative">
@@ -142,8 +142,8 @@ export default function LaundryShopDetailsModal({ open, onOpenChange, shop, onCo
             </div>
           )}
 
-          {/* Logistics — compact */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          {/* Logistics — wider modal */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div className="rounded-md border border-slate-200 p-2 flex items-center gap-2">
               <Truck className={`h-4 w-4 flex-shrink-0 ${shop.delivery_available ? 'text-emerald-600' : 'text-slate-300'}`} />
               <div className="min-w-0">
@@ -162,16 +162,15 @@ export default function LaundryShopDetailsModal({ open, onOpenChange, shop, onCo
         </div>
 
         {/* Footer CTA */}
-        <div className="px-4 pb-4 pt-2 border-t border-purple-100/60 bg-purple-50/30 flex items-center justify-between sm:rounded-b-2xl gap-3">
-          <div className="text-[11px] text-slate-500 hidden sm:block">
+        <div className="px-6 py-4 border-t border-purple-100/60 bg-purple-50/30 flex items-center justify-between sm:rounded-b-2xl gap-3">
+          <div className="text-xs text-slate-500 hidden sm:block">
             Review the menu &amp; logistics before booking.
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="border-purple-200 text-purple-700 hover:bg-purple-50" data-testid="laundry-prebooking-cancel">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-purple-200 text-purple-700 hover:bg-purple-50" data-testid="laundry-prebooking-cancel">
               Cancel
             </Button>
             <Button
-              size="sm"
               onClick={() => onContinue && onContinue(shop)}
               className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-md shadow-purple-500/20"
               data-testid="laundry-prebooking-continue"

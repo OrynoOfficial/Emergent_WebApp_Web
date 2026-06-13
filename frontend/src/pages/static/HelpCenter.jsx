@@ -80,7 +80,7 @@ export default function HelpCenter() {
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section */}
       <div className="bg-[#082c59] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+        <div className="px-4 text-center">
           <HelpCircle className="w-16 h-16 mx-auto mb-4 opacity-80" />
           <h1 className="text-4xl font-bold mb-4">How can we help you?</h1>
           <p className="text-lg text-blue-100 mb-8">Search our knowledge base or browse categories below</p>
@@ -96,7 +96,7 @@ export default function HelpCenter() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* FAQ Section */}
           <div className="lg:col-span-2 space-y-6">

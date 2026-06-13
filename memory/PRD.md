@@ -6,6 +6,33 @@
 - **Timezone source of truth**: `frontend/src/utils/dateUtils.js` — reads `localStorage.oryno_tz` → `Intl.DateTimeFormat().resolvedOptions().timeZone` → `Africa/Douala`. All date/time formatters in the app must go through it.
 
 
+## Phase A / B / C — Login UX + Page-fill + Bigger Modals (iter 205)
+
+### Phase A — Authentication UX
+- **Two-step login** (`pages/auth/LoginView.jsx`): step 1 = email/phone + Continue → backend `/api/auth/check-account` → step 2 reveals password with an "Edit" affordance. Non-existent identifiers surface a red alert + "Create a new account →" CTA.
+- **New `/api/auth/check-account`** endpoint (`routes/auth.py`). SlowAPI-throttled. Returns `{exists, role, status, two_fa_enabled}` to drive UX while minimising enumeration risk.
+- **Customer self-service password reset** — new `/api/auth/forgot-password` + `/api/auth/reset-password` endpoints. Both **email magic-link** (Resend) and **phone OTP** (`generate_phone_otp`, surfaced as sandbox-OTP until SMS provider is wired). Operators / team members are blocked by role-check + `operator_id` presence → HTTP 403.
+- **New `pages/auth/ForgotPasswordView.jsx`** modal: stage machine `request → sent | reset → done`. Used from the in-modal "Forgot password?" link inside step 2 of login.
+- **New `pages/auth/ResetPassword.jsx`** standalone page (`/reset-password?token=…`) — landing page for the email magic link.
+- **MARKETING_LINKS constant** in `pages/auth/AuthConstants.jsx` — `HOME/TERMS/PRIVACY/CONTACT` all pinned to `https://oryno.tech/...`. Every Welcome/Signup/OperatorContact CTA now opens in a new tab via `target=_blank rel="noopener noreferrer"`.
+
+### Phase B — Page-fill (full-width layouts)
+- Mass surgical edit across **49 files** in `pages/` + `components/`: removed `max-w-{3,4,5,6,7}xl mx-auto` wrappers from page roots. `max-w-md` and `max-w-lg` cards (empty-states, narrow forms) preserved.
+- Affected: Shipments, Loyalty, Ratings, Settings, Notifications, Support, TrackPackage, every `services/*Results.jsx` + `services/*Booking.jsx` + `services/*Search.jsx` + `services/*Details.jsx`, every `management/*Management.jsx` (Cinema/Hotel/Travel/Restaurant/Laundry/Package/Banquet/CarRental/Events/TeamRoles/CustomerService/PackageShipments), plus `admin/Permissions.jsx`, `admin/DocumentTemplates.jsx`, `admin/DatabaseManagement.jsx`.
+
+### Phase C — Bigger modals
+- **Customer-service ticket modal** (`management/CustomerServiceManagement.jsx`): `max-w-2xl max-h-[85vh]` → `max-w-5xl w-[95vw] max-h-[92vh]`.
+- **Laundry pre-booking modal** (`components/services/LaundryShopDetailsModal.jsx`): `max-w-2xl w-[94vw] max-h-[88vh]` → `max-w-5xl w-[95vw] max-h-[92vh]`. Hero raised `h-40` → `h-56`, body padding `p-4` → `p-6`, item gallery now `grid-cols-4 sm:grid-cols-6 md:grid-cols-8`, logistics cards now 4-column on desktop, CTAs bumped to default size.
+
+### Branding
+- `index.html` `<title>` = `Oryno`, dynamic via `RouteTitleSync` → `Oryno · <Page>`.
+- 5-size rounded (circular-mask) favicon generated from `/images/logo.png` (32 / 64 / 128 / 256 / 512 px) — all wired up with `<link rel="icon">` per breakpoint.
+
+### Testing
+- `iteration_205.json` — backend 11/11 pytests pass for /check-account /forgot-password /reset-password including operator-403, anti-enumeration, one-shot enforcement. Frontend live-verified two-step login, Edit-back affordance, forgot-modal, Welcome/Terms/Privacy URLs. Two small follow-up bugs reported by testing agent were fixed in the same iteration (welcome-home-link `target=_blank`; forgot-sandbox-link visibility gating).
+
+
+
 ## Latest Changes (Feb 2026 — iter 204: Ratings blank-page fix + Walk-in Modal 7 UI refinements)
 
 ### Fixed: Customer Ratings page blank

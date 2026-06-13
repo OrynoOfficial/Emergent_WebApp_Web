@@ -416,7 +416,7 @@ export default function CinemaResults() {
 
       {/* Header — cyan accent block matching restaurant results' orange treatment */}
       <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-5">
+        <div className="px-4 py-5">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/cinema')} className="gap-2 text-cyan-700 hover:bg-cyan-50" data-testid="cinema-results-back">
               <ArrowLeft className="w-4 h-4" /> Back
@@ -565,7 +565,7 @@ export default function CinemaResults() {
       </div>
 
       {/* Results */}
-      <div className="relative max-w-7xl mx-auto px-4 py-8">
+      <div className="relative px-4 py-8">
         {filteredFilms.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">

@@ -54,6 +54,8 @@ export function WelcomeView({ setCurrentView }) {
       </p>
       <a
         href={MARKETING_LINKS.HOME}
+        target="_blank"
+        rel="noopener noreferrer"
         className="flex items-center justify-center gap-2 text-slate-500 hover:text-[#082c59] mt-4 text-sm"
         data-testid="welcome-home-link"
       >

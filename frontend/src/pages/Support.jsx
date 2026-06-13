@@ -474,7 +474,7 @@ export default function Support() {
   }), [tickets]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5" data-testid="support-page" ref={topRef}>
+    <div className="space-y-5" data-testid="support-page" ref={topRef}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

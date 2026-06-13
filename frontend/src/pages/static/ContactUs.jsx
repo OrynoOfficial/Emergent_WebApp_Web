@@ -74,14 +74,14 @@ export default function ContactUs() {
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section */}
       <div className="bg-[#082c59] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+        <div className="px-4 text-center">
           <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-80" />
           <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
           <p className="text-lg text-blue-100">We'd love to hear from you. Get in touch with our team.</p>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Contact Form */}
           <div className="lg:col-span-2">

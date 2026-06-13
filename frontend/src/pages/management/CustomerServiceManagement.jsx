@@ -184,7 +184,7 @@ function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onSta
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-2xl max-h-[85vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80 [&>button]:hidden"
+        className="max-w-5xl w-[95vw] max-h-[92vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80 [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >

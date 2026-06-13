@@ -673,7 +673,7 @@ export default function PackagesResults() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       <div className="bg-white border-b shadow-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-3 mb-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/services/packages')} data-testid="back-to-search">
               <ArrowLeft className="w-5 h-5" />
@@ -938,7 +938,7 @@ export default function PackagesResults() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {filteredServices.length === 0 ? (
           <div className="text-center py-16">
             <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />

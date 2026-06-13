@@ -278,7 +278,7 @@ export default function FilmDetails() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
       {/* Top bar */}
       <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <Button variant="ghost" className="text-cyan-700 hover:bg-cyan-50" onClick={() => navigate(-1)} data-testid="film-details-back">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
@@ -286,7 +286,7 @@ export default function FilmDetails() {
       </div>
 
       {/* Hero */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="px-4 py-8">
         <div className="flex flex-col md:flex-row gap-8">
           {/* Poster */}
           <div className="w-full md:w-80 flex-shrink-0">
@@ -379,7 +379,7 @@ export default function FilmDetails() {
       </div>
 
       {/* Showtimes */}
-      <div className="max-w-6xl mx-auto px-4 pb-12">
+      <div className="px-4 pb-12">
         <Card className="bg-white border-slate-200 shadow-md">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">

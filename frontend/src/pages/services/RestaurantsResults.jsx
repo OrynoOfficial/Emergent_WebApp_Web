@@ -437,7 +437,7 @@ export default function RestaurantsResults() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/restaurants')} className="gap-2">
               <ArrowLeft className="w-4 h-4" /> Back
@@ -597,7 +597,7 @@ export default function RestaurantsResults() {
       </div>
 
       {/* Results */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {filteredRestaurants.length === 0 ? (
           <div className="text-center py-16">
             <Utensils className="w-16 h-16 text-slate-300 mx-auto mb-4" />

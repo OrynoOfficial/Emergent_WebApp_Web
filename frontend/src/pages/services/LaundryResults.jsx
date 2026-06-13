@@ -514,7 +514,7 @@ export default function LaundryResults() {
     <div className="min-h-screen bg-purple-50/60">
       {/* Header (purple-accented) */}
       <div className="bg-white border-b border-purple-100 shadow-sm sticky top-0 z-20" data-testid="laundry-results-header">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/laundry')} className="gap-2 text-purple-700 hover:bg-purple-50">
               <ArrowLeft className="w-4 h-4" /> Back
@@ -637,7 +637,7 @@ export default function LaundryResults() {
       </div>
 
       {/* Results */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {filteredServices.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 rounded-full bg-purple-100 mx-auto mb-4 flex items-center justify-center">

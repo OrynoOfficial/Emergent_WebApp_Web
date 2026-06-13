@@ -171,9 +171,9 @@ export function ForgotPasswordView({ setCurrentView }) {
               <CheckCircle2 className="h-4 w-4" />Reset link sent
             </p>
             <p>If an account exists for <strong>{identifier}</strong>, you&apos;ll receive an email with a one-time link. It expires in 30 minutes.</p>
-            {info?.reset_link && info?.dispatched === false && (
+            {info?.reset_link && (
               <p className="mt-3 text-xs text-emerald-700">
-                Email delivery is sandboxed for this environment. Use this direct link:{' '}
+                Dev fallback — open this link directly:{' '}
                 <a href={info.reset_link} className="underline font-mono break-all" data-testid="forgot-sandbox-link">
                   {info.reset_link}
                 </a>

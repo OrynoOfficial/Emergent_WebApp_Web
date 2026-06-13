@@ -308,7 +308,7 @@ export default function RestaurantMenu() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#082c59]/90 via-[#082c59]/50 to-[#082c59]/30" />
         </div>
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-8 flex flex-col justify-end" style={{ minHeight: '280px' }}>
+        <div className="relative px-4 sm:px-6 pt-6 pb-8 flex flex-col justify-end" style={{ minHeight: '280px' }}>
           {/* Back button */}
           <Button
             variant="ghost"
@@ -359,7 +359,7 @@ export default function RestaurantMenu() {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="px-4 sm:px-6 py-8">
         <div className="grid grid-cols-12 gap-8">
           {/* ── Left: Menu (8 cols) ── */}
           <div className="col-span-12 lg:col-span-8" data-testid="menu-section">

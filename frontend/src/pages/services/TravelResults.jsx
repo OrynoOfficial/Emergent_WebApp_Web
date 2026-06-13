@@ -612,7 +612,7 @@ export default function TravelResults() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/services/travel')} className="gap-2">
               <ArrowLeft className="w-4 h-4" /> Back
@@ -838,14 +838,14 @@ export default function TravelResults() {
       </div>
 
       {/* Results Summary */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="px-4 py-4">
         <p className="text-sm text-slate-600">
           {filteredAndSortedTrips.length} trips found
         </p>
       </div>
 
       {/* Trip Cards */}
-      <div className="max-w-7xl mx-auto px-4 pb-8">
+      <div className="px-4 pb-8">
         {filteredAndSortedTrips.length === 0 ? (
           <Card className="p-12 text-center">
             <Bus className="h-16 w-16 mx-auto text-slate-300 mb-4" />

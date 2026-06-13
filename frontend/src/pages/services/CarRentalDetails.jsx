@@ -132,14 +132,14 @@ export default function CarRentalDetails() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Results
           </Button>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {/* Image Gallery */}
         <div className="grid grid-cols-3 gap-2 mb-6 h-64 rounded-xl overflow-hidden">
           <div className="col-span-2 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">

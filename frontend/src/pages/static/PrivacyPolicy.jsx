@@ -145,7 +145,7 @@ export default function PrivacyPolicy() {
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section */}
       <div className="bg-[#082c59] text-white py-16">
-        <div className="max-w-4xl mx-auto px-4 text-center">
+        <div className="px-4 text-center">
           <Shield className="w-16 h-16 mx-auto mb-4 opacity-80" />
           <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
           <p className="text-lg text-blue-100">How we collect, use, and protect your information</p>
@@ -153,7 +153,7 @@ export default function PrivacyPolicy() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="px-4 py-12">
         {/* Introduction */}
         <Card className="mb-8">
           <CardContent className="p-6">

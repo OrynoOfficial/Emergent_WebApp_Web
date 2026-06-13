@@ -398,7 +398,7 @@ export default function PackageShipments() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 pb-12">
       {/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="px-4 py-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-[#082c59] to-[#0d4a8f] rounded-xl flex items-center justify-center text-white">
@@ -507,7 +507,7 @@ export default function PackageShipments() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <RefreshCw className="h-10 w-10 animate-spin text-[#082c59]" />

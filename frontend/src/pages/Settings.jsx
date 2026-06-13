@@ -1458,7 +1458,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
           <SettingsIcon className="h-7 w-7 text-[#082c59]" />

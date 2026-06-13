@@ -69,7 +69,7 @@ export default function TrackPackage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* Hero */}
       <div className="bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#0d4a8f] text-white">
-        <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="px-6 py-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="h-10 w-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
               <Package className="h-5 w-5" />
@@ -104,7 +104,7 @@ export default function TrackPackage() {
       </div>
 
       {/* Result */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="px-6 py-8">
         {error && (
           <Card className="border-rose-200 bg-rose-50">
             <CardContent className="p-5 flex items-start gap-3">
