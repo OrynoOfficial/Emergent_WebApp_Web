@@ -3,11 +3,24 @@ import { Card, CardContent } from '@/components/ui/card';
 export const AUTH_VIEWS = {
   WELCOME: 'welcome',
   LOGIN: 'login',
+  FORGOT_PASSWORD: 'forgot_password',
   SIGNUP_ROLE: 'signup_role',
   SIGNUP_FORM: 'signup_form',
   OPERATOR_CONTACT: 'operator_contact',
   TWO_FA: '2fa',
   PHONE_OTP_VERIFY: 'phone_otp_verify'
+};
+
+// Marketing website (apex domain) — used everywhere the auth flow links
+// "off-platform" (Return to homepage, Terms of Service, Privacy Policy,
+// Contact form, etc.). Centralised here so a future rebrand only touches
+// one constant.
+export const MARKETING_SITE = 'https://oryno.tech';
+export const MARKETING_LINKS = {
+  HOME:     MARKETING_SITE,
+  TERMS:    `${MARKETING_SITE}/terms`,
+  PRIVACY:  `${MARKETING_SITE}/privacy`,
+  CONTACT:  `${MARKETING_SITE}/contact`,
 };
 
 export const backgroundImages = [

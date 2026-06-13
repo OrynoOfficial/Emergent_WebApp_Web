@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, Mail, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { FormModal, AUTH_VIEWS } from './AuthConstants';
+import { FormModal, AUTH_VIEWS, MARKETING_LINKS } from './AuthConstants';
 
 export function OperatorContactView({ goBack, setSelectedRole, setCurrentView }) {
   return (
@@ -11,12 +11,16 @@ export function OperatorContactView({ goBack, setSelectedRole, setCurrentView })
         <button onClick={goBack} className="flex items-center text-slate-600 hover:text-[#082c59] text-sm"><ArrowLeft className="h-4 w-4 mr-1" />Back</button>
       </div>
       <div className="text-center mb-4">
-        <img src="/images/logo.png" alt="Logo" className="h-12 w-auto mx-auto mb-2 object-contain" />
+        <img src="/images/logo.png" alt="Oryno" className="h-12 w-auto mx-auto mb-2 object-contain" />
         <h1 className="text-xl font-bold text-slate-900">Become an Operator</h1>
       </div>
       <div className="bg-slate-50 rounded-xl p-5 mb-4">
         <p className="text-slate-600 text-sm mb-4">We&apos;re excited to partner with you. Fill out our contact form to get started with personalized onboarding.</p>
-        <Button onClick={() => window.open('/contact?type=operator', '_blank')} className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl">
+        <Button
+          onClick={() => window.open(`${MARKETING_LINKS.CONTACT}?type=operator`, '_blank', 'noopener,noreferrer')}
+          className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl"
+          data-testid="operator-contact-form-btn"
+        >
           <Mail className="mr-2 h-4 w-4" />Contact Us via Form
         </Button>
         <button onClick={() => { setSelectedRole('customer'); setCurrentView(AUTH_VIEWS.SIGNUP_FORM); }} className="w-full text-center text-[#082c59] hover:underline mt-3 text-sm">Back to Customer Signup</button>

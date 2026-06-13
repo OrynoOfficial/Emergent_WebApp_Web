@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Mail, Lock, User, Phone, Loader2, ArrowLeft, Globe } from 'lucide-react';
-import { FormModal, AUTH_VIEWS } from './AuthConstants';
+import { FormModal, AUTH_VIEWS, MARKETING_LINKS } from './AuthConstants';
 
 export function SignupFormView({ goBack, error, fullName, setFullName, contactMethod, setContactMethod, registerEmail, setRegisterEmail, registerPhone, setRegisterPhone, registerPassword, setRegisterPassword, showPassword, setShowPassword, confirmPassword, setConfirmPassword, showConfirmPassword, setShowConfirmPassword, acceptTerms, setAcceptTerms, isLoading, handleRegister, setCurrentView }) {
   return (
@@ -81,7 +81,7 @@ export function SignupFormView({ goBack, error, fullName, setFullName, contactMe
         <div className="flex items-start gap-2">
           <Checkbox id="acceptTerms" checked={acceptTerms} onCheckedChange={(checked) => setAcceptTerms(checked)} className="mt-0.5" />
           <Label htmlFor="acceptTerms" className="text-xs text-slate-600 cursor-pointer">
-            I agree to the <Link to="/terms" className="text-[#082c59] hover:underline">Terms</Link> and <Link to="/privacy" className="text-[#082c59] hover:underline">Privacy Policy</Link>
+            I agree to the <a href={MARKETING_LINKS.TERMS} target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline">Terms</a> and <a href={MARKETING_LINKS.PRIVACY} target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline">Privacy Policy</a>
           </Label>
         </div>
         <Button type="submit" disabled={isLoading} className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl">

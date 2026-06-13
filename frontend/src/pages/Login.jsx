@@ -8,6 +8,7 @@ import { LoginView } from './auth/LoginView';
 import { SignupRoleView } from './auth/SignupRoleView';
 import { SignupFormView } from './auth/SignupFormView';
 import { OperatorContactView, PhoneOtpView, TwoFactorView } from './auth/OtpViews';
+import { ForgotPasswordView } from './auth/ForgotPasswordView';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -211,6 +212,7 @@ export default function AuthPage() {
     switch (currentView) {
       case AUTH_VIEWS.LOGIN:
       case AUTH_VIEWS.SIGNUP_ROLE: setCurrentView(AUTH_VIEWS.WELCOME); break;
+      case AUTH_VIEWS.FORGOT_PASSWORD: setCurrentView(AUTH_VIEWS.LOGIN); break;
       case AUTH_VIEWS.SIGNUP_FORM:
       case AUTH_VIEWS.OPERATOR_CONTACT: setCurrentView(AUTH_VIEWS.SIGNUP_ROLE); break;
       case AUTH_VIEWS.TWO_FA: setCurrentView(AUTH_VIEWS.LOGIN); break;
@@ -224,7 +226,9 @@ export default function AuthPage() {
       case AUTH_VIEWS.WELCOME:
         return <WelcomeView setCurrentView={setCurrentView} />;
       case AUTH_VIEWS.LOGIN:
-        return <LoginView goBack={goBack} error={error} loginMethod={loginMethod} setLoginMethod={setLoginMethod} loginIdentifier={loginIdentifier} setLoginIdentifier={setLoginIdentifier} loginPassword={loginPassword} setLoginPassword={setLoginPassword} showPassword={showPassword} setShowPassword={setShowPassword} isLoading={isLoading} handleLogin={handleLogin} setCurrentView={setCurrentView} />;
+        return <LoginView goBack={goBack} error={error} setError={setError} loginMethod={loginMethod} setLoginMethod={setLoginMethod} loginIdentifier={loginIdentifier} setLoginIdentifier={setLoginIdentifier} loginPassword={loginPassword} setLoginPassword={setLoginPassword} showPassword={showPassword} setShowPassword={setShowPassword} isLoading={isLoading} handleLogin={handleLogin} setCurrentView={setCurrentView} />;
+      case AUTH_VIEWS.FORGOT_PASSWORD:
+        return <ForgotPasswordView setCurrentView={setCurrentView} />;
       case AUTH_VIEWS.SIGNUP_ROLE:
         return <SignupRoleView goBack={goBack} selectedRole={selectedRole} setSelectedRole={setSelectedRole} setCurrentView={setCurrentView} />;
       case AUTH_VIEWS.SIGNUP_FORM:

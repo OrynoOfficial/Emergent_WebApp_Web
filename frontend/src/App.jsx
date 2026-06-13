@@ -131,6 +131,7 @@ import PaymentSuccess from './pages/payment/PaymentSuccess';
 import PaymentCancel from './pages/payment/PaymentCancel';
 import StripeCheckoutConfirm from './pages/payment/StripeCheckoutConfirm';
 import { RouteTitleSync } from './components/shared/PageTitle';
+import ResetPassword from './pages/auth/ResetPassword';
 
 function App() {
   return (
@@ -146,6 +147,7 @@ function App() {
           <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/track" element={<TrackPackage />} />
           <Route path="/track/:trackingNumber" element={<TrackPackage />} />
             <Route path="/register" element={<Register />} />

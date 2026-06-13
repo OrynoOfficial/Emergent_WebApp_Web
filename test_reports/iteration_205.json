@@ -1,0 +1,31 @@
+{
+  "summary": "Phase A login/auth UX — both backend AND frontend tested live. Backend: 11/11 pytests pass (check-account: existing+unknown+invalid+blank; forgot-password: email-link, phone-otp, operator-403, anti-enumeration; reset-password: short-pw rejected, success + login, one-shot enforcement, invalid token). Frontend live on /login: WelcomeView renders new UI, Terms+Privacy links correctly target=_blank with rel=noopener+noreferrer, two-step login works (bad email → red error alert + signup CTA; good email → step2 with echo+edit+forgot link), Edit button returns to step1 with identifier prefilled and password hidden, ForgotPassword modal opens with all sub-elements. TWO BUGS FOUND.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "WelcomeView.jsx L55-61", "issue": "welcome-home-link is missing target=\"_blank\" and rel=\"noopener noreferrer\" — spec explicitly requires \"open in a new tab\". Terms/Privacy links have it; Homepage link does not (live attributes confirm target=None rel=None).", "selector": "[data-testid=\"welcome-home-link\"]", "priority": "MEDIUM"},
+      {"component": "ForgotPasswordView.jsx L174", "issue": "forgot-sandbox-link is gated on `info?.reset_link && info?.dispatched === false`, but in this preview env the backend returns dispatched=true (Resend reports success in sandbox), so the dev fallback link NEVER renders despite reset_link being present in the API response. Spec requires the sandbox link to be surfaced for dev/QA. Suggest dropping the `info?.dispatched === false` guard and showing the link whenever `info?.reset_link` is present (or conditionally on NODE_ENV/APP_PUBLIC_URL containing 'preview').", "selector": "[data-testid=\"forgot-sandbox-link\"]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_phase_a_auth_flow.py", "/app/test_reports/pytest/iter205_phase_a_auth.xml"],
+  "action_items": [
+    "Add target=\"_blank\" rel=\"noopener noreferrer\" to welcome-home-link in WelcomeView.jsx so the Return-to-Homepage link opens in a new tab (matches Terms/Privacy behavior).",
+    "Relax the sandbox-link visibility guard in ForgotPasswordView.jsx (line 174): show forgot-sandbox-link whenever info?.reset_link exists (the backend only includes reset_link as a dev fallback anyway). Otherwise QA cannot complete the email-reset flow in preview."
+  ],
+  "critical_code_review_comments": [
+    "ForgotPasswordView.jsx visibility logic for forgot-sandbox-link is too strict — couples UI to a backend signal (dispatched=false) that doesn't fire when Resend reports success even in sandbox. Render whenever reset_link is present.",
+    "Backend /api/auth/forgot-password could honor an APP_ENV/preview env flag to deterministically force `dispatched=false` in non-prod, eliminating the coupling above.",
+    "/api/auth/check-account intentionally returns role+status on existence — that's a small enumeration trade-off, acceptable given rate-limiting, but worth a comment in the doc-string (already present).",
+    "Forgot-password endpoint returns the OTP in clear text in the JSON response when SMS_DISPATCH_ENABLED!=true — make sure SMS_DISPATCH_ENABLED is set to 'true' in production deployment."
+  ],
+  "updated_files": ["/app/backend/tests/test_phase_a_auth_flow.py"],
+  "success_rate": {"backend": "11/11 (100%)", "frontend": "9/11 live-verified flows (welcome/terms/privacy links, login 2-step, error+CTA, edit-back, forgot modal); 2 spec deviations (home-link target, sandbox-link gating)"},
+  "test_credentials": "Using /app/memory/test_credentials.md — customer@test.com / testpassword123 (rotated through reset, restored to testpassword123); mani-monroe@netflix.com used for operator-block 403 assertion.",
+  "seed_data_creation": "None. Reset-password test restores the customer's password to testpassword123 so other suites still pass.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase A: New /api/auth/check-account, /api/auth/forgot-password, /api/auth/reset-password are all working at the API layer. UI flows pass end-to-end live except (1) welcome-home-link missing target=_blank, (2) forgot-sandbox-link hidden because info.dispatched===true. Reset-password page (/reset-password?token=...) and Phone-OTP UI stage were NOT live-tested end-to-end because the sandbox link wasn't surfaced; pytest covers the backend reset flow. Cloudflare bot challenge intermittently returns a blank page — retry once or twice if welcome-home-link selector misses on first hit.",
+  "rca of the issue": "Bug 1 (welcome-home-link new-tab): When WelcomeView.jsx was refactored to use MARKETING_LINKS.HOME, the Terms/Privacy anchors were updated with target+rel attrs but the Homepage anchor was overlooked. Fix: add target=\"_blank\" rel=\"noopener noreferrer\" on the <a> at WelcomeView.jsx:55-61. Bug 2 (sandbox-link never renders): ForgotPasswordView.jsx:174 guard `info?.reset_link && info?.dispatched === false` assumes Resend will FAIL in sandbox; in this preview the Resend client returns success so backend sets dispatched=true while still including reset_link as a fallback. Fix: drop the `info?.dispatched === false` part of the guard — render the sandbox-link whenever info?.reset_link is present (backend only adds it as a dev fallback already)."
+}

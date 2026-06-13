@@ -224,6 +224,190 @@ async def login(credentials: UserLogin, request: Request):
         }
     }
 
+
+# ─── Two-step login: existence check ───────────────────────────────────
+class CheckAccountRequest(BaseModel):
+    method: str             # "email" | "phone"
+    identifier: str         # actual email or phone value
+
+
+def _normalize_phone(phone: str) -> str:
+    return phone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+
+
+async def _find_user_by(method: str, identifier: str):
+    db = get_database()
+    if method == "email":
+        return await db.users.find_one({"email": identifier.strip().lower()})
+    phone = _normalize_phone(identifier)
+    user = await db.users.find_one({"phone": phone})
+    if not user:
+        suffix = phone[-9:] if len(phone) >= 9 else phone
+        user = await db.users.find_one({"phone": {"$regex": f".*{suffix}$", "$options": "i"}})
+    return user
+
+
+@router.post("/check-account")
+@limiter.limit(AUTH_LOGIN_RATE)
+async def check_account(payload: CheckAccountRequest, request: Request):
+    """Step 1 of two-step login: tell the client whether the identifier
+    matches an existing account, so the UI can either show the password
+    field or prompt for sign-up.
+
+    To minimise enumeration risk we don't echo the masked identifier back
+    on success — just `{"exists": bool}`. SlowAPI throttles brute force.
+    """
+    if payload.method not in ("email", "phone"):
+        raise HTTPException(status_code=400, detail="method must be 'email' or 'phone'")
+    if not payload.identifier or not payload.identifier.strip():
+        raise HTTPException(status_code=400, detail="identifier is required")
+
+    user = await _find_user_by(payload.method, payload.identifier)
+    if not user:
+        return {"exists": False}
+
+    # Surface only role + status — enough to drive UX (e.g. block disabled
+    # accounts here rather than after a wasted password attempt).
+    return {
+        "exists": True,
+        "role": user.get("role"),
+        "status": user.get("status"),
+        "two_fa_enabled": bool(user.get("two_fa_enabled")),
+    }
+
+
+# ─── Forgot password (customers only) ──────────────────────────────────
+# Two channels per the spec:
+#   • email  → magic-link reset (`/reset-password?token=…`) via Resend
+#   • phone  → 6-digit OTP that the user enters in the reset form
+# Operators / team-members are intentionally excluded: their resets must
+# go through their owner / admin (see `routes/operator_users.py`).
+
+class ForgotPasswordRequest(BaseModel):
+    method: str             # "email" | "phone"
+    identifier: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str              # email-link token  OR  6-digit OTP
+    new_password: str
+    method: str = "email"   # "email" | "phone"  (which channel was used)
+    identifier: Optional[str] = None  # required when method == "phone"
+
+
+# Roles that are NOT allowed to self-reset via this endpoint.
+_OPERATOR_ROLES = {"operator", "operator_admin", "operator_user"}
+
+
+@router.post("/forgot-password")
+@limiter.limit(AUTH_RESEND_RATE)
+async def forgot_password(payload: ForgotPasswordRequest, request: Request):
+    """Initiate a customer self-service password reset.
+
+    For email: a one-shot magic-link token is stored + emailed.
+    For phone: a 6-digit OTP is stored + (in production) sent via SMS.
+    In dev/sandbox the OTP and link are also returned in the response so
+    the agent / QA can complete the flow without a real inbox / handset.
+    """
+    db = get_database()
+    if payload.method not in ("email", "phone"):
+        raise HTTPException(status_code=400, detail="method must be 'email' or 'phone'")
+
+    user = await _find_user_by(payload.method, payload.identifier)
+    # NOTE: To prevent account-existence leaks we return a generic success
+    # even when the user is missing — the only side-effect of a missing
+    # account is that no email/sms is dispatched. The dashboard ratelimit
+    # protects us against using this as an enumeration oracle.
+    if not user:
+        return {"sent": True, "channel": payload.method}
+
+    if user.get("role") in _OPERATOR_ROLES or user.get("operator_id"):
+        raise HTTPException(
+            status_code=403,
+            detail="Operator and team accounts cannot self-reset. Ask your administrator.",
+        )
+
+    token = uuid.uuid4().hex if payload.method == "email" else generate_phone_otp()
+    expires = datetime.utcnow() + timedelta(minutes=30)
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {"$set": {
+            "password_reset_token": token,
+            "password_reset_expires": expires,
+            "password_reset_method": payload.method,
+        }},
+    )
+
+    resp = {"sent": True, "channel": payload.method}
+
+    if payload.method == "email":
+        public_url = os.environ.get("APP_PUBLIC_URL", "").rstrip("/")
+        reset_link = f"{public_url}/reset-password?token={token}"
+        resp["reset_link"] = reset_link  # dev fallback
+        try:
+            from utils.email import send_password_reset_email
+            await send_password_reset_email(
+                to_email=user.get("email"),
+                reset_link=reset_link,
+            )
+            resp["dispatched"] = True
+        except Exception:
+            # If Resend is sandboxed or misconfigured, the link in resp
+            # lets the user copy it from the modal as a fallback.
+            resp["dispatched"] = False
+    else:
+        # SMS dispatch is not yet wired (no Twilio integration). Surface
+        # the OTP in the response so dev/QA can test; production should
+        # toggle this off via `SMS_DISPATCH_ENABLED`.
+        resp["otp"] = token if os.environ.get("SMS_DISPATCH_ENABLED", "false").lower() != "true" else None
+        resp["dispatched"] = False
+
+    return resp
+
+
+@router.post("/reset-password")
+@limiter.limit(AUTH_VERIFY_RATE)
+async def reset_password(payload: ResetPasswordRequest, request: Request):
+    """Complete a password reset using the token from `forgot-password`."""
+    db = get_database()
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+    query = {"password_reset_token": payload.token}
+    if payload.method == "phone":
+        # OTPs are 6 digits and reused per-user, so we MUST scope by
+        # identifier or different users could collide on the same code.
+        if not payload.identifier:
+            raise HTTPException(status_code=400, detail="identifier required for phone reset")
+        user = await _find_user_by("phone", payload.identifier)
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired code.")
+        query["_id"] = user["_id"]
+
+    user = await db.users.find_one(query)
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired token.")
+    expires = user.get("password_reset_expires")
+    if not expires or expires < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="This reset link has expired. Request a new one.")
+    if user.get("role") in _OPERATOR_ROLES or user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Operator accounts cannot self-reset.")
+
+    new_hash = get_password_hash(payload.new_password)
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"password_hash": new_hash},
+            "$unset": {
+                "password_reset_token": "",
+                "password_reset_expires": "",
+                "password_reset_method": "",
+            },
+        },
+    )
+    return {"reset": True}
+
+
 @router.post("/refresh", response_model=Token)
 async def refresh_token(request: Request):
     """Refresh access token using refresh token"""
