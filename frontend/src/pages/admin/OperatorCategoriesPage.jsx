@@ -5,30 +5,75 @@
 // specific sub-category to e.g. find every operator currently offering
 // "photographer". Saves on blur so the admin never has to hunt for a
 // Save button.
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, TrendingUp, Globe, Search, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
+import { Search, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import OperatorCategoryAssign from '@/components/admin/OperatorCategoryAssign';
+import OperatorSectionTabs from '@/components/admin/OperatorSectionTabs';
 import { CATEGORY_CATALOG, parseOperatorTags } from '@/components/admin/operatorCategoryUtils';
 
 const AREA_OPTIONS = ['all', ...Object.keys(CATEGORY_CATALOG)];
 
 export default function OperatorCategoriesPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
   const [search, setSearch] = useState('');
   const [areaFilter, setAreaFilter] = useState('all');
   const [catFilter, setCatFilter] = useState('all');
+
+  // ─── Debounced PUT helper ──────────────────────────────────────────
+  // A user clicking 4 chips in rapid succession used to fire 4 PUT
+  // requests against /api/operators/{id}. We now buffer all toggles
+  // per-operator and flush a single PUT 300 ms after the LAST chip
+  // click. Pending writes are flushed eagerly on unmount so no toggle
+  // is silently dropped if the admin navigates away.
+  const pendingRef = useRef(new Map()); // operatorId -> { timeout, tags }
+
+  const flushPending = useCallback(async (id) => {
+    const entry = pendingRef.current.get(id);
+    if (!entry) return;
+    pendingRef.current.delete(id);
+    clearTimeout(entry.timeout);
+    setSavingId(id);
+    try {
+      await api.put(`/operators/${id}`, { service_types: entry.tags });
+      toast.success('Categories saved');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Save failed');
+    } finally {
+      setSavingId(null);
+    }
+  }, []);
+
+  const scheduleSave = useCallback((op, nextTags) => {
+    const id = op._id || op.id;
+    const existing = pendingRef.current.get(id);
+    if (existing) clearTimeout(existing.timeout);
+    const timeout = setTimeout(() => {
+      // Hoist into a microtask to avoid setState-in-timer warnings
+      // when the effect runs while the component is unmounting.
+      flushPending(id);
+    }, 300);
+    pendingRef.current.set(id, { timeout, tags: nextTags });
+  }, [flushPending]);
+
+  // Eagerly flush any debounced writes if the user navigates away
+  // before the 300 ms timer fires.
+  useEffect(() => {
+    // Snapshot the ref into a local so the cleanup closure refers to
+    // the same Map instance even if React replaces the ref later.
+    const map = pendingRef.current;
+    return () => {
+      for (const [id] of map) flushPending(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -61,18 +106,7 @@ export default function OperatorCategoriesPage() {
     });
   }, [operators, search, areaFilter, catFilter]);
 
-  const saveOperator = async (op, nextTags) => {
-    setSavingId(op._id || op.id);
-    try {
-      await api.put(`/operators/${op._id || op.id}`, { service_types: nextTags });
-      setOperators(list => list.map(x => (x._id || x.id) === (op._id || op.id) ? { ...x, service_types: nextTags } : x));
-      toast.success('Categories saved');
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Save failed');
-    } finally {
-      setSavingId(null);
-    }
-  };
+  const saveOperator = (op, nextTags) => scheduleSave(op, nextTags);
 
   const catOptionsForFilter = areaFilter === 'all' ? [] : (CATEGORY_CATALOG[areaFilter] || []);
 
@@ -90,33 +124,8 @@ export default function OperatorCategoriesPage() {
         </p>
       </div>
 
-      {/* Sub-page tabs — mirror OperatorsManagement layout */}
-      <Tabs
-        value={location.pathname.includes('/geography') ? 'geography'
-             : location.pathname.includes('/market-segments') ? 'market-segments'
-             : location.pathname.includes('/categories') ? 'categories' : 'operators'}
-        onValueChange={(v) => {
-          if (v === 'operators') navigate('/admin/operators');
-          else if (v === 'geography') navigate('/admin/operators/geography');
-          else if (v === 'market-segments') navigate('/admin/operators/market-segments');
-          else if (v === 'categories') navigate('/admin/operators/categories');
-        }}
-      >
-        <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100" data-testid="operator-management-tabs">
-          <TabsTrigger value="operators" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-operators">
-            <Building className="w-4 h-4" />Operators
-          </TabsTrigger>
-          <TabsTrigger value="geography" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Globe className="w-4 h-4" />Geography
-          </TabsTrigger>
-          <TabsTrigger value="market-segments" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <TrendingUp className="w-4 h-4" />Market Segments
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-categories">
-            <Sparkles className="w-4 h-4" />Categories
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Sub-page tabs — shared with OperatorsManagement. */}
+      <OperatorSectionTabs />
 
       {/* Toolbar */}
       <div className="flex flex-wrap gap-3 items-center">

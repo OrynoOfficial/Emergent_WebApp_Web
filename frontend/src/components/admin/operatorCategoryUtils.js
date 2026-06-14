@@ -31,7 +31,24 @@ export const CATEGORY_CATALOG = {
     { value: 'pastry',      label: 'Pastry / Desserts' },
     { value: 'vegan',       label: 'Vegan / Plant-based' },
   ],
-  // Add more areas (hotels by star_rating, cars by vehicle_type) here.
+  hotel: [
+    { value: 'hotel',   label: 'Hotel' },
+    { value: 'resort',  label: 'Resort' },
+    { value: 'lodge',   label: 'Lodge' },
+    { value: 'airbnb',  label: 'Apartments / Airbnb' },
+    { value: 'guesthouse', label: 'Guesthouse' },
+    // Star tiers — saved as the bare digit so the backend can match
+    // `star_rating == 5`.
+    { value: '3star', label: '3★' },
+    { value: '4star', label: '4★' },
+    { value: '5star', label: '5★' },
+  ],
+  car_rental: [
+    { value: 'normal', label: 'Normal' },
+    { value: 'vip',    label: 'VIP' },
+    { value: 'luxury', label: 'Luxury' },
+  ],
+  // Add more areas here as they grow sub-categories.
 };
 
 // Parse the operator's `service_types` into:

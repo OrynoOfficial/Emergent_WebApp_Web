@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/shared/AdminModal';
 import AddOperatorWizard from '@/components/admin/AddOperatorWizard';
 import OperatorCategoryAssign from '@/components/admin/OperatorCategoryAssign';
+import OperatorSectionTabs from '@/components/admin/OperatorSectionTabs';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -335,6 +336,7 @@ export default function OperatorsManagement() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars -- legacy single-step create handler kept for back-compat with older modal triggers; AddOperatorWizard is the active flow.
   const handleCreate = async () => {
     await submitOperatorCreate(createForm);
     setCreateForm({ name: '', email: '', phone: '', city: '', operator_type: 'travel', service_types: ['travel'], country: 'CM', region: '', market_segment: 'sme', create_owner_account: false, owner_full_name: '', owner_email: '', owner_phone: '', owner_password: '' });
@@ -386,21 +388,9 @@ export default function OperatorsManagement() {
         else if (v === 'market-segments') navigate('/admin/operators/market-segments');
         else if (v === 'categories') navigate('/admin/operators/categories');
       }}>
-        <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100" data-testid="operator-management-tabs">
-          <TabsTrigger value="operators" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-operators">
-            <Building className="w-4 h-4" />Operators
-          </TabsTrigger>
-          <TabsTrigger value="geography" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-geography">
-            <Globe className="w-4 h-4" />Geography
-          </TabsTrigger>
-          <TabsTrigger value="market-segments" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-market-segments">
-            <TrendingUp className="w-4 h-4" />Market Segments
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-categories">
-            <Sparkles className="w-4 h-4" />Categories
-          </TabsTrigger>
-        </TabsList>
+        <TabsList className="hidden" /> {/* legacy stub — replaced by <OperatorSectionTabs/> below */}
       </Tabs>
+      <OperatorSectionTabs />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

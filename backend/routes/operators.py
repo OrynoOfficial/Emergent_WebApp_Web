@@ -367,6 +367,40 @@ async def get_operators_by_service_category(
         ]):
             if row.get("_id"):
                 derived_ids.add(row["_id"])
+    elif service_type == "hotel":
+        # Hotels have two natural sub-categories:
+        #   • property_type — string ("hotel", "resort", "lodge", "airbnb")
+        #   • star_rating   — number 1–5 (passed as "5star", "4star", … or "5")
+        # We try the string match first, then fall back to a star match
+        # if the category is in the form "<n>star" or a bare digit.
+        match_clause: dict[str, object] = {"property_type": category}
+        if category.endswith("star") or category.isdigit():
+            try:
+                stars = int(category.replace("star", "").strip() or 0)
+                if stars:
+                    match_clause = {"star_rating": stars}
+            except ValueError:
+                pass
+        async for row in db.hotels.aggregate([
+            {"$match": match_clause},
+            {"$group": {"_id": "$operator_id"}},
+        ]):
+            if row.get("_id"):
+                derived_ids.add(row["_id"])
+    elif service_type in ("car_rental", "cars"):
+        # Vehicles are scoped to a car-rental operator. Each vehicle has
+        # a `vehicle_type` enum (normal | vip | luxury). To derive
+        # eligible operators we walk vehicles → car_rentals → operator.
+        async for row in db.vehicles.aggregate([
+            {"$match": {"vehicle_type": category}},
+            {"$group": {"_id": "$car_rental_id"}},
+        ]):
+            rental_id = row.get("_id")
+            if not rental_id:
+                continue
+            rental = await db.car_rentals.find_one({"_id": rental_id}, {"operator_id": 1})
+            if rental and rental.get("operator_id"):
+                derived_ids.add(rental["operator_id"])
 
     # Operators explicitly tagged with the category in `service_types`.
     # We accept both bare category strings (`photographer`) and qualified
