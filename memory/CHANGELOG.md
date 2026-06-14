@@ -1,3 +1,12 @@
+### 2026-02-14 — Banquet Customer UI verified + P3 Role chips & DnD assignment (iter184/185)
+- **Banquet customer overhaul verified** (iteration_184, 11/12 PASS): pink theme, single Filter popover, swipeable galleries with always-visible chevrons, pinned cart strip, nested package → service modal flow, labelled "Add to Cart" CTA, enriched bundle pricing from `line.service`.
+- **PackageCard regression fix**: per-line unit prices on Bundle cards (`BanquetResults.jsx`) now resolve via `line.service` first, falling back to the local services list (mirrors the modal pattern).
+- **P3a Role chips on Users list** (`Users.jsx`): module-level `<RoleChips>` resolves `user.assigned_roles` via `GET /access/roles`, rendering coloured pill chips in list/grid/details views. `data-testid="user-role-chips"`, `role-chip-<id>`.
+- **P3b Drag-and-drop user → role** (`Permissions.jsx`): Roles tab now ships a 3-col role-card grid + 1-col draggable users sidebar (`data-testid="dnd-users-sidebar"`). Drop a user (`draggable-user-<id>`) onto a role card (`role-drop-target-<role-id>`) to assign — emerald drop highlight, red block for admin/super_admin when non-super-admin. PUT `/access/users/{id}/permissions` sends only `assigned_roles` so `custom_permissions` are preserved.
+- **Backend** (`access_control.py`): unchanged — already supports partial updates (only fields present in body are written).
+- **Tested**: backend 3/3 PASS (`test_role_chips_dnd.py`); frontend code review verified all `data-testid`s and DnD handlers.
+
+
 # Oryno Platform — Changelog
 
 

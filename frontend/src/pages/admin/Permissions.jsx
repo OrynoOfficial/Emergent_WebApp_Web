@@ -790,9 +790,9 @@ export default function Permissions() {
     }
     const nextRoles = [...(targetUser.assigned_roles || []), roleId];
     try {
+      // Send only `assigned_roles` so the backend doesn't wipe `custom_permissions`.
       await api.put(`/access/users/${userId}/permissions`, {
         assigned_roles: nextRoles,
-        permissions: [],
       });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, assigned_roles: nextRoles } : u));
       // Bump the role's user count in local state for an immediate visual update.

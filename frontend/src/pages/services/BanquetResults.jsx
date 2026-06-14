@@ -81,14 +81,14 @@ function SwipeableImages({ images, name, height = 'h-44' }) {
             onClick={(e) => scrollTo(Math.max(0, idx - 1), e)}
             className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow transition flex items-center justify-center"
           >
-            <ChevronLeft className="w-4 h-4 text-pink-700" />
+            <ChevronLeft className="w-4 h-4 text-teal-700" />
           </button>
           <button
             type="button"
             onClick={(e) => scrollTo(Math.min(safe.length - 1, idx + 1), e)}
             className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow transition flex items-center justify-center"
           >
-            <ChevronRight className="w-4 h-4 text-pink-700" />
+            <ChevronRight className="w-4 h-4 text-teal-700" />
           </button>
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
             {safe.map((_, i) => (
@@ -112,17 +112,24 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
   const Icon = meta.icon;
   return (
     <Card
-      className="group overflow-hidden bg-white rounded-2xl border border-pink-100/60 shadow-md hover:shadow-xl hover:border-pink-300 transition-all cursor-pointer"
+      className="group overflow-hidden bg-white rounded-2xl border border-teal-100/60 shadow-md hover:shadow-xl hover:border-teal-300 transition-all cursor-pointer"
       onClick={onOpenDetails}
       data-testid={`service-card-${svc.id}`}
     >
       <div className="relative">
         <SwipeableImages images={svc.images} name={svc.name} height="h-48" />
         <div className="absolute top-3 left-3 z-10">
-          <Badge className="bg-white/95 text-pink-700 font-medium shadow-sm">
+          <Badge className="bg-white/95 text-teal-700 font-medium shadow-sm">
             <Icon className="w-3 h-3 mr-1" /> {meta.label}
           </Badge>
         </div>
+        {inCart && (
+          <div className="absolute top-3 right-3 z-10">
+            <Badge className="bg-emerald-500 text-white border-0 shadow-md" data-testid={`in-cart-tag-${svc.id}`}>
+              <Sparkles className="w-3 h-3 mr-1" /> In Cart · {qtyInCart}
+            </Badge>
+          </div>
+        )}
       </div>
       <CardContent className="p-4 space-y-2.5">
         <h3 className="font-bold text-slate-900 leading-tight line-clamp-1">{svc.name}</h3>
@@ -132,29 +139,29 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
         )}
 
         {(svc.address || svc.city) && (
-          <div className="flex items-start gap-2 rounded-lg bg-pink-50/70 px-2.5 py-1.5 border border-pink-100">
-            <MapPin className="w-3.5 h-3.5 text-pink-700 flex-shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 rounded-lg bg-teal-50/70 px-2.5 py-1.5 border border-teal-100">
+            <MapPin className="w-3.5 h-3.5 text-teal-700 flex-shrink-0 mt-0.5" />
             <div className="min-w-0">
               <p className="text-xs font-semibold text-slate-900 truncate">{svc.address || svc.city}</p>
-              {svc.address && svc.city && <p className="text-[10px] text-pink-700 font-medium">{svc.city}</p>}
+              {svc.address && svc.city && <p className="text-[10px] text-teal-700 font-medium">{svc.city}</p>}
             </div>
           </div>
         )}
 
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
           {svc.capacity_max != null && (
-            <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full">
-              <Users className="w-3 h-3 text-pink-700" /> {svc.capacity_min || 0}–{svc.capacity_max} guests
+            <span className="inline-flex items-center gap-1 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">
+              <Users className="w-3 h-3 text-teal-700" /> {svc.capacity_min || 0}–{svc.capacity_max} guests
             </span>
           )}
           {svc.duration_hours && (
-            <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full">
-              <Box className="w-3 h-3 text-pink-700" /> {svc.duration_hours}h
+            <span className="inline-flex items-center gap-1 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">
+              <Box className="w-3 h-3 text-teal-700" /> {svc.duration_hours}h
             </span>
           )}
           {svc.unit_label && (
-            <span className="inline-flex items-center gap-1 bg-pink-50 border border-pink-100 px-2 py-0.5 rounded-full">
-              <Box className="w-3 h-3 text-pink-700" /> per {svc.unit_label}{svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}
+            <span className="inline-flex items-center gap-1 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full">
+              <Box className="w-3 h-3 text-teal-700" /> per {svc.unit_label}{svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}
             </span>
           )}
         </div>
@@ -163,7 +170,7 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
         {Array.isArray(svc.amenities) && svc.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {svc.amenities.slice(0, 3).map(a => (
-              <Badge key={a} variant="outline" className="text-[10px] font-normal py-0 px-1.5 bg-white border-pink-200 text-pink-700 capitalize">
+              <Badge key={a} variant="outline" className="text-[10px] font-normal py-0 px-1.5 bg-white border-teal-200 text-teal-700 capitalize">
                 {String(a).replace(/_/g, ' ')}
               </Badge>
             ))}
@@ -173,15 +180,15 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
           </div>
         )}
 
-        <div className="flex items-end justify-between pt-2 border-t border-pink-100/60">
+        <div className="flex items-end justify-between pt-2 border-t border-teal-100/60">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">From</div>
-            <div className="text-xl font-bold text-pink-700 leading-tight">{formatFCFA(svc.base_price || 0)}</div>
+            <div className="text-xl font-bold text-teal-700 leading-tight">{formatFCFA(svc.base_price || 0)}</div>
             <div className="text-[11px] text-slate-500">{svc.unit_label ? `/ ${svc.unit_label}` : PRICING_SUFFIX[svc.pricing_model] || ''}</div>
           </div>
           {inCart ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <Button size="icon" variant="outline" className="h-8 w-8 border-pink-300" onClick={() => onSetQty(Math.max(1, qtyInCart - 1))}>
+              <Button size="icon" variant="outline" className="h-8 w-8 border-teal-300" onClick={() => onSetQty(Math.max(1, qtyInCart - 1))}>
                 <Minus className="w-3 h-3" />
               </Button>
               <Input
@@ -190,7 +197,7 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
                 className="w-12 h-8 text-center text-sm"
                 data-testid={`qty-input-${svc.id}`}
               />
-              <Button size="icon" variant="outline" className="h-8 w-8 border-pink-300" onClick={() => onSetQty(qtyInCart + 1)}>
+              <Button size="icon" variant="outline" className="h-8 w-8 border-teal-300" onClick={() => onSetQty(qtyInCart + 1)}>
                 <Plus className="w-3 h-3" />
               </Button>
             </div>
@@ -198,7 +205,7 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
             <Button
               onClick={(e) => { e.stopPropagation(); onAdd(); }}
               size="sm"
-              className="bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-700 hover:to-pink-700 text-white rounded-xl shadow shadow-pink-500/20"
+              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl shadow shadow-teal-500/20"
               data-testid={`add-to-cart-${svc.id}`}
             >
               <Plus className="w-4 h-4 mr-1" /> Add to Cart
@@ -224,27 +231,34 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
 
   return (
     <Card
-      className="overflow-hidden border-2 border-pink-300 bg-gradient-to-br from-pink-50 to-white rounded-2xl shadow-md hover:shadow-xl transition-all cursor-pointer"
+      className="overflow-hidden border-2 border-teal-300 bg-gradient-to-br from-teal-50 to-white rounded-2xl shadow-md hover:shadow-xl transition-all cursor-pointer"
       onClick={onOpenDetails}
       data-testid={`package-card-${pkg.id}`}
     >
       <div className="relative">
         <SwipeableImages images={galleryImages} name={pkg.name} height="h-44" />
         <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
-          <Badge className="bg-pink-600 text-white font-medium shadow-sm">
+          <Badge className="bg-teal-600 text-white font-medium shadow-sm">
             <PackageIcon className="w-3 h-3 mr-1" /> Bundle
           </Badge>
           {pkg.discount_percent > 0 && (
             <Badge className="bg-amber-400 text-amber-900 font-bold shadow-sm">−{pkg.discount_percent}%</Badge>
           )}
         </div>
+        {inCart && (
+          <div className="absolute top-3 right-3 z-10">
+            <Badge className="bg-emerald-500 text-white border-0 shadow-md" data-testid={`in-cart-tag-pkg-${pkg.id}`}>
+              <Sparkles className="w-3 h-3 mr-1" /> In Cart
+            </Badge>
+          </div>
+        )}
       </div>
       <CardContent className="p-4 space-y-2.5">
         <h3 className="font-bold text-slate-900 text-lg leading-tight line-clamp-1">{pkg.name}</h3>
         {pkg.description && <p className="text-xs text-slate-600 line-clamp-2">{pkg.description}</p>}
 
         {/* Pronounced items list — first 3 with unit price */}
-        <div className="space-y-1 pt-1 border-t border-pink-100/60">
+        <div className="space-y-1 pt-1 border-t border-teal-100/60">
           {(pkg.services || []).slice(0, 3).map((line, i) => {
             const full = resolve(line);
             const unitPrice = Number(full.base_price || 0);
@@ -252,12 +266,12 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
               <div key={i} className="flex items-center justify-between text-xs gap-2">
                 <span className="text-slate-700 truncate flex-1">{full.name || line.service_name || line.service_id}</span>
                 <span className="text-[10px] text-slate-500 flex-shrink-0">{formatFCFA(unitPrice)}/u</span>
-                <span className="font-semibold text-pink-700 flex-shrink-0">× {line.quantity}</span>
+                <span className="font-semibold text-teal-700 flex-shrink-0">× {line.quantity}</span>
               </div>
             );
           })}
           {(pkg.services?.length || 0) > 3 && (
-            <div className="text-[11px] text-pink-600 italic">+ {pkg.services.length - 3} more services</div>
+            <div className="text-[11px] text-teal-600 italic">+ {pkg.services.length - 3} more services</div>
           )}
         </div>
 
@@ -265,18 +279,18 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
           <span>{(pkg.services || []).length} services · {totalItems} items</span>
         </div>
 
-        <div className="flex items-end justify-between pt-2 border-t border-pink-100/60">
+        <div className="flex items-end justify-between pt-2 border-t border-teal-100/60">
           <div>
             {pkg.discount_percent > 0 && pkg.subtotal && (
               <div className="text-[10px] text-slate-400 line-through">{formatFCFA(pkg.subtotal)}</div>
             )}
-            <div className="text-2xl font-bold text-pink-700 leading-tight">{formatFCFA(pkg.total_price || 0)}</div>
+            <div className="text-2xl font-bold text-teal-700 leading-tight">{formatFCFA(pkg.total_price || 0)}</div>
           </div>
           {inCart ? (
             <Button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
               variant="outline"
-              className="border-pink-400 text-pink-600"
+              className="border-teal-400 text-teal-600"
               data-testid={`remove-package-${pkg.id}`}
             >
               Remove
@@ -284,7 +298,7 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
           ) : (
             <Button
               onClick={(e) => { e.stopPropagation(); onAdd(); }}
-              className="bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-700 hover:to-pink-700 text-white shadow shadow-pink-500/20"
+              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white shadow shadow-teal-500/20"
               data-testid={`add-package-${pkg.id}`}
             >
               <Plus className="w-4 h-4 mr-1" /> Add Bundle
@@ -298,7 +312,7 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function BanquetResults() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const cartApi = useEventCart();
   const { cart, setMeta, addItem, updateQty, removeItem, addPackage, removePackage, totals, count, clear } = cartApi;
@@ -312,10 +326,24 @@ export default function BanquetResults() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [detailItem, setDetailItem] = useState(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const city = searchParams.get('city') || '';
   const guests = parseInt(searchParams.get('guests')) || cart.expected_guests || 0;
   const eventType = searchParams.get('type') || '';
+
+  // Inline "Modify search" form state — pre-populated from URL on each change.
+  const [editCity, setEditCity] = useState(city);
+  const [editType, setEditType] = useState(eventType);
+  const [editGuests, setEditGuests] = useState(guests || 50);
+  useEffect(() => { setEditCity(city); setEditType(eventType); setEditGuests(guests || 50); }, [city, eventType, guests]);
+  const applySearch = () => {
+    const next = new URLSearchParams();
+    if (editCity) next.set('city', editCity);
+    if (editType) next.set('type', editType);
+    if (editGuests) next.set('guests', String(editGuests));
+    setSearchParams(next);
+  };
 
   // Persist search params (sans date) into cart metadata.
   useEffect(() => {
@@ -375,9 +403,9 @@ export default function BanquetResults() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-pink-50/60">
+      <div className="min-h-screen flex items-center justify-center bg-teal-50/60">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-pink-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-teal-600 mx-auto mb-4" />
           <p className="text-slate-600">Finding services for your event…</p>
         </div>
       </div>
@@ -387,18 +415,18 @@ export default function BanquetResults() {
   const activeFilterCount = (minPrice ? 1 : 0) + (maxPrice ? 1 : 0) + (sortBy !== 'relevance' ? 1 : 0) + (categoryTab !== 'all' ? 1 : 0);
 
   return (
-    <div className="min-h-screen bg-pink-50/40 pb-32">
+    <div className="min-h-screen bg-teal-50/40 pb-32">
       {/* Sticky header (pink-themed, matches Laundry pattern) */}
-      <div className="bg-white border-b border-pink-100 shadow-sm sticky top-0 z-20">
+      <div className="bg-white border-b border-teal-100 shadow-sm sticky top-0 z-20">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')} className="gap-2 text-pink-700 hover:bg-pink-50">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')} className="gap-2 text-teal-700 hover:bg-teal-50">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
           </div>
 
           {/* Highlighted Search Criteria — rose gradient hero */}
-          <Card className="shadow-sm bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white mb-4 border-transparent" data-testid="banquet-search-criteria">
+          <Card className="shadow-sm bg-gradient-to-r from-teal-600 to-cyan-600 text-white mb-4 border-transparent" data-testid="banquet-search-criteria">
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -417,14 +445,65 @@ export default function BanquetResults() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/15 border-white/30 text-white hover:bg-white/25"
-                  onClick={() => navigate('/services/banquet')}
-                >
-                  Modify search
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-white/15 border-white/30 text-white hover:bg-white/25"
+                      data-testid="modify-search-btn"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" /> Modify search
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 bg-white p-4 space-y-3" data-testid="modify-search-popover">
+                    <div>
+                      <Label className="text-xs text-slate-600">City</Label>
+                      <Input
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                        placeholder="Yaoundé, Douala…"
+                        className="mt-1 bg-white border-teal-200"
+                        data-testid="modify-search-city"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">Event type</Label>
+                      <Select value={editType || 'any'} onValueChange={(v) => setEditType(v === 'any' ? '' : v)}>
+                        <SelectTrigger className="mt-1 bg-white border-teal-200" data-testid="modify-search-type">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="any">Any</SelectItem>
+                          <SelectItem value="wedding">Wedding</SelectItem>
+                          <SelectItem value="conference">Conference</SelectItem>
+                          <SelectItem value="birthday">Birthday</SelectItem>
+                          <SelectItem value="corporate">Corporate</SelectItem>
+                          <SelectItem value="graduation">Graduation</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600">Guests</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={editGuests}
+                        onChange={(e) => setEditGuests(Math.max(1, Number(e.target.value) || 0))}
+                        className="mt-1 bg-white border-teal-200"
+                        data-testid="modify-search-guests"
+                      />
+                    </div>
+                    <Button
+                      onClick={applySearch}
+                      className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+                      data-testid="modify-search-apply"
+                    >
+                      <Search className="w-3.5 h-3.5 mr-1.5" /> Update results
+                    </Button>
+                  </PopoverContent>
+                </Popover>
               </div>
             </CardContent>
           </Card>
@@ -432,21 +511,21 @@ export default function BanquetResults() {
           {/* Search bar + single Filter button (mirror Laundry results) */}
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-pink-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
               <Input
                 placeholder="Search services by name, city or address…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white border-pink-200 focus-visible:ring-pink-400"
+                className="pl-10 bg-white border-teal-200 focus-visible:ring-teal-400"
                 data-testid="services-search-input"
               />
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="border-pink-300 text-pink-700 hover:bg-pink-50 relative" data-testid="filter-button">
+                <Button variant="outline" className="border-teal-300 text-teal-700 hover:bg-teal-50 relative" data-testid="filter-button">
                   <SlidersHorizontal className="w-4 h-4 mr-2" /> Filter
                   {activeFilterCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-pink-600 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    <span className="absolute -top-1.5 -right-1.5 bg-teal-600 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold">
                       {activeFilterCount}
                     </span>
                   )}
@@ -456,7 +535,7 @@ export default function BanquetResults() {
                 <div>
                   <Label className="text-xs text-slate-600">Category</Label>
                   <Select value={categoryTab} onValueChange={setCategoryTab}>
-                    <SelectTrigger className="mt-1 bg-white border-pink-200" data-testid="filter-category">
+                    <SelectTrigger className="mt-1 bg-white border-teal-200" data-testid="filter-category">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -469,7 +548,7 @@ export default function BanquetResults() {
                 <div>
                   <Label className="text-xs text-slate-600">Sort by</Label>
                   <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="mt-1 bg-white border-pink-200">
+                    <SelectTrigger className="mt-1 bg-white border-teal-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
@@ -483,16 +562,16 @@ export default function BanquetResults() {
                 <div>
                   <Label className="text-xs text-slate-600">Price range (FCFA)</Label>
                   <div className="flex items-center gap-2 mt-1">
-                    <Input type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min" className="bg-white border-pink-200" />
+                    <Input type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min" className="bg-white border-teal-200" />
                     <span className="text-slate-400">–</span>
-                    <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max" className="bg-white border-pink-200" />
+                    <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max" className="bg-white border-teal-200" />
                   </div>
                 </div>
                 {activeFilterCount > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full text-pink-700"
+                    className="w-full text-teal-700"
                     onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy('relevance'); setCategoryTab('all'); }}
                   >
                     Reset filters
@@ -507,30 +586,36 @@ export default function BanquetResults() {
             to keep this header tight. */}
       </div>
 
-      {/* ── Pinned Cart Strip ──────────────────────────────────────────
-          Always visible just under the search header. Live count +
-          total + quick Checkout so the cart never disappears off-screen. */}
+      {/* ── Pinned Cart Strip (top, primary cart trigger) ───────────────
+          Always visible just under the search header. Clicking opens
+          the cart drawer. The floating bottom FAB is hidden when this
+          strip is rendered so the cart only lives at the top. */}
       {count > 0 && (
-        <div className="bg-white border-b border-pink-200 shadow-sm sticky top-[148px] sm:top-[136px] z-10" data-testid="banquet-cart-strip">
+        <div className="bg-white border-b border-teal-200 shadow-sm sticky top-[148px] sm:top-[136px] z-10" data-testid="banquet-cart-strip">
           <div className="px-4 py-2.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <PackageIcon className="w-4 h-4 text-pink-700" />
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="flex items-center gap-2 min-w-0 rounded-lg hover:bg-teal-50 px-1 py-1 transition group"
+              data-testid="cart-strip-open"
+            >
+              <div className="w-9 h-9 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-teal-200 transition">
+                <PackageIcon className="w-4 h-4 text-teal-700" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 text-left">
                 <div className="text-sm font-semibold text-slate-900">{count} item{count === 1 ? '' : 's'} in cart</div>
-                <div className="text-[11px] text-pink-700">Pick your event date at checkout</div>
+                <div className="text-[11px] text-teal-700">Tap to review · pick your event date at checkout</div>
               </div>
-            </div>
+            </button>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="text-right">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Subtotal</div>
-                <div className="text-base font-bold text-pink-700">{formatFCFA(totals.total)}</div>
+                <div className="text-base font-bold text-teal-700">{formatFCFA(totals.total)}</div>
               </div>
               <Button
                 onClick={() => navigate('/services/banquet/checkout')}
                 size="sm"
-                className="bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-700 hover:to-fuchsia-700 text-white shadow"
+                className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white shadow"
                 data-testid="cart-strip-checkout"
               >
                 Checkout
@@ -545,9 +630,9 @@ export default function BanquetResults() {
         {packages.length > 0 && categoryTab === 'all' && (
           <section data-testid="packages-section">
             <div className="flex items-center gap-2 mb-4">
-              <PackageIcon className="w-5 h-5 text-pink-700" />
+              <PackageIcon className="w-5 h-5 text-teal-700" />
               <h2 className="text-lg font-bold text-slate-900">Curated Bundles</h2>
-              <Badge className="bg-pink-100 text-pink-700 border-0">Save more</Badge>
+              <Badge className="bg-teal-100 text-teal-700 border-0">Save more</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {packages.map(pkg => (
@@ -571,8 +656,8 @@ export default function BanquetResults() {
             <span className="ml-2 text-sm font-normal text-slate-500">({filteredServices.length})</span>
           </h2>
           {filteredServices.length === 0 ? (
-            <Card className="p-12 text-center bg-white border-pink-100">
-              <Sparkles className="w-12 h-12 mx-auto text-pink-200 mb-3" />
+            <Card className="p-12 text-center bg-white border-teal-100">
+              <Sparkles className="w-12 h-12 mx-auto text-teal-200 mb-3" />
               <p className="text-slate-500">No services match your filters. Try a different category or clear the filter.</p>
             </Card>
           ) : (
@@ -604,6 +689,7 @@ export default function BanquetResults() {
         services={services}
         qtyInCart={detailItem && detailItem._type !== 'package' ? qtyOf(detailItem.id) : 0}
         inCart={detailItem && detailItem._type === 'package' ? isPkgInCart(detailItem.id) : false}
+        inCartSvcIds={cart.items.map(i => i.service_id)}
         onAdd={() => {
           if (!detailItem) return;
           if (detailItem._type === 'package') addPackage(detailItem);
@@ -614,6 +700,9 @@ export default function BanquetResults() {
       />
 
       <EventCartDrawer
+        open={cartOpen}
+        onOpenChange={setCartOpen}
+        hideFab={count > 0}
         cart={cart}
         updateQty={updateQty}
         removeItem={removeItem}

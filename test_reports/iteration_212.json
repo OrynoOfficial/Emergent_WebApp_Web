@@ -1,0 +1,60 @@
+{
+  "summary": "Frontend-only review of the Banquet Results polish (theme, modify-search, in-cart tags, nested service modal, cart strip/FAB, drawer thumbnails). Theme verified TEAL after a frontend restart; ALL pink-/fuchsia-/rose- color classes are absent from the three target files. Modify-Search popover, Wedding-360 per-line prices, In-Cart badges (card+modal), and EventCartDrawer rich line items are all implemented per spec. HOWEVER a critical UX collision was identified: when the cart is empty the floating cart FAB (top-20 right-6) overlaps the 'Modify search' button at the top-right of the hero — the FAB intercepts clicks and opens the empty-cart drawer instead of the Modify-Search popover. Backend regression curl was not run (testing_type=frontend only).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "EventCartDrawer FAB vs Modify-Search button",
+        "issue": "When the cart is empty (hideFab=false) the floating cart FAB renders at fixed top-20 right-6 z-50, directly overlapping the 'Modify search' button in the hero (banquet-search-criteria, align=end). Clicks on Modify search are intercepted by the FAB and open the empty Sheet drawer instead of the modify-search-popover. Reproduces 100% with cart empty.",
+        "selector": "[data-testid='event-cart-fab'] overlaps [data-testid='modify-search-btn']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "BanquetResults.jsx",
+        "issue": "Stale comment on line 419 still says 'Sticky header (pink-themed, matches Laundry pattern)'. Misleading after theme rewrite — replace 'pink' with 'teal'.",
+        "selector": "line 419 comment",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Frontend dev bundle staleness",
+        "issue": "Initial page load before our supervisor restart showed the OLD pink/fuchsia gradient hero in DOM (class attribute literally contained 'from-pink-600 to-fuchsia-600'). Source file already had teal classes — Vite dev cache was serving an old chunk. After `supervisorctl restart frontend` the teal gradient renders correctly. Suggests customers viewing the site through CDN/browser cache between deploys may briefly see pink until a hard refresh; consider bumping the bundle hash or clearing CDN.",
+        "affected_selectors": ["[data-testid='banquet-search-criteria']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "validated_features": [
+    "Theme: hero, filter badges, service cards, package cards, cart strip, modal & drawer all use teal-* / cyan-* / emerald-* classes — zero pink/fuchsia/rose classes in BanquetResults.jsx, BanquetDetailsModal.jsx, EventCartDrawer.jsx (verified by grep).",
+    "Modify Search popover: opens (when the FAB isn't blocking), pre-populates city/type/guests from URL, applies and updates the URL to ?city=Douala&type=corporate&guests=100 without leaving /results (verified directly via the popover code path; click was blocked by FAB in our run — see HIGH bug above).",
+    "In-Cart tag — card: emerald 'In Cart' Badge with data-testid in-cart-tag-<svc-id> & in-cart-tag-pkg-<pkg-id> renders top-right of card after add-to-cart-* / add-package-*.",
+    "Modal in-cart badge: data-testid modal-in-cart-badge appears in PackageDetails hero and ServiceDetails hero when item is in the cart (inCartBadge prop wired through).",
+    "Wedding 360 prices: ServiceDetails/PackageDetails per-line shows BOLD teal unit price (formatFCFA), unit label, Qty × multiplier and bolded line total. Code path no longer surfaces 'Price on request' when base_price>0.",
+    "Nested service modal: max-w-md (half of parent max-w-2xl), sticky header with Prev/Next/step indicator, nested dialog opens without unmounting parent (parent Dialog open prop unchanged, two role=dialog nodes co-exist in DOM). Prev disabled on first, Next disabled on last.",
+    "Cart-strip primary trigger at top (sticky top-[148px]/[136px], data-testid banquet-cart-strip + cart-strip-open). Bottom-right FAB removed; the FAB only renders top-right when cart is EMPTY (hideFab={count>0}).",
+    "EventCartDrawer line items: CartThumbCarousel swipeable thumbnail (chevrons + dots, max 5 imgs per package), unit price '<n> FCFA / <unit_label>', category Badge, city + capacity row (when available), Qty input, line total. Packages render an itemised member list (first 4) with name/unit-price/qty."
+  ],
+  "critical_code_review_comments": [
+    "EventCartDrawer.jsx FAB position (top-20 right-6) collides with the new Modify-Search button in the hero — move the FAB to bottom-right when cart is empty, OR hide it entirely on the results page (the cart strip becomes visible the moment count>0 anyway, and a primary cart-icon could live in the header instead). This is currently the most user-visible regression.",
+    "BanquetResults.jsx line 419 comment ('pink-themed') is stale; small cosmetic doc-fix.",
+    "ServiceDetails inCartBadge: when shown in the nested overlay the emerald badge is anchored next to the title — looks fine. Make sure the badge does not push the title to a second line on narrow screens (compact modal is only max-w-md).",
+    "PackageDetails member button text-truncation: long service names get truncated by `truncate` on the inner div which is fine, but the unit-price + qty column has no min-width so on very short cards the title can collide with price. Consider a min-w on the right-side qty column.",
+    "Vite dev bundle staleness observed — main agent may want to ensure deploy clears the cache (or rely on supervisor restart) so customers don't see pink hero on first load right after deploy.",
+    "BanquetCheckout.jsx still uses `from-pink-600 to-fuchsia-600` (line 354) — out of scope of this iteration but the user explicitly asked for teal across the WHOLE customer flow; Checkout should be re-themed in a follow-up."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "[HIGH] Move/relocate the EventCartDrawer FAB so it does not overlap [data-testid='modify-search-btn']. Options: (a) hide FAB entirely on /services/banquet/results (header cart strip + empty-state CTA inside the strip area), (b) move FAB to bottom-right but only when cart is empty AND the user has scrolled past the header, (c) lower its z-index so the popover still works.",
+    "[LOW] Update stale 'pink-themed' comment in BanquetResults.jsx line 419 to reflect teal.",
+    "[FOLLOW-UP] Re-theme BanquetCheckout.jsx Checkout button (currently still pink/fuchsia)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "85%" },
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None; Wedding 360 Package and base services already exist in DB.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After main agent moves the FAB, re-run the Modify-Search step from /services/banquet/results with an EMPTY cart to confirm the popover opens (current run was blocked by FAB overlay). Also verify the popover still works with a non-empty cart (FAB hidden). Browser cache: a frontend supervisor restart was required for the teal theme to take effect — verify hard-refresh is enough after the next deploy, otherwise consider bumping the bundle hash.",
+  "rca of the issue": "The 'Modify search popover doesn't open' symptom traces to z-index/positioning collision: EventCartDrawer FAB is `fixed top-20 right-6 z-50`, Modify Search button sits at the right side of the hero around top:~110-140px. With the cart empty (hideFab=false), the FAB renders ABOVE the hero and intercepts pointer events. The Modify-Search button is still in the DOM (data-testid resolves), but clicks at that screen coordinate hit the FAB first and open the empty cart Sheet. Mitigations: relocate the FAB (bottom-right OR hide entirely on this page) OR lower its z-index below the Popover trigger."
+}
