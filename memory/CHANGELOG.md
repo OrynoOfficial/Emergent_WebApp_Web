@@ -1,6 +1,12 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Banquet Modals Polish (View + Package modals)
+- **Service View Modal**: now a polished detail sheet — hero image with title-on-overlay + category badge + price ribbon, thumbnail strip (up to 6 images + "+N" pill), 2-column facts grid (location with map-pin, capacity range, default duration, unit + min qty, operator name, contact). Category-specific `category_details` rendered as small bordered tiles (e.g. cuisine type for catering, photography style for photographers). Amenities chip strip preserved. Footer with Edit / Close actions.
+- **Package Create/Edit Modal**: added a **"Live preview · how customers will see it"** card below the totals — replicates the customer-facing package card (composite hero from first member service's image, stacked avatar strip, price/discount ribbon, draft-state warning). Lets operators iterate on name/discount/service mix without leaving the modal.
+
+
+
 ## Jun 14, 2026 — Orange Money LIVE + MoMo Refund Automation + Money Trail UI
 **1. Orange Money signature scheme**
 - `services/payment_ledger.py::verify_orange_money_signature()` — HMAC-SHA256 over `{X-OM-Timestamp}.{raw_body}` keyed by `ORANGE_MONEY_WEBHOOK_SECRET` with a 5-minute replay-protection window.

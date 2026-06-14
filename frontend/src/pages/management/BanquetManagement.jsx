@@ -724,6 +724,70 @@ function PackagesTab({ services, scopeOperatorId }) {
                 </div>
               </CardContent>
             </Card>
+
+            {/* ── Live customer preview ────────────────────────────────
+                Shows the operator exactly how the package will be merchandised
+                on the customer-facing card so they can iterate on naming,
+                discount, and service mix without leaving the modal. */}
+            {form.services.length > 0 && (() => {
+              const picked = form.services.map(line => {
+                const full = services.find(s => s.id === line.service_id);
+                return {
+                  ...line,
+                  full,
+                  cover: full?.images?.[0] || null,
+                  name: full?.name || line.service_name,
+                };
+              });
+              const heroCover = picked.find(p => p.cover)?.cover || null;
+              const stripCovers = picked.filter(p => p.cover).slice(1, 4);
+              const totalItems = picked.reduce((s, p) => s + Number(p.quantity || 0), 0);
+              const heroIcon = (CATEGORY_BY_VALUE[picked[0]?.category] || CATEGORY_BY_VALUE.other);
+              const HeroIcon = heroIcon.icon;
+              return (
+                <div className="border-t pt-3">
+                  <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">Live preview · how customers will see it</p>
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm max-w-sm mx-auto">
+                    <div className="relative h-32 bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100">
+                      {heroCover ? (
+                        <img src={heroCover} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <HeroIcon className="w-12 h-12 text-pink-300" />
+                        </div>
+                      )}
+                      {stripCovers.length > 0 && (
+                        <div className="absolute top-2 right-2 flex -space-x-2">
+                          {stripCovers.map((m, i) => (
+                            <img key={i} src={m.cover} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm" />
+                          ))}
+                        </div>
+                      )}
+                      <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
+                        <div className="bg-white/95 backdrop-blur px-2 py-0.5 rounded">
+                          <div className="text-[9px] uppercase text-slate-500 font-semibold">Bundle</div>
+                          <div className="text-xs font-bold text-emerald-700">{formatFCFA(total)}</div>
+                        </div>
+                        {Number(form.discount_percent) > 0 && (
+                          <Badge className="bg-rose-500/95 text-white border-0 text-[10px]">−{form.discount_percent}%</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="font-semibold text-sm leading-tight line-clamp-1">{form.name || 'Untitled bundle'}</p>
+                      {form.description && (
+                        <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5">{form.description}</p>
+                      )}
+                      <div className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-2">
+                        <span>{picked.length} services</span>
+                        {totalItems > 0 && <><span>·</span><span>{totalItems} items</span></>}
+                        {!form.is_active && <><span>·</span><span className="text-amber-600 font-medium">Draft (hidden)</span></>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
@@ -1215,58 +1279,140 @@ export default function BanquetManagement() {
         submitDataTestId="save-service-btn"
       />
 
-      {/* View Service Dialog */}
+      {/* View Service Dialog — rich preview matching the customer-facing card */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-lg bg-white">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PartyPopper className="h-5 w-5 text-pink-600" />
-              Service Details
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto p-0">
           {viewing && (() => {
             const meta = CATEGORY_BY_VALUE[viewing.category || 'hall'] || CATEGORY_BY_VALUE.hall;
             const Icon = meta.icon;
+            const images = Array.isArray(viewing.images) ? viewing.images.filter(Boolean) : [];
+            const cover = images[0];
+            const thumbs = images.slice(1, 6);
+            const detailEntries = Object.entries(viewing.category_details || {})
+              .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0));
             return (
-              <div className="space-y-4 py-4">
-                <div className="bg-pink-50 rounded-lg p-4 flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${meta.accent}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg text-pink-900">{viewing.name}</h3>
-                    <Badge className="mt-1">{meta.label}</Badge>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {viewing.city && (<div><p className="text-slate-500">City</p><p className="font-medium">{viewing.city}</p></div>)}
-                  {viewing.capacity_max && (<div><p className="text-slate-500">Capacity</p><p className="font-medium">{viewing.capacity_max} guests</p></div>)}
-                  {viewing.unit_label && (<div><p className="text-slate-500">Unit</p><p className="font-medium capitalize">{viewing.unit_label}</p></div>)}
-                  <div><p className="text-slate-500">Price</p><p className="font-bold text-green-600">{formatFCFA(viewing.base_price)} <span className="text-xs text-slate-500">{PRICING_LABEL[viewing.pricing_model || viewing.price_type] || ''}</span></p></div>
-                </div>
-                {viewing.amenities?.length > 0 && (
-                  <div>
-                    <p className="text-slate-500 text-sm mb-2">Includes</p>
-                    <div className="flex flex-wrap gap-1">
-                      {viewing.amenities.map(a => (<Badge key={a} variant="outline" className="text-xs capitalize">{a.replace('_', ' ')}</Badge>))}
+              <>
+                {/* Hero image (or icon fallback) with title overlay */}
+                <div className="relative h-56 w-full overflow-hidden">
+                  {cover ? (
+                    <img src={cover} alt={viewing.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className={`w-full h-full flex items-center justify-center ${meta.accent}`}>
+                      <Icon className="w-20 h-20 opacity-50" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+                    <div className="text-white drop-shadow">
+                      <Badge className={`${meta.accent} border-0 mb-1 inline-flex items-center gap-1`}>
+                        <Icon className="w-3.5 h-3.5" /> {meta.label}
+                      </Badge>
+                      <h2 className="text-2xl font-bold leading-tight">{viewing.name}</h2>
+                    </div>
+                    <div className="bg-white/95 backdrop-blur rounded-md px-3 py-1.5 shadow text-right flex-shrink-0">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">{PRICING_LABEL[viewing.pricing_model || viewing.price_type] || 'Price'}</div>
+                      <div className="text-base font-bold text-emerald-700">{formatFCFA(viewing.base_price || 0)}</div>
                     </div>
                   </div>
-                )}
-                {viewing.description && (
-                  <div>
-                    <p className="text-slate-500 text-sm mb-1">Description</p>
-                    <p className="text-sm bg-slate-50 p-3 rounded">{viewing.description}</p>
+                </div>
+
+                {/* Thumbnail strip — when more than one image is uploaded */}
+                {thumbs.length > 0 && (
+                  <div className="px-5 pt-3 flex gap-2 overflow-x-auto pb-1">
+                    {thumbs.map((src, i) => (
+                      <img key={i} src={src} alt="" className="w-16 h-16 rounded-md object-cover flex-shrink-0 ring-1 ring-slate-200" />
+                    ))}
+                    {images.length > 6 && (
+                      <div className="w-16 h-16 rounded-md bg-slate-100 flex items-center justify-center text-xs font-medium text-slate-500 flex-shrink-0">
+                        +{images.length - 6}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+
+                <div className="px-5 py-4 space-y-4">
+                  {/* Description */}
+                  {viewing.description && (
+                    <p className="text-sm text-slate-700 leading-relaxed">{viewing.description}</p>
+                  )}
+
+                  {/* Facts grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    {(viewing.address || viewing.city) && (
+                      <div className="col-span-2">
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Location</p>
+                        <p className="font-medium flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" />{viewing.address ? `${viewing.address}, ` : ''}{viewing.city}</p>
+                      </div>
+                    )}
+                    {(viewing.capacity_min != null || viewing.capacity_max != null) && (
+                      <div>
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Capacity</p>
+                        <p className="font-medium flex items-center gap-1.5"><Users className="w-4 h-4 text-slate-400" />{viewing.capacity_min || 0}–{viewing.capacity_max || '∞'} guests</p>
+                      </div>
+                    )}
+                    {viewing.duration_hours && (
+                      <div>
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Default duration</p>
+                        <p className="font-medium flex items-center gap-1.5"><Layers className="w-4 h-4 text-slate-400" />{viewing.duration_hours}h session</p>
+                      </div>
+                    )}
+                    {viewing.unit_label && (
+                      <div>
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Unit</p>
+                        <p className="font-medium flex items-center gap-1.5"><Box className="w-4 h-4 text-slate-400" />per {viewing.unit_label}{viewing.min_quantity ? ` (min ${viewing.min_quantity})` : ''}</p>
+                      </div>
+                    )}
+                    {viewing.operator_name && (
+                      <div>
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Operator</p>
+                        <p className="font-medium flex items-center gap-1.5"><Building2 className="w-4 h-4 text-slate-400" />{viewing.operator_name}</p>
+                      </div>
+                    )}
+                    {(viewing.phone || viewing.email) && (
+                      <div className="col-span-2">
+                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Contact</p>
+                        <p className="font-medium text-slate-700">{[viewing.phone, viewing.email].filter(Boolean).join(' · ')}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Category-specific details */}
+                  {detailEntries.length > 0 && (
+                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                      <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">{meta.label} details</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {detailEntries.map(([k, v]) => (
+                          <div key={k} className="bg-white rounded px-2 py-1.5 border border-slate-100">
+                            <div className="text-[10px] text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</div>
+                            <div className="font-medium text-slate-800 truncate">{Array.isArray(v) ? v.join(', ') : String(v)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Amenities (mainly halls) */}
+                  {Array.isArray(viewing.amenities) && viewing.amenities.length > 0 && (
+                    <div>
+                      <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">Includes</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {viewing.amenities.map(a => (
+                          <Badge key={a} variant="outline" className="text-xs font-normal capitalize">{String(a).replace(/_/g, ' ')}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="px-5 pb-5 pt-0 border-t">
+                  <Button variant="outline" onClick={() => { openDialog(viewing); setIsViewOpen(false); }}>
+                    <Edit className="w-4 h-4 mr-2" /> Edit
+                  </Button>
+                  <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
+                </DialogFooter>
+              </>
             );
           })()}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { openDialog(viewing); setIsViewOpen(false); }}>
-              <Edit className="w-4 h-4 mr-2" /> Edit
-            </Button>
-            <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
