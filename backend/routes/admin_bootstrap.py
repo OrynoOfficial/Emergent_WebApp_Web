@@ -19,10 +19,18 @@ The endpoint also refuses to touch collections that aren't on its known
 whitelist, so an attacker who pickles a malicious bundle can't, say, write
 fake users or audit logs.
 
+The companion `GET /api/admin/seed-bootstrap/export` endpoint lets a super-
+admin pull a fresh JSON snapshot of the same catalogue collections from the
+*current* database — useful for re-seeding a second environment from a known
+production state.
+
 POST /api/admin/seed-bootstrap
     multipart/form-data:
         file: <oryno_seed.json>
         dry_run: "true" | "false"   (default "false")
+
+GET /api/admin/seed-bootstrap/export
+    Returns the JSON bundle as an attachment.
 
 Returns:
     {
@@ -50,6 +58,7 @@ from typing import Any
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import Response
 
 from config.database import get_database
 from middleware.auth import get_current_user
@@ -257,3 +266,86 @@ async def seed_bootstrap(
         "results": results,
         "totals": totals,
     }
+
+
+def _serialize_for_export(value: Any) -> Any:
+    """Recursively coerce BSON / datetime values into JSON-safe forms.
+
+    Mirrors the helper in `scripts/export_catalogue.py` so a download via
+    this endpoint produces an identical bundle to the offline script.
+    """
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _serialize_for_export(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_serialize_for_export(v) for v in value]
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+_USER_REF_FIELDS = {
+    "owner_user_id", "owner_id",
+    "created_by", "updated_by", "deleted_by",
+    "manager_id", "managed_by", "assigned_to",
+    "user_id",
+}
+
+
+def _scrub_user_refs(doc: Any) -> Any:
+    if isinstance(doc, dict):
+        return {
+            k: (None if k in _USER_REF_FIELDS else _scrub_user_refs(v))
+            for k, v in doc.items()
+        }
+    if isinstance(doc, list):
+        return [_scrub_user_refs(v) for v in doc]
+    return doc
+
+
+@router.get("/seed-bootstrap/export")
+async def export_seed_bundle(current_user: dict = Depends(get_current_user)):
+    """Stream a fresh JSON bundle of the catalogue collections for download.
+
+    Super-admin only. Useful for cloning the current DB state into another
+    environment, or for snapshotting before a risky change.
+    """
+    if current_user.get("role") != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super administrators may export the seed bundle.",
+        )
+
+    db = get_database()
+    bundle: dict[str, Any] = {
+        "format_version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "source_db": db.name,
+        "collections": {},
+    }
+
+    for name in sorted(ALLOWED_COLLECTIONS):
+        try:
+            docs: list[dict[str, Any]] = []
+            async for raw in db[name].find({}):
+                docs.append(_serialize_for_export(_scrub_user_refs(raw)))
+            bundle["collections"][name] = docs
+        except Exception as e:
+            logger.warning("seed export: skipping %s — %s", name, e)
+            bundle["collections"][name] = []
+
+    payload = json.dumps(bundle, indent=2, ensure_ascii=False).encode("utf-8")
+    filename = f"oryno_seed_{datetime.now(timezone.utc):%Y%m%d_%H%M%S}.json"
+
+    return Response(
+        content=payload,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
