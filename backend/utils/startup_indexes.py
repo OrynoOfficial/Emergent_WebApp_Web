@@ -132,6 +132,12 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
     IndexSpec("pressings", [("city", ASCENDING)], "ix_pressings_city", sparse=True),
     IndexSpec("pressings", [("status", ASCENDING)], "ix_pressings_status"),
     IndexSpec("banquets", [("operator_id", ASCENDING)], "ix_banquets_operator", sparse=True),
+    IndexSpec("banquets", [("category", ASCENDING)], "ix_banquets_category", sparse=True),
+    IndexSpec("banquets", [("operator_id", ASCENDING), ("category", ASCENDING)],
+             "ix_banquets_op_category", sparse=True),
+    IndexSpec("banquet_packages", [("operator_id", ASCENDING)], "ix_bnqpkg_operator", sparse=True),
+    IndexSpec("banquet_packages", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_bnqpkg_op_active", sparse=True),
 
     # ── auth / verification ────────────────────────────────────────────
     IndexSpec("verification_tokens", [("email", ASCENDING)], "ix_verif_email"),

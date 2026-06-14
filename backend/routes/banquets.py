@@ -41,13 +41,18 @@ async def get_banquets(
     city: Optional[str] = None,
     country: Optional[str] = None,
     venue_type: Optional[str] = None,
+    category: Optional[str] = None,
     capacity_min: Optional[int] = None,
     capacity_max: Optional[int] = None,
     operator_id: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100)
 ):
-    """Get banquet venues - optionally filtered by country via operator"""
+    """Get event services (banquets, rental items, talent, catering, …).
+
+    `category` filters to a single service type: hall, rental_item, canopy,
+    photographer, videographer, catering, decoration, sound_lighting, other.
+    """
     db = get_database()
     
     query = {"status": BanquetStatus.ACTIVE}
@@ -58,6 +63,8 @@ async def get_banquets(
         query["city"] = {"$regex": city, "$options": "i"}
     if venue_type:
         query["venue_type"] = venue_type
+    if category:
+        query["category"] = category
     if capacity_min:
         query["capacity_max"] = {"$gte": capacity_min}
     if capacity_max:

@@ -1,28 +1,28 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  UtensilsCrossed, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
-  LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
-  Bell, Send, Calendar, PartyPopper, Sparkles, Eye, Banknote, Receipt,
-  Replace as ReplaceIcon,
-} from 'lucide-react';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
-import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
+import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import {
+  PartyPopper, Plus, Edit, Trash2, MapPin, Users, RefreshCw,
+  LayoutDashboard, MessageSquare, Eye, Search, Layers,
+  Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed,
+  Sparkles, Music2, Box, Package as PackageIcon,
+} from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -32,20 +32,57 @@ import ServiceCommunicationsHub from '@/components/management/ServiceCommunicati
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
-import OperatorSelector from '@/components/management/shared/OperatorSelector';
-import { Search } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend
-} from 'recharts';
 
 const PAGE_SIZE = 12;
 
-const CHART_COLORS = ['#EC4899', '#8B5CF6', '#F59E0B', '#10B981', '#3B82F6', '#EF4444'];
-const BANQUET_TYPES = ['wedding', 'corporate', 'birthday', 'anniversary', 'graduation', 'conference', 'gala'];
-const SERVICES_INCLUDED = ['catering', 'decoration', 'entertainment', 'photography', 'sound_system', 'lighting', 'valet_parking'];
+// ────────────────────────────────────────────────────────────────────
+// Service-category metadata. Each category drives:
+//  - which fields the editor shows
+//  - which pricing models are available
+//  - the badge colour + icon on the cards
+// Keep this in sync with `backend/models/banquet.py:ServiceCategory`.
+// ────────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { value: 'hall',           label: 'Hall / Venue',          icon: Building2,       accent: 'bg-pink-100 text-pink-700' },
+  { value: 'rental_item',    label: 'Rental Item',           icon: Armchair,        accent: 'bg-amber-100 text-amber-700' },
+  { value: 'canopy',         label: 'Canopy / Tent',         icon: TentTree,        accent: 'bg-emerald-100 text-emerald-700' },
+  { value: 'photographer',   label: 'Photographer',          icon: Camera,          accent: 'bg-indigo-100 text-indigo-700' },
+  { value: 'videographer',   label: 'Videographer',          icon: Video,           accent: 'bg-purple-100 text-purple-700' },
+  { value: 'catering',       label: 'Catering',              icon: UtensilsCrossed, accent: 'bg-orange-100 text-orange-700' },
+  { value: 'decoration',     label: 'Decoration',            icon: Sparkles,        accent: 'bg-rose-100 text-rose-700' },
+  { value: 'sound_lighting', label: 'Sound & Lighting',      icon: Music2,          accent: 'bg-cyan-100 text-cyan-700' },
+  { value: 'other',          label: 'Other',                 icon: Box,             accent: 'bg-slate-100 text-slate-700' },
+];
 
-const DEFAULT_BANQUET_FORM = {
+const CATEGORY_BY_VALUE = Object.fromEntries(CATEGORIES.map(c => [c.value, c]));
+
+// Which pricing models make sense per category. The first entry is the default.
+const PRICING_MODELS_BY_CATEGORY = {
+  hall:           ['per_event', 'per_person', 'per_hour'],
+  rental_item:    ['per_unit'],
+  canopy:         ['per_unit', 'per_event'],
+  photographer:   ['flat_fee', 'per_hour'],
+  videographer:   ['flat_fee', 'per_hour'],
+  catering:       ['per_person', 'per_event'],
+  decoration:     ['per_event', 'flat_fee'],
+  sound_lighting: ['per_event', 'per_hour'],
+  other:          ['per_event', 'per_unit', 'per_hour', 'per_person', 'flat_fee'],
+};
+
+const PRICING_LABEL = {
+  per_event:  'Per event',
+  per_person: 'Per person',
+  per_hour:   'Per hour',
+  per_unit:   'Per unit',
+  flat_fee:   'Flat fee',
+};
+
+const VENUE_SUBTYPES = ['hall', 'garden', 'rooftop', 'ballroom', 'banquet hall', 'open air'];
+const HALL_AMENITIES = ['catering', 'decoration', 'entertainment', 'photography', 'sound_system', 'lighting', 'valet_parking', 'wifi', 'a/c'];
+
+const DEFAULT_FORM = {
+  category: 'hall',
+  pricing_model: 'per_event',
   name: '',
   description: '',
   venue_type: 'hall',
@@ -54,212 +91,709 @@ const DEFAULT_BANQUET_FORM = {
   capacity_min: 50,
   capacity_max: 200,
   base_price: '',
-  price_type: 'per_event',
+  unit_label: '',
+  min_quantity: '',
+  max_quantity: '',
+  duration_hours: '',
   amenities: [],
   images: [],
   phone: '',
   email: '',
   operator_id: '',
-  operator_name: ''
+  operator_name: '',
 };
 
-// Banquet specific dashboard data generator
-// Dashboard data now fetched from API via useRealDashboardData hook
-
-// Business Analytics Component
-const BusinessAnalytics = ({ banquets }) => {
-  const analyticsData = useMemo(() => {
-    // Fixed monthly trend data
-    const monthlyTrend = [
-      { month: 'Jan', events: 8, revenue: 2500000 },
-      { month: 'Feb', events: 12, revenue: 3800000 },
-      { month: 'Mar', events: 15, revenue: 4850000 },
-      { month: 'Apr', events: 11, revenue: 3550000 },
-      { month: 'May', events: 18, revenue: 6200000 },
-      { month: 'Jun', events: 22, revenue: 7800000 }
-    ];
-
-    return { monthlyTrend };
-  }, [banquets]);
+// ────────────────────────────────────────────────────────────────────
+// Category-aware form. Only renders the fields that actually apply to
+// the picked category — keeps the editor short and unambiguous.
+// ────────────────────────────────────────────────────────────────────
+function CategoryAwareFields({ form, setForm, operators }) {
+  const cat = form.category || 'hall';
+  const allowedModels = PRICING_MODELS_BY_CATEGORY[cat] || ['per_event'];
+  const showCapacity = cat === 'hall' || cat === 'canopy';
+  const showAddress = cat === 'hall';
+  const showUnitFields = ['rental_item', 'canopy'].includes(cat);
+  const showDuration = ['per_hour'].includes(form.pricing_model);
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Monthly Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={analyticsData.monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" />
-                <YAxis yAxisId="right" orientation="right" />
-                <Tooltip />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="events" stroke="#EC4899" strokeWidth={2} name="Events" />
-                <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} name="Revenue" />
-              </LineChart>
-            </ResponsiveContainer>
+    <div className="grid grid-cols-2 gap-4">
+      {/* photos */}
+      <div className="col-span-2">
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Service photos</Label>
+        <div className="mt-2">
+          <MiniImageUploader
+            images={form.images || []}
+            onChange={(imgs) => setForm(p => ({ ...p, images: imgs }))}
+            max={3}
+            folder="banquets"
+            accent="pink"
+            helperText="Up to 3 photos. The first is the cover."
+          />
+        </div>
+      </div>
+
+      {/* category picker */}
+      <div className="col-span-2">
+        <Label>Service Category</Label>
+        <Select
+          value={cat}
+          onValueChange={(v) => {
+            const next = PRICING_MODELS_BY_CATEGORY[v]?.[0] || 'per_event';
+            setForm(p => ({ ...p, category: v, pricing_model: next }));
+          }}
+        >
+          <SelectTrigger data-testid="service-category-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map(c => {
+              const Icon = c.icon;
+              return (
+                <SelectItem key={c.value} value={c.value}>
+                  <span className="inline-flex items-center gap-2"><Icon className="w-4 h-4" /> {c.label}</span>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* name */}
+      <div className="col-span-2">
+        <Label>Service Name</Label>
+        <Input
+          value={form.name}
+          onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+          placeholder={cat === 'hall' ? 'e.g. Akwa Grand Ballroom' :
+                       cat === 'rental_item' ? 'e.g. Tiffany Gold Chair' :
+                       cat === 'canopy' ? 'e.g. 10×20 White Canopy' :
+                       cat === 'photographer' ? 'e.g. Wedding Photographer (Studio Lumière)' :
+                       cat === 'videographer' ? 'e.g. Cinematic Wedding Video' :
+                       cat === 'catering' ? 'e.g. Buffet — Cameroonian Classics' :
+                       'Service name'}
+          data-testid="service-name-input"
+        />
+      </div>
+
+      {/* hall-only: subtype + address + capacity */}
+      {cat === 'hall' && (
+        <>
+          <div>
+            <Label>Venue Type</Label>
+            <Select value={form.venue_type || 'hall'} onValueChange={v => setForm(p => ({ ...p, venue_type: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {VENUE_SUBTYPES.map(v => (<SelectItem key={v} value={v} className="capitalize">{v}</SelectItem>))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <Label>City</Label>
+            <Input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
+          </div>
+        </>
+      )}
+
+      {showAddress && (
+        <div className="col-span-2">
+          <Label>Address</Label>
+          <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Rue Joss, Douala" />
+        </div>
+      )}
+
+      {showCapacity && (
+        <>
+          <div>
+            <Label>Min. Capacity</Label>
+            <Input type="number" value={form.capacity_min} onChange={e => setForm(p => ({ ...p, capacity_min: e.target.value }))} placeholder="50" />
+          </div>
+          <div>
+            <Label>Max. Capacity</Label>
+            <Input type="number" value={form.capacity_max} onChange={e => setForm(p => ({ ...p, capacity_max: e.target.value }))} placeholder="200" />
+          </div>
+        </>
+      )}
+
+      {/* pricing model + base price */}
+      <div>
+        <Label>Pricing</Label>
+        <Select value={form.pricing_model} onValueChange={v => setForm(p => ({ ...p, pricing_model: v }))}>
+          <SelectTrigger data-testid="pricing-model-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {allowedModels.map(m => (<SelectItem key={m} value={m}>{PRICING_LABEL[m]}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Base Price (FCFA)</Label>
+        <Input
+          type="number"
+          value={form.base_price}
+          onChange={e => setForm(p => ({ ...p, base_price: e.target.value }))}
+          placeholder="50000"
+          data-testid="base-price-input"
+        />
+      </div>
+
+      {/* per-unit fields */}
+      {showUnitFields && (
+        <>
+          <div>
+            <Label>Unit Label</Label>
+            <Input
+              value={form.unit_label}
+              onChange={e => setForm(p => ({ ...p, unit_label: e.target.value }))}
+              placeholder={cat === 'canopy' ? 'canopy' : 'chair / plate / spoon'}
+              data-testid="unit-label-input"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Min Qty</Label>
+              <Input type="number" value={form.min_quantity} onChange={e => setForm(p => ({ ...p, min_quantity: e.target.value }))} placeholder="10" />
+            </div>
+            <div>
+              <Label className="text-xs">Max Qty</Label>
+              <Input type="number" value={form.max_quantity} onChange={e => setForm(p => ({ ...p, max_quantity: e.target.value }))} placeholder="500" />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* hourly talent — default duration */}
+      {showDuration && (
+        <div className="col-span-2">
+          <Label>Default Duration (hours)</Label>
+          <Input
+            type="number"
+            step="0.5"
+            value={form.duration_hours}
+            onChange={e => setForm(p => ({ ...p, duration_hours: e.target.value }))}
+            placeholder="4"
+          />
+        </div>
+      )}
+
+      {/* amenities — meaningful for halls + catering + decoration */}
+      {['hall', 'catering', 'decoration', 'sound_lighting'].includes(cat) && (
+        <div className="col-span-2">
+          <Label>What&apos;s included</Label>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {HALL_AMENITIES.map(a => (
+              <Badge
+                key={a}
+                variant={form.amenities?.includes(a) ? 'default' : 'outline'}
+                className="cursor-pointer capitalize"
+                onClick={() => setForm(p => ({
+                  ...p,
+                  amenities: p.amenities?.includes(a) ? p.amenities.filter(x => x !== a) : [...(p.amenities || []), a],
+                }))}
+              >
+                {a.replace('_', ' ')}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* operator */}
+      <div className="col-span-2">
+        <OperatorSelector
+          value={form.operator_id || ''}
+          onChange={(id, name) => setForm(p => ({ ...p, operator_id: id, operator_name: name }))}
+          operators={operators}
+          testId="banquet-operator-selector"
+        />
+      </div>
+
+      {/* description */}
+      <div className="col-span-2">
+        <Label>Description</Label>
+        <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe the service…" />
+      </div>
     </div>
   );
-};
+}
 
+// ────────────────────────────────────────────────────────────────────
+// Packages tab — operator-built bundles
+// ────────────────────────────────────────────────────────────────────
+function PackagesTab({ services, scopeOperatorId }) {
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', description: '', services: [], discount_percent: 0, is_active: true });
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
+      const res = await api.get(`/banquets/packages/${params}`);
+      setPackages(res.data.packages || []);
+    } catch (err) {
+      console.error(err);
+      setPackages([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [scopeOperatorId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ name: '', description: '', services: [], discount_percent: 0, is_active: true });
+    setOpen(true);
+  }
+
+  function openEdit(pkg) {
+    setEditing(pkg);
+    setForm({
+      name: pkg.name || '',
+      description: pkg.description || '',
+      services: (pkg.services || []).map(s => ({ service_id: s.service_id, quantity: s.quantity || 1 })),
+      discount_percent: pkg.discount_percent || 0,
+      is_active: pkg.is_active !== false,
+    });
+    setOpen(true);
+  }
+
+  const save = async () => {
+    if (!form.name || form.services.length === 0) {
+      toast.error('Pick at least one service and give the package a name.');
+      return;
+    }
+    try {
+      const payload = { ...form, discount_percent: Number(form.discount_percent) || 0 };
+      if (editing) await api.put(`/banquets/packages/${editing.id}`, payload);
+      else await api.post('/banquets/packages/', payload);
+      toast.success(editing ? 'Package updated' : 'Package created');
+      setOpen(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save');
+    }
+  };
+
+  const remove = async (id) => {
+    if (!confirm('Delete this package?')) return;
+    try {
+      await api.delete(`/banquets/packages/${id}`);
+      toast.success('Deleted');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete');
+    }
+  };
+
+  const toggleService = (svcId) => {
+    setForm(p => {
+      const exists = p.services.find(s => s.service_id === svcId);
+      if (exists) return { ...p, services: p.services.filter(s => s.service_id !== svcId) };
+      return { ...p, services: [...p.services, { service_id: svcId, quantity: 1 }] };
+    });
+  };
+
+  const setQty = (svcId, qty) => {
+    setForm(p => ({
+      ...p,
+      services: p.services.map(s => s.service_id === svcId ? { ...s, quantity: Number(qty) || 1 } : s),
+    }));
+  };
+
+  const subtotal = useMemo(() => {
+    return form.services.reduce((sum, line) => {
+      const svc = services.find(s => s.id === line.service_id);
+      if (!svc) return sum;
+      return sum + (Number(svc.base_price) || 0) * (line.quantity || 1);
+    }, 0);
+  }, [form.services, services]);
+  const total = subtotal * (1 - (Number(form.discount_percent) || 0) / 100);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-[#082c59]">Event Packages</h2>
+          <p className="text-sm text-slate-500">Bundle multiple services together with an optional discount.</p>
+        </div>
+        <PermissionGate permission="banquets.create">
+          <Button onClick={openCreate} className="bg-[#082c59]" data-testid="add-package-btn">
+            <Plus className="w-4 h-4 mr-2" /> New Package
+          </Button>
+        </PermissionGate>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-slate-500">Loading…</div>
+      ) : packages.length === 0 ? (
+        <Card className="p-12 text-center">
+          <PackageIcon className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+          <p className="text-slate-500">No packages yet. Bundle a hall, chairs, plates and a photographer to sell a &ldquo;Wedding Day Bundle&rdquo; in one click.</p>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {packages.map(pkg => (
+            <Card key={pkg.id} className="hover:shadow-lg transition-shadow" data-testid={`package-card-${pkg.id}`}>
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="font-semibold">{pkg.name}</h3>
+                  <Badge className={pkg.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+                    {pkg.is_active ? 'Active' : 'Draft'}
+                  </Badge>
+                </div>
+                {pkg.description && <p className="text-sm text-slate-500 mb-3">{pkg.description}</p>}
+                <div className="space-y-1 text-sm">
+                  {(pkg.services || []).map((line, i) => {
+                    const meta = CATEGORY_BY_VALUE[line.category] || CATEGORY_BY_VALUE.other;
+                    const Icon = meta.icon;
+                    return (
+                      <div key={i} className="flex items-center justify-between border-b border-slate-100 py-1">
+                        <span className="inline-flex items-center gap-2 text-slate-700">
+                          <Icon className="w-4 h-4 text-slate-500" />
+                          {line.service_name || line.service_id}
+                        </span>
+                        <span className="text-xs text-slate-500">× {line.quantity}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-baseline justify-between">
+                  <div>
+                    <div className="text-xs text-slate-500">Bundle price</div>
+                    <div className="text-lg font-bold text-emerald-700">{formatFCFA(pkg.total_price || 0)}</div>
+                    {pkg.discount_percent > 0 && (
+                      <div className="text-xs text-rose-600">−{pkg.discount_percent}% off {formatFCFA(pkg.subtotal || 0)}</div>
+                    )}
+                  </div>
+                  <div className="flex gap-1">
+                    <PermissionGate permission="banquets.edit">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(pkg)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </PermissionGate>
+                    <PermissionGate permission="banquets.delete">
+                      <Button size="sm" variant="outline" className="text-red-600" onClick={() => remove(pkg.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </PermissionGate>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackageIcon className="h-5 w-5 text-pink-600" />
+              {editing ? 'Edit Package' : 'Create Event Package'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Package Name</Label>
+              <Input
+                value={form.name}
+                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Wedding Day Bundle — 200 guests"
+                data-testid="package-name-input"
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="What this package covers, ideal guest count, etc."
+              />
+            </div>
+            <div>
+              <Label>Services in this bundle</Label>
+              <div className="mt-2 space-y-2 max-h-64 overflow-y-auto border rounded-md p-2">
+                {services.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">Add some services first &mdash; they&apos;ll show up here.</p>
+                ) : services.map(svc => {
+                  const line = form.services.find(s => s.service_id === svc.id);
+                  const meta = CATEGORY_BY_VALUE[svc.category] || CATEGORY_BY_VALUE.other;
+                  const Icon = meta.icon;
+                  return (
+                    <div key={svc.id} className="flex items-center justify-between gap-2 p-2 hover:bg-slate-50 rounded">
+                      <label className="flex items-center gap-2 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={!!line}
+                          onChange={() => toggleService(svc.id)}
+                        />
+                        <Icon className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm">{svc.name}</span>
+                        <Badge variant="outline" className="text-xs">{meta.label}</Badge>
+                      </label>
+                      {line && (
+                        <div className="flex items-center gap-1">
+                          <Label className="text-xs text-slate-500">Qty</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            step="0.5"
+                            value={line.quantity}
+                            onChange={e => setQty(svc.id, e.target.value)}
+                            className="w-20 h-8"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Bundle Discount %</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={form.discount_percent}
+                  onChange={e => setForm(p => ({ ...p, discount_percent: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={e => setForm(p => ({ ...p, is_active: e.target.checked }))}
+                  />
+                  <span className="text-sm">Active (customers can book)</span>
+                </label>
+              </div>
+            </div>
+            <Card className="bg-pink-50 border-pink-200">
+              <CardContent className="pt-4">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm text-slate-600">Subtotal</span>
+                  <span className="font-medium">{formatFCFA(subtotal)}</span>
+                </div>
+                {Number(form.discount_percent) > 0 && (
+                  <div className="flex items-baseline justify-between text-rose-700">
+                    <span className="text-sm">Discount ({form.discount_percent}%)</span>
+                    <span className="font-medium">−{formatFCFA(subtotal - total)}</span>
+                  </div>
+                )}
+                <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-pink-200">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-xl font-bold text-emerald-700">{formatFCFA(total)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save} className="bg-[#082c59]" data-testid="save-package-btn">
+              {editing ? 'Update Package' : 'Create Package'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Main page
+// ────────────────────────────────────────────────────────────────────
 export default function BanquetManagement() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [banquets, setBanquets] = useState([]);
+  const [services, setServices] = useState([]);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isBanquetDialogOpen, setIsBanquetDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [viewingBanquet, setViewingBanquet] = useState(null);
-  const [editingBanquet, setEditingBanquet] = useState(null);
-  const [banquetForm, setBanquetForm] = useState(DEFAULT_BANQUET_FORM);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewing, setViewing] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(DEFAULT_FORM);
   const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
-  const [replaceBanquet, setReplaceBanquet] = useState(null);
 
-  // Use the banquet dashboard data hook
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [viewMode, setViewMode] = useState('grid');
-  const [banquetSearch, setBanquetSearch] = useState('');
-  const [banquetPage, setBanquetPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const dashboardData = useRealDashboardData('banquets', '30days', scopeOperatorId);
 
-  const filteredBanquets = useMemo(() => {
-    if (!banquetSearch) return banquets;
-    const s = banquetSearch.toLowerCase();
-    return banquets.filter(b =>
-      (b.name || '').toLowerCase().includes(s) ||
-      (b.city || '').toLowerCase().includes(s) ||
-      (b.address || b.venue || '').toLowerCase().includes(s)
-    );
-  }, [banquets, banquetSearch]);
-  useEffect(() => { setBanquetPage(1); }, [banquetSearch]);
-  const banquetTotalPages = Math.max(1, Math.ceil(filteredBanquets.length / PAGE_SIZE));
-  const pagedBanquets = useMemo(
-    () => filteredBanquets.slice((banquetPage - 1) * PAGE_SIZE, banquetPage * PAGE_SIZE),
-    [filteredBanquets, banquetPage]
+  const filtered = useMemo(() => {
+    let list = services;
+    if (categoryFilter !== 'all') list = list.filter(s => (s.category || 'hall') === categoryFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.city || '').toLowerCase().includes(q) ||
+        (s.address || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [services, search, categoryFilter]);
+
+  // Natural clamp: when filters change and `filtered` shrinks, `safePage`
+  // collapses to the last valid page. No setState-in-effect needed.
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const paged = useMemo(
+    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filtered, safePage]
   );
 
-  const handleViewBanquet = (banquet) => {
-    setViewingBanquet(banquet);
-    setIsViewDialogOpen(true);
-    activityLogger.serviceView(banquet.id, banquet.name);
-  };
-
-  const loadBanquets = useCallback(async () => {
+  const loadServices = useCallback(async () => {
     try {
       setLoading(true);
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
       const res = await api.get(`/banquets/management/my-venues${params}`);
-      // Backend returns `venues` from my-venues; older callers used `banquets`.
-      setBanquets(res.data.venues || res.data.banquets || res.data || []);
-      
-      // Load operators
+      setServices(res.data.venues || res.data.banquets || []);
       try {
         const opRes = await api.get('/operators/');
         setOperators(opRes.data.operators || opRes.data || []);
       } catch (err) {
         console.error('Failed to load operators:', err);
       }
-    } catch (error) {
-      console.error('Failed to load:', error);
-      setBanquets([]);
+    } catch (err) {
+      console.error(err);
+      setServices([]);
     } finally {
       setLoading(false);
     }
   }, [scopeOperatorId]);
 
-  useEffect(() => {
-    loadBanquets();
-  }, [loadBanquets]);
+  useEffect(() => { loadServices(); }, [loadServices]);
 
-  const openBanquetDialog = (banquet = null) => {
-    setEditingBanquet(banquet);
-    setBanquetForm(banquet ? { 
-      ...banquet, 
-      price_per_person: banquet.price_per_person?.toString() || '',
-      operator_id: banquet.operator_id || '',
-      operator_name: banquet.operator_name || ''
-    } : DEFAULT_BANQUET_FORM);
-    setIsBanquetDialogOpen(true);
-  };
+  function openDialog(svc = null) {
+    setEditing(svc);
+    if (svc) {
+      setForm({
+        ...DEFAULT_FORM,
+        ...svc,
+        category: svc.category || 'hall',
+        pricing_model: svc.pricing_model || (svc.price_type === 'per_person' ? 'per_person' : 'per_event'),
+        base_price: svc.base_price?.toString() || '',
+        capacity_min: svc.capacity_min ?? '',
+        capacity_max: svc.capacity_max ?? '',
+        min_quantity: svc.min_quantity ?? '',
+        max_quantity: svc.max_quantity ?? '',
+        duration_hours: svc.duration_hours ?? '',
+        unit_label: svc.unit_label || '',
+        amenities: svc.amenities || [],
+        operator_id: svc.operator_id || '',
+        operator_name: svc.operator_name || '',
+      });
+    } else {
+      setForm(DEFAULT_FORM);
+    }
+    setIsDialogOpen(true);
+  }
 
-  const handleSaveBanquet = async () => {
+  const handleSave = async () => {
     try {
-      const operator = operators.find(op => (op._id || op.id) === banquetForm.operator_id);
-      const data = { 
-        ...banquetForm, 
-        base_price: parseFloat(banquetForm.base_price) || 0,
-        capacity_min: parseInt(banquetForm.capacity_min) || 10,
-        capacity_max: parseInt(banquetForm.capacity_max) || 100,
-        operator_name: operator?.name || banquetForm.operator_name || ''
+      const op = operators.find(o => (o._id || o.id) === form.operator_id);
+      const payload = {
+        category: form.category,
+        pricing_model: form.pricing_model,
+        name: form.name,
+        description: form.description,
+        venue_type: form.category === 'hall' ? form.venue_type : null,
+        address: form.address || null,
+        city: form.city || null,
+        capacity_min: form.capacity_min !== '' ? parseInt(form.capacity_min, 10) : null,
+        capacity_max: form.capacity_max !== '' ? parseInt(form.capacity_max, 10) : null,
+        base_price: parseFloat(form.base_price) || 0,
+        // legacy field kept in sync for backward compat with old search UIs
+        price_type: form.pricing_model === 'per_person' ? 'per_person' : 'per_event',
+        unit_label: form.unit_label || null,
+        min_quantity: form.min_quantity !== '' ? parseInt(form.min_quantity, 10) : null,
+        max_quantity: form.max_quantity !== '' ? parseInt(form.max_quantity, 10) : null,
+        duration_hours: form.duration_hours !== '' ? parseFloat(form.duration_hours) : null,
+        amenities: form.amenities || [],
+        images: form.images || [],
+        phone: form.phone || null,
+        email: form.email || null,
+        operator_id: form.operator_id || null,
+        operator_name: op?.name || form.operator_name || '',
       };
-      if (editingBanquet) {
-        await api.put(`/banquets/${editingBanquet.id}`, data);
-        toast.success('Updated');
+      if (editing) {
+        await api.put(`/banquets/${editing.id}`, payload);
+        toast.success('Service updated');
       } else {
-        await api.post('/banquets/', data);
-        toast.success('Created');
+        await api.post('/banquets/', payload);
+        toast.success('Service created');
       }
-      setIsBanquetDialogOpen(false);
-      loadBanquets();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to save');
+      setIsDialogOpen(false);
+      loadServices();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to save');
     }
   };
 
-  const handleDeleteBanquet = async (id) => {
-    if (!confirm('Delete?')) return;
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this service?')) return;
     try {
       await api.delete(`/banquets/${id}`);
       toast.success('Deleted');
-      loadBanquets();
-    } catch (error) {
-      toast.error('Failed to delete');
+      loadServices();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to delete');
     }
   };
+
+  const handleView = (svc) => {
+    setViewing(svc);
+    setIsViewOpen(true);
+    activityLogger.serviceView(svc.id, svc.name);
+  };
+
+  // Category-aware preview meta for the form's right-column preview card.
+  const previewMeta = CATEGORY_BY_VALUE[form.category] || CATEGORY_BY_VALUE.hall;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Banquet Hall Management</h1>
-          <p className="text-gray-600">Manage halls, events, analytics, and communications</p>
+          <h1 className="text-2xl font-bold text-[#082c59]">Banquet & Event Services</h1>
+          <p className="text-gray-600">Halls, chairs & cutlery, canopies, photographers and event packages — all in one place.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadBanquets} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
+          <Button onClick={loadServices} variant="outline" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management"><UtensilsCrossed className="h-4 w-4 mr-2" />Management</TabsTrigger>
+          <TabsTrigger value="management" data-testid="services-tab"><Layers className="h-4 w-4 mr-2" />Services</TabsTrigger>
+          <TabsTrigger value="packages" data-testid="packages-tab"><PackageIcon className="h-4 w-4 mr-2" />Packages</TabsTrigger>
           <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
             serviceType="Banquet"
-            serviceIcon={<UtensilsCrossed className="h-8 w-8" />}
+            serviceIcon={<PartyPopper className="h-8 w-8" />}
             primaryColor="pink"
             stats={dashboardData.stats}
             bookingsByStatus={dashboardData.bookingsByStatus}
             dailyTrend={dashboardData.dailyTrend}
             distribution={dashboardData.distribution}
             recentBookings={dashboardData.recentBookings}
-            itemLabel="Halls"
-            secondaryLabel="Total Capacity"
-            secondaryCount={dashboardData.secondaryCount}
+            itemLabel="Services"
+            secondaryLabel="Categories"
+            secondaryCount={new Set(services.map(s => s.category || 'hall')).size}
             recentBookingsSlot={
               <OperatorBookingsList serviceType="banquet" refreshKey={bookingsRefreshKey} compact viewAllHref="/admin/bookings" />
             }
@@ -269,127 +803,135 @@ export default function BanquetManagement() {
         <TabsContent value="management" className="mt-6 space-y-4">
           {/* Toolbar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search halls by name, city, address..."
-                value={banquetSearch}
-                onChange={(e) => setBanquetSearch(e.target.value)}
-                className="pl-10 bg-white"
-                data-testid="banquets-search-input"
-              />
+            <div className="flex flex-1 gap-2 max-w-2xl items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search services by name, city, address…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 bg-white"
+                  data-testid="services-search-input"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-44 bg-white" data-testid="category-filter-select">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {CATEGORIES.map(c => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="banquets.create">
-                <Button onClick={() => openBanquetDialog()} className="bg-[#082c59]" data-testid="add-banquet-btn">
-                  <Plus className="w-4 h-4 mr-2" /> Add Hall
+                <Button onClick={() => openDialog()} className="bg-[#082c59]" data-testid="add-service-btn">
+                  <Plus className="w-4 h-4 mr-2" /> Add Service
                 </Button>
               </PermissionGate>
             </div>
           </div>
 
+          {/* Quick category chips */}
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={categoryFilter === 'all' ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setCategoryFilter('all')}
+            >
+              All
+            </Badge>
+            {CATEGORIES.map(c => {
+              const Icon = c.icon;
+              const count = services.filter(s => (s.category || 'hall') === c.value).length;
+              return (
+                <Badge
+                  key={c.value}
+                  variant={categoryFilter === c.value ? 'default' : 'outline'}
+                  className="cursor-pointer inline-flex items-center gap-1"
+                  onClick={() => setCategoryFilter(c.value)}
+                  data-testid={`category-chip-${c.value}`}
+                >
+                  <Icon className="w-3 h-3" />
+                  {c.label}
+                  <span className="ml-1 text-[10px] opacity-70">{count}</span>
+                </Badge>
+              );
+            })}
+          </div>
+
           {loading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : filteredBanquets.length === 0 ? (
+            <div className="text-center py-8">Loading…</div>
+          ) : filtered.length === 0 ? (
             <Card className="p-12 text-center">
-              <UtensilsCrossed className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500">{banquetSearch ? 'No halls match your search' : 'No halls found.'}</p>
-            </Card>
-          ) : viewMode === 'list' ? (
-            <Card className="overflow-hidden" data-testid="banquets-list-view">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3">Hall</th>
-                      <th className="px-4 py-3">Type</th>
-                      <th className="px-4 py-3">Location</th>
-                      <th className="px-4 py-3">Capacity</th>
-                      <th className="px-4 py-3">Price</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedBanquets.map(banquet => (
-                      <tr key={banquet.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-3 font-medium text-slate-900">{banquet.name}</td>
-                        <td className="px-4 py-3 capitalize text-slate-700">{banquet.type || banquet.venue_type || '—'}</td>
-                        <td className="px-4 py-3 text-slate-700">{(banquet.address || banquet.venue || '—')}{banquet.city ? `, ${banquet.city}` : ''}</td>
-                        <td className="px-4 py-3 text-slate-700">{banquet.capacity_min || 0}–{banquet.capacity_max || banquet.capacity || 0}</td>
-                        <td className="px-4 py-3 font-bold text-emerald-700">{formatFCFA(banquet.price_per_person || banquet.base_price || 0)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="inline-flex gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => handleViewBanquet(banquet)}>View</Button>
-                            <PermissionGate permission="banquets.edit">
-                              <Button size="sm" variant="ghost" onClick={() => openBanquetDialog(banquet)}>Edit</Button>
-                            </PermissionGate>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <PartyPopper className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+              <p className="text-slate-500">{search || categoryFilter !== 'all' ? 'No services match your filters' : 'No services yet. Click "Add Service" to get started.'}</p>
             </Card>
           ) : (
-            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`banquets-${viewMode}-view`}>
-              {pagedBanquets.map(banquet => (
-                <Card key={banquet.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-semibold">{banquet.name}</h3>
-                      <Badge variant="outline" className="capitalize">{banquet.type || banquet.venue_type}</Badge>
-                    </div>
-                    <div className="space-y-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{banquet.address || banquet.venue}{banquet.city ? `, ${banquet.city}` : ''}</div>
-                      <div className="flex items-center gap-2"><Users className="w-4 h-4" />{banquet.capacity_max || banquet.capacity || 0} guests max</div>
-                      {viewMode === 'details' && banquet.description && (
-                        <p className="text-slate-600 text-sm pt-2 border-t border-slate-100">{banquet.description}</p>
-                      )}
-                    </div>
-                    {banquet.services_included?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {banquet.services_included.slice(0, viewMode === 'details' ? 8 : 3).map(s => (
-                          <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
-                        ))}
+            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`services-${viewMode}-view`}>
+              {paged.map(svc => {
+                const meta = CATEGORY_BY_VALUE[svc.category || 'hall'] || CATEGORY_BY_VALUE.hall;
+                const Icon = meta.icon;
+                return (
+                  <Card key={svc.id} className="hover:shadow-lg transition-shadow" data-testid={`service-card-${svc.id}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${meta.accent}`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold leading-tight">{svc.name}</h3>
+                            <Badge variant="outline" className="text-xs mt-1">{meta.label}</Badge>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <div className="mt-3 font-bold text-green-600">{formatFCFA(banquet.price_per_person || banquet.base_price || 0)}{banquet.price_per_person ? '/person' : ''}</div>
-                    <div className="flex gap-2 mt-4">
-                      <Button size="sm" variant="outline" onClick={() => handleViewBanquet(banquet)} title="View Details">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <PermissionGate permission="banquets.edit">
-                        <Button size="sm" variant="outline" onClick={() => setReplaceBanquet(banquet)} title="Migrate bookings" className="text-[#082c59] hover:bg-[#082c59]/10" data-testid={`replace-banquet-btn-${banquet.id}`}>
-                          <ReplaceIcon className="w-4 h-4" />
+                      <div className="space-y-1 text-sm text-gray-500">
+                        {svc.city && (<div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{svc.address ? `${svc.address}, ` : ''}{svc.city}</div>)}
+                        {(svc.capacity_max != null) && (<div className="flex items-center gap-2"><Users className="w-4 h-4" />{svc.capacity_min || 0}–{svc.capacity_max} guests</div>)}
+                        {svc.unit_label && (<div className="text-xs text-slate-600">Sold by the <strong>{svc.unit_label}</strong>{svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}</div>)}
+                        {svc.duration_hours && (<div className="text-xs text-slate-600">Default {svc.duration_hours}h session</div>)}
+                      </div>
+                      <div className="mt-3 font-bold text-emerald-700">
+                        {formatFCFA(svc.base_price || 0)}
+                        <span className="text-xs text-slate-500 ml-1">{PRICING_LABEL[svc.pricing_model || svc.price_type] || ''}</span>
+                      </div>
+                      <div className="flex gap-2 mt-4">
+                        <Button size="sm" variant="outline" onClick={() => handleView(svc)} title="View details">
+                          <Eye className="w-4 h-4" />
                         </Button>
-                      </PermissionGate>
-                      <PermissionGate permission="banquets.edit">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => openBanquetDialog(banquet)}>
-                          <Edit className="w-4 h-4 mr-1" /> Edit
-                        </Button>
-                      </PermissionGate>
-                      <PermissionGate permission="banquets.delete">
-                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDeleteBanquet(banquet.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </PermissionGate>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <PermissionGate permission="banquets.edit">
+                          <Button size="sm" variant="outline" className="flex-1" onClick={() => openDialog(svc)} data-testid={`edit-service-btn-${svc.id}`}>
+                            <Edit className="w-4 h-4 mr-1" /> Edit
+                          </Button>
+                        </PermissionGate>
+                        <PermissionGate permission="banquets.delete">
+                          <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(svc.id)} data-testid={`delete-service-btn-${svc.id}`}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </PermissionGate>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
 
           <Pagination
-            page={banquetPage}
-            totalPages={banquetTotalPages}
-            onChange={setBanquetPage}
-            total={filteredBanquets.length}
+            page={page}
+            totalPages={totalPages}
+            onChange={setPage}
+            total={filtered.length}
             pageSize={PAGE_SIZE}
-            itemLabel="hall"
+            itemLabel="service"
           />
+        </TabsContent>
+
+        <TabsContent value="packages" className="mt-6">
+          <PackagesTab services={services} scopeOperatorId={scopeOperatorId} />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">
@@ -397,206 +939,106 @@ export default function BanquetManagement() {
             serviceType="Banquet"
             serviceTag="banquets"
             operatorId={scopeOperatorId}
-            serviceIcon={<UtensilsCrossed className="h-5 w-5 text-pink-600" />}
+            serviceIcon={<PartyPopper className="h-5 w-5 text-pink-600" />}
             primaryColor="pink"
           />
         </TabsContent>
-
       </Tabs>
 
+      {/* Add / Edit Service Modal */}
       <ServiceFormShell
-        open={isBanquetDialogOpen}
-        onOpenChange={setIsBanquetDialogOpen}
-        icon={PartyPopper}
-        title={editingBanquet ? 'Edit Hall' : 'Add Banquet Hall'}
-        subtitle={editingBanquet
-          ? 'Refresh capacity, pricing, services and gallery photos.'
-          : 'List a new banquet venue — photos, capacity, pricing and bundled services.'}
-        editing={!!editingBanquet}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        icon={previewMeta.icon}
+        title={editing ? 'Edit Service' : 'Add Service'}
+        subtitle={editing
+          ? 'Update category, pricing and photos.'
+          : 'List a new service — hall, rental items, canopy, photographer, catering, anything you offer for events.'}
+        editing={!!editing}
         accent="pink"
-        leftColumn={
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Hall photos</Label>
-              <div className="mt-2">
-                <MiniImageUploader
-                  images={banquetForm.images || []}
-                  onChange={(imgs) => setBanquetForm(p => ({ ...p, images: imgs }))}
-                  max={3}
-                  folder="banquets"
-                  accent="pink"
-                  helperText="Up to 3 photos. The first is the cover."
-                />
-              </div>
-            </div>
-            <div className="col-span-2">
-              <Label>Hall Name</Label>
-              <Input value={banquetForm.name} onChange={e => setBanquetForm(p => ({ ...p, name: e.target.value }))} placeholder="Hall name" />
-            </div>
-            <div>
-              <Label>Event Type</Label>
-              <select
-                value={banquetForm.type}
-                onChange={e => setBanquetForm(p => ({ ...p, type: e.target.value }))}
-                className="w-full h-10 border rounded-md px-3 bg-white"
-              >
-                {BANQUET_TYPES.map(type => (<option key={type} value={type} className="capitalize">{type}</option>))}
-              </select>
-            </div>
-            <div>
-              <Label>Venue</Label>
-              <Input value={banquetForm.venue} onChange={e => setBanquetForm(p => ({ ...p, venue: e.target.value }))} placeholder="Venue name" />
-            </div>
-            <div>
-              <Label>City</Label>
-              <Input value={banquetForm.city} onChange={e => setBanquetForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
-            </div>
-            <div>
-              <Label>Capacity</Label>
-              <Input type="number" value={banquetForm.capacity} onChange={e => setBanquetForm(p => ({ ...p, capacity: parseInt(e.target.value) || 0 }))} />
-            </div>
-            <div>
-              <Label>Price/Person (FCFA)</Label>
-              <Input type="number" value={banquetForm.price_per_person} onChange={e => setBanquetForm(p => ({ ...p, price_per_person: e.target.value }))} placeholder="15000" />
-            </div>
-            <div>
-              <Label>Min. Guests</Label>
-              <Input type="number" value={banquetForm.minimum_guests} onChange={e => setBanquetForm(p => ({ ...p, minimum_guests: parseInt(e.target.value) || 0 }))} />
-            </div>
-            <div className="col-span-2">
-              <Label>Services Included</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {SERVICES_INCLUDED.map(service => (
-                  <Badge
-                    key={service}
-                    variant={banquetForm.services_included?.includes(service) ? 'default' : 'outline'}
-                    className="cursor-pointer capitalize"
-                    onClick={() => {
-                      setBanquetForm(p => ({
-                        ...p,
-                        services_included: p.services_included?.includes(service)
-                          ? p.services_included.filter(s => s !== service)
-                          : [...(p.services_included || []), service]
-                      }));
-                    }}
-                  >
-                    {service.replace('_', ' ')}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="col-span-2">
-              <OperatorSelector
-                value={banquetForm.operator_id || ''}
-                onChange={(id, name) => setBanquetForm(p => ({ ...p, operator_id: id, operator_name: name }))}
-                operators={operators}
-                testId="banquet-operator-selector"
-              />
-            </div>
-            <div className="col-span-2">
-              <Label>Description</Label>
-              <Textarea value={banquetForm.description} onChange={e => setBanquetForm(p => ({ ...p, description: e.target.value }))} placeholder="Description..." />
-            </div>
-          </div>
-        }
+        leftColumn={<CategoryAwareFields form={form} setForm={setForm} operators={operators} />}
         preview={
           <GenericPreviewCard
-            cover={(banquetForm.images || [])[0]}
-            thumbs={(banquetForm.images || []).slice(1, 3)}
-            icon={PartyPopper}
-            badgeText={(banquetForm.type || 'banquet').replace('_', ' ')}
+            cover={(form.images || [])[0]}
+            thumbs={(form.images || []).slice(1, 3)}
+            icon={previewMeta.icon}
+            badgeText={previewMeta.label}
             badgeClass="bg-pink-500 text-white"
             placeholderColor="from-pink-600 via-rose-500 to-fuchsia-500"
-            title={banquetForm.name || 'Hall name'}
-            subtitle={banquetForm.venue || 'Venue'}
-            location={[banquetForm.city, banquetForm.capacity ? `Up to ${banquetForm.capacity} guests` : null].filter(Boolean).join(' · ') || 'City · Capacity'}
-            tags={banquetForm.services_included || []}
+            title={form.name || 'Service name'}
+            subtitle={form.category === 'hall' ? (form.venue_type || 'Venue') : previewMeta.label}
+            location={[
+              form.city,
+              form.capacity_max ? `Up to ${form.capacity_max} guests` : null,
+              form.unit_label ? `Sold by the ${form.unit_label}` : null,
+            ].filter(Boolean).join(' · ') || (form.category === 'hall' ? 'City · Capacity' : 'Service details')}
+            tags={form.amenities || []}
             tagsAccentClass="bg-pink-50 text-pink-700"
-            priceLabel="Per guest"
-            priceValue={banquetForm.price_per_person ? `${Number(banquetForm.price_per_person).toLocaleString()} FCFA` : '—'}
+            priceLabel={PRICING_LABEL[form.pricing_model] || 'Price'}
+            priceValue={form.base_price ? `${Number(form.base_price).toLocaleString()} FCFA` : '—'}
             accentTextClass="text-pink-700"
           />
         }
         submitting={false}
-        submitLabel={editingBanquet ? 'Update Hall' : 'Add Hall'}
-        onSubmit={handleSaveBanquet}
-        submitDataTestId="save-banquet-btn"
+        submitLabel={editing ? 'Update Service' : 'Add Service'}
+        onSubmit={handleSave}
+        submitDataTestId="save-service-btn"
       />
 
-      {/* View Banquet Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      {/* View Service Dialog */}
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-lg bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PartyPopper className="h-5 w-5 text-pink-600" />
-              Banquet Hall Details
+              Service Details
             </DialogTitle>
           </DialogHeader>
-          {viewingBanquet && (
-            <div className="space-y-4 py-4">
-              <div className="bg-pink-50 rounded-lg p-4">
-                <h3 className="font-bold text-lg text-pink-900">{viewingBanquet.name}</h3>
-                <Badge className="mt-1 capitalize">{viewingBanquet.venue_type}</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500">Location</p>
-                  <p className="font-medium flex items-center gap-1">
-                    <MapPin className="h-4 w-4" /> {viewingBanquet.city || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Address</p>
-                  <p className="font-medium">{viewingBanquet.address || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Capacity</p>
-                  <p className="font-medium">{viewingBanquet.capacity} guests</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Price/Person</p>
-                  <p className="font-bold text-green-600">{formatFCFA(viewingBanquet.price_per_person)}</p>
-                </div>
-              </div>
-              {viewingBanquet.services_included?.length > 0 && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-2">Services Included</p>
-                  <div className="flex flex-wrap gap-1">
-                    {viewingBanquet.services_included.map(s => (
-                      <Badge key={s} variant="outline" className="text-xs capitalize">{s.replace('_', ' ')}</Badge>
-                    ))}
+          {viewing && (() => {
+            const meta = CATEGORY_BY_VALUE[viewing.category || 'hall'] || CATEGORY_BY_VALUE.hall;
+            const Icon = meta.icon;
+            return (
+              <div className="space-y-4 py-4">
+                <div className="bg-pink-50 rounded-lg p-4 flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${meta.accent}`}>
+                    <Icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-pink-900">{viewing.name}</h3>
+                    <Badge className="mt-1">{meta.label}</Badge>
                   </div>
                 </div>
-              )}
-              {viewingBanquet.description && (
-                <div>
-                  <p className="text-slate-500 text-sm mb-1">Description</p>
-                  <p className="text-sm bg-slate-50 p-3 rounded">{viewingBanquet.description}</p>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {viewing.city && (<div><p className="text-slate-500">City</p><p className="font-medium">{viewing.city}</p></div>)}
+                  {viewing.capacity_max && (<div><p className="text-slate-500">Capacity</p><p className="font-medium">{viewing.capacity_max} guests</p></div>)}
+                  {viewing.unit_label && (<div><p className="text-slate-500">Unit</p><p className="font-medium capitalize">{viewing.unit_label}</p></div>)}
+                  <div><p className="text-slate-500">Price</p><p className="font-bold text-green-600">{formatFCFA(viewing.base_price)} <span className="text-xs text-slate-500">{PRICING_LABEL[viewing.pricing_model || viewing.price_type] || ''}</span></p></div>
                 </div>
-              )}
-            </div>
-          )}
+                {viewing.amenities?.length > 0 && (
+                  <div>
+                    <p className="text-slate-500 text-sm mb-2">Includes</p>
+                    <div className="flex flex-wrap gap-1">
+                      {viewing.amenities.map(a => (<Badge key={a} variant="outline" className="text-xs capitalize">{a.replace('_', ' ')}</Badge>))}
+                    </div>
+                  </div>
+                )}
+                {viewing.description && (
+                  <div>
+                    <p className="text-slate-500 text-sm mb-1">Description</p>
+                    <p className="text-sm bg-slate-50 p-3 rounded">{viewing.description}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { openBanquetDialog(viewingBanquet); setIsViewDialogOpen(false); }}>
+            <Button variant="outline" onClick={() => { openDialog(viewing); setIsViewOpen(false); }}>
               <Edit className="w-4 h-4 mr-2" /> Edit
             </Button>
-            <Button onClick={() => setIsViewDialogOpen(false)} className="bg-[#082c59]">Close</Button>
+            <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
-      <ReplaceResourceModal
-        open={!!replaceBanquet}
-        onClose={() => setReplaceBanquet(null)}
-        serviceType="banquet"
-        oldResource={replaceBanquet}
-        allResources={banquets}
-        onSuccess={() => {
-          setBookingsRefreshKey((k) => k + 1);
-          loadBanquets?.();
-        }}
-      />
     </div>
   );
 }

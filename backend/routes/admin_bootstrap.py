@@ -396,7 +396,55 @@ _PURGEABLE_COLLECTIONS = {
 }
 
 
-@router.post("/db-cleanup/purge-soft-deleted")
+@router.post("/db-reset/banquets")
+async def reset_banquets(
+    dry_run: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    """Wipe the entire `banquets` and `banquet_packages` collections.
+
+    Use this exactly once when migrating from the legacy "halls only" model
+    to the new event-services catalog. Super-admin only. Dry-run by default.
+
+    The user explicitly requested deletion of legacy banquet records on
+    2026-02 when adopting the new category-aware schema.
+    """
+    if current_user.get("role") != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super administrators may reset banquets.",
+        )
+
+    db = get_database()
+    banquets_count = await db.banquets.count_documents({})
+    packages_count = await db.banquet_packages.count_documents({})
+
+    if not dry_run:
+        await db.banquets.delete_many({})
+        await db.banquet_packages.delete_many({})
+        await db.activity_logs.insert_one({
+            "_id": str(uuid4()),
+            "action": "admin.banquets_reset",
+            "action_type": "bulk_delete",
+            "entity_type": "database",
+            "entity_id": "banquets",
+            "entity_name": "banquets + banquet_packages",
+            "details": f"Wiped {banquets_count} banquet services and {packages_count} packages.",
+            "metadata": {"banquets_deleted": banquets_count, "packages_deleted": packages_count},
+            "user_id": current_user.get("_id"),
+            "user_name": current_user.get("full_name"),
+            "user_email": current_user.get("email"),
+            "user_role": current_user.get("role"),
+            "severity": "WARNING",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    return {
+        "ok": True,
+        "dry_run": dry_run,
+        "banquets_count": banquets_count,
+        "packages_count": packages_count,
+    }
 async def purge_soft_deleted(
     collection: str | None = None,
     dry_run: bool = True,

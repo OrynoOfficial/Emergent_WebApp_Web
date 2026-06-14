@@ -1,0 +1,55 @@
+{
+  "summary": "Tested Banquet & Event Services (categories + packages), hotel hard-delete, db-indexes/cleanup. Backend: 13/20 pytest assertions PASS, 7 FAIL — packages CRUD endpoints are NOT implemented at all in /app/backend/routes/banquets.py (POST /api/banquets/packages/ -> 405 because path collides with /{banquet_id}); my-venues `category` filter is silently ignored; db-cleanup/purge-soft-deleted endpoint returns 404 (not implemented). Hall/rental/canopy/photographer/videographer creation, GET, public listing by category, PUT, DELETE, db-reset/banquets dry+actual, db-indexes/ensure, hotel hard-delete with cascade and room_count aggregation all PASS. Frontend live testing was blocked by repeated 429 rate-limits on the preview env, but source inspection of BanquetManagement.jsx confirms H1 'Banquet & Event Services' and all required data-testids (services-tab, packages-tab, add-service-btn, service-category-select, unit-label-input, save-service-btn, category-chip-*, add-package-btn, save-package-btn) are present.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/banquets/packages/", "issue": "Route NOT implemented. Returns 405 Method Not Allowed (path is captured by /{banquet_id}). BanquetPackageCreate model exists in models/banquet.py but no @router.post('/packages/...') was added to routes/banquets.py (file ends at 399 lines; review request promised lines 345-500).", "priority": "CRITICAL"},
+      {"endpoint": "GET /api/banquets/packages/", "issue": "Not implemented — request resolves to /{banquet_id}='packages' and returns 404 'Banquet venue not found'.", "priority": "CRITICAL"},
+      {"endpoint": "PUT /api/banquets/packages/{id}", "issue": "Not implemented.", "priority": "CRITICAL"},
+      {"endpoint": "DELETE /api/banquets/packages/{id}", "issue": "Not implemented.", "priority": "CRITICAL"},
+      {"endpoint": "GET /api/banquets/management/my-venues?category=...", "issue": "`category` query param is silently ignored. Code only handles search/city/venue_type/operator_id. Test request for rental_item returned ALL categories (videographer, photographer, canopy, rental_item, hall).", "priority": "HIGH"},
+      {"endpoint": "POST /api/admin/db-cleanup/purge-soft-deleted", "issue": "Route does not exist — returns 404. Only /admin/db-indexes/ensure is registered in admin_bootstrap.py.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/admin/db-indexes/ensure", "issue": "Response shape ({ok, created, existed, failed_count, failed}) does NOT include per-index names so callers can't verify which indexes were added; review request specifically wants visibility into ix_banquets_op_category & ix_bnqpkg_op_active. Functionally OK (existed=116, ok=true)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Packages tab — create/save bundle", "issue": "Will fail at runtime because backend /api/banquets/packages/ endpoints don't exist. UI wiring (add-package-btn, save-package-btn data-testids, services checkbox) is present in BanquetManagement.jsx but the POST will return 405.", "affected_selectors": ["[data-testid='add-package-btn']", "[data-testid='save-package-btn']"]}
+    ],
+    "design_issues": [
+      {"screen": "/admin/banquets — live verification", "issues": ["Live UI smoke-test could not be completed due to repeated 429 rate-limit responses from the auth/dashboard APIs after running the backend test suite. After waiting ~45s the page still loaded blank. Source review confirms required testids and labels exist."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter206_banquet_services.py",
+    "/app/test_reports/pytest/iter206.xml"
+  ],
+  "action_items": [
+    "Implement the BanquetPackage CRUD routes in /app/backend/routes/banquets.py: POST/GET/PUT/DELETE /packages/ (and define them BEFORE the dynamic /{banquet_id} route, otherwise FastAPI keeps routing /packages/ to /{banquet_id}).",
+    "On POST /packages: validate services list is non-empty (400), enforce per-line operator ownership (403 for non-super-admin), compute subtotal = sum(service.base_price * quantity) and total_price = subtotal * (1 - discount_percent/100); persist to banquet_packages collection.",
+    "On GET /packages: hydrate service_name + category for each line item (the iter206 test asserts these are present).",
+    "Add `category` query-param filter to GET /api/banquets/management/my-venues (currently silently dropped).",
+    "Implement POST /api/admin/db-cleanup/purge-soft-deleted (dry_run flag, super_admin-only, returns matched count per collection from _PURGEABLE_COLLECTIONS).",
+    "Enrich /api/admin/db-indexes/ensure response to surface the names of indexes created/already-existing per collection so callers can verify ix_banquets_op_category / ix_bnqpkg_op_active are present.",
+    "After the backend fixes, re-run /app/backend/tests/test_iter206_banquet_services.py (it covers all 20 cases incl. package subtotal math)."
+  ],
+  "critical_code_review_comments": [
+    "routes/banquets.py is missing the packages router entirely yet the model layer + DB index + admin reset already reference banquet_packages — looks like an incomplete commit.",
+    "FastAPI route ordering: when adding /packages, declare it before /{banquet_id} (or use a sub-router with a distinct prefix) — otherwise the dynamic param swallows the literal path.",
+    "models/banquet.PackageServiceLine.quantity is `float` but for per_unit it really should be int — recommend int with min_quantity validation hook.",
+    "routes/banquets.py mixes `operator_id` ownership checks via `current_user['_id']` vs `current_user.get('operator_id')` inconsistently (hotels.py uses _id, banquets.py uses operator_id). Will need alignment when adding package ownership guard.",
+    "When BanquetPackageCreate persists, it must compute total_price server-side — don't trust client-supplied totals."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter206_banquet_services.py (new)"
+  ],
+  "success_rate": {"backend": "65%", "frontend": "not_measured_due_to_429"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (works, /api/auth/login returns access_token)",
+  "seed_data_creation": "Hall/Rental/Canopy/Photographer/Videographer TEST_* services created via super-admin. Hall + rental + photographer remain in DB; videographer was deleted by test_12. A TEST_H1 hotel was created then soft+hard deleted (with one room) by test_20.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_iter206_banquet_services.py -v`. The 7 failures pinpoint exactly which features still need implementation (packages endpoints, my-venues category filter, db-cleanup/purge-soft-deleted). Frontend BanquetManagement.jsx is already wired with all promised data-testids; once backend ships, an E2E run on /admin/banquets should pass — but wait ~60s between rapid logins to avoid 429.",
+  "rca of the issue": "Main agent updated the Pydantic models (BanquetPackageCreate/Update), DB indexes (ix_banquets_op_category, ix_bnqpkg_op_active), admin db-reset endpoint, AND the full frontend rewrite (4 tabs, category-aware fields, packages modal), but never added the actual `@router.post('/packages/')`/`@router.get('/packages/')`/`@router.put('/packages/{id}')`/`@router.delete('/packages/{id}')` handlers to /app/backend/routes/banquets.py. The file is 399 lines and ends right after /management/my-venues. The my-venues handler also accepts no `category` kwarg. The db-cleanup/purge-soft-deleted handler is similarly absent from admin_bootstrap.py."
+}
