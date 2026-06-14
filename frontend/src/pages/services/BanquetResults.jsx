@@ -3,7 +3,7 @@
 // Customers arrive here from `/services/banquet`. Date is collected at
 // checkout (mirrors the Laundry flow). Cards are swipeable + clickable;
 // all filters are consolidated into a single "Filter" popover next to the
-// search bar. Theme is rose/pink — the official banquet colour.
+// search bar. Theme is teal/cyan — the official banquet colour (#14B8A6).
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -425,7 +425,7 @@ export default function BanquetResults() {
             </Button>
           </div>
 
-          {/* Highlighted Search Criteria — rose gradient hero */}
+          {/* Highlighted Search Criteria — teal gradient hero */}
           <Card className="shadow-sm bg-gradient-to-r from-teal-600 to-cyan-600 text-white mb-4 border-transparent" data-testid="banquet-search-criteria">
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">

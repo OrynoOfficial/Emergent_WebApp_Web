@@ -1,3 +1,14 @@
+### 2026-02-14 — Banquet customer polish — round 2 (iter212/213)
+- **Theme**: replaced rose/pink across `BanquetResults.jsx`, `BanquetDetailsModal.jsx`, `EventCartDrawer.jsx`, `BanquetCheckout.jsx` with teal/cyan (#14B8A6, the official banquet sidebar icon colour).
+- **Inline "Modify search"**: results-page hero now shows a Popover (`data-testid="modify-search-btn"`) with City/Type/Guests pre-populated from URL; "Update results" rewrites the URL and reloads in-place.
+- **Nested service modal**: when a customer taps a service inside the Package modal, the nested overlay is now `max-w-md` (~½ of the parent) with a sticky Prev/Next header (`nested-prev-btn`, `nested-next-btn`, `nested-step-indicator` "Service N of K"); parent dialog stays mounted underneath.
+- **In-Cart tags**: emerald "In Cart" badge on result cards (top-right) and inside modal hero so users can tell at a glance.
+- **Wedding 360 prices**: per-line unit price now rendered BOLD teal next to qty + line total in `PackageDetails`.
+- **Cart moved to TOP**: floating bottom FAB removed; sticky top cart strip (`cart-strip-open`) plus a header `header-cart-btn` open the drawer.
+- **Cart drawer richer**: line items show a swipeable `CartThumbCarousel`, unit price label, category, city + capacity (if available), and line total. Packages preview first 4 member services with per-line price.
+- **Tested** (iter213): 21/21 frontend checks PASS after a supervisor frontend restart (Vite stale-bundle workaround). Backend untouched.
+
+
 ### 2026-02-14 — Banquet Customer UI verified + P3 Role chips & DnD assignment (iter184/185)
 - **Banquet customer overhaul verified** (iteration_184, 11/12 PASS): pink theme, single Filter popover, swipeable galleries with always-visible chevrons, pinned cart strip, nested package → service modal flow, labelled "Add to Cart" CTA, enriched bundle pricing from `line.service`.
 - **PackageCard regression fix**: per-line unit prices on Bundle cards (`BanquetResults.jsx`) now resolve via `line.service` first, falling back to the local services list (mirrors the modal pattern).
