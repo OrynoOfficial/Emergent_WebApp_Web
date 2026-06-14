@@ -32,13 +32,16 @@ from services.payment_ledger import (
     get_timeline,
     refresh_snapshot,
     verify_mtn_momo_signature,
+    verify_orange_money_signature,
 )
 from services.stripe_service import StripeService
+from services.mtn_momo_service import MTNMoMoService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v2/payments", tags=["Payments V2 (Ledger)"])
 
 stripe_service = StripeService()
+momo_service = MTNMoMoService()
 
 
 # ── REQUEST MODELS ──────────────────────────────────────────────────────────
@@ -178,6 +181,35 @@ async def create_payment_intent_v2(
 
 
 # ── READ ───────────────────────────────────────────────────────────────────
+
+@router.get("/by-order/{order_id}/timeline")
+async def get_timeline_by_order(
+    order_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Look up the ledger timeline by order_id.
+
+    Customer-facing flows store `order_id` in the intent payload, so the
+    Order Detail "Money Trail" tab can resolve it without the frontend
+    having to remember the v2 payment_id.
+    """
+    db = get_database()
+    snap = await db.payments.find_one({"order_id": order_id})
+    if not snap:
+        # Fallback — scan event payloads if the snapshot doesn't have it.
+        intent = await db.payment_events.find_one(
+            {"event_type": "intent_created", "payload.order_id": order_id}
+        )
+        if not intent:
+            return {"order_id": order_id, "payment_id": None, "events": [], "snapshot": None}
+        snap = await db.payments.find_one({"_id": intent["payment_id"]})
+
+    payment_id = snap["_id"] if snap else None
+    events = await get_timeline(db, payment_id) if payment_id else []
+    if snap:
+        snap["id"] = snap.pop("_id")
+    return {"order_id": order_id, "payment_id": payment_id, "events": events, "snapshot": snap}
+
 
 @router.get("/{payment_id}")
 async def get_payment_state(
@@ -356,13 +388,78 @@ async def webhook_mtn_momo(request: Request):
 
 @router.post("/webhook/orange-money")
 async def webhook_orange_money(request: Request):
-    """Orange Money webhook — stubbed.
+    """Orange Money Cameroon webhook → append to ledger.
 
-    TODO: integrate Orange Money API once credentials and signing scheme are
-    confirmed. The skeleton mirrors the MTN MoMo handler — only the
-    signature-verification function and status-code map differ.
+    Verification: HMAC-SHA256 over `{X-OM-Timestamp}.{raw_body}` keyed by
+    `ORANGE_MONEY_WEBHOOK_SECRET`. A 5-minute timestamp tolerance window
+    blocks replay attacks. Idempotency is enforced via the unique partial
+    index on `(provider, provider_event_id)`.
+
+    Status mapping mirrors MoMo: SUCCESS → captured, FAILED/REJECTED →
+    failed, CANCELLED → voided, REFUNDED → refunded.
     """
-    raise HTTPException(status_code=501, detail="Orange Money webhook not yet implemented")
+    raw = await request.body()
+    sig = request.headers.get("x-om-signature")
+    ts = request.headers.get("x-om-timestamp")
+    if not verify_orange_money_signature(raw, sig, ts):
+        raise HTTPException(status_code=401, detail="Invalid Orange Money signature")
+
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    # Orange Money's payload field names vary by integration. We accept
+    # the most common aliases the aggregator publishes.
+    event_id = data.get("event_id") or data.get("notification_id") or data.get("txnid")
+    reference_id = data.get("reference") or data.get("transaction_id") or data.get("order_id")
+    om_status = (data.get("status") or data.get("payment_status") or "").upper()
+    if not event_id or not reference_id:
+        return {"status": "ignored", "reason": "missing event_id or reference"}
+
+    db = get_database()
+    intent = await db.payment_events.find_one({
+        "provider": "orange_money",
+        "provider_event_id": reference_id,
+        "event_type": "intent_created",
+    })
+    if not intent:
+        logger.warning("orange-money webhook: no intent for reference=%s", reference_id)
+        return {"status": "unresolved"}
+
+    et_map = {
+        "SUCCESS": "captured",
+        "SUCCESSFUL": "captured",
+        "COMPLETED": "captured",
+        "FAILED": "failed",
+        "REJECTED": "failed",
+        "EXPIRED": "failed",
+        "TIMEOUT": "failed",
+        "CANCELLED": "voided",
+        "REFUNDED": "refunded",
+    }
+    et = et_map.get(om_status)
+    if not et:
+        return {"status": "ignored", "reason": f"unmapped status {om_status}"}
+
+    await append_event(
+        db,
+        payment_id=intent["payment_id"],
+        event_type=et,
+        provider="orange_money",
+        provider_event_id=str(event_id),
+        amount=data.get("amount"),
+        currency=data.get("currency"),
+        payload={"raw": data, "status": om_status},
+        occurred_at=datetime.now(timezone.utc),
+    )
+    return {"status": "ok"}
+
+
+@router.post("/webhook/orange-money-legacy-stub")
+async def webhook_orange_money_legacy_stub(request: Request):  # noqa: ARG001
+    """Compatibility shim — original stub kept reachable for older configs."""
+    raise HTTPException(status_code=501, detail="Use /webhook/orange-money (live).")
 
 
 # ── REFUND ─────────────────────────────────────────────────────────────────
@@ -410,9 +507,90 @@ async def initiate_refund(
             raise HTTPException(status_code=400, detail=result.get("error"))
         return {"status": "submitted", "provider": "stripe", "refund_id": result.get("refund_id")}
 
-    # Mobile money refunds are out of scope for this iteration — operator
-    # must reverse manually and then call POST /api/v2/payments/{id}/recompute.
+    if provider == "mtn_momo":
+        # Push funds back from the merchant disbursement wallet to the
+        # subscriber. The MoMo `transfer` endpoint accepts the same fields
+        # as `requestToPay` but moves money in the opposite direction.
+        intent_payload = intent.get("payload") or {}
+        customer_phone = intent_payload.get("customer_phone")
+        if not customer_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="MoMo intent has no customer_phone — cannot disburse",
+            )
+
+        refund_amount = float(req.amount) if req.amount is not None else float(snap["captured_amount"] - snap["refunded_amount"])
+        if refund_amount <= 0:
+            raise HTTPException(status_code=400, detail="Nothing left to refund")
+
+        # Append a pending intent for the refund leg so the timeline shows
+        # the operator's request before the disbursement confirms.
+        refund_external_id = f"refund-{payment_id}-{int(datetime.now(timezone.utc).timestamp())}"
+        transfer = await momo_service.transfer(
+            amount=refund_amount,
+            currency=intent.get("currency") or "XAF",
+            phone_number=customer_phone,
+            external_id=refund_external_id,
+            payer_message=req.reason or "Refund",
+            payee_note=req.reason or "Refund",
+        )
+        if not transfer.get("success"):
+            raise HTTPException(status_code=400, detail=transfer.get("error") or "MoMo transfer failed")
+
+        # Optimistically write the refunded event. If the disbursement
+        # later fails, an operator can call /recompute and the snapshot
+        # will reflect reality (manual reconciliation).
+        await append_event(
+            db,
+            payment_id=payment_id,
+            event_type="refunded",
+            provider="mtn_momo",
+            provider_event_id=transfer.get("reference_id") or refund_external_id,
+            amount=refund_amount,
+            currency=intent.get("currency"),
+            payload={
+                "source": "manual_refund",
+                "reason": req.reason,
+                "transfer_reference_id": transfer.get("reference_id"),
+                "initiated_by": current_user.get("email"),
+            },
+            occurred_at=datetime.now(timezone.utc),
+        )
+        return {
+            "status": "submitted",
+            "provider": "mtn_momo",
+            "refund_reference_id": transfer.get("reference_id"),
+            "amount": refund_amount,
+        }
+
+    if provider == "orange_money":
+        # Orange Money refund/disbursement API varies per aggregator. Mark
+        # the ledger row, but the actual money movement must be done in
+        # the operator portal. After the operator confirms, they call
+        # POST /api/v2/payments/{id}/recompute to refresh the snapshot.
+        await append_event(
+            db,
+            payment_id=payment_id,
+            event_type="refunded",
+            provider="orange_money",
+            provider_event_id=f"manual-refund-{payment_id}-{int(datetime.now(timezone.utc).timestamp())}",
+            amount=float(req.amount) if req.amount is not None else (snap["captured_amount"] - snap["refunded_amount"]),
+            currency=intent.get("currency"),
+            payload={
+                "source": "manual_refund",
+                "reason": req.reason,
+                "initiated_by": current_user.get("email"),
+                "note": "Orange Money refunds processed manually via operator portal",
+            },
+            occurred_at=datetime.now(timezone.utc),
+        )
+        return {
+            "status": "recorded",
+            "provider": "orange_money",
+            "note": "Refund recorded in ledger — complete payout in Orange Money portal.",
+        }
+
     raise HTTPException(
         status_code=501,
-        detail=f"Refund automation not implemented for provider '{provider}' — process manually and recompute",
+        detail=f"Refund automation not implemented for provider '{provider}'",
     )

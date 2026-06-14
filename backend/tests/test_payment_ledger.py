@@ -25,6 +25,7 @@ from services.payment_ledger import (
     find_intent_by_idempotency,
     refresh_snapshot,
     verify_mtn_momo_signature,
+    verify_orange_money_signature,
 )
 
 
@@ -144,6 +145,44 @@ def test_mtn_momo_signature_rejects_tampered_body(monkeypatch):
 def test_mtn_momo_signature_rejects_when_secret_missing(monkeypatch):
     monkeypatch.delenv("MTN_MOMO_WEBHOOK_SECRET", raising=False)
     assert verify_mtn_momo_signature(b"anything", "deadbeef") is False
+
+
+# ───────────────────────── ORANGE MONEY SIGNATURE ──────────────────────────
+
+def test_orange_money_signature_valid(monkeypatch):
+    import hmac, hashlib, time
+    secret = "om_secret_456"
+    monkeypatch.setenv("ORANGE_MONEY_WEBHOOK_SECRET", secret)
+    body = b'{"reference":"r1","status":"SUCCESS"}'
+    ts = str(int(time.time()))
+    sig = hmac.new(secret.encode(), f"{ts}.{body.decode()}".encode(), hashlib.sha256).hexdigest()
+    assert verify_orange_money_signature(body, sig, ts) is True
+
+
+def test_orange_money_signature_rejects_old_timestamp(monkeypatch):
+    import hmac, hashlib, time
+    secret = "om_secret_456"
+    monkeypatch.setenv("ORANGE_MONEY_WEBHOOK_SECRET", secret)
+    body = b'{"reference":"r1","status":"SUCCESS"}'
+    old_ts = str(int(time.time()) - 600)  # 10 minutes old, outside 5-min window
+    sig = hmac.new(secret.encode(), f"{old_ts}.{body.decode()}".encode(), hashlib.sha256).hexdigest()
+    assert verify_orange_money_signature(body, sig, old_ts) is False
+
+
+def test_orange_money_signature_rejects_tampered_body(monkeypatch):
+    import hmac, hashlib, time
+    secret = "om_secret_456"
+    monkeypatch.setenv("ORANGE_MONEY_WEBHOOK_SECRET", secret)
+    body = b'{"reference":"r1","status":"SUCCESS"}'
+    ts = str(int(time.time()))
+    sig = hmac.new(secret.encode(), f"{ts}.{body.decode()}".encode(), hashlib.sha256).hexdigest()
+    tampered = b'{"reference":"r1","status":"FAILED"}'
+    assert verify_orange_money_signature(tampered, sig, ts) is False
+
+
+def test_orange_money_signature_rejects_when_secret_missing(monkeypatch):
+    monkeypatch.delenv("ORANGE_MONEY_WEBHOOK_SECRET", raising=False)
+    assert verify_orange_money_signature(b"x", "deadbeef", "12345") is False
 
 
 # ───────────────────────── INTEGRATION: APPEND + DEDUP ──────────────────────

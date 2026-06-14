@@ -1,6 +1,28 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Orange Money LIVE + MoMo Refund Automation + Money Trail UI
+**1. Orange Money signature scheme**
+- `services/payment_ledger.py::verify_orange_money_signature()` — HMAC-SHA256 over `{X-OM-Timestamp}.{raw_body}` keyed by `ORANGE_MONEY_WEBHOOK_SECRET` with a 5-minute replay-protection window.
+- `POST /api/v2/payments/webhook/orange-money` switched from 501 stub → live. Status map: `SUCCESS/SUCCESSFUL/COMPLETED → captured`, `FAILED/REJECTED/EXPIRED/TIMEOUT → failed`, `CANCELLED → voided`, `REFUNDED → refunded`. Dedup via existing `(provider, provider_event_id)` unique partial index.
+- 4 new unit tests (valid signature, tampered body, stale timestamp, missing secret) — **all pass**.
+- Added `ORANGE_MONEY_WEBHOOK_SECRET` placeholder to `/app/backend/.env`.
+
+**2. Mobile-money refund automation**
+- `services/mtn_momo_service.py`: added `transfer()` + `get_transfer_status()` methods that call MoMo's disbursement endpoint to push funds back to the subscriber wallet.
+- `POST /api/v2/payments/{payment_id}/refund` now handles 3 providers:
+  - **Stripe**: existing API call (unchanged).
+  - **MTN MoMo**: live disbursement — appends `refunded` event with the disbursement reference id; full or partial amount.
+  - **Orange Money**: records refund in the ledger (manual payout via portal — playbook said varies-by-aggregator). Status returned: `"recorded"` with reason for operator.
+- Live-tested: partial refund → snapshot correctly flips to `partially_refunded` with net_amount = captured − refunded.
+
+**3. Money Trail UI**
+- `GET /api/v2/payments/by-order/{order_id}/timeline` — new endpoint resolving by order_id (snapshot lookup + payload-scan fallback). Returns `{order_id, payment_id, events, snapshot}`.
+- `components/payment/MoneyTrail.jsx` — vertical stepper component: snapshot card (state, captured/refunded/net), then a chronological event timeline with per-type icons + colors (intent_created → captured → refunded → disputed → resolved). Live polls via `RotateCcw` refresh button. Test IDs: `money-trail`, `money-trail-event-{type}`, `money-trail-refresh`.
+- `OrderDetailModal.jsx`: added a "Money Trail" section just below "Payment Summary" — visible to operators viewing any order.
+
+
+
 ## Jun 14, 2026 — Webhook Correlation + Richer Banquet Cards
 **1. V2 Ledger ↔ Webhook Correlation**
 - `routes/stripe_checkout.py`: `CheckoutRequest` now accepts `v2_payment_id`. The Stripe Checkout session metadata carries it through, and the `checkout.session.completed` webhook handler appends a `captured` event to `/api/v2/payments` (signature- + session-id-deduped). All non-fatal — failures of the v2 append are logged but never break the existing legacy flow.

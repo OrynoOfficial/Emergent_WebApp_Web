@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
+import MoneyTrail from '@/components/payment/MoneyTrail';
 
 const getStatusConfig = (status) => {
   const configs = {
@@ -953,6 +954,15 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* ── Money Trail ─────────────────────────────────────────────
+              The immutable ledger view: every event from intent_created
+              through captured → refunded → disputed lives here. Pulled
+              from /api/v2/payments/by-order/{order_id}/timeline. */}
+          <div data-testid="money-trail-section">
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Money Trail</h3>
+            <MoneyTrail orderId={order.id || order._id || order.order_id} />
           </div>
 
           {/* QR Code Section — only for confirmed orders that are actually paid.

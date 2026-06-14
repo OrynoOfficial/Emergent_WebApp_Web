@@ -191,3 +191,65 @@ class MTNMoMoService:
                 "success": False,
                 "error": str(e)
             }
+
+    async def transfer(
+        self,
+        amount: float,
+        currency: str,
+        phone_number: str,
+        external_id: str,
+        payer_message: str = "Refund",
+        payee_note: str = "Refund issued",
+    ) -> Dict[str, Any]:
+        """Push funds FROM the merchant disbursement wallet TO a subscriber.
+
+        Used to automate refunds: MoMo's collection API only pulls money;
+        sending money back requires the disbursement product. The endpoint
+        returns 202 with no body — the actual outcome arrives via the same
+        transaction-status poll mechanism used for collections.
+        """
+        try:
+            url = f"{self.BASE_URL}/disbursement/v1_0/transfer"
+            reference_id = str(uuid.uuid4())
+
+            headers = self._get_auth_headers("disbursement")
+            headers["X-Reference-Id"] = reference_id
+            headers["X-Callback-Url"] = settings.MTN_MOMO_CALLBACK_URL
+
+            payload = {
+                "amount": str(amount),
+                "currency": currency,
+                "externalId": external_id,
+                "payee": {
+                    "partyIdType": "MSISDN",
+                    "partyId": phone_number,
+                },
+                "payerMessage": payer_message,
+                "payeeNote": payee_note,
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            if response.status_code == 202:
+                return {"success": True, "reference_id": reference_id, "status": "PENDING"}
+            return {"success": False, "error": response.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    async def get_transfer_status(self, reference_id: str) -> Dict[str, Any]:
+        """Status check for a disbursement (refund) transaction."""
+        try:
+            url = f"{self.BASE_URL}/disbursement/v1_0/transfer/{reference_id}"
+            headers = self._get_auth_headers("disbursement")
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "status": data.get("status"),
+                    "amount": data.get("amount"),
+                    "currency": data.get("currency"),
+                    "external_id": data.get("externalId"),
+                    "reason": data.get("reason"),
+                }
+            return {"success": False, "error": response.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}

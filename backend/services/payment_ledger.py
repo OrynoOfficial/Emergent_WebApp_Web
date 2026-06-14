@@ -150,3 +150,37 @@ def verify_mtn_momo_signature(raw_body: bytes, header_signature: Optional[str]) 
     expected = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
     # constant-time compare to avoid timing attacks
     return hmac.compare_digest(expected, header_signature.strip())
+
+
+def verify_orange_money_signature(
+    raw_body: bytes,
+    header_signature: Optional[str],
+    header_timestamp: Optional[str],
+    tolerance_seconds: int = 300,
+) -> bool:
+    """Verify an Orange Money Cameroon webhook.
+
+    Orange Money signs `{timestamp}.{body}` with HMAC-SHA256 keyed by the
+    shared secret stored in `ORANGE_MONEY_WEBHOOK_SECRET`. We additionally
+    enforce a 5-minute tolerance window on the timestamp to prevent replay
+    attacks. Timestamp must be a Unix epoch in seconds (string).
+    """
+    import time as _time
+
+    secret = os.environ.get("ORANGE_MONEY_WEBHOOK_SECRET", "").strip()
+    if not secret or not header_signature or not header_timestamp:
+        return False
+
+    try:
+        ts = int(header_timestamp)
+    except (TypeError, ValueError):
+        return False
+
+    if abs(int(_time.time()) - ts) > tolerance_seconds:
+        return False
+
+    signed_payload = f"{header_timestamp}.{raw_body.decode('utf-8', errors='replace')}"
+    expected = hmac.new(
+        secret.encode("utf-8"), signed_payload.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, header_signature.strip())
