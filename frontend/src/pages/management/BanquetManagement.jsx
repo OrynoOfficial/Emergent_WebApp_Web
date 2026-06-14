@@ -367,7 +367,7 @@ function PackagesTab({ services, scopeOperatorId }) {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: '', description: '', services: [], discount_percent: 0, is_active: true });
+    setForm({ name: '', description: '', images: [], services: [], discount_percent: 0, is_active: true });
     setOpen(true);
   }
 
@@ -376,6 +376,7 @@ function PackagesTab({ services, scopeOperatorId }) {
     setForm({
       name: pkg.name || '',
       description: pkg.description || '',
+      images: Array.isArray(pkg.images) ? pkg.images : [],
       services: (pkg.services || []).map(s => ({ service_id: s.service_id, quantity: s.quantity || 1 })),
       discount_percent: pkg.discount_percent || 0,
       is_active: pkg.is_active !== false,
@@ -624,6 +625,17 @@ function PackagesTab({ services, scopeOperatorId }) {
                 value={form.description}
                 onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                 placeholder="What this package covers, ideal guest count, etc."
+              />
+            </div>
+            <div>
+              <Label>Package photos</Label>
+              <MiniImageUploader
+                images={form.images || []}
+                onChange={(imgs) => setForm(p => ({ ...p, images: imgs }))}
+                max={5}
+                folder="banquet_packages"
+                accent="pink"
+                helperText="Up to 5 photos shown in the customer-facing package modal (swipeable gallery)."
               />
             </div>
             <div>

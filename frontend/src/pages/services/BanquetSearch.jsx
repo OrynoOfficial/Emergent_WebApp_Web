@@ -28,34 +28,31 @@ export default function BanquetSearch() {
   const validateForm = () => {
     const newErrors = {};
     const fieldsToShake = {};
-    
+
     if (!searchParams.city) {
       newErrors.city = 'City is required';
       fieldsToShake.city = true;
     }
-    if (!searchParams.event_date) {
-      newErrors.event_date = 'Event date is required';
-      fieldsToShake.event_date = true;
-    }
-    
+    // Event date is collected on the checkout page (matches the Laundry flow),
+    // so we don't enforce it here.
+
     setErrors(newErrors);
     setShakeFields(fieldsToShake);
-    
+
     if (Object.keys(fieldsToShake).length > 0) {
       setTimeout(() => setShakeFields({}), 500);
     }
-    
+
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
+
     const params = new URLSearchParams();
     params.set('city', searchParams.city);
     if (searchParams.venue_type) params.set('type', searchParams.venue_type);
-    params.set('date', format(searchParams.event_date, 'yyyy-MM-dd'));
     if (searchParams.guests) params.set('guests', searchParams.guests.toString());
     navigate(`/services/banquet/results?${params.toString()}`);
   };
@@ -109,36 +106,7 @@ export default function BanquetSearch() {
                   </Select>
                 </div>
 
-                {/* Event Date */}
-                <div>
-                  <Label>Event Date <span className="text-red-500">*</span></Label>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    onClick={() => setShowDateModal(true)}
-                    className={cn(
-                      "w-full mt-1 justify-start text-left font-normal bg-white h-12",
-                      !searchParams.event_date && "text-muted-foreground",
-                      errors.event_date && "border-red-500",
-                      shakeFields.event_date && "animate-shake"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {searchParams.event_date ? format(searchParams.event_date, 'PPP') : 'Select date'}
-                  </Button>
-                  <DatePickerModal
-                    isOpen={showDateModal}
-                    onClose={() => setShowDateModal(false)}
-                    selectedDate={searchParams.event_date}
-                    onSelect={(d) => {
-                      setSearchParams(p => ({ ...p, event_date: d }));
-                      setErrors(e => ({ ...e, event_date: undefined }));
-                    }}
-                    minDate={new Date()}
-                    title="Select Event Date"
-                  />
-                  {errors.event_date && <p className="text-xs text-red-500 mt-1">{errors.event_date}</p>}
-                </div>
+                {/* Event Date — collected at checkout (mirrors Laundry flow) */}
 
                 {/* Number of Guests */}
                 <div>

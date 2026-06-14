@@ -165,6 +165,7 @@ class BanquetPackageCreate(BaseModel):
     name: str
     description: Optional[str] = None
     image_url: Optional[str] = None
+    images: List[str] = []  # multi-image gallery for the customer-facing package modal
     services: List[PackageServiceLine]
     discount_percent: float = 0   # 0–100
     is_active: bool = True
@@ -173,6 +174,7 @@ class BanquetPackageUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
+    images: Optional[List[str]] = None
     services: Optional[List[PackageServiceLine]] = None
     discount_percent: Optional[float] = None
     is_active: Optional[bool] = None

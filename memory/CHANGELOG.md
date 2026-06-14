@@ -1,6 +1,41 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Banquet Customer Flow Overhaul (Laundry-style polish)
+**Bug fix**
+- **Cart → Checkout was blocked** when no event_date was set: `EventCartDrawer.goCheckout` required `cart.event_date` and threw an alert. Removed — checkout now collects the date itself (mirrors Laundry).
+
+**Date moved to checkout** (out of search)
+- `BanquetSearch.jsx`: removed event_date input + validation; URL params no longer include `date`.
+- `BanquetCheckout.jsx`: added `event_date` (HTML date input), `expected_guests`, `city`, `event_type` editable fields wired to `setMeta` from `useEventCart`. Validation now blocks submit if `event_date` is missing.
+
+**BanquetResults rewrite — Laundry-style polish, rose theme**
+- New highlighted "Banquet & Event Services in {city}" hero card (rose-to-pink gradient) replaces the cluttered filter strip.
+- Single **Filter** popover button beside the search bar (sort + price range + reset) — removes the under-bar filter row.
+- Removed date display entirely from the URL/header.
+- Category pills horizontally scrollable, gradient when active.
+- `ServiceCard` and `PackageCard` are now **swipeable** (dots + hover arrows) and **clickable** — opens `BanquetDetailsModal`.
+- Package cards: pronounced 3-line items list with **unit price** AND quantity per service.
+
+**New `BanquetDetailsModal.jsx`**
+- Full-resolution swipeable hero (dots + arrows + drag).
+- Service variant: facts grid (capacity/duration/unit/operator), contact strip, category_details tiles, amenities chips, qty +/- and Add-to-cart CTA.
+- Package variant: composite hero (package images + member-service photos), member services listed with thumbnail + per-unit price + line total + qty, breakdown card with subtotal/discount/total, Add Bundle / Remove CTA.
+
+**Package images in management**
+- `models/banquet.py::BanquetPackageCreate/Update`: added `images: List[str]` field.
+- `BanquetManagement.jsx::PackagesTab`: added `MiniImageUploader` (max 5, folder `banquet_packages`) in the create/edit modal so operators can upload curated bundle photos that drive the customer-facing swipeable gallery.
+
+**EventCartDrawer visual refresh**
+- Rose-to-pink gradient header strip, white text, FAB rose-themed with count badge.
+- Line items now show **service thumbnail + per-unit price + line total** in a clean card layout.
+- Packages get a distinct rose-bordered card variant.
+- Empty state with sparkles icon and friendly copy.
+
+**BanquetCheckout colour**: all purple → rose to match official banquet palette.
+
+
+
 ## Jun 14, 2026 — Banquet Modals Polish (View + Package modals)
 - **Service View Modal**: now a polished detail sheet — hero image with title-on-overlay + category badge + price ribbon, thumbnail strip (up to 6 images + "+N" pill), 2-column facts grid (location with map-pin, capacity range, default duration, unit + min qty, operator name, contact). Category-specific `category_details` rendered as small bordered tiles (e.g. cuisine type for catering, photography style for photographers). Amenities chip strip preserved. Footer with Edit / Close actions.
 - **Package Create/Edit Modal**: added a **"Live preview · how customers will see it"** card below the totals — replicates the customer-facing package card (composite hero from first member service's image, stacked avatar strip, price/discount ribbon, draft-state warning). Lets operators iterate on name/discount/service mix without leaving the modal.

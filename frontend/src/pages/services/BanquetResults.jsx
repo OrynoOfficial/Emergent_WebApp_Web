@@ -1,25 +1,28 @@
-// Banquet & Event Services — customer browsing page.
+// Banquet & Event Services — customer browsing page (Laundry-style polish).
 //
-// Customers arrive here from `/services/banquet` (the search form) with
-// `city`, `event_date`, `guests` in the query string. The page then lists
-// available services across all categories AND the operator-built
-// packages. Customers add multiple services to an event cart (one date
-// per cart) and checkout in a single transaction.
-import React, { useState, useEffect, useMemo } from 'react';
+// Customers arrive here from `/services/banquet`. Date is collected at
+// checkout (mirrors the Laundry flow). Cards are swipeable + clickable;
+// all filters are consolidated into a single "Filter" popover next to the
+// search bar. Theme is rose/pink — the official banquet colour.
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
 import {
   MapPin, Users, ArrowLeft, Loader2, PartyPopper, Plus, Minus, Package as PackageIcon,
-  Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed, Sparkles, Music2, Box, Calendar,
+  Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed, Sparkles, Music2, Box,
+  Search, SlidersHorizontal, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useEventCart } from '@/hooks/useEventCart';
 import EventCartDrawer from '@/components/banquet/EventCartDrawer';
+import BanquetDetailsModal from '@/components/banquet/BanquetDetailsModal';
 
 const CATEGORIES = [
   { value: 'all',            label: 'All',              icon: Sparkles },
@@ -33,66 +36,148 @@ const CATEGORIES = [
   { value: 'sound_lighting', label: 'Sound & Lighting', icon: Music2 },
   { value: 'other',          label: 'Other',            icon: Box },
 ];
-
 const CATEGORY_META = Object.fromEntries(CATEGORIES.map(c => [c.value, c]));
-
 const PRICING_SUFFIX = {
-  per_event:  'flat',
-  per_person: 'per person',
-  per_hour:   'per hour',
-  per_unit:   '',  // shown alongside unit label
-  flat_fee:   'flat',
+  per_event: 'flat', per_person: '/ person', per_hour: '/ hour',
+  per_unit: '', flat_fee: 'flat',
 };
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
 
-// Category-specific card. Hall = big image card; rental_item = compact qty card; talent = portrait.
-function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty }) {
+// ── Swipeable images on cards ───────────────────────────────────────────────
+function SwipeableImages({ images, name, height = 'h-44' }) {
+  const ref = useRef(null);
+  const [idx, setIdx] = useState(0);
+  const safe = images && images.length > 0 ? images : [PLACEHOLDER];
+  const scrollTo = (i, e) => {
+    e?.stopPropagation();
+    if (!ref.current) return;
+    const w = ref.current.clientWidth;
+    ref.current.scrollTo({ left: w * i, behavior: 'smooth' });
+    setIdx(i);
+  };
+  const onScroll = () => {
+    if (!ref.current) return;
+    const w = ref.current.clientWidth;
+    setIdx(Math.round(ref.current.scrollLeft / w));
+  };
+  return (
+    <div className={`relative ${height} group overflow-hidden`}>
+      <div
+        ref={ref}
+        onScroll={onScroll}
+        className="flex h-full overflow-x-auto snap-x snap-mandatory scroll-smooth"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {safe.map((src, i) => (
+          <div key={i} className="flex-shrink-0 w-full h-full snap-center">
+            <img src={src} alt={`${name} ${i + 1}`} loading="lazy" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+      {safe.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => scrollTo(Math.max(0, idx - 1), e)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+          >
+            <ChevronLeft className="w-4 h-4 text-rose-700" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => scrollTo(Math.min(safe.length - 1, idx + 1), e)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
+          >
+            <ChevronRight className="w-4 h-4 text-rose-700" />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            {safe.map((_, i) => (
+              <button
+                key={i}
+                onClick={(e) => scrollTo(i, e)}
+                className={`h-1.5 rounded-full transition-all ${i === idx ? 'bg-white w-4' : 'bg-white/60 w-1.5'}`}
+                aria-label={`Image ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Service card ────────────────────────────────────────────────────────────
+function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails }) {
   const meta = CATEGORY_META[svc.category] || CATEGORY_META.other;
   const Icon = meta.icon;
-  const placeholder = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600';
-  const image = svc.images?.[0] || placeholder;
-
   return (
-    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all" data-testid={`service-card-${svc.id}`}>
-      <div className="h-44 relative overflow-hidden">
-        <img src={image} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-        <div className="absolute top-3 left-3">
-          <Badge className="bg-white/95 text-purple-700 font-medium">
-            <Icon className="w-3 h-3 mr-1" />
-            {meta.label}
+    <Card
+      className="group overflow-hidden bg-white rounded-2xl border border-rose-100/60 shadow-md hover:shadow-xl hover:border-rose-300 transition-all cursor-pointer"
+      onClick={onOpenDetails}
+      data-testid={`service-card-${svc.id}`}
+    >
+      <div className="relative">
+        <SwipeableImages images={svc.images} name={svc.name} height="h-48" />
+        <div className="absolute top-3 left-3 z-10">
+          <Badge className="bg-white/95 text-rose-700 font-medium shadow-sm">
+            <Icon className="w-3 h-3 mr-1" /> {meta.label}
           </Badge>
         </div>
       </div>
-      <CardContent className="p-4 space-y-2">
+      <CardContent className="p-4 space-y-2.5">
         <h3 className="font-bold text-slate-900 leading-tight line-clamp-1">{svc.name}</h3>
-        <div className="text-xs text-slate-500 flex items-center gap-3">
-          {svc.city && (<span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{svc.city}</span>)}
-          {svc.capacity_max && (<span className="inline-flex items-center gap-1"><Users className="w-3 h-3" />Up to {svc.capacity_max}</span>)}
-          {svc.unit_label && (<span>per {svc.unit_label}</span>)}
+
+        {(svc.address || svc.city) && (
+          <div className="flex items-start gap-2 rounded-lg bg-rose-50/70 px-2.5 py-1.5 border border-rose-100">
+            <MapPin className="w-3.5 h-3.5 text-rose-700 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-900 truncate">{svc.address || svc.city}</p>
+              {svc.address && svc.city && <p className="text-[10px] text-rose-700 font-medium">{svc.city}</p>}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+          {svc.capacity_max && (
+            <span className="inline-flex items-center gap-1 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
+              <Users className="w-3 h-3 text-rose-700" /> {svc.capacity_max}
+            </span>
+          )}
+          {svc.unit_label && (
+            <span className="inline-flex items-center gap-1 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
+              <Box className="w-3 h-3 text-rose-700" /> per {svc.unit_label}
+            </span>
+          )}
         </div>
-        <div className="flex items-baseline justify-between pt-2">
+
+        <div className="flex items-end justify-between pt-2 border-t border-rose-100/60">
           <div>
-            <div className="text-xl font-bold text-purple-700">{formatFCFA(svc.base_price || 0)}</div>
-            <div className="text-xs text-slate-500">{svc.unit_label ? `/ ${svc.unit_label}` : PRICING_SUFFIX[svc.pricing_model] || ''}</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">From</div>
+            <div className="text-xl font-bold text-rose-700 leading-tight">{formatFCFA(svc.base_price || 0)}</div>
+            <div className="text-[11px] text-slate-500">{svc.unit_label ? `/ ${svc.unit_label}` : PRICING_SUFFIX[svc.pricing_model] || ''}</div>
           </div>
           {inCart ? (
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => onSetQty(Math.max(1, qtyInCart - 1))}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <Button size="icon" variant="outline" className="h-8 w-8 border-rose-300" onClick={() => onSetQty(Math.max(1, qtyInCart - 1))}>
                 <Minus className="w-3 h-3" />
               </Button>
               <Input
-                type="number"
-                value={qtyInCart}
+                type="number" value={qtyInCart} min="1"
                 onChange={(e) => onSetQty(Math.max(1, Number(e.target.value) || 1))}
-                className="w-14 h-8 text-center"
-                min="1"
+                className="w-12 h-8 text-center text-sm"
                 data-testid={`qty-input-${svc.id}`}
               />
-              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => onSetQty(qtyInCart + 1)}>
+              <Button size="icon" variant="outline" className="h-8 w-8 border-rose-300" onClick={() => onSetQty(qtyInCart + 1)}>
                 <Plus className="w-3 h-3" />
               </Button>
             </div>
           ) : (
-            <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700" size="sm" data-testid={`add-to-cart-${svc.id}`}>
+            <Button
+              onClick={(e) => { e.stopPropagation(); onAdd(); }}
+              size="sm"
+              className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white rounded-xl shadow shadow-rose-500/20"
+              data-testid={`add-to-cart-${svc.id}`}
+            >
               <Plus className="w-4 h-4 mr-1" /> Add
             </Button>
           )}
@@ -102,45 +187,80 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty }) {
   );
 }
 
-function PackageCard({ pkg, inCart, onAdd, onRemove }) {
+// ── Package card ────────────────────────────────────────────────────────────
+function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) {
+  // Compose gallery from package images + member service photos.
+  const memberCovers = (pkg.services || [])
+    .map(line => services.find(s => s.id === line.service_id)?.images?.[0])
+    .filter(Boolean);
+  const galleryImages = [...(pkg.images || []), ...memberCovers].filter(Boolean).slice(0, 6);
+  const totalItems = (pkg.services || []).reduce((s, l) => s + Number(l.quantity || 0), 0);
+
   return (
-    <Card className="overflow-hidden border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white rounded-2xl shadow-md hover:shadow-lg transition-all" data-testid={`package-card-${pkg.id}`}>
-      <CardContent className="p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <PackageIcon className="w-5 h-5 text-purple-700" />
-            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">Bundle</span>
-          </div>
+    <Card
+      className="overflow-hidden border-2 border-rose-300 bg-gradient-to-br from-rose-50 to-white rounded-2xl shadow-md hover:shadow-xl transition-all cursor-pointer"
+      onClick={onOpenDetails}
+      data-testid={`package-card-${pkg.id}`}
+    >
+      <div className="relative">
+        <SwipeableImages images={galleryImages} name={pkg.name} height="h-44" />
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+          <Badge className="bg-rose-600 text-white font-medium shadow-sm">
+            <PackageIcon className="w-3 h-3 mr-1" /> Bundle
+          </Badge>
           {pkg.discount_percent > 0 && (
-            <Badge className="bg-rose-600 text-white">−{pkg.discount_percent}% OFF</Badge>
+            <Badge className="bg-amber-400 text-amber-900 font-bold shadow-sm">−{pkg.discount_percent}%</Badge>
           )}
         </div>
-        <h3 className="font-bold text-slate-900 text-lg leading-tight">{pkg.name}</h3>
-        {pkg.description && <p className="text-sm text-slate-600 line-clamp-2">{pkg.description}</p>}
-        <div className="text-xs text-slate-500 space-y-1 pt-1 border-t">
-          {(pkg.services || []).slice(0, 4).map((line, i) => (
-            <div key={i} className="flex justify-between">
-              <span>{line.service_name || line.service_id}</span>
-              <span>× {line.quantity}</span>
-            </div>
-          ))}
-          {(pkg.services?.length || 0) > 4 && (
-            <div className="text-purple-600 italic">+ {pkg.services.length - 4} more</div>
+      </div>
+      <CardContent className="p-4 space-y-2.5">
+        <h3 className="font-bold text-slate-900 text-lg leading-tight line-clamp-1">{pkg.name}</h3>
+        {pkg.description && <p className="text-xs text-slate-600 line-clamp-2">{pkg.description}</p>}
+
+        {/* Pronounced items list — first 3 with unit price */}
+        <div className="space-y-1 pt-1 border-t border-rose-100/60">
+          {(pkg.services || []).slice(0, 3).map((line, i) => {
+            const full = services.find(s => s.id === line.service_id) || {};
+            const unitPrice = Number(full.base_price || 0);
+            return (
+              <div key={i} className="flex items-center justify-between text-xs gap-2">
+                <span className="text-slate-700 truncate flex-1">{full.name || line.service_name || line.service_id}</span>
+                <span className="text-[10px] text-slate-500 flex-shrink-0">{formatFCFA(unitPrice)}/u</span>
+                <span className="font-semibold text-rose-700 flex-shrink-0">× {line.quantity}</span>
+              </div>
+            );
+          })}
+          {(pkg.services?.length || 0) > 3 && (
+            <div className="text-[11px] text-rose-600 italic">+ {pkg.services.length - 3} more services</div>
           )}
         </div>
-        <div className="flex items-baseline justify-between pt-2">
+
+        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+          <span>{(pkg.services || []).length} services · {totalItems} items</span>
+        </div>
+
+        <div className="flex items-end justify-between pt-2 border-t border-rose-100/60">
           <div>
-            {pkg.discount_percent > 0 && (
-              <div className="text-xs text-slate-400 line-through">{formatFCFA(pkg.subtotal || 0)}</div>
+            {pkg.discount_percent > 0 && pkg.subtotal && (
+              <div className="text-[10px] text-slate-400 line-through">{formatFCFA(pkg.subtotal)}</div>
             )}
-            <div className="text-2xl font-bold text-purple-700">{formatFCFA(pkg.total_price || 0)}</div>
+            <div className="text-2xl font-bold text-rose-700 leading-tight">{formatFCFA(pkg.total_price || 0)}</div>
           </div>
           {inCart ? (
-            <Button onClick={onRemove} variant="outline" className="border-rose-400 text-rose-600" data-testid={`remove-package-${pkg.id}`}>
+            <Button
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              variant="outline"
+              className="border-rose-400 text-rose-600"
+              data-testid={`remove-package-${pkg.id}`}
+            >
               Remove
             </Button>
           ) : (
-            <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700" data-testid={`add-package-${pkg.id}`}>
+            <Button
+              onClick={(e) => { e.stopPropagation(); onAdd(); }}
+              className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white shadow shadow-rose-500/20"
+              data-testid={`add-package-${pkg.id}`}
+            >
               <Plus className="w-4 h-4 mr-1" /> Add Bundle
             </Button>
           )}
@@ -150,6 +270,7 @@ function PackageCard({ pkg, inCart, onAdd, onRemove }) {
   );
 }
 
+// ── Page ────────────────────────────────────────────────────────────────────
 export default function BanquetResults() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -161,22 +282,24 @@ export default function BanquetResults() {
   const [loading, setLoading] = useState(true);
   const [categoryTab, setCategoryTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('relevance');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [detailItem, setDetailItem] = useState(null);
 
   const city = searchParams.get('city') || '';
-  const eventDate = searchParams.get('event_date') || cart.event_date || '';
   const guests = parseInt(searchParams.get('guests')) || cart.expected_guests || 0;
   const eventType = searchParams.get('type') || '';
 
-  // Persist the search params into the cart so the drawer + checkout see them.
+  // Persist search params (sans date) into cart metadata.
   useEffect(() => {
     const updates = {};
-    if (eventDate && eventDate !== cart.event_date) updates.event_date = eventDate;
     if (city && city !== cart.city) updates.city = city;
     if (guests && guests !== cart.expected_guests) updates.expected_guests = guests;
     if (eventType && eventType !== cart.event_type) updates.event_type = eventType;
     if (Object.keys(updates).length) setMeta(updates);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventDate, city, guests, eventType]);
+  }, [city, guests, eventType]);
 
   useEffect(() => {
     const load = async () => {
@@ -206,112 +329,202 @@ export default function BanquetResults() {
       const q = searchQuery.toLowerCase();
       list = list.filter(s =>
         (s.name || '').toLowerCase().includes(q) ||
-        (s.city || '').toLowerCase().includes(q)
+        (s.city || '').toLowerCase().includes(q) ||
+        (s.address || '').toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [services, categoryTab, searchQuery]);
+    if (minPrice) list = list.filter(s => Number(s.base_price || 0) >= Number(minPrice));
+    if (maxPrice) list = list.filter(s => Number(s.base_price || 0) <= Number(maxPrice));
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'price_low':  return sorted.sort((a, b) => Number(a.base_price || 0) - Number(b.base_price || 0));
+      case 'price_high': return sorted.sort((a, b) => Number(b.base_price || 0) - Number(a.base_price || 0));
+      case 'name':       return sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      default:           return sorted;
+    }
+  }, [services, categoryTab, searchQuery, sortBy, minPrice, maxPrice]);
 
   const qtyOf = (svcId) => cart.items.find(i => i.service_id === svcId)?.quantity || 0;
   const isPkgInCart = (pkgId) => !!cart.packages.find(p => p.package_id === pkgId);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-rose-50/60">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-rose-600 mx-auto mb-4" />
           <p className="text-slate-600">Finding services for your event…</p>
         </div>
       </div>
     );
   }
 
+  const activeFilterCount = (minPrice ? 1 : 0) + (maxPrice ? 1 : 0) + (sortBy !== 'relevance' ? 1 : 0);
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
-      {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')}>
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+    <div className="min-h-screen bg-rose-50/40 pb-32">
+      {/* Sticky header (rose-themed, matches Laundry pattern) */}
+      <div className="bg-white border-b border-rose-100 shadow-sm sticky top-0 z-20">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4 mb-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')} className="gap-2 text-rose-700 hover:bg-rose-50">
+              <ArrowLeft className="w-4 h-4" /> Back
             </Button>
-            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <PartyPopper className="w-5 h-5 text-purple-600" />
-              Banquet & Event Services
-            </h1>
           </div>
-          <div className="flex flex-wrap gap-3 items-center text-sm text-slate-600">
-            {city && <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" />{city}</span>}
-            {eventDate && <span className="inline-flex items-center gap-1"><Calendar className="w-4 h-4" />{eventDate}</span>}
-            {guests > 0 && <span className="inline-flex items-center gap-1"><Users className="w-4 h-4" />{guests} guests</span>}
+
+          {/* Highlighted Search Criteria — rose gradient hero */}
+          <Card className="shadow-sm bg-gradient-to-r from-rose-600 to-pink-600 text-white mb-4 border-transparent" data-testid="banquet-search-criteria">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <PartyPopper className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-bold truncate">Banquet &amp; Event Services {city && `in ${city}`}</h2>
+                    <div className="flex items-center gap-2 text-white/85 text-sm mt-0.5 flex-wrap">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{filteredServices.length} service{filteredServices.length === 1 ? '' : 's'}{packages.length ? ` · ${packages.length} bundle${packages.length === 1 ? '' : 's'}` : ''}</span>
+                      {eventType && (
+                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] ml-1 capitalize">{eventType}</Badge>
+                      )}
+                      {guests > 0 && <Badge className="bg-white/20 text-white border-white/30 text-[10px]"><Users className="w-3 h-3 mr-1" />{guests} guests</Badge>}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/15 border-white/30 text-white hover:bg-white/25"
+                  onClick={() => navigate('/services/banquet')}
+                >
+                  Modify search
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Search bar + single Filter button (mirror Laundry results) */}
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400" />
+              <Input
+                placeholder="Search services by name, city or address…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white border-rose-200 focus-visible:ring-rose-400"
+                data-testid="services-search-input"
+              />
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-50 relative" data-testid="filter-button">
+                  <SlidersHorizontal className="w-4 h-4 mr-2" /> Filter
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 bg-white p-4 space-y-3">
+                <div>
+                  <Label className="text-xs text-slate-600">Sort by</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="mt-1 bg-white border-rose-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="relevance">Relevance</SelectItem>
+                      <SelectItem value="price_low">Price: low to high</SelectItem>
+                      <SelectItem value="price_high">Price: high to low</SelectItem>
+                      <SelectItem value="name">Name (A–Z)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-600">Price range (FCFA)</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min" className="bg-white border-rose-200" />
+                    <span className="text-slate-400">–</span>
+                    <Input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max" className="bg-white border-rose-200" />
+                  </div>
+                </div>
+                {activeFilterCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-rose-700"
+                    onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy('relevance'); }}
+                  >
+                    Reset filters
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
-          <Input
-            placeholder="Search services by name…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="mt-3 max-w-md"
-            data-testid="services-search-input"
-          />
         </div>
 
-        {/* Category tabs */}
-        <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
-          <Tabs value={categoryTab} onValueChange={setCategoryTab}>
-            <TabsList className="bg-transparent flex flex-nowrap gap-1 h-auto p-0">
-              {CATEGORIES.map(c => {
-                const Icon = c.icon;
-                const n = c.value === 'all' ? services.length : services.filter(s => (s.category || 'hall') === c.value).length;
-                return (
-                  <TabsTrigger
-                    key={c.value}
-                    value={c.value}
-                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-full px-4 py-2 text-sm whitespace-nowrap"
-                    data-testid={`tab-${c.value}`}
-                  >
-                    <Icon className="w-4 h-4 mr-1.5" />
-                    {c.label}
-                    {n > 0 && <span className="ml-2 text-[10px] opacity-70">{n}</span>}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
+        {/* Category pills */}
+        <div className="px-4 pb-3 overflow-x-auto">
+          <div className="flex flex-nowrap gap-1.5">
+            {CATEGORIES.map(c => {
+              const Icon = c.icon;
+              const n = c.value === 'all' ? services.length : services.filter(s => (s.category || 'hall') === c.value).length;
+              const active = categoryTab === c.value;
+              return (
+                <button
+                  key={c.value}
+                  onClick={() => setCategoryTab(c.value)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-all
+                    ${active
+                      ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow shadow-rose-500/20'
+                      : 'bg-white border border-rose-200 text-rose-700 hover:bg-rose-50'}`}
+                  data-testid={`tab-${c.value}`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {c.label}
+                  {n > 0 && <span className={`text-[10px] ${active ? 'opacity-80' : 'text-rose-500'}`}>{n}</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-        {/* Packages first — they're the headline offer */}
+      {/* Results */}
+      <div className="px-4 py-6 space-y-8">
         {packages.length > 0 && categoryTab === 'all' && (
           <section data-testid="packages-section">
             <div className="flex items-center gap-2 mb-4">
-              <PackageIcon className="w-5 h-5 text-purple-700" />
+              <PackageIcon className="w-5 h-5 text-rose-700" />
               <h2 className="text-lg font-bold text-slate-900">Curated Bundles</h2>
-              <Badge className="bg-purple-100 text-purple-700">Save more</Badge>
+              <Badge className="bg-rose-100 text-rose-700 border-0">Save more</Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {packages.map(pkg => (
                 <PackageCard
                   key={pkg.id}
                   pkg={pkg}
+                  services={services}
                   inCart={isPkgInCart(pkg.id)}
                   onAdd={() => addPackage(pkg)}
                   onRemove={() => removePackage(pkg.id)}
+                  onOpenDetails={() => setDetailItem({ ...pkg, _type: 'package' })}
                 />
               ))}
             </div>
           </section>
         )}
 
-        {/* Services grid */}
         <section>
           <h2 className="text-lg font-bold text-slate-900 mb-4">
             {categoryTab === 'all' ? 'All services' : CATEGORY_META[categoryTab]?.label}
             <span className="ml-2 text-sm font-normal text-slate-500">({filteredServices.length})</span>
           </h2>
           {filteredServices.length === 0 ? (
-            <Card className="p-12 text-center bg-white">
-              <Sparkles className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500">No services match your filters. Try a different category or search term.</p>
+            <Card className="p-12 text-center bg-white border-rose-100">
+              <Sparkles className="w-12 h-12 mx-auto text-rose-200 mb-3" />
+              <p className="text-slate-500">No services match your filters. Try a different category or clear the filter.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -325,6 +538,7 @@ export default function BanquetResults() {
                     qtyInCart={q}
                     onAdd={() => addItem(svc, svc.min_quantity || 1)}
                     onSetQty={(n) => updateQty(svc.id, n)}
+                    onOpenDetails={() => setDetailItem(svc)}
                   />
                 );
               })}
@@ -332,6 +546,23 @@ export default function BanquetResults() {
           )}
         </section>
       </div>
+
+      {/* Detail modal */}
+      <BanquetDetailsModal
+        open={!!detailItem}
+        onOpenChange={(v) => { if (!v) setDetailItem(null); }}
+        item={detailItem}
+        services={services}
+        qtyInCart={detailItem && detailItem._type !== 'package' ? qtyOf(detailItem.id) : 0}
+        inCart={detailItem && detailItem._type === 'package' ? isPkgInCart(detailItem.id) : false}
+        onAdd={() => {
+          if (!detailItem) return;
+          if (detailItem._type === 'package') addPackage(detailItem);
+          else addItem(detailItem, detailItem.min_quantity || 1);
+        }}
+        onSetQty={(n) => detailItem && updateQty(detailItem.id, n)}
+        onRemove={() => detailItem && removePackage(detailItem.id)}
+      />
 
       <EventCartDrawer
         cart={cart}

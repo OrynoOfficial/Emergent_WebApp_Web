@@ -33,7 +33,7 @@ const CATEGORY_LABEL = {
 export default function BanquetCheckout() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { cart, totals, count, clear } = useEventCart();
+  const { cart, setMeta, totals, count, clear } = useEventCart();
 
   const [contact, setContact] = useState({
     contact_name: user?.full_name || '',
@@ -50,7 +50,7 @@ export default function BanquetCheckout() {
   const setField = (k, v) => setContact(c => ({ ...c, [k]: v }));
 
   const validate = () => {
-    if (!cart.event_date) { toast.error('Event date is missing. Go back and set it.'); return false; }
+    if (!cart.event_date) { toast.error('Please pick your event date.'); return false; }
     if (!contact.contact_name?.trim()) { toast.error('Please enter a contact name.'); return false; }
     if (!contact.contact_phone?.trim()) { toast.error('Please enter a phone number.'); return false; }
     if (count === 0) { toast.error('Your cart is empty.'); return false; }
@@ -109,12 +109,12 @@ export default function BanquetCheckout() {
             <h1 className="text-2xl font-bold text-slate-900">Your event is booked!</h1>
             <p className="text-slate-600">
               We&apos;ve sent the confirmation to <strong>{contact.contact_email || contact.contact_phone}</strong>.
-              Your event ID is <strong className="text-purple-700" data-testid="success-order-number">{success.order_number}</strong>.
+              Your event ID is <strong className="text-rose-700" data-testid="success-order-number">{success.order_number}</strong>.
             </p>
-            <div className="bg-purple-50 rounded-lg p-4 text-left space-y-2 my-4">
+            <div className="bg-rose-50 rounded-lg p-4 text-left space-y-2 my-4">
               <div className="flex justify-between"><span className="text-slate-600">Event date</span><span className="font-semibold">{success.event_date}</span></div>
               <div className="flex justify-between"><span className="text-slate-600">Items</span><span className="font-semibold">{(success.line_items || []).length}</span></div>
-              <div className="flex justify-between border-t pt-2 mt-2"><span className="text-slate-600">Total</span><span className="font-bold text-purple-700 text-xl">{formatFCFA(success.total_price)}</span></div>
+              <div className="flex justify-between border-t pt-2 mt-2"><span className="text-slate-600">Total</span><span className="font-bold text-rose-700 text-xl">{formatFCFA(success.total_price)}</span></div>
             </div>
 
             {/* ── V2 ledger payment ──────────────────────────────────────
@@ -185,7 +185,7 @@ export default function BanquetCheckout() {
             <ShoppingBag className="w-12 h-12 mx-auto text-slate-300 mb-4" />
             <h2 className="text-xl font-bold mb-2">Your cart is empty</h2>
             <p className="text-slate-600 mb-4">Add some services first.</p>
-            <Button onClick={() => navigate('/services/banquet')} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={() => navigate('/services/banquet')} className="bg-rose-600 hover:bg-rose-700">
               Browse event services
             </Button>
           </CardContent>
@@ -202,21 +202,61 @@ export default function BanquetCheckout() {
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <PartyPopper className="w-6 h-6 text-purple-600" /> Checkout your event
+            <PartyPopper className="w-6 h-6 text-rose-600" /> Checkout your event
           </h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* LEFT — contact info */}
           <div className="lg:col-span-2 space-y-4">
-            <Card className="bg-white">
+            <Card className="bg-white border-rose-100">
               <CardContent className="p-6 space-y-4">
-                <h2 className="font-semibold text-slate-900">Event details</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-purple-600" /><strong>{cart.event_date}</strong></div>
-                  {cart.expected_guests > 0 && (<div className="flex items-center gap-2"><Users className="w-4 h-4 text-purple-600" /><strong>{cart.expected_guests}</strong> guests</div>)}
-                  {cart.city && (<div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-purple-600" />{cart.city}</div>)}
-                  {cart.event_type && (<div className="capitalize text-slate-600">{cart.event_type}</div>)}
+                <h2 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-rose-600" /> Event details
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm">Event date *</Label>
+                    <Input
+                      type="date"
+                      value={cart.event_date || ''}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setMeta({ event_date: e.target.value })}
+                      className="mt-1 border-rose-200 focus-visible:ring-rose-400"
+                      data-testid="checkout-event-date"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Expected guests</Label>
+                    <Input
+                      type="number" min="1"
+                      value={cart.expected_guests || ''}
+                      onChange={(e) => setMeta({ expected_guests: Number(e.target.value) || 0 })}
+                      className="mt-1 border-rose-200 focus-visible:ring-rose-400"
+                      placeholder="50"
+                      data-testid="checkout-guests"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">City</Label>
+                    <Input
+                      value={cart.city || ''}
+                      onChange={(e) => setMeta({ city: e.target.value })}
+                      className="mt-1 border-rose-200 focus-visible:ring-rose-400"
+                      placeholder="Douala, Yaoundé…"
+                      data-testid="checkout-city"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Event type</Label>
+                    <Input
+                      value={cart.event_type || ''}
+                      onChange={(e) => setMeta({ event_type: e.target.value })}
+                      className="mt-1 border-rose-200 focus-visible:ring-rose-400"
+                      placeholder="Wedding, birthday, conference…"
+                      data-testid="checkout-event-type"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -263,12 +303,12 @@ export default function BanquetCheckout() {
               {cart.packages.length > 0 && (
                 <div className="space-y-2">
                   {cart.packages.map(p => (
-                    <div key={p.package_id} className="rounded-lg bg-purple-50 p-3 text-sm" data-testid={`checkout-package-${p.package_id}`}>
-                      <div className="flex items-center gap-2 font-semibold text-purple-900">
+                    <div key={p.package_id} className="rounded-lg bg-rose-50 p-3 text-sm" data-testid={`checkout-package-${p.package_id}`}>
+                      <div className="flex items-center gap-2 font-semibold text-rose-900">
                         <PackageIcon className="w-4 h-4" />
                         {p.snapshot?.name}
                       </div>
-                      <div className="flex justify-between mt-1 text-purple-700">
+                      <div className="flex justify-between mt-1 text-rose-700">
                         <span>{p.snapshot?.services?.length || 0} services</span>
                         <span className="font-semibold">{formatFCFA(p.snapshot?.total_price || 0)}</span>
                       </div>
@@ -304,14 +344,14 @@ export default function BanquetCheckout() {
                 {totals.items > 0 && (<div className="flex justify-between text-slate-600"><span>Services</span><span>{formatFCFA(totals.items)}</span></div>)}
                 <div className="flex justify-between items-baseline pt-2 border-t">
                   <span className="font-semibold">Total</span>
-                  <span className="text-2xl font-bold text-purple-700" data-testid="checkout-total">{formatFCFA(totals.total)}</span>
+                  <span className="text-2xl font-bold text-rose-700" data-testid="checkout-total">{formatFCFA(totals.total)}</span>
                 </div>
               </div>
 
               <Button
                 onClick={submit}
                 disabled={submitting}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-base h-12"
+                className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-base h-12"
                 data-testid="confirm-checkout-btn"
               >
                 {submitting ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Placing order…</>) : `Confirm & pay ${formatFCFA(totals.total)}`}
