@@ -34,11 +34,37 @@ const canManageRole = (managerRole, targetRole) => {
   return managerLevel > targetLevel;
 };
 
+// Chip tags for `user.assigned_roles` (role IDs) resolved via rolesMap.
+// Defined at module scope so React doesn't remount on every parent render.
+function RoleChips({ ids, rolesMap, size = 'sm' }) {
+  if (!Array.isArray(ids) || ids.length === 0) return null;
+  const px = size === 'xs' ? 'px-1.5 py-0 text-[10px]' : 'px-2 py-0.5 text-[11px]';
+  return (
+    <div className="flex flex-wrap gap-1" data-testid="user-role-chips">
+      {ids.map(rid => {
+        const meta = rolesMap[rid] || { name: rid.length > 10 ? `${rid.slice(0, 8)}…` : rid, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+        return (
+          <span
+            key={rid}
+            className={`inline-flex items-center gap-0.5 rounded-full border ${meta.color} ${px} font-medium`}
+            title={meta.name}
+            data-testid={`role-chip-${rid}`}
+          >
+            <Shield className="h-2.5 w-2.5" />
+            <span className="truncate max-w-[120px]">{meta.name}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [users, setUsers] = useState([]);
+  const [rolesMap, setRolesMap] = useState({}); // id -> { name, color }
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
@@ -72,8 +98,20 @@ export default function UserManagement() {
 
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
     activityLogger.pageView('User Management', '/admin/users');
   }, []);
+
+  const fetchRoles = async () => {
+    try {
+      const res = await api.get('/access/roles');
+      const map = {};
+      (res.data?.roles || []).forEach(r => { map[r.id] = { name: r.name, color: r.color || 'bg-slate-100 text-slate-700 border-slate-200' }; });
+      setRolesMap(map);
+    } catch (err) {
+      console.warn('Failed to fetch roles', err);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -280,6 +318,9 @@ export default function UserManagement() {
     };
     return styles[role] || styles.customer;
   };
+
+  // Renders chip tags for `user.assigned_roles` (role IDs) resolved via rolesMap.
+  // Module-level RoleChips component imported above; helper here just binds rolesMap.
 
   const getRoleIcon = (role) => {
     switch (role) {
@@ -517,6 +558,11 @@ export default function UserManagement() {
                     {user.status}
                   </span>
                 </div>
+                {Array.isArray(user.assigned_roles) && user.assigned_roles.length > 0 && (
+                  <div className="mt-2">
+                    <RoleChips ids={user.assigned_roles} rolesMap={rolesMap} size="xs" />
+                  </div>
+                )}
                 {user.operator_id && (
                   <div className="mt-2 text-xs text-slate-600 flex items-center gap-1.5 bg-slate-50 rounded px-2 py-1">
                     <Building2 className="h-3 w-3 text-[#082c59]" />
@@ -558,6 +604,9 @@ export default function UserManagement() {
                   <div>
                     <p className="text-xs text-slate-500 uppercase">Role</p>
                     <span className={`mt-0.5 inline-block px-2 py-0.5 rounded-full text-xs capitalize ${getRoleBadge(user.role)}`}>{user.role.replace('_', ' ')}</span>
+                    {Array.isArray(user.assigned_roles) && user.assigned_roles.length > 0 && (
+                      <div className="mt-1.5"><RoleChips ids={user.assigned_roles} rolesMap={rolesMap} size="xs" /></div>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 uppercase">Status</p>
@@ -636,6 +685,9 @@ export default function UserManagement() {
                           <span className="capitalize">{user.role.replace('_', ' ')}</span>
                           {isSelf && <span className="text-xs">(You)</span>}
                         </span>
+                      )}
+                      {Array.isArray(user.assigned_roles) && user.assigned_roles.length > 0 && (
+                        <div className="mt-1.5"><RoleChips ids={user.assigned_roles} rolesMap={rolesMap} size="xs" /></div>
                       )}
                     </td>
                     <td className="py-4 px-6 text-sm" data-testid={`user-operator-cell-${user.id}`}>

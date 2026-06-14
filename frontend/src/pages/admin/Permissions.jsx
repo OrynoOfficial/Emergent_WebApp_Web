@@ -771,6 +771,38 @@ export default function Permissions() {
     );
   };
 
+  // ── Drag & drop user → role assignment ─────────────────────────────────────
+  const [draggingUserId, setDraggingUserId] = useState(null);
+  const [hoverRoleId, setHoverRoleId] = useState(null);
+
+  const assignRoleByDnd = async (userId, roleId) => {
+    const targetUser = users.find(u => u.id === userId);
+    const targetRole = roles.find(r => r.id === roleId);
+    if (!targetUser || !targetRole) return;
+    if ((targetUser.assigned_roles || []).includes(roleId)) {
+      toast.info(`${targetUser.full_name || targetUser.email} already has the "${targetRole.name}" role`);
+      return;
+    }
+    // Permission gate — block non-super-admins from assigning admin/super_admin
+    if (!isSuperAdmin && ['admin', 'super_admin'].includes(roleId)) {
+      toast.error('Only super admins can assign the admin or super admin role');
+      return;
+    }
+    const nextRoles = [...(targetUser.assigned_roles || []), roleId];
+    try {
+      await api.put(`/access/users/${userId}/permissions`, {
+        assigned_roles: nextRoles,
+        permissions: [],
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, assigned_roles: nextRoles } : u));
+      // Bump the role's user count in local state for an immediate visual update.
+      setRoles(prev => prev.map(r => r.id === roleId ? { ...r, userCount: (r.userCount || r.user_count || 0) + 1 } : r));
+      toast.success(`Assigned "${targetRole.name}" to ${targetUser.full_name || targetUser.email}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to assign role');
+    }
+  };
+
   // Get total permissions count from assigned roles
   const getTotalPermissionsFromRoles = (assignedRoleIds) => {
     const allPermissions = new Set();
@@ -967,9 +999,27 @@ export default function Permissions() {
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {roles.map((role) => (
-              <Card key={role.id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6" data-testid="dnd-roles-tab">
+            {/* Role cards — drop targets */}
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {roles.map((role) => {
+              const isHover = hoverRoleId === role.id;
+              const canDrop = !!draggingUserId && (isSuperAdmin || !['admin', 'super_admin'].includes(role.id));
+              return (
+              <Card
+                key={role.id}
+                onDragOver={(e) => { if (draggingUserId) { e.preventDefault(); e.dataTransfer.dropEffect = canDrop ? 'copy' : 'none'; setHoverRoleId(role.id); } }}
+                onDragLeave={() => { if (hoverRoleId === role.id) setHoverRoleId(null); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const uid = e.dataTransfer.getData('text/x-user-id') || draggingUserId;
+                  setHoverRoleId(null);
+                  setDraggingUserId(null);
+                  if (uid && canDrop) assignRoleByDnd(uid, role.id);
+                }}
+                className={`relative overflow-hidden transition-all ${isHover && canDrop ? 'ring-2 ring-emerald-500 ring-offset-2 shadow-xl bg-emerald-50/50' : isHover && !canDrop ? 'ring-2 ring-red-300 ring-offset-2' : 'hover:shadow-lg'}`}
+                data-testid={`role-drop-target-${role.id}`}
+              >
                 {role.isSystem && (
                   <div className="absolute top-0 right-0 bg-[#082c59] text-white text-xs px-3 py-1 rounded-bl-lg">
                     System
@@ -989,7 +1039,7 @@ export default function Permissions() {
                   <div className="flex items-center gap-4 text-sm text-slate-600">
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>{role.userCount} users</span>
+                      <span>{role.userCount || role.user_count || 0} users</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Key className="h-4 w-4" />
@@ -1022,6 +1072,13 @@ export default function Permissions() {
                       )}
                     </div>
                   </div>
+
+                  {/* Drag hint when a user is being dragged */}
+                  {draggingUserId && (
+                    <div className={`mt-3 rounded-lg border-2 border-dashed p-2 text-center text-xs font-medium ${canDrop ? 'border-emerald-400 text-emerald-700 bg-emerald-50' : 'border-red-300 text-red-600 bg-red-50'}`}>
+                      {canDrop ? 'Drop to assign this role' : 'Only super admins can assign'}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="pt-2 border-t">
                   <div className="flex justify-end gap-2 w-full">
@@ -1040,7 +1097,67 @@ export default function Permissions() {
                   </div>
                 </CardFooter>
               </Card>
-            ))}
+            );})}
+            </div>
+
+            {/* Draggable Users Sidebar */}
+            <aside className="lg:col-span-1" data-testid="dnd-users-sidebar">
+              <Card className="lg:sticky lg:top-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><UserCog className="h-4 w-4 text-[#082c59]" /> Drag users → role</CardTitle>
+                  <CardDescription className="text-xs">Drop any user onto a role card to assign it. Existing roles are kept.</CardDescription>
+                  <div className="relative mt-2">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Search users…"
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="pl-8 bg-white h-8 text-xs"
+                      data-testid="dnd-user-search"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-2 max-h-[60vh] overflow-y-auto space-y-1.5">
+                  {users
+                    .filter(u =>
+                      userSearchQuery === '' ||
+                      u.email?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+                      u.full_name?.toLowerCase().includes(userSearchQuery.toLowerCase())
+                    )
+                    .slice(0, 80)
+                    .map(u => {
+                    const isDragging = draggingUserId === u.id;
+                    return (
+                      <div
+                        key={u.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'copy';
+                          e.dataTransfer.setData('text/x-user-id', u.id);
+                          setDraggingUserId(u.id);
+                        }}
+                        onDragEnd={() => { setDraggingUserId(null); setHoverRoleId(null); }}
+                        className={`group flex items-center gap-2 p-2 rounded-lg border bg-white cursor-grab active:cursor-grabbing transition ${isDragging ? 'opacity-50 border-dashed border-emerald-400' : 'border-slate-200 hover:border-[#082c59] hover:shadow-sm'}`}
+                        title={`Drag ${u.full_name || u.email} onto a role card`}
+                        data-testid={`draggable-user-${u.id}`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-[#082c59]/10 flex items-center justify-center flex-shrink-0">
+                          <Users className="h-3.5 w-3.5 text-[#082c59]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-slate-900 truncate">{u.full_name || u.email}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{u.email}</p>
+                        </div>
+                        <Badge variant="outline" className="text-[9px] capitalize px-1.5 py-0">{(u.assigned_roles?.length || 0)}</Badge>
+                      </div>
+                    );
+                  })}
+                  {users.length === 0 && !isLoading && (
+                    <p className="text-center text-xs text-slate-400 py-4">No users available</p>
+                  )}
+                </CardContent>
+              </Card>
+            </aside>
           </div>
         </TabsContent>
 

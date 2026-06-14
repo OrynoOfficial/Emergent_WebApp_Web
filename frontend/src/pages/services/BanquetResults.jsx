@@ -212,9 +212,12 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
 
 // ── Package card ────────────────────────────────────────────────────────────
 function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) {
-  // Compose gallery from package images + member service photos.
+  // Resolve each line to its full service. Prefer the enriched `line.service`
+  // returned by the backend (always present), fall back to the loaded services
+  // list (which may be empty when the city filter yields no services).
+  const resolve = (line) => line.service || services.find(s => s.id === line.service_id) || {};
   const memberCovers = (pkg.services || [])
-    .map(line => services.find(s => s.id === line.service_id)?.images?.[0])
+    .map(line => resolve(line)?.images?.[0])
     .filter(Boolean);
   const galleryImages = [...(pkg.images || []), ...memberCovers].filter(Boolean).slice(0, 6);
   const totalItems = (pkg.services || []).reduce((s, l) => s + Number(l.quantity || 0), 0);
@@ -243,7 +246,7 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
         {/* Pronounced items list — first 3 with unit price */}
         <div className="space-y-1 pt-1 border-t border-pink-100/60">
           {(pkg.services || []).slice(0, 3).map((line, i) => {
-            const full = services.find(s => s.id === line.service_id) || {};
+            const full = resolve(line);
             const unitPrice = Number(full.base_price || 0);
             return (
               <div key={i} className="flex items-center justify-between text-xs gap-2">
