@@ -490,14 +490,32 @@ async def list_banquet_packages(
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """List bundles. Operators see only their own; admins see everything."""
-    from middleware.auth import get_operator_filter
+    """List bundles.
+
+    Visibility:
+      • super_admin / admin: all packages, optionally filtered by operator_id.
+      • operator role: scoped to their own operator (cannot peek at rivals).
+      • customer role: every `is_active=true` bundle across operators —
+        this is the marketplace catalogue, not a private ops view.
+    """
     db = get_database()
-    query = get_operator_filter(current_user)
-    if operator_id and current_user.get("role") in ("super_admin", "admin"):
+    role = current_user.get("role", "")
+    query = {}
+
+    if role == "operator":
+        # Operators see only their own bundles.
+        from middleware.auth import get_operator_filter
+        query = get_operator_filter(current_user)
+    # admin / super_admin / customer: no implicit operator scope.
+
+    if operator_id and role in ("super_admin", "admin"):
         query["operator_id"] = operator_id
+
     if is_active is not None:
         query["is_active"] = is_active
+    elif role == "customer":
+        # Customers should never see disabled bundles.
+        query["is_active"] = True
 
     packages = await db.banquet_packages.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.banquet_packages.count_documents(query)
@@ -627,7 +645,13 @@ def _price_line(service: dict, qty: float, hours: Optional[float]) -> tuple[floa
         unit = service.get("unit_label") or "unit"
         rate_label = f"{int(base):,} / {unit}"
     elif model == "per_hour":
-        h = float(hours or service.get("duration_hours") or 1)
+        h = hours if hours is not None else service.get("duration_hours")
+        if h is None or float(h) <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{service.get('name')}' is priced per hour — please specify hours.",
+            )
+        h = float(h)
         line_total = base * h * qty
         rate_label = f"{int(base):,} / hour × {h}h"
     elif model == "per_person":

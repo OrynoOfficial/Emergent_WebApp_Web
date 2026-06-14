@@ -69,8 +69,17 @@ export default function BanquetCheckout() {
         package_ids: cart.packages.map(p => p.package_id),
         ...contact,
       };
+      // Snapshot the metadata we want on the success screen *before*
+      // clearing the cart — otherwise the confirmation card shows an
+      // empty "Event date" row.
+      const snapshot = {
+        event_date: cart.event_date,
+        expected_guests: cart.expected_guests,
+        city: cart.city,
+        event_type: cart.event_type,
+      };
       const res = await api.post('/banquets/cart/checkout', payload);
-      setSuccess(res.data);
+      setSuccess({ ...res.data, ...snapshot });
       clear();
       toast.success('Event order placed!');
     } catch (err) {
@@ -99,7 +108,7 @@ export default function BanquetCheckout() {
               Your event ID is <strong className="text-purple-700" data-testid="success-order-number">{success.order_number}</strong>.
             </p>
             <div className="bg-purple-50 rounded-lg p-4 text-left space-y-2 my-4">
-              <div className="flex justify-between"><span className="text-slate-600">Event date</span><span className="font-semibold">{cart.event_date}</span></div>
+              <div className="flex justify-between"><span className="text-slate-600">Event date</span><span className="font-semibold">{success.event_date}</span></div>
               <div className="flex justify-between"><span className="text-slate-600">Items</span><span className="font-semibold">{(success.line_items || []).length}</span></div>
               <div className="flex justify-between border-t pt-2 mt-2"><span className="text-slate-600">Total</span><span className="font-bold text-purple-700 text-xl">{formatFCFA(success.total_price)}</span></div>
             </div>

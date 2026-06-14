@@ -157,3 +157,20 @@
 - **Production perf**: GZip middleware (`min_size=500`), 30+ new compound indexes (banquets/restaurants/cinemas/films/vehicles/packages/routes/audit_logs/settings/otps), index ensure on startup
 - **Admin ops endpoints**: `POST /api/admin/db-indexes/ensure`, `POST /api/admin/db-cleanup/purge-soft-deleted` (dry-run by default)
 - **Testing — iteration_207**: Backend 100% (all 20 cases in test_iter206_banquet_services.py PASS); Frontend 75% (modal save UX now adds inline validation + FastAPI 422 field-error display)
+
+### 2026-02-14 — Banquet & Event Services Phase 2 (Customer-side cart + checkout)
+- **Backend cart endpoint** `POST /api/banquets/cart/checkout`
+  - Single order spanning multiple services + packages for one event date
+  - Per-line snapshot (service_name, category, pricing_model, unit_label, quantity, hours, unit_price, line_total, rate_label, operator_id)
+  - Pricing models honoured: per_event, per_person, per_hour (hours required & enforced), per_unit, flat_fee
+  - Package expansion: bundle.total_price feeds order subtotal; inner services snapshotted for operator visibility
+  - Validation: future date, non-empty cart, all service IDs exist, per_hour requires hours
+  - Writes 1 `orders` row (service_category=banquet, EVT-XXXXXX number) + 1 `banquet_bookings` row
+- **Customer-side packages visibility**: `GET /api/banquets/packages/` is now public-friendly — customers see all `is_active=true` bundles across operators; operators still see only their own; admins see everything
+- **Frontend customer flow**:
+  - `useEventCart` hook: localStorage-backed cart with items + packages, live totals, per-event metadata
+  - `EventCartDrawer`: floating cart FAB with sliding sheet, qty edits, remove, proceed-to-checkout
+  - `BanquetResults.jsx` rewritten: category tabs, ServiceCard with qty stepper, PackageCard with "Add Bundle", mounts cart drawer
+  - `BanquetCheckout.jsx` new page: contact form + order summary + success screen (snapshots event_date before clear)
+  - Route `/services/banquet/checkout` added
+- **Testing (iteration_208)**: Backend 100% (8/8 pytest in test_iter208_banquet_cart_checkout.py PASS); Frontend e2e 100% (order EVT-000005 created end-to-end with cart drawer + checkout + success + localStorage clear). Two follow-up fixes applied: customer-visible packages, snapshot event_date for success screen, per_hour without hours now 400s.
