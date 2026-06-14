@@ -23,14 +23,25 @@ User foreign-key fields (`owner_user_id`, `created_by`, `updated_by`, `manager_i
 ## How to run the import
 
 ### Step 1 — Download the seed bundle
-The export was generated against the current preview DB. The file is at:
+The export lives in the preview pod at `/app/oryno_seed.json` (≈273 KB, 290 docs).
+Download it via the Emergent Files panel (right-click → Download), or pull it via the API from your laptop:
 
-    /app/oryno_seed.json
+```bash
+PREVIEW_URL="https://<your-preview-host>.preview.emergentagent.com"
+PREVIEW_TOKEN=$(curl -s -X POST "$PREVIEW_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"superadmin@oryno.com","password":"YOUR_PREVIEW_PASSWORD"}' \
+  | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
 
-Download it to your laptop (Files panel → right-click → Download, or `scp` if you've enabled SSH).
+curl -L -o oryno_seed.json \
+  -H "Authorization: Bearer $PREVIEW_TOKEN" \
+  "$PREVIEW_URL/api/admin/seed-bootstrap/export"
+```
+
+> ⚠️ Do **not** use `curl -I` to "ping" the endpoint — that sends a `HEAD` request and the route only accepts `GET`, so you'll get `405 Method Not Allowed`. A 405 here actually *confirms* the route exists; a missing route would return `404`.
 
 ### Step 2 — Sign in to production as super-admin
-Go to `https://app.oryno.tech/login` and sign in with `superadmin@oryno.com` (or whatever the production super-admin is).
+Go to `https://<your-prod-host>/login` and sign in with `superadmin@oryno.com` (or whatever the production super-admin is). Grab a fresh access token via curl (shown in Step 3).
 
 ### Step 3 — Dry-run via curl first (recommended)
 
