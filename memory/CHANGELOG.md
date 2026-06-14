@@ -1,3 +1,14 @@
+### 2026-02-14 — BanquetCheckout revamped to LaundryBooking pattern (iter214)
+- **`BanquetCheckout.jsx` rebuilt** (~590 lines) following `LaundryBooking.jsx` structurally:
+  - Sticky teal header with PartyPopper + count badge + event-date/city/guests meta.
+  - 3-step indicator (Cart → Event Details → Payment) — current step derived via `useMemo`, no `set-state-in-effect`.
+  - LEFT col: 3 gradient-headed cards — `co-cart-card` (qty +/− and trash per line), `co-event-card` (DatePickerModal date, time select, guests, type select, city), `co-contact-card` (name/phone/email/address/special-requests).
+  - RIGHT col sticky: `co-summary-card` (event summary), `co-price-breakdown` (Bundles / Services / 5% fee / promo block / grand total), inline `PaymentMethodsSelection`, single Confirm & Pay button.
+  - Lazy order creation via `onRequestCreateOrder` so abandoning the page doesn't pollute `orders`.
+- **Backend** (`banquets.py`): `CartCheckoutRequest` accepts new optional `event_time`, `address`, `service_fee`, `promo_code`, `promo_discount`; response carries `subtotal`, `service_fee`, `promo_discount`, `total_price` = subtotal + service_fee − promo_discount; `service_fee` defaults to **0** when omitted (preserves iter208 contract).
+- **Tests**: 12/12 PASS (`test_iter208_banquet_cart_checkout.py` 8/8 + `test_iter214_banquet_checkout_extended.py` 4/4). Frontend ~95% per iter214 — all 26 `co-*` testids verified, theme integrity intact (zero pink/fuchsia/rose), end-to-end payment trigger validated up to the order-create call.
+
+
 ### 2026-02-14 — Banquet customer polish — round 2 (iter212/213)
 - **Theme**: replaced rose/pink across `BanquetResults.jsx`, `BanquetDetailsModal.jsx`, `EventCartDrawer.jsx`, `BanquetCheckout.jsx` with teal/cyan (#14B8A6, the official banquet sidebar icon colour).
 - **Inline "Modify search"**: results-page hero now shows a Popover (`data-testid="modify-search-btn"`) with City/Type/Guests pre-populated from URL; "Update results" rewrites the URL and reloads in-place.

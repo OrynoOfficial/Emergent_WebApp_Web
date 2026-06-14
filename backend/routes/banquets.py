@@ -809,9 +809,10 @@ async def event_cart_checkout(
             })
 
     subtotal = round(subtotal, 2)
-    # Recompute the service fee server-side from a 5% baseline if the
-    # client didn't supply one (back-compat with the old checkout UI).
-    service_fee = float(payload.service_fee) if payload.service_fee is not None else round(subtotal * 0.05, 2)
+    # Optional client-supplied service fee / promo discount. Default to 0
+    # when omitted so legacy callers (no fee/promo) still see total_price
+    # == subtotal — the new BanquetCheckout sends these explicitly.
+    service_fee = float(payload.service_fee) if payload.service_fee is not None else 0.0
     promo_discount = float(payload.promo_discount or 0)
     grand_total = round(max(0.0, subtotal + service_fee - promo_discount), 2)
 
