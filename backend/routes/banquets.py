@@ -649,6 +649,7 @@ class CartLineInput(BaseModel):
 
 class CartCheckoutRequest(BaseModel):
     event_date: str            # YYYY-MM-DD
+    event_time: Optional[str] = None
     line_items: List[CartLineInput] = []
     package_ids: List[str] = []
     expected_guests: int = 0
@@ -656,7 +657,14 @@ class CartCheckoutRequest(BaseModel):
     contact_name: str
     contact_phone: str
     contact_email: Optional[str] = None
+    address: Optional[str] = None
     special_requests: Optional[str] = None
+    # Optional client-computed adjustments. The server still recomputes
+    # `subtotal` from authoritative service prices so the customer can't
+    # short-pay; these fields are stored verbatim for receipts/audit.
+    service_fee: Optional[float] = None
+    promo_code: Optional[str] = None
+    promo_discount: Optional[float] = None
 
 
 def _price_line(service: dict, qty: float, hours: Optional[float]) -> tuple[float, dict]:
@@ -801,6 +809,11 @@ async def event_cart_checkout(
             })
 
     subtotal = round(subtotal, 2)
+    # Recompute the service fee server-side from a 5% baseline if the
+    # client didn't supply one (back-compat with the old checkout UI).
+    service_fee = float(payload.service_fee) if payload.service_fee is not None else round(subtotal * 0.05, 2)
+    promo_discount = float(payload.promo_discount or 0)
+    grand_total = round(max(0.0, subtotal + service_fee - promo_discount), 2)
 
     # 4. Mint identifiers + order number.
     order_id = str(uuid.uuid4())
@@ -820,15 +833,20 @@ async def event_cart_checkout(
         "order_id": order_id,
         "user_id": current_user["_id"],
         "event_date": payload.event_date,
+        "event_time": payload.event_time,
         "event_type": payload.event_type,
         "expected_guests": payload.expected_guests,
         "contact_name": payload.contact_name,
         "contact_phone": payload.contact_phone,
         "contact_email": payload.contact_email,
+        "address": payload.address,
         "special_requests": payload.special_requests,
         "line_items": line_items_out,
         "subtotal": subtotal,
-        "total_price": subtotal,
+        "service_fee": service_fee,
+        "promo_code": payload.promo_code,
+        "promo_discount": promo_discount,
+        "total_price": grand_total,
         "status": "pending",
         "payment_status": "pending",
         "created_at": datetime.utcnow(),
@@ -848,17 +866,24 @@ async def event_cart_checkout(
         "user_id": current_user["_id"],
         "operator_id": primary_operator_id,
         "operator_name": primary_operator_name,
-        "total_amount": subtotal,
+        "total_amount": grand_total,
         "currency": "XAF",
         "status": "pending",
         "payment_status": "pending",
         "booking_details": {
             "event_date": payload.event_date,
+            "event_time": payload.event_time,
             "event_type": payload.event_type,
             "expected_guests": payload.expected_guests,
             "contact_name": payload.contact_name,
             "contact_phone": payload.contact_phone,
             "contact_email": payload.contact_email,
+            "address": payload.address,
+            "special_requests": payload.special_requests,
+            "subtotal": subtotal,
+            "service_fee": service_fee,
+            "promo_code": payload.promo_code,
+            "promo_discount": promo_discount,
             "line_items": line_items_out,
         },
         "created_at": datetime.utcnow(),
@@ -871,7 +896,10 @@ async def event_cart_checkout(
         "order_id": order_id,
         "order_number": order_number,
         "booking_id": booking_id,
-        "total_price": subtotal,
+        "subtotal": subtotal,
+        "service_fee": service_fee,
+        "promo_discount": promo_discount,
+        "total_price": grand_total,
         "currency": "XAF",
         "line_items": line_items_out,
     }

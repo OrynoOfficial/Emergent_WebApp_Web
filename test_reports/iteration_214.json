@@ -1,0 +1,64 @@
+{
+  "summary": "Tested the LaundryBooking-style rewrite of BanquetCheckout.jsx (iter214) — both backend extension and frontend UI. Backend: 4/4 new iter214 tests PASS — POST /api/banquets/cart/checkout now accepts event_time/address/service_fee/promo_code/promo_discount and the response correctly carries subtotal=225,000, service_fee=2,500, promo_discount, and total_price=subtotal+service_fee-promo_discount (227,500 for the hall-only happy-path; 222,500 with promo=5000). Persisted event_time/address visible in GET /api/banquets/bookings/my. However the iter208 regression suite REGRESSED 3/9: when service_fee is omitted from the payload, the backend now silently auto-applies 5% (round(subtotal*0.05)), so test_iter208 happy-paths that asserted total_price==pure-subtotal now see 5%-inflated totals (200k→210k, 180k→189k, 160k→168k). This contradicts the request statement that iter208 should still pass unchanged. Frontend: all 26 expected co-* data-testids render (cart-card, event-card, contact-card, summary-card, price-breakdown, cart-subtotal-badge, grand-total, event-date-btn, event-time-trigger, event-guests, event-type-trigger, event-city, contact-name/phone/email/address/requests, promo-input/apply-btn, confirm-btn, cart-item-*, inc/dec/remove-item-*, cart-package-*, remove-package-*). Live pricing math is correct (180k bundle + 45k×2×5h = 630k subtotal + 5%=31,500 fee → 661,500 grand; +1 qty → 855k/897,750; service-line remove → 180k bundle only). Step indicator is wired (Cart turns teal initially). Promo invalid path renders 'Invalid promo code'. No-payment toast 'Please choose a payment method' fires on Confirm with no method picked. Empty-cart guard with back-to-browse-btn renders. Theme: ZERO pink/fuchsia/rose Tailwind classes on the live DOM. The Vite bundle was stale on first hit — `supervisorctl restart frontend` was required (same recurring symptom as iter212/213).",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/banquets/cart/checkout",
+        "issue": "Auto-applies default 5% service_fee when payload omits service_fee (banquets.py line 814: `service_fee = float(payload.service_fee) if payload.service_fee is not None else round(subtotal*0.05, 2)`). This silently mutates total_price for any legacy caller and breaks 3/9 iter208 regression tests (test_hall_plus_chairs_math 200000→210000, test_per_hour_with_hours_override 180000→189000, test_package_plus_individual 160000→168000). Either: (a) default service_fee to 0 when omitted (cleanest backward compat — the new frontend already sends 2500 explicitly), or (b) update iter208 expected totals if the 5% default is intentional product behaviour.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Vite dev bundle staleness (recurring iter212/213)",
+        "issue": "Live preview served the OLD BanquetCheckout bundle on first visit (no co-* testids found). `sudo supervisorctl restart frontend && sleep 7` was required before the new bundle was served. Same symptom flagged in the last two iterations — main agent should consider a bundle-hash bump / cache-bust on deploy.",
+        "affected_selectors": ["[data-testid='co-cart-card']", "[data-testid='co-confirm-btn']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "validated_features": [
+    "ALL 26 co-* data-testids present on /services/banquet/checkout (co-cart-card, co-event-card, co-contact-card, co-summary-card, co-price-breakdown, co-cart-subtotal-badge, co-grand-total, co-event-date-btn, co-event-time-trigger, co-event-guests, co-event-type-trigger, co-event-city, co-contact-name/phone/email/address/requests, co-promo-input, co-promo-apply-btn, co-confirm-btn, co-cart-item-/inc-/dec-/remove-item-, co-cart-package-/remove-package-).",
+    "Sticky teal header with PartyPopper, count badge, MapPin·CalendarIcon·Users meta renders.",
+    "3-step indicator: Cart label uses text-teal-700 (active), Event Details / Payment use text-slate-400 (pending) until event_date+contact then payment-method are filled — matches LaundryBooking pattern.",
+    "Cart subtotal badge updates live on qty +1 (630,000 → 855,000) and on remove (855,000 → 180,000).",
+    "Grand total (co-grand-total) reflects subtotal + 5% service fee in real-time (630k→661,500, 855k→897,750).",
+    "Confirm-without-payment shows 'Please choose a payment method' toast and does NOT navigate.",
+    "Promo apply with bad code shows 'Invalid promo code' below the input (red text).",
+    "Empty-cart guard: emptied cart → /checkout renders 'Your cart is empty' card with data-testid='back-to-browse-btn'.",
+    "Theme integrity: 0 pink/fuchsia/rose Tailwind class elements on the live DOM at /services/banquet/checkout.",
+    "Backend iter214 extension: /api/banquets/cart/checkout returns subtotal, service_fee, promo_discount, total_price; persists event_time & address visible in /bookings/my (verified by string match)."
+  ],
+  "critical_code_review_comments": [
+    "[BACKEND/HIGH] banquets.py line 814 auto-applies 5% service_fee when payload omits it. Either default to 0 for backward compat OR migrate iter208 tests. This is the root cause of the iter208 regression.",
+    "[FRONTEND/LOW] BanquetCheckout.jsx uses the custom DatePickerModal correctly (good — resolves the iter213 'native date picker' design comment). Note: DatePickerModal doesn't expose role='dialog', so any automated test querying [role='dialog'] after a co-event-date-btn click will get a false negative; consider adding role='dialog' & aria-modal='true' to that component for a11y + testability.",
+    "[FRONTEND/LOW] ensureOrder() correctly memoises orderId so re-clicking Confirm after a transient failure won't create a duplicate — good. But on payment failure the orderId remains stored; if the user re-attempts after a non-recoverable backend rejection there's no UX to abandon/recreate the order. Consider clearing orderId on certain error classes.",
+    "[VITE CACHE — recurring] Stale bundle observed AGAIN despite source being correct. supervisorctl restart frontend required. Same recommendation as iter212/213 — bundle-hash bump on deploy."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iter214_banquet_checkout_extended.py",
+    "/app/test_reports/pytest/iter214.xml"
+  ],
+  "action_items": [
+    "[HIGH] Decide and fix the 5%-default service_fee behaviour in /api/banquets/cart/checkout (banquets.py:814). Either default to 0 when omitted (preferred — restores iter208 contract) or update test_iter208 expected totals.",
+    "[LOW] Add role='dialog' aria-modal='true' to DatePickerModal for a11y + testability.",
+    "[FOLLOW-UP] Vite stale-bundle: bump bundle hash on deploy / cache-bust so frontend restart is not required."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter214_banquet_checkout_extended.py (new)"
+  ],
+  "success_rate": {
+    "backend": "75% (9/12: 4/4 new iter214 PASS, 6/9 iter208 PASS, 3/9 iter208 regression)",
+    "frontend": "~95% (all visible flows + testids verified; end-to-end order creation w/ real payment not executed to avoid creating a real order)"
+  },
+  "test_credentials": "customer@test.com / testpassword123 ; superadmin@oryno.com / testpassword123",
+  "seed_data_creation": "Created an ad-hoc TEST_iter214_Hall (per_hour, 45000, 5h) per test class via admin token. Frontend test seeded a local-only cart via localStorage key 'oryno:event-cart' (no DB writes).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend Vite bundle may serve stale code — run `sudo supervisorctl restart frontend && sleep 7` first. Login is two-step: 'Login to Your Account' → email → 'Continue' → password → 'Login' (NOT 'Continue' on the password step). Event cart localStorage key is 'oryno:event-cart' (NOT 'event_cart_v1'). DatePickerModal does NOT expose role='dialog' — query its inner buttons by text instead. The end-to-end ConfirmAndPay flow was not driven all the way through a real payment provider in this run — only validated up to the toast/no-payment-method guard. The iter208 regression is real and reproducible — confirmed by both the test failures AND inspecting banquets.py:814.",
+  "rca of the issue": "Iter208 regression RCA: in the iter214 backend extension, /app/backend/routes/banquets.py line 814 now reads `service_fee = float(payload.service_fee) if payload.service_fee is not None else round(subtotal*0.05, 2)`. Previously iter208 assumed total_price == pure subtotal because the endpoint had no fee concept at all. The fallback `round(subtotal*0.05, 2)` is the regression — it silently inflates total_price for ANY legacy caller that omits service_fee. The new BanquetCheckout.jsx always sends serviceFee=Math.round(subtotal*0.05) (line 218 / 281), so the new frontend total matches the new backend default by coincidence, masking the regression. Recommended one-line fix: change the fallback to `0.0` (the new FE already sends it explicitly), and the iter208 suite resumes passing without any other edits."
+}
