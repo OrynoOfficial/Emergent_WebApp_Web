@@ -346,6 +346,7 @@ function PackagesTab({ services, scopeOperatorId }) {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', services: [], discount_percent: 0, is_active: true });
 
   const load = useCallback(async () => {
@@ -577,6 +578,9 @@ function PackagesTab({ services, scopeOperatorId }) {
                       </div>
                     )}
                     <div className="flex gap-1 ml-auto">
+                      <Button size="sm" variant="outline" onClick={() => setViewing(pkg)} title="View details" data-testid={`view-package-btn-${pkg.id}`}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <PermissionGate permission="banquets.edit">
                         <Button size="sm" variant="outline" onClick={() => openEdit(pkg)} data-testid={`edit-package-btn-${pkg.id}`}>
                           <Edit className="w-4 h-4" />
@@ -795,6 +799,138 @@ function PackagesTab({ services, scopeOperatorId }) {
               {editing ? 'Update Package' : 'Create Package'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Package Dialog — full bundle breakdown with member service photos */}
+      <Dialog open={!!viewing} onOpenChange={(o) => { if (!o) setViewing(null); }}>
+        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto p-0">
+          {viewing && (() => {
+            const members = (viewing.services || []).map(line => {
+              const full = services.find(s => s.id === line.service_id);
+              return { ...line, full, cover: full?.images?.[0] || null };
+            });
+            const covers = members.filter(m => m.cover).map(m => m.cover);
+            const heroCover = covers[0] || null;
+            const stripCovers = covers.slice(1, 4);
+            const totalItems = members.reduce((s, m) => s + Number(m.quantity || 0), 0);
+            const cats = Array.from(new Set(members.map(m => m.category || m.full?.category).filter(Boolean)));
+            return (
+              <>
+                {/* Hero */}
+                <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-pink-200 via-rose-200 to-amber-200">
+                  {heroCover ? (
+                    <img src={heroCover} alt={viewing.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <PackageIcon className="w-16 h-16 text-pink-400" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  {stripCovers.length > 0 && (
+                    <div className="absolute top-3 right-3 flex -space-x-2">
+                      {stripCovers.map((c, i) => (
+                        <img key={i} src={c} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="absolute top-3 left-3">
+                    <Badge className={`${viewing.is_active ? 'bg-emerald-500/95' : 'bg-slate-500/90'} text-white border-0 shadow-sm`}>
+                      {viewing.is_active ? 'Active' : 'Draft'}
+                    </Badge>
+                  </div>
+                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between text-white drop-shadow">
+                    <div>
+                      <h2 className="text-2xl font-bold leading-tight">{viewing.name}</h2>
+                      <p className="text-xs text-white/80 mt-0.5">{members.length} services · {totalItems} items</p>
+                    </div>
+                    <div className="bg-white/95 backdrop-blur rounded-md px-3 py-1.5 shadow text-right text-slate-800 flex-shrink-0">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Bundle</div>
+                      <div className="text-base font-bold text-emerald-700">{formatFCFA(viewing.total_price || 0)}</div>
+                      {viewing.discount_percent > 0 && (
+                        <div className="text-[10px] text-rose-600 font-medium">−{viewing.discount_percent}% off</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-5 py-4 space-y-4">
+                  {viewing.description && (
+                    <p className="text-sm text-slate-700 leading-relaxed">{viewing.description}</p>
+                  )}
+
+                  {cats.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {cats.map(cat => {
+                        const m = CATEGORY_BY_VALUE[cat] || CATEGORY_BY_VALUE.other;
+                        const CIcon = m.icon;
+                        return (
+                          <Badge key={cat} variant="outline" className={`text-xs font-normal ${m.accent} border-0`}>
+                            <CIcon className="w-3 h-3 mr-1" /> {m.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Member services with photos */}
+                  <div>
+                    <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">Includes</p>
+                    <div className="space-y-2">
+                      {members.map((m, i) => {
+                        const meta = CATEGORY_BY_VALUE[m.category || m.full?.category] || CATEGORY_BY_VALUE.other;
+                        const Icon = meta.icon;
+                        return (
+                          <div key={i} className="flex items-center gap-3 p-2 rounded-lg border border-slate-200 bg-slate-50">
+                            {m.cover ? (
+                              <img src={m.cover} alt="" className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
+                            ) : (
+                              <div className={`w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 ${meta.accent}`}>
+                                <Icon className="w-6 h-6" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{m.service_name || m.full?.name || m.service_id}</div>
+                              <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+                                <Badge variant="outline" className={`text-[10px] font-normal py-0 px-1.5 ${meta.accent} border-0`}>{meta.label}</Badge>
+                                {m.full?.base_price && (
+                                  <span className="text-emerald-700 font-medium">{formatFCFA(m.full.base_price)}</span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-sm font-semibold text-slate-700 flex-shrink-0">× {m.quantity}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pricing breakdown */}
+                  <div className="bg-pink-50 rounded-lg border border-pink-200 p-3 text-sm">
+                    {viewing.subtotal && (
+                      <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span className="font-medium">{formatFCFA(viewing.subtotal)}</span></div>
+                    )}
+                    {viewing.discount_percent > 0 && viewing.subtotal && (
+                      <div className="flex justify-between text-rose-700"><span>Discount ({viewing.discount_percent}%)</span><span>−{formatFCFA(viewing.subtotal - viewing.total_price)}</span></div>
+                    )}
+                    <div className="flex justify-between mt-1 pt-1 border-t border-pink-200">
+                      <span className="font-semibold">Total</span>
+                      <span className="text-xl font-bold text-emerald-700">{formatFCFA(viewing.total_price || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="px-5 pb-5 pt-0 border-t">
+                  <PermissionGate permission="banquets.edit">
+                    <Button variant="outline" onClick={() => { setViewing(null); openEdit(viewing); }}>
+                      <Edit className="w-4 h-4 mr-2" /> Edit
+                    </Button>
+                  </PermissionGate>
+                  <Button onClick={() => setViewing(null)} className="bg-[#082c59]">Close</Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
@@ -1252,26 +1388,122 @@ export default function BanquetManagement() {
         accent="pink"
         leftColumn={<CategoryAwareFields form={form} setForm={setForm} categoryOperators={categoryOperators} />}
         preview={
-          <GenericPreviewCard
-            cover={(form.images || [])[0]}
-            thumbs={(form.images || []).slice(1, 3)}
-            icon={previewMeta.icon}
-            badgeText={previewMeta.label}
-            badgeClass="bg-pink-500 text-white"
-            placeholderColor="from-pink-600 via-rose-500 to-fuchsia-500"
-            title={form.name || 'Service name'}
-            subtitle={form.category === 'hall' ? (form.venue_type || 'Venue') : previewMeta.label}
-            location={[
-              form.city,
-              form.capacity_max ? `Up to ${form.capacity_max} guests` : null,
-              form.unit_label ? `Sold by the ${form.unit_label}` : null,
-            ].filter(Boolean).join(' · ') || (form.category === 'hall' ? 'City · Capacity' : 'Service details')}
-            tags={form.amenities || []}
-            tagsAccentClass="bg-pink-50 text-pink-700"
-            priceLabel={PRICING_LABEL[form.pricing_model] || 'Price'}
-            priceValue={form.base_price ? `${Number(form.base_price).toLocaleString()} FCFA` : '—'}
-            accentTextClass="text-pink-700"
-          />
+          <div className="space-y-3">
+            <GenericPreviewCard
+              cover={(form.images || [])[0]}
+              thumbs={(form.images || []).slice(1, 3)}
+              icon={previewMeta.icon}
+              badgeText={previewMeta.label}
+              badgeClass="bg-pink-500 text-white"
+              placeholderColor="from-pink-600 via-rose-500 to-fuchsia-500"
+              title={form.name || 'Service name'}
+              subtitle={form.category === 'hall' ? (form.venue_type || 'Venue') : previewMeta.label}
+              location={[
+                form.city,
+                form.capacity_max ? `Up to ${form.capacity_max} guests` : null,
+                form.unit_label ? `Sold by the ${form.unit_label}` : null,
+              ].filter(Boolean).join(' · ') || (form.category === 'hall' ? 'City · Capacity' : 'Service details')}
+              tags={form.amenities || []}
+              tagsAccentClass="bg-pink-50 text-pink-700"
+              priceLabel={PRICING_LABEL[form.pricing_model] || 'Price'}
+              priceValue={form.base_price ? `${Number(form.base_price).toLocaleString()} FCFA` : '—'}
+              accentTextClass="text-pink-700"
+            />
+
+            {/* Extra image gallery — surface ALL uploaded shots so the operator
+                doesn't have to scroll the form to know what they've added. */}
+            {Array.isArray(form.images) && form.images.length > 3 && (
+              <div className="bg-white rounded-xl border border-slate-200 p-2.5">
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
+                  Gallery · {form.images.length} photos
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {form.images.slice(0, 8).map((img, i) => (
+                    <img key={i} src={img} alt="" className="aspect-square rounded-md object-cover" />
+                  ))}
+                  {form.images.length > 8 && (
+                    <div className="aspect-square rounded-md bg-slate-100 flex items-center justify-center text-xs font-medium text-slate-500">
+                      +{form.images.length - 8}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Description preview — operators love seeing how their copy will read */}
+            {form.description && (
+              <div className="bg-white rounded-xl border border-slate-200 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">About</div>
+                <p className="text-xs text-slate-700 leading-relaxed line-clamp-5">{form.description}</p>
+              </div>
+            )}
+
+            {/* Category-specific details surfaced as a chip grid. Empty values
+                are filtered so the operator sees only what they've filled in.
+                eslint-disable-next-line react/no-unstable-nested-components */}
+            {/* eslint-disable-next-line react/no-unstable-nested-components */}
+            {(() => {
+              const cd = form.category_details || {};
+              const entries = Object.entries(cd).filter(([, v]) =>
+                v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0)
+              );
+              if (entries.length === 0) return null;
+              return (
+                /* eslint-disable-next-line react/no-unstable-nested-components */
+                <div className="bg-pink-50 rounded-xl border border-pink-200 p-3" data-testid="modal-category-details">
+                  <div className="text-[10px] uppercase tracking-wider text-pink-700 font-semibold mb-2">
+                    {previewMeta.label} details
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {entries.map(([k, v]) => (
+                      <div key={k} className="bg-white rounded px-2 py-1 border border-pink-100">
+                        <div className="text-[9px] text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</div>
+                        <div className="text-xs font-medium text-slate-800 truncate" title={Array.isArray(v) ? v.join(', ') : String(v)}>
+                          {Array.isArray(v) ? v.join(', ') : String(v)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Operator + contact strip — visible only when known */}
+            {(form.operator_name || form.phone || form.email || form.duration_hours || form.min_quantity) && (
+              <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-1.5">
+                {form.operator_name && (
+                  <div className="text-[11px] flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Operator</span>
+                    <span className="font-medium text-slate-800 truncate">{form.operator_name}</span>
+                  </div>
+                )}
+                {form.duration_hours && (
+                  <div className="text-[11px] flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Default duration</span>
+                    <span className="font-medium text-slate-800">{form.duration_hours}h</span>
+                  </div>
+                )}
+                {form.min_quantity && (
+                  <div className="text-[11px] flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Min quantity</span>
+                    <span className="font-medium text-slate-800">{form.min_quantity}</span>
+                  </div>
+                )}
+                {form.phone && (
+                  <div className="text-[11px] flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Phone</span>
+                    <span className="font-medium text-slate-800 truncate">{form.phone}</span>
+                  </div>
+                )}
+                {form.email && (
+                  <div className="text-[11px] flex items-center justify-between gap-2">
+                    <span className="text-slate-500">Email</span>
+                    <span className="font-medium text-slate-800 truncate">{form.email}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         }
         submitting={false}
         submitLabel={editing ? 'Update Service' : 'Add Service'}
