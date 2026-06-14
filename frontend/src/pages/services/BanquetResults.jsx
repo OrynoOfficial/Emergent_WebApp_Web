@@ -1,385 +1,347 @@
+// Banquet & Event Services — customer browsing page.
+//
+// Customers arrive here from `/services/banquet` (the search form) with
+// `city`, `event_date`, `guests` in the query string. The page then lists
+// available services across all categories AND the operator-built
+// packages. Customers add multiple services to an event cart (one date
+// per cart) and checkout in a single transaction.
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Users, Star, Utensils, Music, Camera, ArrowLeft, Search, LayoutGrid, List, SlidersHorizontal, Loader2, PartyPopper, Building, Sparkles } from 'lucide-react';
-import { banquetApi } from '@/api/management';
-import { useFavourites } from '@/hooks/useFavourites';
-import SubscribeButton from '@/components/shared/SubscribeButton';
-import FavouriteButton from '@/components/shared/FavouriteButton';
-import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  MapPin, Users, ArrowLeft, Loader2, PartyPopper, Plus, Minus, Package as PackageIcon,
+  Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed, Sparkles, Music2, Box, Calendar,
+} from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
+import { useEventCart } from '@/hooks/useEventCart';
+import EventCartDrawer from '@/components/banquet/EventCartDrawer';
 
-const VENUE_TYPE_COLORS = {
-  'wedding': 'bg-gradient-to-r from-pink-500 to-rose-500 text-white',
-  'conference': 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white',
-  'birthday': 'bg-gradient-to-r from-purple-500 to-violet-500 text-white',
-  'meeting': 'bg-gradient-to-r from-slate-500 to-slate-600 text-white',
-  'party': 'bg-gradient-to-r from-orange-500 to-amber-500 text-white'
+const CATEGORIES = [
+  { value: 'all',            label: 'All',              icon: Sparkles },
+  { value: 'hall',           label: 'Halls',            icon: Building2 },
+  { value: 'rental_item',    label: 'Rental Items',     icon: Armchair },
+  { value: 'canopy',         label: 'Canopies',         icon: TentTree },
+  { value: 'photographer',   label: 'Photographers',    icon: Camera },
+  { value: 'videographer',   label: 'Videographers',    icon: Video },
+  { value: 'catering',       label: 'Catering',         icon: UtensilsCrossed },
+  { value: 'decoration',     label: 'Decoration',       icon: Sparkles },
+  { value: 'sound_lighting', label: 'Sound & Lighting', icon: Music2 },
+  { value: 'other',          label: 'Other',            icon: Box },
+];
+
+const CATEGORY_META = Object.fromEntries(CATEGORIES.map(c => [c.value, c]));
+
+const PRICING_SUFFIX = {
+  per_event:  'flat',
+  per_person: 'per person',
+  per_hour:   'per hour',
+  per_unit:   '',  // shown alongside unit label
+  flat_fee:   'flat',
 };
 
-const getVenueIcon = (type) => {
-  switch (type?.toLowerCase()) {
-    case 'wedding': return Sparkles;
-    case 'conference': return Building;
-    case 'birthday': case 'party': return PartyPopper;
-    default: return Building;
-  }
-};
+// Category-specific card. Hall = big image card; rental_item = compact qty card; talent = portrait.
+function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty }) {
+  const meta = CATEGORY_META[svc.category] || CATEGORY_META.other;
+  const Icon = meta.icon;
+  const placeholder = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=600';
+  const image = svc.images?.[0] || placeholder;
 
-const getAmenityIcon = (amenity) => {
-  switch (amenity?.toLowerCase()) {
-    case 'catering': return Utensils;
-    case 'sound_system': case 'music': return Music;
-    case 'decoration': case 'photography': return Camera;
-    default: return Star;
-  }
-};
-
-// Grid View Venue Card
-const VenueCardGrid = ({ venue, onBook, isFav, toggleFav }) => {
-  // Favourites handled by parent via isFav/toggleFav props
-  const VenueIcon = getVenueIcon(venue.venue_type);
-  const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
-  const image = venue.images?.[0] || defaultImage;
-  
   return (
-    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-      {/* Image Section */}
-      <div className="h-52 relative overflow-hidden">
-        <img
-          src={image}
-          alt={venue.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        
-        {/* Favorite & Subscribe buttons */}
-        <div className="absolute top-3 right-3 z-10 flex gap-1.5">
-          <SubscribeButton operatorId={venue.operator_id} operatorName={venue.operator_name} variant="icon" />
-          <FavouriteButton
-            isFavourite={!!(isFav && isFav(venue._id || venue.id))}
-            onToggle={() => toggleFav && toggleFav(venue)}
-            testId={`favourite-${venue._id || venue.id}`}
-            className="p-2 rounded-full bg-white/20 hover:bg-white/40 transition-all"
-            emptyClass="text-white"
-          />
+    <Card className="group overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all" data-testid={`service-card-${svc.id}`}>
+      <div className="h-44 relative overflow-hidden">
+        <img src={image} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <div className="absolute top-3 left-3">
+          <Badge className="bg-white/95 text-purple-700 font-medium">
+            <Icon className="w-3 h-3 mr-1" />
+            {meta.label}
+          </Badge>
         </div>
-        
-        {/* Type Badge */}
-        <Badge className={`absolute top-3 left-3 capitalize ${VENUE_TYPE_COLORS[venue.venue_type] || 'bg-purple-600'}`}>
-          <VenueIcon className="w-3 h-3 mr-1" />
-          {venue.venue_type}
-        </Badge>
-        
-        {/* Rating */}
-        {venue.rating && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            {venue.rating}
-          </div>
-        )}
-        {venue.slots_available != null && (
-          <div className="absolute bottom-3 right-3 z-10" data-testid={`banquet-fomo-grid-${venue._id || venue.id}`}>
-            <AlmostSoldOutBadge count={venue.slots_available} unit="dates" />
-          </div>
-        )}
       </div>
-      
-      {/* Content */}
-      <CardContent className="p-5">
-        <h3 className="font-bold text-lg text-slate-900 mb-1 line-clamp-1">{venue.name}</h3>
-        <div className="flex items-center text-slate-500 text-sm mb-3">
-          <MapPin className="w-4 h-4 mr-1" /> {venue.city}
+      <CardContent className="p-4 space-y-2">
+        <h3 className="font-bold text-slate-900 leading-tight line-clamp-1">{svc.name}</h3>
+        <div className="text-xs text-slate-500 flex items-center gap-3">
+          {svc.city && (<span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{svc.city}</span>)}
+          {svc.capacity_max && (<span className="inline-flex items-center gap-1"><Users className="w-3 h-3" />Up to {svc.capacity_max}</span>)}
+          {svc.unit_label && (<span>per {svc.unit_label}</span>)}
         </div>
-        
-        {/* Capacity */}
-        <div className="flex items-center text-sm text-slate-600 mb-3 bg-slate-50 rounded-lg p-2">
-          <Users className="w-4 h-4 mr-2 text-purple-600" />
-          <span>{venue.capacity_min} - {venue.capacity_max} guests</span>
-        </div>
-        
-        {/* Amenities */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {venue.amenities?.slice(0, 3).map((amenity, idx) => {
-            const AmenityIcon = getAmenityIcon(amenity);
-            return (
-              <div key={idx} className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-full">
-                <AmenityIcon className="h-3 w-3 text-slate-600" />
-                <span className="text-xs text-slate-600 capitalize">{amenity.replace('_', ' ')}</span>
-              </div>
-            );
-          })}
-        </div>
-        
-        {/* Price & CTA */}
-        <div className="flex items-end justify-between pt-3 border-t border-slate-100">
+        <div className="flex items-baseline justify-between pt-2">
           <div>
-            <div className="text-2xl font-bold text-purple-600">{formatFCFA(venue.price_per_day)}</div>
-            <div className="text-xs text-slate-500">per day</div>
+            <div className="text-xl font-bold text-purple-700">{formatFCFA(svc.base_price || 0)}</div>
+            <div className="text-xs text-slate-500">{svc.unit_label ? `/ ${svc.unit_label}` : PRICING_SUFFIX[svc.pricing_model] || ''}</div>
           </div>
-          <Button onClick={() => onBook(venue)} className="bg-purple-600 hover:bg-purple-700 rounded-xl">
-            Book Now
-          </Button>
+          {inCart ? (
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => onSetQty(Math.max(1, qtyInCart - 1))}>
+                <Minus className="w-3 h-3" />
+              </Button>
+              <Input
+                type="number"
+                value={qtyInCart}
+                onChange={(e) => onSetQty(Math.max(1, Number(e.target.value) || 1))}
+                className="w-14 h-8 text-center"
+                min="1"
+                data-testid={`qty-input-${svc.id}`}
+              />
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => onSetQty(qtyInCart + 1)}>
+                <Plus className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700" size="sm" data-testid={`add-to-cart-${svc.id}`}>
+              <Plus className="w-4 h-4 mr-1" /> Add
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
   );
-};
+}
 
-// List View Venue Card
-const VenueCardList = ({ venue, onBook, isFav, toggleFav }) => {
-  const VenueIcon = getVenueIcon(venue.venue_type);
-  const defaultImage = 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800';
-  const image = venue.images?.[0] || defaultImage;
-  
+function PackageCard({ pkg, inCart, onAdd, onRemove }) {
   return (
-    <Card className="overflow-hidden bg-white rounded-2xl border-0 shadow-md hover:shadow-xl transition-all">
-      <div className="flex flex-col md:flex-row">
-        {/* Image */}
-        <div className="md:w-1/3 h-48 md:h-auto relative">
-          <img src={image} alt={venue.name} className="w-full h-full object-cover" />
-          <Badge className={`absolute top-3 left-3 capitalize ${VENUE_TYPE_COLORS[venue.venue_type] || 'bg-purple-600'}`}>
-            <VenueIcon className="w-3 h-3 mr-1" />
-            {venue.venue_type}
-          </Badge>
-          {venue.rating && (
-            <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-black/60 text-white text-sm px-3 py-1 rounded-full">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              {venue.rating}
-            </div>
+    <Card className="overflow-hidden border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white rounded-2xl shadow-md hover:shadow-lg transition-all" data-testid={`package-card-${pkg.id}`}>
+      <CardContent className="p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <PackageIcon className="w-5 h-5 text-purple-700" />
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">Bundle</span>
+          </div>
+          {pkg.discount_percent > 0 && (
+            <Badge className="bg-rose-600 text-white">−{pkg.discount_percent}% OFF</Badge>
           )}
         </div>
-        
-        {/* Content */}
-        <div className="md:w-2/3 p-6">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-semibold text-xl text-slate-900">{venue.name}</h3>
-              <div className="flex items-center text-gray-600 text-sm">
-                <MapPin className="w-4 h-4 mr-1" /> {venue.city}
-              </div>
+        <h3 className="font-bold text-slate-900 text-lg leading-tight">{pkg.name}</h3>
+        {pkg.description && <p className="text-sm text-slate-600 line-clamp-2">{pkg.description}</p>}
+        <div className="text-xs text-slate-500 space-y-1 pt-1 border-t">
+          {(pkg.services || []).slice(0, 4).map((line, i) => (
+            <div key={i} className="flex justify-between">
+              <span>{line.service_name || line.service_id}</span>
+              <span>× {line.quantity}</span>
             </div>
-          </div>
-          
-          <p className="text-slate-600 mb-4 line-clamp-2">{venue.description}</p>
-          
-          <div className="flex items-center text-sm text-gray-600 mb-4">
-            <Users className="w-4 h-4 mr-1 text-purple-600" /> {venue.capacity_min} - {venue.capacity_max} guests
-          </div>
-          
-          {/* Amenities */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {venue.amenities?.map((amenity, idx) => {
-              const AmenityIcon = getAmenityIcon(amenity);
-              return (
-                <Badge key={idx} variant="outline" className="bg-slate-50 capitalize">
-                  <AmenityIcon className="w-3 h-3 mr-1" />
-                  {amenity.replace('_', ' ')}
-                </Badge>
-              );
-            })}
-          </div>
-          
-          <div className="flex justify-between items-center pt-4 border-t">
-            <div>
-              <span className="text-2xl font-bold text-purple-600">{formatFCFA(venue.price_per_day)}</span>
-              <span className="text-sm text-gray-500"> / day</span>
-            </div>
-            <Button onClick={() => onBook(venue)} className="bg-purple-600 hover:bg-purple-700 rounded-xl">
-              Book Now
-            </Button>
-          </div>
+          ))}
+          {(pkg.services?.length || 0) > 4 && (
+            <div className="text-purple-600 italic">+ {pkg.services.length - 4} more</div>
+          )}
         </div>
-      </div>
+        <div className="flex items-baseline justify-between pt-2">
+          <div>
+            {pkg.discount_percent > 0 && (
+              <div className="text-xs text-slate-400 line-through">{formatFCFA(pkg.subtotal || 0)}</div>
+            )}
+            <div className="text-2xl font-bold text-purple-700">{formatFCFA(pkg.total_price || 0)}</div>
+          </div>
+          {inCart ? (
+            <Button onClick={onRemove} variant="outline" className="border-rose-400 text-rose-600" data-testid={`remove-package-${pkg.id}`}>
+              Remove
+            </Button>
+          ) : (
+            <Button onClick={onAdd} className="bg-purple-600 hover:bg-purple-700" data-testid={`add-package-${pkg.id}`}>
+              <Plus className="w-4 h-4 mr-1" /> Add Bundle
+            </Button>
+          )}
+        </div>
+      </CardContent>
     </Card>
   );
-};
+}
 
 export default function BanquetResults() {
-
-  const { isFav, toggleFav } = useFavourites('banquets');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [venues, setVenues] = useState([]);
+  const cartApi = useEventCart();
+  const { cart, setMeta, addItem, updateQty, removeItem, addPackage, removePackage, totals, count, clear } = cartApi;
+
+  const [services, setServices] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('rating');
+  const [categoryTab, setCategoryTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
 
   const city = searchParams.get('city') || '';
-  const guests = parseInt(searchParams.get('guests')) || 0;
+  const eventDate = searchParams.get('event_date') || cart.event_date || '';
+  const guests = parseInt(searchParams.get('guests')) || cart.expected_guests || 0;
+  const eventType = searchParams.get('type') || '';
+
+  // Persist the search params into the cart so the drawer + checkout see them.
+  useEffect(() => {
+    const updates = {};
+    if (eventDate && eventDate !== cart.event_date) updates.event_date = eventDate;
+    if (city && city !== cart.city) updates.city = city;
+    if (guests && guests !== cart.expected_guests) updates.expected_guests = guests;
+    if (eventType && eventType !== cart.event_type) updates.event_type = eventType;
+    if (Object.keys(updates).length) setMeta(updates);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventDate, city, guests, eventType]);
 
   useEffect(() => {
-    loadVenues();
-  }, [searchParams]);
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [svcRes, pkgRes] = await Promise.all([
+          api.get('/banquets/', { params: { city, limit: 100 } }),
+          api.get('/banquets/packages/', { params: { is_active: true, limit: 50 } }).catch(() => ({ data: { packages: [] } })),
+        ]);
+        setServices(svcRes.data.banquets || svcRes.data.venues || []);
+        setPackages(pkgRes.data.packages || []);
+      } catch (err) {
+        console.error(err);
+        setServices([]);
+        setPackages([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [city]);
 
-  const loadVenues = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        city,
-        venue_type: searchParams.get('type') || '',
-        capacity_min: guests
-      };
-      const res = await banquetApi.list(params);
-      setVenues(res.data.banquets || res.data.venues || []);
-    } catch (error) {
-      console.error('Failed to load venues:', error);
-      setVenues([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredVenues = useMemo(() => {
-    let filtered = [...venues];
-    
+  const filteredServices = useMemo(() => {
+    let list = services;
+    if (categoryTab !== 'all') list = list.filter(s => (s.category || 'hall') === categoryTab);
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(v => 
-        v.name?.toLowerCase().includes(query) ||
-        v.city?.toLowerCase().includes(query)
+      const q = searchQuery.toLowerCase();
+      list = list.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.city || '').toLowerCase().includes(q)
       );
     }
-    
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(v => v.venue_type === typeFilter);
-    }
-    
-    switch (sortBy) {
-      case 'price_low':
-        return filtered.sort((a, b) => (a.price_per_day || 0) - (b.price_per_day || 0));
-      case 'price_high':
-        return filtered.sort((a, b) => (b.price_per_day || 0) - (a.price_per_day || 0));
-      case 'capacity':
-        return filtered.sort((a, b) => (b.capacity_max || 0) - (a.capacity_max || 0));
-      case 'rating':
-      default:
-        return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    }
-  }, [venues, sortBy, searchQuery, typeFilter]);
+    return list;
+  }, [services, categoryTab, searchQuery]);
 
-  const handleBook = (venue) => {
-    sessionStorage.setItem('selectedVenue', JSON.stringify(venue));
-    navigate(`/services/banquet/booking/${venue.id}`);
-  };
+  const qtyOf = (svcId) => cart.items.find(i => i.service_id === svcId)?.quantity || 0;
+  const isPkgInCart = (pkgId) => !!cart.packages.find(p => p.package_id === pkgId);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-slate-600">Finding venues for you...</p>
+          <p className="text-slate-600">Finding services for your event…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-slate-50 pb-32">
       {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-20">
-        <div className="px-4 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')} className="gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back
+      <div className="bg-white border-b sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/banquet')}>
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-purple-600">Banquet Venues</h1>
-              <p className="text-sm text-slate-500">{filteredVenues.length} venues found</p>
-            </div>
+            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <PartyPopper className="w-5 h-5 text-purple-600" />
+              Banquet & Event Services
+            </h1>
           </div>
+          <div className="flex flex-wrap gap-3 items-center text-sm text-slate-600">
+            {city && <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" />{city}</span>}
+            {eventDate && <span className="inline-flex items-center gap-1"><Calendar className="w-4 h-4" />{eventDate}</span>}
+            {guests > 0 && <span className="inline-flex items-center gap-1"><Users className="w-4 h-4" />{guests} guests</span>}
+          </div>
+          <Input
+            placeholder="Search services by name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="mt-3 max-w-md"
+            data-testid="services-search-input"
+          />
+        </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search venues..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40 bg-white">
-                <Building className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="wedding">Wedding</SelectItem>
-                <SelectItem value="conference">Conference</SelectItem>
-                <SelectItem value="birthday">Birthday</SelectItem>
-                <SelectItem value="meeting">Meeting</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="rating">Top Rated</SelectItem>
-                <SelectItem value="price_low">Price: Low to High</SelectItem>
-                <SelectItem value="price_high">Price: High to Low</SelectItem>
-                <SelectItem value="capacity">Capacity</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+        {/* Category tabs */}
+        <div className="max-w-7xl mx-auto px-4 pb-3 overflow-x-auto">
+          <Tabs value={categoryTab} onValueChange={setCategoryTab}>
+            <TabsList className="bg-transparent flex flex-nowrap gap-1 h-auto p-0">
+              {CATEGORIES.map(c => {
+                const Icon = c.icon;
+                const n = c.value === 'all' ? services.length : services.filter(s => (s.category || 'hall') === c.value).length;
+                return (
+                  <TabsTrigger
+                    key={c.value}
+                    value={c.value}
+                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white rounded-full px-4 py-2 text-sm whitespace-nowrap"
+                    data-testid={`tab-${c.value}`}
+                  >
+                    <Icon className="w-4 h-4 mr-1.5" />
+                    {c.label}
+                    {n > 0 && <span className="ml-2 text-[10px] opacity-70">{n}</span>}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
-      {/* Results */}
-      <div className="px-4 py-6">
-        {filteredVenues.length === 0 ? (
-          <div className="text-center py-16">
-            <Building className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No venues found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
-            <Button onClick={() => navigate('/services/banquet')} className="bg-purple-600">
-              Modify Search
-            </Button>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredVenues.map((venue) => (
-              <VenueCardGrid key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredVenues.map((venue) => (
-              <VenueCardList key={venue.id} venue={venue} onBook={handleBook} isFav={isFav} toggleFav={toggleFav} />
-            ))}
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+        {/* Packages first — they're the headline offer */}
+        {packages.length > 0 && categoryTab === 'all' && (
+          <section data-testid="packages-section">
+            <div className="flex items-center gap-2 mb-4">
+              <PackageIcon className="w-5 h-5 text-purple-700" />
+              <h2 className="text-lg font-bold text-slate-900">Curated Bundles</h2>
+              <Badge className="bg-purple-100 text-purple-700">Save more</Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {packages.map(pkg => (
+                <PackageCard
+                  key={pkg.id}
+                  pkg={pkg}
+                  inCart={isPkgInCart(pkg.id)}
+                  onAdd={() => addPackage(pkg)}
+                  onRemove={() => removePackage(pkg.id)}
+                />
+              ))}
+            </div>
+          </section>
         )}
+
+        {/* Services grid */}
+        <section>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">
+            {categoryTab === 'all' ? 'All services' : CATEGORY_META[categoryTab]?.label}
+            <span className="ml-2 text-sm font-normal text-slate-500">({filteredServices.length})</span>
+          </h2>
+          {filteredServices.length === 0 ? (
+            <Card className="p-12 text-center bg-white">
+              <Sparkles className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-500">No services match your filters. Try a different category or search term.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredServices.map(svc => {
+                const q = qtyOf(svc.id);
+                return (
+                  <ServiceCard
+                    key={svc.id}
+                    svc={svc}
+                    inCart={q > 0}
+                    qtyInCart={q}
+                    onAdd={() => addItem(svc, svc.min_quantity || 1)}
+                    onSetQty={(n) => updateQty(svc.id, n)}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
+
+      <EventCartDrawer
+        cart={cart}
+        updateQty={updateQty}
+        removeItem={removeItem}
+        removePackage={removePackage}
+        totals={totals}
+        count={count}
+        clear={clear}
+      />
     </div>
   );
 }

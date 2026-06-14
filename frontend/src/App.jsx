@@ -111,6 +111,7 @@ import EventBooking from './pages/services/EventBooking';
 import BanquetSearch from './pages/services/BanquetSearch';
 import BanquetResults from './pages/services/BanquetResults';
 import BanquetBooking from './pages/services/BanquetBooking';
+import BanquetCheckout from './pages/services/BanquetCheckout';
 import CinemaSearch from './pages/services/CinemaSearch';
 import CinemaResults from './pages/services/CinemaResults';
 import FilmDetails from './pages/services/FilmDetails';
@@ -472,6 +473,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <BanquetBooking />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/services/banquet/checkout"
+            element={
+              <ProtectedRoute>
+                <BanquetCheckout />
               </ProtectedRoute>
             }
           />

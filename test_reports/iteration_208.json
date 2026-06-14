@@ -1,0 +1,40 @@
+{
+  "summary": "Phase 2 Banquet & Event Services cart-checkout — backend 100% (8/8 pytest), frontend e2e 100% (services render, tabs, add-to-cart, qty stepper, drawer, checkout, validation, success, localStorage clear). Order EVT-000005 successfully created via UI. Customer-facing package listing did NOT surface the bundle (filtered out), noted as minor issue.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BanquetCheckout success screen", "issue": "After clear() the cart.event_date becomes null and the 'Event date' row on the success card renders an empty value. Should snapshot event_date BEFORE clearing the cart so the confirmation displays the booked date.", "selector": "success card 'Event date' row", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Customer browsing — packages section", "issue": "GET /api/banquets/packages/ uses get_operator_filter(current_user). For a customer (no operator_id) the filter likely scopes results away — packages-section was NOT rendered for the customer despite a valid active bundle being seeded by super_admin. Either the packages list endpoint must be public/customer-friendly (no operator scoping for customers) OR the BanquetResults page must hit a dedicated marketplace endpoint. As a result, the 'Add Bundle' one-click flow could not be exercised through the UI.", "affected_selectors": ["[data-testid='packages-section']", "[data-testid^='add-package-']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter208_banquet_cart_checkout.py",
+    "/app/test_reports/pytest/iter208.xml"
+  ],
+  "action_items": [
+    "FIX: GET /api/banquets/packages/ scoping — customer role currently receives 0 packages because get_operator_filter scopes by operator_id. Make package listing public (or customer-aware) so the marketplace shows seeded bundles.",
+    "FIX (low): Capture cart.event_date before clear() in BanquetCheckout.submit() so the success card displays the date instead of an empty row.",
+    "Consider returning 422 vs the explicit 400 for missing event_date (Pydantic returns 422 for missing required field — current code only emits 400 for the parsable-but-past case)."
+  ],
+  "critical_code_review_comments": [
+    "_price_line for per_hour services: when hours=None on the request AND the service has no duration_hours, falls back to 1h silently — recommend rejecting with 400 ('hours required for per_hour services').",
+    "Order's top-level operator_id is set to the FIRST line-item's operator. With mixed-operator carts this single field makes operator dashboard scoping ambiguous — already noted in code comment but worth highlighting.",
+    "BanquetCheckout.submit clears the cart BEFORE the success screen renders the event_date, leading to an empty Event-date row on confirmation."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter208_banquet_cart_checkout.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "test_credentials": "customer@test.com / testpassword123 ; superadmin@oryno.com / testpassword123",
+  "seed_data_creation": "Backend test fixture creates TEST_Hall (hall, per_event 100k), TEST_Chair (rental_item, per_unit 500/chair), TEST_Photog (photographer, per_hour 30k × 4h default), and one TEST_Bundle (hall + 100 chairs, 10% off). Plus the BanquetResults pre-existing 'Cart E2E Hall' from a previous session.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend cart-checkout endpoint is fully validated by pytest (math, validation, auth, package expansion, per_hour hours-override). Frontend UI flow is fully working — services render, add-to-cart, qty stepper, drawer, checkout, validation, success screen, localStorage clear all confirmed (order EVT-000005 created end-to-end). Two outstanding issues: (1) GET /api/banquets/packages/ does not show bundles to customer role due to operator_filter scoping — package one-click flow could not be tested through UI; (2) Success screen shows blank Event-date row after clear(). The Vite dev server occasionally returns 429 on cold load — first attempt rendered 0 services, second attempt after a 30s wait rendered all 4 services correctly.",
+  "rca_of_the_issue": "Packages not visible to customer: list_banquet_packages applies get_operator_filter(current_user). For customer role (no operator_id), this returns a query that doesn't match the bundle's operator_id, so the customer sees 0 packages. Fix: bypass operator_filter for customer/anonymous reads on this endpoint, or return all is_active bundles regardless of operator scope."
+}

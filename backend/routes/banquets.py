@@ -15,6 +15,10 @@ router = APIRouter(prefix="/api/banquets", tags=["Banquets"])
 # explicitly before the parent always wins over the dynamic param.)
 packages_router = APIRouter(prefix="/api/banquets/packages", tags=["Banquets · Packages"])
 
+# Sub-router for /api/banquets/cart — same trick: separate prefix avoids
+# collision with /{banquet_id}.
+cart_router = APIRouter(prefix="/api/banquets/cart", tags=["Banquets · Cart"])
+
 @router.post("/")
 async def create_banquet(
     banquet_data: BanquetCreate,
@@ -569,3 +573,251 @@ async def delete_banquet_package(
     await db.banquet_packages.delete_one({"_id": package_id})
     return {"message": "Package deleted"}
 
+
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Cart Checkout — single order with multiple event-service line items.
+#
+# The customer browses event services + packages, fills a "cart" for one
+# event date, then hits checkout. We materialise one row in `orders`
+# (service_category="banquet") with a flat list of line_items so the
+# operator dashboard, receipts and analytics treat the whole event as a
+# single revenue event. A companion `banquet_bookings` row holds the
+# event-level metadata (date, guest count, contact info).
+# ──────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel  # noqa: E402
+
+
+class CartLineInput(BaseModel):
+    service_id: str
+    quantity: float = 1
+    # Optional hour-count override for per_hour services (e.g. "I want 6h
+    # of the photographer instead of the default 4h"). Falls back to the
+    # service's `duration_hours` when unset.
+    hours: Optional[float] = None
+
+
+class CartCheckoutRequest(BaseModel):
+    event_date: str            # YYYY-MM-DD
+    line_items: List[CartLineInput] = []
+    package_ids: List[str] = []
+    expected_guests: int = 0
+    event_type: Optional[str] = None         # wedding, conference, etc.
+    contact_name: str
+    contact_phone: str
+    contact_email: Optional[str] = None
+    special_requests: Optional[str] = None
+
+
+def _price_line(service: dict, qty: float, hours: Optional[float]) -> tuple[float, dict]:
+    """Compute the line total based on the service's pricing model.
+
+    Returns (line_total, snapshot_dict) where snapshot_dict is the
+    persistent record we store on the order so future price changes on
+    the service don't retroactively alter past bookings.
+    """
+    base = float(service.get("base_price") or 0)
+    model = service.get("pricing_model") or service.get("price_type") or "per_event"
+    qty = float(qty or 1)
+
+    if model == "per_unit":
+        line_total = base * qty
+        unit = service.get("unit_label") or "unit"
+        rate_label = f"{int(base):,} / {unit}"
+    elif model == "per_hour":
+        h = float(hours or service.get("duration_hours") or 1)
+        line_total = base * h * qty
+        rate_label = f"{int(base):,} / hour × {h}h"
+    elif model == "per_person":
+        line_total = base * qty
+        rate_label = f"{int(base):,} / person"
+    else:  # per_event, flat_fee
+        line_total = base * qty
+        rate_label = f"{int(base):,} flat"
+
+    snapshot = {
+        "service_id": service["_id"],
+        "service_name": service.get("name"),
+        "category": service.get("category", "hall"),
+        "pricing_model": model,
+        "unit_label": service.get("unit_label"),
+        "quantity": qty,
+        "hours": float(hours) if hours is not None else None,
+        "unit_price": base,
+        "line_total": round(line_total, 2),
+        "rate_label": rate_label,
+        "operator_id": service.get("operator_id"),
+        "operator_name": service.get("operator_name"),
+    }
+    return round(line_total, 2), snapshot
+
+
+@cart_router.post("/checkout")
+async def event_cart_checkout(
+    payload: CartCheckoutRequest,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Create one order spanning multiple event services + packages.
+
+    Validation rules:
+      - event_date must be a future ISO date.
+      - At least one line item OR one package must be in the cart.
+      - All services + packages must exist; ones the cart references but
+        the DB no longer has are surfaced as a 400 with the missing IDs.
+      - Mixed operators are allowed (a wedding can pull chairs from one
+        operator, a photographer from another). The order's top-level
+        `operator_id` is set to the FIRST line item's operator for
+        backwards-compat with operator dashboards; per-line operators
+        are preserved in `booking_details.line_items`.
+    """
+    db = get_database()
+
+    # 1. Validate date.
+    try:
+        event_dt = datetime.fromisoformat(payload.event_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="event_date must be YYYY-MM-DD")
+    if event_dt.date() < datetime.utcnow().date():
+        raise HTTPException(status_code=400, detail="Event date must be in the future")
+
+    if not payload.line_items and not payload.package_ids:
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    # 2. Hydrate individual services.
+    line_items_out: list[dict] = []
+    subtotal = 0.0
+
+    if payload.line_items:
+        ids = [li.service_id for li in payload.line_items]
+        svc_by_id = {
+            s["_id"]: s
+            async for s in db.banquets.find({"_id": {"$in": ids}})
+        }
+        missing = [sid for sid in ids if sid not in svc_by_id]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Services not found: {missing}")
+
+        for li in payload.line_items:
+            line_total, snap = _price_line(svc_by_id[li.service_id], li.quantity, li.hours)
+            snap["source"] = "individual"
+            line_items_out.append(snap)
+            subtotal += line_total
+
+    # 3. Hydrate packages (one bundle expands into its services with the
+    # *bundle* line_total credited once; we still store the expanded
+    # services so the operator sees which items were committed).
+    if payload.package_ids:
+        bundles = await db.banquet_packages.find(
+            {"_id": {"$in": payload.package_ids}}
+        ).to_list(None)
+        missing = [pid for pid in payload.package_ids if pid not in {b["_id"] for b in bundles}]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Packages not found: {missing}")
+
+        for bundle in bundles:
+            bundle_total = float(bundle.get("total_price") or 0)
+            subtotal += bundle_total
+
+            # Hydrate inner services for the snapshot.
+            inner_ids = [ln["service_id"] for ln in bundle.get("services", [])]
+            inner_svcs = {
+                s["_id"]: s
+                async for s in db.banquets.find({"_id": {"$in": inner_ids}})
+            }
+            inner_lines = []
+            for ln in bundle.get("services", []):
+                svc = inner_svcs.get(ln["service_id"])
+                if svc:
+                    _, snap = _price_line(svc, ln.get("quantity", 1), None)
+                    inner_lines.append(snap)
+
+            line_items_out.append({
+                "source": "package",
+                "package_id": bundle["_id"],
+                "service_name": bundle.get("name"),
+                "category": "package",
+                "discount_percent": bundle.get("discount_percent", 0),
+                "subtotal": bundle.get("subtotal", 0),
+                "line_total": bundle_total,
+                "operator_id": bundle.get("operator_id"),
+                "operator_name": bundle.get("operator_name"),
+                "services": inner_lines,
+            })
+
+    subtotal = round(subtotal, 2)
+
+    # 4. Mint identifiers + order number.
+    order_id = str(uuid.uuid4())
+    booking_id = str(uuid.uuid4())
+    order_count = await db.orders.count_documents({"service_category": "banquet"})
+    order_number = f"EVT-{order_count + 1:06d}"
+
+    primary_operator_id = next(
+        (li.get("operator_id") for li in line_items_out if li.get("operator_id")), None
+    )
+    primary_operator_name = next(
+        (li.get("operator_name") for li in line_items_out if li.get("operator_name")), ""
+    )
+
+    booking_doc = {
+        "_id": booking_id,
+        "order_id": order_id,
+        "user_id": current_user["_id"],
+        "event_date": payload.event_date,
+        "event_type": payload.event_type,
+        "expected_guests": payload.expected_guests,
+        "contact_name": payload.contact_name,
+        "contact_phone": payload.contact_phone,
+        "contact_email": payload.contact_email,
+        "special_requests": payload.special_requests,
+        "line_items": line_items_out,
+        "subtotal": subtotal,
+        "total_price": subtotal,
+        "status": "pending",
+        "payment_status": "pending",
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.banquet_bookings.insert_one(booking_doc)
+
+    order_doc = {
+        "_id": order_id,
+        "order_number": order_number,
+        "service_category": "banquet",
+        "service_booking_id": booking_id,
+        "service_name": f"Event @ {payload.event_date}" + (
+            f" ({len(line_items_out)} items)" if line_items_out else ""
+        ),
+        "service_id": booking_id,   # for back-compat reporting
+        "user_id": current_user["_id"],
+        "operator_id": primary_operator_id,
+        "operator_name": primary_operator_name,
+        "total_amount": subtotal,
+        "currency": "XAF",
+        "status": "pending",
+        "payment_status": "pending",
+        "booking_details": {
+            "event_date": payload.event_date,
+            "event_type": payload.event_type,
+            "expected_guests": payload.expected_guests,
+            "contact_name": payload.contact_name,
+            "contact_phone": payload.contact_phone,
+            "contact_email": payload.contact_email,
+            "line_items": line_items_out,
+        },
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.orders.insert_one(order_doc)
+
+    return {
+        "message": "Event order created",
+        "order_id": order_id,
+        "order_number": order_number,
+        "booking_id": booking_id,
+        "total_price": subtotal,
+        "currency": "XAF",
+        "line_items": line_items_out,
+    }

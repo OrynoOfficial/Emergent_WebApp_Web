@@ -47,7 +47,7 @@ from routes.validation import router as validation_router
 from routes.activity_log import router as activity_log_router
 from routes.events_management import router as events_management_router
 from routes.pressing import router as pressing_router
-from routes.banquets import router as banquets_router, packages_router as banquet_packages_router
+from routes.banquets import router as banquets_router, packages_router as banquet_packages_router, cart_router as banquet_cart_router
 from routes.cinema import router as cinema_router
 from routes.packages import router as packages_router
 from routes.package_services import router as package_services_router
@@ -508,6 +508,7 @@ app.include_router(banquets_router)
 # resolves the dynamic vs literal path component correctly regardless
 # of ordering). Listing it here keeps the OpenAPI tags grouped.
 app.include_router(banquet_packages_router)
+app.include_router(banquet_cart_router)
 app.include_router(cinema_router)
 app.include_router(packages_router)
 app.include_router(package_services_router)
