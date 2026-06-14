@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import {
   MapPin, Users, ArrowLeft, Loader2, PartyPopper, Plus, Minus, Package as PackageIcon,
   Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed, Sparkles, Music2, Box,
-  Search, SlidersHorizontal, ChevronLeft, ChevronRight,
+  Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -416,7 +416,7 @@ export default function BanquetResults() {
 
   return (
     <div className="min-h-screen bg-teal-50/40 pb-32">
-      {/* Sticky header (pink-themed, matches Laundry pattern) */}
+      {/* Sticky header (teal-themed, matches Laundry pattern) */}
       <div className="bg-white border-b border-teal-100 shadow-sm sticky top-0 z-20">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-3">
@@ -504,6 +504,15 @@ export default function BanquetResults() {
                     </Button>
                   </PopoverContent>
                 </Popover>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/15 border-white/30 text-white hover:bg-white/25"
+                  onClick={() => setCartOpen(true)}
+                  data-testid="header-cart-btn"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 mr-1.5" /> Cart{count > 0 ? ` · ${count}` : ''}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -702,7 +711,7 @@ export default function BanquetResults() {
       <EventCartDrawer
         open={cartOpen}
         onOpenChange={setCartOpen}
-        hideFab={count > 0}
+        hideFab={true}
         cart={cart}
         updateQty={updateQty}
         removeItem={removeItem}

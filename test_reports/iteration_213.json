@@ -1,0 +1,51 @@
+{
+  "summary": "Retest of the Banquet polish after the HIGH FAB-vs-Modify-Search collision fix (iter212). Result: ALL 21 verification checks PASS. The floating event-cart-fab is now COMPLETELY ABSENT from /services/banquet/results, the new data-testid='header-cart-btn' renders next to data-testid='modify-search-btn' in the hero, opens the cart drawer regardless of cart count, and shows 'Cart' (empty) or 'Cart · N' (count>0). Modify-Search popover now opens cleanly on an empty cart and apply updates the URL to ?guests=100. Sticky cart strip appears once count>0 and its cart-strip-open opens the same drawer. In-cart tag, modal-in-cart badge, Wedding-360 per-line FCFA prices, and nested-service-modal with sticky prev/next coexisting with parent dialog all verified. Theme: zero pink/fuchsia/rose Tailwind classes found in the live DOM on /services/banquet/results and /services/banquet/checkout (full DOM regex scan). NOTE: a frontend supervisor restart was required before the new bundle served the fix — initial run still served the OLD bundle (FAB present, header-cart-btn missing). After `supervisorctl restart frontend` everything passes.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Vite dev bundle staleness (recurring from iter212)",
+        "issue": "Live preview was still serving the previous bundle even though the source already had hideFab={true} and the new header-cart-btn. event-cart-fab was rendered and header-cart-btn was absent until I ran `sudo supervisorctl restart frontend`. After restart all 21 checks passed. Same symptom flagged in iter212 — main agent should consider bumping the bundle hash on deploy or invalidating the CDN, otherwise customers may briefly see the old empty-cart FAB overlapping Modify-Search.",
+        "affected_selectors": ["[data-testid='event-cart-fab']", "[data-testid='header-cart-btn']"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "BanquetCheckout — Event date field",
+        "issues": ["The Event date input uses the browser's native date picker (mm/dd/yyyy) instead of a shadcn Calendar/Popover component. Inconsistent with the rest of the app's date selection UX. Not blocking but worth aligning."]
+      }
+    ]
+  },
+  "validated_features": [
+    "FAB removed: event-cart-fab count = 0 on /services/banquet/results both before and after adding an item to cart.",
+    "Header Cart trigger: data-testid='header-cart-btn' is rendered next to modify-search-btn in the hero. Empty-cart label is 'Cart'; after add it becomes 'Cart · 1'. Clicking it opens [data-testid='event-cart-drawer'] in both empty and non-empty states.",
+    "Modify Search popover: opens on empty-cart click (no FAB interception). Filling modify-search-guests=100 and clicking modify-search-apply updates URL to ?city=Yaound%C3%A9&type=wedding&guests=100 without leaving /results.",
+    "Cart strip: with count>0 banquet-cart-strip is visible; cart-strip-open opens the same event-cart-drawer.",
+    "In-Cart badges: card-level in-cart-tag-* renders after add; modal-level modal-in-cart-badge renders in PackageDetails hero.",
+    "Wedding 360 prices: package modal shows FCFA unit prices per member line (500/5,000/25,000/45,000) — verified via dialog text search.",
+    "Nested service modal: clicking package-member-* opens nested-service-modal; nested-prev-btn / nested-next-btn / nested-step-indicator all present; parent dialog stays mounted (2 [role='dialog'] nodes coexist). Step indicator advances 'SERVICE 1 OF 4' → 'SERVICE 2 OF 4' on Next click without unmounting parent.",
+    "Drawer rich line items: 4 images rendered inside the event-cart-drawer for the package (CartThumbCarousel thumbs).",
+    "Theme (live DOM regex scan): zero pink/fuchsia/rose Tailwind classes on /services/banquet/results AND /services/banquet/checkout. Hero, cards, modal, drawer, strip, checkout form, and Confirm & Pay button all teal/cyan."
+  ],
+  "critical_code_review_comments": [
+    "[STALE COMMENT] BanquetResults.jsx line 6 still says 'Theme is rose/pink — the official banquet colour.' and line 428 still says 'rose gradient hero'. Cosmetic, but misleading after the teal rewrite — please update these two comments.",
+    "[VITE CACHE — recurring] Same stale-bundle behaviour as iter212. A supervisor restart is required for new bundle to take effect. Recommend bumping the bundle hash on each deploy or adding a service-worker-style cache-busting step so customers don't see the old FAB right after deploy.",
+    "[DESIGN] BanquetCheckout Event date input is the browser-native date picker (mm/dd/yyyy). Per the project's design guideline, prefer the shadcn Calendar/Popover for consistency.",
+    "[Already good] hideFab is permanently true on /services/banquet/results (line 714). EventCartDrawer.jsx still defaults hideFab=false so any other page that mounts the drawer without the prop will still get the FAB — fine for the rest of the app but worth a comment in the component."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "[LOW] Update stale 'rose/pink' comments in BanquetResults.jsx lines 6 and 428 to 'teal'.",
+    "[FOLLOW-UP] Investigate the recurring Vite stale-bundle behaviour observed on /services/banquet/results — bundle hash bump or cache-bust on deploy so a frontend restart is not required.",
+    "[DESIGN — out of scope but flagged] Replace the native date input on BanquetCheckout with a shadcn Calendar."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A", "frontend": "100% (21/21 checks after frontend restart)" },
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None. Existing Wedding 360 Package in Yaoundé was used.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "If you run this immediately after a code change and see the OLD FAB or a missing header-cart-btn, run `sudo supervisorctl restart frontend && sleep 8` then retest — the live preview can serve a stale Vite bundle. Login is two-step: click 'Login to Your Account' → fill email → Continue → fill password → Continue. Wedding 360 Package exists in Yaoundé; its add-package-* button is on the results page directly.",
+  "rca of the issue": "iter212 HIGH bug RCA: EventCartDrawer's FAB at fixed top-20 right-6 z-50 overlapped the Modify-Search button in the hero. Fix applied in iter213: (a) BanquetResults passes hideFab={true} permanently to EventCartDrawer (line 714), removing the FAB entirely from /services/banquet/results; (b) a new inline data-testid='header-cart-btn' button was added next to modify-search-btn in the hero (lines 507-515) wired to setCartOpen(true) — it opens the drawer regardless of cart count and exposes a 'Cart · N' label when items are present; (c) BanquetCheckout was re-themed (the previous from-pink-600 to-fuchsia-600 Confirm & Pay button + 4 focus-visible:ring-pink inputs are now teal/cyan). All three changes verified by live-DOM inspection after a frontend supervisor restart."
+}
