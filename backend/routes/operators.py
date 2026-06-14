@@ -357,6 +357,16 @@ async def get_operators_by_service_category(
         ]):
             if row.get("_id"):
                 derived_ids.add(row["_id"])
+    elif service_type == "restaurant":
+        # Restaurants use `cuisine_type` (a list per record) as the
+        # "category". A restaurant matches if its cuisine_type array
+        # contains the requested cuisine.
+        async for row in db.restaurants.aggregate([
+            {"$match": {"cuisine_type": category}},
+            {"$group": {"_id": "$operator_id"}},
+        ]):
+            if row.get("_id"):
+                derived_ids.add(row["_id"])
 
     # Operators explicitly tagged with the category in `service_types`.
     # We accept both bare category strings (`photographer`) and qualified

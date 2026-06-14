@@ -49,6 +49,7 @@ import CommissionManagement from './pages/admin/CommissionManagement';
 import AuditLogs from './pages/admin/AuditLogs';
 import Permissions from './pages/admin/Permissions';
 import OperatorsManagement from './pages/admin/OperatorsManagement';
+import OperatorCategoriesPage from './pages/admin/OperatorCategoriesPage';
 import EmployeesManagement from './pages/admin/EmployeesManagement';
 import BookingAnalytics from './pages/admin/BookingAnalytics';
 import Reporting from './pages/admin/Reporting';
@@ -792,6 +793,15 @@ function App() {
             element={
               <ProtectedRoute requiredRoles={['admin']}>
                 <MarketSegmentManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/operators/categories"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <OperatorCategoriesPage />
               </ProtectedRoute>
             }
           />

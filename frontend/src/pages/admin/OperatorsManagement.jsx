@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building, Plus, Search, Edit, Trash2, Eye, Ban, CheckCircle,
   Phone, Mail, MapPin, Clock, Star, TrendingUp, Users, Calendar, DollarSign, UserCog, Shield,
-  ChevronLeft, ChevronRight, Globe, Filter, X as XIcon
+  ChevronLeft, ChevronRight, Globe, Filter, X as XIcon, Sparkles, Layers
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate } from '@/utils/dateUtils';
@@ -21,6 +21,7 @@ import api from '@/api/client';
 import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/shared/AdminModal';
 import AddOperatorWizard from '@/components/admin/AddOperatorWizard';
+import OperatorCategoryAssign from '@/components/admin/OperatorCategoryAssign';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -379,12 +380,13 @@ export default function OperatorsManagement() {
       </div>
 
       {/* Sub-page tabs */}
-      <Tabs value={location.pathname.includes('/geography') ? 'geography' : location.pathname.includes('/market-segments') ? 'market-segments' : 'operators'} onValueChange={(v) => {
+      <Tabs value={location.pathname.includes('/geography') ? 'geography' : location.pathname.includes('/market-segments') ? 'market-segments' : location.pathname.includes('/categories') ? 'categories' : 'operators'} onValueChange={(v) => {
         if (v === 'operators') navigate('/admin/operators');
         else if (v === 'geography') navigate('/admin/operators/geography');
         else if (v === 'market-segments') navigate('/admin/operators/market-segments');
+        else if (v === 'categories') navigate('/admin/operators/categories');
       }}>
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100" data-testid="operator-management-tabs">
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100" data-testid="operator-management-tabs">
           <TabsTrigger value="operators" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-operators">
             <Building className="w-4 h-4" />Operators
           </TabsTrigger>
@@ -393,6 +395,9 @@ export default function OperatorsManagement() {
           </TabsTrigger>
           <TabsTrigger value="market-segments" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-market-segments">
             <TrendingUp className="w-4 h-4" />Market Segments
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-categories">
+            <Sparkles className="w-4 h-4" />Categories
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -1018,6 +1023,19 @@ export default function OperatorsManagement() {
                   </Select>
                 </FormField>
               </div>
+            </div>
+          </AdminModal.Section>
+          <AdminModal.Section title="Service Categories" icon={<Sparkles className="w-4 h-4" />}>
+            <div className="p-4 bg-purple-50/40 rounded-xl border border-purple-100">
+              <p className="text-xs text-slate-500 mb-3">
+                Tag this operator with the sub-categories they offer. They&apos;ll show up in
+                category-scoped operator dropdowns (e.g. when admins add a new Photographer or
+                Italian restaurant) even before they have their first service row.
+              </p>
+              <OperatorCategoryAssign
+                value={editForm.service_types || []}
+                onChange={(next) => setEditForm(p => ({ ...p, service_types: next }))}
+              />
             </div>
           </AdminModal.Section>
         </div>
