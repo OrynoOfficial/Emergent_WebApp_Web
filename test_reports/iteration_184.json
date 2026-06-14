@@ -1,0 +1,45 @@
+{
+  "summary": "Frontend-only verification of Customer Banquet results & details overhaul (BanquetResults.jsx + BanquetDetailsModal.jsx). All review-request requirements PASS — including the nested package→service modal flow, pink theme, single Filter popover, swipeable galleries, 'Add to Cart' labelled CTA, pinned cart strip, and enriched bundle pricing. One minor cosmetic regression on the PackageCard summary unit-prices. Zero Uncaught / Failed to compile errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PackageCard (BanquetResults.jsx ~line 246)", "issue": "Per-line unit prices on the Curated Bundle CARD render as '0 FCFA/u' because PackageCard resolves prices via `services.find(s => s.id === line.service_id)?.base_price` against the /banquets/ list, which is empty when the city filter yields no services. The MODAL renders correctly because PackageDetails uses the enriched `line.service`. Fix: PackageCard should mirror the modal — prefer `line.service?.base_price`/`.name`/`.images?.[0]` and fall back to `services.find(...)` only when `line.service` is absent.", "selector": "[data-testid^=\"package-card-\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/services/banquet (customer landing)", "issues": ["Burst of HTTP 429 responses on first paint from the customer dashboard/services landing — non-blocking but suggests duplicated polling. Worth investigating throttling/dedup."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Patch /app/frontend/src/pages/services/BanquetResults.jsx PackageCard (~line 246) to use `line.service` first, then fall back to `services.find(...)`. Mirrors the existing pattern in PackageDetails.",
+    "Investigate the 429 burst on the /services/banquet landing route (parallel duplicate calls or polling loops)."
+  ],
+  "critical_code_review_comments": [
+    "BanquetDetailsModal wrapper keeps parent <Dialog open=true> mounted while nested <Dialog> is shown — DOM verified: dialogs 1 → 2 → 1 after Escape, `package-member-*` buttons remain after nested close. ✅",
+    "SwipeableImages (card) and SwipeableGallery (modal) both expose always-visible chevrons + dot indicators; the card-level handler `stopPropagation()` so chevron clicks don't open the details modal. ✅",
+    "Backend /api/banquets/packages/ returns enriched `line.service` — modal correctly shows 500 FCFA/Chairs, 5,000 FCFA/person, 25,000 FCFA/flat, 45,000 FCFA/hour → bundle total 64,175 FCFA (15% off 75,500). ✅",
+    "Add-to-cart button text label IS visible ('Add to Cart') and clicking it does NOT open the details modal (stopPropagation works). ✅"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "92% (11/12 requirements PASS; 1 minor cosmetic on PackageCard)"},
+  "test_credentials": "customer@test.com / testpassword123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None — used existing seeded `Wedding 360 Package` (4 member services) to exercise nested modal flow.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Auth path: POST /api/auth/login → set localStorage.access_token; also set localStorage.location_selected='true' to bypass the country picker modal that otherwise blocks /services/banquet. Then go directly to /services/banquet/results?city=Yaound%C3%A9&guests=50&type=wedding. Seeded `Wedding 360 Package` bundle exercises the nested modal flow.",
+  "verified_requirements": [
+    "PASS pink-gradient hero (data-testid='banquet-search-criteria')",
+    "PASS single Filter popover (data-testid='filter-button') containing Category + Sort + Min/Max price; NO category pills in header",
+    "PASS service card SwipeableImages with always-visible chevrons + dots",
+    "PASS 'Add to Cart' CTA shows literal text label",
+    "PASS clicking Add-to-Cart does NOT open the details modal",
+    "PASS sticky cart strip (data-testid='banquet-cart-strip') stays pinned in viewport while scrolling",
+    "PASS clicking a package card opens BanquetDetailsModal with PackageDetails — 4 members rendered as buttons",
+    "PASS clicking package-member-* opens NESTED ServiceDetails dialog ON TOP (dialogs 1→2)",
+    "PASS Escape closes nested dialog only; parent package modal stays mounted (dialogs→1, members still in DOM)",
+    "PASS Bundle price `pkg.total_price` rendered correctly (64,175 FCFA) with line.service-driven per-line prices IN THE MODAL",
+    "PASS zero Uncaught/Failed to compile console errors"
+  ],
+  "rca of the issue": "PackageCard '0 FCFA/u' RCA — BanquetResults.jsx ~line 246 computes `const full = services.find(s => s.id === line.service_id) || {}` then uses `full.base_price` for the per-line unit-price text. The /banquets/ list is filtered by city, so when the current city yields no matching services (as in this test run with Yaoundé returning 0 services), `full` is `{}` and `unitPrice` falls back to 0 → renders `0 FCFA/u` on the card. The MODAL is correct because PackageDetails consumes the enriched `line.service` returned by /api/banquets/packages/. FIX: `const full = line.service || services.find(s => s.id === line.service_id) || {};` (mirrors PackageDetails) — same change for `line.service?.name` and `line.service?.images?.[0]` to keep the card visually accurate."
+}

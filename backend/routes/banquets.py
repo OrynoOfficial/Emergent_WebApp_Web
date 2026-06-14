@@ -525,7 +525,14 @@ async def list_banquet_packages(
     if all_svc_ids:
         async for s in db.banquets.find(
             {"_id": {"$in": list(all_svc_ids)}},
-            {"_id": 1, "name": 1, "category": 1, "base_price": 1, "unit_label": 1, "pricing_model": 1},
+            {
+                "_id": 1, "name": 1, "category": 1, "base_price": 1,
+                "unit_label": 1, "pricing_model": 1, "images": 1,
+                "description": 1, "city": 1, "address": 1,
+                "capacity_min": 1, "capacity_max": 1, "duration_hours": 1,
+                "min_quantity": 1, "amenities": 1, "category_details": 1,
+                "phone": 1, "email": 1, "operator_id": 1, "operator_name": 1,
+            },
         ):
             svc_docs[s["_id"]] = s
 
@@ -539,6 +546,29 @@ async def list_banquet_packages(
                 line["base_price"] = svc.get("base_price")
                 line["unit_label"] = svc.get("unit_label")
                 line["pricing_model"] = svc.get("pricing_model")
+                # Customer modal needs the full service shape for its
+                # nested-detail dialog (photos, capacity, contact, etc.).
+                line["service"] = {
+                    "id": svc["_id"],
+                    "name": svc.get("name"),
+                    "category": svc.get("category"),
+                    "base_price": svc.get("base_price"),
+                    "unit_label": svc.get("unit_label"),
+                    "pricing_model": svc.get("pricing_model"),
+                    "images": svc.get("images") or [],
+                    "description": svc.get("description"),
+                    "city": svc.get("city"),
+                    "address": svc.get("address"),
+                    "capacity_min": svc.get("capacity_min"),
+                    "capacity_max": svc.get("capacity_max"),
+                    "duration_hours": svc.get("duration_hours"),
+                    "min_quantity": svc.get("min_quantity"),
+                    "amenities": svc.get("amenities") or [],
+                    "category_details": svc.get("category_details") or {},
+                    "phone": svc.get("phone"),
+                    "email": svc.get("email"),
+                    "operator_name": svc.get("operator_name"),
+                }
 
     return {"packages": packages, "total": total}
 

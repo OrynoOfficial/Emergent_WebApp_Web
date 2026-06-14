@@ -33,22 +33,22 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
-          className="fixed bottom-6 right-6 z-50 rounded-full h-14 px-5 shadow-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white"
+          className="fixed bottom-6 right-6 z-50 rounded-full h-14 px-5 shadow-2xl bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-700 hover:to-pink-700 text-white"
           data-testid="event-cart-fab"
         >
           <ShoppingBag className="w-5 h-5 mr-2" />
           Cart
           {count > 0 && (
-            <Badge className="ml-2 bg-white text-rose-700 font-bold" data-testid="event-cart-count">{count}</Badge>
+            <Badge className="ml-2 bg-white text-pink-700 font-bold" data-testid="event-cart-count">{count}</Badge>
           )}
           {totals.total > 0 && (
             <span className="ml-3 hidden sm:inline font-semibold">{formatFCFA(totals.total)}</span>
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md bg-rose-50/30 overflow-y-auto p-0" data-testid="event-cart-drawer">
+      <SheetContent side="right" className="w-full sm:max-w-md bg-pink-50/30 overflow-y-auto p-0" data-testid="event-cart-drawer">
         {/* Hero strip */}
-        <div className="bg-gradient-to-r from-rose-600 to-pink-600 text-white px-6 py-5">
+        <div className="bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white px-6 py-5">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2 text-white text-xl">
               <ShoppingBag className="w-5 h-5" /> Your Event Cart
@@ -66,8 +66,8 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
         <div className="px-5 py-4 space-y-3">
           {count === 0 ? (
             <div className="text-center py-16 text-slate-500">
-              <div className="w-16 h-16 rounded-full bg-rose-100 mx-auto mb-3 flex items-center justify-center">
-                <Sparkles className="w-7 h-7 text-rose-500" />
+              <div className="w-16 h-16 rounded-full bg-pink-100 mx-auto mb-3 flex items-center justify-center">
+                <Sparkles className="w-7 h-7 text-pink-500" />
               </div>
               <p className="font-medium text-slate-700 mb-1">Your cart is empty</p>
               <p className="text-xs text-slate-500 max-w-[260px] mx-auto">Add a hall, chairs, photographer or pick a bundle to start curating your event.</p>
@@ -81,32 +81,32 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
                 return (
                   <div
                     key={p.package_id}
-                    className="rounded-xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-white p-3 shadow-sm"
+                    className="rounded-xl border-2 border-pink-200 bg-gradient-to-br from-pink-50 to-white p-3 shadow-sm"
                     data-testid={`cart-package-${p.package_id}`}
                   >
                     <div className="flex gap-3">
                       {cover ? (
                         <img src={cover} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
                       ) : (
-                        <div className="w-16 h-16 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-                          <PackageIcon className="w-7 h-7 text-rose-500" />
+                        <div className="w-16 h-16 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                          <PackageIcon className="w-7 h-7 text-pink-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <Badge className="bg-rose-600 text-white border-0 text-[10px] mb-1"><PackageIcon className="w-2.5 h-2.5 mr-0.5" /> Bundle</Badge>
-                            <p className="font-semibold text-rose-900 leading-tight truncate">{snap.name}</p>
+                            <Badge className="bg-pink-600 text-white border-0 text-[10px] mb-1"><PackageIcon className="w-2.5 h-2.5 mr-0.5" /> Bundle</Badge>
+                            <p className="font-semibold text-pink-900 leading-tight truncate">{snap.name}</p>
                           </div>
                           <Button size="icon" variant="ghost" onClick={() => removePackage(p.package_id)} className="h-7 w-7 -mr-1.5 -mt-1.5 flex-shrink-0">
                             <X className="w-4 h-4 text-slate-500" />
                           </Button>
                         </div>
-                        <p className="text-[11px] text-rose-700 mt-0.5">
+                        <p className="text-[11px] text-pink-700 mt-0.5">
                           {snap.services?.length || 0} services
                           {snap.discount_percent > 0 && ` · −${snap.discount_percent}% off`}
                         </p>
-                        <div className="mt-1.5 text-base font-bold text-rose-700">{formatFCFA(snap.total_price || 0)}</div>
+                        <div className="mt-1.5 text-base font-bold text-pink-700">{formatFCFA(snap.total_price || 0)}</div>
                       </div>
                     </div>
                   </div>
@@ -122,7 +122,7 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
                 return (
                   <div
                     key={it.service_id}
-                    className="rounded-xl border border-rose-100 bg-white p-3 shadow-sm"
+                    className="rounded-xl border border-pink-100 bg-white p-3 shadow-sm"
                     data-testid={`cart-item-${it.service_id}`}
                   >
                     <div className="flex gap-3">
@@ -137,12 +137,12 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-900 leading-tight truncate">{snap.name}</p>
-                            <Badge variant="outline" className="text-[10px] mt-1 bg-rose-50 border-rose-200 text-rose-700">
+                            <Badge variant="outline" className="text-[10px] mt-1 bg-pink-50 border-pink-200 text-pink-700">
                               {CATEGORY_LABEL[snap.category] || snap.category}
                             </Badge>
                           </div>
                           <Button size="icon" variant="ghost" onClick={() => removeItem(it.service_id)} className="h-7 w-7 -mr-1.5 -mt-1.5 flex-shrink-0">
-                            <Trash2 className="w-4 h-4 text-rose-500" />
+                            <Trash2 className="w-4 h-4 text-pink-500" />
                           </Button>
                         </div>
                         <div className="mt-2 flex items-center justify-between gap-2">
@@ -162,7 +162,7 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
                           </div>
                           <div className="text-right">
                             <div className="text-[10px] text-slate-500">{formatFCFA(unitPrice)} / {snap.unit_label || 'unit'}</div>
-                            <div className="font-bold text-rose-700">{formatFCFA(lineTotal)}</div>
+                            <div className="font-bold text-pink-700">{formatFCFA(lineTotal)}</div>
                           </div>
                         </div>
                       </div>
@@ -172,7 +172,7 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
               })}
 
               {/* Totals + Checkout */}
-              <div className="bg-white rounded-xl border border-rose-200 p-4 mt-4 space-y-1.5 shadow-sm">
+              <div className="bg-white rounded-xl border border-pink-200 p-4 mt-4 space-y-1.5 shadow-sm">
                 {totals.bundles > 0 && (
                   <div className="flex justify-between text-sm text-slate-600">
                     <span>Bundles</span><span className="font-medium">{formatFCFA(totals.bundles)}</span>
@@ -183,15 +183,15 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
                     <span>Individual services</span><span className="font-medium">{formatFCFA(totals.items)}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-baseline pt-2 mt-1 border-t border-rose-100">
+                <div className="flex justify-between items-baseline pt-2 mt-1 border-t border-pink-100">
                   <span className="font-semibold text-slate-900">Total</span>
-                  <span className="text-2xl font-bold text-rose-700" data-testid="cart-total">{formatFCFA(totals.total)}</span>
+                  <span className="text-2xl font-bold text-pink-700" data-testid="cart-total">{formatFCFA(totals.total)}</span>
                 </div>
               </div>
 
               <Button
                 onClick={goCheckout}
-                className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white shadow-lg shadow-rose-500/20"
+                className="w-full bg-gradient-to-r from-pink-600 to-fuchsia-600 hover:from-pink-700 hover:to-pink-700 text-white shadow-lg shadow-pink-500/20"
                 size="lg"
                 data-testid="event-cart-checkout-btn"
               >
@@ -200,7 +200,7 @@ export default function EventCartDrawer({ cart, updateQty, removeItem, removePac
               <Button
                 variant="ghost"
                 onClick={() => { if (window.confirm('Clear the cart?')) clear(); }}
-                className="w-full text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                className="w-full text-pink-600 hover:text-pink-700 hover:bg-pink-50"
               >
                 Clear cart
               </Button>
