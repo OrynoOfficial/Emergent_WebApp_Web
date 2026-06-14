@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -112,6 +111,18 @@ const DEFAULT_FORM = {
 function CategoryAwareFields({ form, setForm, categoryOperators }) {
   const cat = form.category || 'hall';
   const allowedModels = PRICING_MODELS_BY_CATEGORY[cat] || ['per_event'];
+
+  // Guard against a desync: when the user rapidly swaps categories the
+  // controlled `pricing_model` may end up outside `allowedModels`, which
+  // makes shadcn's Select render an empty trigger and submit posts an
+  // empty value → backend 422. Snap to the first allowed model.
+  React.useEffect(() => {
+    if (!allowedModels.includes(form.pricing_model)) {
+      setForm(p => ({ ...p, pricing_model: allowedModels[0] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat]);
+
   const showCapacity = cat === 'hall' || cat === 'canopy';
   const showAddress = cat === 'hall';
   const showUnitFields = ['rental_item', 'canopy'].includes(cat);
@@ -621,6 +632,8 @@ function PackagesTab({ services, scopeOperatorId }) {
 // Main page
 // ────────────────────────────────────────────────────────────────────
 export default function BanquetManagement() {
+  // user lookup retained for future role-aware tweaks (e.g. operator-scoped UI hints).
+  // eslint-disable-next-line no-unused-vars
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [services, setServices] = useState([]);
@@ -631,7 +644,7 @@ export default function BanquetManagement() {
   const [viewing, setViewing] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
-  const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+  const [bookingsRefreshKey] = useState(0);
 
   const [scopeOperatorId, setScopeOperatorId] = useState('');
   const [viewMode, setViewMode] = useState('grid');
@@ -781,11 +794,18 @@ export default function BanquetManagement() {
     } catch (err) {
       // FastAPI 422 returns `{ detail: [{ loc, msg }, …] }`. Render the
       // first field error so the user can fix it inline rather than
-      // staring at "[object Object]".
+      // staring at "[object Object]" — or worse, an empty toast.
       const d = err.response?.data?.detail;
-      const msg = Array.isArray(d) && d[0]?.msg
-        ? `${d[0].loc?.slice(-1)?.[0] || 'Field'}: ${d[0].msg}`
-        : (typeof d === 'string' ? d : 'Failed to save service');
+      let msg = 'Failed to save service';
+      if (Array.isArray(d) && d[0]?.msg) {
+        msg = `${d[0].loc?.slice(-1)?.[0] || 'Field'}: ${d[0].msg}`;
+      } else if (typeof d === 'string' && d) {
+        msg = d;
+      } else if (err.response?.status === 422) {
+        msg = 'Some fields are invalid. Double-check the pricing model and required fields.';
+      } else if (err.message) {
+        msg = err.message;
+      }
       toast.error(msg);
     }
   };

@@ -174,3 +174,15 @@
   - `BanquetCheckout.jsx` new page: contact form + order summary + success screen (snapshots event_date before clear)
   - Route `/services/banquet/checkout` added
 - **Testing (iteration_208)**: Backend 100% (8/8 pytest in test_iter208_banquet_cart_checkout.py PASS); Frontend e2e 100% (order EVT-000005 created end-to-end with cart drawer + checkout + success + localStorage clear). Two follow-up fixes applied: customer-visible packages, snapshot event_date for success screen, per_hour without hours now 400s.
+
+### 2026-02-14 — Banquet Management UX polish (iter209/210)
+- **Inline category chips removed** from the Services tab toolbar — filtering now lives only in the dropdown next to the search.
+- **Rich per-category fields** in the Add Service modal:
+  - New `category_details: Dict[str, Any]` on the Banquet model (free-form, backward-compatible).
+  - New `/app/frontend/src/components/banquet/categorySchema.js` defines fields per category (hall, rental_item, canopy, photographer, videographer, catering, decoration, sound_lighting, other).
+  - New `<CategoryDetailsFields/>` component walks the schema and renders text/number/select/multi-chip/textarea/checkbox controls.
+  - Backend persists/echoes the full dict on POST/PUT/GET.
+- **Category-scoped operator picker**: new `GET /api/operators/by-service-category?service_type=banquet&category=X` returns only operators who already have at least one service in that category (derived from `banquets.category` aggregation + `service_types` explicit tags). The Add Service modal refetches operators whenever the category changes; shows an amber warning if none are tagged yet.
+- **Pricing-model desync guard**: after rapid category swaps, the pricing-model controlled Select sometimes ended up outside the new allowed set → blank trigger → 422 on save. Added a `useEffect` that snaps `form.pricing_model` to the first allowed model whenever the category changes.
+- **Better save error toast**: surfaces FastAPI 422 field-level errors, falls back to a friendly message on unknown shapes, never shows an empty toast.
+- **Testing iter210**: both P0 blockers fixed (chip row gone ✓, rich fields render for photographer/catering ✓). Operator dropdown refetches per category and displays the right list.
