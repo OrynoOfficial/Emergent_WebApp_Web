@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 209 — Banquet category_details + by-service-category endpoint. Backend (8/8 tests) PASSES: photographer & catering category_details persist round-trip via POST/PUT/GET, my-venues returns full nested dict, /api/operators/by-service-category enforces operators.view (customer→403), returns documented shape with has_active_service_in_category flag, and returns empty array (not 500) for unknown categories. Frontend has TWO CRITICAL FAILURES on the /management/banquet → Services tab: (1) the inline category chip row below the search/toolbar is STILL rendered (9 chip-like buttons: All / Hall/Venue 4 / Rental Item 3 / Canopy/Tent 0 / Photographer 4 / Videographer 2 / Catering 1 / Decoration 0 / Sound & Lighting 0 / Other 0). The dropdown `category-filter-select` is present, so the chips are *in addition*. (2) Inside the Add Service modal, when switching category to Photographer or Catering, NONE of the data-testid='details-*' rich fields render — DOM query returns []. CategoryDetailsFields appears to be silently returning null in the deployed bundle even though /app/frontend/src/components/banquet/categorySchema.js has photographer + catering schemas and BanquetManagement.jsx mounts <CategoryDetailsFields/> at line 321. No console errors captured.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BanquetManagement Services toolbar", "issue": "Inline category chip row is NOT removed — 9 chip buttons still render under the search/toolbar (All, Hall/Venue 4, Rental Item 3, Canopy/Tent 0, Photographer 4, Videographer 2, Catering 1, Decoration 0, Sound & Lighting 0, Other 0). Per spec the category filter must only live in the dropdown beside the search.", "selector": "below [data-testid='services-search-input']", "priority": "HIGH"},
+      {"component": "Add Service modal — CategoryDetailsFields", "issue": "Category-specific rich fields do not render. After selecting Photographer or Catering in [data-testid='service-category-select'], the modal still shows only name / pricing / base price / operator / description. DOM check finds zero data-testid='details-*' nodes. Schema file has the photographer/catering entries, and JSX mounts the component, so the component is either rendering null or unreachable in the built bundle.", "selector": "[data-testid^='details-']", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Add Service → operator dropdown narrowed by category", "issue": "Could not verify because the rich-field block under the category picker is missing; once that area renders we can confirm operator-list refetch. The /api/operators/by-service-category endpoint itself works (see backend tests).", "affected_selectors": ["[data-testid='banquet-operator-selector']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter209_banquet_category_details.py",
+    "/app/test_reports/pytest/iter209.xml",
+    "/app/test_reports/iter209_toolbar.png",
+    "/app/test_reports/iter209_modal_hall.png",
+    "/app/test_reports/iter209_modal_photog.png",
+    "/app/test_reports/iter209_modal_catering.png"
+  ],
+  "action_items": [
+    "Remove the inline category chip row from the Services tab toolbar in /app/frontend/src/pages/management/BanquetManagement.jsx — the rendering source is still wired somewhere (line ~890 has a comment claiming chips were removed, but they are still visible in the running app). Search for `CATEGORIES.map` outside of the Select dropdown / icon list inside the Add Service modal.",
+    "Fix the Add Service modal so CategoryDetailsFields actually renders the per-category fields. Inspect why <CategoryDetailsFields category={form.category} … /> at line ~321 renders nothing in production (verify CATEGORY_SCHEMA import path resolves; add a console.log of `groups.length`; ensure form.category mutation triggers a re-render of the leftColumn passed to the dialog wrapper).",
+    "Re-run the frontend Playwright flow once both are fixed — backend round-trip already verified."
+  ],
+  "critical_code_review_comments": [
+    "BanquetManagement.jsx is 1071 lines — split CategoryAwareFields, PackagesTab, and the dialog into separate files for maintainability.",
+    "POST /api/banquets/ returns only {message, banquet_id} — consider returning the full created object so the UI doesn't need an immediate follow-up GET.",
+    "Frontend changelog comment at line 890 ('chips removed by request to keep the toolbar clean') is misleading because the chips are still rendered somewhere else."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter209_banquet_category_details.py (NEW)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "0% (2/2 acceptance criteria failing)"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (super admin); customer@test.com / testpassword123 (used for 403)",
+  "seed_data_creation": "Tests create + auto-delete TEST_ITER209_PHOTOG and TEST_ITER209_CATERING banquet rows. Earlier manual debug created a banquet `7b80e716-d136-4896-afa3-f1cc2fab0919` named TEST_dbg under the seeded banquet operator (visible in the Services grid screenshot).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend endpoint contract for /api/banquets/ is POST returns {message, banquet_id} — fetch by id to inspect. /api/banquets/management/my-venues returns {venues, total, is_operator_scoped}. /api/operators/by-service-category requires operators.view (customer 403). Frontend route is /management/banquet (not /admin/banquets). Login is two-step: enter email → Continue → enter password → submit. CATEGORIES values match categorySchema keys (hall, rental_item, canopy, photographer, videographer, catering, decoration, sound_lighting, other).",
+  "rca of the issue": "(1) Inline chip row: The comment in BanquetManagement.jsx line 890 claims chips were removed, but the running UI still shows a row of 9 category chip buttons under the search/toolbar (with counts). Grep for `CATEGORIES.map` outside the dropdown/modal — likely a leftover ToggleGroup or a sibling component. (2) Rich fields: DOM has zero `[data-testid^='details-']` nodes after switching category. CategoryDetailsFields imports CATEGORY_SCHEMA from './categorySchema' which definitely has photographer (line 87) and catering (line 149). The mount point exists at line 321. So either (a) `cat` lookup is failing at runtime (perhaps the form.category state isn't propagating into the leftColumn of the dialog wrapper used by ServiceDialog), or (b) the dialog wrapper unmounts leftColumn between renders losing local state. Add a `console.log('CDF render', category, groups.length)` to confirm. Verified no JS console errors thrown."
+}

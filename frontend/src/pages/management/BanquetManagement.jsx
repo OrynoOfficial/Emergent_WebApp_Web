@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
+import CategoryDetailsFields from '@/components/banquet/CategoryDetailsFields';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
@@ -96,6 +97,7 @@ const DEFAULT_FORM = {
   max_quantity: '',
   duration_hours: '',
   amenities: [],
+  category_details: {},
   images: [],
   phone: '',
   email: '',
@@ -107,7 +109,7 @@ const DEFAULT_FORM = {
 // Category-aware form. Only renders the fields that actually apply to
 // the picked category — keeps the editor short and unambiguous.
 // ────────────────────────────────────────────────────────────────────
-function CategoryAwareFields({ form, setForm, operators }) {
+function CategoryAwareFields({ form, setForm, categoryOperators }) {
   const cat = form.category || 'hall';
   const allowedModels = PRICING_MODELS_BY_CATEGORY[cat] || ['per_event'];
   const showCapacity = cat === 'hall' || cat === 'canopy';
@@ -294,14 +296,19 @@ function CategoryAwareFields({ form, setForm, operators }) {
         </div>
       )}
 
-      {/* operator */}
+      {/* operator — scoped to operators selling this category */}
       <div className="col-span-2">
         <OperatorSelector
           value={form.operator_id || ''}
           onChange={(id, name) => setForm(p => ({ ...p, operator_id: id, operator_name: name }))}
-          operators={operators}
+          operators={categoryOperators}
           testId="banquet-operator-selector"
         />
+        {categoryOperators.length === 0 && (
+          <p className="text-xs text-amber-600 mt-1">
+            No operators are currently set up for &ldquo;{cat}&rdquo;. Assign this category to an operator first, or add the operator&apos;s first {cat} service via super-admin.
+          </p>
+        )}
       </div>
 
       {/* description */}
@@ -309,6 +316,13 @@ function CategoryAwareFields({ form, setForm, operators }) {
         <Label>Description</Label>
         <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe the service…" />
       </div>
+
+      {/* category-specific rich fields */}
+      <CategoryDetailsFields
+        category={cat}
+        details={form.category_details || {}}
+        onChange={(next) => setForm(p => ({ ...p, category_details: next }))}
+      />
     </div>
   );
 }
@@ -671,6 +685,29 @@ export default function BanquetManagement() {
 
   useEffect(() => { loadServices(); }, [loadServices]);
 
+  // Operators relevant to the *currently picked category* in the modal.
+  // Refetched whenever the operator opens the modal or flips the
+  // category dropdown — so the selector only shows operators who
+  // actually offer this kind of service.
+  const [categoryOperators, setCategoryOperators] = useState([]);
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    const cat = form.category || 'hall';
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/operators/by-service-category', {
+          params: { service_type: 'banquet', category: cat },
+        });
+        if (!cancelled) setCategoryOperators(res.data.operators || []);
+      } catch (err) {
+        console.error('by-service-category failed', err);
+        if (!cancelled) setCategoryOperators([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isDialogOpen, form.category]);
+
   function openDialog(svc = null) {
     setEditing(svc);
     if (svc) {
@@ -687,6 +724,7 @@ export default function BanquetManagement() {
         duration_hours: svc.duration_hours ?? '',
         unit_label: svc.unit_label || '',
         amenities: svc.amenities || [],
+        category_details: svc.category_details || {},
         operator_id: svc.operator_id || '',
         operator_name: svc.operator_name || '',
       });
@@ -705,7 +743,7 @@ export default function BanquetManagement() {
     const price = parseFloat(form.base_price);
     if (!price || price <= 0) { toast.error('Base price must be greater than 0'); return; }
     try {
-      const op = operators.find(o => (o._id || o.id) === form.operator_id);
+      const op = (categoryOperators.length ? categoryOperators : operators).find(o => (o._id || o.id) === form.operator_id);
       const payload = {
         category: form.category,
         pricing_model: form.pricing_model,
@@ -724,6 +762,7 @@ export default function BanquetManagement() {
         max_quantity: form.max_quantity !== '' ? parseInt(form.max_quantity, 10) : null,
         duration_hours: form.duration_hours !== '' ? parseFloat(form.duration_hours) : null,
         amenities: form.amenities || [],
+        category_details: form.category_details || {},
         images: form.images || [],
         phone: form.phone || null,
         email: form.email || null,
@@ -848,33 +887,7 @@ export default function BanquetManagement() {
             </div>
           </div>
 
-          {/* Quick category chips */}
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={categoryFilter === 'all' ? 'default' : 'outline'}
-              className="cursor-pointer"
-              onClick={() => setCategoryFilter('all')}
-            >
-              All
-            </Badge>
-            {CATEGORIES.map(c => {
-              const Icon = c.icon;
-              const count = services.filter(s => (s.category || 'hall') === c.value).length;
-              return (
-                <Badge
-                  key={c.value}
-                  variant={categoryFilter === c.value ? 'default' : 'outline'}
-                  className="cursor-pointer inline-flex items-center gap-1"
-                  onClick={() => setCategoryFilter(c.value)}
-                  data-testid={`category-chip-${c.value}`}
-                >
-                  <Icon className="w-3 h-3" />
-                  {c.label}
-                  <span className="ml-1 text-[10px] opacity-70">{count}</span>
-                </Badge>
-              );
-            })}
-          </div>
+          {/* Category filter is in the dropdown beside the search — chips removed by request to keep the toolbar clean. */}
 
           {loading ? (
             <div className="text-center py-8">Loading…</div>
@@ -970,7 +983,7 @@ export default function BanquetManagement() {
           : 'List a new service — hall, rental items, canopy, photographer, catering, anything you offer for events.'}
         editing={!!editing}
         accent="pink"
-        leftColumn={<CategoryAwareFields form={form} setForm={setForm} operators={operators} />}
+        leftColumn={<CategoryAwareFields form={form} setForm={setForm} categoryOperators={categoryOperators} />}
         preview={
           <GenericPreviewCard
             cover={(form.images || [])[0]}

@@ -64,6 +64,15 @@ class Banquet(BaseModel):
     capacity_max: Optional[int] = None
     base_price: float
     price_type: str = "per_event"             # legacy; kept for backward compat
+    # Category-specific rich fields. Schema is defined on the frontend
+    # (`/components/banquet/categorySchema.js`) and varies per category —
+    # e.g. photographer stores `style`, `equipment`, `deliverables`,
+    # `turnaround_days`, `portfolio_url`; catering stores `cuisines`,
+    # `dietary_options`, `service_style`. We keep this as a free-form
+    # dict on the model so adding a new field per category never needs a
+    # backend migration; the operator dashboard simply renders whatever
+    # keys are present.
+    category_details: Dict[str, Any] = {}
     images: List[str] = []
     amenities: List[str] = []
     packages: List[Dict[str, Any]] = []
@@ -100,6 +109,7 @@ class BanquetCreate(BaseModel):
     capacity_max: Optional[int] = None
     base_price: float
     price_type: str = "per_event"
+    category_details: Dict[str, Any] = {}
     images: List[str] = []
     amenities: List[str] = []
     packages: List[Dict[str, Any]] = []
@@ -126,6 +136,7 @@ class BanquetUpdate(BaseModel):
     capacity_max: Optional[int] = None
     base_price: Optional[float] = None
     price_type: Optional[str] = None
+    category_details: Optional[Dict[str, Any]] = None
     images: Optional[List[str]] = None
     amenities: Optional[List[str]] = None
     packages: Optional[List[Dict[str, Any]]] = None

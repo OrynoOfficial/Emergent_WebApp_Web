@@ -326,6 +326,68 @@ async def get_operators_by_service(
     return {"operators": operators}
 
 
+@router.get("/by-service-category")
+async def get_operators_by_service_category(
+    service_type: str = Query(..., description="Top-level service area: banquet, hotel, etc."),
+    category: str = Query(..., description="Sub-category within the service: hall, rental_item, photographer, …"),
+    current_user: dict = Depends(require_any_permission(["operators.view", "operators.view_all"])),
+):
+    """Return operators that already operate the given sub-category.
+
+    Today only the `banquet` service area has sub-categories (driven by
+    `banquets.category` on each service document). For other service
+    areas this falls back to the operator's `service_types` membership.
+
+    Derivation logic (banquet):
+      1. Find every operator who has at least one document in
+         `banquets` with the requested `category`.
+      2. Union that with operators whose explicit `service_types`
+         includes the literal category name (gives super-admins a way
+         to pre-assign a category before any service is created).
+      3. Always exclude inactive operators.
+    """
+    db = get_database()
+
+    # Operators *currently* selling this sub-category.
+    derived_ids: set[str] = set()
+    if service_type == "banquet":
+        async for row in db.banquets.aggregate([
+            {"$match": {"category": category}},
+            {"$group": {"_id": "$operator_id"}},
+        ]):
+            if row.get("_id"):
+                derived_ids.add(row["_id"])
+
+    # Operators explicitly tagged with the category in `service_types`.
+    # We accept both bare category strings (`photographer`) and qualified
+    # ones (`banquet.photographer`) for forward-compat.
+    explicit_tags = [category, f"{service_type}.{category}"]
+
+    query = {
+        "status": "active",
+        "$or": [
+            {"_id": {"$in": list(derived_ids)}} if derived_ids else {"_id": "__never__"},
+            {"service_types": {"$in": explicit_tags}},
+            # Multi-service operators are always candidates — super-admin
+            # can still narrow further if they want.
+            {"operator_type": "multi", "service_types": service_type},
+        ],
+    }
+
+    out = []
+    async for op in db.operators.find(query).sort("name", 1):
+        out.append({
+            "id": str(op["_id"]),
+            "name": op.get("name", "Unknown"),
+            "operator_type": op.get("operator_type", ""),
+            "service_types": op.get("service_types", []),
+            # Flag so the UI can mark "already selling this category" vs
+            # "tagged but no services yet".
+            "has_active_service_in_category": op["_id"] in derived_ids,
+        })
+    return {"operators": out, "category": category, "service_type": service_type}
+
+
 @router.get("/")
 async def get_operators(
     op_status: Optional[str] = None,
