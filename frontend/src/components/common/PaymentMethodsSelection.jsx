@@ -8,6 +8,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import StripeCheckoutModal from '../payment/StripeCheckoutModal';
 import { formatCurrency } from '../../utils/currency';
+import useIdempotencyKey from '../../hooks/useIdempotencyKey';
 
 const PaymentMethodsSelection = ({ 
   amount, 
@@ -40,6 +41,14 @@ const PaymentMethodsSelection = ({
 
   // Stripe checkout modal — opens in the foreground instead of navigating away
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
+
+  // Idempotency key — stable across retries within one checkout attempt.
+  // We send it on every payment-initiation request so if the network drops
+  // the response and the user retries (Stripe modal close+reopen, MoMo "Try
+  // Again", network blip), the backend recognises the duplicate and returns
+  // the original payment_id instead of double-charging.
+  // The key is reset only on successful completion or explicit "Start over".
+  const { key: idempotencyKey, reset: resetIdempotencyKey } = useIdempotencyKey();
 
   const paymentMethods = [
     {
@@ -139,6 +148,9 @@ const PaymentMethodsSelection = ({
 
           if (status === 'completed') {
             setIsProcessingInternal(false);
+            // Reset the idempotency key now that this attempt is complete —
+            // the next checkout will start fresh.
+            resetIdempotencyKey();
             // Notify parent that processing has stopped
             if (onProcessingChange) {
               onProcessingChange(false);
@@ -207,7 +219,8 @@ const PaymentMethodsSelection = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
           order_id: effectiveOrderId,
@@ -412,7 +425,8 @@ const PaymentMethodsSelection = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
           amount,
@@ -424,7 +438,14 @@ const PaymentMethodsSelection = ({
       });
 
       const data = await response.json();
-      
+
+      // Mint a fresh key for the next attempt only if the backend
+      // accepted/processed the request. On network/server errors we keep
+      // the existing key so the retry hits the same idempotency window.
+      if (data?.success) {
+        resetIdempotencyKey();
+      }
+
       if (onPaymentInitiated) {
         onPaymentInitiated(data);
       }
@@ -438,7 +459,7 @@ const PaymentMethodsSelection = ({
     } finally {
       setIsProcessingInternal(false);
     }
-  }, [selectedMethodInternal, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange]);
+  }, [selectedMethodInternal, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange, idempotencyKey, resetIdempotencyKey]);
 
   // Fire initiatePayment exactly ONCE per false→true transition of triggerPayment.
   // Using a ref instead of relying on dependency arrays avoids the prior race
