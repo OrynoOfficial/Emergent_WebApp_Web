@@ -239,6 +239,31 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
     # ── system_settings (read on every request via middleware) ─────────
     IndexSpec("system_settings", [("key", ASCENDING)], "ix_settings_key", unique=True, sparse=True),
 
+    # ── payment_events (immutable ledger — V2 payments) ────────────────
+    # Append-only event log. Reads are timeline (`payment_id` + chronological)
+    # and dedup (provider event id, idempotency key). Mutations are forbidden.
+    IndexSpec(
+        "payment_events",
+        [("payment_id", ASCENDING), ("occurred_at", ASCENDING)],
+        "ix_payment_events_payment_chrono",
+    ),
+    IndexSpec(
+        "payment_events",
+        [("provider", ASCENDING), ("provider_event_id", ASCENDING)],
+        "ix_payment_events_provider_dedup",
+        unique=True,
+        partial={"provider_event_id": {"$type": "string"}},
+    ),
+    IndexSpec(
+        "payment_events",
+        [("idempotency_key", ASCENDING)],
+        "ix_payment_events_idempotency",
+        unique=True,
+        partial={"idempotency_key": {"$type": "string"}, "event_type": "intent_created"},
+    ),
+    IndexSpec("payments", [("state", ASCENDING)], "ix_payments_state"),
+    IndexSpec("payments", [("user_id", ASCENDING), ("updated_at", DESCENDING)], "ix_payments_user_updated", sparse=True),
+
     # ── otps (TTL — auto-evict expired OTPs) ───────────────────────────
     IndexSpec("otps", [("phone", ASCENDING), ("purpose", ASCENDING)], "ix_otp_phone_purpose"),
     IndexSpec("otps", [("email", ASCENDING), ("purpose", ASCENDING)], "ix_otp_email_purpose", sparse=True),

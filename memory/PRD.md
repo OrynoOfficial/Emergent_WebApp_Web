@@ -1,5 +1,29 @@
 # Oryno Platform - PRD
 
+
+## Immutable Payment Ledger v2 (Jun 14, 2026)
+The platform now uses an append-only event ledger for all V2 payments. Every state transition (intent_created → authorized → captured → refunded → disputed → dispute_resolved) is a new row in `payment_events`. The mutable `payments` collection is a denormalized snapshot, rebuildable from the ledger.
+
+**Key files:**
+- `backend/models/payment_event.py` — state machine reducer (`reduce_events()`)
+- `backend/services/payment_ledger.py` — append/dedup/snapshot service + HMAC signature verification
+- `backend/routes/payments_v2.py` — `/api/v2/payments/*` endpoints
+- `backend/tests/test_payment_ledger.py` — 13 unit + integration tests (all PASS)
+
+**Guarantees:**
+- **Idempotency**: clients send `Idempotency-Key` header on `POST /intent`; duplicate keys return the original `payment_id` without re-charging.
+- **Webhook replay safety**: unique partial index on `(provider, provider_event_id)` makes duplicate Stripe/MoMo deliveries no-ops.
+- **Out-of-order tolerance**: events sorted by `occurred_at` before reducing — a late `captured` after `authorized` still lands the payment correctly.
+- **Audit trail**: original ledger rows are immutable, queryable via `GET /api/v2/payments/{id}/timeline`.
+
+**Provider coverage (this iteration):**
+- Stripe: full (signature verify, dedup, refund automation)
+- MTN MoMo: full (HMAC-SHA256 signature via `MTN_MOMO_WEBHOOK_SECRET` env, manual refund + recompute)
+- Orange Money: stub (501) — same structure ready, signing scheme TBD
+
+**Legacy `/api/payments/*` endpoints remain live** for backward compatibility (hybrid migration).
+
+
 ## Architecture
 - React + Vite + Tailwind + Shadcn/UI + Leaflet | FastAPI + MongoDB
 - **CRITICAL**: `travel_routes.py` = public travel API. `travel.py` = management/analytics only. Never duplicate.

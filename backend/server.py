@@ -21,6 +21,7 @@ load_dotenv(ROOT_DIR / '.env')
 # Import routes from webapp-backend structure
 from routes.auth import router as auth_router
 from routes.payments import router as payments_router
+from routes.payments_v2 import router as payments_v2_router
 from routes.services import router as services_router
 from routes.orders import router as orders_router
 from routes.hotels import router as hotels_router
@@ -476,6 +477,7 @@ async def api_health_check():
 # Include all webapp-backend routers
 app.include_router(auth_router)
 app.include_router(payments_router)
+app.include_router(payments_v2_router)  # Immutable ledger-based payments
 app.include_router(services_router)
 app.include_router(orders_router)
 app.include_router(hotels_router)

@@ -1,6 +1,25 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Immutable Payment Ledger (V2)
+- **New collection `payment_events`**: append-only ledger. Every payment lifecycle change (intent → authorize → capture → refund → dispute) is a new row. Never overwritten.
+- **New collection `payments`**: denormalized read-model auto-rebuilt by `refresh_snapshot()` on every event append. Rebuildable from the ledger at any time.
+- **State machine** in `models/payment_event.py::reduce_events()` — handles out-of-order webhook delivery by sorting events by `occurred_at` before reducing. Supports partial refunds, full refunds, disputes won/lost.
+- **Endpoints** (`/api/v2/payments/*`, hybrid — old `/api/payments/*` untouched):
+  - `POST /intent` — requires `Idempotency-Key` header. Returns same `payment_id` on replay.
+  - `GET /{payment_id}` — derived current state snapshot.
+  - `GET /{payment_id}/timeline` — full immutable event history.
+  - `POST /{payment_id}/refund` — admin refund initiation (Stripe only for now).
+  - `POST /{payment_id}/recompute` — super-admin snapshot rebuild from ledger.
+  - `POST /webhook/stripe` — signature verified + `event.id` dedup.
+  - `POST /webhook/mtn-momo` — HMAC-SHA256 signature via `MTN_MOMO_WEBHOOK_SECRET` env var.
+  - `POST /webhook/orange-money` — stub (501); structure mirrors MTN MoMo.
+- **Replay protection**: unique partial indexes on `(provider, provider_event_id)` and `idempotency_key` (intent_created only). Duplicate webhooks no-op safely.
+- **Tests**: `backend/tests/test_payment_ledger.py` — 13/13 PASS (reducer correctness, signature verification, dedup invariants, snapshot rebuild).
+- **Live smoke**: intent → signed MoMo webhook → captured snapshot → replay webhook = same event count.
+
+
+
 ## Apr 21, 2026 — Showtimes Mgmt Tab + User-Operator Assignment + Users Page Revamp
 - **Cinema: Showtimes sub-tab** added to CinemaManagement → Management. Table with film/cinema/screen/date-time/seats/price/status + Replace and Delete actions per row.
 - **Backend cinema**: new `GET /api/cinema/showtimes/operator` (returns showtimes with `id` field, operator-scoped), `POST /api/cinema/showtimes` (body-based), `PUT /api/cinema/showtimes/{id}`, `DELETE /api/cinema/showtimes/{id}` (refuses 409 if active bookings reference the showtime — forces Replace flow).
