@@ -25,6 +25,10 @@ class MoMoPaymentRequest(BaseModel):
     phone_number: str = Field(..., min_length=9, max_length=15)
     payer_message: Optional[str] = ""
     payee_note: Optional[str] = ""
+    # Optional V2 ledger correlation — when set, the status poll handler
+    # will append `captured`/`failed` events to /api/v2/payments so the
+    # ledger reflects the true outcome (not just the legacy txn row).
+    v2_payment_id: Optional[str] = None
 
 
 class MoMoStatusRequest(BaseModel):
@@ -107,6 +111,9 @@ async def initiate_momo_payment(
         "payment_status": "initiated",
         "payer_message": payment_request.payer_message,
         "payee_note": payment_request.payee_note,
+        # V2 ledger correlation (optional). When present, status-poll
+        # handler appends captured/failed to the immutable timeline.
+        "v2_payment_id": payment_request.v2_payment_id,
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc)
     }
@@ -255,7 +262,31 @@ async def get_momo_payment_status(
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
-        
+
+        # V2 ledger correlation — append `captured` if this transaction was
+        # initiated against a v2 payment intent.
+        v2_payment_id = transaction.get("v2_payment_id")
+        if v2_payment_id:
+            try:
+                from services.payment_ledger import append_event as _v2_append
+                await _v2_append(
+                    db,
+                    payment_id=v2_payment_id,
+                    event_type="captured",
+                    provider="mtn_momo",
+                    provider_event_id=f"{transaction_id}:SUCCESSFUL",  # dedup
+                    amount=transaction.get("amount"),
+                    currency=transaction.get("currency"),
+                    payload={
+                        "source": "momo_status_poll",
+                        "financial_id": result.get("financial_id"),
+                        "transaction_id": transaction_id,
+                    },
+                )
+                logger.info("V2 ledger: appended captured for payment_id=%s", v2_payment_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("V2 ledger append (captured) failed: %s", exc)
+
         # Update order
         if order_id:
             await db.orders.update_one(
@@ -293,6 +324,28 @@ async def get_momo_payment_status(
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
+
+        # V2 ledger correlation — append terminal `failed` or `voided`.
+        v2_payment_id = transaction.get("v2_payment_id")
+        if v2_payment_id:
+            try:
+                from services.payment_ledger import append_event as _v2_append
+                v2_event_type = "voided" if momo_status == MoMoPaymentStatus.CANCELLED else "failed"
+                await _v2_append(
+                    db,
+                    payment_id=v2_payment_id,
+                    event_type=v2_event_type,
+                    provider="mtn_momo",
+                    provider_event_id=f"{transaction_id}:{momo_status}",
+                    payload={
+                        "source": "momo_status_poll",
+                        "reason": result.get("reason"),
+                        "momo_status": momo_status,
+                    },
+                )
+                logger.info("V2 ledger: appended %s for payment_id=%s", v2_event_type, v2_payment_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("V2 ledger append (%s) failed: %s", momo_status, exc)
         
         if order_id:
             await db.orders.update_one(

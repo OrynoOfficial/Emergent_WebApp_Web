@@ -457,55 +457,142 @@ function PackagesTab({ services, scopeOperatorId }) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {packages.map(pkg => (
-            <Card key={pkg.id} className="hover:shadow-lg transition-shadow" data-testid={`package-card-${pkg.id}`}>
-              <CardContent className="pt-6">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-semibold">{pkg.name}</h3>
-                  <Badge className={pkg.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-                    {pkg.is_active ? 'Active' : 'Draft'}
-                  </Badge>
-                </div>
-                {pkg.description && <p className="text-sm text-slate-500 mb-3">{pkg.description}</p>}
-                <div className="space-y-1 text-sm">
-                  {(pkg.services || []).map((line, i) => {
-                    const meta = CATEGORY_BY_VALUE[line.category] || CATEGORY_BY_VALUE.other;
-                    const Icon = meta.icon;
-                    return (
-                      <div key={i} className="flex items-center justify-between border-b border-slate-100 py-1">
-                        <span className="inline-flex items-center gap-2 text-slate-700">
-                          <Icon className="w-4 h-4 text-slate-500" />
-                          {line.service_name || line.service_id}
-                        </span>
-                        <span className="text-xs text-slate-500">× {line.quantity}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex items-baseline justify-between">
-                  <div>
-                    <div className="text-xs text-slate-500">Bundle price</div>
-                    <div className="text-lg font-bold text-emerald-700">{formatFCFA(pkg.total_price || 0)}</div>
+          {packages.map(pkg => {
+            // Resolve member services so we can pull cover images + meta
+            const memberSvcs = (pkg.services || []).map(line => {
+              const full = services.find(s => s.id === line.service_id);
+              return {
+                ...line,
+                cover: full?.images?.[0] || null,
+                full,
+              };
+            });
+            const coversWithImage = memberSvcs.filter(m => m.cover);
+            const heroCover = coversWithImage[0]?.cover || pkg.cover_image || null;
+            const stripCovers = coversWithImage.slice(1, 4);
+            const itemCount = memberSvcs.reduce((sum, m) => sum + (m.quantity || 0), 0);
+            const categoriesUsed = Array.from(new Set(memberSvcs.map(m => m.category).filter(Boolean)));
+
+            return (
+              <Card key={pkg.id} className="overflow-hidden hover:shadow-xl transition-shadow group" data-testid={`package-card-${pkg.id}`}>
+                {/* Hero composite: first member service's cover, with up to 3 thumbnails strip on top */}
+                <div className="relative h-40 w-full bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100 overflow-hidden">
+                  {heroCover ? (
+                    <img src={heroCover} alt={pkg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <PackageIcon className="w-14 h-14 text-pink-300" />
+                    </div>
+                  )}
+                  {/* Strip of additional service thumbnails */}
+                  {stripCovers.length > 0 && (
+                    <div className="absolute top-2 right-2 flex -space-x-2">
+                      {stripCovers.map((m, i) => (
+                        <img
+                          key={i}
+                          src={m.cover}
+                          alt=""
+                          className="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-sm"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {/* Status badge */}
+                  <div className="absolute top-2 left-2">
+                    <Badge className={`${pkg.is_active ? 'bg-emerald-500/95 text-white' : 'bg-slate-500/90 text-white'} border-0 shadow-sm`}>
+                      {pkg.is_active ? 'Active' : 'Draft'}
+                    </Badge>
+                  </div>
+                  {/* Price + savings ribbon */}
+                  <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
+                    <div className="bg-white/95 backdrop-blur px-2.5 py-1 rounded-md shadow-sm">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Bundle</div>
+                      <div className="text-sm font-bold text-emerald-700 leading-tight">{formatFCFA(pkg.total_price || 0)}</div>
+                    </div>
                     {pkg.discount_percent > 0 && (
-                      <div className="text-xs text-rose-600">−{pkg.discount_percent}% off {formatFCFA(pkg.subtotal || 0)}</div>
+                      <Badge className="bg-rose-500/95 text-white border-0 shadow-sm">−{pkg.discount_percent}%</Badge>
                     )}
                   </div>
-                  <div className="flex gap-1">
-                    <PermissionGate permission="banquets.edit">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(pkg)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </PermissionGate>
-                    <PermissionGate permission="banquets.delete">
-                      <Button size="sm" variant="outline" className="text-red-600" onClick={() => remove(pkg.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </PermissionGate>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                <CardContent className="pt-3 pb-4">
+                  <h3 className="font-semibold leading-tight line-clamp-1 mb-1" title={pkg.name}>{pkg.name}</h3>
+                  {pkg.description && (
+                    <p className="text-xs text-slate-500 line-clamp-2 mb-2">{pkg.description}</p>
+                  )}
+
+                  {/* Stats row */}
+                  <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-2">
+                    <span className="inline-flex items-center gap-1"><Layers className="w-3 h-3" /> {memberSvcs.length} services</span>
+                    {itemCount > 0 && <span className="inline-flex items-center gap-1"><Box className="w-3 h-3" /> {itemCount} items</span>}
+                    {pkg.discount_percent > 0 && pkg.subtotal && (
+                      <span className="text-rose-600 inline-flex items-center gap-1">save {formatFCFA((pkg.subtotal || 0) - (pkg.total_price || 0))}</span>
+                    )}
+                  </div>
+
+                  {/* Category chips */}
+                  {categoriesUsed.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {categoriesUsed.slice(0, 5).map(cat => {
+                        const m = CATEGORY_BY_VALUE[cat] || CATEGORY_BY_VALUE.other;
+                        const CIcon = m.icon;
+                        return (
+                          <Badge key={cat} variant="outline" className={`text-[10px] font-normal py-0 px-1.5 ${m.accent}`}>
+                            <CIcon className="w-3 h-3 mr-1" /> {m.label}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Service breakdown — compact list with thumb + name + qty */}
+                  <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
+                    {memberSvcs.slice(0, 4).map((m, i) => {
+                      const meta = CATEGORY_BY_VALUE[m.category] || CATEGORY_BY_VALUE.other;
+                      const Icon = meta.icon;
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-[12px] border-b border-slate-100 last:border-b-0 py-1">
+                          {m.cover ? (
+                            <img src={m.cover} alt="" className="w-7 h-7 rounded object-cover flex-shrink-0" />
+                          ) : (
+                            <div className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 ${meta.accent}`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+                          <span className="flex-1 truncate text-slate-700">{m.service_name || m.full?.name || m.service_id}</span>
+                          <span className="text-xs text-slate-500 flex-shrink-0">× {m.quantity}</span>
+                        </div>
+                      );
+                    })}
+                    {memberSvcs.length > 4 && (
+                      <div className="text-[11px] text-slate-500 text-center pt-1">+{memberSvcs.length - 4} more services</div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    {pkg.discount_percent > 0 && (
+                      <div className="text-xs text-slate-500">
+                        <span className="line-through">{formatFCFA(pkg.subtotal || 0)}</span>
+                      </div>
+                    )}
+                    <div className="flex gap-1 ml-auto">
+                      <PermissionGate permission="banquets.edit">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(pkg)} data-testid={`edit-package-btn-${pkg.id}`}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="banquets.delete">
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => remove(pkg.id)} data-testid={`delete-package-btn-${pkg.id}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </PermissionGate>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -537,27 +624,49 @@ function PackagesTab({ services, scopeOperatorId }) {
             </div>
             <div>
               <Label>Services in this bundle</Label>
-              <div className="mt-2 space-y-2 max-h-64 overflow-y-auto border rounded-md p-2">
+              <div className="mt-2 space-y-2 max-h-72 overflow-y-auto border rounded-md p-2 bg-slate-50/50">
                 {services.length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-4">Add some services first &mdash; they&apos;ll show up here.</p>
                 ) : services.map(svc => {
                   const line = form.services.find(s => s.service_id === svc.id);
                   const meta = CATEGORY_BY_VALUE[svc.category] || CATEGORY_BY_VALUE.other;
                   const Icon = meta.icon;
+                  const cover = (svc.images && svc.images[0]) || null;
+                  const isPicked = !!line;
                   return (
-                    <div key={svc.id} className="flex items-center justify-between gap-2 p-2 hover:bg-slate-50 rounded">
-                      <label className="flex items-center gap-2 cursor-pointer flex-1">
+                    <div
+                      key={svc.id}
+                      className={`flex items-center gap-3 p-2 rounded-lg border transition-all ${isPicked ? 'bg-pink-50 border-pink-200 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                    >
+                      <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
                         <input
                           type="checkbox"
-                          checked={!!line}
+                          checked={isPicked}
                           onChange={() => toggleService(svc.id)}
+                          className="flex-shrink-0"
                         />
-                        <Icon className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm">{svc.name}</span>
-                        <Badge variant="outline" className="text-xs">{meta.label}</Badge>
+                        {cover ? (
+                          <img src={cover} alt="" className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
+                        ) : (
+                          <div className={`w-12 h-12 rounded-md flex items-center justify-center flex-shrink-0 ${meta.accent}`}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium truncate">{svc.name}</span>
+                            <Badge variant="outline" className={`text-[10px] font-normal py-0 px-1.5 ${meta.accent} border-0`}>{meta.label}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
+                            <span className="font-medium text-emerald-700">{formatFCFA(svc.base_price || 0)}</span>
+                            <span>·</span>
+                            <span>{PRICING_LABEL[svc.pricing_model || svc.price_type] || 'price'}</span>
+                            {svc.city && (<><span>·</span><span className="truncate">{svc.city}</span></>)}
+                          </div>
+                        </div>
                       </label>
-                      {line && (
-                        <div className="flex items-center gap-1">
+                      {isPicked && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <Label className="text-xs text-slate-500">Qty</Label>
                           <Input
                             type="number"
@@ -921,32 +1030,106 @@ export default function BanquetManagement() {
               {paged.map(svc => {
                 const meta = CATEGORY_BY_VALUE[svc.category || 'hall'] || CATEGORY_BY_VALUE.hall;
                 const Icon = meta.icon;
+                const cover = (svc.images && svc.images[0]) || null;
+                const detailEntries = Object.entries(svc.category_details || {})
+                  .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0))
+                  .slice(0, 4);
                 return (
-                  <Card key={svc.id} className="hover:shadow-lg transition-shadow" data-testid={`service-card-${svc.id}`}>
-                    <CardContent className="pt-6">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${meta.accent}`}>
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold leading-tight">{svc.name}</h3>
-                            <Badge variant="outline" className="text-xs mt-1">{meta.label}</Badge>
-                          </div>
+                  <Card key={svc.id} className="overflow-hidden hover:shadow-xl transition-shadow group" data-testid={`service-card-${svc.id}`}>
+                    {/* Cover image — full-bleed; falls back to a tinted icon hero */}
+                    <div className="relative h-40 w-full bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
+                      {cover ? (
+                        <img src={cover} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${meta.accent}`}>
+                          <Icon className="w-14 h-14 opacity-50" />
+                        </div>
+                      )}
+                      {/* Category chip overlay */}
+                      <div className="absolute top-2 left-2">
+                        <Badge className={`${meta.accent} border-0 shadow-sm inline-flex items-center gap-1`}>
+                          <Icon className="w-3.5 h-3.5" /> {meta.label}
+                        </Badge>
+                      </div>
+                      {/* Image count chip (when more than one) */}
+                      {svc.images && svc.images.length > 1 && (
+                        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
+                          +{svc.images.length - 1} more
+                        </div>
+                      )}
+                      {/* Price ribbon */}
+                      <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
+                        <div className="bg-white/95 backdrop-blur px-2.5 py-1 rounded-md shadow-sm">
+                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">{PRICING_LABEL[svc.pricing_model || svc.price_type] || 'Price'}</div>
+                          <div className="text-sm font-bold text-emerald-700 leading-tight">{formatFCFA(svc.base_price || 0)}</div>
                         </div>
                       </div>
-                      <div className="space-y-1 text-sm text-gray-500">
-                        {svc.city && (<div className="flex items-center gap-2"><MapPin className="w-4 h-4" />{svc.address ? `${svc.address}, ` : ''}{svc.city}</div>)}
-                        {(svc.capacity_max != null) && (<div className="flex items-center gap-2"><Users className="w-4 h-4" />{svc.capacity_min || 0}–{svc.capacity_max} guests</div>)}
-                        {svc.unit_label && (<div className="text-xs text-slate-600">Sold by the <strong>{svc.unit_label}</strong>{svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}</div>)}
-                        {svc.duration_hours && (<div className="text-xs text-slate-600">Default {svc.duration_hours}h session</div>)}
+                    </div>
+
+                    <CardContent className="pt-3 pb-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold leading-tight line-clamp-1" title={svc.name}>{svc.name}</h3>
                       </div>
-                      <div className="mt-3 font-bold text-emerald-700">
-                        {formatFCFA(svc.base_price || 0)}
-                        <span className="text-xs text-slate-500 ml-1">{PRICING_LABEL[svc.pricing_model || svc.price_type] || ''}</span>
+
+                      {svc.description && (
+                        <p className="text-xs text-slate-500 line-clamp-2 mb-2">{svc.description}</p>
+                      )}
+
+                      <div className="space-y-1 text-xs text-slate-600">
+                        {svc.city && (
+                          <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{svc.address ? `${svc.address}, ` : ''}{svc.city}</span>
+                          </div>
+                        )}
+                        {(svc.capacity_max != null) && (
+                          <div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />{svc.capacity_min || 0}–{svc.capacity_max} guests</div>
+                        )}
+                        {svc.unit_label && (
+                          <div className="flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            Sold by the <strong className="font-medium">{svc.unit_label}</strong>
+                            {svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}
+                          </div>
+                        )}
+                        {svc.duration_hours && (
+                          <div className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />Default {svc.duration_hours}h session</div>
+                        )}
                       </div>
-                      <div className="flex gap-2 mt-4">
-                        <Button size="sm" variant="outline" onClick={() => handleView(svc)} title="View details">
+
+                      {/* Category-specific details summary (up to 4 chips) */}
+                      {detailEntries.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {detailEntries.map(([k, v]) => (
+                            <Badge key={k} variant="outline" className="text-[10px] font-normal py-0 px-1.5 text-slate-600">
+                              {String(k).replace(/_/g, ' ')}: <strong className="font-medium ml-1 truncate max-w-[120px]">{Array.isArray(v) ? v.join(', ') : String(v)}</strong>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Amenities preview for halls */}
+                      {Array.isArray(svc.amenities) && svc.amenities.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {svc.amenities.slice(0, 3).map(a => (
+                            <Badge key={a} variant="secondary" className="text-[10px] font-normal py-0 px-1.5">{String(a).replace(/_/g, ' ')}</Badge>
+                          ))}
+                          {svc.amenities.length > 3 && (
+                            <Badge variant="secondary" className="text-[10px] font-normal py-0 px-1.5 text-slate-500">+{svc.amenities.length - 3}</Badge>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Operator + contact strip */}
+                      {(svc.operator_name || svc.phone || svc.email) && (
+                        <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between gap-2">
+                          {svc.operator_name && <span className="inline-flex items-center gap-1 truncate"><Building2 className="w-3 h-3" /> {svc.operator_name}</span>}
+                          {(svc.phone || svc.email) && (
+                            <span className="truncate text-right">{svc.phone || svc.email}</span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" variant="outline" onClick={() => handleView(svc)} title="View details" data-testid={`view-service-btn-${svc.id}`}>
                           <Eye className="w-4 h-4" />
                         </Button>
                         <PermissionGate permission="banquets.edit">

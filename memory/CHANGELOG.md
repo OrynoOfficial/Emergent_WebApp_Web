@@ -1,6 +1,21 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Webhook Correlation + Richer Banquet Cards
+**1. V2 Ledger ↔ Webhook Correlation**
+- `routes/stripe_checkout.py`: `CheckoutRequest` now accepts `v2_payment_id`. The Stripe Checkout session metadata carries it through, and the `checkout.session.completed` webhook handler appends a `captured` event to `/api/v2/payments` (signature- + session-id-deduped). All non-fatal — failures of the v2 append are logged but never break the existing legacy flow.
+- `routes/momo_checkout.py`: `MoMoPaymentRequest` accepts `v2_payment_id`, stored on the `payment_transactions` row. The status-poll handler appends `captured` on `SUCCESSFUL`, `failed` on FAILED/TIMED_OUT, `voided` on CANCELLED — each deduped via `{transaction_id}:{status}`.
+- `StripeCheckoutModal` + `StripeCheckoutPanel`: `v2PaymentId` prop forwarded to `/api/checkout/session`.
+- `PaymentMethodsSelection`: tracks `v2PaymentIdRef.current` from the v2 intent response and threads it into the Stripe modal + the MoMo request-to-pay body.
+- **Smoke-tested**: Stripe and MoMo endpoints accept the new field; v2 intent endpoint returns `payment_id` consistently.
+
+**2. Banquet Management — Richer Cards**
+- **Service cards**: now lead with a 40-vh cover image (or category-tinted hero), price ribbon overlaid, multi-image count chip, category badge, line-clamped description, and a `category_details` chip strip + amenity chips. Adds an operator/contact strip at the bottom.
+- **Package cards**: composite hero (first member service image), stacked avatar strip of 3 more service thumbnails, status badge, discount ribbon, stats row (service count / item count / savings), category chips, scrollable service breakdown with thumbnails.
+- **Package creation modal — service picker**: each service row now renders with a 48px image thumbnail (or category-tinted icon), price, pricing model, city — picked rows get a pink-tinted card treatment for clarity.
+
+
+
 ## Jun 14, 2026 — Checkout Migration to V2 Ledger
 - **`PaymentMethodsSelection.jsx`** (used by Cinema + Hotel + Restaurant + Travel etc.) now calls `POST /api/v2/payments/intent` **before** every provider hand-off. Adds a `createV2Intent(provider)` helper that writes the `intent_created` ledger row with the persisted `Idempotency-Key`. Failures are caught as non-fatal so existing Stripe/MoMo flows keep working even when the ledger endpoint is temporarily unhappy.
 - Dead legacy fallback to `/api/payments/initiate` (mock) **removed** — replaced by the V2 intent call. Callers continue to read `data.success` / `data.transactionRef` because the wrapper preserves the legacy response shape.

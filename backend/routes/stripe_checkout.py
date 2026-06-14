@@ -23,6 +23,9 @@ class CheckoutRequest(BaseModel):
     """Request to create a checkout session"""
     order_id: str
     origin_url: str  # Frontend origin URL for building success/cancel URLs
+    # Optional V2 ledger correlation — when set, Stripe webhook will append
+    # the `captured` event to /api/v2/payments and update the snapshot.
+    v2_payment_id: Optional[str] = None
 
 
 class CheckoutStatusRequest(BaseModel):
@@ -353,6 +356,26 @@ async def stripe_webhook(request: Request):
             
             if user_id:
                 await process_successful_payment(db, order_id, user_id)
+
+        # V2 ledger correlation — append `captured` so the immutable
+        # timeline reflects this Stripe Checkout Session settlement.
+        v2_payment_id = metadata.get("v2_payment_id")
+        if v2_payment_id:
+            try:
+                from services.payment_ledger import append_event as _v2_append
+                await _v2_append(
+                    db,
+                    payment_id=v2_payment_id,
+                    event_type="captured",
+                    provider="stripe",
+                    provider_event_id=session_id,  # session id is unique → dedup
+                    amount=float(result.get("amount", 0) or 0) / 100 if result.get("amount") else None,
+                    currency=(result.get("currency") or "").upper() or None,
+                    payload={"source": "checkout_session", "session_id": session_id},
+                )
+                logger.info("V2 ledger: appended captured for payment_id=%s", v2_payment_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("V2 ledger append failed (non-fatal): %s", exc)
     
     elif event_type == "checkout.session.expired":
         # Session expired

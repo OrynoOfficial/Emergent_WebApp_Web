@@ -56,7 +56,7 @@ const PremiumRow = ({ label, value, icon: Icon, testid, compact = false }) => {
  *                     (in modal context this should close the dialog)
  *   variant         — "page" | "modal". Only changes outer spacing, never the card styling.
  */
-export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, variant = 'page' }) {
+export default function StripeCheckoutPanel({ orderId, v2PaymentId, onBack, onChangeMethod, variant = 'page' }) {
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -88,6 +88,9 @@ export default function StripeCheckoutPanel({ orderId, onBack, onChangeMethod, v
       const response = await api.post('/checkout/session', {
         order_id: orderId,
         origin_url: window.location.origin,
+        // V2 ledger correlation — backend webhook reads this back from
+        // Stripe session metadata and appends the `captured` event.
+        v2_payment_id: v2PaymentId || undefined,
       });
       if (response.data?.url) {
         window.location.href = response.data.url;

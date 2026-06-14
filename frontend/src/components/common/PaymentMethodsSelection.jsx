@@ -272,7 +272,10 @@ const PaymentMethodsSelection = ({
           order_id: effectiveOrderId,
           phone_number: momoPhoneNumber.replace(/\s/g, ''),
           payer_message: serviceDetails?.service_title ? `Payment for ${serviceDetails.service_title}` : 'Payment',
-          payee_note: ''
+          payee_note: '',
+          // V2 ledger correlation — status poll handler appends
+          // captured/failed events to the same payment_id.
+          v2_payment_id: v2PaymentIdRef.current || undefined,
         })
       });
 
@@ -803,6 +806,7 @@ const PaymentMethodsSelection = ({
       {/* Premium in-foreground Stripe checkout modal (replaces the old /payment/checkout redirect) */}
       <StripeCheckoutModal
         open={stripeModalOpen}
+        v2PaymentId={v2PaymentIdRef.current}
         onClose={() => {
           // If the modal is closing and we still have an unpaid order, tell
           // the parent so it can abandon (delete) it. Triggered both by the

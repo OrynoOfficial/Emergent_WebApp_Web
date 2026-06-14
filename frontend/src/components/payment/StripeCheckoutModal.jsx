@@ -12,7 +12,7 @@ import StripeCheckoutPanel from './StripeCheckoutPanel';
  *                "Choose a different payment method"
  *   orderId    — order to pay for
  */
-export default function StripeCheckoutModal({ open, onClose, orderId }) {
+export default function StripeCheckoutModal({ open, onClose, orderId, v2PaymentId }) {
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose?.(); }}>
       <DialogContent
@@ -36,6 +36,7 @@ export default function StripeCheckoutModal({ open, onClose, orderId }) {
         <div className="relative h-full overflow-y-auto">
           <StripeCheckoutPanel
             orderId={orderId}
+            v2PaymentId={v2PaymentId}
             onBack={onClose}
             onChangeMethod={onClose}
             variant="modal"
