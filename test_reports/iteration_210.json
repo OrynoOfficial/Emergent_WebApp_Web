@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 210 RE-TEST of iter209 Banquet Management frontend fixes (frontend-only, backend skipped per request). BOTH PREVIOUS BLOCKERS ARE FIXED. (1) The inline category chip row is GONE from the Services tab toolbar — DOM scan for chip-like buttons (All / Hall/Venue N / Rental Item N / Photographer N etc.) returned 0 matches; only [data-testid='category-filter-select'] is present next to the search. (2) Inside the Add Service modal, selecting Photographer renders ALL 7 expected data-testid='details-*' fields plus extras: details-years_experience, details-team_size, details-languages, details-portfolio_url, details-instagram_handle, details-style, details-equipment, details-drone_licensed, details-travels_outside_city, details-deliverables, details-edited_photos_count, details-revisions_included, details-turnaround_days. Switching to Catering swaps to: details-cuisines, details-dietary_options, details-signature_dishes, details-service_style, details-min_guests, details-max_guests, details-staff_included, details-equipment_provided, details-bar_service — all 6 spec fields present. Operator dropdown ([data-testid='banquet-operator-selector']) is present, refetched per category and showed selectable operator (Carter Entertainment) for Photographer (no warning). Save flow shows a NEW MINOR REGRESSION: POST returned HTTP 422 with empty toast — likely missing pricing_model in payload (Pricing dropdown visually empty in filled modal screenshot, suggesting category-change default did not propagate after multiple switches Hall→Photog→Catering→Photog).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Add Service → Save photographer service", "issue": "POST /api/banquet-services (or equivalent) returned HTTP 422 after clicking [data-testid='save-service-btn']. Toast container was empty so user gets no feedback. Suspected cause: pricing_model field was empty in the form when saved — although BanquetManagement.jsx line 142-144 defaults pricing_model on category change via PRICING_MODELS_BY_CATEGORY[v]?.[0], after rapid category switches (Hall→Photographer→Catering→Photographer) the pricing dropdown stayed visually blank. Recommend (a) ensure pricing_model always resets on every category change, (b) surface the 422 detail in a toast so the user knows which field is invalid.", "affected_selectors": ["[data-testid='save-service-btn']", "Pricing select inside Add Service modal"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iter210_toolbar.png",
+    "/app/test_reports/iter210_modal_hall.png",
+    "/app/test_reports/iter210_modal_photog.png",
+    "/app/test_reports/iter210_modal_catering.png",
+    "/app/test_reports/iter210_modal_filled.png",
+    "/app/test_reports/iter210_after_save.png"
+  ],
+  "action_items": [
+    "Investigate why pricing_model defaults stop applying after multiple Service Category switches inside the Add Service modal. Reproduce: open Add Service → switch category several times → observe Pricing field becomes empty → Save returns 422.",
+    "Show 422 validation detail in a toast/inline error so the failing field is visible to the user.",
+    "(Optional polish) Spec note in this iter said 'NO details-* fields yet because hall has its own dedicated fields rendered separately'. In reality Hall already renders 7 extra details-* fields (parking_capacity, outdoor_area, has_kitchen, has_bar, noise_curfew, setup_styles, accessibility) in addition to the dedicated venue_type/city/capacity inputs. That looks intentional/desirable — please confirm and update the spec wording for future test agents."
+  ],
+  "critical_code_review_comments": [
+    "BanquetManagement.jsx is still 1072 lines — extracting AddServiceDialog + CategoryAwareFields into separate components will materially improve maintainability.",
+    "POST /api/banquets/ still returns only {message, banquet_id}; if banquet-service POST is similar the UI is forced to refetch. Return the full created object to simplify state updates and avoid the missing-toast effect after save errors.",
+    "Add Service modal: surface 422 details in a sonner/toast — a silent failure with no toast looks like nothing happened to the user."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "Acceptance: 6/7 scenarios PASS — only the final Save step regressed on a pricing_model edge case. Both iter209 P0 blockers (chip row + missing rich fields) are FIXED."},
+  "test_credentials": "superadmin@oryno.com / testpassword123",
+  "seed_data_creation": "Manual end-to-end attempted to create a photographer service 'E2E Cat Photog' (180000 FCFA, years_exp=6, DSLR equipment, turnaround=10d, portfolio https://example.com, operator Carter Entertainment) — server rejected with 422 so no new banquet-service row should exist. No backend cleanup needed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login flow needs an extra click: landing page shows two big buttons ('Login to Your Account' / 'Create New Account') — click 'Login to Your Account' BEFORE the email input appears. Then two-step: email → Continue → password → submit. Super admin lands on /admin/analytics; navigate to /management/banquet directly and click [data-testid='services-tab']. Add Service modal: clicking outside or pressing ESC dismisses; use [data-testid='add-service-btn']. The Style/Equipment/Deliverables chips inside details-* containers are NOT <button> elements — they appear to be styled <div>/<span>; selecting 'button' inside [data-testid='details-style'] returns 0. Use role=button or text= selectors if you want to toggle a specific chip. Chips ARE visible and clickable per screenshot.",
+  "rca of the issue": "Save 422: The form's pricing_model gets defaulted via Select onValueChange when Service Category changes (BanquetManagement.jsx ~L142-144 sets pricing_model = PRICING_MODELS_BY_CATEGORY[v]?.[0] || 'per_event'). After multiple rapid category swaps (Hall→Photographer→Catering→Photographer) the Pricing Select trigger displayed an empty label in the filled-modal screenshot, strongly suggesting the controlled value diverged from a valid PRICING_MODELS_BY_CATEGORY entry — possibly because the previous category's pricing_model is not a valid option for the new category and the SelectValue placeholder takes over. Submitting then sends empty/invalid pricing_model and the API rejects it with 422. Mitigation: in the same onValueChange, always coerce pricing_model to PRICING_MODELS_BY_CATEGORY[v][0] (drop the `|| 'per_event'` fallback that may be invalid for some categories) AND, on submit, validate pricing_model is in the allowed set before POSTing, else show an inline error."
+}
