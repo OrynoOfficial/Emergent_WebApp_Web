@@ -186,3 +186,11 @@
 - **Pricing-model desync guard**: after rapid category swaps, the pricing-model controlled Select sometimes ended up outside the new allowed set → blank trigger → 422 on save. Added a `useEffect` that snaps `form.pricing_model` to the first allowed model whenever the category changes.
 - **Better save error toast**: surfaces FastAPI 422 field-level errors, falls back to a friendly message on unknown shapes, never shows an empty toast.
 - **Testing iter210**: both P0 blockers fixed (chip row gone ✓, rich fields render for photographer/catering ✓). Operator dropdown refetches per category and displays the right list.
+
+### 2026-02-14 — Operator categories (assign + filter) — iter211
+- **Inline "Service Categories" section** added to the Edit Operator modal — chip-toggle UI per service area. Only renders sub-categories for parent areas the operator has enabled.
+- **New "Categories" tab** at `/admin/operators/categories` (4th tab alongside Operators/Geography/Market Segments). Power-user view: every operator listed with chip panels, search + per-area filter, optimistic chip toggles persisted via PUT /api/operators/{id} (success toast on save).
+- **Shared category catalog** at `/app/frontend/src/components/admin/operatorCategoryUtils.js` (CATEGORY_CATALOG + parseOperatorTags + serializeOperatorTags). Reusable widget at `OperatorCategoryAssign.jsx`.
+- **Restaurant cuisine extended**: `/api/operators/by-service-category?service_type=restaurant&category=italian` now aggregates `db.restaurants` by `cuisine_type` to find matching operators (alongside the existing banquet path).
+- **Service-types tagging convention**: operators' `service_types` array now accepts both bare (`banquet`, `restaurant`) and qualified (`banquet.photographer`, `restaurant.italian`) tags side-by-side. Pre-tagging works — operators show up in category-scoped dropdowns even before they have an active service row.
+- **Tested**: Backend 5/5 PASS (test_iter211_operator_categories.py); Frontend Playwright verified tab rendering, chip toggle persistence, Edit Modal section, fallback empty-state. No defects found.
