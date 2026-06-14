@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { formatFCFA } from '@/utils/currency';
 import { useEventCart } from '@/hooks/useEventCart';
 import { useAuth } from '@/contexts/AuthContext';
+import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 
 const CATEGORY_LABEL = {
   hall: 'Hall', rental_item: 'Rental', canopy: 'Canopy',
@@ -42,6 +43,9 @@ export default function BanquetCheckout() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
+  // Tracks whether the user has clicked "Pay now" on the success screen so we
+  // reveal the payment-methods card and route the order through the V2 ledger.
+  const [showPayNow, setShowPayNow] = useState(false);
 
   const setField = (k, v) => setContact(c => ({ ...c, [k]: v }));
 
@@ -112,14 +116,60 @@ export default function BanquetCheckout() {
               <div className="flex justify-between"><span className="text-slate-600">Items</span><span className="font-semibold">{(success.line_items || []).length}</span></div>
               <div className="flex justify-between border-t pt-2 mt-2"><span className="text-slate-600">Total</span><span className="font-bold text-purple-700 text-xl">{formatFCFA(success.total_price)}</span></div>
             </div>
-            <div className="space-y-2">
-              <Button onClick={() => navigate('/orders')} className="w-full bg-purple-600 hover:bg-purple-700" data-testid="view-orders-btn">
-                View my orders
-              </Button>
-              <Button onClick={() => navigate('/')} variant="outline" className="w-full">
-                Back to home
-              </Button>
-            </div>
+
+            {/* ── V2 ledger payment ──────────────────────────────────────
+                Lazy-disclosed payment card. When the user clicks "Pay now"
+                we render <PaymentMethodsSelection/> which writes an
+                `intent_created` event to /api/v2/payments/intent and then
+                hands off to Stripe or MTN MoMo. Users who'd rather pay
+                later can still click "View my orders". */}
+            {!showPayNow ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => setShowPayNow(true)}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  data-testid="banquet-pay-now-btn"
+                >
+                  Pay now
+                </Button>
+                <Button onClick={() => navigate('/orders')} variant="outline" className="w-full" data-testid="view-orders-btn">
+                  View my orders
+                </Button>
+                <Button onClick={() => navigate('/')} variant="ghost" className="w-full">
+                  Back to home
+                </Button>
+              </div>
+            ) : (
+              <div className="text-left" data-testid="banquet-payment-block">
+                <PaymentMethodsSelection
+                  amount={success.total_price}
+                  customerPhone={contact.contact_phone}
+                  customerEmail={contact.contact_email}
+                  orderId={success.order_id || success._id || success.id || success.order_number}
+                  serviceDetails={{
+                    service_category: 'banquet',
+                    service_title: 'Event Services',
+                    order_id: success.order_id || success._id || success.id || success.order_number,
+                  }}
+                  onPaymentInitiated={(data) => {
+                    if (data?.success) {
+                      toast.success('Payment recorded. Awaiting confirmation.');
+                      navigate('/orders');
+                    } else if (data?.success === false && data?.message) {
+                      toast.error(data.message);
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => navigate('/orders')}
+                  variant="ghost"
+                  className="w-full mt-3"
+                  data-testid="banquet-pay-later-btn"
+                >
+                  I&apos;ll pay later
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

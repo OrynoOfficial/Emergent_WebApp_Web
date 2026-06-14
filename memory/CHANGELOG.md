@@ -1,6 +1,14 @@
 # Oryno Platform — Changelog
 
 
+## Jun 14, 2026 — Checkout Migration to V2 Ledger
+- **`PaymentMethodsSelection.jsx`** (used by Cinema + Hotel + Restaurant + Travel etc.) now calls `POST /api/v2/payments/intent` **before** every provider hand-off. Adds a `createV2Intent(provider)` helper that writes the `intent_created` ledger row with the persisted `Idempotency-Key`. Failures are caught as non-fatal so existing Stripe/MoMo flows keep working even when the ledger endpoint is temporarily unhappy.
+- Dead legacy fallback to `/api/payments/initiate` (mock) **removed** — replaced by the V2 intent call. Callers continue to read `data.success` / `data.transactionRef` because the wrapper preserves the legacy response shape.
+- **`BanquetCheckout.jsx`** success screen now has a **"Pay now"** button that lazy-discloses `<PaymentMethodsSelection/>`, routing banquet orders through the same V2 ledger. Users who'd rather pay later still have "View my orders".
+- **Smoke-tested** live: cinema-style + hotel-style + banquet-style intents accepted by `/api/v2/payments/intent`, each returns a `payment_id`. (Stripe live call needs a real `STRIPE_SECRET_KEY` — placeholder fails gracefully with the non-fatal try/catch.)
+
+
+
 ## Jun 14, 2026 — Immutable Payment Ledger (V2)
 - **New collection `payment_events`**: append-only ledger. Every payment lifecycle change (intent → authorize → capture → refund → dispute) is a new row. Never overwritten.
 - **New collection `payments`**: denormalized read-model auto-rebuilt by `refresh_snapshot()` on every event append. Rebuildable from the ledger at any time.

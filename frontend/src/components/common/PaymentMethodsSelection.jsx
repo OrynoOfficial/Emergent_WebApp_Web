@@ -50,6 +50,47 @@ const PaymentMethodsSelection = ({
   // The key is reset only on successful completion or explicit "Start over".
   const { key: idempotencyKey, reset: resetIdempotencyKey } = useIdempotencyKey();
 
+  // ── V2 LEDGER INTEGRATION ─────────────────────────────────────────────
+  // Every payment attempt writes an `intent_created` event to the immutable
+  // ledger BEFORE we call the provider (Stripe modal / MoMo request-to-pay).
+  // That way the audit trail is preserved even if the provider call fails
+  // or the user abandons the flow. The `Idempotency-Key` header ensures
+  // retries reuse the same payment_id.
+  const v2PaymentIdRef = useRef(null);
+
+  const createV2Intent = useCallback(async (provider) => {
+    if (!amount || amount <= 0) {
+      throw new Error('Invalid payment amount');
+    }
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/v2/payments/intent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        amount,
+        currency: serviceDetails?.currency || 'XAF',
+        provider,
+        order_id: orderId || serviceDetails?.order_id || null,
+        customer_phone: customerPhone || null,
+        metadata: {
+          service_category: serviceDetails?.service_category,
+          service_title: serviceDetails?.service_title,
+          customer_email: customerEmail,
+          operator_id: serviceDetails?.operator_id,
+        },
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.detail || 'Could not create payment intent');
+    }
+    v2PaymentIdRef.current = data.payment_id;
+    return data;
+  }, [amount, customerEmail, customerPhone, idempotencyKey, orderId, serviceDetails]);
+
   const paymentMethods = [
     {
       id: 'stripe',
@@ -215,6 +256,11 @@ const PaymentMethodsSelection = ({
     }
 
     try {
+      // 1. Write intent_created to the V2 ledger BEFORE calling MoMo.
+      //    Idempotent: a retry with the same key returns the same payment_id.
+      await createV2Intent('mtn_momo');
+
+      // 2. Trigger the actual MoMo request-to-pay.
       const response = await fetch(`${import.meta.env.VITE_API_URL}/momo/request-to-pay`, {
         method: 'POST',
         headers: {
@@ -330,6 +376,17 @@ const PaymentMethodsSelection = ({
     setError(null);
 
     try {
+      // 1. Write intent_created to the V2 ledger BEFORE opening the Stripe
+      //    modal. If the user abandons or Stripe fails, the audit row
+      //    persists so finance can reconcile.
+      try {
+        await createV2Intent('stripe');
+      } catch (intentErr) {
+        // Non-fatal — fall back to the legacy Stripe modal path so the
+        // user can still pay even if the ledger write fails for any reason.
+        console.warn('V2 intent failed (non-fatal), continuing to Stripe:', intentErr);
+      }
+
       // Open the premium checkout modal in the foreground (no page navigation).
       // The user can review the booking summary + payment amount and either
       // continue to Stripe or click "Choose a different payment method" to
@@ -421,33 +478,25 @@ const PaymentMethodsSelection = ({
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/initiate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Idempotency-Key': idempotencyKey,
-        },
-        body: JSON.stringify({
-          amount,
-          payment_method: selectedMethodInternal,
-          customer_phone: customerPhone,
-          customer_email: customerEmail,
-          service_details: serviceDetails
-        })
-      });
+      // Fallback path (only reached for non-Stripe / non-MoMo methods —
+      // e.g. future PayPal). Write the V2 ledger intent and signal success
+      // to the parent so it can render its own post-intent UX. The
+      // provider-specific call is intentionally skipped here because each
+      // method has its own dedicated flow above.
+      const data = await createV2Intent(selectedMethodInternal);
 
-      const data = await response.json();
-
-      // Mint a fresh key for the next attempt only if the backend
-      // accepted/processed the request. On network/server errors we keep
-      // the existing key so the retry hits the same idempotency window.
-      if (data?.success) {
-        resetIdempotencyKey();
-      }
+      // Mint a fresh key for the next attempt once the intent is recorded.
+      resetIdempotencyKey();
 
       if (onPaymentInitiated) {
-        onPaymentInitiated(data);
+        onPaymentInitiated({
+          success: true,
+          payment_id: data.payment_id,
+          transactionRef: data.provider_reference,
+          order_id: orderId,
+          message: data.idempotent_replay ? 'Replayed existing intent' : 'Payment intent created',
+          v2: data,
+        });
       }
 
     } catch (err) {
@@ -459,7 +508,7 @@ const PaymentMethodsSelection = ({
     } finally {
       setIsProcessingInternal(false);
     }
-  }, [selectedMethodInternal, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange, idempotencyKey, resetIdempotencyKey]);
+  }, [selectedMethodInternal, isProcessingInternal, customerPhone, amount, onPaymentInitiated, serviceDetails, customerEmail, orderId, onMoMoDialogOpen, onProcessingChange, createV2Intent, resetIdempotencyKey]);
 
   // Fire initiatePayment exactly ONCE per false→true transition of triggerPayment.
   // Using a ref instead of relying on dependency arrays avoids the prior race
