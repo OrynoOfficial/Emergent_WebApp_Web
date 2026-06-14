@@ -141,6 +141,9 @@ async def get_my_hotels(
     
     # Build base query with operator filter (operators are auto-scoped)
     query = get_operator_filter(current_user)
+    # Hide soft-deleted hotels (DELETE flips is_active to False — they should
+    # not appear in management lists unless explicitly requested via ?include_inactive=true).
+    query["is_active"] = {"$ne": False}
     # Admin / super_admin override: allow filtering by a specific operator via query param
     if operator_id and current_user.get("role") in ("super_admin", "admin"):
         query["operator_id"] = operator_id
@@ -156,16 +159,33 @@ async def get_my_hotels(
     if star_rating:
         query["star_rating"] = star_rating
     
-    hotels = await db.hotels.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    # Single aggregation pass: list page + room counts in one round-trip
+    # (replaces the previous N+1 of "find hotels" + per-hotel count_documents).
+    pipeline = [
+        {"$match": query},
+        {"$sort": {"created_at": -1}},
+        {"$skip": skip},
+        {"$limit": limit},
+        {"$lookup": {
+            "from": "rooms",
+            "let": {"hid": {"$toString": "$_id"}},
+            "pipeline": [
+                {"$match": {"$expr": {"$eq": ["$hotel_id", "$$hid"]}}},
+                {"$count": "n"},
+            ],
+            "as": "_room_count",
+        }},
+        {"$addFields": {
+            "room_count": {"$ifNull": [{"$arrayElemAt": ["$_room_count.n", 0]}, 0]},
+        }},
+        {"$project": {"_room_count": 0}},
+    ]
+    hotels = await db.hotels.aggregate(pipeline).to_list(limit)
     total = await db.hotels.count_documents(query)
-    
+
     # Transform _id to id
     for hotel in hotels:
         hotel["id"] = str(hotel.pop("_id", ""))
-        
-        # Get room count for this hotel
-        room_count = await db.rooms.count_documents({"hotel_id": hotel["id"]})
-        hotel["room_count"] = room_count
     
     return {
         "hotels": hotels, 
@@ -225,28 +245,51 @@ async def update_hotel(
 @router.delete("/{hotel_id}")
 async def delete_hotel(
     hotel_id: str,
+    hard: bool = False,
     current_user: dict = Depends(require_permission("hotels.delete"))
 ):
-    """Delete hotel - requires hotels.delete permission"""
+    """Delete hotel.
+
+    - Default: soft-delete (sets `is_active: False`). Hotel disappears from
+      listings but stays in the DB so historical bookings still resolve.
+    - `?hard=true` (super-admin only): permanently remove the hotel **and**
+      cascade-delete all its rooms. Use this to clean up test/junk records.
+    """
     db = get_database()
     hotel = await db.hotels.find_one({"_id": hotel_id})
-    
+
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
-    
+
     # Check if user owns this hotel (operators can only delete their own)
     user_role = current_user.get("role", "")
     if user_role not in ["admin", "super_admin"]:
         if hotel.get("operator_id") != current_user["_id"]:
             raise HTTPException(status_code=403, detail="You can only delete your own hotels")
-    
+
+    # Hard delete is gated to super-admins to avoid accidental data loss.
+    if hard:
+        if user_role != "super_admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Only super administrators may permanently delete a hotel.",
+            )
+        # Cascade rooms first so we don't leave orphaned inventory.
+        rooms_deleted = await db.rooms.delete_many({"hotel_id": hotel_id})
+        await db.hotels.delete_one({"_id": hotel_id})
+        return {
+            "message": "Hotel permanently deleted",
+            "hard_delete": True,
+            "rooms_deleted": rooms_deleted.deleted_count,
+        }
+
     # Soft delete - just mark as inactive
     await db.hotels.update_one(
         {"_id": hotel_id},
         {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
     )
-    
-    return {"message": "Hotel deleted"}
+
+    return {"message": "Hotel deleted", "hard_delete": False}
 
 # ==================== ANALYTICS ENDPOINTS ====================
 

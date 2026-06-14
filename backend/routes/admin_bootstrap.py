@@ -349,3 +349,118 @@ async def export_seed_bundle(current_user: dict = Depends(get_current_user)):
         },
     )
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Operational tooling — super-admin only
+# ──────────────────────────────────────────────────────────────────────
+
+@router.post("/db-indexes/ensure")
+async def ensure_db_indexes(current_user: dict = Depends(get_current_user)):
+    """Trigger the index bootstrapper on-demand.
+
+    The bootstrapper also runs on every backend startup, but a freshly-
+    deployed pod might be missing newly-added compound indexes if it hasn't
+    been restarted yet. This endpoint lets a super-admin force a rebuild
+    without redeploying.
+
+    Returns the per-index stats so you can see exactly what was created.
+    """
+    if current_user.get("role") != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super administrators may rebuild indexes.",
+        )
+    from utils.startup_indexes import ensure_all_indexes
+    db = get_database()
+    stats = await ensure_all_indexes(db)
+    return {
+        "ok": True,
+        "created": stats["created"],
+        "existed": stats["existed"],
+        "failed_count": len(stats["failed"]),
+        # Mongo errors aren't always JSON-safe — stringify defensively.
+        "failed": [
+            {"collection": c, "name": n, "error": str(e)[:300]}
+            for c, n, e in stats["failed"][:50]
+        ],
+    }
+
+
+# Collections that carry an `is_active` boolean we may want to purge from.
+# Keep this tight — purge is destructive and we don't want a typo to nuke
+# something we never meant to touch.
+_PURGEABLE_COLLECTIONS = {
+    "hotels", "rooms", "restaurants", "cinemas", "films", "showtimes",
+    "events", "vehicles", "car_rentals", "pressings", "banquets",
+    "travel_routes", "services", "packages",
+}
+
+
+@router.post("/db-cleanup/purge-soft-deleted")
+async def purge_soft_deleted(
+    collection: str | None = None,
+    dry_run: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    """One-shot bulk hard-delete of every doc with `is_active: False`.
+
+    - Super-admin only.
+    - Defaults to `dry_run=true` — returns counts but writes nothing.
+    - `collection=hotels` to scope to one collection; omit to sweep them all.
+    - Skips any collection not in `_PURGEABLE_COLLECTIONS` for safety.
+
+    Use case: after running the seed bootstrap, you may have soft-deleted
+    test records lingering. This nukes them in one shot.
+    """
+    if current_user.get("role") != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only super administrators may purge soft-deleted records.",
+        )
+
+    db = get_database()
+    targets = [collection] if collection else sorted(_PURGEABLE_COLLECTIONS)
+    if collection and collection not in _PURGEABLE_COLLECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Refusing to purge unknown collection '{collection}'.",
+        )
+
+    results: dict[str, dict[str, int]] = {}
+    grand_total = 0
+
+    for coll in targets:
+        criteria = {"is_active": False}
+        count = await db[coll].count_documents(criteria)
+        deleted = 0
+        if not dry_run and count > 0:
+            res = await db[coll].delete_many(criteria)
+            deleted = res.deleted_count
+        results[coll] = {"matched": count, "deleted": deleted}
+        grand_total += deleted
+
+    # Audit the destructive call.
+    if not dry_run and grand_total > 0:
+        await db.activity_logs.insert_one({
+            "_id": str(uuid4()),
+            "action": "admin.purge_soft_deleted",
+            "action_type": "bulk_delete",
+            "entity_type": "database",
+            "entity_id": collection or "all",
+            "entity_name": collection or "all soft-deleted records",
+            "details": f"Hard-deleted {grand_total} soft-deleted records.",
+            "metadata": {"results": results},
+            "user_id": current_user.get("_id"),
+            "user_name": current_user.get("full_name"),
+            "user_email": current_user.get("email"),
+            "user_role": current_user.get("role"),
+            "severity": "WARNING",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    return {
+        "ok": True,
+        "dry_run": dry_run,
+        "grand_total_deleted": grand_total,
+        "results": results,
+    }

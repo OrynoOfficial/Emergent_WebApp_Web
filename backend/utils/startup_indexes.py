@@ -181,6 +181,62 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
              "ix_rollup_operator_date", sparse=True),
     IndexSpec("analytics_daily_rollup", [("service_category", ASCENDING), ("date", ASCENDING)],
              "ix_rollup_category_date"),
+
+    # ── compound (operator_id, is_active) — kills full-scans on the
+    # "my-X" management lists (hotels, restaurants, etc.). These are the
+    # endpoints the operator dashboard hits on every page load.
+    IndexSpec("hotels", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_hotels_op_active", sparse=True),
+    IndexSpec("hotels", [("is_active", ASCENDING)], "ix_hotels_active"),
+    IndexSpec("restaurants", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_restaurants_op_active", sparse=True),
+    IndexSpec("restaurants", [("is_active", ASCENDING)], "ix_restaurants_active"),
+    IndexSpec("cinemas", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_cinemas_op_active", sparse=True),
+    IndexSpec("films", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_films_op_active", sparse=True),
+    IndexSpec("car_rentals", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_carrentals_op_active", sparse=True),
+    IndexSpec("vehicles", [("car_rental_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_vehicles_rental_active", sparse=True),
+    IndexSpec("events", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_events_op_active", sparse=True),
+    IndexSpec("packages", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_packages_op_active", sparse=True),
+    IndexSpec("travel_routes", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+             "ix_routes_op_active", sparse=True),
+
+    # ── notifications (already partly indexed elsewhere, but the unread-
+    # badge hits these on every page nav so the compound shape matters).
+    IndexSpec("notifications", [("user_id", ASCENDING), ("read", ASCENDING), ("created_at", DESCENDING)],
+             "ix_notifs_user_read_created"),
+    # NOTE: (user_id, created_at DESC) already exists under the auto-name
+    # `user_id_1_created_at_-1` — re-declaring with our naming convention
+    # raises IndexOptionsConflict, so we leave it as-is.
+
+    # ── activity_logs (Audit Logs page sorts DESC by created_at, then
+    # filters by user/action — both should be cheap).
+    IndexSpec("activity_logs", [("created_at", DESCENDING)], "ix_audit_created"),
+    IndexSpec("activity_logs", [("user_id", ASCENDING), ("created_at", DESCENDING)],
+             "ix_audit_user_created", sparse=True),
+    IndexSpec("activity_logs", [("action", ASCENDING), ("created_at", DESCENDING)],
+             "ix_audit_action_created"),
+
+    # ── favourites / ratings supplemental ──────────────────────────────
+    IndexSpec("favourites", [("user_id", ASCENDING), ("service_type", ASCENDING)],
+             "ix_favs_user_type"),
+
+    # ── support tickets supplemental ───────────────────────────────────
+    IndexSpec("support_tickets", [("assigned_to", ASCENDING), ("status", ASCENDING)],
+             "ix_tickets_assignee_status", sparse=True),
+
+    # ── system_settings (read on every request via middleware) ─────────
+    IndexSpec("system_settings", [("key", ASCENDING)], "ix_settings_key", unique=True, sparse=True),
+
+    # ── otps (TTL — auto-evict expired OTPs) ───────────────────────────
+    IndexSpec("otps", [("phone", ASCENDING), ("purpose", ASCENDING)], "ix_otp_phone_purpose"),
+    IndexSpec("otps", [("email", ASCENDING), ("purpose", ASCENDING)], "ix_otp_email_purpose", sparse=True),
+    IndexSpec("otps", [("expires_at", ASCENDING)], "ix_otp_ttl", expire_after_seconds=0, sparse=True),
 ]
 
 

@@ -216,8 +216,12 @@ export default function HotelManagement() {
     if (!deleteTarget?.item) return;
     try {
       setSaving(true);
-      await api.delete(`/hotels/${deleteTarget.item._id || deleteTarget.item.id}`);
-      toast.success('Hotel deleted');
+      // Super-admins permanently remove the hotel (cascade-deletes rooms);
+      // everyone else does a soft delete via the same endpoint.
+      const isSuperAdmin = user?.role === 'super_admin';
+      const url = `/hotels/${deleteTarget.item._id || deleteTarget.item.id}${isSuperAdmin ? '?hard=true' : ''}`;
+      await api.delete(url);
+      toast.success(isSuperAdmin ? 'Hotel permanently deleted' : 'Hotel deleted');
       setIsDeleteDialogOpen(false);
       setDeleteTarget(null);
       if ((selectedHotel?._id || selectedHotel?.id) === (deleteTarget.item._id || deleteTarget.item.id)) {
