@@ -697,6 +697,13 @@ export default function BanquetManagement() {
   }
 
   const handleSave = async () => {
+    // Client-side validation. Backend rejects payload with 422 if these are
+    // missing — surface that *before* hitting the wire so the operator sees
+    // exactly what's needed instead of a generic "Failed to save".
+    if (!form.name?.trim()) { toast.error('Service name is required'); return; }
+    if (!form.operator_id) { toast.error('Please pick an operator'); return; }
+    const price = parseFloat(form.base_price);
+    if (!price || price <= 0) { toast.error('Base price must be greater than 0'); return; }
     try {
       const op = operators.find(o => (o._id || o.id) === form.operator_id);
       const payload = {
@@ -709,7 +716,7 @@ export default function BanquetManagement() {
         city: form.city || null,
         capacity_min: form.capacity_min !== '' ? parseInt(form.capacity_min, 10) : null,
         capacity_max: form.capacity_max !== '' ? parseInt(form.capacity_max, 10) : null,
-        base_price: parseFloat(form.base_price) || 0,
+        base_price: price,
         // legacy field kept in sync for backward compat with old search UIs
         price_type: form.pricing_model === 'per_person' ? 'per_person' : 'per_event',
         unit_label: form.unit_label || null,
@@ -733,7 +740,14 @@ export default function BanquetManagement() {
       setIsDialogOpen(false);
       loadServices();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to save');
+      // FastAPI 422 returns `{ detail: [{ loc, msg }, …] }`. Render the
+      // first field error so the user can fix it inline rather than
+      // staring at "[object Object]".
+      const d = err.response?.data?.detail;
+      const msg = Array.isArray(d) && d[0]?.msg
+        ? `${d[0].loc?.slice(-1)?.[0] || 'Field'}: ${d[0].msg}`
+        : (typeof d === 'string' ? d : 'Failed to save service');
+      toast.error(msg);
     }
   };
 

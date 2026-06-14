@@ -142,3 +142,18 @@
 - 8/8 backend feature verdicts PASS (walk-in create/list/lookup/403, notifications dedupe, travel enrichment)
 - Frontend smoke: "Walk-in Booking" button + Bookings tab visible on Travel management
 
+
+### 2026-02-14 — Banquet & Event Services + Perf Hardening + Hotel Hard-Delete
+- **Banquet module pivot** from "halls only" → multi-category event services catalog
+  - 9 categories: hall, rental_item, canopy, photographer, videographer, catering, decoration, sound_lighting, other
+  - 5 pricing models: per_event, per_person, per_hour, per_unit, flat_fee
+  - New fields on `banquets` model: `category`, `pricing_model`, `unit_label`, `min_quantity`, `max_quantity`, `duration_hours`
+  - New `banquet_packages` collection: operator-built bundles with optional bundle discount (subtotal/total computed server-side)
+  - Dedicated `packages_router` at `/api/banquets/packages` to bypass `/{banquet_id}` shadow
+  - `/api/banquets/management/my-venues?category=X` filter added
+  - `/api/admin/db-reset/banquets` super-admin endpoint to wipe legacy hall records (used once to migrate)
+  - Frontend `BanquetManagement.jsx` fully rewritten: "Banquet & Event Services" header, 4 tabs (Dashboard/Services/Packages/Communications), category-aware modal, packages CRUD UI with live subtotal/total preview, category filter chips
+- **Hotel hard-delete (P0 from earlier)**: `?hard=true` flag on DELETE (super_admin only) cascades to rooms; `/management/my-hotels` filters soft-deleted; N+1 replaced with `$lookup` aggregation
+- **Production perf**: GZip middleware (`min_size=500`), 30+ new compound indexes (banquets/restaurants/cinemas/films/vehicles/packages/routes/audit_logs/settings/otps), index ensure on startup
+- **Admin ops endpoints**: `POST /api/admin/db-indexes/ensure`, `POST /api/admin/db-cleanup/purge-soft-deleted` (dry-run by default)
+- **Testing — iteration_207**: Backend 100% (all 20 cases in test_iter206_banquet_services.py PASS); Frontend 75% (modal save UX now adds inline validation + FastAPI 422 field-error display)
