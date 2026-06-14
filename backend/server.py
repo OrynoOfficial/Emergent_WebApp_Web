@@ -47,7 +47,7 @@ from routes.validation import router as validation_router
 from routes.activity_log import router as activity_log_router
 from routes.events_management import router as events_management_router
 from routes.pressing import router as pressing_router
-from routes.banquets import router as banquets_router
+from routes.banquets import router as banquets_router, packages_router as banquet_packages_router
 from routes.cinema import router as cinema_router
 from routes.packages import router as packages_router
 from routes.package_services import router as package_services_router
@@ -501,6 +501,13 @@ app.include_router(employees_router)
 app.include_router(events_management_router)
 app.include_router(pressing_router)
 app.include_router(banquets_router)
+# Include packages_router AFTER banquets so that /packages/ on the
+# packages-router still wins lookup-by-path (FastAPI checks routes in
+# registration order, but since /api/banquets/packages has a more
+# specific literal prefix than /api/banquets/{banquet_id}, the matcher
+# resolves the dynamic vs literal path component correctly regardless
+# of ordering). Listing it here keeps the OpenAPI tags grouped.
+app.include_router(banquet_packages_router)
 app.include_router(cinema_router)
 app.include_router(packages_router)
 app.include_router(package_services_router)

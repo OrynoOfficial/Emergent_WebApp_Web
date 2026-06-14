@@ -445,6 +445,9 @@ async def reset_banquets(
         "banquets_count": banquets_count,
         "packages_count": packages_count,
     }
+
+
+@router.post("/db-cleanup/purge-soft-deleted")
 async def purge_soft_deleted(
     collection: str | None = None,
     dry_run: bool = True,

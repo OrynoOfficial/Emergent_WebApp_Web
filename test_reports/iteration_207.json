@@ -1,0 +1,34 @@
+{
+  "summary": "Iter 207 RE-TEST after iter206 fixes. Backend: ALL 20 pytest cases in test_iter206_banquet_services.py PASS, plus extra curl-verified checks (subtotal=200000, total_price=180000 on 10% discount, hydrated service_name/category in list, my-venues?category=rental_item returns only rental_item, super_admin gets 200 on purge-soft-deleted, customer gets 403, db-reset/banquets gated to super_admin with 403 for customer). Frontend: H1 'Banquet & Event Services', 4 tabs (Dashboard/Services/Packages/Communications), data-testid='add-service-btn' all verified PRESENT. However, UI 'Add Service' save flow returns 422 from POST /api/banquets/ — the modal's operator selector (banquet-operator-selector) was not populated in the automated run so the Pydantic validation rejects the payload (or some other category-dependent field is missing).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BanquetManagement Add Service modal", "issue": "POST /api/banquets/ from the UI returns 422 when saving via the modal in automation (operator_selector default not picked up). Backend itself accepts the same payload via curl. Main agent should verify the modal cannot be saved without an operator selected and either (a) auto-default to super_admin's first operator, or (b) surface a clearer client-side validation message instead of a silent 422 toast.", "selector": "[data-testid='banquet-operator-selector']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter206_banquet_services.py",
+    "/app/test_reports/pytest/iter207.xml"
+  ],
+  "action_items": [
+    "Investigate the 422 on UI 'Add Service' save when operator is not explicitly selected in the OperatorSelector — either auto-pick when super_admin has only one operator-context, or add inline 'Operator is required' validation BEFORE making the API call.",
+    "(Minor) The review request referred to '/admin/banquets' but the actual route registered in App.jsx is '/management/banquets' (and '/management/banquet'). Either add an /admin/banquets alias or correct the spec/docs."
+  ],
+  "critical_code_review_comments": [
+    "BanquetManagement.jsx is ~1045 lines; consider splitting PackagesTab and CategoryAwareFields into dedicated files for maintainability (file-size threshold >700 lines).",
+    "handleSave swallows the underlying 422 detail into a generic toast — surface field-specific errors to help users (currently only err.response?.data?.detail is shown which for FastAPI 422 is a list of objects, not a string)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "75%"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (verified); customer@test.com / testpassword123 (verified for 403 role-guard checks)",
+  "seed_data_creation": "Backend tests create+delete TEST_* services and a TEST_Bundle package. db-reset/banquets was invoked at start of pytest run to clean state. No residual seed left after suite completion.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 20 backend tests in /app/backend/tests/test_iter206_banquet_services.py pass. JUnit XML at /app/test_reports/pytest/iter207.xml. The UI add-service modal requires an operator to be picked via the operator selector before save (otherwise POST /api/banquets/ returns 422). For Playwright tests, after opening the add-service modal: open category select, choose option by role='option', fill name + base_price, then click the [data-testid='banquet-operator-selector'] control and pick the first operator option, THEN click save-service-btn. The route is /management/banquets, not /admin/banquets. Login flow is two-step: gateway 'Login to Your Account' → enter email → 'Continue' → enter password → submit.",
+  "rca_of_the_issue": "Iter206's 5 critical backend issues are FULLY FIXED: (1) /banquets/packages/ POST/GET/PUT/DELETE all reachable on the dedicated APIRouter that bypasses the /{banquet_id} shadow; (2) subtotal/total math correct (verified: 100000 + 500*200 = 200000 subtotal, *0.9 = 180000 total); (3) packages list hydrates service_name+category from a join lookup; (4) my-venues?category=rental_item correctly filters (no category leak); (5) /admin/db-cleanup/purge-soft-deleted endpoint exists with super_admin guard (200 for super_admin, 403 for customer). UI flow has one residual issue: the 422 on add-service from the modal — root cause is the OperatorSelector defaulting to '' for super_admin (no implicit operator context) combined with backend Pydantic validation. This is a minor UX gap, not a regression of iter206 fixes."
+}
