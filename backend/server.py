@@ -61,6 +61,7 @@ from routes.stripe_checkout import router as stripe_checkout_router
 from routes.momo_checkout import router as momo_checkout_router
 from routes.operator_users import router as operator_users_router
 from routes.system_settings import router as system_settings_router
+from routes.admin_bootstrap import router as admin_bootstrap_router
 from routes.operator_roles import router as operator_roles_router
 from routes.resource_reassignments import router as resource_reassignments_router
 from routes.document_templates import router as document_templates_router
@@ -506,6 +507,7 @@ app.include_router(stripe_checkout_router)  # Stripe Checkout integration
 app.include_router(momo_checkout_router)  # MTN MoMo Mobile Money integration
 app.include_router(operator_users_router)  # Operator users management
 app.include_router(system_settings_router)  # System settings (session timeout, etc.)
+app.include_router(admin_bootstrap_router)  # Super-admin one-shot catalogue seed
 app.include_router(operator_roles_router)  # Operator roles and permissions management
 app.include_router(document_templates_router)  # HR Document templates
 app.include_router(database_management_router)  # Database management GUI
