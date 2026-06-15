@@ -23,7 +23,7 @@ import {
   ArrowLeft, PartyPopper, CalendarIcon, Users, MapPin, Phone, Mail, User,
   Loader2, CheckCircle2, Package as PackageIcon, ShoppingBag, Sparkles, Plus,
   Minus, Trash2, Tag, X, DollarSign, CreditCard, Building2, Clock,
-  UserCircle2, Briefcase, Info, ShieldCheck, Headphones,
+  UserCircle2, Briefcase, Info, ShieldCheck, Headphones, AlertCircle,
 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
@@ -176,7 +176,7 @@ const PackageLineCard = ({ pkg, onRemove }) => {
 export default function BanquetCheckout() {
   const navigate = useNavigate();
   const { user, isOperatorUser } = useAuth();
-  const { cart, setMeta, updateQty, removeItem, removePackage, totals, count, clear } = useEventCart();
+  const { cart, setMeta, updateQty, removeItem, removePackage, totals, count, clear, expiresInSeconds, extendHold } = useEventCart();
 
   const [contact, setContact] = useState({
     contact_name: user?.full_name || '',
@@ -372,6 +372,16 @@ export default function BanquetCheckout() {
                 {cart.city && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {cart.city}</span>}
                 {cart.event_date && <span className="inline-flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> {format(eventDateObj, 'MMM d, yyyy')}</span>}
                 {cart.expected_guests > 0 && <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {cart.expected_guests} guests</span>}
+                {expiresInSeconds != null && expiresInSeconds > 0 && count > 0 && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${expiresInSeconds <= 120 ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse' : 'bg-teal-100 text-teal-800 border border-teal-200'}`}
+                    data-testid="co-cart-countdown"
+                    title="Cart auto-clears after 10 minutes of inactivity"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Hold expires in {Math.floor(expiresInSeconds / 60)}:{(expiresInSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -380,6 +390,37 @@ export default function BanquetCheckout() {
 
       <div className="max-w-[1472px] mx-auto px-4 py-8">
         <StepIndicator currentStep={currentStep} />
+
+        {/* Soft warning when cart hold is about to expire (≤2 min) */}
+        {expiresInSeconds != null && expiresInSeconds <= 120 && expiresInSeconds > 0 && count > 0 && (
+          <div
+            className="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3"
+            data-testid="co-expiry-warning"
+            role="status"
+            aria-live="polite"
+          >
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 leading-tight">
+                Your event hold expires in {Math.floor(expiresInSeconds / 60)}:{(expiresInSeconds % 60).toString().padStart(2, '0')}
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Finish checkout now or extend your hold to keep these vendors locked in.
+              </p>
+            </div>
+            {extendHold && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={extendHold}
+                className="h-8 px-3 text-xs border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
+                data-testid="co-extend-hold"
+              >
+                Extend hold +10 min
+              </Button>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ===== LEFT COLUMN ===== */}

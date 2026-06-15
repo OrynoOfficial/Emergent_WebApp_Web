@@ -1,0 +1,43 @@
+{
+  "summary": "Frontend-only test of banquet cart hold countdown + warning UX. Verified BanquetCheckout sticky-header countdown pill, warning banner, and extend button. Found two HIGH-priority gaps: (1) the FAB countdown pill is never visible on /services/banquet because BanquetResults passes hideFab=true to EventCartDrawer — the countdown lives inside the hidden FAB only, and the sticky banquet-cart-strip doesn't surface it; (2) clicking the extend-hold button on the checkout page does NOT reset the timer back to 10:00 — countdown kept ticking (0:26 -> 0:24 after click) and the amber banner stayed up. Could not validate the drawer-side hero pill / warning banner because the test could not open the drawer via the (hidden) FAB; the sticky strip needs its own opener testid.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BanquetResults", "issue": "FAB is rendered with hideFab=true, so [data-testid=event-cart-countdown-fab] is NEVER mounted on /services/banquet. The countdown M:SS pill is only inside the floating Cart Button. The visible sticky strip (banquet-cart-strip) has no countdown pill at all -> the visual cart-hold timer is invisible until the drawer is opened.", "selector": "[data-testid=event-cart-countdown-fab]", "priority": "HIGH"},
+      {"component": "BanquetCheckout / useEventCart.extendHold", "issue": "Clicking [data-testid=co-extend-hold] does NOT reset the timer to 10:00. Observed: countdown text went '0:26' (pre-click) -> '0:24' (1.8s post-click, force-clicked). co-expiry-warning banner remained visible. extendHold in useEventCart.js stamps last_active_at = Date.now(), and the countdown useEffect depends on cart.last_active_at, so the click is either not firing or the state update isn't propagating. Same code path is used by event-cart-extend-hold in the drawer — likely broken there too.", "selector": "[data-testid=co-extend-hold]", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Open EventCartDrawer from BanquetResults", "issue": "Drawer FAB is hidden (hideFab=true) and there is no documented testid on the sticky cart strip's open-drawer button, so the drawer cannot be opened programmatically by automation. Could not exercise event-cart-countdown-hero / event-cart-expiry-warning / event-cart-extend-hold from /services/banquet via the deployed UI.", "affected_selectors": ["[data-testid=event-cart-fab]", "[data-testid=banquet-cart-strip]"]}
+    ],
+    "design_issues": [
+      {"screen": "/services/banquet", "issues": ["No visible cart-hold countdown anywhere in the persistent UI until the drawer is opened — defeats the purpose of surfacing the 10-min hold."]}
+    ]
+  },
+  "verified_working": [
+    "[data-testid=co-cart-countdown] renders with 'Hold expires in M:SS' text",
+    "co-cart-countdown switches to amber + animate-pulse classes when expiresInSeconds <= 120",
+    "[data-testid=co-expiry-warning] amber banner renders with 'Your event hold expires in X:XX' copy when <=2 min remaining",
+    "[data-testid=co-extend-hold] button renders inside the warning banner",
+    "Banquet checkout page loads and shows the step indicator with sticky header (no console errors related to cart-hold UX)"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "BanquetResults: either flip hideFab to false on /services/banquet, OR add a duplicate countdown pill (data-testid=event-cart-countdown-fab or equivalent) directly into the banquet-cart-strip so the timer is always visible.",
+    "Debug why clicking co-extend-hold / event-cart-extend-hold does not reset last_active_at. Likely candidates: (a) the click is being intercepted/no-op, (b) onClick prop isn't actually wired through, (c) extendHold closure stale. Add a quick console.log inside extendHold and verify in DevTools. Manual repro: seed cart with last_active_at = Date.now() - 9.5*60*1000, open /services/banquet/checkout, click 'Extend hold +10 min' — the pill should jump to 10:00 within ~1s but it doesn't.",
+    "Once extendHold reset is fixed, retest event-cart-extend-hold inside the drawer too (it uses the same hook action).",
+    "Add a data-testid to the sticky banquet-cart-strip's open-drawer button so automation can reach the drawer without relying on the FAB."
+  ],
+  "critical_code_review_comments": [
+    "EventCartDrawer renders the countdown pill ONLY inside the FAB Button; when hideFab=true (BanquetResults case) the pill becomes inaccessible. Surface should be moved to a component that's always visible regardless of hideFab, or duplicated into the parent sticky strip.",
+    "useEventCart.extendHold uses setCart(c => ({...c, last_active_at: Date.now()})). That should work, but the observed UI shows the timer doesn't reset — suggests the handler isn't reaching that line. Worth adding a unit-style click trace.",
+    "Many 429 'Too Many Requests' responses observed in console on banquet route — orthogonal to this task but worth a separate look (rate limiter likely hammered by repeated permissions fetches)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "~40% (checkout pill+warning render; FAB pill missing on Results; extend-hold does not reset timer)"},
+  "test_credentials": "customer@test.com / testpassword123 (used)",
+  "seed_data_creation": "Used localStorage seeding of oryno:event-cart to simulate warning state (last_active_at = now - 9m30s) and fresh state (last_active_at = now).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login is two-step: Login to Your Account -> email -> Continue -> password -> Sign In. After login, navigate to /services/banquet or /services/banquet/checkout and seed localStorage via the snippet in the request. The FAB on /services/banquet is hidden — to open the drawer you'll need to click the sticky banquet-cart-strip (currently no testid on its open button). Checkout testids work; their values do not auto-reset on extend click.",
+  "rca of the issue": "BUG #1 root cause: BanquetResults.jsx passes hideFab=true to EventCartDrawer, which short-circuits the entire SheetTrigger Button JSX where event-cart-countdown-fab lives. The countdown is never rendered to the DOM on that route. Mitigation: render a parallel countdown pill in the sticky banquet-cart-strip (line ~603 of BanquetResults.jsx), or conditionally render the pill outside the FAB Button. BUG #2 root cause: not yet pinpointed in code — extendHold's setCart pattern looks correct, so the most likely culprit is that the onClick isn't actually firing or the button isn't receiving the click in the observed environment. Repro: 30s-remaining seed -> checkout -> click Extend hold +10 min -> expect 10:00, actual 0:24."
+}

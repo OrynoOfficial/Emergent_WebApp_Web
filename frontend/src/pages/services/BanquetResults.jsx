@@ -719,6 +719,8 @@ export default function BanquetResults() {
         totals={totals}
         count={count}
         clear={clear}
+        expiresInSeconds={cartApi.expiresInSeconds}
+        onExtendHold={cartApi.extendHold}
       />
     </div>
   );

@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   ShoppingBag, X, Trash2, Package as PackageIcon, Sparkles, ArrowRight,
-  ChevronLeft, ChevronRight, MapPin, Users,
+  ChevronLeft, ChevronRight, MapPin, Users, Clock, AlertTriangle,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 
@@ -27,6 +27,14 @@ const CATEGORY_LABEL = {
   photographer: 'Photographer', videographer: 'Videographer',
   catering: 'Catering', decoration: 'Decoration',
   sound_lighting: 'Sound & Lighting', other: 'Other',
+};
+
+// Format seconds → "M:SS" for the cart hold countdown pill
+const formatCountdown = (secs) => {
+  if (secs == null || secs < 0) return null;
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
 // Compact swipeable carousel for cart line thumbnails.
@@ -102,11 +110,16 @@ function CartThumbCarousel({ images, name }) {
 export default function EventCartDrawer({
   cart, updateQty, removeItem, removePackage, totals, count, clear,
   open: openProp, onOpenChange, hideFab = false,
+  expiresInSeconds = null, onExtendHold,
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = openProp != null ? openProp : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
   const navigate = useNavigate();
+
+  // Cart-hold UX — surface the live 10-min countdown, warn at ≤2 min remaining.
+  const countdown = formatCountdown(expiresInSeconds);
+  const isWarning = expiresInSeconds != null && expiresInSeconds <= 120 && expiresInSeconds > 0 && count > 0;
 
   // event_date is collected at checkout (mirrors the Laundry flow) — never block here.
   const goCheckout = () => {
@@ -130,6 +143,15 @@ export default function EventCartDrawer({
             {totals.total > 0 && (
               <span className="ml-3 hidden sm:inline font-semibold">{formatFCFA(totals.total)}</span>
             )}
+            {countdown && count > 0 && (
+              <span
+                className={`ml-2 inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${isWarning ? 'bg-amber-400 text-amber-900 animate-pulse' : 'bg-white/25 text-white'}`}
+                data-testid="event-cart-countdown-fab"
+                title="Cart auto-clears after 10 minutes of inactivity"
+              >
+                <Clock className="w-3 h-3" /> {countdown}
+              </span>
+            )}
           </Button>
         </SheetTrigger>
       )}
@@ -137,8 +159,17 @@ export default function EventCartDrawer({
         {/* Hero strip */}
         <div className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white px-6 py-5">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2 text-white text-xl">
-              <ShoppingBag className="w-5 h-5" /> Your Event Cart
+            <SheetTitle className="flex items-center justify-between gap-2 text-white text-xl">
+              <span className="flex items-center gap-2"><ShoppingBag className="w-5 h-5" /> Your Event Cart</span>
+              {countdown && count > 0 && (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-1 ${isWarning ? 'bg-amber-400 text-amber-900' : 'bg-white/20 text-white'}`}
+                  data-testid="event-cart-countdown-hero"
+                  title="Cart auto-clears after 10 minutes of inactivity"
+                >
+                  <Clock className="w-3 h-3" /> {countdown}
+                </span>
+              )}
             </SheetTitle>
             <p className="text-sm text-white/85">
               {count === 0 ? 'Curate your perfect event from a hall, chairs, photographer & more.' : (
@@ -149,6 +180,37 @@ export default function EventCartDrawer({
             </p>
           </SheetHeader>
         </div>
+
+        {/* Soft warning when the hold is about to expire — appears at ≤2 min */}
+        {isWarning && (
+          <div
+            className="mx-5 mt-4 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3"
+            data-testid="event-cart-expiry-warning"
+            role="status"
+            aria-live="polite"
+          >
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 leading-tight">
+                Your event hold expires in {countdown}
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Checkout now or extend your hold to keep these vendors locked in.
+              </p>
+              {onExtendHold && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onExtendHold}
+                  className="mt-2 h-7 px-3 text-xs border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
+                  data-testid="event-cart-extend-hold"
+                >
+                  Extend hold +10 min
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="px-5 py-4 space-y-3">
           {count === 0 ? (
