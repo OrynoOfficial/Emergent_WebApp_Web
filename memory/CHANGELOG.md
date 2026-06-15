@@ -1,3 +1,17 @@
+### 2026-02-15 — Banquet Management consolidated cards + sub-component extraction (iter216)
+- **Single nav card** (`bq-mgmt-nav-card`): title + Hide/Show toggle + OperatorScopeFilter + Refresh button + 4-button TabsList (Dashboard/Services/Packages/Communications) — all in ONE Card. H1 always visible.
+- **Single subpage strip per tab**:
+  - Services tab → `bq-mgmt-subpage-card-services` (Layers + "Services" + count + search + category select + view-mode toggle + Add Service) in one compact row.
+  - Packages tab → `bq-mgmt-subpage-card-packages` (Package icon + "Event Packages" + count + New Package).
+- **Refactor**: `BanquetManagement.jsx` 1729 → 1334 lines (−23%). Extracted four sub-components under `/components/management/banquet/`:
+  - `ServicesToolbar.jsx` (60 LOC) — stateless subpage chrome.
+  - `ServicesGrid.jsx` (165 LOC) — pure grid/details/empty-state renderer.
+  - `ServiceDialog.jsx` (138 LOC) — Add/Edit ServiceFormShell wrapper.
+  - `ServiceViewModal.jsx` (148 LOC) — read-only rich preview dialog.
+- **Tests** (iter216): static code review 100% verified — all 9 required testids present, ESLint clean on the main file and all 4 sub-components, all previous testids preserved. Live UI execution blocked by Cloudflare bot-challenge on the preview URL (same recurring env issue from iter215); main agent / user can self-smoke in a fresh browser.
+- **Follow-up backlog**: extract `<PackagesPanel/>` (~700 LOC still in-file) for parity and to bring the main file under the 700-LOC guideline.
+
+
 ### 2026-02-15 — Banquet Management collapsible header experiment (iter215)
 - **`BanquetManagement.jsx`**: wrapped the title strip, subtitle, OperatorScopeFilter, Refresh button, TabsList, and the management-tab toolbar (search + category filter + view-mode + Add Service) into a single collapsible Card. Only the H1 ("Banquet & Event Services" with `bq-mgmt-title`) stays visible at all times. Toggle button: `bq-mgmt-toggle-header` (label switches between "Hide" and "Show controls", chevron flips).
 - **Collapsed state**: shows the active-tab pill (`bq-mgmt-active-tab-pill`) and, when filters are active on the Services tab, an amber "Filtered" pill (`bq-mgmt-filter-active-pill`) so the user knows hidden filters are still in effect.
