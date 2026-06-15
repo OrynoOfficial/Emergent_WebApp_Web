@@ -1,3 +1,11 @@
+### 2026-02-15 — Management consolidation rolled out to 5 more pages + Banquet refactored to use the shared shell (iter217)
+- **Built `<ManagementShell>`** (shared nav-card chrome) and `<SubpageCard>` (shared subpage modal-strip) under `/components/management/shared/`. Reusable across the marketplace.
+- **Migrated**: `CinemaManagement.jsx`, `HotelManagement.jsx`, `LaundryManagement.jsx`, `TravelManagement.jsx`, `CarRentalManagement.jsx`, and retroactively `BanquetManagement.jsx` — all six now render a single nav Card containing title + collapsible (subtitle + scope filter + Refresh + TabsList). Testid prefixes: `cinema-mgmt`, `hotel-mgmt`, `laundry-mgmt`, `travel-mgmt`, `carrental-mgmt`, `bq-mgmt`.
+- **Tailwind safety**: replaced the dynamic `grid-cols-${n}` template with a static lookup so Tailwind JIT always generates the right grid class (handles 1–6 tabs).
+- **Tested** (iter217): 6/6 PASS, 100% frontend success. Hotel "Rooms" tab `disabled={!selectedHotel}` correctly flows through.
+- **Note**: Hotel route is `/management/hotels` (plural) in App.jsx — not `/management/hotel`.
+
+
 ### 2026-02-15 — Banquet Management consolidated cards + sub-component extraction (iter216)
 - **Single nav card** (`bq-mgmt-nav-card`): title + Hide/Show toggle + OperatorScopeFilter + Refresh button + 4-button TabsList (Dashboard/Services/Packages/Communications) — all in ONE Card. H1 always visible.
 - **Single subpage strip per tab**:

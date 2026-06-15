@@ -39,7 +39,18 @@ export default function ManagementShell({
     || (tabs.find(t => t.value === activeTab)?.label)
     || activeTab;
 
-  const cols = `grid w-full grid-cols-${Math.min(tabs.length, 6)} h-9 bg-slate-100/70`;
+  // Static lookup so Tailwind JIT can statically extract every class. A
+  // dynamic `grid-cols-${n}` template would silently bail out for tab counts
+  // not already used elsewhere in the codebase.
+  const COLS_BY_COUNT = {
+    1: 'grid w-full grid-cols-1 h-9 bg-slate-100/70',
+    2: 'grid w-full grid-cols-2 h-9 bg-slate-100/70',
+    3: 'grid w-full grid-cols-3 h-9 bg-slate-100/70',
+    4: 'grid w-full grid-cols-4 h-9 bg-slate-100/70',
+    5: 'grid w-full grid-cols-5 h-9 bg-slate-100/70',
+    6: 'grid w-full grid-cols-6 h-9 bg-slate-100/70',
+  };
+  const cols = COLS_BY_COUNT[Math.min(tabs.length, 6)] || COLS_BY_COUNT[3];
 
   return (
     <div className="p-6 space-y-4">
