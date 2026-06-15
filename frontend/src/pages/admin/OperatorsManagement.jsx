@@ -27,6 +27,8 @@ import OperatorTeamManagement from '@/components/management/OperatorTeamManageme
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotel', 'travel', 'car_rental', 'restaurant', 'events', 'cinema', 'laundry', 'banquet', 'package'];
@@ -366,22 +368,21 @@ export default function OperatorsManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="operator-management-title">Operator Management</h1>
-          <p className="text-slate-500 mt-1">Manage service providers and operators</p>
-        </div>
-        {canManageOperators && (
-          <Button className="bg-[#082c59] hover:bg-[#0a3a75]" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+    <>
+      <ManagementShell
+        title="Operator Management"
+        icon={Building}
+        subtitle="Manage service providers and operators"
+        scopeFilter={canManageOperators && (
+          <Button className="bg-[#082c59] hover:bg-[#0a3a75] h-8" size="sm" onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
             Add Operator
           </Button>
         )}
-      </div>
-
-      {/* Sub-page tabs */}
+        testIdPrefix="operator-mgmt"
+        activeTab="operators"
+      >
+      {/* OperatorSectionTabs handles its own routing (operators/geography/market-segments/categories) */}
       <Tabs value={location.pathname.includes('/geography') ? 'geography' : location.pathname.includes('/market-segments') ? 'market-segments' : location.pathname.includes('/categories') ? 'categories' : 'operators'} onValueChange={(v) => {
         if (v === 'operators') navigate('/admin/operators');
         else if (v === 'geography') navigate('/admin/operators/geography');
@@ -391,6 +392,7 @@ export default function OperatorsManagement() {
         <TabsList className="hidden" /> {/* legacy stub — replaced by <OperatorSectionTabs/> below */}
       </Tabs>
       <OperatorSectionTabs />
+      <TabsContent value="operators" className="mt-4 space-y-4" forceMount>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -462,13 +464,12 @@ export default function OperatorsManagement() {
       </div>
 
       {/* Filters */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-3">
+      <SubpageCard title="Filters" icon={Search} testId="operator-filters-card">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input
               placeholder="Search operators..."
-              className="pl-10 bg-white"
+              className="pl-9 h-8 bg-white text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               data-testid="operator-search"
@@ -506,9 +507,8 @@ export default function OperatorsManagement() {
           <div className="ml-auto">
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </div>
-        </div>
         {showFilters && (
-          <div className="flex flex-wrap gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200" data-testid="expanded-filters">
+          <div className="flex flex-wrap gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 w-full mt-2" data-testid="expanded-filters">
             <div className="min-w-[180px]">
               <Label className="text-xs text-slate-500 mb-1 block">Owner</Label>
               <Input placeholder="Filter by owner..." value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)} className="bg-white h-9 text-sm" data-testid="owner-filter" />
@@ -523,7 +523,7 @@ export default function OperatorsManagement() {
             </div>
           </div>
         )}
-      </div>
+      </SubpageCard>
 
       {/* Operators — list / grid / details */}
       {loading ? (
@@ -1128,6 +1128,8 @@ export default function OperatorsManagement() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </TabsContent>
+      </ManagementShell>
+    </>
   );
 }

@@ -18,6 +18,8 @@ import {
 import { formatCurrency } from '../../utils/currency';
 import { formatDate, formatDateShort } from '../../utils/dateUtils';
 import api from '../../api/client';
+import ManagementShell from '../../components/management/shared/ManagementShell';
+import SubpageCard from '../../components/management/shared/SubpageCard';
 import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput } from '../../components/shared/AdminModal';
 import { Label } from '../../components/ui/label';
@@ -76,7 +78,6 @@ export default function AdminLoyaltyView() {
   const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [alertForm, setAlertForm] = useState({ title: '', message: '', target_type: 'subscribers', target_user_id: '', service_type: 'general' });
   const [submittingComm, setSubmittingComm] = useState(false);
-  const [opSubscriberCount, setOpSubscriberCount] = useState(0);
 
   const createPromotion = async () => {
     if (!promoForm.title.trim() || !promoForm.message.trim()) {
@@ -310,9 +311,26 @@ export default function AdminLoyaltyView() {
   );
 
   return (
-    <div className="space-y-6">
+    <ManagementShell
+      title="Loyalty Program"
+      icon={Crown}
+      iconColorClass="text-amber-500"
+      subtitle={isOperator ? 'Manage promotions and alerts for your services' : 'Manage rewards, points, and member tiers'}
+      tabs={isOperator ? [
+        { value: 'operator-rewards', label: 'Promo & Alerts', icon: Megaphone, testId: 'operator-rewards-tab' },
+      ] : [
+        { value: 'overview', label: 'Overview', icon: BarChart3 },
+        { value: 'rewards', label: 'Rewards', icon: Gift },
+        { value: 'operator-rewards', label: 'Op. Rewards', icon: Megaphone, testId: 'operator-rewards-tab' },
+        { value: 'members', label: 'Members', icon: Users },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="loyalty-mgmt"
+    >
       {/* Stats Overview — operators see metrics scoped to their own promotions
           and alerts; admins keep the global loyalty rollup. */}
+      <div className="mt-4 mb-4">
       {isOperator ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="operator-promo-stats">
           <Card className="bg-gradient-to-br from-purple-600 to-fuchsia-700 border-0 text-white">
@@ -388,21 +406,7 @@ export default function AdminLoyaltyView() {
           </Card>
         </div>
       )}
-
-      {/* Tabs — operators get a skewed view with only Promo & Alerts (their tenant scope). */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {isOperator ? (
-          <TabsList className="grid w-full grid-cols-1 mb-6 bg-slate-100">
-            <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Promo & Alerts</TabsTrigger>
-          </TabsList>
-        ) : (
-          <TabsList className="grid w-full grid-cols-4 mb-6 bg-slate-100">
-            <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><BarChart3 className="w-4 h-4" /> Overview</TabsTrigger>
-            <TabsTrigger value="rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Gift className="w-4 h-4" /> Rewards</TabsTrigger>
-            <TabsTrigger value="operator-rewards" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm" data-testid="operator-rewards-tab"><Megaphone className="w-4 h-4" /> Op. Rewards</TabsTrigger>
-            <TabsTrigger value="members" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white text-xs sm:text-sm"><Users className="w-4 h-4" /> Members</TabsTrigger>
-          </TabsList>
-        )}
+      </div>
 
         {/* === OVERVIEW TAB === */}
         <TabsContent value="overview" className="space-y-6 mt-6">
@@ -765,7 +769,6 @@ export default function AdminLoyaltyView() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
       {/* Reward Create/Edit Modal */}
       <AdminModal
@@ -1115,6 +1118,6 @@ export default function AdminLoyaltyView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ManagementShell>
   );
 }

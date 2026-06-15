@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import ManagementShell from '../components/management/shared/ManagementShell';
 import { 
   Star, MessageSquare, ThumbsUp, Calendar, Search, Filter,
   Hotel, Utensils, Bus, Car, Film, Sparkles, Package, Gift,
@@ -20,7 +21,7 @@ import {
   Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
   PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List, Bell
 } from 'lucide-react';
-import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 import { toast } from 'sonner';
 import MessagesTab from './loyalty/MessagesTab';
 import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
@@ -171,7 +172,7 @@ function CustomerRatingsView() {
       setRatings(prev => prev.map(r => r.id === editingRating.id ? { ...r, comment: editComment } : r));
       setEditingRating(null);
       toast.success('Review updated successfully!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to update review');
     }
   };
@@ -634,7 +635,7 @@ function OperatorRatingsView() {
       setReplyingTo(null);
       setReplyText('');
       toast.success('Response submitted successfully!');
-    } catch (error) {
+    } catch {
       toast.error('Failed to submit response');
     } finally {
       setSubmittingReply(false);
@@ -1755,10 +1756,7 @@ function AdminReportsView() {
     value: c.count
   })) || [];
 
-  const responseRateData = by_category?.map(c => ({
-    category: c.category?.charAt(0).toUpperCase() + c.category?.slice(1).replace('_', ' '),
-    rate: c.response_rate
-  })) || [];
+  // responseRateData removed - was unused
 
   return (
     <div className="space-y-6" data-testid="ratings-reports">
@@ -2163,7 +2161,7 @@ function ModerationQueueView() {
       toast.success(`${selectedIds.size} rating(s) ${action}ed`);
       setSelectedIds(new Set());
       fetchQueue();
-    } catch (err) {
+    } catch {
       toast.error('Action failed');
     } finally {
       setProcessingAction(false);
@@ -2430,79 +2428,46 @@ export default function Ratings() {
   const isOperator = user?.role === 'operator' || isOperatorUser;
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
-  // Support deep linking via ?tab=messages
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
+  // Sync activeTab when ?tab= query parameter changes (adjusted during render per React docs)
+  const tabParam = searchParams.get('tab');
+  const [prevTabParam, setPrevTabParam] = useState(tabParam);
+  if (tabParam !== prevTabParam) {
+    setPrevTabParam(tabParam);
     if (tabParam === 'messages') setActiveTab('messages');
-  }, [searchParams]);
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="ratings-title">
-            {isAdmin ? 'All Ratings' : isOperator ? 'Customer Reviews' : 'My Ratings & Reviews'}
-          </h1>
-          <p className="text-slate-600">
-            {isAdmin
-              ? 'View, moderate, and analyze ratings across the platform'
-              : isOperator 
-              ? 'Manage and respond to customer feedback for your services'
-              : 'Reviews you\'ve left for services you\'ve used'}
-          </p>
-        </div>
-        {isAdmin && (
-          <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-        )}
-      </div>
-
-      {/* Admin View with Tabs */}
+    <ManagementShell
+      title={isAdmin ? 'All Ratings' : isOperator ? 'Customer Reviews' : 'My Ratings & Reviews'}
+      icon={Star}
+      iconColorClass="text-amber-500"
+      subtitle={isAdmin
+        ? 'View, moderate, and analyze ratings across the platform'
+        : isOperator 
+        ? 'Manage and respond to customer feedback for your services'
+        : 'Reviews you\'ve left for services you\'ve used'}
+      scopeFilter={isAdmin && (
+        <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+      )}
+      tabs={isAdmin ? [
+        { value: 'ratings', label: 'All Ratings', icon: MessageSquare, testId: 'ratings-tab' },
+        { value: 'queue', label: 'Queue', icon: ShieldAlert, testId: 'queue-tab' },
+        { value: 'audit', label: 'Audit Log', icon: Activity, testId: 'audit-tab' },
+        { value: 'reports', label: 'Reports', icon: BarChart3, testId: 'reports-tab' },
+        { value: 'messages', label: 'Notifications', icon: Bell, testId: 'admin-messages-tab' },
+      ] : isOperator ? [
+        { value: 'ratings', label: 'Customer Reviews', icon: Star, testId: 'operator-reviews-tab' },
+        { value: 'messages', label: 'Notifications', icon: Bell, testId: 'operator-messages-tab' },
+      ] : [
+        { value: 'ratings', label: 'My Reviews', icon: Star, testId: 'my-reviews-tab' },
+        { value: 'messages', label: 'Messages', icon: MessageSquare, testId: 'ratings-messages-tab' },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="ratings-mgmt"
+    >
       {isAdmin ? (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-6 bg-slate-100">
-            <TabsTrigger 
-              value="ratings" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
-              data-testid="ratings-tab"
-            >
-              <MessageSquare className="h-4 w-4" />
-              All Ratings
-            </TabsTrigger>
-            <TabsTrigger 
-              value="queue" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
-              data-testid="queue-tab"
-            >
-              <ShieldAlert className="h-4 w-4" />
-              Queue
-            </TabsTrigger>
-            <TabsTrigger 
-              value="audit" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
-              data-testid="audit-tab"
-            >
-              <Activity className="h-4 w-4" />
-              Audit Log
-            </TabsTrigger>
-            <TabsTrigger 
-              value="reports" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
-              data-testid="reports-tab"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Reports
-            </TabsTrigger>
-            <TabsTrigger 
-              value="messages" 
-              className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white"
-              data-testid="admin-messages-tab"
-            >
-              <Bell className="h-4 w-4" />
-              Notifications
-            </TabsTrigger>
-          </TabsList>
-
+        <>
           <TabsContent value="ratings" className="mt-6">
             <AdminRatingsView />
           </TabsContent>
@@ -2526,17 +2491,9 @@ export default function Ratings() {
               initialSubTab={searchParams.get('subtab')}
             />
           </TabsContent>
-        </Tabs>
+        </>
       ) : isOperator ? (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
-            <TabsTrigger value="ratings" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="operator-reviews-tab">
-              <Star className="h-4 w-4" /> Customer Reviews
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="operator-messages-tab">
-              <Bell className="h-4 w-4" /> Notifications
-            </TabsTrigger>
-          </TabsList>
+        <>
           <TabsContent value="ratings" className="mt-6">
             <OperatorRatingsView />
           </TabsContent>
@@ -2547,17 +2504,9 @@ export default function Ratings() {
               initialSubTab={searchParams.get('subtab')}
             />
           </TabsContent>
-        </Tabs>
+        </>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
-            <TabsTrigger value="ratings" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="my-reviews-tab">
-              <Star className="h-4 w-4" /> My Reviews
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="ratings-messages-tab">
-              <MessageSquare className="h-4 w-4" /> Messages
-            </TabsTrigger>
-          </TabsList>
+        <>
           <TabsContent value="ratings" className="mt-6">
             <CustomerRatingsView />
           </TabsContent>
@@ -2568,8 +2517,8 @@ export default function Ratings() {
               initialSubTab={searchParams.get('subtab')}
             />
           </TabsContent>
-        </Tabs>
+        </>
       )}
-    </div>
+    </ManagementShell>
   );
 }

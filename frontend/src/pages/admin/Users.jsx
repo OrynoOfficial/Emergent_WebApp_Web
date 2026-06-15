@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import UserDetailModal from '../../components/modals/UserDetailModal';
 import InvitationsManagement from './InvitationsManagement';
 import OperatorPicker from '../../components/shared/OperatorPicker';
@@ -17,6 +17,8 @@ import AddUserWizard from '../../components/admin/AddUserWizard';
 import { activityLogger } from '../../utils/activityLogger';
 import { toast } from 'sonner';
 import { formatDate } from '../../utils/dateUtils';
+import ManagementShell from '../../components/management/shared/ManagementShell';
+import SubpageCard from '../../components/management/shared/SubpageCard';
 
 // Role hierarchy for permission checks
 const ROLE_HIERARCHY = {
@@ -83,7 +85,6 @@ export default function UserManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [addUserOpen, setAddUserOpen] = useState(false);
   const [activeView, setActiveView] = useState('users'); // 'users' or 'invitations'
   const [createForm, setCreateForm] = useState({
     email: '',
@@ -255,6 +256,7 @@ export default function UserManagement() {
   };
 
   // Kept for backwards-compat in case any external caller still uses createForm; the wizard is the primary path now.
+  // eslint-disable-next-line no-unused-vars
   const handleCreateUser = async () => {
     if ((createForm.role === 'admin' || createForm.role === 'super_admin') && currentUserRole !== 'super_admin') {
       toast.error('Only super admins can create admin or super admin accounts');
@@ -370,47 +372,42 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="user-management-title">User Management</h1>
-          <p className="text-slate-500 mt-1">Manage system users, roles, and permissions</p>
-        </div>
-        <Button
-          className="bg-[#082c59] hover:bg-[#0a3a75]"
-          onClick={() => setIsCreateModalOpen(true)}
-          data-testid="add-user-btn"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
-      </div>
-
-      {/* Sub-page tabs */}
-      <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : activeView === 'invitations' ? 'invitations' : 'users'} onValueChange={(v) => {
-        if (v === 'users') { navigate('/admin/users'); setActiveView('users'); }
-        else if (v === 'permissions') navigate('/admin/users/permissions');
-        else if (v === 'invitations') setActiveView('invitations');
-      }}>
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100" data-testid="user-management-tabs">
-          <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-users">
-            <Users className="w-4 h-4" />Users
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-permissions">
-            <ShieldCheck className="w-4 h-4" />Permissions
-          </TabsTrigger>
-          <TabsTrigger value="invitations" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-invitations">
-            <Send className="w-4 h-4" />Invitations
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+    <>
+      <ManagementShell
+        title="User Management"
+        icon={Users}
+        iconColorClass="text-[#082c59]"
+        subtitle="Manage system users, roles, and permissions"
+        scopeFilter={
+          <Button
+            className="bg-[#082c59] hover:bg-[#0a3a75] h-8"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            data-testid="add-user-btn"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add User
+          </Button>
+        }
+        tabs={[
+          { value: 'users', label: 'Users', icon: Users, testId: 'tab-users' },
+          { value: 'permissions', label: 'Permissions', icon: ShieldCheck, testId: 'tab-permissions' },
+          { value: 'invitations', label: 'Invitations', icon: Send, testId: 'tab-invitations' },
+        ]}
+        activeTab={location.pathname.includes('/permissions') ? 'permissions' : activeView === 'invitations' ? 'invitations' : 'users'}
+        onTabChange={(v) => {
+          if (v === 'users') { navigate('/admin/users'); setActiveView('users'); }
+          else if (v === 'permissions') navigate('/admin/users/permissions');
+          else if (v === 'invitations') setActiveView('invitations');
+        }}
+        testIdPrefix="user-mgmt"
+      >
 
       {/* Show Invitations view or Users list */}
-      {activeView === 'invitations' ? (
+      <TabsContent value="invitations" className="mt-4">
         <InvitationsManagement />
-      ) : (
-      <>
+      </TabsContent>
+      <TabsContent value="users" className="mt-4 space-y-4">
 
       {/* Role Permission Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
@@ -428,8 +425,7 @@ export default function UserManagement() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3" data-testid="user-filters">
-        <div className="flex flex-wrap gap-3">
+      <SubpageCard title="Filters" icon={Search} count={filteredUsers.length} testId="user-filters-card">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
@@ -480,9 +476,8 @@ export default function UserManagement() {
               <FileText className="h-4 w-4" />
             </button>
           </div>
-        </div>
         {/* Date-joined range */}
-        <div className="flex flex-wrap gap-3 items-center text-sm">
+        <div className="flex flex-wrap gap-3 items-center text-sm w-full mt-2 pt-2 border-t border-slate-100">
           <Label className="text-slate-500 flex items-center gap-1.5"><Calendar className="h-4 w-4" /> Joined</Label>
           <Input
             type="date"
@@ -508,7 +503,7 @@ export default function UserManagement() {
             Showing {pagedUsers.length} of {filteredUsers.length} user(s)
           </span>
         </div>
-      </div>
+      </SubpageCard>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -776,8 +771,8 @@ export default function UserManagement() {
           </div>
         </div>
       )}
-      </>
-      )}
+      </TabsContent>
+      </ManagementShell>
 
       {/* User Detail Modal */}
       <UserDetailModal
@@ -869,6 +864,6 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

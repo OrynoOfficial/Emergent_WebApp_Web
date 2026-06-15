@@ -1,20 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsContent } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format } from 'date-fns';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import {
   FileText, Download, Calendar as CalendarIcon, Filter,
   BarChart3, PieChart, TrendingUp, DollarSign, Users,
   Clock, CheckCircle, Eye, Printer, Mail, RefreshCw
 } from 'lucide-react';
-import { formatFCFA } from '@/utils/currency';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter from '@/components/common/QuickDateRangeFilter';
 import api from '@/api/client';
@@ -84,22 +83,22 @@ export default function Reporting() {
     // In production, this would generate the actual report
   };
 
+  const [activeTab, setActiveTab] = React.useState('generate');
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Reports & Analytics</h1>
-          <p className="text-gray-600">Generate and manage business reports</p>
-        </div>
-      </div>
-
-      <Tabs defaultValue="generate" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="generate">Generate</TabsTrigger>
-          <TabsTrigger value="saved">Saved Reports</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
-        </TabsList>
-
+    <ManagementShell
+      title="Reports & Analytics"
+      icon={FileText}
+      subtitle="Generate and manage business reports"
+      tabs={[
+        { value: 'generate', label: 'Generate' },
+        { value: 'saved', label: 'Saved Reports' },
+        { value: 'scheduled', label: 'Scheduled' },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="reports-mgmt"
+    >
         {/* Generate Report Tab */}
         <TabsContent value="generate" className="space-y-6 mt-6">
           <Card>
@@ -327,7 +326,6 @@ export default function Reporting() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
-    </div>
+    </ManagementShell>
   );
 }

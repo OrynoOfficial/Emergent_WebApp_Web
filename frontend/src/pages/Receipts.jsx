@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { formatDate, formatDateTime, formatDateLong } from '../utils/dateUtils';
+import { formatDate } from '../utils/dateUtils';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -17,6 +17,9 @@ import { formatCurrency } from '../utils/currency';
 import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '../components/common/QuickDateRangeFilter';
 import ViewModeToggle from '../components/common/ViewModeToggle';
+import ManagementShell from '../components/management/shared/ManagementShell';
+import SubpageCard from '../components/management/shared/SubpageCard';
+import { TabsContent } from '../components/ui/tabs';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -285,36 +288,31 @@ export default function Receipts() {
     const hasActiveFilters = searchQuery || serviceFilter !== 'all' || statusFilter !== 'all' || sortBy !== 'date_desc' || operatorFilter || dateRange.preset !== 'all';
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3" data-testid="receipts-title">
-                        <div className="p-2 bg-[#082c59] rounded-lg">
-                            <Receipt className="h-6 w-6 text-white" />
-                        </div>
-                        {isAllReceiptsView ? 'All Receipts' : 'Receipts'}
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                        {isAllReceiptsView 
-                            ? 'View and manage all receipts across the platform'
-                            : isOperator
-                            ? 'View receipts for your services'
-                            : 'View and download your payment receipts'}
-                    </p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                    <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
-                    <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                </div>
-            </div>
-
-            {/* Admin operator filter */}
-            {isAllReceiptsView && (
-                <div className="flex">
-                    <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-                </div>
-            )}
+        <>
+          <ManagementShell
+            title={isAllReceiptsView ? 'All Receipts' : 'Receipts'}
+            icon={Receipt}
+            subtitle={isAllReceiptsView 
+              ? 'View and manage all receipts across the platform'
+              : isOperator
+              ? 'View receipts for your services'
+              : 'View and download your payment receipts'}
+            scopeFilter={
+              <div className="flex items-center gap-2 flex-wrap">
+                <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              </div>
+            }
+            testIdPrefix="receipts-mgmt"
+            activeTab="all"
+          >
+            <TabsContent value="all" className="mt-4 space-y-4" forceMount>
+              {/* Admin operator filter */}
+              {isAllReceiptsView && (
+                <SubpageCard title="Scope" icon={Building2} testId="receipts-scope-card">
+                  <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+                </SubpageCard>
+              )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -681,7 +679,7 @@ export default function Receipts() {
                     </div>
                 ) : (
                 <div className="space-y-3" data-testid="receipts-list-view">
-                    {paginatedBills.map((bill, index) => (
+                    {paginatedBills.map((bill) => (
                         <Card 
                             key={bill.id} 
                             className="group bg-white border border-slate-200 hover:border-[#082c59]/30 hover:shadow-md transition-all duration-200 overflow-hidden"
@@ -885,6 +883,8 @@ export default function Receipts() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+            </TabsContent>
+          </ManagementShell>
+        </>
     );
 }

@@ -18,6 +18,9 @@ import {
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 const CHART_COLORS = ['#082c59', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
@@ -311,7 +314,15 @@ function DateRangePicker({ dateFrom, dateTo, onChange }) {
   const [customTo, setCustomTo] = useState(dateTo);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => { setCustomFrom(dateFrom); setCustomTo(dateTo); }, [dateFrom, dateTo]);
+  // Sync local state when prop changes (React docs: adjust state during render)
+  const [prevDateFrom, setPrevDateFrom] = useState(dateFrom);
+  const [prevDateTo, setPrevDateTo] = useState(dateTo);
+  if (dateFrom !== prevDateFrom || dateTo !== prevDateTo) {
+    setPrevDateFrom(dateFrom);
+    setPrevDateTo(dateTo);
+    setCustomFrom(dateFrom);
+    setCustomTo(dateTo);
+  }
 
   const applyPreset = (days) => {
     const to = new Date();
@@ -496,29 +507,26 @@ export default function SystemReports() {
   const filename = `${selectedReportId || 'report'}_${reportData?.scope?.replace(/\s/g, '_') || 'all'}_${new Date().toISOString().slice(0, 10)}`;
 
   return (
-    <div className="space-y-6 p-6" data-testid="system-reports-page">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59] flex items-center gap-3">
-            <BarChart3 className="h-7 w-7" />
-            Reports
-          </h1>
-          <p className="text-slate-500 mt-1">Business intelligence and operational analytics</p>
-        </div>
-        {isAdmin && (
+    <>
+      <ManagementShell
+        title="Reports"
+        icon={BarChart3}
+        subtitle="Business intelligence and operational analytics"
+        scopeFilter={isAdmin && (
           <OperatorScope operators={operators} value={selectedOperator} onChange={(v) => setSelectedOperator(v === 'all' ? '' : v)} />
         )}
-      </div>
+        testIdPrefix="system-reports-mgmt"
+        activeTab="all"
+      >
+        <TabsContent value="all" className="mt-4 space-y-4" forceMount>
 
       {/* Controls Bar */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-3">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+      <SubpageCard title="Report" icon={FileText} testId="system-reports-controls-card">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 w-full">
             {/* Report Selector */}
             <div className="flex-1 min-w-0">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="bg-white h-10 text-sm w-full" data-testid="report-selector">
+                <SelectTrigger className="bg-white h-9 text-sm w-full" data-testid="report-selector">
                   <SelectValue placeholder="Select a report...">
                     {selectedReport && (
                       <div className="flex items-center gap-2">
@@ -600,8 +608,7 @@ export default function SystemReports() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+      </SubpageCard>
 
       {/* Report Content */}
       <div id="report-content">
@@ -646,6 +653,8 @@ export default function SystemReports() {
           <div className="text-center py-20 text-slate-400">No data returned for this report</div>
         )}
       </div>
-    </div>
+        </TabsContent>
+      </ManagementShell>
+    </>
   );
 }

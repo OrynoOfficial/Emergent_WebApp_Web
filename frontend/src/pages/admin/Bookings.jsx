@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search, Package, Check, X, Eye, Calendar, User, Mail, Building2,
-  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, RefreshCw, Plus
+  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, Plus, SlidersHorizontal
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import { formatDate } from '../../utils/dateUtils';
@@ -20,6 +18,9 @@ import ViewModeToggle from '../../components/common/ViewModeToggle';
 import Pagination from '../../components/common/Pagination';
 import BookingDetailModal from '../../components/modals/BookingDetailModal';
 import WalkInBookingModal from '../../components/management/shared/WalkInBookingModal';
+import ManagementShell from '../../components/management/shared/ManagementShell';
+import SubpageCard from '../../components/management/shared/SubpageCard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -44,7 +45,6 @@ const CHANNEL_META = {
 };
 
 export default function AdminBookings() {
-  const navigate = useNavigate();
   const { user, operatorContext } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +214,7 @@ export default function AdminBookings() {
       await api.put(`/orders/${bookingId}/status`, { status: newStatus });
       toast.success(`Booking ${newStatus}`);
       setRefreshKey(k => k + 1);
-    } catch (error) {
+    } catch {
       toast.error('Failed to update status');
     }
   };
@@ -227,98 +227,92 @@ export default function AdminBookings() {
   const customerName = (b) => b.guest_customer?.name || b.customer_name || b.user_email || 'Customer';
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-            <div className="p-2 bg-[#082c59] rounded-lg">
-              <Receipt className="h-6 w-6 text-white" />
-            </div>
-            All Bookings
-          </h1>
-          <p className="text-slate-500 mt-1">View and manage all bookings (online + walk-in) across the platform</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          {canRecordWalkIn && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-slate-900 hover:bg-slate-800 text-white gap-2 shadow-sm" data-testid="walkin-launcher">
-                  <Banknote className="h-4 w-4" /> Walk-in Booking <Plus className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 bg-white p-1.5">
-                {SERVICE_TYPES.map((s) => (
-                  <DropdownMenuItem
-                    key={s.value}
-                    onClick={() => openWalkin(s.value)}
-                    className="cursor-pointer gap-3 py-2.5 px-2 rounded-lg focus:bg-slate-50"
-                    data-testid={`walkin-launcher-${s.value}`}
-                  >
-                    <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white text-lg shadow-sm shrink-0`}>
-                      {s.icon}
-                    </div>
-                    <span className="font-medium text-slate-800">{s.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          <Button variant="outline" size="icon" onClick={() => setRefreshKey(k => k + 1)} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
+    <>
+      <ManagementShell
+        title="All Bookings"
+        icon={Receipt}
+        subtitle="View and manage all bookings (online + walk-in) across the platform"
+        scopeFilter={
+          <div className="flex items-center gap-2 flex-wrap">
+            <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            {canRecordWalkIn && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="bg-slate-900 hover:bg-slate-800 text-white gap-2 shadow-sm h-8" data-testid="walkin-launcher">
+                    <Banknote className="h-4 w-4" /> Walk-in <Plus className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-white p-1.5">
+                  {SERVICE_TYPES.map((s) => (
+                    <DropdownMenuItem
+                      key={s.value}
+                      onClick={() => openWalkin(s.value)}
+                      className="cursor-pointer gap-3 py-2.5 px-2 rounded-lg focus:bg-slate-50"
+                      data-testid={`walkin-launcher-${s.value}`}
+                    >
+                      <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white text-lg shadow-sm shrink-0`}>
+                        {s.icon}
+                      </div>
+                      <span className="font-medium text-slate-800">{s.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        }
+        onRefresh={() => setRefreshKey(k => k + 1)}
+        refreshing={loading}
+        testIdPrefix="admin-bookings-mgmt"
+        activeTab="all"
+      >
+        <TabsContent value="all" className="mt-4 space-y-4" forceMount>
+          {/* Channel + scope toolbar */}
+          <SubpageCard title="Channel" icon={SlidersHorizontal} testId="admin-bookings-channel-card">
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+            <Tabs value={channelFilter} onValueChange={setChannelFilter}>
+              <TabsList className="bg-slate-100 h-8">
+                <TabsTrigger value="all" className="text-xs h-7" data-testid="ab-channel-all">
+                  All <Badge className="ml-1.5 bg-slate-600 text-white">{counts.total}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="online" className="text-xs h-7" data-testid="ab-channel-online">
+                  <Globe2 className="h-3.5 w-3.5 mr-1" /> Online <Badge className="ml-1.5 bg-blue-500 text-white">{counts.online}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="on_site" className="text-xs h-7" data-testid="ab-channel-onsite">
+                  <Store className="h-3.5 w-3.5 mr-1" /> Walk-in <Badge className="ml-1.5 bg-amber-500 text-white">{counts.on_site}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <button
+              type="button"
+              onClick={() => setRecentWalkinsOnly((v) => !v)}
+              className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all ${
+                recentWalkinsOnly
+                  ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200'
+                  : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+              }`}
+              data-testid="recent-walkins-chip"
+              title="Show only the last 5 walk-in bookings — end-of-shift receipt run"
+            >
+              <Store className="h-3.5 w-3.5" /> Recent walk-ins (5)
+            </button>
+          </SubpageCard>
 
-      {/* Operator scope + channel tabs */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-        <Tabs value={channelFilter} onValueChange={setChannelFilter}>
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="all" data-testid="ab-channel-all">
-              All <Badge className="ml-2 bg-slate-600 text-white">{counts.total}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="online" data-testid="ab-channel-online">
-              <Globe2 className="h-3.5 w-3.5 mr-1" /> Online <Badge className="ml-2 bg-blue-500 text-white">{counts.online}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="on_site" data-testid="ab-channel-onsite">
-              <Store className="h-3.5 w-3.5 mr-1" /> Walk-in <Badge className="ml-2 bg-amber-500 text-white">{counts.on_site}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <button
-          type="button"
-          onClick={() => setRecentWalkinsOnly((v) => !v)}
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider px-3 py-1.5 rounded-full border-2 transition-all ${
-            recentWalkinsOnly
-              ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200'
-              : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
-          }`}
-          data-testid="recent-walkins-chip"
-          title="Show only the last 5 walk-in bookings — end-of-shift receipt run"
-        >
-          <Store className="h-3.5 w-3.5" /> Recent walk-ins (5)
-        </button>
-      </div>
-
-      {/* Search + filters */}
-      <Card className="border-slate-200">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          {/* Search + filters */}
+          <SubpageCard title="Filters" icon={Search} testId="admin-bookings-filters-card">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Search order #, customer, service..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-9 h-8 bg-white text-sm"
                 data-testid="admin-bookings-search"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -328,7 +322,7 @@ export default function AdminBookings() {
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Category" /></SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Services</SelectItem>
                 <SelectItem value="hotel">Hotels</SelectItem>
@@ -342,24 +336,22 @@ export default function AdminBookings() {
                 <SelectItem value="banquet">Banquets</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
+          </SubpageCard>
 
-      {/* Results */}
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <Card className="border-dashed border-2 border-slate-200">
-          <CardContent className="py-16 text-center">
-            <Package className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <h3 className="font-semibold text-slate-700">No bookings found</h3>
-            <p className="text-sm text-slate-500">Try adjusting your filters</p>
-          </CardContent>
-        </Card>
-      ) : viewMode === 'grid' ? (
+          {/* Results */}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <Card className="border-dashed border-2 border-slate-200">
+              <CardContent className="py-16 text-center">
+                <Package className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                <h3 className="font-semibold text-slate-700">No bookings found</h3>
+                <p className="text-sm text-slate-500">Try adjusting your filters</p>
+              </CardContent>
+            </Card>
+          ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="admin-bookings-grid">
           {pageItems.map((b, idx) => {
             const chKey = b.channel === 'on_site' ? 'on_site' : 'online';
@@ -546,6 +538,8 @@ export default function AdminBookings() {
         itemLabel="booking"
         className="mt-2"
       />
+        </TabsContent>
+      </ManagementShell>
 
       {/* Booking Detail Modal — operator-focused (not the customer's ticket view) */}
       <BookingDetailModal
@@ -569,6 +563,6 @@ export default function AdminBookings() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

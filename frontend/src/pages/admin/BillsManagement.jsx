@@ -16,9 +16,14 @@ import { toast } from 'sonner';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '@/components/common/QuickDateRangeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
+import Pagination from '@/components/common/Pagination';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 const BILL_STATUS = ['all', 'paid', 'pending', 'overdue', 'cancelled'];
 const PAYMENT_METHODS = ['all', 'mtn_momo', 'orange_money', 'card', 'bank_transfer', 'cash'];
+const PAGE_SIZE = 25;
 
 export default function BillsManagement() {
   const [bills, setBills] = useState([]);
@@ -31,6 +36,7 @@ export default function BillsManagement() {
   const [viewMode, setViewMode] = useState('list'); // list | grid | details
   const [selectedBill, setSelectedBill] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     loadBills();
@@ -156,6 +162,13 @@ export default function BillsManagement() {
     return matchesSearch && matchesStatus && matchesPayment && matchesOperator && matchesDate;
   }), [bills, searchQuery, statusFilter, paymentFilter, operatorFilter, dateRange]);
 
+  // Reset pagination when filters change (React-recommended: adjust state during render)
+  const filterKey = `${searchQuery}|${statusFilter}|${paymentFilter}|${operatorFilter}|${dateRange.from}|${dateRange.to}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) { setPrevFilterKey(filterKey); setPage(1); }
+  const totalPages = Math.max(1, Math.ceil(filteredBills.length / PAGE_SIZE));
+  const pagedBills = useMemo(() => filteredBills.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredBills, page]);
+
   const getStatusBadge = (status) => {
     const styles = {
       paid: 'bg-green-100 text-green-800',
@@ -191,72 +204,71 @@ export default function BillsManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">All Bills</h1>
-          <p className="text-gray-600">Manage customer bills and payment records</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button className="bg-[#082c59]" onClick={handleExportAll}><FileText className="w-4 h-4 mr-2" /> Export All</Button>
-        </div>
-      </div>
+    <>
+      <ManagementShell
+        title="All Bills"
+        icon={Receipt}
+        subtitle="Manage customer bills and payment records"
+        scopeFilter={
+          <div className="flex items-center gap-2 flex-wrap">
+            <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            <Button className="bg-[#082c59] h-8" size="sm" onClick={handleExportAll}><FileText className="w-3.5 h-3.5 mr-1.5" /> Export All</Button>
+          </div>
+        }
+        onRefresh={loadBills}
+        refreshing={loading}
+        testIdPrefix="bills-mgmt"
+        activeTab="all"
+      >
+        <TabsContent value="all" className="mt-4 space-y-4" forceMount>
+          <SubpageCard title="Scope" icon={Filter} testId="bills-scope-card">
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+          </SubpageCard>
 
-      <div className="flex">
-        <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-      </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <Card><CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-blue-100 rounded-lg"><Receipt className="w-6 h-6 text-blue-600" /></div>
+              <div><p className="text-sm text-gray-500">Total Bills</p><p className="text-2xl font-bold">{stats.total}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-green-100 rounded-lg"><CheckCircle className="w-6 h-6 text-green-600" /></div>
+              <div><p className="text-sm text-gray-500">Paid</p><p className="text-2xl font-bold">{stats.paid}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-yellow-100 rounded-lg"><Clock className="w-6 h-6 text-yellow-600" /></div>
+              <div><p className="text-sm text-gray-500">Pending</p><p className="text-2xl font-bold">{stats.pending}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-purple-100 rounded-lg"><DollarSign className="w-6 h-6 text-purple-600" /></div>
+              <div><p className="text-sm text-gray-500">Revenue</p><p className="text-xl font-bold">{formatFCFA(stats.totalRevenue)}</p></div>
+            </CardContent></Card>
+            <Card><CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 bg-orange-100 rounded-lg"><Clock className="w-6 h-6 text-orange-600" /></div>
+              <div><p className="text-sm text-gray-500">Pending Amount</p><p className="text-xl font-bold">{formatFCFA(stats.pendingAmount)}</p></div>
+            </CardContent></Card>
+          </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-lg"><Receipt className="w-6 h-6 text-blue-600" /></div>
-          <div><p className="text-sm text-gray-500">Total Bills</p><p className="text-2xl font-bold">{stats.total}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-green-100 rounded-lg"><CheckCircle className="w-6 h-6 text-green-600" /></div>
-          <div><p className="text-sm text-gray-500">Paid</p><p className="text-2xl font-bold">{stats.paid}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-yellow-100 rounded-lg"><Clock className="w-6 h-6 text-yellow-600" /></div>
-          <div><p className="text-sm text-gray-500">Pending</p><p className="text-2xl font-bold">{stats.pending}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-purple-100 rounded-lg"><DollarSign className="w-6 h-6 text-purple-600" /></div>
-          <div><p className="text-sm text-gray-500">Revenue</p><p className="text-xl font-bold">{formatFCFA(stats.totalRevenue)}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 bg-orange-100 rounded-lg"><Clock className="w-6 h-6 text-orange-600" /></div>
-          <div><p className="text-sm text-gray-500">Pending Amount</p><p className="text-xl font-bold">{formatFCFA(stats.pendingAmount)}</p></div>
-        </CardContent></Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input placeholder="Search bills..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
+          {/* Filters */}
+          <SubpageCard title="Filters" icon={Search} count={filteredBills.length} testId="bills-filters-card">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Input placeholder="Search bills..." className="pl-9 h-8 bg-white text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} data-testid="bills-search-input" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent className="bg-white">
                 {BILL_STATUS.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-44"><SelectValue placeholder="Payment Method" /></SelectTrigger>
+              <SelectTrigger className="w-44 h-8 bg-white text-sm"><SelectValue placeholder="Payment Method" /></SelectTrigger>
               <SelectContent className="bg-white">
                 {PAYMENT_METHODS.map(p => <SelectItem key={p} value={p} className="capitalize">{p === 'all' ? 'All Methods' : p.replace('_', ' ')}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        </CardContent>
-      </Card>
+          </SubpageCard>
 
       {/* Bills */}
       {loading ? (
@@ -265,7 +277,7 @@ export default function BillsManagement() {
         <Card><CardContent className="py-16 text-center text-slate-500">No bills found</CardContent></Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="bills-grid-view">
-          {filteredBills.map(bill => (
+          {pagedBills.map(bill => (
             <Card key={bill.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between">
@@ -298,7 +310,7 @@ export default function BillsManagement() {
         </div>
       ) : viewMode === 'details' ? (
         <div className="space-y-3" data-testid="bills-details-view">
-          {filteredBills.map(bill => (
+          {pagedBills.map(bill => (
             <Card key={bill.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-5 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -381,7 +393,7 @@ export default function BillsManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredBills.map(bill => (
+                {pagedBills.map(bill => (
                     <tr key={bill.id} className="border-b hover:bg-slate-50">
                       <td className="p-4 font-mono text-sm">{bill.id}</td>
                       <td className="p-4">
@@ -423,6 +435,18 @@ export default function BillsManagement() {
       </Card>
       )}
 
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onChange={setPage}
+            total={filteredBills.length}
+            pageSize={PAGE_SIZE}
+            itemLabel="bill"
+            className="mt-2"
+          />
+        </TabsContent>
+      </ManagementShell>
+
       {/* Bill Detail Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="bg-white max-w-lg">
@@ -460,6 +484,6 @@ export default function BillsManagement() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

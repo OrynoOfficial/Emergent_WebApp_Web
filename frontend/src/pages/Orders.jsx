@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { formatDate, formatDateTime, formatDateLong } from '../utils/dateUtils';
+import { formatDateTime } from '../utils/dateUtils';
 import { Link } from 'react-router-dom';
 import { ordersAPI } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +33,9 @@ import {
 } from 'lucide-react';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import { activityLogger } from '../utils/activityLogger';
+import ManagementShell from '../components/management/shared/ManagementShell';
+import SubpageCard from '../components/management/shared/SubpageCard';
+import { TabsContent } from '../components/ui/tabs';
 import { formatFCFA } from '../utils/currency';
 import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '../components/common/QuickDateRangeFilter';
@@ -83,7 +86,6 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
-  const [showFilters, setShowFilters] = useState(false);
   const [operatorFilter, setOperatorFilter] = useState('');
   const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null });
   const [viewMode, setViewMode] = useState('grid'); // list | grid | details
@@ -132,7 +134,7 @@ export default function Orders() {
       activityLogger.orderCancel(orderId, order?.order_number, 'User requested cancellation');
       fetchOrders();
       setIsDetailModalOpen(false);
-    } catch (error) {
+    } catch {
       alert('Failed to cancel order');
     }
   };
@@ -270,47 +272,42 @@ export default function Orders() {
   // NOTE: formatDate is imported from utils/dateUtils (timezone-aware). Do not shadow here.
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3" data-testid="orders-title">
-            <div className="p-2 bg-[#082c59] rounded-lg">
-              <ShoppingBag className="h-6 w-6 text-white" />
-            </div>
-            {isAllOrdersView ? 'All Orders' : 'My Orders'}
-          </h1>
-          <p className="text-slate-500 mt-1">
-            {isAllOrdersView 
-              ? 'View and manage all orders across the platform'
-              : isOperator
-              ? 'Track and manage orders for your services'
-              : 'Track and manage your bookings'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          {!isAllOrdersView && !isOperator && (
-            <Link to="/services">
-              <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
-                <Plus className="h-4 w-4 mr-2" />
-                Book New Service
-              </Button>
-            </Link>
+    <>
+      <ManagementShell
+        title={isAllOrdersView ? 'All Orders' : 'My Orders'}
+        icon={ShoppingBag}
+        subtitle={isAllOrdersView 
+          ? 'View and manage all orders across the platform'
+          : isOperator
+          ? 'Track and manage orders for your services'
+          : 'Track and manage your bookings'}
+        scopeFilter={
+          <div className="flex items-center gap-2 flex-wrap">
+            <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            {!isAllOrdersView && !isOperator && (
+              <Link to="/services">
+                <Button className="bg-[#082c59] hover:bg-[#0a3a75] h-8" size="sm">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Book New
+                </Button>
+              </Link>
+            )}
+          </div>
+        }
+        testIdPrefix="orders-mgmt"
+        activeTab="all"
+      >
+        <TabsContent value="all" className="mt-4 space-y-4" forceMount>
+          {/* Admin operator filter */}
+          {isAllOrdersView && (
+            <SubpageCard title="Scope" icon={Building2} testId="orders-scope-card">
+              <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+            </SubpageCard>
           )}
-        </div>
-      </div>
 
-      {/* Admin operator filter */}
-      {isAllOrdersView && (
-        <div className="flex">
-          <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-        </div>
-      )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -379,169 +376,69 @@ export default function Orders() {
       </div>
 
       {/* Search and Filters Section */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search Input */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by order number, service name, or category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59]/20"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Toggle Button (Mobile) */}
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden border-slate-200"
+      <SubpageCard title="Filters" icon={Search} testId="orders-filters-card">
+        <div className="flex-1 min-w-[220px] relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            placeholder="Search by order number, service, or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-8 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59]/20 text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              Filters
-              {hasActiveFilters && (
-                <span className="ml-2 px-1.5 py-0.5 bg-[#082c59] text-white text-xs rounded-full">!</span>
-              )}
-            </Button>
-
-            {/* Desktop Filters */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[150px] bg-white border-slate-200">
-                  <Tag className="h-4 w-4 mr-2 text-slate-400" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {CATEGORY_OPTIONS.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] bg-white border-slate-200">
-                  <Filter className="h-4 w-4 mr-2 text-slate-400" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {STATUS_OPTIONS.map(status => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[170px] bg-white border-slate-200">
-                  <ArrowUpDown className="h-4 w-4 mr-2 text-slate-400" />
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {SORT_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-slate-500 hover:text-slate-700"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Filters Panel */}
-          {showFilters && (
-            <div className="lg:hidden mt-4 pt-4 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="bg-white border-slate-200">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {CATEGORY_OPTIONS.map(cat => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-white border-slate-200">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {STATUS_OPTIONS.map(status => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="bg-white border-slate-200">
-                  <SelectValue placeholder="Sort By" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {SORT_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  className="sm:col-span-3"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Clear All Filters
-                </Button>
-              )}
-            </div>
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-
-          {/* Search hints */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="text-xs text-slate-400">Search by:</span>
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-              <Hash className="h-3 w-3" /> Order #
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-              <Package className="h-3 w-3" /> Service
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-              <Tag className="h-3 w-3" /> Category
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-[140px] h-8 bg-white border-slate-200 text-sm">
+            <Tag className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {CATEGORY_OPTIONS.map(cat => (
+              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[130px] h-8 bg-white border-slate-200 text-sm">
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {STATUS_OPTIONS.map(status => (
+              <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[160px] h-8 bg-white border-slate-200 text-sm">
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {SORT_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-slate-500 hover:text-slate-700 h-8"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+      </SubpageCard>
 
       {/* Results Count */}
       {!loading && (
@@ -934,6 +831,8 @@ export default function Orders() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+      </ManagementShell>
 
       {/* Order Detail Modal */}
       <OrderDetailModal
@@ -942,6 +841,6 @@ export default function Orders() {
         onClose={handleCloseModal}
         onCancel={handleCancelOrder}
       />
-    </div>
+    </>
   );
 }
