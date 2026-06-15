@@ -23,7 +23,6 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -85,7 +84,7 @@ const DEFAULT_PRESSING_FORM = {
 // Laundry specific dashboard data generator
 // Dashboard data now fetched from API via useRealDashboardData hook
 
-const BusinessAnalytics = ({ pressings }) => {
+const BusinessAnalytics = () => {
   const analyticsData = useMemo(() => {
     // Fixed monthly trend data
     const monthlyTrend = [
@@ -98,7 +97,7 @@ const BusinessAnalytics = ({ pressings }) => {
     ];
 
     return { monthlyTrend };
-  }, [pressings]);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -128,7 +127,7 @@ const BusinessAnalytics = ({ pressings }) => {
 };
 
 export default function LaundryManagement() {
-  const { user } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pressings, setPressings] = useState([]);
   const [replacePressing, setReplacePressing] = useState(null);
@@ -287,7 +286,7 @@ export default function LaundryManagement() {
       await api.delete(`/pressing/${id}`);
       toast.success('Deleted');
       loadPressings();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete');
     }
   };

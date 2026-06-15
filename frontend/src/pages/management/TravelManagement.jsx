@@ -97,7 +97,7 @@ const TravelAnalyticsSection = ({ routes, vehicles }) => {
         });
         setAnalyticsData({
           monthlyTrend: [],
-          vehicleUtilization: vehicles.slice(0, 6).map((v, i) => ({
+          vehicleUtilization: vehicles.slice(0, 6).map((v) => ({
             name: v.vehicle_name?.substring(0, 10) || 'Vehicle',
             utilization: 0
           })),

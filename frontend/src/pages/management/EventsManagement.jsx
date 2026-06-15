@@ -23,7 +23,6 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import DatePickerField from '@/components/shared/DatePickerField';
@@ -68,7 +67,7 @@ const DEFAULT_EVENT_FORM = {
 // Dashboard data now fetched from API via useRealDashboardData hook
 
 export default function EventsManagement() {
-  const { user } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [events, setEvents] = useState([]);
   const [replaceEvent, setReplaceEvent] = useState(null);
@@ -231,7 +230,7 @@ export default function EventsManagement() {
       await api.delete(`/events/${eventId}`);
       toast.success('Event deleted');
       loadEvents();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete');
     }
   };

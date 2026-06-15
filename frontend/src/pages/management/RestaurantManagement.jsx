@@ -239,7 +239,7 @@ const EnhancedMenuItemCard = ({ item, onEdit, onDelete, canEdit, canDelete }) =>
 };
 
 export default function RestaurantManagement() {
-  const { user } = useAuth();
+  useAuth();
   const { hasPermission } = usePermissions();
   
   // Data state
@@ -437,7 +437,7 @@ export default function RestaurantManagement() {
     
     try {
       setSaving(true);
-      const { popular, ...rest } = menuForm;
+      const { popular: _popular, ...rest } = menuForm;
       const data = { ...rest, price: parseFloat(menuForm.price) || 0 };
       if (editingMenuItem) {
         await api.put(`/restaurants/${selectedRestaurant.id}/menu/${editingMenuItem.id}`, data);

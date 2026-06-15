@@ -297,7 +297,7 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
 
 // Main Component
 export default function CarRentalManagement() {
-  const { user } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cars, setCars] = useState([]);
   const [operators, setOperators] = useState([]);
@@ -328,8 +328,12 @@ export default function CarRentalManagement() {
     );
   }, [cars, carSearch]);
 
-  // Pagination
-  useEffect(() => { setCarPage(1); }, [carSearch]);
+  // Reset to page 1 when search changes (React-recommended pattern: adjust state during render)
+  const [prevCarSearch, setPrevCarSearch] = useState(carSearch);
+  if (carSearch !== prevCarSearch) {
+    setPrevCarSearch(carSearch);
+    setCarPage(1);
+  }
   const carTotalPages = Math.max(1, Math.ceil(filteredCars.length / PAGE_SIZE));
   const pagedCars = useMemo(
     () => filteredCars.slice((carPage - 1) * PAGE_SIZE, carPage * PAGE_SIZE),
@@ -418,7 +422,7 @@ export default function CarRentalManagement() {
       await api.delete(`/car-rental/${carId}`);
       toast.success('Car deleted');
       loadCars();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete');
     }
   };

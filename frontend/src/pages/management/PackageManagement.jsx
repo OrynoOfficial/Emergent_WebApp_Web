@@ -228,7 +228,7 @@ const PackageCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace, dens
   );
 };
 
-const PackageDetailsCard = ({ pkg, onView, onEdit, onDelete, onAdvance, onReplace }) => {
+const PackageDetailsCard = ({ pkg, onView, onEdit, onAdvance, onReplace }) => {
   const dim = pkg.dimensions || {};
   const dims = [dim.length_cm, dim.width_cm, dim.height_cm].filter(Boolean).join(' × ');
   return (
@@ -360,7 +360,10 @@ export default function PackageManagement() {
     return v;
   }, [packages, search, statusFilter]);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  // Reset pagination when filters change (React-recommended: adjust state during render)
+  const filterKey = `${search}|${statusFilter}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) { setPrevFilterKey(filterKey); setPage(1); }
   const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE));
   const pagedPackages = useMemo(
     () => filteredPackages.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
@@ -627,7 +630,6 @@ export default function PackageManagement() {
                   pkg={pkg}
                   onView={handleView}
                   onEdit={openForm}
-                  onDelete={handleDelete}
                   onAdvance={handleAdvance}
                   onReplace={setReplacePkg}
                 />

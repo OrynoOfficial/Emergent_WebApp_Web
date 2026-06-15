@@ -18,7 +18,6 @@ import {
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
-import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
@@ -174,8 +173,13 @@ export default function HotelManagement() {
       setRoomPage(1); 
     } 
   }, [selectedHotel, loadRooms]);
-  useEffect(() => { setHotelPage(1); }, [hotelSearch, hotelFilters, selectedOperator.id]);
-  useEffect(() => { setRoomPage(1); }, [roomSearch, roomFilters]);
+  // Reset pagination when filters change (React-recommended: adjust state during render)
+  const hotelFilterKey = `${hotelSearch}|${JSON.stringify(hotelFilters)}|${selectedOperator.id}`;
+  const [prevHotelFilterKey, setPrevHotelFilterKey] = useState(hotelFilterKey);
+  if (hotelFilterKey !== prevHotelFilterKey) { setPrevHotelFilterKey(hotelFilterKey); setHotelPage(1); }
+  const roomFilterKey = `${roomSearch}|${JSON.stringify(roomFilters)}`;
+  const [prevRoomFilterKey, setPrevRoomFilterKey] = useState(roomFilterKey);
+  if (roomFilterKey !== prevRoomFilterKey) { setPrevRoomFilterKey(roomFilterKey); setRoomPage(1); }
 
   // Hotel CRUD
   const openHotelDialog = (hotel = null) => {
@@ -299,14 +303,8 @@ export default function HotelManagement() {
     setHotelSearch(''); 
     setSelectedOperator({ id: '', name: '' }); 
   };
-  
-  const clearRoomFilters = () => { 
-    setRoomFilters({ roomType: '', priceRange: '', availability: '' }); 
-    setRoomSearch(''); 
-  };
 
   const activeHotelFiltersCount = Object.values(hotelFilters).filter(Boolean).length + (hotelSearch ? 1 : 0) + (selectedOperator.id ? 1 : 0);
-  const activeRoomFiltersCount = Object.values(roomFilters).filter(Boolean).length + (roomSearch ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">

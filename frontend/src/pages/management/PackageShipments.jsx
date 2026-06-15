@@ -211,7 +211,10 @@ export default function PackageShipments() {
     return v;
   }, [packages, search, statusFilter, paymentFilter, typeFilter]);
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, paymentFilter, typeFilter]);
+  // Reset pagination when filters change (React-recommended: adjust state during render)
+  const filterKey = `${search}|${statusFilter}|${paymentFilter}|${typeFilter}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) { setPrevFilterKey(filterKey); setPage(1); }
   const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE));
   const pagedPackages = useMemo(
     () => filteredPackages.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),

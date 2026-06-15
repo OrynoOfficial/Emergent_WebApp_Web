@@ -6,13 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ShieldCheck, Plus, Edit, Trash2, Users, Key, Lock, Unlock } from 'lucide-react';
-import api from '@/api/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { ShieldCheck, Plus, Edit, Trash2, Users, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PERMISSIONS = [
@@ -49,8 +45,6 @@ const DEFAULT_GROUP_FORM = {
 };
 
 export default function AccessGroupManagement() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('groups');
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

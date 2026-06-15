@@ -1,5 +1,16 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 219: Management pages lint cleanup)
+
+### Code hygiene: Zero ESLint errors across `/pages/management/*.jsx`
+- **Removed 35 unused-vars violations** flagged by the project's ESLint config across 10 management pages: dead imports (`api`, `useMemo`, `usePermissions`, `formatFCFA`, `Tabs/*`), unused destructured props (`user`, `cinemas`, `movies`, `pressings`, `teamMembers`, `onDelete`), dead local vars (`statusColors`, `priorityColors`, `sendingReply`, `replyText`, `isInternalNote`, `headerExpanded`, `clearRoomFilters`, `activeRoomFiltersCount`, `popular`, `i`), unused callbacks (`handleSendReply`), and unused error bindings in `catch (error)` clauses.
+- **Refactored 6 `useEffect(() => setPage(1), [filters])` anti-patterns** to React-recommended render-time conditional `setState` pattern using `prev*` state mirrors. Affected files: `CarRentalManagement.jsx`, `CinemaManagement.jsx`, `CustomerServiceManagement.jsx`, `HotelManagement.jsx`, `PackageManagement.jsx`, `PackageShipments.jsx`. Pagination still resets when search/filters change — implementation now matches official React docs guidance for "adjusting state when a prop changes".
+- **Fixed 2 `useMemo` exhaustive-deps warnings**: `BusinessAnalytics` components in `CinemaManagement.jsx` (line 65) and `LaundryManagement.jsx` (line 101) had stale `[cinemas, movies]` / `[pressings]` dependencies on a useMemo returning hardcoded monthly trend data — now `[]`.
+- **Fixed 4 empty-catch blocks** in `CustomerServiceManagement.jsx` with `/* ignore */` markers.
+- `yarn build` now produces zero ESLint errors across all 12 management pages. Verified Vite production build still succeeds (4.3 MB main bundle, no module resolution errors).
+- No behavioural changes — pure structural/hygienic refactor.
+
+
 
 ## Immutable Payment Ledger v2 (Jun 14, 2026)
 The platform now uses an append-only event ledger for all V2 payments. Every state transition (intent_created → authorized → captured → refunded → disputed → dispute_resolved) is a new row in `payment_events`. The mutable `payments` collection is a denormalized snapshot, rebuildable from the ledger.

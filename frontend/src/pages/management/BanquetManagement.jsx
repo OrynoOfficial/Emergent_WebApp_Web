@@ -983,10 +983,6 @@ export default function BanquetManagement() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [page, setPage] = useState(1);
-  // Collapsible header — when false, ONLY the page title is visible.
-  // Subtitle, ops filters, refresh, the tabs list and the toolbar (search,
-  // category, view mode, Add Service) all hide until expanded again.
-  const [headerExpanded, setHeaderExpanded] = useState(true);
   const dashboardData = useRealDashboardData('banquets', '30days', scopeOperatorId);
 
   const filtered = useMemo(() => {

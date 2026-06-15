@@ -29,7 +29,6 @@ import {
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -49,7 +48,7 @@ import {
 // Dashboard data now fetched from API via useRealDashboardData hook
 
 // Business Analytics
-const BusinessAnalytics = ({ cinemas, movies }) => {
+const BusinessAnalytics = () => {
   const analyticsData = useMemo(() => {
     // Fixed monthly trend data
     const monthlyTrend = [
@@ -62,7 +61,7 @@ const BusinessAnalytics = ({ cinemas, movies }) => {
     ];
 
     return { monthlyTrend };
-  }, [cinemas, movies]);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -93,7 +92,7 @@ const BusinessAnalytics = ({ cinemas, movies }) => {
 
 // Main Component
 export default function CinemaManagement() {
-  const { user } = useAuth();
+  useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cinemas, setCinemas] = useState([]);
   const [movies, setMovies] = useState([]);
@@ -163,9 +162,14 @@ export default function CinemaManagement() {
     );
   }, [movies, movieSearch]);
 
-  useEffect(() => { setCinemaPage(1); }, [cinemaSearch]);
-  useEffect(() => { setMoviePage(1); }, [movieSearch]);
-  useEffect(() => { setShowtimePage(1); }, [showtimeSearch, showtimeCinemaFilter, showtimeDateFilter]);
+  // Reset pagination when filters change (React-recommended: adjust state during render, not in effect)
+  const [prevCinemaSearch, setPrevCinemaSearch] = useState(cinemaSearch);
+  if (cinemaSearch !== prevCinemaSearch) { setPrevCinemaSearch(cinemaSearch); setCinemaPage(1); }
+  const [prevMovieSearch, setPrevMovieSearch] = useState(movieSearch);
+  if (movieSearch !== prevMovieSearch) { setPrevMovieSearch(movieSearch); setMoviePage(1); }
+  const showtimeFilterKey = `${showtimeSearch}|${showtimeCinemaFilter}|${showtimeDateFilter}`;
+  const [prevShowtimeKey, setPrevShowtimeKey] = useState(showtimeFilterKey);
+  if (showtimeFilterKey !== prevShowtimeKey) { setPrevShowtimeKey(showtimeFilterKey); setShowtimePage(1); }
   const cinemaTotalPages = Math.max(1, Math.ceil(filteredCinemas.length / PAGE_SIZE));
   const movieTotalPages = Math.max(1, Math.ceil(filteredMovies.length / PAGE_SIZE));
 
@@ -294,7 +298,7 @@ export default function CinemaManagement() {
       toast.success('Cinema deleted');
       loadCinemas();
       if (selectedCinema?.id === id) setSelectedCinema(null);
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete');
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -174,12 +174,10 @@ function AdminTicketCardGrid({ ticket, onView }) {
 }
 
 // ========== Admin Ticket Detail Modal ==========
-function AdminTicketDetailModal({ open, onOpenChange, ticket, teamMembers, onStatusChange, onPriorityChange, onAssign, onRefreshTicket }) {
+function AdminTicketDetailModal({ open, onOpenChange, ticket, onStatusChange, onPriorityChange, onAssign, onRefreshTicket }) {
   if (!ticket) return null;
   const statusConfig = getStatusConfig(ticket.status);
   const priorityConfig = getPriorityConfig(ticket.priority);
-  const statusColors = { open: 'bg-sky-50 border-sky-200', pending: 'bg-amber-50 border-amber-200', in_progress: 'bg-violet-50 border-violet-200', resolved: 'bg-emerald-50 border-emerald-200', closed: 'bg-slate-50 border-slate-200' };
-  const priorityColors = { low: 'bg-slate-50 border-slate-200', medium: 'bg-blue-50 border-blue-200', high: 'bg-orange-50 border-orange-200', urgent: 'bg-red-50 border-red-200' };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -867,9 +865,6 @@ export default function CustomerServiceManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [replyText, setReplyText] = useState('');
-  const [isInternalNote, setIsInternalNote] = useState(false);
-  const [sendingReply, setSendingReply] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -907,12 +902,15 @@ export default function CustomerServiceManagement() {
     finally { setLoading(false); }
   }, [searchTerm, sortBy, sortOrder, currentPage, getSubTabStatuses, operatorFilter]);
 
-  const loadStats = useCallback(async () => { try { const r = await api.get('/support-tickets/stats'); setStats(r.data); } catch {} }, []);
-  const loadTeamMembers = useCallback(async () => { try { const r = await api.get('/support-tickets/team-members'); setTeamMembers(r.data.team_members || []); } catch {} }, []);
+  const loadStats = useCallback(async () => { try { const r = await api.get('/support-tickets/stats'); setStats(r.data); } catch { /* ignore */ } }, []);
+  const loadTeamMembers = useCallback(async () => { try { const r = await api.get('/support-tickets/team-members'); setTeamMembers(r.data.team_members || []); } catch { /* ignore */ } }, []);
 
   useEffect(() => { loadTickets(); loadStats(); loadTeamMembers(); }, [loadTickets, loadStats, loadTeamMembers]);
-  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
-  useEffect(() => { setCurrentPage(1); setSelectedTickets([]); }, [ticketSubTab]);
+  // Reset pagination when filters change (React-recommended: adjust state during render)
+  const [prevSearchTerm, setPrevSearchTerm] = useState(searchTerm);
+  if (searchTerm !== prevSearchTerm) { setPrevSearchTerm(searchTerm); setCurrentPage(1); }
+  const [prevTicketSubTab, setPrevTicketSubTab] = useState(ticketSubTab);
+  if (ticketSubTab !== prevTicketSubTab) { setPrevTicketSubTab(ticketSubTab); setCurrentPage(1); setSelectedTickets([]); }
 
   const handleSelectTicket = (id, checked) => setSelectedTickets(p => checked ? [...p, id] : p.filter(i => i !== id));
   const handleSelectAll = (checked) => setSelectedTickets(checked ? tickets.map(t => t.id) : []);
@@ -920,17 +918,6 @@ export default function CustomerServiceManagement() {
   const handleViewTicket = async (ticket) => {
     try { const r = await api.get(`/support-tickets/${ticket.id}`); setSelectedTicket(r.data); setShowDetailModal(true); }
     catch { toast.error('Failed to load ticket'); }
-  };
-
-  const handleSendReply = async () => {
-    if (!replyText.trim() || !selectedTicket) return;
-    setSendingReply(true);
-    try {
-      await api.post(`/support-tickets/${selectedTicket.id}/reply`, { message: replyText, is_internal: isInternalNote });
-      const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data);
-      setReplyText(''); setIsInternalNote(false); toast.success(isInternalNote ? 'Note added' : 'Reply sent'); loadTickets();
-    } catch { toast.error('Failed to send reply'); }
-    finally { setSendingReply(false); }
   };
 
   const handleStatusChange = async (s) => {
@@ -977,7 +964,7 @@ export default function CustomerServiceManagement() {
     catch { toast.error('Failed'); }
   };
 
-  const loadAvailableMembers = useCallback(async () => { try { const r = await api.get('/support-tickets/available-members'); setAvailableMembers(r.data.available_members || []); } catch {} }, []);
+  const loadAvailableMembers = useCallback(async () => { try { const r = await api.get('/support-tickets/available-members'); setAvailableMembers(r.data.available_members || []); } catch { /* ignore */ } }, []);
   const handleAddTeamMember = async (m) => { try { await api.post('/support-tickets/team-members', { user_id: m.id, name: m.name, email: m.email, role: m.role, department: m.department, type: m.type }); toast.success(`${m.name} added`); loadTeamMembers(); loadAvailableMembers(); } catch { toast.error('Failed'); } };
   const handleRemoveTeamMember = async (m) => { if (m.is_auto) { toast.error('Cannot remove auto-added'); return; } try { await api.delete(`/support-tickets/team-members/${m.id}`); toast.success('Removed'); loadTeamMembers(); } catch { toast.error('Failed'); } };
   useEffect(() => { if (showAddMemberModal) loadAvailableMembers(); }, [showAddMemberModal, loadAvailableMembers]);
@@ -1109,9 +1096,9 @@ export default function CustomerServiceManagement() {
 
       {/* Modals */}
       <AddMemberModal open={showAddMemberModal} onOpenChange={setShowAddMemberModal} availableMembers={availableMembers} searchTerm={memberSearchTerm} onSearchChange={setMemberSearchTerm} onAddMember={handleAddTeamMember} />
-      <AdminTicketDetailModal open={showDetailModal} onOpenChange={setShowDetailModal} ticket={selectedTicket} teamMembers={teamMembers} onStatusChange={handleStatusChange} onPriorityChange={handlePriorityChange}
+      <AdminTicketDetailModal open={showDetailModal} onOpenChange={setShowDetailModal} ticket={selectedTicket} onStatusChange={handleStatusChange} onPriorityChange={handlePriorityChange}
         onAssign={() => { setTicketToAssign(selectedTicket); setShowAssignModal(true); }} onRefreshTicket={async () => {
-          try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); loadTickets(); } catch {}
+          try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); loadTickets(); } catch { /* ignore */ }
         }} />
       <AssignModal open={showAssignModal} onOpenChange={(o) => { setShowAssignModal(o); if (!o) { setTicketToAssign(null); setSelectedAssignee(''); setAssignmentNotes(''); } }} ticket={ticketToAssign} teamMembers={teamMembers} selectedAssignee={selectedAssignee} onAssigneeChange={setSelectedAssignee} notes={assignmentNotes} onNotesChange={setAssignmentNotes} onAssign={handleAssignTicket} />
       <BulkAssignModal open={showBulkAssignModal} onOpenChange={(o) => { setShowBulkAssignModal(o); if (!o) setSelectedAssignee(''); }} selectedCount={selectedTickets.length} teamMembers={teamMembers} selectedAssignee={selectedAssignee} onAssigneeChange={setSelectedAssignee} onAssign={handleBulkAssign} />
