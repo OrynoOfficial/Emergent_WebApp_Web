@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only review of collapsible Banquet Management header. Code review of /app/frontend/src/pages/management/BanquetManagement.jsx and source-bundle inspection confirms the implementation matches the spec exactly. Live Playwright execution was blocked by severe rate-limiting (HTTP 429 from Cloudflare/backend) on the preview URL — every attempt to load /management/banquet timed out waiting for the page to render. Only one early run actually reached the page (it returned a stale cached bundle showing the OLD non-collapsible header). After `sudo supervisorctl restart frontend && sleep 12` the served React source DOES contain all six required testids (verified via curl of the JSX module), but subsequent browser loads were blocked by 429s.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "code_review_findings": {
+    "implementation_matches_spec": true,
+    "verified_elements": [
+      "`headerExpanded` state defaults to true (BanquetManagement.jsx:979)",
+      "H1 'Banquet & Event Services' with data-testid='bq-mgmt-title' is ALWAYS rendered inside the card top row (line 1171) — never gated by headerExpanded",
+      "Toggle button with data-testid='bq-mgmt-toggle-header' on the right; label flips between 'Hide' (ChevronUp) and 'Show controls' (ChevronDown) based on headerExpanded (lines 1186–1201). aria-expanded + aria-controls present.",
+      "Subtitle 'Halls, chairs & cutlery...', OperatorScopeFilter, and Refresh (data-testid='bq-mgmt-refresh-btn') are inside `{headerExpanded && (...)}` block (lines 1206–1219)",
+      "TabsList (Dashboard/Services/Packages/Communications) is wrapped in `{headerExpanded && (...)}` (lines 1223–1230) so it disappears when collapsed",
+      "Services-tab toolbar with data-testid='bq-mgmt-toolbar' (services-search-input, category-filter-select, ViewModeToggle, add-service-btn) is wrapped in `{headerExpanded && (...)}` (lines 1254–1286)",
+      "Active-tab pill data-testid='bq-mgmt-active-tab-pill' only renders when !headerExpanded; maps activeTab==='management' → label 'Services' (lines 1172–1177)",
+      "Filter pill data-testid='bq-mgmt-filter-active-pill' (amber, 'Filtered' label, SlidersHorizontal icon) only shows when collapsed AND activeTab==='management' AND (search || categoryFilter !== 'all') (lines 1178–1182)",
+      "Services grid (TabsContent value='management') renders OUTSIDE the headerExpanded gate, so cards remain visible while header is collapsed (lines 1290–1298)",
+      "Tab switching via the Tabs root works while expanded; when collapsed the TabsList is unmounted so the user physically cannot switch — pill reflects last active tab"
+    ],
+    "source_bundle_verification": "curl of /src/pages/management/BanquetManagement.jsx through the preview URL returned all six required testids: bq-mgmt-title, bq-mgmt-toggle-header, bq-mgmt-active-tab-pill, bq-mgmt-filter-active-pill, bq-mgmt-refresh-btn, bq-mgmt-toolbar"
+  },
+  "critical_code_review_comments": [
+    "Implementation is clean and minimally invasive — only adds a single boolean state plus two short conditional wrappers around existing chrome. No side-effects on data fetching, dialog, edit, or packages flows.",
+    "Accessibility: aria-expanded and aria-controls on the toggle button are properly wired to the panel id 'bq-mgmt-header-panel'. ChevronUp/Down icons + visible label give a clear affordance.",
+    "Defensive UX nicety: when collapsed and the Services tab has active filters, the amber `bq-mgmt-filter-active-pill` makes the otherwise-hidden filter state discoverable. Good pattern to keep if rolling out to other pages.",
+    "File is 1722 lines (~700-line guideline exceeded). Consider extracting the dialog form and the management toolbar into sub-components in a follow-up — not blocking for this UI experiment."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "MAIN AGENT: Please self-verify in a clean incognito browser (Cmd+Shift+N), hard refresh once. Sign in as superadmin@oryno.com / testpassword123, navigate to /management/banquet and click the 'Hide' button next to the H1. Expected: subtitle + OperatorScopeFilter + Refresh + TabsList + toolbar all disappear; pill appears showing active tab; grid below stays. Click again to re-expand. Add a search term, collapse, confirm amber 'Filtered' pill appears.",
+    "Optional follow-up (NOT a blocker): split BanquetManagement.jsx (1722 LOC) into <ServicesToolbar>, <ServiceDialog>, <ServicesGrid> sub-components for maintainability before rolling this header pattern out to other management pages."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not in scope)", "frontend": "Code review 100%; live UI execution blocked by 429 rate-limiting on preview URL"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 — login API confirmed working (HTTP 200, access_token returned)",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The preview URL (cinema-management-p0.preview.emergentagent.com) was returning blanket HTTP 429 on virtually every /api/* request for the duration of this session, which makes Playwright UI flows extremely flaky — page never finishes hydration so React testids never appear. If you hit the same wall: (1) wait 2–3 minutes between runs, (2) `sudo supervisorctl restart frontend && sleep 12` to flush Vite stale bundle (recurring symptom called out by the main agent), (3) prefer single navigate + long wait_for_selector(timeout=60s) rather than many parallel actions which compound the rate limit. The implementation in BanquetManagement.jsx is verified correct via static review + source-bundle curl.",
+  "rca_of_the_issue": "Not a product bug — environment-side throttling. The Banquet collapsible header code is correctly wired (state + 3 conditional wrappers + 2 conditional pills) and all 6 required data-testids ship in the Vite-served bundle. The earlier screenshot showing 'no toggle button' was a browser-cached stale bundle from before the change; supervisorctl restart frontend + sleep 12 cleared it (verified via curl on the live JSX module)."
+}

@@ -19,6 +19,7 @@ import {
   LayoutDashboard, MessageSquare, Eye, Search, Layers,
   Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed,
   Sparkles, Music2, Box, Package as PackageIcon,
+  ChevronDown, ChevronUp, SlidersHorizontal,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -972,6 +973,10 @@ export default function BanquetManagement() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [page, setPage] = useState(1);
+  // Collapsible header — when false, ONLY the page title is visible.
+  // Subtitle, ops filters, refresh, the tabs list and the toolbar (search,
+  // category, view mode, Add Service) all hide until expanded again.
+  const [headerExpanded, setHeaderExpanded] = useState(true);
   const dashboardData = useRealDashboardData('banquets', '30days', scopeOperatorId);
 
   const filtered = useMemo(() => {
@@ -1153,27 +1158,76 @@ export default function BanquetManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Banquet & Event Services</h1>
-          <p className="text-gray-600">Halls, chairs & cutlery, canopies, photographers and event packages — all in one place.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button onClick={loadServices} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+      {/* ── Collapsible header card ──────────────────────────────────────
+          Page name is ALWAYS visible (top row of the card). All other
+          chrome — subtitle, scope filter, refresh, tab navigation, and
+          the toolbar (search + category + view mode + Add Service) — is
+          hidden when collapsed so the user can focus on the grid below.
+          Toggled via the chevron button on the right. */}
+      <Card className="border-slate-200 shadow-sm">
+        <div className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <PartyPopper className="h-5 w-5 text-[#082c59] flex-shrink-0" />
+            <h1 className="text-2xl font-bold text-[#082c59] truncate" data-testid="bq-mgmt-title">Banquet & Event Services</h1>
+            {!headerExpanded && (
+              <>
+                <span className="ml-2 hidden sm:inline-block text-slate-300">·</span>
+                <Badge className="hidden sm:inline-flex bg-[#082c59]/10 text-[#082c59] border-0 capitalize" data-testid="bq-mgmt-active-tab-pill">
+                  {activeTab === 'management' ? 'Services' : activeTab}
+                </Badge>
+                {activeTab === 'management' && (search || categoryFilter !== 'all') && (
+                  <Badge variant="outline" className="hidden md:inline-flex border-amber-300 text-amber-700 bg-amber-50" data-testid="bq-mgmt-filter-active-pill">
+                    <SlidersHorizontal className="h-3 w-3 mr-1" /> Filtered
+                  </Badge>
+                )}
+              </>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setHeaderExpanded(v => !v)}
+            className="text-slate-600 hover:text-[#082c59] hover:bg-slate-100"
+            aria-expanded={headerExpanded}
+            aria-controls="bq-mgmt-header-panel"
+            data-testid="bq-mgmt-toggle-header"
+          >
+            {headerExpanded ? (
+              <><ChevronUp className="h-4 w-4 mr-1" /> Hide</>
+            ) : (
+              <><ChevronDown className="h-4 w-4 mr-1" /> Show controls</>
+            )}
           </Button>
         </div>
-      </div>
+
+        {/* Collapsible body — subtitle + scope filter + refresh, then the
+            tabs list, then the management toolbar. Hidden when collapsed. */}
+        {headerExpanded && (
+          <div id="bq-mgmt-header-panel" className="px-5 pb-4 border-t border-slate-100 pt-4 space-y-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <p className="text-gray-600 text-sm">Halls, chairs & cutlery, canopies, photographers and event packages — all in one place.</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
+                <Button onClick={loadServices} variant="outline" disabled={loading} data-testid="bq-mgmt-refresh-btn">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management" data-testid="services-tab"><Layers className="h-4 w-4 mr-2" />Services</TabsTrigger>
-          <TabsTrigger value="packages" data-testid="packages-tab"><PackageIcon className="h-4 w-4 mr-2" />Packages</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-        </TabsList>
+        {headerExpanded && (
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
+            <TabsTrigger value="management" data-testid="services-tab"><Layers className="h-4 w-4 mr-2" />Services</TabsTrigger>
+            <TabsTrigger value="packages" data-testid="packages-tab"><PackageIcon className="h-4 w-4 mr-2" />Packages</TabsTrigger>
+            <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
@@ -1195,38 +1249,41 @@ export default function BanquetManagement() {
         </TabsContent>
 
         <TabsContent value="management" className="mt-6 space-y-4">
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-1 gap-2 max-w-2xl items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search services by name, city, address…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 bg-white"
-                  data-testid="services-search-input"
-                />
+          {/* Toolbar — hidden when the header card is collapsed, exactly
+              like the rest of the chrome above. */}
+          {headerExpanded && (
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between" data-testid="bq-mgmt-toolbar">
+              <div className="flex flex-1 gap-2 max-w-2xl items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search services by name, city, address…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-10 bg-white"
+                    data-testid="services-search-input"
+                  />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-44 bg-white" data-testid="category-filter-select">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {CATEGORIES.map(c => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-44 bg-white" data-testid="category-filter-select">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {CATEGORIES.map(c => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2 flex-wrap">
+                <ViewModeToggle value={viewMode} onChange={setViewMode} />
+                <PermissionGate permission="banquets.create">
+                  <Button onClick={() => openDialog()} className="bg-[#082c59]" data-testid="add-service-btn">
+                    <Plus className="w-4 h-4 mr-2" /> Add Service
+                  </Button>
+                </PermissionGate>
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              <PermissionGate permission="banquets.create">
-                <Button onClick={() => openDialog()} className="bg-[#082c59]" data-testid="add-service-btn">
-                  <Plus className="w-4 h-4 mr-2" /> Add Service
-                </Button>
-              </PermissionGate>
-            </div>
-          </div>
+          )}
 
           {/* Category filter is in the dropdown beside the search — chips removed by request to keep the toolbar clean. */}
 
