@@ -10,6 +10,8 @@ import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Calendar, Plus, Edit, Trash2, MapPin, Clock, Users, DollarSign,
@@ -243,26 +245,23 @@ export default function EventsManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Events Management Center</h1>
-          <p className="text-gray-600">Manage events, tickets, and communications</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="events" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadEvents} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management"><Calendar className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-        </TabsList>
+    <>
+    <ManagementShell
+      title="Events Management Center"
+      icon={Calendar}
+      subtitle="Manage events, tickets, and communications"
+      scopeFilter={<OperatorScopeFilter serviceType="events" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+      onRefresh={loadEvents}
+      refreshing={loading}
+      tabs={[
+        { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { value: 'management', label: 'Management', icon: Calendar },
+        { value: 'communications', label: 'Communications', icon: MessageSquare },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="events-mgmt"
+    >
 
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
@@ -284,27 +283,24 @@ export default function EventsManagement() {
         </TabsContent>
 
         <TabsContent value="management" className="mt-6 space-y-4">
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <SubpageCard title="Events" icon={Calendar} count={filteredEvents.length} testId="events-mgmt-subpage-card">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
-                placeholder="Search events by name, venue, city..."
+                placeholder="Search events by name, venue, city…"
                 value={eventSearch}
                 onChange={(e) => setEventSearch(e.target.value)}
-                className="pl-10 bg-white"
+                className="pl-9 h-8 bg-white text-sm"
                 data-testid="events-search-input"
               />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              <PermissionGate permission="events.create">
-                <Button onClick={() => openEventDialog()} className="bg-[#082c59]" data-testid="add-event-btn">
-                  <Plus className="w-4 h-4 mr-2" /> Add Event
-                </Button>
-              </PermissionGate>
-            </div>
-          </div>
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            <PermissionGate permission="events.create">
+              <Button onClick={() => openEventDialog()} className="bg-[#082c59] h-8" size="sm" data-testid="add-event-btn">
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Event
+              </Button>
+            </PermissionGate>
+          </SubpageCard>
 
           {loading ? (
             <div className="text-center py-8">Loading...</div>
@@ -417,7 +413,7 @@ export default function EventsManagement() {
             primaryColor="purple"
           />
         </TabsContent>
-      </Tabs>
+      </ManagementShell>
 
       <ServiceFormShell
         open={isEventDialogOpen}
@@ -638,6 +634,6 @@ export default function EventsManagement() {
           loadEvents?.();
         }}
       />
-    </div>
+    </>
   );
 }

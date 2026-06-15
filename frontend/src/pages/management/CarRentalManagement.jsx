@@ -11,6 +11,7 @@ import GenericPreviewCard from '@/components/management/shared/GenericPreviewCar
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
@@ -461,26 +462,24 @@ export default function CarRentalManagement() {
           </TabsContent>
 
           <TabsContent value="management" className="mt-6 space-y-4">
-            {/* Search and Add */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <SubpageCard title="Fleet" icon={Car} iconColorClass="text-emerald-600" count={filteredCars.length} testId="carrental-mgmt-subpage-card">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <Input
-                  placeholder="Search by brand, model, city, or plate..."
+                  placeholder="Search by brand, model, city, or plate…"
                   value={carSearch}
                   onChange={(e) => setCarSearch(e.target.value)}
-                  className="pl-10 bg-white"
+                  className="pl-9 h-8 bg-white text-sm"
+                  data-testid="car-search-input"
                 />
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                <PermissionGate permission="car_rental.create">
-                  <Button onClick={() => openCarDialog()} className="bg-emerald-600 hover:bg-emerald-700" data-testid="add-car-btn">
-                    <Plus className="w-4 h-4 mr-2" /> Add Car
-                  </Button>
-                </PermissionGate>
-              </div>
-            </div>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
+              <PermissionGate permission="car_rental.create">
+                <Button onClick={() => openCarDialog()} size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8" data-testid="add-car-btn">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Car
+                </Button>
+              </PermissionGate>
+            </SubpageCard>
 
             {/* Cars Grid */}
             {loading ? (

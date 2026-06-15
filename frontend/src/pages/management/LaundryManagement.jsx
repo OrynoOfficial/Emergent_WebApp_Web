@@ -11,6 +11,7 @@ import GenericPreviewCard from '@/components/management/shared/GenericPreviewCar
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
@@ -332,27 +333,24 @@ export default function LaundryManagement() {
         </TabsContent>
 
         <TabsContent value="management" className="mt-6 space-y-4">
-          {/* Toolbar */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <SubpageCard title="Shops" icon={Shirt} iconColorClass="text-purple-600" count={filteredPressings.length} testId="laundry-mgmt-subpage-card">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
-                placeholder="Search shops by name, city, address..."
+                placeholder="Search shops by name, city, address…"
                 value={pressingSearch}
                 onChange={(e) => setPressingSearch(e.target.value)}
-                className="pl-10 bg-white"
+                className="pl-9 h-8 bg-white text-sm"
                 data-testid="pressings-search-input"
               />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              <PermissionGate permission="pressing.create">
-                <Button onClick={() => openPressingDialog()} className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-md shadow-purple-500/20" data-testid="add-pressing-btn">
-                  <Plus className="w-4 h-4 mr-2" /> Add Shop
-                </Button>
-              </PermissionGate>
-            </div>
-          </div>
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
+            <PermissionGate permission="pressing.create">
+              <Button onClick={() => openPressingDialog()} size="sm" className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-md shadow-purple-500/20 h-8" data-testid="add-pressing-btn">
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Shop
+              </Button>
+            </PermissionGate>
+          </SubpageCard>
 
           {loading ? (
             <div className="text-center py-8">Loading...</div>

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import Pagination from '@/components/common/Pagination';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
@@ -437,28 +438,25 @@ export default function PackageServicesTab({ scopeOperatorId, operators }) {
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+      <SubpageCard title="Services" icon={Truck} count={filtered.length} testId="packages-mgmt-subpage-card">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <Input
-            placeholder="Search by name, origin, destination..."
+            placeholder="Search by name, origin, destination…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-white"
+            className="pl-9 h-8 bg-white text-sm"
             data-testid="services-search-input"
           />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <Button variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
-          <PermissionGate permission="packages.create">
-            <Button onClick={() => openForm()} className="bg-[#082c59] hover:bg-[#0a3a75]" data-testid="add-service-btn">
-              <Plus className="h-4 w-4 mr-1" /> New Service
-            </Button>
-          </PermissionGate>
-        </div>
-      </div>
+        <ViewModeToggle value={viewMode} onChange={setViewMode} />
+        <Button variant="outline" size="sm" onClick={load} className="h-8"><RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh</Button>
+        <PermissionGate permission="packages.create">
+          <Button onClick={() => openForm()} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] h-8" data-testid="add-service-btn">
+            <Plus className="h-3.5 w-3.5 mr-1" /> New Service
+          </Button>
+        </PermissionGate>
+      </SubpageCard>
 
       {/* Cards */}
       {loading ? (

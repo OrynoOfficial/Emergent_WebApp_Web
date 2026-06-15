@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
@@ -633,41 +634,33 @@ export default function CinemaManagement() {
               <TabsTrigger value="showtimes" data-testid="tab-showtimes">Showtimes ({showtimes.length})</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="cinemas">
+            <TabsContent value="cinemas" className="space-y-4">
+              <SubpageCard title="Cinemas" icon={Film} count={filteredCinemas.length} testId="cinema-mgmt-subpage-card-cinemas">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search cinemas…"
+                    value={cinemaSearch}
+                    onChange={(e) => setCinemaSearch(e.target.value)}
+                    className="pl-9 h-8 bg-white text-sm"
+                    data-testid="cinemas-search-input"
+                  />
+                </div>
+                <ViewModeToggle value={cinemaViewMode} onChange={setCinemaViewMode} />
+                {selectedCinemaIds.size > 0 && (
+                  <PermissionGate permission="cinema.delete">
+                    <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 h-8" onClick={handleBulkDeleteCinemas} data-testid="bulk-delete-cinemas-btn">
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete ({selectedCinemaIds.size})
+                    </Button>
+                  </PermissionGate>
+                )}
+                <PermissionGate permission="cinema.create">
+                  <Button onClick={() => openCinemaDialog()} size="sm" className="bg-[#082c59] h-8" data-testid="add-cinema-btn">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Cinema
+                  </Button>
+                </PermissionGate>
+              </SubpageCard>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-                  <CardTitle>Cinemas</CardTitle>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search cinemas..."
-                        value={cinemaSearch}
-                        onChange={(e) => setCinemaSearch(e.target.value)}
-                        className="pl-10 bg-white w-64"
-                        data-testid="cinemas-search-input"
-                      />
-                    </div>
-                    <ViewModeToggle value={cinemaViewMode} onChange={setCinemaViewMode} />
-                    {selectedCinemaIds.size > 0 && (
-                      <PermissionGate permission="cinema.delete">
-                        <Button
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                          onClick={handleBulkDeleteCinemas}
-                          data-testid="bulk-delete-cinemas-btn"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete selected ({selectedCinemaIds.size})
-                        </Button>
-                      </PermissionGate>
-                    )}
-                    <PermissionGate permission="cinema.create">
-                      <Button onClick={() => openCinemaDialog()} className="bg-[#082c59]" data-testid="add-cinema-btn">
-                        <Plus className="w-4 h-4 mr-2" /> Add Cinema
-                      </Button>
-                    </PermissionGate>
-                  </div>
-                </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="text-center py-8">Loading...</div>
@@ -886,41 +879,33 @@ export default function CinemaManagement() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="movies">
+            <TabsContent value="movies" className="space-y-4">
+              <SubpageCard title="Films" icon={Film} count={filteredMovies.length} testId="cinema-mgmt-subpage-card-films">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search films…"
+                    value={movieSearch}
+                    onChange={(e) => setMovieSearch(e.target.value)}
+                    className="pl-9 h-8 bg-white text-sm"
+                    data-testid="movies-search-input"
+                  />
+                </div>
+                <ViewModeToggle value={movieViewMode} onChange={setMovieViewMode} />
+                {selectedMovieIds.size > 0 && (
+                  <PermissionGate permission="cinema.delete">
+                    <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 h-8" onClick={handleBulkDeleteMovies} data-testid="bulk-delete-movies-btn">
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete ({selectedMovieIds.size})
+                    </Button>
+                  </PermissionGate>
+                )}
+                <PermissionGate permission="cinema.edit">
+                  <Button onClick={() => openMovieDialog()} size="sm" className="bg-[#082c59] h-8" data-testid="add-movie-btn">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Movie
+                  </Button>
+                </PermissionGate>
+              </SubpageCard>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between gap-3 flex-wrap">
-                  <CardTitle>Films</CardTitle>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        placeholder="Search films..."
-                        value={movieSearch}
-                        onChange={(e) => setMovieSearch(e.target.value)}
-                        className="pl-10 bg-white w-64"
-                        data-testid="movies-search-input"
-                      />
-                    </div>
-                    <ViewModeToggle value={movieViewMode} onChange={setMovieViewMode} />
-                    {selectedMovieIds.size > 0 && (
-                      <PermissionGate permission="cinema.delete">
-                        <Button
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                          onClick={handleBulkDeleteMovies}
-                          data-testid="bulk-delete-movies-btn"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete selected ({selectedMovieIds.size})
-                        </Button>
-                      </PermissionGate>
-                    )}
-                    <PermissionGate permission="cinema.edit">
-                      <Button onClick={() => openMovieDialog()} className="bg-[#082c59]" data-testid="add-movie-btn">
-                        <Plus className="w-4 h-4 mr-2" /> Add Movie
-                      </Button>
-                    </PermissionGate>
-                  </div>
-                </CardHeader>
                 <CardContent>
                   {filteredMovies.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">{movieSearch ? 'No films match your search' : 'No films. Add a film!'}</div>
@@ -1062,68 +1047,56 @@ export default function CinemaManagement() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="showtimes" data-testid="content-showtimes">
+            <TabsContent value="showtimes" data-testid="content-showtimes" className="space-y-4">
+              <SubpageCard title="Showtimes" icon={Film} count={showtimes.length} testId="cinema-mgmt-subpage-card-showtimes">
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Search film, cinema, screen…"
+                    value={showtimeSearch}
+                    onChange={(e) => setShowtimeSearch(e.target.value)}
+                    className="pl-9 h-8 bg-white text-sm"
+                    data-testid="showtime-search-input"
+                  />
+                </div>
+                <Select value={showtimeCinemaFilter} onValueChange={setShowtimeCinemaFilter}>
+                  <SelectTrigger className="w-44 h-8 bg-white text-sm" data-testid="showtime-cinema-filter">
+                    <SelectValue placeholder="All cinemas" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All cinemas</SelectItem>
+                    {(cinemas || []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={showtimeDateFilter} onValueChange={setShowtimeDateFilter}>
+                  <SelectTrigger className="w-36 h-8 bg-white text-sm" data-testid="showtime-date-filter">
+                    <SelectValue placeholder="All dates" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All dates</SelectItem>
+                    {showtimeDateOptions.map((d) => (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(showtimeSearch || showtimeCinemaFilter !== 'all' || showtimeDateFilter !== 'all') && (
+                  <Button variant="ghost" size="sm" className="h-8" onClick={() => { setShowtimeSearch(''); setShowtimeCinemaFilter('all'); setShowtimeDateFilter('all'); }} data-testid="showtime-clear-filters">
+                    Clear filters
+                  </Button>
+                )}
+                <Button onClick={loadShowtimes} variant="outline" size="sm" className="h-8">
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+                </Button>
+                <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
+                  <Button onClick={() => openShowtimeDialog()} className="bg-[#082c59] h-8" size="sm" data-testid="add-showtime-btn">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Showtime
+                  </Button>
+                </PermissionGate>
+              </SubpageCard>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Showtimes</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button onClick={loadShowtimes} variant="outline" size="sm">
-                      <RefreshCw className="w-4 h-4 mr-2" /> Refresh
-                    </Button>
-                    <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
-                      <Button onClick={() => openShowtimeDialog()} className="bg-[#082c59]" size="sm" data-testid="add-showtime-btn">
-                        <Plus className="w-4 h-4 mr-2" /> Add Showtime
-                      </Button>
-                    </PermissionGate>
-                  </div>
-                </CardHeader>
                 <CardContent>
-                  {/* Filters row */}
-                  <div className="flex flex-col md:flex-row gap-2 md:items-center mb-4">
-                    <div className="relative md:w-72">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input
-                        placeholder="Search film, cinema, screen…"
-                        value={showtimeSearch}
-                        onChange={(e) => setShowtimeSearch(e.target.value)}
-                        className="pl-9 bg-white"
-                        data-testid="showtime-search-input"
-                      />
-                    </div>
-                    <Select value={showtimeCinemaFilter} onValueChange={setShowtimeCinemaFilter}>
-                      <SelectTrigger className="md:w-56 bg-white" data-testid="showtime-cinema-filter">
-                        <SelectValue placeholder="All cinemas" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All cinemas</SelectItem>
-                        {(cinemas || []).map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={showtimeDateFilter} onValueChange={setShowtimeDateFilter}>
-                      <SelectTrigger className="md:w-44 bg-white" data-testid="showtime-date-filter">
-                        <SelectValue placeholder="All dates" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All dates</SelectItem>
-                        {showtimeDateOptions.map((d) => (
-                          <SelectItem key={d} value={d}>{d}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {(showtimeSearch || showtimeCinemaFilter !== 'all' || showtimeDateFilter !== 'all') && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setShowtimeSearch(''); setShowtimeCinemaFilter('all'); setShowtimeDateFilter('all'); }}
-                        data-testid="showtime-clear-filters"
-                      >
-                        Clear filters
-                      </Button>
-                    )}
-                  </div>
-
                   {showtimes.length === 0 ? (
                     <div className="text-center py-10 text-gray-500 text-sm">
                       No showtimes yet. Click <strong>"Add Showtime"</strong> to assign a film to a cinema, screen, date, time and price.

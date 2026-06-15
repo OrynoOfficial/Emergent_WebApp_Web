@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Utensils, Plus, LayoutDashboard, MessageSquare, RefreshCw, MapPin, Star, 
@@ -478,49 +480,32 @@ export default function RestaurantManagement() {
   const canDelete = hasPermission('restaurants.delete');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-orange-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Utensils className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Restaurant Management</h1>
-                <p className="text-slate-500">Manage restaurants, menus, and reservations</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button variant="outline" onClick={loadRestaurants} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+    <>
+      <ManagementShell
+        title="Restaurant Management"
+        icon={Utensils}
+        subtitle="Manage restaurants, menus, and reservations"
+        scopeFilter={
+          <>
+            <OperatorScopeFilter serviceType="restaurant" value={scopeOperatorId} onChange={setScopeOperatorId} />
+            <PermissionGate permission="restaurants.create">
+              <Button onClick={() => openRestaurantDialog()} size="sm" className="bg-orange-600 hover:bg-orange-700 h-8" data-testid="add-restaurant-btn">
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Restaurant
               </Button>
-              <PermissionGate permission="restaurants.create">
-                <Button onClick={() => openRestaurantDialog()} className="bg-orange-600 hover:bg-orange-700" data-testid="add-restaurant-btn">
-                  <Plus className="h-4 w-4 mr-2" /> Add Restaurant
-                </Button>
-              </PermissionGate>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="dashboard">
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="management">
-              <Utensils className="h-4 w-4 mr-2" /> Management
-            </TabsTrigger>
-            <TabsTrigger value="communications">
-              <MessageSquare className="h-4 w-4 mr-2" /> Communications
-            </TabsTrigger>
-          </TabsList>
+            </PermissionGate>
+          </>
+        }
+        onRefresh={loadRestaurants}
+        refreshing={loading}
+        tabs={[
+          { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { value: 'management', label: 'Management', icon: Utensils },
+          { value: 'communications', label: 'Communications', icon: MessageSquare },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        testIdPrefix="restaurant-mgmt"
+      >
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard">
@@ -542,40 +527,41 @@ export default function RestaurantManagement() {
           </TabsContent>
 
           {/* Management Tab */}
-          <TabsContent value="management">
+          <TabsContent value="management" className="space-y-4">
             <div className="flex gap-6">
               {/* Restaurants List */}
-              <div className={`${showMenuPanel ? 'flex-1' : 'w-full'} transition-all duration-300`}>
-                <Card className="shadow-lg border-0">
-                  <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-xl">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <Utensils className="h-5 w-5" />
-                        Restaurants ({filteredRestaurants.length})
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
+              <div className={`${showMenuPanel ? 'flex-1' : 'w-full'} transition-all duration-300 space-y-4`}>
+                <SubpageCard
+                  title="Restaurants"
+                  icon={Utensils}
+                  iconColorClass="text-orange-600"
+                  count={filteredRestaurants.length}
+                  testId="restaurant-mgmt-subpage-card"
+                >
+                  <div className="flex-1 min-w-[200px]">
                     <SearchFilter
                       searchValue={searchQuery}
                       onSearchChange={setSearchQuery}
-                      searchPlaceholder="Search restaurants..."
+                      searchPlaceholder="Search restaurants…"
                       filters={[{
                         key: 'status',
                         placeholder: 'Status',
                         options: [
                           { value: 'active', label: 'Active' },
-                          { value: 'inactive', label: 'Inactive' }
-                        ]
+                          { value: 'inactive', label: 'Inactive' },
+                        ],
                       }]}
                       filterValues={{ status: filterStatus }}
                       onFilterChange={(key, val) => setFilterStatus(val)}
                       showViewToggle
                       viewMode={viewMode}
                       onViewModeChange={setViewMode}
-                      className="mb-4"
                     />
+                  </div>
+                </SubpageCard>
 
+                <Card className="shadow-lg border-0">
+                  <CardContent className="p-4">
                     {loading ? (
                       <div className="flex items-center justify-center py-12">
                         <RefreshCw className="h-8 w-8 animate-spin text-orange-500" />
@@ -723,8 +709,7 @@ export default function RestaurantManagement() {
           <TabsContent value="communications">
             <ServiceCommunicationsHub serviceType="Restaurants" operatorId={scopeOperatorId} serviceIcon={<Utensils className="h-6 w-6" />} />
           </TabsContent>
-        </Tabs>
-      </div>
+      </ManagementShell>
 
       {/* Restaurant Dialog */}
       <ServiceFormShell
@@ -914,6 +899,6 @@ export default function RestaurantManagement() {
           loadRestaurants?.();
         }}
       />
-    </div>
+    </>
   );
 }

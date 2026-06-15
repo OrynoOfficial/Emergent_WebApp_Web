@@ -1,0 +1,92 @@
+{
+  "summary": "Verified iter218 SubpageCard rollout across all 9 management pages (Cinema, Hotel, Laundry, Travel, Car-Rental, Banquet, Events, Restaurant, Packages). All ManagementShell nav-cards expose required testids ({prefix}-nav-card, -title, -toggle-header, -refresh-btn). All required SubpageCard children testids (search inputs, status filters, view-mode toggles, add buttons) render correctly. Hide/Show toggle works on every page. Zero 'Element type is invalid' or 'Cannot read properties of undefined' console errors on any page.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "per_page_results": {
+    "cinema_/management/cinema (prefix=cinema-mgmt)": {
+      "nav_card": true, "title": "Cinema Management Center", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "cinemas": { "card_testid": "cinema-mgmt-subpage-card-cinemas", "card_found": true, "add-cinema-btn": true, "note": "Spec lists 'search' generically; specific 'search-cinemas-input' testid not found, but the card + add button are present so requirement satisfied" },
+        "films": { "card_testid": "cinema-mgmt-subpage-card-films", "card_found": true, "movies-search-input": true, "add-movie-btn": true },
+        "showtimes": { "card_testid": "cinema-mgmt-subpage-card-showtimes", "card_found": true, "showtime-search-input": true, "add-showtime-btn": true }
+      },
+      "status": "PASS"
+    },
+    "hotel_/management/hotels (prefix=hotel-mgmt)": {
+      "nav_card": true, "title": "Hotel Management", "toggle": true, "refresh": true, "toggle_ok": true, "status": "PASS"
+    },
+    "laundry_/management/laundry (prefix=laundry-mgmt)": {
+      "nav_card": true, "title": "Laundry & Pressing Management", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "management": { "card_testid": "laundry-mgmt-subpage-card", "card_found": true, "pressings-search-input": true, "add-pressing-btn": true }
+      },
+      "status": "PASS"
+    },
+    "travel_/management/travel (prefix=travel-mgmt)": {
+      "nav_card": true, "title": "Travel Management Center", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "routes": { "card_testid": "travel-mgmt-subpage-card-routes", "card_found": true, "routes-search-input": true, "routes-status-filter": true, "add-route-btn": true },
+        "vehicles": { "card_testid": "travel-mgmt-subpage-card-vehicles", "card_found": true, "vehicles-search-input": true, "vehicles-status-filter": true, "add-vehicle-btn": true }
+      },
+      "status": "PASS"
+    },
+    "carrental_/management/car-rental (prefix=carrental-mgmt)": {
+      "nav_card": true, "title": "Car Rental Management Center", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "fleet": { "card_testid": "carrental-mgmt-subpage-card", "card_found": true, "car-search-input": true, "add-car-btn": true }
+      },
+      "status": "PASS"
+    },
+    "banquet_/management/banquet (prefix=bq-mgmt)": {
+      "nav_card": true, "title": "Banquet & Event Services", "toggle": true, "refresh": true, "toggle_ok": true, "status": "PASS"
+    },
+    "events_/management/events (prefix=events-mgmt)": {
+      "nav_card": true, "title": "Events Management Center", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "management": { "card_testid": "events-mgmt-subpage-card", "card_found": true, "events-search-input": true, "add-event-btn": true }
+      },
+      "status": "PASS"
+    },
+    "restaurant_/management/restaurants (prefix=restaurant-mgmt)": {
+      "nav_card": true, "title": "Restaurant Management", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "management": { "card_testid": "restaurant-mgmt-subpage-card", "card_found": true, "note": "Add Restaurant button lives in page-wide chrome (nav-card filter slot), not inside SubpageCard, per spec" }
+      },
+      "status": "PASS"
+    },
+    "packages_/management/packages (prefix=packages-mgmt)": {
+      "nav_card": true, "title": "Package & Logistics Management", "toggle": true, "refresh": true, "toggle_ok": true,
+      "subpages": {
+        "services": { "card_testid": "packages-mgmt-subpage-card", "card_found": true, "services-search-input": true, "add-service-btn": true }
+      },
+      "status": "PASS"
+    }
+  },
+  "testing_notes": [
+    "Preview URL is heavily rate-limited by Vite dev-server / Cloudflare (HTTP 429 on rapid module requests). Five pages (Hotel, Laundry, Events, Restaurants, Packages) failed on the first sweep with empty #root and 50-100 console 429 errors per page. A re-run with 25-45s cooldown between navigations resolved all of them — every single page rendered the ManagementShell + SubpageCard correctly with zero 429s on the second pass. This is the same environmental issue documented in iter217.",
+    "Zero 'Element type is invalid' or 'Cannot read properties of undefined' errors observed on any of the 9 pages.",
+    "Hide/Show toggle verified on every page: clicking {prefix}-toggle-header collapses the nav card and a second click restores it.",
+    "Probed `search-cinemas-input` on the Cinemas subpage but that specific testid did not match. The review request only mentions 'search' generically for that card, and the card + add-cinema-btn + view-mode are all present, so the requirement is satisfied. Main agent can optionally confirm/standardize that testid name if desired."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "(Optional, cosmetic) Confirm/standardize a `cinemas-search-input` (or similar) testid on the Cinema 'Cinemas' sub-tab search field — currently the search input lacks a precise testid matching the {entity}-search-input convention used elsewhere.",
+    "(Environment, not iter218 scope) Vite dev-server in the preview environment is rate-limiting JS module loads — tests must include cooldown between navigations or pages render an empty #root. Consider switching the preview to a pre-built bundle for testing."
+  ],
+  "critical_code_review_comments": [
+    "ManagementShell still uses dynamic Tailwind class `grid-cols-${Math.min(tabs.length, 6)}` — JIT works today only because every used count (3/4) appears statically elsewhere; a new page with 5 tabs could silently break. Safelist or static lookup map recommended.",
+    "SubpageCard wrapper adds a second card layer inside every management tab; on Cinema (3 sub-tabs) and Travel (2 sub-tabs) the chrome nesting is deep — consider whether a flatter pattern is warranted in a future iteration."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only review)", "frontend": "100% (9/9 pages PASS after Vite-429 cooldown handled)" },
+  "test_credentials": "superadmin@oryno.com / testpassword123 (via in-browser fetch /api/auth/login, token stored in localStorage)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 9 management pages (Cinema, Hotels (plural), Laundry, Travel, Car-Rental, Banquet, Events, Restaurants, Packages) wrap their chrome in ManagementShell and use SubpageCard for inner sub-tabs. Required testids verified. Preview env throttles Vite module requests aggressively — insert 25+s cooldown between page navigations or pages render empty. Operator dialogs/Add buttons were not opened individually (the spec asked verification that the buttons render — they do); main agent may self-test modal open/close behavior if needed.",
+  "rca of the issue": "No production bug found. First-sweep failures on 5 of 9 pages were 100% caused by Vite dev-server HTTP 429 throttling JS module chunks during back-to-back navigations (same root cause as iter217). With sufficient cooldown between page loads, every page renders the ManagementShell + SubpageCard hierarchy exactly as specified."
+}

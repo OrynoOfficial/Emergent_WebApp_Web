@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Package, Plus, Edit, Trash2, MapPin, User, Phone, Weight, Ruler,
@@ -483,26 +485,23 @@ export default function PackageManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Package & Logistics Management</h1>
-          <p className="text-gray-600">Track and manage physical shipments, deliveries and dispatch.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="packages" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button onClick={loadPackages} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="services" data-testid="tab-services"><Truck className="h-4 w-4 mr-2" />Services</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-        </TabsList>
+    <>
+    <ManagementShell
+      title="Package & Logistics Management"
+      icon={Truck}
+      subtitle="Track and manage physical shipments, deliveries and dispatch."
+      scopeFilter={<OperatorScopeFilter serviceType="packages" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+      onRefresh={loadPackages}
+      refreshing={loading}
+      tabs={[
+        { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { value: 'services', label: 'Services', icon: Truck, testId: 'tab-services' },
+        { value: 'communications', label: 'Communications', icon: MessageSquare },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="packages-mgmt"
+    >
 
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
@@ -669,7 +668,7 @@ export default function PackageManagement() {
             primaryColor="blue"
           />
         </TabsContent>
-      </Tabs>
+      </ManagementShell>
 
       {/* Create/Edit Form */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -1053,6 +1052,6 @@ export default function PackageManagement() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

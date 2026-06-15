@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
@@ -690,37 +691,34 @@ export default function TravelManagement() {
               </div>
 
               <TabsContent value="routes" className="space-y-4">
-                {/* Toolbar — search, status filter, view mode, add */}
-                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <SubpageCard title="Routes" icon={MapPin} iconColorClass="text-blue-600" count={filteredRoutes.length} testId="travel-mgmt-subpage-card-routes">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
-                      placeholder="Search routes..."
+                      placeholder="Search routes…"
                       value={routeSearch}
                       onChange={(e) => setRouteSearch(e.target.value)}
-                      className="pl-10 bg-white"
+                      className="pl-9 h-8 bg-white text-sm"
                       data-testid="routes-search-input"
                     />
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Select value={routeStatusFilter} onValueChange={setRouteStatusFilter}>
-                      <SelectTrigger className="w-40 bg-white" data-testid="routes-status-filter">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <ViewModeToggle value={routeViewMode} onChange={setRouteViewMode} />
-                    <PermissionGate permission="travel.create">
-                      <Button onClick={() => openRouteDialog()} className="bg-blue-600 hover:bg-blue-700" data-testid="add-route-btn">
-                        <Plus className="w-4 h-4 mr-2" /> Add Route
-                      </Button>
-                    </PermissionGate>
-                  </div>
-                </div>
+                  <Select value={routeStatusFilter} onValueChange={setRouteStatusFilter}>
+                    <SelectTrigger className="w-32 h-8 bg-white text-sm" data-testid="routes-status-filter">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <ViewModeToggle value={routeViewMode} onChange={setRouteViewMode} />
+                  <PermissionGate permission="travel.create">
+                    <Button onClick={() => openRouteDialog()} size="sm" className="bg-blue-600 hover:bg-blue-700 h-8" data-testid="add-route-btn">
+                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Route
+                    </Button>
+                  </PermissionGate>
+                </SubpageCard>
 
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
@@ -821,38 +819,35 @@ export default function TravelManagement() {
               </TabsContent>
 
               <TabsContent value="vehicles" className="space-y-4">
-                {/* Toolbar — search, status filter, view mode, add */}
-                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <SubpageCard title="Vehicles" icon={Bus} iconColorClass="text-blue-600" count={filteredVehicles.length} testId="travel-mgmt-subpage-card-vehicles">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
-                      placeholder="Search vehicles..."
+                      placeholder="Search vehicles…"
                       value={vehicleSearch}
                       onChange={(e) => setVehicleSearch(e.target.value)}
-                      className="pl-10 bg-white"
+                      className="pl-9 h-8 bg-white text-sm"
                       data-testid="vehicles-search-input"
                     />
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Select value={vehicleStatusFilter} onValueChange={setVehicleStatusFilter}>
-                      <SelectTrigger className="w-40 bg-white" data-testid="vehicles-status-filter">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All statuses</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="maintenance">Maintenance</SelectItem>
-                        <SelectItem value="retired">Retired</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <ViewModeToggle value={vehicleViewMode} onChange={setVehicleViewMode} />
-                    <PermissionGate permission="travel.create">
-                      <Button onClick={() => openVehicleDialog()} className="bg-blue-600 hover:bg-blue-700">
-                        <Plus className="w-4 h-4 mr-2" /> Add Vehicle
-                      </Button>
-                    </PermissionGate>
-                  </div>
-                </div>
+                  <Select value={vehicleStatusFilter} onValueChange={setVehicleStatusFilter}>
+                    <SelectTrigger className="w-32 h-8 bg-white text-sm" data-testid="vehicles-status-filter">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <ViewModeToggle value={vehicleViewMode} onChange={setVehicleViewMode} />
+                  <PermissionGate permission="travel.create">
+                    <Button onClick={() => openVehicleDialog()} size="sm" className="bg-blue-600 hover:bg-blue-700 h-8" data-testid="add-vehicle-btn">
+                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Vehicle
+                    </Button>
+                  </PermissionGate>
+                </SubpageCard>
 
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
