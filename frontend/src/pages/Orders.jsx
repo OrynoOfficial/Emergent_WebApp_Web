@@ -306,8 +306,75 @@ export default function Orders() {
             </SubpageCard>
           )}
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Stats Cards moved below filters */}
+
+      {/* Search and Filters Section */}
+      <SubpageCard title="Filters" icon={Search} testId="orders-filters-card">
+        <div className="flex-1 min-w-[220px] relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            placeholder="Search by order number, service, or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-8 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59]/20 text-sm"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-[140px] h-8 bg-white border-slate-200 text-sm">
+            <Tag className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {CATEGORY_OPTIONS.map(cat => (
+              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[130px] h-8 bg-white border-slate-200 text-sm">
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {STATUS_OPTIONS.map(status => (
+              <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[160px] h-8 bg-white border-slate-200 text-sm">
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {SORT_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-slate-500 hover:text-slate-700 h-8"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+      </SubpageCard>
+
+      {/* Stats Cards (dynamic — reflects active filters) */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4" data-testid="orders-stats-grid">
         <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -374,71 +441,6 @@ export default function Orders() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Search and Filters Section */}
-      <SubpageCard title="Filters" icon={Search} testId="orders-filters-card">
-        <div className="flex-1 min-w-[220px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <Input
-            placeholder="Search by order number, service, or category..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-8 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59]/20 text-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[140px] h-8 bg-white border-slate-200 text-sm">
-            <Tag className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {CATEGORY_OPTIONS.map(cat => (
-              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[130px] h-8 bg-white border-slate-200 text-sm">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {STATUS_OPTIONS.map(status => (
-              <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[160px] h-8 bg-white border-slate-200 text-sm">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {SORT_OPTIONS.map(option => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="text-slate-500 hover:text-slate-700 h-8"
-          >
-            <X className="h-3.5 w-3.5 mr-1" />
-            Clear
-          </Button>
-        )}
-      </SubpageCard>
 
       {/* Results Count */}
       {!loading && (

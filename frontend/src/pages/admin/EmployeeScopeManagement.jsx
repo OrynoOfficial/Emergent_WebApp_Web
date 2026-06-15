@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,14 +16,15 @@ import {
 import { toast } from 'sonner';
 import api from '@/api/client';
 import { AdminModal, FormField, StyledInput } from '@/components/shared/AdminModal';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 export default function EmployeeScopeManagement() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [scopes, setScopes] = useState([]);
   const [users, setUsers] = useState([]);
   const [countries, setCountries] = useState([]);
-  const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -93,10 +94,9 @@ export default function EmployeeScopeManagement() {
       
       setUsers(platformUsers);
       setCountries(countriesRes.data.countries || []);
-      setRegions(regionsRes.data.regions || []);
       setMarketSegments(segRes.data.market_segments || []);
       setPods(podsRes.data.pods || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
@@ -172,7 +172,7 @@ export default function EmployeeScopeManagement() {
     try {
       const res = await api.get(`/employee-scopes/${scopeId}`);
       setSelectedScope(res.data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch scope details');
     }
   };
@@ -190,49 +190,50 @@ export default function EmployeeScopeManagement() {
   const filteredScopes = scopes.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Sub-page Navigation */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#082c59] mb-1" data-testid="employee-management-title">Employee Management</h1>
-        <p className="text-gray-600 mb-4">Manage staff, pods, and access scopes</p>
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="employee-management-tabs">
-          <button onClick={() => navigate('/admin/employees')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-employees">
-            <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Employees
-          </button>
-          <button onClick={() => navigate('/admin/employees/pods')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/pods') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-pod-management">
-            <Network className="w-4 h-4 inline mr-1.5 -mt-0.5" />Pod Management
-          </button>
-          <button onClick={() => navigate('/admin/employees/access-scopes')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/access-scopes') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-access-scopes">
-            <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Access Scopes
-          </button>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Access Scopes</h2>
-          <p className="text-slate-600">Manage attribute-based access control for platform employees</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Refresh
-          </Button>
+    <ManagementShell
+      title="Employee Management"
+      icon={Users}
+      subtitle="Manage staff, pods, and access scopes"
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
           {scopes.length === 0 && (
-            <Button variant="outline" onClick={initializeDefaults}>Initialize Defaults</Button>
+            <Button variant="outline" size="sm" onClick={initializeDefaults} className="h-8">Initialize Defaults</Button>
           )}
-          <Button onClick={() => { setEditingScope(null); resetScopeForm(); setShowScopeModal(true); }}>
-            <Plus className="w-4 h-4 mr-2" /> Create Scope
+          <Button className="h-8 bg-[#082c59]" size="sm" onClick={() => { setEditingScope(null); resetScopeForm(); setShowScopeModal(true); }}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Scope
           </Button>
         </div>
-      </div>
+      }
+      onRefresh={fetchData}
+      refreshing={loading}
+      tabs={[
+        { value: 'employees', label: 'Employees', icon: Users, testId: 'tab-employees' },
+        { value: 'pods', label: 'Pod Management', icon: Network, testId: 'tab-pod-management' },
+        { value: 'access-scopes', label: 'Access Scopes', icon: ShieldCheck, testId: 'tab-access-scopes' },
+      ]}
+      activeTab="access-scopes"
+      onTabChange={(v) => {
+        if (v === 'employees') navigate('/admin/employees');
+        else if (v === 'pods') navigate('/admin/employees/pods');
+        else if (v === 'access-scopes') navigate('/admin/employees/access-scopes');
+      }}
+      testIdPrefix="employee-scope-mgmt"
+    >
+      <TabsContent value="access-scopes" className="mt-4 space-y-4" forceMount>
+
+      <SubpageCard title="Access Scopes" icon={Shield} count={filteredScopes.length} testId="access-scopes-subpage">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search scopes..." className="pl-9 h-8 bg-white text-sm" />
+        </div>
+      </SubpageCard>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-blue-100 rounded-xl"><Shield className="w-6 h-6 text-blue-600" /></div><div><p className="text-2xl font-bold">{scopes.length}</p><p className="text-slate-600">Total Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-green-100 rounded-xl"><Globe className="w-6 h-6 text-green-600" /></div><div><p className="text-2xl font-bold">{scopes.filter(isGlobalScope).length}</p><p className="text-slate-600">Global Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-purple-100 rounded-xl"><MapPin className="w-6 h-6 text-purple-600" /></div><div><p className="text-2xl font-bold">{scopes.filter(s => s.countries?.length).length}</p><p className="text-slate-600">Country Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-orange-100 rounded-xl"><Briefcase className="w-6 h-6 text-orange-600" /></div><div><p className="text-2xl font-bold">{scopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</p><p className="text-slate-600">Assignments</p></div></div></CardContent></Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="access-scopes-stats-grid">
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-blue-100 rounded-xl"><Shield className="w-6 h-6 text-blue-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.length}</p><p className="text-slate-600">Total Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-green-100 rounded-xl"><Globe className="w-6 h-6 text-green-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.filter(isGlobalScope).length}</p><p className="text-slate-600">Global Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-purple-100 rounded-xl"><MapPin className="w-6 h-6 text-purple-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.filter(s => s.countries?.length).length}</p><p className="text-slate-600">Country Scopes</p></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-orange-100 rounded-xl"><Briefcase className="w-6 h-6 text-orange-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</p><p className="text-slate-600">Assignments</p></div></div></CardContent></Card>
       </div>
 
       {/* Content */}
@@ -535,6 +536,7 @@ export default function EmployeeScopeManagement() {
           </div>
         </div>
       </AdminModal>
-    </div>
+      </TabsContent>
+    </ManagementShell>
   );
 }

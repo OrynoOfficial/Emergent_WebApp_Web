@@ -505,15 +505,15 @@ export default function UserManagement() {
         </div>
       </SubpageCard>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      {/* Stats (dynamic — updates with active filters) */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4" data-testid="users-stats-grid">
         {[
-          { label: 'Total', count: users.length, color: 'bg-slate-100 text-slate-700' },
-          { label: 'Super Admins', count: users.filter(u => u.role === 'super_admin').length, color: 'bg-purple-100 text-purple-700' },
-          { label: 'Admins', count: users.filter(u => u.role === 'admin').length, color: 'bg-blue-100 text-blue-700' },
-          { label: 'Operators', count: users.filter(u => u.role === 'operator').length, color: 'bg-green-100 text-green-700' },
-          { label: 'Customers', count: users.filter(u => u.role === 'customer').length, color: 'bg-amber-100 text-amber-700' },
-          { label: 'Suspended', count: users.filter(u => u.status === 'suspended').length, color: 'bg-red-100 text-red-700' }
+          { label: 'Total', count: filteredUsers.length, color: 'bg-slate-100 text-slate-700' },
+          { label: 'Super Admins', count: filteredUsers.filter(u => u.role === 'super_admin').length, color: 'bg-purple-100 text-purple-700' },
+          { label: 'Admins', count: filteredUsers.filter(u => u.role === 'admin').length, color: 'bg-blue-100 text-blue-700' },
+          { label: 'Operators', count: filteredUsers.filter(u => u.role === 'operator').length, color: 'bg-green-100 text-green-700' },
+          { label: 'Customers', count: filteredUsers.filter(u => u.role === 'customer').length, color: 'bg-amber-100 text-amber-700' },
+          { label: 'Suspended', count: filteredUsers.filter(u => u.status === 'suspended').length, color: 'bg-red-100 text-red-700' }
         ].map((stat) => (
           <div key={stat.label} className={`p-3 rounded-lg ${stat.color}`}>
             <p className="text-2xl font-bold">{stat.count}</p>
@@ -632,17 +632,17 @@ export default function UserManagement() {
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-slate-50 border-b">
               <tr>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">User</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Role</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Joined</th>
-                <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Orders</th>
-                <th className="py-4 px-6 text-right text-sm font-semibold text-slate-600">Actions</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">User</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Role</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Operator</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Status</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Joined</th>
+                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Orders</th>
+                <th className="py-4 px-4 text-right text-sm font-semibold text-slate-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -652,7 +652,7 @@ export default function UserManagement() {
 
                 return (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors" data-testid={`user-row-${user.id}`}>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#082c59]/10 flex items-center justify-center">
                           {getRoleIcon(user.role)}
@@ -663,7 +663,7 @@ export default function UserManagement() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-4">
                       {canManage && !isSelf ? (
                         <select
                           value={user.role}
@@ -685,7 +685,7 @@ export default function UserManagement() {
                         <div className="mt-1.5"><RoleChips ids={user.assigned_roles} rolesMap={rolesMap} size="xs" /></div>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm" data-testid={`user-operator-cell-${user.id}`}>
+                    <td className="py-4 px-4 text-sm" data-testid={`user-operator-cell-${user.id}`}>
                       {user.operator_id ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#082c59]/5 border border-[#082c59]/15 text-[#082c59] rounded-full px-2.5 py-1 text-xs font-medium">
                           <Building2 className="h-3 w-3" />
@@ -695,20 +695,20 @@ export default function UserManagement() {
                         <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-4">
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         user.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                       }`}>
                         {user.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-slate-600">
+                    <td className="py-4 px-4 text-slate-600">
                       {formatDate(user.created_at)}
                     </td>
-                    <td className="py-4 px-6 text-slate-600">
+                    <td className="py-4 px-4 text-slate-600">
                       {user.orders_count || 0}
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           className="p-2 hover:bg-blue-100 rounded-lg"

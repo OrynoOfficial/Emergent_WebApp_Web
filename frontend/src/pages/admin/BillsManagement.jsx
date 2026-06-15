@@ -195,13 +195,13 @@ export default function BillsManagement() {
     }
   };
 
-  const stats = {
-    total: bills.length,
-    paid: bills.filter(b => b.status === 'paid').length,
-    pending: bills.filter(b => b.status === 'pending').length,
-    totalRevenue: bills.filter(b => b.status === 'paid').reduce((sum, b) => sum + (b.total || 0), 0),
-    pendingAmount: bills.filter(b => b.status === 'pending' || b.status === 'overdue').reduce((sum, b) => sum + (b.total || 0), 0)
-  };
+  const stats = useMemo(() => ({
+    total: filteredBills.length,
+    paid: filteredBills.filter(b => b.status === 'paid').length,
+    pending: filteredBills.filter(b => b.status === 'pending').length,
+    totalRevenue: filteredBills.filter(b => b.status === 'paid').reduce((sum, b) => sum + (b.total || 0), 0),
+    pendingAmount: filteredBills.filter(b => b.status === 'pending' || b.status === 'overdue').reduce((sum, b) => sum + (b.total || 0), 0)
+  }), [filteredBills]);
 
   return (
     <>
@@ -226,8 +226,28 @@ export default function BillsManagement() {
             <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
           </SubpageCard>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Filters */}
+          <SubpageCard title="Filters" icon={Search} count={filteredBills.length} testId="bills-filters-card">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <Input placeholder="Search bills..." className="pl-9 h-8 bg-white text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} data-testid="bills-search-input" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent className="bg-white">
+                {BILL_STATUS.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+              <SelectTrigger className="w-44 h-8 bg-white text-sm"><SelectValue placeholder="Payment Method" /></SelectTrigger>
+              <SelectContent className="bg-white">
+                {PAYMENT_METHODS.map(p => <SelectItem key={p} value={p} className="capitalize">{p === 'all' ? 'All Methods' : p.replace('_', ' ')}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </SubpageCard>
+
+          {/* Stats (dynamic — reflects active filters) */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4" data-testid="bills-stats-grid">
             <Card><CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-lg"><Receipt className="w-6 h-6 text-blue-600" /></div>
               <div><p className="text-sm text-gray-500">Total Bills</p><p className="text-2xl font-bold">{stats.total}</p></div>
@@ -249,26 +269,6 @@ export default function BillsManagement() {
               <div><p className="text-sm text-gray-500">Pending Amount</p><p className="text-xl font-bold">{formatFCFA(stats.pendingAmount)}</p></div>
             </CardContent></Card>
           </div>
-
-          {/* Filters */}
-          <SubpageCard title="Filters" icon={Search} count={filteredBills.length} testId="bills-filters-card">
-            <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <Input placeholder="Search bills..." className="pl-9 h-8 bg-white text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} data-testid="bills-search-input" />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {BILL_STATUS.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-44 h-8 bg-white text-sm"><SelectValue placeholder="Payment Method" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {PAYMENT_METHODS.map(p => <SelectItem key={p} value={p} className="capitalize">{p === 'all' ? 'All Methods' : p.replace('_', ' ')}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </SubpageCard>
 
       {/* Bills */}
       {loading ? (

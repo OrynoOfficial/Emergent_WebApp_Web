@@ -13,6 +13,7 @@ import {
   Percent, Plus, Edit, Trash2, TrendingUp, Building, ShoppingBag, Globe, Loader2, Save
 } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
+import ManagementShell from '../../components/management/shared/ManagementShell';
 
 const SERVICE_CATEGORIES = [
   { value: 'travel', label: 'Travel Services' },
@@ -184,32 +185,20 @@ export default function CommissionManagement() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <TrendingUp className="h-7 w-7 text-[#082c59]" />
-          Commission Management
-        </h1>
-        <p className="text-slate-600 mt-1">Configure commission rates for services, categories, and operators</p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
-          <TabsTrigger value="global" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Globe className="h-4 w-4" />
-            Global Default
-          </TabsTrigger>
-          <TabsTrigger value="category" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <ShoppingBag className="h-4 w-4" />
-            By Category
-          </TabsTrigger>
-          <TabsTrigger value="operator" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-            <Building className="h-4 w-4" />
-            By Operator
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="global">
+    <ManagementShell
+      title="Commission Management"
+      icon={TrendingUp}
+      subtitle="Configure commission rates for services, categories, and operators"
+      tabs={[
+        { value: 'global', label: 'Global Default', icon: Globe },
+        { value: 'category', label: 'By Category', icon: ShoppingBag },
+        { value: 'operator', label: 'By Operator', icon: Building },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="commission-mgmt"
+    >
+        <TabsContent value="global" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Global Default Commission</CardTitle>
@@ -256,7 +245,6 @@ export default function CommissionManagement() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md bg-white">
@@ -350,6 +338,6 @@ export default function CommissionManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ManagementShell>
   );
 }

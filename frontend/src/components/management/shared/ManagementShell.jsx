@@ -53,7 +53,7 @@ export default function ManagementShell({
   const cols = COLS_BY_COUNT[Math.min(tabs.length, 6)] || COLS_BY_COUNT[3];
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4 min-w-0">
       {/* ── Nav card ─────────────────────────────────────────────────── */}
       <Card className="border-slate-200 shadow-sm" data-testid={`${testIdPrefix}-nav-card`}>
         <div className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap">

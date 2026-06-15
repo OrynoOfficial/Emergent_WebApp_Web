@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,15 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Globe, MapPin, Plus, Edit2, Trash2, Search, RefreshCw, Flag,
+  Globe, MapPin, Plus, Edit2, Trash2, Search, Flag,
   ChevronDown, ChevronRight, Building, Loader2, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 export default function GeographyManagement() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -161,49 +163,55 @@ export default function GeographyManagement() {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Parent nav */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#082c59] mb-1">Operator Management</h1>
-        <p className="text-slate-500 mb-4">Manage service providers and operators</p>
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-          <button onClick={() => navigate('/admin/operators')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-operators">
-            <Building className="w-4 h-4 inline mr-1.5 -mt-0.5" />Operators
-          </button>
-          <button onClick={() => navigate('/admin/operators/geography')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-geography">
-            <Globe className="w-4 h-4 inline mr-1.5 -mt-0.5" />Geography
-          </button>
-          <button onClick={() => navigate('/admin/operators/market-segments')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/market-segments') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-market-segments">
-            <TrendingUp className="w-4 h-4 inline mr-1.5 -mt-0.5" />Market Segments
-          </button>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900" data-testid="geography-title">Geography Management</h2>
-          <p className="text-slate-600">Manage countries and their regions</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData} disabled={loading} data-testid="refresh-btn">
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+    <ManagementShell
+      title="Operator Management"
+      icon={Building}
+      subtitle="Manage service providers and operators"
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
           {countries.length === 0 && (
-            <Button onClick={initializeDefaults} data-testid="init-defaults-btn">
-              <Flag className="w-4 h-4 mr-2" />
-              Initialize Defaults
+            <Button onClick={initializeDefaults} className="h-8" size="sm" data-testid="init-defaults-btn">
+              <Flag className="w-3.5 h-3.5 mr-1.5" /> Initialize Defaults
             </Button>
           )}
-          <Button onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }} data-testid="add-country-btn">
-            <Plus className="w-4 h-4 mr-2" /> Add Country
+          <Button onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }} className="h-8" size="sm" data-testid="add-country-btn">
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Country
           </Button>
         </div>
-      </div>
+      }
+      onRefresh={fetchData}
+      refreshing={loading}
+      tabs={[
+        { value: 'operators', label: 'Operators', icon: Building, testId: 'tab-operators' },
+        { value: 'geography', label: 'Geography', icon: Globe, testId: 'tab-geography' },
+        { value: 'market-segments', label: 'Market Segments', icon: TrendingUp, testId: 'tab-market-segments' },
+      ]}
+      activeTab="geography"
+      onTabChange={(v) => {
+        if (v === 'operators') navigate('/admin/operators');
+        else if (v === 'geography') navigate('/admin/operators/geography');
+        else if (v === 'market-segments') navigate('/admin/operators/market-segments');
+      }}
+      testIdPrefix="geography-mgmt"
+    >
+      <TabsContent value="geography" className="mt-4 space-y-4" forceMount>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Search */}
+      <SubpageCard title="Countries & Regions" icon={Globe} count={countries.length} testId="geography-subpage">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Input
+            placeholder="Search countries or regions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-8 bg-white text-sm"
+            data-testid="geography-search"
+          />
+        </div>
+      </SubpageCard>
+
+      {/* Stats (dynamic — reflects search) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="geography-stats-grid">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -211,7 +219,7 @@ export default function GeographyManagement() {
                 <Globe className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{countries.length}</p>
+                <p className="text-2xl font-bold">{filteredCountries.length}</p>
                 <p className="text-slate-600">Countries</p>
               </div>
             </div>
@@ -224,7 +232,7 @@ export default function GeographyManagement() {
                 <MapPin className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{regions.length}</p>
+                <p className="text-2xl font-bold">{filteredCountries.reduce((acc, c) => acc + getRegionsForCountry(c.id).length, 0)}</p>
                 <p className="text-slate-600">Total Regions</p>
               </div>
             </div>
@@ -237,24 +245,12 @@ export default function GeographyManagement() {
                 <Flag className="w-6 h-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{countries.filter(c => getRegionsForCountry(c.id).length > 0).length}</p>
+                <p className="text-2xl font-bold">{filteredCountries.filter(c => getRegionsForCountry(c.id).length > 0).length}</p>
                 <p className="text-slate-600">Countries with Regions</p>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search countries or regions..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-          data-testid="geography-search"
-        />
       </div>
 
       {/* Countries with nested Regions */}
@@ -449,6 +445,7 @@ export default function GeographyManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </TabsContent>
+    </ManagementShell>
   );
 }

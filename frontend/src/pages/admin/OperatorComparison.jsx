@@ -8,6 +8,7 @@ import {
 import { Loader2, X, Plus, TrendingUp, ShoppingBag, CheckCircle2, BarChart3, Trophy, Banknote } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import api from '../../api/client';
+import ManagementShell from '../../components/management/shared/ManagementShell';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const OP_COLORS = ['#082c59', '#0ea5e9', '#f97316']; // 1st/2nd/3rd column
@@ -116,20 +117,13 @@ export default function OperatorComparison() {
   const opPickerSlots = selectedIds;
 
   return (
-    <div className="space-y-6" data-testid="operator-comparison-page">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59] flex items-center gap-2">
-            <BarChart3 className="h-6 w-6" />
-            Operator Comparison
-          </h1>
-          <p className="text-slate-600 text-sm">
-            Stack 2–3 operators side-by-side to spot performance gaps across the same period.
-          </p>
-        </div>
+    <ManagementShell
+      title="Operator Comparison"
+      icon={BarChart3}
+      subtitle="Stack 2–3 operators side-by-side to spot performance gaps across the same period."
+      scopeFilter={
         <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44" data-testid="comparison-period">
+          <SelectTrigger className="w-44 h-8 text-sm" data-testid="comparison-period">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -138,10 +132,12 @@ export default function OperatorComparison() {
             ))}
           </SelectContent>
         </Select>
-      </div>
-
+      }
+      testIdPrefix="op-comparison"
+      activeTab="all"
+    >
       {/* Operator pickers */}
-      <Card>
+      <Card className="mt-4">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-slate-700">Pick operators to compare</CardTitle>
         </CardHeader>
@@ -324,7 +320,7 @@ export default function OperatorComparison() {
           </Card>
         </>
       )}
-    </div>
+    </ManagementShell>
   );
 }
 

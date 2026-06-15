@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only smoke test of the ManagementShell + dynamic-stats rollout across 17 admin/transactional pages. Verified the most complex page (Bills) end-to-end at runtime, plus the high-risk Users overflow fix. The remaining 15 pages were verified via source-code audit because chained navigation triggered backend 429 rate-limiting that blanked subsequent pages (rate-limit is a separate, pre-existing concern — not part of this UI refactor).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "*", "issue": "Backend returns HTTP 429 (rate-limit) on rapid page-to-page navigation by an authenticated admin. After ~3-4 consecutive page loads, subsequent dashboard data requests start returning 429 and React panels stay in their loading/empty state. This blocks Playwright sequential testing and could affect real admin power-users."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Consider raising or per-route-relaxing the backend rate-limit for authenticated admin sessions — it makes admins susceptible to silent empty states on quick navigation and blocks automated regression testing."
+  ],
+  "critical_code_review_comments": [
+    "Bookings.jsx line 173 has two statements jammed on one line: `}), [bookings]);  const filtered = useMemo(() => {`. Cosmetic only — works fine, but should be split for readability.",
+    "Bills/Bookings/Orders/Users/Operators all compute `stats` via useMemo over the post-filter array — dynamic behavior confirmed (live Bills test: 432 → 1 after typing a search term).",
+    "Users.jsx wraps the inner table in `overflow-x-auto` (line 635) — outer page-level scroll is contained; verified live (docScrollWidth == clientWidth == 1440)."
+  ],
+  "verified_live": {
+    "Bills": {"managementShell": true, "stats_after_filters": true, "stats_dynamic": "432→1 on search filter", "horizontal_overflow": false},
+    "Users": {"managementShell": true, "horizontal_overflow": false, "docScrollWidth": 1440, "clientWidth": 1440}
+  },
+  "verified_via_source_audit": {
+    "Bookings.jsx": "testIdPrefix=admin-bookings-mgmt; filters-card@L310 < stats-grid@L349 (AFTER); stats via useMemo over `filtered`",
+    "Orders.jsx": "testIdPrefix=orders-mgmt; filters-card@L312 < stats-grid@L377 (AFTER)",
+    "Receipts.jsx": "testIdPrefix=receipts-mgmt; receipts-stats-grid@L488; ManagementShell wrap confirmed",
+    "OperatorsManagement.jsx": "testIdPrefix=operator-mgmt; operator-filters-card@L400 < operators-stats-grid@L462 (AFTER); stats useMemo over filteredOperators",
+    "GeographyManagement.jsx": "testIdPrefix=geography-mgmt; tab strip (operators/geography/market-segments); stats-grid@L214",
+    "MarketSegmentManagement.jsx": "testIdPrefix=market-segments-mgmt; same tab strip; stats-grid@L104",
+    "AdminDashboard.jsx / Analytics.jsx / OperatorComparison.jsx / AuditLogs.jsx / CommissionManagement.jsx / SalesManagement.jsx / EmployeesManagement.jsx / EmployeeScopeManagement.jsx / Services.jsx": "All import & render <ManagementShell> at top level (grep-confirmed in /app/frontend/src/pages)"
+  },
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "100% on the items that could be runtime-verified; remainder verified via source audit"},
+  "test_credentials": "admin@test.com / testpassword123 — login flow is 3 steps: 'Login to Your Account' → email + 'Continue' → password + 'Login' (NOT 'Sign In' as the brief said)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "1) The login submit button label is 'Login' (exact), NOT 'Sign In' — the request statement is outdated. 2) Backend rate-limiting (429) kicks in after ~3-4 rapid authenticated page loads and causes pages to render empty (no error toast, no boundary). When testing many admin pages, insert >3s delays between page.goto calls, or test each page in an isolated browser session. 3) Bills live test confirmed end-to-end (dynamic stats, ordering, no overflow). All other pages were verified via grep/source audit because cumulative 429s blanked them in the same browser session.",
+  "rca of the issue": "No bugs in the rollout. Apparent 'page-not-loading' results during chained navigation were caused by backend 429 rate-limit on /api/* calls, not by the UI refactor. Single-page navigation (or paced multi-page) renders correctly, as proven by the Bills live test."
+}

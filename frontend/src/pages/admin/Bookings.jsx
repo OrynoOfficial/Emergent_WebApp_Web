@@ -170,9 +170,7 @@ export default function AdminBookings() {
     total: bookings.length,
     online: bookings.filter(b => (b.channel || 'online') === 'online').length,
     on_site: bookings.filter(b => b.channel === 'on_site').length,
-  }), [bookings]);
-
-  const filtered = useMemo(() => {
+  }), [bookings]);  const filtered = useMemo(() => {
     let r = [...bookings];
     // Channel filter — now applied client-side so the badge counts above stay accurate.
     if (channelFilter === 'online') r = r.filter(b => (b.channel || 'online') === 'online');
@@ -208,6 +206,15 @@ export default function AdminBookings() {
   useEffect(() => { setPage(1); }, [searchQuery, statusFilter, categoryFilter, operatorFilter, dateRange, channelFilter]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
+
+  // Dynamic stats — reflect the currently-filtered set
+  const stats = useMemo(() => ({
+    total: filtered.length,
+    pending: filtered.filter(b => b.status === 'pending').length,
+    confirmed: filtered.filter(b => b.status === 'confirmed').length,
+    completed: filtered.filter(b => b.status === 'completed').length,
+    revenue: filtered.filter(b => ['completed', 'confirmed'].includes(b.status)).reduce((s, b) => s + (b.total_amount || b.total || 0), 0),
+  }), [filtered]);
 
   const handleStatusUpdate = async (bookingId, newStatus) => {
     try {
@@ -337,6 +344,55 @@ export default function AdminBookings() {
               </SelectContent>
             </Select>
           </SubpageCard>
+
+          {/* Stats Cards (dynamic — reflect channel + filters) */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4" data-testid="admin-bookings-stats-grid">
+            <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">Total</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                </div>
+                <div className="p-3 bg-slate-200 rounded-full"><Receipt className="h-5 w-5 text-slate-600" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-amber-600 font-medium">Pending</p>
+                  <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
+                </div>
+                <div className="p-3 bg-amber-200 rounded-full"><Loader2 className="h-5 w-5 text-amber-600" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Confirmed</p>
+                  <p className="text-2xl font-bold text-blue-700">{stats.confirmed}</p>
+                </div>
+                <div className="p-3 bg-blue-200 rounded-full"><Check className="h-5 w-5 text-blue-600" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-emerald-600 font-medium">Completed</p>
+                  <p className="text-2xl font-bold text-emerald-700">{stats.completed}</p>
+                </div>
+                <div className="p-3 bg-emerald-200 rounded-full"><Check className="h-5 w-5 text-emerald-600" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-[#082c59]/5 to-[#082c59]/10 border-[#082c59]/20 col-span-2 lg:col-span-1">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#082c59] font-medium">Revenue</p>
+                  <p className="text-xl font-bold text-[#082c59]">{formatFCFA(stats.revenue)}</p>
+                </div>
+                <div className="p-3 bg-[#082c59]/20 rounded-full"><CreditCard className="h-5 w-5 text-[#082c59]" /></div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Results */}
           {loading ? (

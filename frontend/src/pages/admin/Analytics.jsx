@@ -25,6 +25,7 @@ import {
 import { formatFCFA } from '../../utils/currency';
 import api from '../../api/client';
 import OperatorScopeFilter from '../../components/common/OperatorScopeFilter';
+import ManagementShell from '../../components/management/shared/ManagementShell';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, Area, AreaChart } from 'recharts';
 
 const SERVICE_COLORS = {
@@ -266,10 +267,37 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
+    <ManagementShell
+      title={isOperator ? 'My Analytics Dashboard' : 'Analytics Dashboard'}
+      icon={BarChart3}
+      subtitle={isOperator 
+        ? 'Your personalized business performance metrics'
+        : 'Comprehensive business intelligence dashboard'}
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && (
+            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
+          )}
+          <Select value={timeFilter} onValueChange={setTimeFilter}>
+            <SelectTrigger className="w-40 h-8 text-sm" data-testid="time-filter-select">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7days">Last 7 Days</SelectItem>
+              <SelectItem value="30days">Last 30 Days</SelectItem>
+              <SelectItem value="3months">Last 3 Months</SelectItem>
+              <SelectItem value="6months">Last 6 Months</SelectItem>
+              <SelectItem value="1year">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      }
+      testIdPrefix="analytics-mgmt"
+      activeTab="all"
+    >
       {/* Operator Context Banner */}
       {isOperator && operatorContext && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3 mt-4">
           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
             <BarChart3 className="h-5 w-5 text-blue-600" />
           </div>
@@ -283,37 +311,6 @@ export default function Analytics() {
           </div>
         </div>
       )}
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="analytics-title">
-            {isOperator ? 'My Analytics Dashboard' : 'Analytics Dashboard'}
-          </h1>
-          <p className="text-slate-600">
-            {isOperator 
-              ? 'Your personalized business performance metrics'
-              : 'Comprehensive business intelligence dashboard'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && (
-            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-          )}
-          <Select value={timeFilter} onValueChange={setTimeFilter}>
-            <SelectTrigger className="w-40" data-testid="time-filter-select">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7days">Last 7 Days</SelectItem>
-              <SelectItem value="30days">Last 30 Days</SelectItem>
-              <SelectItem value="3months">Last 3 Months</SelectItem>
-              <SelectItem value="6months">Last 6 Months</SelectItem>
-              <SelectItem value="1year">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
       {/* Extended Summary Stats (from Data Analytics) */}
       {dataAnalytics && (
@@ -550,6 +547,6 @@ export default function Analytics() {
           </table>
         </div>
       </div>
-    </div>
+    </ManagementShell>
   );
 }

@@ -14,6 +14,7 @@ import {
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 
 // Activity Log Detail Dialog
 const ActivityDetailDialog = ({ log, isOpen, onClose }) => {
@@ -243,25 +244,17 @@ export default function AuditLogs() {
   );
 
   return (
-    <div className="space-y-6 p-6" data-testid="audit-logs-page">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59] flex items-center gap-3">
-            <History className="h-7 w-7" />
-            System Activity Log
-          </h1>
-          <p className="text-slate-600 mt-1">
-            {isAdmin 
-              ? "View all system activity and user actions"
-              : "View your activity history"}
-          </p>
-        </div>
-        <Button onClick={() => { loadActivityLogs(); loadStats(); }} variant="outline" className="gap-2" data-testid="refresh-logs-btn">
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
-
+    <ManagementShell
+      title="System Activity Log"
+      icon={History}
+      subtitle={isAdmin 
+        ? "View all system activity and user actions"
+        : "View your activity history"}
+      onRefresh={() => { loadActivityLogs(); loadStats(); }}
+      testIdPrefix="audit-logs"
+      activeTab="all"
+    >
+      <div className="mt-4 space-y-6">
       {!isAdmin && <PermissionNotice />}
 
       {/* Stats Cards (Admin Only) */}
@@ -527,6 +520,7 @@ export default function AuditLogs() {
         isOpen={isDetailOpen} 
         onClose={() => setIsDetailOpen(false)} 
       />
-    </div>
+      </div>
+    </ManagementShell>
   );
 }

@@ -19,6 +19,7 @@ import api from '@/api/client';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 
 const DEPARTMENTS = ['all', 'operations', 'customer_service', 'finance', 'marketing', 'it', 'management'];
 const ROLES = ['all', 'manager', 'supervisor', 'agent', 'driver', 'receptionist', 'technician'];
@@ -55,8 +56,6 @@ export default function EmployeesManagement() {
     system_role: 'employee'
   });
   const [createLoading, setCreateLoading] = useState(false);
-  const [podMemberships, setPodMemberships] = useState([]);
-  const [pods, setPods] = useState([]);
 
   useEffect(() => {
     loadAllData();
@@ -74,7 +73,6 @@ export default function EmployeesManagement() {
       const rawEmployees = empRes.data.employees || empRes.data || [];
       const podsData = podsRes.data.pods || [];
       const allUsers = usersRes.data.users || [];
-      setPods(podsData);
 
       // Build pod memberships from pod details
       const memberships = [];
@@ -87,7 +85,6 @@ export default function EmployeesManagement() {
           }
         } catch { /* skip */ }
       }
-      setPodMemberships(memberships);
 
       // Build user lookup by ID
       const usersById = {};
@@ -95,9 +92,6 @@ export default function EmployeesManagement() {
         const uid = u.id || u._id;
         if (uid) usersById[uid] = u;
       }
-
-      // Build email set from employees
-      const empEmails = new Set(rawEmployees.map(e => e.email?.toLowerCase()).filter(Boolean));
 
       // Merge: start with employees, then add pod members not in the list
       const merged = rawEmployees.map(emp => {
@@ -337,24 +331,29 @@ export default function EmployeesManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]" data-testid="employee-management-title">Employee Management</h1>
-          <p className="text-gray-600">Manage staff, pods, and access scopes</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <ManagementShell
+      title="Employee Management"
+      icon={Users}
+      subtitle="Manage staff, pods, and access scopes"
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => navigate('/admin/employees/templates')}
-            className="border-[#082c59] text-[#082c59]"
+            className="border-[#082c59] text-[#082c59] h-8"
           >
-            <FileText className="w-4 h-4 mr-2" /> Document Templates
+            <FileText className="w-3.5 h-3.5 mr-1.5" /> Templates
           </Button>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#082c59]"><UserPlus className="w-4 h-4 mr-2" /> Add Employee</Button>
-            </DialogTrigger>
+          <Button className="bg-[#082c59] h-8" size="sm" onClick={() => setIsCreateOpen(true)}>
+            <UserPlus className="w-3.5 h-3.5 mr-1.5" /> Add Employee
+          </Button>
+        </div>
+      }
+      testIdPrefix="employees-mgmt"
+      activeTab="employees"
+    >
+      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogContent className="bg-white max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Employee</DialogTitle>
@@ -437,8 +436,6 @@ export default function EmployeesManagement() {
             </div>
           </DialogContent>
         </Dialog>
-        </div>
-      </div>
 
       {/* Sub-page Navigation */}
       <Tabs value={location.pathname.includes('/pods') ? 'pods' : location.pathname.includes('/access-scopes') ? 'access-scopes' : 'employees'} onValueChange={(v) => {
@@ -801,6 +798,6 @@ export default function EmployeesManagement() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </ManagementShell>
   );
 }

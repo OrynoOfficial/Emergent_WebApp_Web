@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,15 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Edit2, Trash2, TrendingUp, Loader2, Palette, Building, Globe } from 'lucide-react';
+import { Plus, Edit2, Trash2, TrendingUp, Loader2, Building, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 const DEFAULT_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#EC4899', '#06B6D4', '#F97316'];
 
 export default function MarketSegmentManagement() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [segments, setSegments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -68,32 +70,50 @@ export default function MarketSegmentManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Parent nav */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#082c59] mb-1">Operator Management</h1>
-        <p className="text-slate-500 mb-4">Manage service providers and operators</p>
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-          <button onClick={() => navigate('/admin/operators')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-operators">
-            <Building className="w-4 h-4 inline mr-1.5 -mt-0.5" />Operators
-          </button>
-          <button onClick={() => navigate('/admin/operators/geography')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/geography') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-geography">
-            <Globe className="w-4 h-4 inline mr-1.5 -mt-0.5" />Geography
-          </button>
-          <button onClick={() => navigate('/admin/operators/market-segments')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/market-segments') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-market-segments">
-            <TrendingUp className="w-4 h-4 inline mr-1.5 -mt-0.5" />Market Segments
-          </button>
-        </div>
-      </div>
+    <ManagementShell
+      title="Operator Management"
+      icon={Building}
+      subtitle="Manage service providers and operators"
+      tabs={[
+        { value: 'operators', label: 'Operators', icon: Building, testId: 'tab-operators' },
+        { value: 'geography', label: 'Geography', icon: Globe, testId: 'tab-geography' },
+        { value: 'market-segments', label: 'Market Segments', icon: TrendingUp, testId: 'tab-market-segments' },
+      ]}
+      activeTab="market-segments"
+      onTabChange={(v) => {
+        if (v === 'operators') navigate('/admin/operators');
+        else if (v === 'geography') navigate('/admin/operators/geography');
+        else if (v === 'market-segments') navigate('/admin/operators/market-segments');
+      }}
+      testIdPrefix="market-segments-mgmt"
+    >
+      <TabsContent value="market-segments" className="mt-4 space-y-4" forceMount>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-[#082c59]" data-testid="market-segments-title">Market Segments</h2>
-          <p className="text-slate-600">Manage operator classification categories</p>
-        </div>
-        <Button onClick={() => { setEditing(null); setForm({ name: '', description: '', color: '#3B82F6' }); setShowModal(true); }} data-testid="add-segment-btn">
-          <Plus className="w-4 h-4 mr-2" /> Add Segment
+      <SubpageCard
+        title="Market Segments"
+        icon={TrendingUp}
+        count={segments.length}
+        testId="market-segments-subpage"
+      >
+        <Button onClick={() => { setEditing(null); setForm({ name: '', description: '', color: '#3B82F6' }); setShowModal(true); }} className="h-8" size="sm" data-testid="add-segment-btn">
+          <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Segment
         </Button>
+      </SubpageCard>
+
+      {/* Stats (dynamic) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="market-segments-stats-grid">
+        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg"><TrendingUp className="h-5 w-5 text-blue-600" /></div>
+          <div><p className="text-2xl font-bold text-slate-900">{segments.length}</p><p className="text-sm text-slate-500">Total Segments</p></div>
+        </CardContent></Card>
+        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="h-5 w-5 text-green-600" /></div>
+          <div><p className="text-2xl font-bold text-slate-900">{segments.filter(s => s.description).length}</p><p className="text-sm text-slate-500">Described</p></div>
+        </CardContent></Card>
+        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-100 rounded-lg"><TrendingUp className="h-5 w-5 text-amber-600" /></div>
+          <div><p className="text-2xl font-bold text-slate-900">{new Set(segments.map(s => s.color)).size}</p><p className="text-sm text-slate-500">Unique Colors</p></div>
+        </CardContent></Card>
       </div>
 
       {loading ? (
@@ -172,6 +192,7 @@ export default function MarketSegmentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </TabsContent>
+    </ManagementShell>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { servicesAPI } from '../api/client';
-import { Search, Filter, MapPin, Star, ArrowRight, X, SlidersHorizontal } from 'lucide-react';
+import { Search, Filter, MapPin, Star, ArrowRight, X, SlidersHorizontal, Sparkles } from 'lucide-react';
+import ManagementShell from '../components/management/shared/ManagementShell';
 
 const SERVICE_CATEGORIES = [
   { key: 'all', label: 'All Services', icon: '🌟' },
@@ -75,22 +76,23 @@ export default function Services() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Browse Services</h1>
-          <p className="text-slate-600">Find and book the perfect service for your needs</p>
-        </div>
+    <ManagementShell
+      title="Browse Services"
+      icon={Sparkles}
+      subtitle="Find and book the perfect service for your needs"
+      scopeFilter={
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="sm:hidden flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 text-slate-700"
+          className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-slate-200 text-slate-700 text-sm"
         >
-          <SlidersHorizontal className="h-4 w-4" />
+          <SlidersHorizontal className="h-3.5 w-3.5" />
           Filters
         </button>
-      </div>
-
+      }
+      testIdPrefix="services-browse"
+      activeTab="all"
+    >
+      <div className="mt-4 space-y-6">
       {/* Categories */}
       <div className="overflow-x-auto pb-2 -mx-4 px-4">
         <div className="flex gap-3 min-w-max">
@@ -254,6 +256,7 @@ export default function Services() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </ManagementShell>
   );
 }

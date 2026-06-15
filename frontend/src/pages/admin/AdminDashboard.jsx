@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import ManagementShell from '../../components/management/shared/ManagementShell';
 import {
   TrendingUp,
   TrendingDown,
@@ -180,15 +181,13 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Admin Dashboard</h1>
-          <p className="text-gray-500 mt-1">Platform metrics and overview</p>
-        </div>
+    <ManagementShell
+      title="Admin Dashboard"
+      icon={BarChart3}
+      subtitle="Platform metrics and overview"
+      scopeFilter={
         <Select value={dateRange} onValueChange={setDateRange}>
-          <SelectTrigger className="w-[180px] bg-white border-gray-300 text-gray-700">
+          <SelectTrigger className="w-[160px] h-8 bg-white border-gray-300 text-gray-700 text-sm">
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
           <SelectContent className="bg-white">
@@ -197,10 +196,12 @@ export default function AdminDashboard() {
             <SelectItem value="90days">Last 90 Days</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Key Metrics Grid - Removed Total Revenue */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      }
+      testIdPrefix="admin-dashboard"
+      activeTab="all"
+    >
+      {/* Key Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         <StatCard
           title="Total Orders"
           value={metrics.totalOrders.toLocaleString()}
@@ -477,6 +478,6 @@ export default function AdminDashboard() {
           </Card>
         </Link>
       </div>
-    </div>
+    </ManagementShell>
   );
 }

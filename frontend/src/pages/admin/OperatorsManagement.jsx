@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -358,14 +358,14 @@ export default function OperatorsManagement() {
     }
   };
 
-  // Stats
-  const stats = {
-    total: operators.length,
-    active: operators.filter(o => o.status === 'active').length,
-    pending: operators.filter(o => o.status === 'pending').length,
-    suspended: operators.filter(o => o.status === 'suspended').length,
-    totalRevenue: operators.reduce((sum, o) => sum + (o.revenue || 0), 0)
-  };
+  // Stats (dynamic — reflects active filters)
+  const stats = useMemo(() => ({
+    total: filteredOperators.length,
+    active: filteredOperators.filter(o => o.status === 'active').length,
+    pending: filteredOperators.filter(o => o.status === 'pending').length,
+    suspended: filteredOperators.filter(o => o.status === 'suspended').length,
+    totalRevenue: filteredOperators.reduce((sum, o) => sum + (o.revenue || 0), 0)
+  }), [filteredOperators]);
 
   return (
     <>
@@ -394,74 +394,7 @@ export default function OperatorsManagement() {
       <OperatorSectionTabs />
       <TabsContent value="operators" className="mt-4 space-y-4" forceMount>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Building className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-                <p className="text-sm text-slate-500">Total Operators</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                <p className="text-sm text-slate-500">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                <p className="text-sm text-slate-500">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Ban className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
-                <p className="text-sm text-slate-500">Suspended</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-slate-900">{formatFCFA(stats.totalRevenue)}</p>
-                <p className="text-sm text-slate-500">Total Revenue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats moved below filters — see block after Filters SubpageCard */}
 
       {/* Filters */}
       <SubpageCard title="Filters" icon={Search} testId="operator-filters-card">
@@ -524,6 +457,65 @@ export default function OperatorsManagement() {
           </div>
         )}
       </SubpageCard>
+
+      {/* Stats Cards (dynamic — reflects active filters) */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="operators-stats-grid">
+        <Card className="bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg"><Building className="h-5 w-5 text-blue-600" /></div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-sm text-slate-500">Total Operators</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg"><CheckCircle className="h-5 w-5 text-green-600" /></div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                <p className="text-sm text-slate-500">Active</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-lg"><Clock className="h-5 w-5 text-yellow-600" /></div>
+              <div>
+                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-sm text-slate-500">Pending</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg"><Ban className="h-5 w-5 text-red-600" /></div>
+              <div>
+                <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
+                <p className="text-sm text-slate-500">Suspended</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 rounded-lg"><DollarSign className="h-5 w-5 text-purple-600" /></div>
+              <div>
+                <p className="text-lg font-bold text-slate-900">{formatFCFA(stats.totalRevenue)}</p>
+                <p className="text-sm text-slate-500">Total Revenue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Operators — list / grid / details */}
       {loading ? (

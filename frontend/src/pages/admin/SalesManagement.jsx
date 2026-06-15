@@ -16,6 +16,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { ordersAPI } from '@/api/client';
 import api from '@/api/client';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -457,27 +458,18 @@ export default function SalesManagement() {
   }));
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">{pageTitle}</h1>
-          <p className="text-gray-600">{pageSubtitle}</p>
-          {isSuperAdmin && (
-            <Badge className="mt-2 bg-purple-100 text-purple-700">All Operators Combined</Badge>
-          )}
-          {isOperator && operatorServiceTypes?.length > 0 && (
-            <Badge className="mt-2 bg-blue-100 text-blue-700">
-              Services: {operatorServiceTypes.join(', ')}
-            </Badge>
-          )}
-        </div>
-        <div className="flex gap-4 items-center flex-wrap">
+    <ManagementShell
+      title={pageTitle}
+      icon={DollarSign}
+      subtitle={pageSubtitle}
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
           {isAdminLike && (
             <OperatorScopeFilter value={selectedOperatorId} onChange={setSelectedOperatorId} />
           )}
           <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-44">
-              <Calendar className="w-4 h-4 mr-2" />
+            <SelectTrigger className="w-44 h-8 text-sm">
+              <Calendar className="w-3.5 h-3.5 mr-1.5" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-white">
@@ -486,8 +478,8 @@ export default function SalesManagement() {
           </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" data-testid="revenue-export-btn">
-                <Download className="w-4 h-4 mr-2" /> Export
+              <Button variant="outline" size="sm" className="h-8" data-testid="revenue-export-btn">
+                <Download className="w-3.5 h-3.5 mr-1.5" /> Export
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white" align="end">
@@ -503,7 +495,24 @@ export default function SalesManagement() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      }
+      testIdPrefix="sales-mgmt"
+      activeTab="all"
+    >
+      <div className="mt-4 space-y-6">
+      {/* Badges */}
+      {(isSuperAdmin || (isOperator && operatorServiceTypes?.length > 0)) && (
+        <div className="flex gap-2 flex-wrap">
+          {isSuperAdmin && (
+            <Badge className="bg-purple-100 text-purple-700">All Operators Combined</Badge>
+          )}
+          {isOperator && operatorServiceTypes?.length > 0 && (
+            <Badge className="bg-blue-100 text-blue-700">
+              Services: {operatorServiceTypes.join(', ')}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -701,6 +710,7 @@ export default function SalesManagement() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </ManagementShell>
   );
 }

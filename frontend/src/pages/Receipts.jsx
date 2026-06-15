@@ -314,61 +314,7 @@ export default function Receipts() {
                 </SubpageCard>
               )}
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-slate-500 font-medium">Total Receipts</p>
-                                <p className="text-2xl font-bold text-slate-900">{stats.count}</p>
-                            </div>
-                            <div className="p-3 bg-slate-200 rounded-full">
-                                <FileText className="h-5 w-5 text-slate-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-emerald-600 font-medium">Paid</p>
-                                <p className="text-2xl font-bold text-emerald-700">{stats.paid}</p>
-                            </div>
-                            <div className="p-3 bg-emerald-200 rounded-full">
-                                <Receipt className="h-5 w-5 text-emerald-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-amber-600 font-medium">Pending</p>
-                                <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
-                            </div>
-                            <div className="p-3 bg-amber-200 rounded-full">
-                                <Calendar className="h-5 w-5 text-amber-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-[#082c59]/5 to-[#082c59]/10 border-[#082c59]/20">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-[#082c59] font-medium">Total Amount</p>
-                                <p className="text-xl font-bold text-[#082c59]">{formatCurrency(stats.total)}</p>
-                            </div>
-                            <div className="p-3 bg-[#082c59]/20 rounded-full">
-                                <Receipt className="h-5 w-5 text-[#082c59]" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Stats Cards moved below filters for dynamic-on-filter UX */}
 
             {/* Search and Filters Section */}
             <Card className="border-slate-200 shadow-sm">
@@ -537,6 +483,62 @@ export default function Receipts() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Stats Cards (dynamic — updates with filters) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="receipts-stats-grid">
+                <Card className="bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-slate-500 font-medium">Total Receipts</p>
+                                <p className="text-2xl font-bold text-slate-900">{stats.count}</p>
+                            </div>
+                            <div className="p-3 bg-slate-200 rounded-full">
+                                <FileText className="h-5 w-5 text-slate-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-emerald-600 font-medium">Paid</p>
+                                <p className="text-2xl font-bold text-emerald-700">{stats.paid}</p>
+                            </div>
+                            <div className="p-3 bg-emerald-200 rounded-full">
+                                <Receipt className="h-5 w-5 text-emerald-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-amber-600 font-medium">Pending</p>
+                                <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
+                            </div>
+                            <div className="p-3 bg-amber-200 rounded-full">
+                                <Calendar className="h-5 w-5 text-amber-600" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-br from-[#082c59]/5 to-[#082c59]/10 border-[#082c59]/20">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-[#082c59] font-medium">Total Amount</p>
+                                <p className="text-xl font-bold text-[#082c59]">{formatCurrency(stats.total)}</p>
+                            </div>
+                            <div className="p-3 bg-[#082c59]/20 rounded-full">
+                                <Receipt className="h-5 w-5 text-[#082c59]" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Results Count */}
             {!isLoading && (
