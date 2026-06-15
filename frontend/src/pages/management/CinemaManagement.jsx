@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Film, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Calendar,
@@ -588,28 +589,23 @@ export default function CinemaManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#082c59]">Cinema Management Center</h1>
-          <p className="text-gray-600">Manage cinemas, movies, analytics, and communications</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="cinema" value={scopeOperatorId} onChange={setScopeOperatorId} />
-          <Button onClick={loadCinemas} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management"><Film className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-        </TabsList>
-
+    <>
+    <ManagementShell
+      title="Cinema Management Center"
+      icon={Film}
+      subtitle="Manage cinemas, movies, analytics, and communications"
+      scopeFilter={<OperatorScopeFilter serviceType="cinema" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+      onRefresh={loadCinemas}
+      refreshing={loading}
+      tabs={[
+        { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { value: 'management', label: 'Management', icon: Film },
+        { value: 'communications', label: 'Communications', icon: MessageSquare },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="cinema-mgmt"
+    >
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
             serviceType="Cinema"
@@ -1312,7 +1308,7 @@ export default function CinemaManagement() {
           />
         </TabsContent>
 
-      </Tabs>
+      </ManagementShell>
       {/* Cinema / Movie / Showtime / View dialogs are extracted into
           dedicated components under /components/cinema so this page stays
           focused on tab orchestration and data fetching. */}
@@ -1377,6 +1373,6 @@ export default function CinemaManagement() {
           loadShowtimes();
         }}
       />
-    </div>
+    </>
   );
 }

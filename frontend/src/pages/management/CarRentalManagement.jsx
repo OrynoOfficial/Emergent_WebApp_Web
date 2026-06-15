@@ -10,6 +10,7 @@ import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
@@ -423,43 +424,22 @@ export default function CarRentalManagement() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Car className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Car Rental Management Center</h1>
-                <p className="text-slate-500">Manage fleet, bookings, and communications</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="car_rental" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button onClick={loadCars} variant="outline" disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="dashboard">
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="management">
-              <Car className="h-4 w-4 mr-2" /> Fleet Management
-            </TabsTrigger>
-            <TabsTrigger value="communications">
-              <MessageSquare className="h-4 w-4 mr-2" /> Communications
-            </TabsTrigger>
-          </TabsList>
+      <ManagementShell
+        title="Car Rental Management Center"
+        icon={Car}
+        subtitle="Manage fleet, bookings, and communications"
+        scopeFilter={<OperatorScopeFilter serviceType="car_rental" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+        onRefresh={loadCars}
+        refreshing={loading}
+        tabs={[
+          { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { value: 'management', label: 'Fleet Management', icon: Car },
+          { value: 'communications', label: 'Communications', icon: MessageSquare },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        testIdPrefix="carrental-mgmt"
+      >
 
           <TabsContent value="dashboard" className="mt-6">
             <ServiceExecutiveDashboard
@@ -609,8 +589,7 @@ export default function CarRentalManagement() {
               primaryColor="green"
             />
           </TabsContent>
-        </Tabs>
-      </div>
+        </ManagementShell>
 
       {/* Car Dialog */}
       <ServiceFormShell

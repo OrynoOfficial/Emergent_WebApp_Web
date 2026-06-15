@@ -10,6 +10,7 @@ import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import {
   Shirt, Plus, Edit, Trash2, MapPin, Clock, DollarSign, Package,
   LayoutDashboard, BarChart2, MessageSquare, TrendingUp, RefreshCw,
@@ -291,26 +292,25 @@ export default function LaundryManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-purple-800">Laundry & Pressing Management</h1>
-          <p className="text-gray-600">Manage shops, orders, analytics, and communications</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />          <Button onClick={loadPressings} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-          <TabsTrigger value="management"><Shirt className="h-4 w-4 mr-2" />Management</TabsTrigger>
-          <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-        </TabsList>
+    <>
+    <ManagementShell
+      title="Laundry & Pressing Management"
+      icon={Shirt}
+      titleColorClass="text-purple-800"
+      iconColorClass="text-purple-600"
+      subtitle="Manage shops, orders, analytics, and communications"
+      scopeFilter={<OperatorScopeFilter serviceType="pressing" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+      onRefresh={loadPressings}
+      refreshing={loading}
+      tabs={[
+        { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { value: 'management', label: 'Management', icon: Shirt },
+        { value: 'communications', label: 'Communications', icon: MessageSquare },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="laundry-mgmt"
+    >
 
         <TabsContent value="dashboard" className="mt-6">
           <ServiceExecutiveDashboard
@@ -564,7 +564,7 @@ export default function LaundryManagement() {
             primaryColor="teal"
           />
         </TabsContent>
-      </Tabs>
+      </ManagementShell>
 
       <ServiceFormShell
         open={isPressingDialogOpen}
@@ -833,6 +833,6 @@ export default function LaundryManagement() {
           loadPressings?.();
         }}
       />
-    </div>
+    </>
   );
 }

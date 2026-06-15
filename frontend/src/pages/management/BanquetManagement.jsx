@@ -37,6 +37,7 @@ import ServicesToolbar from '@/components/management/banquet/ServicesToolbar';
 import ServicesGrid from '@/components/management/banquet/ServicesGrid';
 import ServiceDialog from '@/components/management/banquet/ServiceDialog';
 import ServiceViewModal from '@/components/management/banquet/ServiceViewModal';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 
 const PAGE_SIZE = 12;
 
@@ -1166,79 +1167,26 @@ export default function BanquetManagement() {
   const previewMeta = CATEGORY_BY_VALUE[form.category] || CATEGORY_BY_VALUE.hall;
 
   return (
-    <div className="p-6 space-y-4">
-      {/* ── Card 1: Navigation strip ─────────────────────────────────────
-          Single modal card containing the page name + tab navigation
-          (Dashboard / Services / Packages / Communications) + the global
-          ops chrome (scope filter + refresh). Page title is ALWAYS
-          visible; everything else collapses behind the "Hide" toggle. */}
-      <Card className="border-slate-200 shadow-sm" data-testid="bq-mgmt-nav-card">
-        <div className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
-            <PartyPopper className="h-5 w-5 text-[#082c59] flex-shrink-0" />
-            <h1 className="text-2xl font-bold text-[#082c59] truncate" data-testid="bq-mgmt-title">Banquet & Event Services</h1>
-            {!headerExpanded && (
-              <>
-                <span className="ml-2 hidden sm:inline-block text-slate-300">·</span>
-                <Badge className="hidden sm:inline-flex bg-[#082c59]/10 text-[#082c59] border-0 capitalize" data-testid="bq-mgmt-active-tab-pill">
-                  {activeTab === 'management' ? 'Services' : activeTab}
-                </Badge>
-                {activeTab === 'management' && (search || categoryFilter !== 'all') && (
-                  <Badge variant="outline" className="hidden md:inline-flex border-amber-300 text-amber-700 bg-amber-50" data-testid="bq-mgmt-filter-active-pill">
-                    <SlidersHorizontal className="h-3 w-3 mr-1" /> Filtered
-                  </Badge>
-                )}
-              </>
-            )}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setHeaderExpanded(v => !v)}
-            className="text-slate-600 hover:text-[#082c59] hover:bg-slate-100"
-            aria-expanded={headerExpanded}
-            aria-controls="bq-mgmt-header-panel"
-            data-testid="bq-mgmt-toggle-header"
-          >
-            {headerExpanded ? (
-              <><ChevronUp className="h-4 w-4 mr-1" /> Hide</>
-            ) : (
-              <><ChevronDown className="h-4 w-4 mr-1" /> Show controls</>
-            )}
-          </Button>
-        </div>
-
-        {headerExpanded && (
-          <div id="bq-mgmt-header-panel" className="px-5 pb-4 border-t border-slate-100 pt-3 space-y-3">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-gray-600 text-sm">Halls, chairs & cutlery, canopies, photographers and event packages — all in one place.</p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
-                <Button onClick={loadServices} variant="outline" size="sm" disabled={loading} data-testid="bq-mgmt-refresh-btn">
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-            </div>
-            {/* Tab nav lives INSIDE the same nav card — single modal strip. */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 h-9 bg-slate-100/70">
-                <TabsTrigger value="dashboard" className="text-xs"><LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
-                <TabsTrigger value="management" className="text-xs" data-testid="services-tab"><Layers className="h-3.5 w-3.5 mr-1.5" />Services</TabsTrigger>
-                <TabsTrigger value="packages" className="text-xs" data-testid="packages-tab"><PackageIcon className="h-3.5 w-3.5 mr-1.5" />Packages</TabsTrigger>
-                <TabsTrigger value="communications" className="text-xs"><MessageSquare className="h-3.5 w-3.5 mr-1.5" />Communications</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
-      </Card>
-
-      {/* ── Tab content (the Tabs root is duplicated; harmless because
-          shadcn Tabs uses uncontrolled DOM and the parent passes the
-          `value` prop). We render the TabsList inside the nav card above
-          and use a hidden Tabs here just for content routing. */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <>
+    <ManagementShell
+      title="Banquet & Event Services"
+      icon={PartyPopper}
+      subtitle="Halls, chairs & cutlery, canopies, photographers and event packages — all in one place."
+      scopeFilter={<OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+      onRefresh={loadServices}
+      refreshing={loading}
+      tabs={[
+        { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { value: 'management', label: 'Services', icon: Layers, testId: 'services-tab' },
+        { value: 'packages', label: 'Packages', icon: PackageIcon, testId: 'packages-tab' },
+        { value: 'communications', label: 'Communications', icon: MessageSquare },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      filterActive={activeTab === 'management' && !!(search || categoryFilter !== 'all')}
+      activeTabLabelOverrides={{ management: 'Services' }}
+      testIdPrefix="bq-mgmt"
+    >
         <TabsContent value="dashboard" className="mt-0">
           <ServiceExecutiveDashboard
             serviceType="Banquet"
@@ -1306,7 +1254,7 @@ export default function BanquetManagement() {
             primaryColor="pink"
           />
         </TabsContent>
-      </Tabs>
+    </ManagementShell>
 
       {/* Add / Edit Service modal — extracted to /components/management/banquet/ServiceDialog.jsx */}
       <ServiceDialog
@@ -1329,6 +1277,6 @@ export default function BanquetManagement() {
         pricingLabel={PRICING_LABEL}
         onEdit={openDialog}
       />
-    </div>
+    </>
   );
 }

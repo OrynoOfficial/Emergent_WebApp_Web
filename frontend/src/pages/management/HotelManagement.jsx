@@ -9,6 +9,7 @@ import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import {
   Hotel, Plus, LayoutDashboard, MessageSquare, RefreshCw, Bed,
   MapPin, ChevronLeft, Search, SlidersHorizontal, Grid3X3, List, X, Save, Building2,
@@ -309,46 +310,23 @@ export default function HotelManagement() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-[#082c59] to-[#0a3a75] rounded-xl flex items-center justify-center shadow-lg">
-                <Hotel className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Hotel Management</h1>
-                <p className="text-slate-500">Manage hotels, rooms, and communications</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="hotel" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button variant="outline" onClick={loadHotels} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="dashboard">
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="hotels">
-              <Hotel className="h-4 w-4 mr-2" /> Hotels
-            </TabsTrigger>
-            <TabsTrigger value="rooms" disabled={!selectedHotel}>
-              <Bed className="h-4 w-4 mr-2" /> Rooms
-            </TabsTrigger>
-            <TabsTrigger value="communications">
-              <MessageSquare className="h-4 w-4 mr-2" /> Communications
-            </TabsTrigger>
-          </TabsList>
+      <ManagementShell
+        title="Hotel Management"
+        icon={Hotel}
+        subtitle="Manage hotels, rooms, and communications"
+        scopeFilter={<OperatorScopeFilter serviceType="hotel" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+        onRefresh={loadHotels}
+        refreshing={loading}
+        tabs={[
+          { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { value: 'hotels', label: 'Hotels', icon: Hotel },
+          { value: 'rooms', label: 'Rooms', icon: Bed, disabled: !selectedHotel },
+          { value: 'communications', label: 'Communications', icon: MessageSquare },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        testIdPrefix="hotel-mgmt"
+      >
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard">
@@ -743,8 +721,7 @@ export default function HotelManagement() {
               primaryColor="blue"
             />
           </TabsContent>
-        </Tabs>
-      </div>
+        </ManagementShell>
 
       {/* Hotel Dialog */}
       <ServiceFormShell

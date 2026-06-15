@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ManagementShell from '@/components/management/shared/ManagementShell';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Bus, LayoutDashboard, MessageSquare, RefreshCw, Armchair, Plus, Edit, Trash2,
@@ -637,43 +638,22 @@ export default function TravelManagement() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Bus className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Travel Management Center</h1>
-                <p className="text-slate-500">Manage routes, vehicles, and communications</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />              <Button onClick={loadData} variant="outline" disabled={loading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="dashboard">
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="management">
-              <Bus className="h-4 w-4 mr-2" /> Management
-            </TabsTrigger>
-            <TabsTrigger value="communications">
-              <MessageSquare className="h-4 w-4 mr-2" /> Communications
-            </TabsTrigger>
-          </TabsList>
+      <ManagementShell
+        title="Travel Management Center"
+        icon={Bus}
+        subtitle="Manage routes, vehicles, and communications"
+        scopeFilter={<OperatorScopeFilter serviceType="travel" value={scopeOperatorId} onChange={setScopeOperatorId} />}
+        onRefresh={loadData}
+        refreshing={loading}
+        tabs={[
+          { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+          { value: 'management', label: 'Management', icon: Bus },
+          { value: 'communications', label: 'Communications', icon: MessageSquare },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        testIdPrefix="travel-mgmt"
+      >
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="mt-6">
@@ -978,8 +958,7 @@ export default function TravelManagement() {
               primaryColor="blue"
             />
           </TabsContent>
-        </Tabs>
-      </div>
+        </ManagementShell>
 
       {/* Route Dialog */}
       <ServiceFormShell
