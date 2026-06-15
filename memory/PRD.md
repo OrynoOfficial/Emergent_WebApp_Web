@@ -1,5 +1,19 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 223: visible cart countdown + soft warning)
+
+### Visible cart-hold countdown across the banquet flow
+- **BanquetResults sticky strip** — added a visible countdown pill (`data-testid="banquet-cart-strip-countdown"`) showing `M:SS` next to the subtotal. Turns amber + pulses when ≤2 min remain, with an inline `banquet-cart-strip-extend` button to reset the hold.
+- **EventCartDrawer** — countdown pill on the FAB (`event-cart-countdown-fab`) and inside the hero header (`event-cart-countdown-hero`). When ≤2 min remain, an amber `event-cart-expiry-warning` banner appears at the top of the drawer body with an `event-cart-extend-hold` button.
+- **BanquetCheckout** — countdown pill in the sticky header (`co-cart-countdown`); when ≤2 min remain, a `co-expiry-warning` banner shows with a `co-extend-hold` button just below the step indicator.
+
+### `extendHold` now resets the visible counter instantly
+- The `useEventCart` `extendHold()` action both refreshes `last_active_at` (which slides the 10-min auto-expire timer) AND synchronously calls `setExpiresInSeconds(600)` so the visible pill jumps to `10:00` in the same React render. Previously the counter would keep counting down until the next 1-second `setInterval` tick.
+
+### Verification (iter_223)
+- Live UI test confirmed: amber pulsing countdown + extend button rendered in the warning state on /services/banquet/results, and `extendHold` instantly resets visible counters across the strip / drawer / checkout. 0 frontend bugs.
+
+
 ## Latest Changes (Feb 2026 — iter 221: cart TTL + UX polish)
 
 ### Banquet cart 10-minute auto-expiry
