@@ -1,0 +1,55 @@
+{
+  "summary": "Frontend-only review of Banquet Management refactor (iter216): (1) consolidated nav card containing title + 4 tabs + operator-scope chrome, (2) per-subpage single modal-card strip, (3) BanquetManagement.jsx split into 4 sub-components. All wiring verified via static code review + ESLint clean. Live Playwright execution was blocked by the same Cloudflare bot-challenge / 429 rate-limit pattern called out in iter215 — the browser-context fetch('/api/auth/login') returned an HTML challenge page instead of JSON, and subsequent /login renders came back blank in the second attempt. The same superadmin login from a cURL shell returns HTTP 200 with a valid access_token, confirming this is a preview-edge throttling issue, not a product bug.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "code_review_findings": {
+    "implementation_matches_spec": true,
+    "file_size_check": "BanquetManagement.jsx now 1334 lines (down from 1729 — 23% reduction). Still exceeds the 700-LOC guideline but the trajectory is clearly correct after extracting 4 sub-components.",
+    "extracted_components_exist": {
+      "/components/management/banquet/ServicesToolbar.jsx": "60 lines — single Card with data-testid='bq-mgmt-subpage-card-services'; inline row containing Layers icon + 'Services' label + count Badge + services-search-input + category-filter-select + ViewModeToggle + add-service-btn (gated by PermissionGate 'banquets.create')",
+      "/components/management/banquet/ServicesGrid.jsx": "165 lines — pure presentational; renders grid or details view with data-testid=`services-${viewMode}-view`; each card has service-card-<id>, view/edit/delete testids",
+      "/components/management/banquet/ServiceDialog.jsx": "138 lines — wraps ServiceFormShell with submitDataTestId='save-service-btn'",
+      "/components/management/banquet/ServiceViewModal.jsx": "148 lines — read-only details dialog"
+    },
+    "nav_card_consolidation_verified": [
+      "Single Card with data-testid='bq-mgmt-nav-card' at BanquetManagement.jsx:1175",
+      "H1 'Banquet & Event Services' with data-testid='bq-mgmt-title' inside the card (1179) — always rendered",
+      "Toggle button data-testid='bq-mgmt-toggle-header' inside the card (1202); flips between 'Hide'/'Show controls' with ChevronUp/Down; aria-expanded and aria-controls wired to 'bq-mgmt-header-panel'",
+      "Active-tab pill data-testid='bq-mgmt-active-tab-pill' rendered only when collapsed (1183); maps activeTab==='management' → label 'Services'",
+      "Filter-active pill data-testid='bq-mgmt-filter-active-pill' rendered only when collapsed AND on Services tab AND filters are active (1187)",
+      "Inside `{headerExpanded && ...}` block (1212-1234): subtitle, OperatorScopeFilter, bq-mgmt-refresh-btn, AND the 4-button TabsList (Dashboard / Services / Packages / Communications) — all in the SAME card",
+      "TabsContent moved OUTSIDE the nav card via a duplicated `<Tabs value=...>` wrapper at line 1241 — content rendering remains correct"
+    ],
+    "subpage_strip_verified": [
+      "Services tab: <ServicesToolbar/> renders Card data-testid='bq-mgmt-subpage-card-services' as a single compact row (px-4 py-2.5) directly under the nav card (BanquetManagement.jsx:1262)",
+      "Packages tab: Card data-testid='bq-mgmt-subpage-card-packages' at line 447 — single row with PackageIcon + 'Event Packages' label + count Badge + add-package-btn"
+    ],
+    "testid_preservation": "All previously documented testids preserved — services-search-input, category-filter-select, add-service-btn, service-card-<id>, view-service-btn-<id>, edit-service-btn-<id>, delete-service-btn-<id>, save-service-btn, services-grid-view / services-details-view, add-package-btn, packages-tab, services-tab — verified via grep + file inspection.",
+    "lint": "ESLint clean on BanquetManagement.jsx + all 4 banquet sub-components — no errors, no warnings."
+  },
+  "critical_code_review_comments": [
+    "Refactor is clean: ServicesToolbar / ServicesGrid are pure presentational (parent owns state), ServiceDialog wraps the existing shared ServiceFormShell so the form fields & validation are unchanged → low regression risk.",
+    "Duplicate `<Tabs value={activeTab}>` wrapper at line 1241 to host TabsContent OUTSIDE the nav card is functional (shadcn uses uncontrolled DOM internally) but slightly unusual — consider in a follow-up promoting Tabs to wrap BOTH the TabsList card AND the TabsContent, then remove the duplicate wrapper. Not a blocker.",
+    "BanquetManagement.jsx still 1334 LOC — most of the remaining bulk is the in-file PackagesPanel component (~700 lines). Recommend extracting <PackagesPanel/> into /components/management/banquet/PackagesPanel.jsx in the next pass for parity with the Services-side split.",
+    "Accessibility on toggle button is correctly preserved from iter215: aria-expanded + aria-controls + visible icon+label."
+  ],
+  "test_report_links": [
+    "/app/test_reports/iteration_215.json (previous baseline – same env-blocking pattern observed)"
+  ],
+  "action_items": [
+    "MAIN AGENT self-test in a fresh incognito browser (the preview URL is currently bot-challenging headless Playwright): sign in as superadmin@oryno.com / testpassword123 → /management/banquet. Expected: (a) single nav card holding H1 + Hide/Show + 4 tabs + refresh + scope filter; (b) Services tab shows ONE compact subpage card containing search + category select + view-mode toggle + Add Service; (c) Packages tab shows ONE subpage card with 'Event Packages' + count + New Package; (d) toggle collapses the nav-card body and shows the active-tab pill; (e) Add Service opens the ServiceFormShell dialog; (f) eye/edit/trash on a service card open View / Edit / Delete flows; (g) no 'Element type is invalid' or 'Cannot read properties of undefined' errors in console.",
+    "Optional follow-up (NOT a blocker for this iter): extract <PackagesPanel/> into its own file to bring BanquetManagement.jsx under the 700-LOC guideline."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only scope)", "frontend": "Code review 100% verified; live UI execution blocked by Cloudflare bot-challenge / 429 on preview URL (3 attempts, all blocked — same pattern as iter215)"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 — shell cURL to /api/auth/login returns HTTP 200 + access_token; browser-context fetch returned HTML challenge (Cloudflare).",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The preview URL cinema-management-p0.preview.emergentagent.com is sitting behind a Cloudflare bot-challenge layer that intermittently returns HTML 429/challenge pages to headless Playwright contexts. Shell cURL works (auth/login → 200). In iter215 the same blocker was hit. If you need to re-test live UI: (1) wait ≥ 5 minutes between runs; (2) use a slow, single-shot navigation (`page.goto` + `wait_for_selector` timeout ≥ 90s) rather than many parallel actions; (3) prefer driving the visible login form (click 'Login to Your Account' CTA → fill the modal/form → submit) over the in-browser fetch bypass, since the fetch bypass triggers the bot challenge. The Banquet Management implementation itself is verified correct via source-level review + ESLint — all 9 required testids are present, all 4 extracted sub-components are imported, and the single-card consolidation pattern is properly implemented in BanquetManagement.jsx lines 1175-1235 (nav card) + 1262 (ServicesToolbar) + 447-461 (packages subpage card).",
+  "rca_of_the_issue": "Not a product bug. The implementation cleanly executes the iter216 spec (consolidate nav into one card; one card per subpage chrome; extract 4 sub-components). The blocker is environment-side rate-limiting / Cloudflare bot-challenge on the preview URL when accessed by Playwright. Main agent (or a fresh interactive browser) should be able to self-verify in seconds."
+}

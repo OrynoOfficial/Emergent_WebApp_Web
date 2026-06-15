@@ -33,6 +33,10 @@ import ServiceCommunicationsHub from '@/components/management/ServiceCommunicati
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import ServicesToolbar from '@/components/management/banquet/ServicesToolbar';
+import ServicesGrid from '@/components/management/banquet/ServicesGrid';
+import ServiceDialog from '@/components/management/banquet/ServiceDialog';
+import ServiceViewModal from '@/components/management/banquet/ServiceViewModal';
 
 const PAGE_SIZE = 12;
 
@@ -439,17 +443,22 @@ function PackagesTab({ services, scopeOperatorId }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[#082c59]">Event Packages</h2>
-          <p className="text-sm text-slate-500">Bundle multiple services together with an optional discount.</p>
+      {/* ── Subpage toolbar — single modal card strip ─────────────────── */}
+      <Card className="border-slate-200 shadow-sm" data-testid="bq-mgmt-subpage-card-packages">
+        <div className="px-4 py-2.5 flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <PackageIcon className="h-4 w-4 text-[#082c59]" />
+            <h2 className="text-sm font-semibold text-[#082c59]">Event Packages</h2>
+            <Badge variant="outline" className="text-[10px] border-slate-300 text-slate-600 px-1.5 py-0">{packages.length}</Badge>
+            <span className="hidden md:inline text-xs text-slate-500 ml-2">Bundle multiple services with an optional discount.</span>
+          </div>
+          <PermissionGate permission="banquets.create">
+            <Button onClick={openCreate} className="bg-[#082c59] h-8" size="sm" data-testid="add-package-btn">
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> New Package
+            </Button>
+          </PermissionGate>
         </div>
-        <PermissionGate permission="banquets.create">
-          <Button onClick={openCreate} className="bg-[#082c59]" data-testid="add-package-btn">
-            <Plus className="w-4 h-4 mr-2" /> New Package
-          </Button>
-        </PermissionGate>
-      </div>
+      </Card>
 
       {loading ? (
         <div className="text-center py-8 text-slate-500">Loading…</div>
@@ -1157,14 +1166,13 @@ export default function BanquetManagement() {
   const previewMeta = CATEGORY_BY_VALUE[form.category] || CATEGORY_BY_VALUE.hall;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* ── Collapsible header card ──────────────────────────────────────
-          Page name is ALWAYS visible (top row of the card). All other
-          chrome — subtitle, scope filter, refresh, tab navigation, and
-          the toolbar (search + category + view mode + Add Service) — is
-          hidden when collapsed so the user can focus on the grid below.
-          Toggled via the chevron button on the right. */}
-      <Card className="border-slate-200 shadow-sm">
+    <div className="p-6 space-y-4">
+      {/* ── Card 1: Navigation strip ─────────────────────────────────────
+          Single modal card containing the page name + tab navigation
+          (Dashboard / Services / Packages / Communications) + the global
+          ops chrome (scope filter + refresh). Page title is ALWAYS
+          visible; everything else collapses behind the "Hide" toggle. */}
+      <Card className="border-slate-200 shadow-sm" data-testid="bq-mgmt-nav-card">
         <div className="px-5 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
             <PartyPopper className="h-5 w-5 text-[#082c59] flex-shrink-0" />
@@ -1201,35 +1209,37 @@ export default function BanquetManagement() {
           </Button>
         </div>
 
-        {/* Collapsible body — subtitle + scope filter + refresh, then the
-            tabs list, then the management toolbar. Hidden when collapsed. */}
         {headerExpanded && (
-          <div id="bq-mgmt-header-panel" className="px-5 pb-4 border-t border-slate-100 pt-4 space-y-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div id="bq-mgmt-header-panel" className="px-5 pb-4 border-t border-slate-100 pt-3 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
               <p className="text-gray-600 text-sm">Halls, chairs & cutlery, canopies, photographers and event packages — all in one place.</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <OperatorScopeFilter serviceType="banquet" value={scopeOperatorId} onChange={setScopeOperatorId} />
-                <Button onClick={loadServices} variant="outline" disabled={loading} data-testid="bq-mgmt-refresh-btn">
+                <Button onClick={loadServices} variant="outline" size="sm" disabled={loading} data-testid="bq-mgmt-refresh-btn">
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
               </div>
             </div>
+            {/* Tab nav lives INSIDE the same nav card — single modal strip. */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-4 h-9 bg-slate-100/70">
+                <TabsTrigger value="dashboard" className="text-xs"><LayoutDashboard className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
+                <TabsTrigger value="management" className="text-xs" data-testid="services-tab"><Layers className="h-3.5 w-3.5 mr-1.5" />Services</TabsTrigger>
+                <TabsTrigger value="packages" className="text-xs" data-testid="packages-tab"><PackageIcon className="h-3.5 w-3.5 mr-1.5" />Packages</TabsTrigger>
+                <TabsTrigger value="communications" className="text-xs"><MessageSquare className="h-3.5 w-3.5 mr-1.5" />Communications</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         )}
       </Card>
 
+      {/* ── Tab content (the Tabs root is duplicated; harmless because
+          shadcn Tabs uses uncontrolled DOM and the parent passes the
+          `value` prop). We render the TabsList inside the nav card above
+          and use a hidden Tabs here just for content routing. */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        {headerExpanded && (
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" />Dashboard</TabsTrigger>
-            <TabsTrigger value="management" data-testid="services-tab"><Layers className="h-4 w-4 mr-2" />Services</TabsTrigger>
-            <TabsTrigger value="packages" data-testid="packages-tab"><PackageIcon className="h-4 w-4 mr-2" />Packages</TabsTrigger>
-            <TabsTrigger value="communications"><MessageSquare className="h-4 w-4 mr-2" />Communications</TabsTrigger>
-          </TabsList>
-        )}
-
-        <TabsContent value="dashboard" className="mt-6">
+        <TabsContent value="dashboard" className="mt-0">
           <ServiceExecutiveDashboard
             serviceType="Banquet"
             serviceIcon={<PartyPopper className="h-8 w-8" />}
@@ -1248,176 +1258,30 @@ export default function BanquetManagement() {
           />
         </TabsContent>
 
-        <TabsContent value="management" className="mt-6 space-y-4">
-          {/* Toolbar — hidden when the header card is collapsed, exactly
-              like the rest of the chrome above. */}
-          {headerExpanded && (
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between" data-testid="bq-mgmt-toolbar">
-              <div className="flex flex-1 gap-2 max-w-2xl items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Search services by name, city, address…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-10 bg-white"
-                    data-testid="services-search-input"
-                  />
-                </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-44 bg-white" data-testid="category-filter-select">
-                    <SelectValue placeholder="All categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
-                    {CATEGORIES.map(c => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-                <PermissionGate permission="banquets.create">
-                  <Button onClick={() => openDialog()} className="bg-[#082c59]" data-testid="add-service-btn">
-                    <Plus className="w-4 h-4 mr-2" /> Add Service
-                  </Button>
-                </PermissionGate>
-              </div>
-            </div>
-          )}
+        <TabsContent value="management" className="mt-0 space-y-4">
+          <ServicesToolbar
+            count={filtered.length}
+            search={search}
+            onSearch={setSearch}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            categories={CATEGORIES}
+            onAdd={() => openDialog()}
+          />
 
-          {/* Category filter is in the dropdown beside the search — chips removed by request to keep the toolbar clean. */}
-
-          {loading ? (
-            <div className="text-center py-8">Loading…</div>
-          ) : filtered.length === 0 ? (
-            <Card className="p-12 text-center">
-              <PartyPopper className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500">{search || categoryFilter !== 'all' ? 'No services match your filters' : 'No services yet. Click "Add Service" to get started.'}</p>
-            </Card>
-          ) : (
-            <div className={viewMode === 'details' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'} data-testid={`services-${viewMode}-view`}>
-              {paged.map(svc => {
-                const meta = CATEGORY_BY_VALUE[svc.category || 'hall'] || CATEGORY_BY_VALUE.hall;
-                const Icon = meta.icon;
-                const cover = (svc.images && svc.images[0]) || null;
-                const detailEntries = Object.entries(svc.category_details || {})
-                  .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0))
-                  .slice(0, 4);
-                return (
-                  <Card key={svc.id} className="overflow-hidden hover:shadow-xl transition-shadow group" data-testid={`service-card-${svc.id}`}>
-                    {/* Cover image — full-bleed; falls back to a tinted icon hero */}
-                    <div className="relative h-40 w-full bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-                      {cover ? (
-                        <img src={cover} alt={svc.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${meta.accent}`}>
-                          <Icon className="w-14 h-14 opacity-50" />
-                        </div>
-                      )}
-                      {/* Category chip overlay */}
-                      <div className="absolute top-2 left-2">
-                        <Badge className={`${meta.accent} border-0 shadow-sm inline-flex items-center gap-1`}>
-                          <Icon className="w-3.5 h-3.5" /> {meta.label}
-                        </Badge>
-                      </div>
-                      {/* Image count chip (when more than one) */}
-                      {svc.images && svc.images.length > 1 && (
-                        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full backdrop-blur-sm">
-                          +{svc.images.length - 1} more
-                        </div>
-                      )}
-                      {/* Price ribbon */}
-                      <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between">
-                        <div className="bg-white/95 backdrop-blur px-2.5 py-1 rounded-md shadow-sm">
-                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">{PRICING_LABEL[svc.pricing_model || svc.price_type] || 'Price'}</div>
-                          <div className="text-sm font-bold text-emerald-700 leading-tight">{formatFCFA(svc.base_price || 0)}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <CardContent className="pt-3 pb-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-semibold leading-tight line-clamp-1" title={svc.name}>{svc.name}</h3>
-                      </div>
-
-                      {svc.description && (
-                        <p className="text-xs text-slate-500 line-clamp-2 mb-2">{svc.description}</p>
-                      )}
-
-                      <div className="space-y-1 text-xs text-slate-600">
-                        {svc.city && (
-                          <div className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{svc.address ? `${svc.address}, ` : ''}{svc.city}</span>
-                          </div>
-                        )}
-                        {(svc.capacity_max != null) && (
-                          <div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />{svc.capacity_min || 0}–{svc.capacity_max} guests</div>
-                        )}
-                        {svc.unit_label && (
-                          <div className="flex items-center gap-1.5"><Box className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            Sold by the <strong className="font-medium">{svc.unit_label}</strong>
-                            {svc.min_quantity ? ` (min ${svc.min_quantity})` : ''}
-                          </div>
-                        )}
-                        {svc.duration_hours && (
-                          <div className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />Default {svc.duration_hours}h session</div>
-                        )}
-                      </div>
-
-                      {/* Category-specific details summary (up to 4 chips) */}
-                      {detailEntries.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {detailEntries.map(([k, v]) => (
-                            <Badge key={k} variant="outline" className="text-[10px] font-normal py-0 px-1.5 text-slate-600">
-                              {String(k).replace(/_/g, ' ')}: <strong className="font-medium ml-1 truncate max-w-[120px]">{Array.isArray(v) ? v.join(', ') : String(v)}</strong>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Amenities preview for halls */}
-                      {Array.isArray(svc.amenities) && svc.amenities.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {svc.amenities.slice(0, 3).map(a => (
-                            <Badge key={a} variant="secondary" className="text-[10px] font-normal py-0 px-1.5">{String(a).replace(/_/g, ' ')}</Badge>
-                          ))}
-                          {svc.amenities.length > 3 && (
-                            <Badge variant="secondary" className="text-[10px] font-normal py-0 px-1.5 text-slate-500">+{svc.amenities.length - 3}</Badge>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Operator + contact strip */}
-                      {(svc.operator_name || svc.phone || svc.email) && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between gap-2">
-                          {svc.operator_name && <span className="inline-flex items-center gap-1 truncate"><Building2 className="w-3 h-3" /> {svc.operator_name}</span>}
-                          {(svc.phone || svc.email) && (
-                            <span className="truncate text-right">{svc.phone || svc.email}</span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 mt-3">
-                        <Button size="sm" variant="outline" onClick={() => handleView(svc)} title="View details" data-testid={`view-service-btn-${svc.id}`}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <PermissionGate permission="banquets.edit">
-                          <Button size="sm" variant="outline" className="flex-1" onClick={() => openDialog(svc)} data-testid={`edit-service-btn-${svc.id}`}>
-                            <Edit className="w-4 h-4 mr-1" /> Edit
-                          </Button>
-                        </PermissionGate>
-                        <PermissionGate permission="banquets.delete">
-                          <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(svc.id)} data-testid={`delete-service-btn-${svc.id}`}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </PermissionGate>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          <ServicesGrid
+            services={paged}
+            hasFilters={!!(search || categoryFilter !== 'all')}
+            viewMode={viewMode}
+            categoryByValue={CATEGORY_BY_VALUE}
+            pricingLabel={PRICING_LABEL}
+            loading={loading}
+            onView={handleView}
+            onEdit={openDialog}
+            onDelete={handleDelete}
+          />
 
           <Pagination
             page={page}
@@ -1444,278 +1308,27 @@ export default function BanquetManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Add / Edit Service Modal */}
-      <ServiceFormShell
+      {/* Add / Edit Service modal — extracted to /components/management/banquet/ServiceDialog.jsx */}
+      <ServiceDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        icon={previewMeta.icon}
-        title={editing ? 'Edit Service' : 'Add Service'}
-        subtitle={editing
-          ? 'Update category, pricing and photos.'
-          : 'List a new service — hall, rental items, canopy, photographer, catering, anything you offer for events.'}
-        editing={!!editing}
-        accent="pink"
+        editing={editing}
+        form={form}
+        previewMeta={previewMeta}
+        pricingLabel={PRICING_LABEL}
         leftColumn={<CategoryAwareFields form={form} setForm={setForm} categoryOperators={categoryOperators} />}
-        preview={
-          <div className="space-y-3">
-            <GenericPreviewCard
-              cover={(form.images || [])[0]}
-              thumbs={(form.images || []).slice(1, 3)}
-              icon={previewMeta.icon}
-              badgeText={previewMeta.label}
-              badgeClass="bg-pink-500 text-white"
-              placeholderColor="from-pink-600 via-rose-500 to-fuchsia-500"
-              title={form.name || 'Service name'}
-              subtitle={form.category === 'hall' ? (form.venue_type || 'Venue') : previewMeta.label}
-              location={[
-                form.city,
-                form.capacity_max ? `Up to ${form.capacity_max} guests` : null,
-                form.unit_label ? `Sold by the ${form.unit_label}` : null,
-              ].filter(Boolean).join(' · ') || (form.category === 'hall' ? 'City · Capacity' : 'Service details')}
-              tags={form.amenities || []}
-              tagsAccentClass="bg-pink-50 text-pink-700"
-              priceLabel={PRICING_LABEL[form.pricing_model] || 'Price'}
-              priceValue={form.base_price ? `${Number(form.base_price).toLocaleString()} FCFA` : '—'}
-              accentTextClass="text-pink-700"
-            />
-
-            {/* Extra image gallery — surface ALL uploaded shots so the operator
-                doesn't have to scroll the form to know what they've added. */}
-            {Array.isArray(form.images) && form.images.length > 3 && (
-              <div className="bg-white rounded-xl border border-slate-200 p-2.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1.5">
-                  Gallery · {form.images.length} photos
-                </div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {form.images.slice(0, 8).map((img, i) => (
-                    <img key={i} src={img} alt="" className="aspect-square rounded-md object-cover" />
-                  ))}
-                  {form.images.length > 8 && (
-                    <div className="aspect-square rounded-md bg-slate-100 flex items-center justify-center text-xs font-medium text-slate-500">
-                      +{form.images.length - 8}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Description preview — operators love seeing how their copy will read */}
-            {form.description && (
-              <div className="bg-white rounded-xl border border-slate-200 p-3">
-                <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">About</div>
-                <p className="text-xs text-slate-700 leading-relaxed line-clamp-5">{form.description}</p>
-              </div>
-            )}
-
-            {/* Category-specific details surfaced as a chip grid. Empty values
-                are filtered so the operator sees only what they've filled in.
-                eslint-disable-next-line react/no-unstable-nested-components */}
-            {/* eslint-disable-next-line react/no-unstable-nested-components */}
-            {(() => {
-              const cd = form.category_details || {};
-              const entries = Object.entries(cd).filter(([, v]) =>
-                v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0)
-              );
-              if (entries.length === 0) return null;
-              return (
-                /* eslint-disable-next-line react/no-unstable-nested-components */
-                <div className="bg-pink-50 rounded-xl border border-pink-200 p-3" data-testid="modal-category-details">
-                  <div className="text-[10px] uppercase tracking-wider text-pink-700 font-semibold mb-2">
-                    {previewMeta.label} details
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {entries.map(([k, v]) => (
-                      <div key={k} className="bg-white rounded px-2 py-1 border border-pink-100">
-                        <div className="text-[9px] text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</div>
-                        <div className="text-xs font-medium text-slate-800 truncate" title={Array.isArray(v) ? v.join(', ') : String(v)}>
-                          {Array.isArray(v) ? v.join(', ') : String(v)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Operator + contact strip — visible only when known */}
-            {(form.operator_name || form.phone || form.email || form.duration_hours || form.min_quantity) && (
-              <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-1.5">
-                {form.operator_name && (
-                  <div className="text-[11px] flex items-center justify-between gap-2">
-                    <span className="text-slate-500">Operator</span>
-                    <span className="font-medium text-slate-800 truncate">{form.operator_name}</span>
-                  </div>
-                )}
-                {form.duration_hours && (
-                  <div className="text-[11px] flex items-center justify-between gap-2">
-                    <span className="text-slate-500">Default duration</span>
-                    <span className="font-medium text-slate-800">{form.duration_hours}h</span>
-                  </div>
-                )}
-                {form.min_quantity && (
-                  <div className="text-[11px] flex items-center justify-between gap-2">
-                    <span className="text-slate-500">Min quantity</span>
-                    <span className="font-medium text-slate-800">{form.min_quantity}</span>
-                  </div>
-                )}
-                {form.phone && (
-                  <div className="text-[11px] flex items-center justify-between gap-2">
-                    <span className="text-slate-500">Phone</span>
-                    <span className="font-medium text-slate-800 truncate">{form.phone}</span>
-                  </div>
-                )}
-                {form.email && (
-                  <div className="text-[11px] flex items-center justify-between gap-2">
-                    <span className="text-slate-500">Email</span>
-                    <span className="font-medium text-slate-800 truncate">{form.email}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        }
-        submitting={false}
-        submitLabel={editing ? 'Update Service' : 'Add Service'}
         onSubmit={handleSave}
-        submitDataTestId="save-service-btn"
       />
 
-      {/* View Service Dialog — rich preview matching the customer-facing card */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto p-0">
-          {viewing && (() => {
-            const meta = CATEGORY_BY_VALUE[viewing.category || 'hall'] || CATEGORY_BY_VALUE.hall;
-            const Icon = meta.icon;
-            const images = Array.isArray(viewing.images) ? viewing.images.filter(Boolean) : [];
-            const cover = images[0];
-            const thumbs = images.slice(1, 6);
-            const detailEntries = Object.entries(viewing.category_details || {})
-              .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0));
-            return (
-              <>
-                {/* Hero image (or icon fallback) with title overlay */}
-                <div className="relative h-56 w-full overflow-hidden">
-                  {cover ? (
-                    <img src={cover} alt={viewing.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className={`w-full h-full flex items-center justify-center ${meta.accent}`}>
-                      <Icon className="w-20 h-20 opacity-50" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-                    <div className="text-white drop-shadow">
-                      <Badge className={`${meta.accent} border-0 mb-1 inline-flex items-center gap-1`}>
-                        <Icon className="w-3.5 h-3.5" /> {meta.label}
-                      </Badge>
-                      <h2 className="text-2xl font-bold leading-tight">{viewing.name}</h2>
-                    </div>
-                    <div className="bg-white/95 backdrop-blur rounded-md px-3 py-1.5 shadow text-right flex-shrink-0">
-                      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">{PRICING_LABEL[viewing.pricing_model || viewing.price_type] || 'Price'}</div>
-                      <div className="text-base font-bold text-emerald-700">{formatFCFA(viewing.base_price || 0)}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Thumbnail strip — when more than one image is uploaded */}
-                {thumbs.length > 0 && (
-                  <div className="px-5 pt-3 flex gap-2 overflow-x-auto pb-1">
-                    {thumbs.map((src, i) => (
-                      <img key={i} src={src} alt="" className="w-16 h-16 rounded-md object-cover flex-shrink-0 ring-1 ring-slate-200" />
-                    ))}
-                    {images.length > 6 && (
-                      <div className="w-16 h-16 rounded-md bg-slate-100 flex items-center justify-center text-xs font-medium text-slate-500 flex-shrink-0">
-                        +{images.length - 6}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="px-5 py-4 space-y-4">
-                  {/* Description */}
-                  {viewing.description && (
-                    <p className="text-sm text-slate-700 leading-relaxed">{viewing.description}</p>
-                  )}
-
-                  {/* Facts grid */}
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                    {(viewing.address || viewing.city) && (
-                      <div className="col-span-2">
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Location</p>
-                        <p className="font-medium flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" />{viewing.address ? `${viewing.address}, ` : ''}{viewing.city}</p>
-                      </div>
-                    )}
-                    {(viewing.capacity_min != null || viewing.capacity_max != null) && (
-                      <div>
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Capacity</p>
-                        <p className="font-medium flex items-center gap-1.5"><Users className="w-4 h-4 text-slate-400" />{viewing.capacity_min || 0}–{viewing.capacity_max || '∞'} guests</p>
-                      </div>
-                    )}
-                    {viewing.duration_hours && (
-                      <div>
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Default duration</p>
-                        <p className="font-medium flex items-center gap-1.5"><Layers className="w-4 h-4 text-slate-400" />{viewing.duration_hours}h session</p>
-                      </div>
-                    )}
-                    {viewing.unit_label && (
-                      <div>
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Unit</p>
-                        <p className="font-medium flex items-center gap-1.5"><Box className="w-4 h-4 text-slate-400" />per {viewing.unit_label}{viewing.min_quantity ? ` (min ${viewing.min_quantity})` : ''}</p>
-                      </div>
-                    )}
-                    {viewing.operator_name && (
-                      <div>
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Operator</p>
-                        <p className="font-medium flex items-center gap-1.5"><Building2 className="w-4 h-4 text-slate-400" />{viewing.operator_name}</p>
-                      </div>
-                    )}
-                    {(viewing.phone || viewing.email) && (
-                      <div className="col-span-2">
-                        <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-0.5">Contact</p>
-                        <p className="font-medium text-slate-700">{[viewing.phone, viewing.email].filter(Boolean).join(' · ')}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Category-specific details */}
-                  {detailEntries.length > 0 && (
-                    <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-                      <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">{meta.label} details</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {detailEntries.map(([k, v]) => (
-                          <div key={k} className="bg-white rounded px-2 py-1.5 border border-slate-100">
-                            <div className="text-[10px] text-slate-500 capitalize">{String(k).replace(/_/g, ' ')}</div>
-                            <div className="font-medium text-slate-800 truncate">{Array.isArray(v) ? v.join(', ') : String(v)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Amenities (mainly halls) */}
-                  {Array.isArray(viewing.amenities) && viewing.amenities.length > 0 && (
-                    <div>
-                      <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">Includes</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {viewing.amenities.map(a => (
-                          <Badge key={a} variant="outline" className="text-xs font-normal capitalize">{String(a).replace(/_/g, ' ')}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <DialogFooter className="px-5 pb-5 pt-0 border-t">
-                  <Button variant="outline" onClick={() => { openDialog(viewing); setIsViewOpen(false); }}>
-                    <Edit className="w-4 h-4 mr-2" /> Edit
-                  </Button>
-                  <Button onClick={() => setIsViewOpen(false)} className="bg-[#082c59]">Close</Button>
-                </DialogFooter>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* View Service modal — extracted to /components/management/banquet/ServiceViewModal.jsx */}
+      <ServiceViewModal
+        open={isViewOpen}
+        onOpenChange={setIsViewOpen}
+        viewing={viewing}
+        categoryByValue={CATEGORY_BY_VALUE}
+        pricingLabel={PRICING_LABEL}
+        onEdit={openDialog}
+      />
     </div>
   );
 }
