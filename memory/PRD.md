@@ -1,5 +1,28 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 221: cart TTL + UX polish)
+
+### Banquet cart 10-minute auto-expiry
+- `useEventCart` hook now stamps `last_active_at` on every mutation. After 10 min of inactivity the cart auto-clears (state + localStorage) via a sliding `setTimeout`. Hook exposes `expiresInSeconds` so the drawer/checkout can render a live countdown.
+- Stale carts read from localStorage on mount are discarded immediately.
+
+### Customer Service Center + Pods → ManagementShell
+- `CustomerServiceManagement.jsx` (`/management/customer-service`) — wrapped in `<ManagementShell>` with Tickets / Statistics / Team header tabs. Ticket sub-statuses (Open / Pending / In Progress / Resolved / Closed) live inside a `<SubpageCard>`. Search + sort use a second `<SubpageCard>`. AI Assistant and Create Ticket move to the header `scopeFilter`.
+- `PodManagement.jsx` (`/admin/employees/pods`) — wrapped in `<ManagementShell>` with the existing Employees / Pod Management / Access Scopes tab strip. Refresh + Create Pod live in the header.
+
+### Users page cleanup
+- Removed the blue "Role Hierarchy & Permissions" info card (redundant with the role chips already shown on each row).
+- Removed the "Joined" table column — date-joined remains a filter in the Filters SubpageCard, which is the canonical place to scope by it.
+
+### Banquet checkout enrichment
+- Event Summary card now also surfaces: bundle vs service counts, contact name/phone, vendor list (deduped across items + packages), and a per-line unit-price detail (e.g., "50,000 XAF/guest × 100").
+- Price Breakdown card gains a "Why the service fee?" explanation block (info icon + teal callout) explaining the 5% fee covers vendor verification, payment processing, event-day support, and booking guarantee — matching the multi-vendor banquet context.
+
+### Verification (iter_221)
+- 0 frontend bugs across all 5 changes (some via live UI smoke, some via source audit due to admin rate-limit on chained navigation).
+- `yarn build` succeeds, frontend serves HTTP 200, eslint clean on touched files.
+
+
 ## Latest Changes (Feb 2026 — iter 220: Final ManagementShell rollout + dynamic stats)
 
 ### ManagementShell wrapping (final 11 pages)
