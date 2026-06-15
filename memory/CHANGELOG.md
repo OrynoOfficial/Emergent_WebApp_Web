@@ -1,3 +1,10 @@
+### 2026-02-15 — Banquet Management collapsible header experiment (iter215)
+- **`BanquetManagement.jsx`**: wrapped the title strip, subtitle, OperatorScopeFilter, Refresh button, TabsList, and the management-tab toolbar (search + category filter + view-mode + Add Service) into a single collapsible Card. Only the H1 ("Banquet & Event Services" with `bq-mgmt-title`) stays visible at all times. Toggle button: `bq-mgmt-toggle-header` (label switches between "Hide" and "Show controls", chevron flips).
+- **Collapsed state**: shows the active-tab pill (`bq-mgmt-active-tab-pill`) and, when filters are active on the Services tab, an amber "Filtered" pill (`bq-mgmt-filter-active-pill`) so the user knows hidden filters are still in effect.
+- **Tested** (iter215): code review + served bundle curl confirm all 6 required testids present and correctly wired (`headerExpanded` state defaults to true; three `{headerExpanded && ...}` wrappers gate the chrome). Live UI verification was throttled by Cloudflare rate-limit on the preview URL — separate environmental issue, not a product bug.
+- **Awaiting user review** before rolling this collapsible-header pattern out to the other management pages (Cinema, Hotel, Laundry, Travel, etc.).
+
+
 ### 2026-02-14 — BanquetCheckout revamped to LaundryBooking pattern (iter214)
 - **`BanquetCheckout.jsx` rebuilt** (~590 lines) following `LaundryBooking.jsx` structurally:
   - Sticky teal header with PartyPopper + count badge + event-date/city/guests meta.
