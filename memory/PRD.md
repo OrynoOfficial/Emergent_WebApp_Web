@@ -1,5 +1,26 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 220: Final ManagementShell rollout + dynamic stats)
+
+### ManagementShell wrapping (final 11 pages)
+- Wrapped these admin/customer pages in `<ManagementShell>` + `<SubpageCard>`:
+  - `/admin/sales` (Sales — "Revenue"), `/analytics`, `/admin` (AdminDashboard), `/admin/operators-comparison`, `/services`, `/admin/employees`, `/admin/employees/access-scopes`, `/admin/audit-logs`, `/admin/commissions` (incl. Global/Category/Operator tabs), `/admin/operators/geography`, `/admin/operators/market-segments`.
+- ManagementShell outer wrapper changed from `p-6 space-y-4` → `space-y-4 min-w-0` so Layout's existing `p-4 lg:p-8` is the single source of padding (no more nested-padding crowding).
+
+### Dynamic, filter-aware stats blocks
+- Bills, Bookings, Orders, Receipts, Users, Operators, Geography, MarketSegments now compute their summary stats from the already-filtered record set (`filteredBills`, `filtered`, `filteredAndSortedOrders`, `filteredUsers`, `filteredOperators`, `filteredCountries`, `segments`) — changing operator scope, date range, status, or any other filter instantly updates the stats.
+- All stats grids repositioned to render BELOW the Filters/Search SubpageCard, just before the records list (matches the user-requested "scope → filter → stats → records" reading order).
+- Bills also got the previously-requested pagination footer (PAGE_SIZE=25) integrated with the dynamic-filter pattern via the React-recommended render-time `prev*` mirror.
+
+### Bug fixes
+- **Users page horizontal overflow** fixed: list-view `<table>` now sits inside `overflow-x-auto` with `min-w-[800px]`, and cell padding compressed `py-4 px-6` → `py-4 px-4`. Page no longer pushes the layout past the viewport on common widths.
+- Removed unused `useLocation` imports and dead state (`pods`, `setPods`, `podMemberships`, `setPodMemberships`, `empEmails`, `regions`, `setRegions`) from Geography / MarketSegments / EmployeesManagement / EmployeeScopeManagement to keep eslint clean.
+
+### Verification (iter_220)
+- `yarn build` succeeds, frontend serves HTTP 200, 0 frontend bugs found by testing agent.
+- Bills page verified end-to-end live (dynamic stats responding to filters confirmed). Users overflow fix verified live. Remaining 15 pages verified via source-code audit (testing agent hit backend rate-limit during fast chained navigation — unrelated to this refactor).
+
+
 ## Latest Changes (Feb 2026 — iter 219: Management pages lint cleanup)
 
 ### Code hygiene: Zero ESLint errors across `/pages/management/*.jsx`
