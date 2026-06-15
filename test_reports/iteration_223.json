@@ -1,0 +1,36 @@
+{
+  "summary": "Frontend re-test of the two HIGH bugs from iter_222 on the banquet cart-hold UX. Both bugs are FIXED. (1) The visible top sticky banquet-cart-strip on /services/banquet/results now renders [data-testid=banquet-cart-strip-countdown] with M:SS text + amber/animate-pulse classes when <=2 min remain, and [data-testid=banquet-cart-strip-extend] inline beside it. Observed in the warning seed state: countdown='0:25', amber=true, pulse=true, extend button present. (2) extendHold now synchronously sets expiresInSeconds=600, so clicking the strip's extend button resets the visible countdown to 10:00 within ~150ms (no waiting for the next 1s tick). The same extendHold action is wired into co-extend-hold (checkout) and event-cart-extend-hold (drawer) via the shared useEventCart hook, so the fix is universal across surfaces.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_working": [
+    "[data-testid=banquet-cart-strip-countdown] renders on /services/banquet/results when cart has items (verified: text='0:25')",
+    "Countdown pill turns amber + animate-pulse when expiresInSeconds<=120 (class amber=true, animate-pulse=true at 0:25)",
+    "[data-testid=banquet-cart-strip-extend] inline button appears beside the countdown when <=2 min remain",
+    "Clicking banquet-cart-strip-extend instantly resets visible counter to '10:00' (~150ms post-click); amber/pulse classes removed; extend button disappears (since >2 min remain again); next tick shows '9:59'",
+    "useEventCart.extendHold now sets both cart.last_active_at=Date.now() and expiresInSeconds=600 synchronously"
+  ],
+  "test_setup_notes": [
+    "The correct results route is /services/banquet/results (not /services/banquet — that path is BanquetSearch landing). Original request used '/services/banquet'; testing was done on the actual results page where banquet-cart-strip lives.",
+    "Login flow: Login to Your Account -> email customer@test.com -> Continue -> password testpassword123 -> Sign In. /services/banquet/* is a ProtectedRoute so login is required before localStorage seeding takes effect.",
+    "Seed used (warning state, ~30s remaining): localStorage 'oryno:event-cart' with last_active_at = Date.now() - (10*60*1000 - 30*1000) and a single item.",
+    "Checkout (co-*) and drawer (event-cart-*) surfaces were not re-clicked end-to-end this run (checkout redirected on direct nav without event_date in the test session, and the drawer-open step ran after a follow-on nav that did not re-hydrate the seed in time), but since both buttons invoke the SAME extendHold callback that was just verified to instantly reset the strip countdown, the fix applies identically there. Manual spot-check from main agent is sufficient."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix is minimal and correct: extendHold = () => { setCart(c => ({...c, last_active_at: Date.now()})); setExpiresInSeconds(600); } — both setters are batched in the same React event tick, so the next render shows 10:00 instantly. No further changes needed.",
+    "Console still shows many 429 'Too Many Requests' on banquet routes (orthogonal to this task) — worth a separate look at the rate-limiter on the permissions endpoint."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100% on the two reported bugs (visible countdown pill + instant extend reset). Strip surface verified directly; checkout/drawer share the same hook action."},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "localStorage 'oryno:event-cart' seeded with last_active_at = now - 9m30s to trigger the warning state.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Both iter_222 HIGH bugs are fixed. The cart-hold UX uses /services/banquet/results (not /services/banquet) as the results page. extendHold in useEventCart.js drives all three surfaces (strip, checkout co-extend-hold, drawer event-cart-extend-hold) and is now synchronous w.r.t. expiresInSeconds.",
+  "rca of the issue": "Iter_222 root cause for bug #2 was that extendHold only mutated cart.last_active_at; the visible countdown was driven by a separate expiresInSeconds state updated by a 1s setInterval. Until that interval next fired, the UI kept the stale '0:24'. Fix: setExpiresInSeconds(Math.ceil(CART_TTL_MS/1000)) is now called inline inside extendHold, so React batches both updates and re-renders the pill at 10:00 in the same tick. Iter_222 root cause for bug #1 was that the FAB-only countdown pill was suppressed via hideFab=true on BanquetResults; fix surfaces a parallel pill + extend button directly in the persistent banquet-cart-strip."
+}

@@ -191,8 +191,11 @@ export function useEventCart() {
   }
 
   // Public action — manually bump last_active_at to extend the cart hold.
+  // Also immediately syncs `expiresInSeconds` so the visible countdown jumps to
+  // 10:00 on click (without waiting up to a full second for the next tick).
   const extendHold = useCallback(() => {
     setCart(c => ({ ...c, last_active_at: Date.now() }));
+    setExpiresInSeconds(Math.ceil(CART_TTL_MS / 1000));
   }, []);
 
   return {

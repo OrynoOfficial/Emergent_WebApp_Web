@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import {
   MapPin, Users, ArrowLeft, Loader2, PartyPopper, Plus, Minus, Package as PackageIcon,
   Building2, Armchair, TentTree, Camera, Video, UtensilsCrossed, Sparkles, Music2, Box,
-  Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag,
+  Search, SlidersHorizontal, ChevronLeft, ChevronRight, ShoppingBag, Clock,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
@@ -617,6 +617,27 @@ export default function BanquetResults() {
               </div>
             </button>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {cartApi.expiresInSeconds != null && cartApi.expiresInSeconds > 0 && (
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${cartApi.expiresInSeconds <= 120 ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse' : 'bg-teal-100 text-teal-800 border border-teal-200'}`}
+                  data-testid="banquet-cart-strip-countdown"
+                  title="Cart auto-clears after 10 minutes of inactivity"
+                >
+                  <Clock className="w-3 h-3" />
+                  {Math.floor(cartApi.expiresInSeconds / 60)}:{(cartApi.expiresInSeconds % 60).toString().padStart(2, '0')}
+                </span>
+              )}
+              {cartApi.expiresInSeconds != null && cartApi.expiresInSeconds <= 120 && cartApi.expiresInSeconds > 0 && cartApi.extendHold && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cartApi.extendHold}
+                  className="h-7 px-2 text-[11px] border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
+                  data-testid="banquet-cart-strip-extend"
+                >
+                  Extend hold
+                </Button>
+              )}
               <div className="text-right">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Subtotal</div>
                 <div className="text-base font-bold text-teal-700">{formatFCFA(totals.total)}</div>
