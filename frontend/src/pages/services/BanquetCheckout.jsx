@@ -23,6 +23,7 @@ import {
   ArrowLeft, PartyPopper, CalendarIcon, Users, MapPin, Phone, Mail, User,
   Loader2, CheckCircle2, Package as PackageIcon, ShoppingBag, Sparkles, Plus,
   Minus, Trash2, Tag, X, DollarSign, CreditCard, Building2, Clock,
+  UserCircle2, Briefcase, Info, ShieldCheck, Headphones,
 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
@@ -564,9 +565,21 @@ export default function BanquetCheckout() {
                     <h3 className="text-white font-bold text-lg leading-tight mt-1">
                       {cart.event_type ? `${cart.event_type.charAt(0).toUpperCase()}${cart.event_type.slice(1)}` : 'Your Event'}
                     </h3>
-                    <Badge className="bg-white/20 text-white border-white/40 mt-1 text-[10px]">
-                      {count} item{count === 1 ? '' : 's'}
-                    </Badge>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="bg-white/20 text-white border-white/40 text-[10px]">
+                        {count} item{count === 1 ? '' : 's'}
+                      </Badge>
+                      {cart.packages.length > 0 && (
+                        <Badge className="bg-white/20 text-white border-white/40 text-[10px]">
+                          {cart.packages.length} bundle{cart.packages.length === 1 ? '' : 's'}
+                        </Badge>
+                      )}
+                      {cart.items.length > 0 && (
+                        <Badge className="bg-white/20 text-white border-white/40 text-[10px]">
+                          {cart.items.length} service{cart.items.length === 1 ? '' : 's'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="p-5 space-y-2.5 text-sm">
@@ -579,7 +592,7 @@ export default function BanquetCheckout() {
                   {cart.expected_guests > 0 && (
                     <div className="flex items-center gap-2 text-slate-700">
                       <Users className="w-4 h-4 text-teal-700 flex-shrink-0" />
-                      <span className="font-medium">{cart.expected_guests} guests</span>
+                      <span className="font-medium">{cart.expected_guests} guest{cart.expected_guests === 1 ? '' : 's'} expected</span>
                     </div>
                   )}
                   {cart.city && (
@@ -594,27 +607,73 @@ export default function BanquetCheckout() {
                       <span className="leading-snug">{contact.address}</span>
                     </div>
                   )}
+                  {contact.contact_name && (
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <UserCircle2 className="w-4 h-4 text-teal-700 flex-shrink-0" />
+                      <span className="font-medium">{contact.contact_name}{contact.contact_phone ? ` · ${contact.contact_phone}` : ''}</span>
+                    </div>
+                  )}
+
+                  {/* Operators involved — banquets typically span 2–3 vendors */}
+                  {(() => {
+                    const ops = Array.from(new Set([
+                      ...cart.items.map(i => i.snapshot?.operator_name).filter(Boolean),
+                      ...cart.packages.flatMap(p => (p.snapshot?.services || []).map(s => s.operator_name)).filter(Boolean),
+                    ]));
+                    if (ops.length === 0) return null;
+                    return (
+                      <div className="flex items-start gap-2 text-slate-700">
+                        <Briefcase className="w-4 h-4 text-teal-700 flex-shrink-0 mt-0.5" />
+                        <span className="leading-snug text-xs">
+                          <span className="text-slate-500">Vendors:</span>{' '}
+                          <span className="font-medium">{ops.slice(0, 3).join(' · ')}{ops.length > 3 ? ` +${ops.length - 3}` : ''}</span>
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Mini cart preview */}
                   {(cart.packages.length > 0 || cart.items.length > 0) && (
                     <div className="pt-3 mt-2 border-t border-teal-100">
                       <h4 className="font-semibold text-slate-800 mb-2 text-xs uppercase tracking-wide">Selection</h4>
-                      <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                        {cart.packages.map(p => (
-                          <div key={p.package_id} className="flex justify-between text-xs text-slate-600">
-                            <span className="truncate"><PackageIcon className="inline w-3 h-3 mr-1 text-teal-700" />{p.snapshot?.name}</span>
-                            <span className="font-medium text-slate-800 ml-2">{formatFCFA(p.snapshot?.total_price || 0)}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                        {cart.packages.map(p => {
+                          const svcCount = (p.snapshot?.services || []).length;
+                          return (
+                            <div key={p.package_id} className="flex flex-col gap-0.5 text-xs text-slate-600 py-1 border-b border-slate-50 last:border-0">
+                              <div className="flex justify-between">
+                                <span className="truncate font-medium text-slate-800"><PackageIcon className="inline w-3 h-3 mr-1 text-teal-700" />{p.snapshot?.name}</span>
+                                <span className="font-semibold text-slate-900 ml-2">{formatFCFA(p.snapshot?.total_price || 0)}</span>
+                              </div>
+                              {svcCount > 0 && (
+                                <span className="text-[10px] text-slate-500 ml-4">
+                                  Includes {svcCount} service{svcCount === 1 ? '' : 's'}
+                                  {p.snapshot?.discount_percent ? ` · ${p.snapshot.discount_percent}% bundle savings` : ''}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                         {cart.items.map(it => {
                           const snap = it.snapshot || {};
                           const unitPrice = Number(snap.base_price || 0);
                           const hours = snap.pricing_model === 'per_hour' ? (it.hours || 1) : 1;
                           const lineTotal = unitPrice * (it.quantity || 1) * hours;
+                          const unitSuffix = snap.pricing_model === 'per_hour'
+                            ? `/hr × ${it.quantity || 1} × ${it.hours || 1}h`
+                            : snap.pricing_model === 'per_guest'
+                              ? `/guest × ${it.quantity || 1}`
+                              : ` × ${it.quantity || 1}`;
                           return (
-                            <div key={it.service_id} className="flex justify-between text-xs text-slate-600">
-                              <span className="truncate">{snap.name} × {it.quantity}</span>
-                              <span className="font-medium text-slate-800 ml-2">{formatFCFA(lineTotal)}</span>
+                            <div key={it.service_id} className="flex flex-col gap-0.5 text-xs text-slate-600 py-1 border-b border-slate-50 last:border-0">
+                              <div className="flex justify-between">
+                                <span className="truncate font-medium text-slate-800">{snap.name}</span>
+                                <span className="font-semibold text-slate-900 ml-2">{formatFCFA(lineTotal)}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-500">
+                                {formatFCFA(unitPrice)}{unitSuffix}
+                                {snap.operator_name ? ` · ${snap.operator_name}` : ''}
+                              </span>
                             </div>
                           );
                         })}
@@ -644,7 +703,16 @@ export default function BanquetCheckout() {
                       </div>
                     )}
                     <div className="flex justify-between text-slate-600">
-                      <span>Service fee (5%)</span><span className="font-medium">+{formatFCFA(serviceFee)}</span>
+                      <span className="flex items-center gap-1.5">
+                        Service fee (5%)
+                      </span>
+                      <span className="font-medium">+{formatFCFA(serviceFee)}</span>
+                    </div>
+                    <div className="flex items-start gap-2 px-3 py-2 bg-teal-50/60 border border-teal-100 rounded-lg text-[11px] text-teal-900 leading-relaxed" data-testid="co-service-fee-note">
+                      <Info className="w-3.5 h-3.5 text-teal-600 mt-0.5 flex-shrink-0" />
+                      <span>
+                        <strong className="font-semibold">Why the service fee?</strong> Oryno coordinates multiple vendors for your event — venue, catering, décor, entertainment — and the 5% fee covers vendor verification, secure payment processing, dedicated event-day support, and our booking guarantee if anything falls through.
+                      </span>
                     </div>
 
                     {/* Promo code */}

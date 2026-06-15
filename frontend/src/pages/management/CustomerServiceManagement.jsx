@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -970,53 +972,40 @@ export default function CustomerServiceManagement() {
   useEffect(() => { if (showAddMemberModal) loadAvailableMembers(); }, [showAddMemberModal, loadAvailableMembers]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/50">
-      <div className="p-6 space-y-5">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Customer Service Center</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Manage support tickets and team</p>
-          </div>
-          {isAdmin && (
-            <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-          )}
-        </div>
-
-        {/* Tabs */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
-              <TabsTrigger value="tickets" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-                <Inbox className="h-4 w-4" />Tickets
-              </TabsTrigger>
-              <TabsTrigger value="statistics" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-                <BarChart2 className="h-4 w-4" />Statistics
-              </TabsTrigger>
-              <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white">
-                <Users className="h-4 w-4" />Team
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {/* Action buttons for Tickets tab */}
+    <ManagementShell
+      title="Customer Service Center"
+      icon={Inbox}
+      subtitle="Manage support tickets and team"
+      scopeFilter={
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />}
           {activeTab === 'tickets' && (
-            <div className="flex items-center gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setChatBotOpen(true)} className="gap-2 bg-white/70 shadow-sm border-slate-200 text-sm h-9">
-                <Bot className="h-4 w-4 text-[#082c59]" />AI Assistant
+            <>
+              <Button variant="outline" onClick={() => setChatBotOpen(true)} className="gap-1.5 bg-white shadow-sm border-slate-200 text-sm h-8" size="sm">
+                <Bot className="h-3.5 w-3.5 text-[#082c59]" />AI Assistant
               </Button>
-              <Button onClick={() => setShowCreateModal(true)} className="bg-[#082c59] hover:bg-[#0a3a75] gap-2 shadow-md text-sm h-9" data-testid="create-on-behalf-btn">
-                <Plus className="w-4 h-4" />Create Ticket
+              <Button onClick={() => setShowCreateModal(true)} className="bg-[#082c59] hover:bg-[#0a3a75] gap-1.5 shadow-md text-sm h-8" size="sm" data-testid="create-on-behalf-btn">
+                <Plus className="w-3.5 h-3.5" />Create Ticket
               </Button>
-            </div>
+            </>
           )}
         </div>
-
+      }
+      tabs={[
+        { value: 'tickets', label: 'Tickets', icon: Inbox },
+        { value: 'statistics', label: 'Statistics', icon: BarChart2 },
+        { value: 'team', label: 'Team', icon: Users },
+      ]}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      testIdPrefix="customer-service-mgmt"
+    >
+      <div className="mt-4 space-y-5">
         {/* ========== TICKETS TAB ========== */}
         {activeTab === 'tickets' && (
           <div className="space-y-4">
             {/* Sub-tabs */}
-            <div className="flex items-center gap-3">
+            <SubpageCard title="Ticket Status" icon={Inbox} testId="cs-substatus-card">
               <Tabs value={ticketSubTab} onValueChange={setTicketSubTab} className="flex-1">
                 <TabsList className="grid w-full grid-cols-5 bg-slate-100">
                   {[
@@ -1036,14 +1025,14 @@ export default function CustomerServiceManagement() {
                 <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><List className="h-4 w-4" /></button>
                 <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><LayoutGrid className="h-4 w-4" /></button>
               </div>
-            </div>
+            </SubpageCard>
 
             {/* Search */}
-            <div className="flex gap-3 items-center">
-              <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-white/70 border-slate-200 shadow-sm" /></div>
-              <Select value={sortBy} onValueChange={setSortBy}><SelectTrigger className="w-36 bg-white/70 shadow-sm"><ArrowUpDown className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger><SelectContent className="bg-white"><SelectItem value="created_at">Date Created</SelectItem><SelectItem value="updated_at">Last Updated</SelectItem><SelectItem value="priority">Priority</SelectItem></SelectContent></Select>
-              <Button variant="outline" size="icon" onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')} className="bg-white/70">{sortOrder === 'desc' ? '↓' : '↑'}</Button>
-            </div>
+            <SubpageCard title="Filters" icon={Search} testId="cs-filters-card">
+              <div className="relative flex-1 min-w-[220px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" /><Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 h-8 bg-white text-sm" /></div>
+              <Select value={sortBy} onValueChange={setSortBy}><SelectTrigger className="w-36 h-8 bg-white text-sm"><ArrowUpDown className="w-3.5 h-3.5 mr-1.5" /><SelectValue /></SelectTrigger><SelectContent className="bg-white"><SelectItem value="created_at">Date Created</SelectItem><SelectItem value="updated_at">Last Updated</SelectItem><SelectItem value="priority">Priority</SelectItem></SelectContent></Select>
+              <Button variant="outline" size="sm" className="h-8" onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}>{sortOrder === 'desc' ? '↓' : '↑'}</Button>
+            </SubpageCard>
 
             {/* Bulk Actions */}
             {selectedTickets.length > 0 && (
@@ -1104,6 +1093,6 @@ export default function CustomerServiceManagement() {
       <BulkAssignModal open={showBulkAssignModal} onOpenChange={(o) => { setShowBulkAssignModal(o); if (!o) setSelectedAssignee(''); }} selectedCount={selectedTickets.length} teamMembers={teamMembers} selectedAssignee={selectedAssignee} onAssigneeChange={setSelectedAssignee} onAssign={handleBulkAssign} />
       <CreateOnBehalfModal open={showCreateModal} onOpenChange={setShowCreateModal} onCreated={() => { loadTickets(); loadStats(); }} />
       <AIChatBot isOpen={chatBotOpen} onClose={() => setChatBotOpen(false)} onCreateTicket={() => { setChatBotOpen(false); setShowCreateModal(true); }} />
-    </div>
+    </ManagementShell>
   );
 }

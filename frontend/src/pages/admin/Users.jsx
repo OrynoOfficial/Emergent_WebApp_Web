@@ -409,21 +409,6 @@ export default function UserManagement() {
       </TabsContent>
       <TabsContent value="users" className="mt-4 space-y-4">
 
-      {/* Role Permission Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-        <div className="flex items-center gap-2 text-blue-800 font-medium mb-2">
-          <Shield className="h-4 w-4" />
-          Role Hierarchy & Permissions
-        </div>
-        <div className="text-blue-700 space-y-1">
-          <p><strong>Super Admin:</strong> Can manage all users including other admins</p>
-          <p><strong>Admin:</strong> Can manage operators, employees, and customers only</p>
-          <p className="text-blue-600 text-xs mt-2">
-            Your role: <span className="font-semibold capitalize">{currentUserRole.replace('_', ' ')}</span>
-          </p>
-        </div>
-      </div>
-
       {/* Filters */}
       <SubpageCard title="Filters" icon={Search} count={filteredUsers.length} testId="user-filters-card">
           <div className="relative flex-1 min-w-[220px]">
@@ -640,7 +625,6 @@ export default function UserManagement() {
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Role</th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Operator</th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Joined</th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Orders</th>
                 <th className="py-4 px-4 text-right text-sm font-semibold text-slate-600">Actions</th>
               </tr>
@@ -701,9 +685,6 @@ export default function UserManagement() {
                       }`}>
                         {user.status}
                       </span>
-                    </td>
-                    <td className="py-4 px-4 text-slate-600">
-                      {formatDate(user.created_at)}
                     </td>
                     <td className="py-4 px-4 text-slate-600">
                       {user.orders_count || 0}

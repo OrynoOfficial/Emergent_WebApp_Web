@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,9 @@ import {
 import { toast } from 'sonner';
 import api from '@/api/client';
 import { AdminModal, FormField, StyledInput } from '@/components/shared/AdminModal';
+import ManagementShell from '@/components/management/shared/ManagementShell';
+import SubpageCard from '@/components/management/shared/SubpageCard';
+import { TabsContent } from '@/components/ui/tabs';
 
 const POD_ROLE_CONFIG = {
   team_lead: { label: 'Team Lead', icon: Crown, bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', accent: '#D97706' },
@@ -27,7 +30,6 @@ const POD_ROLE_CONFIG = {
 
 export default function PodManagement() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [pods, setPods] = useState([]);
   const [users, setUsers] = useState([]);
   const [operators, setOperators] = useState([]);
@@ -119,7 +121,7 @@ export default function PodManagement() {
       }
       
       setUsers(combined);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
@@ -207,7 +209,7 @@ export default function PodManagement() {
     try {
       const res = await api.get(`/pods/${podId}`);
       setSelectedPod(res.data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to fetch pod details');
     }
   };
@@ -249,43 +251,38 @@ export default function PodManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Sub-page Navigation */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#082c59] mb-1" data-testid="employee-management-title">Employee Management</h1>
-        <p className="text-gray-600 mb-4">Manage staff, pods, and access scopes</p>
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-1" data-testid="employee-management-tabs">
-          <button onClick={() => navigate('/admin/employees')} className="px-4 py-2 rounded-t-lg text-sm font-medium transition-colors text-slate-600 hover:bg-slate-100" data-testid="tab-employees">
-            <Users className="w-4 h-4 inline mr-1.5 -mt-0.5" />Employees
-          </button>
-          <button onClick={() => navigate('/admin/employees/pods')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/pods') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-pod-management">
-            <Network className="w-4 h-4 inline mr-1.5 -mt-0.5" />Pod Management
-          </button>
-          <button onClick={() => navigate('/admin/employees/access-scopes')} className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${location.pathname.includes('/access-scopes') ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-100'}`} data-testid="tab-access-scopes">
-            <ShieldCheck className="w-4 h-4 inline mr-1.5 -mt-0.5" />Access Scopes
-          </button>
-        </div>
-      </div>
+    <ManagementShell
+      title="Employee Management"
+      icon={Users}
+      subtitle="Manage staff, pods, and access scopes"
+      scopeFilter={
+        <Button className="bg-[#082c59] h-8" size="sm" onClick={() => { setEditingPod(null); setPodForm({ name: '', description: '' }); setShowPodModal(true); }}>
+          <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Pod
+        </Button>
+      }
+      onRefresh={fetchData}
+      refreshing={loading}
+      tabs={[
+        { value: 'employees', label: 'Employees', icon: Users, testId: 'tab-employees' },
+        { value: 'pods', label: 'Pod Management', icon: Network, testId: 'tab-pod-management' },
+        { value: 'access-scopes', label: 'Access Scopes', icon: ShieldCheck, testId: 'tab-access-scopes' },
+      ]}
+      activeTab="pods"
+      onTabChange={(v) => {
+        if (v === 'employees') navigate('/admin/employees');
+        else if (v === 'pods') navigate('/admin/employees/pods');
+        else if (v === 'access-scopes') navigate('/admin/employees/access-scopes');
+      }}
+      testIdPrefix="pods-mgmt"
+    >
+      <TabsContent value="pods" className="mt-4 space-y-4" forceMount>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900">Pod Management</h2>
-          <p className="text-slate-600">Manage internal team pods and operator assignments</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => { setEditingPod(null); setPodForm({ name: '', description: '' }); setShowPodModal(true); }}>
-            <Plus className="w-4 h-4 mr-2" /> Create Pod
-          </Button>
-        </div>
-      </div>
+      <SubpageCard title="Pods" icon={Network} count={pods.length} testId="pods-subpage">
+        <p className="text-xs text-slate-500">Manage internal team pods and operator assignments</p>
+      </SubpageCard>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="pods-stats-grid">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -788,6 +785,7 @@ export default function PodManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </TabsContent>
+    </ManagementShell>
   );
 }
