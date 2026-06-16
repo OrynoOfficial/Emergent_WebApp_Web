@@ -15,6 +15,7 @@ import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { isPast } from '@/utils/dateUtils';
+import EventPreviewModal from './EventsResults/EventPreviewModal';
 
 const EVENT_TYPE_COLORS = {
   'Concert': 'bg-gradient-to-r from-purple-500 to-purple-600 text-white',
@@ -153,8 +154,8 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
               <AlertCircle className="w-4 h-4 mr-2" /> Ended
             </Button>
           ) : (
-            <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl">
-              <Ticket className="w-4 h-4 mr-2" /> Get Tickets
+            <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl" data-testid={`view-details-grid-${event._id || event.id}`}>
+              <Ticket className="w-4 h-4 mr-2" /> View Details
             </Button>
           )}
         </div>
@@ -256,8 +257,8 @@ const EventCardList = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
                 <AlertCircle className="w-4 h-4 mr-2" /> Ended
               </Button>
             ) : (
-              <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl">
-                <Ticket className="w-4 h-4 mr-2" /> Get Tickets
+              <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl" data-testid={`view-details-list-${event._id || event.id}`}>
+                <Ticket className="w-4 h-4 mr-2" /> View Details
               </Button>
             )}
           </div>
@@ -278,6 +279,8 @@ export default function EventsResults() {
   const [sortBy, setSortBy] = useState('date');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [previewEvent, setPreviewEvent] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || '';
@@ -359,17 +362,11 @@ export default function EventsResults() {
   }, [events, sortBy, searchQuery, typeFilter]);
 
   const handleBook = (event) => {
-    // New-architecture showtime → dedicated detail page with class picker.
-    if (event._showtime) {
-      navigate(`/services/showtimes/${event.id}`);
-      return;
-    }
-    // Legacy events: keep the old behaviour.
-    if (isPast(event.date, event.time)) {
-      return;
-    }
-    sessionStorage.setItem('selectedEvent', JSON.stringify(event));
-    navigate(`/services/events/booking`);
+    // ALL clicks open the rich preview modal first; the modal's "Book Now"
+    // CTA pivots to the real booking page (showtime detail or legacy booking).
+    if (isPast(event.date, event.time)) return;
+    setPreviewEvent(event);
+    setPreviewOpen(true);
   };
 
   if (loading) {
@@ -485,6 +482,12 @@ export default function EventsResults() {
           </div>
         )}
       </div>
+
+      <EventPreviewModal
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        event={previewEvent}
+      />
     </div>
   );
 }

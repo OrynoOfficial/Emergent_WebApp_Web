@@ -104,14 +104,16 @@ const formatDate = (dateString, includeTime = false) => {
   return out === '-' ? 'N/A' : out;
 };
 
-// QR Code generator URL
+// QR Code generator URL — self-hosted so we don't depend on a 3rd party for
+// ticket validation. Backend route at /api/qr returns the PNG directly.
 const generateQRCodeUrl = (order) => {
   const data = JSON.stringify({
     orderId: order.id,
     orderNumber: order.order_number,
-    service: order.service_name || order.service_title
+    service: order.service_name || order.service_title,
   });
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
+  const base = import.meta.env.VITE_API_URL || '/api';
+  return `${base}/qr?size=200&data=${encodeURIComponent(data)}`;
 };
 
 export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onDownloadReceipt }) {

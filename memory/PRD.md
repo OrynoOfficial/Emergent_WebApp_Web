@@ -1,5 +1,41 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 241: Self-hosted QR + Event preview modal + 2-step booking)
+
+### Self-hosted QR endpoint ✅
+New `GET /api/qr?data=…&size=200` route at `/app/backend/routes/qr.py`. Uses the `qrcode` Python library, returns `image/png` with a 1-day immutable cache header. `OrderDetailModal` updated to use the in-platform URL — we no longer depend on `api.qrserver.com` for ticket validation. Backend smoke-test confirmed: 200 OK, 200×200 PNG returned.
+
+### Rich Event Preview modal ✅
+- "Get Tickets" button on EventsResults cards renamed to **"View Details"**.
+- Clicking opens `EventPreviewModal.jsx` (new) — a TravelResults-style rich preview before pivoting to booking. It shows:
+  - **Photo carousel** (location + showtime images stitched)
+  - Quick facts (Date / Doors / Venue / Capacity)
+  - **Organiser card** with operator logo + contact
+  - **Interactive OpenStreetMap embed** with marker + "Open in Maps" link (uses `event_locations.latitude/longitude`)
+  - **Seating arrangement preview** — renders by `layout_type`: visual grid (rows × cols with aisle gap + stage banner), zones (named cards), or simple (theater-rows / banquet-round / open-air / standing icon).
+  - **Venue policies** as checklist
+  - Sticky right panel: starting price, rating, all ticket classes with color dots + availability chips, "Book Now" CTA.
+- data-testids: `event-preview-modal`, `event-preview-title`, `event-preview-map`, `event-preview-policies`, `event-preview-panel`, `event-preview-book-btn`, `event-preview-close`.
+
+### Enhanced ShowtimeDetails — 2-step booking ✅
+Rewrote `/services/showtimes/:id` as a clear 2-step flow with a top header step-indicator ("① Reserve → ② Pay"):
+
+**Step 1 — Reserve**
+- Ticket class picker with color dots + live availability chips
+- Quantity stepper clamped to `min(available, 10)`
+- "Your details" form (name *, email, phone — pre-filled from auth)
+- Live total
+- "Continue to payment" CTA → calls `/api/event-showtimes/book` (atomic class-level decrement) → creates pending order → advances to step 2
+
+**Step 2 — Pay**
+- "Reservation confirmed" summary card (class badge with color dot + qty pill + showtime title/date/venue)
+- `PaymentMethodsSelection` mounted with the pending `orderId` + amount (Stripe / MoMo / Orange Money — same component cinema uses)
+- "Pay <amount>" CTA fires `triggerPayment`; on success → navigate to `/orders?highlight={id}`
+- "← Edit reservation" link to go back to step 1
+
+End-to-end visually verified for both legacy and new-architecture events, with both available and sold-out scenarios. data-testids: `reserve-card`, `class-option-{id}`, `qty-increment/decrement/value`, `contact-name/email/phone-input`, `book-now-btn`, `order-summary-card`, `payment-card`, `confirm-payment-btn`, `back-to-step-1`.
+
+
 ## Latest Changes (Feb 2026 — iter 240: Auth hardening + Event e-ticket renderer)
 
 ### Auth security overhaul ✅

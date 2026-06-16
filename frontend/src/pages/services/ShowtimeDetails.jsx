@@ -1,7 +1,6 @@
-// Customer-side Event Showtime detail + booking page. Mirrors the cinema
-// booking pattern but adapted to the Location → Showtime architecture:
-// - One showtime carries N ticket "classes" (VIP / Standard / ...).
-// - Booking decrements `available_units` atomically per class on the backend.
+// Customer-side Event Showtime detail + booking page.
+// 2-step flow: (1) pick ticket class + qty + contact → reserve;
+//             (2) pay via PaymentMethodsSelection (Stripe / MoMo / Orange).
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import {
   ArrowLeft, MapPin, Calendar, Clock, Ticket, Users, Loader2, CheckCircle2,
   Plus, Minus, Flame, Sparkles, Image as ImageIcon, AlertCircle, Building2,
+  CreditCard, User as UserIcon, Mail, Phone, ShieldCheck,
 } from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { format, parseISO, isValid } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
@@ -44,7 +45,14 @@ export default function ShowtimeDetails() {
   const [quantity, setQuantity] = useState(1);
   const [contact, setContact] = useState({ name: '', email: '', phone: '' });
   const [posterIdx, setPosterIdx] = useState(0);
-  const [booking, setBooking] = useState(false);
+
+  // ── Step state ────────────────────────────────────────────────────────────
+  // step 1 = pick class & contact, step 2 = pay
+  const [step, setStep] = useState(1);
+  const [orderId, setOrderId] = useState(null);
+  const [reserving, setReserving] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [triggerPayment, setTriggerPayment] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -82,7 +90,6 @@ export default function ShowtimeDetails() {
     () => (showtime?.classes || []).find(c => c.id === selectedClassId),
     [showtime, selectedClassId]
   );
-
   const subtotal = selectedClass ? Number(selectedClass.price) * quantity : 0;
   const maxQty = selectedClass ? Math.max(1, Math.min(10, selectedClass.available_units || 0)) : 1;
   const isPastShowtime = useMemo(() => {
@@ -91,11 +98,12 @@ export default function ShowtimeDetails() {
     return isValid(d) && d.getTime() < Date.now();
   }, [showtime]);
 
-  const handleBook = async () => {
+  // ── Step 1: reserve the seats (creates pending order) ────────────────────
+  const handleReserve = async () => {
     if (!selectedClassId) { toast.error('Pick a ticket class'); return; }
     if (quantity < 1) { toast.error('Quantity must be at least 1'); return; }
     if (!contact.name?.trim()) { toast.error('Your name is required'); return; }
-    setBooking(true);
+    setReserving(true);
     try {
       const res = await api.post('/event-showtimes/book', {
         showtime_id: showtime.id,
@@ -105,11 +113,27 @@ export default function ShowtimeDetails() {
         contact_phone: contact.phone || null,
         contact_email: contact.email || null,
       });
-      toast.success(`${quantity} × ${selectedClass.name} ticket(s) reserved — complete payment to confirm`);
-      navigate(`/orders?highlight=${res.data.order_id}`);
+      setOrderId(res.data.order_id);
+      setStep(2);
+      toast.success(`${quantity} × ${selectedClass.name} reserved — complete payment below`);
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Booking failed');
-    } finally { setBooking(false); }
+      toast.error(err.response?.data?.detail || 'Reservation failed');
+    } finally { setReserving(false); }
+  };
+
+  // ── Step 2: payment callbacks ────────────────────────────────────────────
+  const handlePaymentInitiated = ({ success, message }) => {
+    setTriggerPayment(false);
+    if (success) {
+      toast.success('Payment confirmed — see you at the show!');
+      navigate(`/orders?highlight=${orderId}`);
+    } else {
+      toast.error(message || 'Payment failed');
+    }
+  };
+  const handlePay = () => {
+    if (!selectedPaymentMethod) { toast.error('Pick a payment method'); return; }
+    setTriggerPayment(true);
   };
 
   if (loading) {
@@ -128,15 +152,27 @@ export default function ShowtimeDetails() {
   const policies = location?.policies || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 pb-12">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur border-b sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2" data-testid="showtime-back-btn">
             <ArrowLeft className="w-4 h-4" /> Back
           </Button>
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 text-xs">
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${step === 1 ? 'bg-amber-100 text-amber-700 font-bold' : 'bg-emerald-100 text-emerald-700'}`}>
+              {step === 1 ? <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">1</span> : <CheckCircle2 className="w-4 h-4" />}
+              Reserve
+            </div>
+            <div className="w-6 h-px bg-slate-300" />
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${step === 2 ? 'bg-amber-100 text-amber-700 font-bold' : 'bg-slate-100 text-slate-500'}`}>
+              <span className={`w-4 h-4 rounded-full ${step === 2 ? 'bg-amber-500' : 'bg-slate-400'} text-white flex items-center justify-center text-[10px] font-bold`}>2</span>
+              Pay
+            </div>
+          </div>
           {showtime.operator_logo_url && (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="hidden md:flex items-center gap-2 text-xs text-slate-500">
               <img src={showtime.operator_logo_url} alt={showtime.operator_name} className="w-6 h-6 rounded-full object-cover" />
               <span>{showtime.operator_name}</span>
             </div>
@@ -159,7 +195,7 @@ export default function ShowtimeDetails() {
                         <button
                           key={i}
                           onClick={() => setPosterIdx(i)}
-                          className={`w-2 h-2 rounded-full transition ${i === posterIdx ? 'bg-white w-6' : 'bg-white/50'}`}
+                          className={`h-2 rounded-full transition ${i === posterIdx ? 'bg-white w-6' : 'bg-white/50 w-2'}`}
                           aria-label={`Poster ${i + 1}`}
                         />
                       ))}
@@ -167,9 +203,7 @@ export default function ShowtimeDetails() {
                   )}
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageIcon className="w-14 h-14 text-white/70" />
-                </div>
+                <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-14 h-14 text-white/70" /></div>
               )}
               <div className="absolute top-3 left-3 flex gap-2">
                 <Badge className="bg-amber-500 text-white border-0 capitalize">{showtime.event_type || 'event'}</Badge>
@@ -241,125 +275,181 @@ export default function ShowtimeDetails() {
           )}
         </div>
 
-        {/* Right — ticket class picker + booking */}
+        {/* Right — booking panel */}
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          <Card className="border-amber-200 shadow-md">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Ticket className="w-5 h-5 text-amber-700" />
-                <h2 className="font-bold text-slate-900">Pick your tickets</h2>
-              </div>
-              <div className="space-y-2" data-testid="ticket-classes">
-                {(showtime.classes || []).map(c => {
-                  const isActive = selectedClassId === c.id;
-                  const soldOut = (c.available_units ?? 0) <= 0;
-                  const chip = availabilityChip(c);
-                  const ChipIcon = chip.icon;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      disabled={soldOut || isPastShowtime}
-                      onClick={() => { setSelectedClassId(c.id); setQuantity(1); }}
-                      className={`w-full text-left rounded-lg border-2 p-3 transition-all ${
-                        soldOut || isPastShowtime ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
-                        isActive ? 'border-amber-500 bg-amber-50 shadow' : 'border-slate-200 hover:border-amber-300 bg-white'
-                      }`}
-                      data-testid={`class-option-${c.id}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ background: c.color || '#3b82f6' }}
-                          />
-                          <span className="font-semibold text-sm text-slate-900 truncate">{c.name}</span>
+          {step === 1 ? (
+            // ─── STEP 1: pick class + qty + contact ──────────────────────
+            <Card className="border-amber-200 shadow-md" data-testid="reserve-card">
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-amber-700" />
+                  <h2 className="font-bold text-slate-900">Pick your tickets</h2>
+                </div>
+
+                <div className="space-y-2" data-testid="ticket-classes">
+                  {(showtime.classes || []).map(c => {
+                    const isActive = selectedClassId === c.id;
+                    const soldOut = (c.available_units ?? 0) <= 0;
+                    const chip = availabilityChip(c);
+                    const ChipIcon = chip.icon;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={soldOut || isPastShowtime}
+                        onClick={() => { setSelectedClassId(c.id); setQuantity(1); }}
+                        className={`w-full text-left rounded-lg border-2 p-3 transition-all ${
+                          soldOut || isPastShowtime ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
+                          isActive ? 'border-amber-500 bg-amber-50 shadow' : 'border-slate-200 hover:border-amber-300 bg-white'
+                        }`}
+                        data-testid={`class-option-${c.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
+                            <span className="font-semibold text-sm text-slate-900 truncate">{c.name}</span>
+                          </div>
+                          <span className="font-bold text-amber-700 text-sm whitespace-nowrap">{formatFCFA(c.price)}</span>
                         </div>
-                        <span className="font-bold text-amber-700 text-sm whitespace-nowrap">{formatFCFA(c.price)}</span>
-                      </div>
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chip.color}`}>
-                          <ChipIcon className="w-3 h-3" /> {chip.text}
-                        </span>
-                        {(c.perks || []).slice(0, 2).map((p, i) => (
-                          <span key={i} className="text-[10px] text-slate-500">• {p}</span>
-                        ))}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chip.color}`}>
+                            <ChipIcon className="w-3 h-3" /> {chip.text}
+                          </span>
+                          {(c.perks || []).slice(0, 2).map((p, i) => (
+                            <span key={i} className="text-[10px] text-slate-500">• {p}</span>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-              {/* Quantity */}
-              {selectedClass && !isPastShowtime && (
-                <div className="mt-4 pt-3 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">Quantity</span>
+                {selectedClass && !isPastShowtime && (
+                  <div className="pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">Quantity</span>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" className="w-8 h-8 p-0"
+                          onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                          disabled={quantity <= 1} data-testid="qty-decrement"><Minus className="w-3.5 h-3.5" /></Button>
+                        <span className="font-bold w-8 text-center" data-testid="qty-value">{quantity}</span>
+                        <Button size="sm" variant="outline" className="w-8 h-8 p-0"
+                          onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                          disabled={quantity >= maxQty} data-testid="qty-increment"><Plus className="w-3.5 h-3.5" /></Button>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">Up to {maxQty} per order</p>
+                  </div>
+                )}
+
+                {selectedClass && !isPastShowtime && (
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <p className="text-xs uppercase font-semibold text-slate-500 flex items-center gap-1.5">
+                      <UserIcon className="w-3 h-3" /> Your details
+                    </p>
+                    <div>
+                      <Label className="text-[10px]">Name *</Label>
+                      <Input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} className="h-9 text-sm" data-testid="contact-name-input" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-[10px] flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
+                        <Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} className="h-9 text-sm" data-testid="contact-email-input" />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
+                        <Input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className="h-9 text-sm" data-testid="contact-phone-input" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-slate-200 bg-slate-50/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-lg">
+                  <div className="flex items-baseline justify-between mb-3">
+                    <span className="text-xs uppercase font-semibold text-slate-500">Total</span>
+                    <span className="text-2xl font-bold text-amber-700" data-testid="total-amount">{formatFCFA(subtotal)}</span>
+                  </div>
+                  <Button onClick={handleReserve}
+                    disabled={!selectedClass || reserving || isPastShowtime || (selectedClass?.available_units ?? 0) <= 0}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white h-11"
+                    data-testid="book-now-btn">
+                    {reserving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reserving…</>
+                    ) : isPastShowtime ? (<><AlertCircle className="w-4 h-4 mr-2" /> Event has ended</>
+                    ) : (<><Ticket className="w-4 h-4 mr-2" /> Continue to payment</>)}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            // ─── STEP 2: pay ─────────────────────────────────────────────
+            <>
+              {/* Order summary */}
+              <Card className="border-emerald-200" data-testid="order-summary-card">
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <h2 className="font-bold text-slate-900">Reservation confirmed</h2>
+                  </div>
+                  <p className="text-xs text-slate-500 -mt-1">Complete payment below to lock in your seats.</p>
+                  <div className="mt-2 space-y-2 bg-emerald-50/60 rounded-lg p-3">
                     <div className="flex items-center gap-2">
-                      <Button
-                        size="sm" variant="outline" className="w-8 h-8 p-0"
-                        onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                        disabled={quantity <= 1}
-                        data-testid="qty-decrement"
-                      ><Minus className="w-3.5 h-3.5" /></Button>
-                      <span className="font-bold w-8 text-center" data-testid="qty-value">{quantity}</span>
-                      <Button
-                        size="sm" variant="outline" className="w-8 h-8 p-0"
-                        onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                        disabled={quantity >= maxQty}
-                        data-testid="qty-increment"
-                      ><Plus className="w-3.5 h-3.5" /></Button>
+                      <span className="w-3 h-3 rounded-full" style={{ background: selectedClass?.color || '#3b82f6' }} />
+                      <span className="font-bold text-sm text-slate-900">{selectedClass?.name}</span>
+                      <Badge className="ml-auto bg-slate-900 text-white border-0">× {quantity}</Badge>
                     </div>
+                    <div className="text-xs text-slate-600">{showtime.title}</div>
+                    <div className="text-xs text-slate-500">{fmtDateTime(showtime.start_datetime)}</div>
+                    <div className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {showtime.location_name}</div>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">Up to {maxQty} per order</p>
-                </div>
-              )}
+                  <div className="flex items-baseline justify-between pt-2 border-t border-slate-100">
+                    <span className="text-xs uppercase font-semibold text-slate-500">Total to pay</span>
+                    <span className="text-2xl font-bold text-emerald-700">{formatFCFA(subtotal)}</span>
+                  </div>
+                </CardContent>
+              </Card>
 
-              {/* Contact */}
-              {selectedClass && !isPastShowtime && (
-                <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                  <p className="text-xs uppercase font-semibold text-slate-500">Your details</p>
-                  <div>
-                    <Label className="text-[10px]">Name *</Label>
-                    <Input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} className="h-9 text-sm" data-testid="contact-name-input" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-[10px]">Email</Label>
-                      <Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} className="h-9 text-sm" data-testid="contact-email-input" />
+              {/* Payment */}
+              <Card className="border-cyan-200" data-testid="payment-card">
+                <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-cyan-100 rounded-lg border border-cyan-300">
+                      <CreditCard className="h-4 w-4 text-cyan-700" />
                     </div>
                     <div>
-                      <Label className="text-[10px]">Phone</Label>
-                      <Input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className="h-9 text-sm" data-testid="contact-phone-input" />
+                      <h3 className="font-bold text-slate-900 text-sm">Payment method</h3>
+                      <p className="text-[10px] text-cyan-700/80 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Secure checkout · Stripe / MoMo / Orange</p>
                     </div>
                   </div>
                 </div>
-              )}
+                <CardContent className="p-3">
+                  <PaymentMethodsSelection
+                    amount={subtotal}
+                    orderId={orderId}
+                    customerEmail={contact.email}
+                    customerPhone={contact.phone}
+                    serviceDetails={{ name: showtime.title }}
+                    triggerPayment={triggerPayment}
+                    onPaymentInitiated={handlePaymentInitiated}
+                    onMethodSelected={setSelectedPaymentMethod}
+                  />
+                </CardContent>
+              </Card>
 
-              {/* Total + CTA */}
-              <div className="mt-4 pt-3 border-t border-slate-200">
-                <div className="flex items-baseline justify-between mb-3">
-                  <span className="text-xs uppercase font-semibold text-slate-500">Total</span>
-                  <span className="text-2xl font-bold text-amber-700" data-testid="total-amount">{formatFCFA(subtotal)}</span>
-                </div>
-                <Button
-                  onClick={handleBook}
-                  disabled={!selectedClass || booking || isPastShowtime || (selectedClass?.available_units ?? 0) <= 0}
-                  className="w-full bg-amber-600 hover:bg-amber-700 text-white h-11"
-                  data-testid="book-now-btn"
-                >
-                  {booking ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reserving…</>
-                  ) : isPastShowtime ? (
-                    <><AlertCircle className="w-4 h-4 mr-2" /> Event has ended</>
-                  ) : (
-                    <><Ticket className="w-4 h-4 mr-2" /> Reserve {quantity > 1 ? `${quantity} tickets` : 'ticket'}</>
-                  )}
-                </Button>
-                <p className="text-[10px] text-slate-500 mt-2 text-center">You'll complete payment after reservation.</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Button onClick={handlePay} disabled={!selectedPaymentMethod}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11"
+                data-testid="confirm-payment-btn">
+                {selectedPaymentMethod
+                  ? <>Pay {formatFCFA(subtotal)}</>
+                  : 'Choose a payment method'}
+              </Button>
+
+              <button onClick={() => { setStep(1); setOrderId(null); }}
+                className="text-xs text-slate-500 hover:text-slate-700 underline w-full text-center"
+                data-testid="back-to-step-1">
+                ← Edit reservation
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
