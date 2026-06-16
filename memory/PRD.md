@@ -1,5 +1,39 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 226: Vite stale-cache fix + page splits + codebase index)
+
+### Vite "no visible changes since yesterday" — root cause + fix
+- Diagnosed via comparing `grep` on disk vs the Vite-served file: the served `CarRentalResults.jsx` had **0** occurrences of `isEditingSearch` / `car-rental-search-summary` while the on-disk file had **5**.
+- Vite's HMR had stalled on a pre-existing `node_modules/.vite/deps` cache from Jun 14. Cleared the cache (`rm -rf node_modules/.vite`) and restarted the frontend supervisor — the preview now serves the latest code (verified by `curl`).
+- All prior iter 224/225 work was on disk and committed to git the whole time; nothing was lost.
+
+### Page splits (no behaviour change)
+- `pages/services/HotelDetails.jsx` 1167 → 826 lines (-341). Extracted into `pages/services/HotelDetails/`:
+  - `HotelImageGallery.jsx` — 4-up grid + lightbox.
+  - `HotelRoomCard.jsx` — compact room card + lightbox.
+  - `AmenityIcons.jsx` — named exports `AmenityIcon` and `LandmarkIcon`.
+  - `index.js` barrel.
+  - Inline Leaflet `MapContainer`/`L.divIcon` glue + `mapCenter`/`hasLocation`/`getServiceIcon` dead code removed (LocationMap handles it now).
+- `pages/services/TravelResults.jsx` 929 → 581 lines (-348). Extracted into `pages/services/TravelResults/`:
+  - `TripCardGrid.jsx`, `TripCardList.jsx`, `VehicleImageThumbnails.jsx`.
+  - `helpers.js` — `safeParse`, `getAmenityIcon`, `getDefaultAmenities`, `getVehicleTypeStyle`.
+  - `index.js` barrel.
+
+### Barrel files (import-shortening)
+- `components/shared/index.js` — re-exports `LocationMap`, `DatePickerField`, `SetupWizard`, ...
+- `components/common/index.js` — re-exports `ViewModeToggle`, `Pagination`, `PaymentMethodsSelection`, ...
+- `components/services/index.js` — re-exports `TripDetailsModal`, `LaundryShopDetailsModal`.
+
+### Codebase navigation index
+- New `/app/memory/CODEBASE_INDEX.md` — full directory map, route ↔ model ↔ page lookup table, conventions cheat-sheet, "add a new vertical" checklist. Updated on every iteration going forward.
+
+### Verification (iter_226)
+- Lint clean on every touched file (`mcp_lint_javascript`: 0 blocking issues; pre-existing `react-hooks/purity` warnings only).
+- Backend pytest sanity: `test_iter225_pickup_and_hotel_coords.py` + `test_user_invite_flow.py` → 8/8 PASS.
+- Vite confirmed serving the new modules (HTTP 200 on all 9 new paths).
+- Login screen smoke test renders cleanly (no error boundary).
+
+
 ## Latest Changes (Feb 2026 — iter 225: Travel pre-booking modal + Hotel/Travel location persistence + booking gating rollout)
 
 ### Travel Results — pre-booking modal
