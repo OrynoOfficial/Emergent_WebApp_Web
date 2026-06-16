@@ -1,5 +1,35 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 225: Travel pre-booking modal + Hotel/Travel location persistence + booking gating rollout)
+
+### Travel Results — pre-booking modal
+- New `/app/frontend/src/components/services/TripDetailsModal.jsx` (data-testid `travel-prebooking-modal`). Hero with operator + route + departure/arrival, bus pictures grid (with "no photos" fallback), built-in `SeatLayoutPreview` (rows of 2+2 with centre aisle, "Driver" label, Available/Booked legend), onboard amenities chips, operator-details mini-card, and a `LocationMap` pin of the pickup location. CTA `travel-modal-continue` proceeds to `/services/travel/booking`; `travel-modal-close` closes the modal.
+- `TravelResults.jsx` now intercepts Select → opens the modal first; `handleConfirmTrip` then performs the original sessionStorage + navigate flow.
+
+### Hotel Details — shared LocationMap in "Explore the area"
+- Inline `MapContainer` block replaced with `<LocationMap lat={hotel.location?.lat ?? hotel.latitude} lon={hotel.location?.lon ?? hotel.longitude} ... />`. `loadHotel` now merges raw `latitude/longitude` into the existing `location.{lat,lon}` shape so all downstream UI keeps working.
+
+### New "Location" inputs on operator forms
+- **Add Hotel** (`/app/frontend/src/components/management/hotel/HotelForm.jsx`): new Latitude / Longitude numeric inputs (data-testids `hotel-form-latitude`, `hotel-form-longitude`). The Pydantic `HotelCreate` schema in `/app/backend/routes/hotels.py` was missing both fields and silently dropped them on POST — **now fixed**: `latitude: Optional[float]`, `longitude: Optional[float]`.
+- **Add Route** (`/app/frontend/src/components/management/travel/RouteForm.jsx`): new "Pickup / Boarding Location" section with Pickup Address + Lat + Lon (data-testids `route-form-pickup-address` / `route-form-pickup-lat` / `route-form-pickup-lon`). Backend `TravelRoute`, `TravelRouteCreate` and `TravelRouteUpdate` models in `/app/backend/models/travel_route.py` extended with the same fields.
+
+### Booking gating — payment block greyed until prerequisites are met (rolled out to all 7 booking pages)
+- Pattern: `<PaymentMethodsSelection />` wrapped in `<div className={gated ? 'opacity-50 pointer-events-none' : ''}>` plus an amber alert banner above it. Banners have dedicated testids:
+  - `travel-payment-gated` (passengers' firstName/lastName/idNumber)
+  - `hotel-payment-gated` (firstName/lastName/email/phone)
+  - `banquet-payment-gated` (event_date + contact_name + contact_phone)
+  - `cinema-payment-gated` (totalTickets > 0 && selectedSeats.length === totalTickets)
+  - `restaurant-payment-gated` (firstName + email + phone)
+  - `laundry-payment-gated` (firstName + lastName + phone)
+- Car Rental + Package booking already had this pattern.
+
+### Seed fix
+- `operator@test.com` was active but had `role: 'customer'` and no `operator_id`. Linked it back to Musango Bus Service (`30c487d8-f8ef-4e80-8b14-1a68866071c8`) so /api/routes calls return 200 instead of 403. `test_credentials.md` updated.
+
+### Verification (iter_225)
+- 4/4 pytest cases in `/app/backend/tests/test_iter225_pickup_and_hotel_coords.py` pass (POST/PUT hotels with lat/lon + POST routes with pickup fields). Frontend static code review passed for all data-testids and gating expressions. Runtime UI testing was again limited by Cloudflare 429 on the preview host — verified flows are documented as `verified_via_static_code_review` in `/app/test_reports/iteration_225.json`.
+
+
 ## Latest Changes (Feb 2026 — iter 224: reusable LocationMap + ViewModeToggle rollout + Car Rental polish)
 
 ### Reusable Leaflet map component

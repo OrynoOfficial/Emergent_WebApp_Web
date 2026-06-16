@@ -23,6 +23,8 @@ class HotelCreate(BaseModel):
     email: Optional[str] = None
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 @router.post("/")
 async def create_hotel(

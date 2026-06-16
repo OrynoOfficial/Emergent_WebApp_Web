@@ -1,5 +1,14 @@
 # Test Credentials
 
+## Live seeded accounts (use these for testing/login flows)
+
+- **Super Admin**: superadmin@oryno.com / testpassword123
+- **Admin**: admin@test.com / testpassword123
+- **Customer**: customer@test.com / testpassword123
+- **Operator**: operator@test.com / testpassword123 (Musango Bus Service — travel + restaurants; role=`operator`, operator_id=`30c487d8-f8ef-4e80-8b14-1a68866071c8`)
+- **Netflix Operator**: netflix.cinema@test.com / testpassword123 (Netflix — cinema; has `cinema.manage_screenings`)
+
+
 ## Protected Super-Admin (bootstrap account — un-deletable, auto-seeded on every startup)
 - **Super Admin**: superadmin@oryno.com / testpassword123
   - Has `is_system_account=True` and `is_protected=True` flags
