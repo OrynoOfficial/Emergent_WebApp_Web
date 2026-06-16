@@ -1,5 +1,26 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 245: Scanner refund overlay + smart location resolve)
+
+### Scanner — refund-aware (`pages/utility/Scanner.jsx` + `routes/orders.py`)
+- `POST /api/orders/scan/validate` response now includes `is_refunded`, `is_partially_refunded`, `refunded_amount`, and `open_refund` (the pending/approved refund row when present — surfaces `refund_id`, `status`, `requested_amount`, `reason`, `requires_manual_processing`, `created_at`).
+- `POST /api/orders/scan/check-in` **hard-rejects refunded tickets** with 400 — the seat has been returned to inventory and may have been resold.
+- Frontend Scanner shows three coloured banners (FULL refund → red "Do Not Admit", PARTIAL → orange balance-adjustment notice, PENDING/APPROVED-but-manual → amber "confirm with support"). The Check-In button is swapped for a disabled red `refunded-block-btn` when the ticket is fully refunded.
+- New testids: `ticket-result-card`, `ticket-result-title`, `refund-banner-refunded`, `refund-banner-partial`, `refund-banner-pending`, `refunded-block-btn`.
+
+### Smart location resolution (`components/Layout.jsx`)
+- Customer's stored profile `country` is now auto-promoted to localStorage on login → the "Select Your Location" modal **never pops on first visit** if the user already has a country saved.
+- A **TRANSACTIONAL_PATTERNS** allowlist suppresses the modal entirely on deep-link pages (`/services/showtimes/*`, `/services/cinema/*`, `/services/package/*`, `/services/hotel/*`, `/services/restaurant/*`, `/services/banquet/*`, `/services/travel/booking`, `/services/car-rental/*`, `/checkout`, `/payment`, `/orders/*`) — so the modal can't intercept clicks during checkout.
+- Manual override (Settings page) still takes precedence; IP-based silent sync still runs in the background.
+
+### Test coverage — `/app/backend/tests/test_scanner_refund_overlay.py` (4 tests, all passing)
+1. Clean ticket → no refund flags.
+2. Pending MoMo refund → `open_refund` populated with `pending` + `requires_manual_processing=true`.
+3. Approved full refund → `is_refunded=true`, check-in returns 400 with "Do not admit".
+4. Approved partial refund → `is_partially_refunded=true`, check-in bounces on payment-status guard (not refund-block).
+
+Combined refund + scanner test count: **16/16 passing**.
+
 ## Latest Changes (Feb 2026 — iter 244: ShowtimeDetails 2-col rebuild + Refund E2E suite)
 
 ### ShowtimeDetails.jsx — full Cinema-style 2-column rebuild (`/services/showtimes/{id}`)

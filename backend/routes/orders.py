@@ -1174,6 +1174,36 @@ async def validate_ticket_scan(
     booking = order.get("booking_details") or {}
     order_id = order.get("id") or str(order.get("_id", ""))
 
+    # Refund overlay — gate staff MUST see if a ticket has been refunded mid-cycle.
+    # We surface both fully-refunded (status=refunded / payment_status=refunded)
+    # and partially refunded orders, plus any open refund request still pending
+    # admin approval so staff can flag the holder for follow-up if needed.
+    refunded_amount = float(order.get("refunded_amount") or 0)
+    is_fully_refunded = (
+        order.get("status") == "refunded"
+        or order.get("payment_status") == "refunded"
+    )
+    is_partially_refunded = (
+        not is_fully_refunded
+        and order.get("payment_status") == "partially_refunded"
+    )
+    pending_refund_doc = await db.refunds.find_one({
+        "order_id": order["_id"],
+        "status": {"$in": ["pending", "approved"]},
+    }) if order.get("_id") else None
+    open_refund = None
+    if pending_refund_doc:
+        open_refund = {
+            "refund_id": pending_refund_doc["_id"],
+            "status": pending_refund_doc.get("status"),
+            "requested_amount": pending_refund_doc.get("requested_amount"),
+            "reason": pending_refund_doc.get("reason"),
+            "requires_manual_processing": pending_refund_doc.get("requires_manual_processing", False),
+            "created_at": pending_refund_doc.get("created_at").isoformat()
+                if hasattr(pending_refund_doc.get("created_at", ""), "isoformat")
+                else str(pending_refund_doc.get("created_at", "")),
+        }
+
     # Prefer the most-recently-updated label coming from booking_details (which
     # is what a "replace/swap" mutates). Falls back to top-level service_name.
     # This guarantees the scanner shows fresh data after a ticket is updated.
@@ -1198,6 +1228,11 @@ async def validate_ticket_scan(
         "service_type": order.get("service_type", ""),
         "service_name": fresh_service_name,
         "last_reassignment": last_reassign,
+        # Refund status overlay
+        "is_refunded": is_fully_refunded,
+        "is_partially_refunded": is_partially_refunded,
+        "refunded_amount": refunded_amount,
+        "open_refund": open_refund,
         "updated_at": order.get("updated_at").isoformat() if hasattr(order.get("updated_at", ""), "isoformat") else str(order.get("updated_at", "")),
         "operator_name": order.get("operator_name", ""),
         "total_amount": order.get("total_amount", 0),
@@ -1254,6 +1289,18 @@ async def check_in_ticket(
     # Check if already checked in
     if order.get("checked_in"):
         raise HTTPException(status_code=400, detail=f"Ticket already checked in at {order.get('checked_in_at', 'unknown time')}")
+
+    # Refunded tickets must NEVER check in — the seat has been released back
+    # to inventory and may have been resold. Allow gate staff to escalate to
+    # support if the customer disputes the refund.
+    if (
+        order.get("status") == "refunded"
+        or order.get("payment_status") == "refunded"
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="This ticket has been refunded. Do not admit — escalate to support.",
+        )
 
     # Only confirmed/paid tickets can be checked in
     if order.get("status") not in ("confirmed",) or order.get("payment_status") not in ("paid", "verified"):

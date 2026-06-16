@@ -87,41 +87,77 @@ export default function Layout({ children }) {
     }
   }, [user?.role]);
   
-  // Show location modal only on first-ever customer visit, then auto-detect silently
+  // Show location modal only on first-ever customer visit, then auto-detect silently.
+  // We also (a) auto-resolve from the user's saved profile `country` if present
+  // and (b) suppress the modal on transactional / deep-link pages where it
+  // would intercept clicks (showtime booking, cinema booking, package detail,
+  // etc.). Customers can still set their location from Settings.
   useEffect(() => {
-    if (user?.role === 'customer') {
-      const hasBeenPrompted = localStorage.getItem('oryno_location_prompted');
-      if (!hasBeenPrompted && !userLocation) {
-        // First time ever — show the modal
-        const timer = setTimeout(() => {
-          setShowLocationModal(true);
-          localStorage.setItem('oryno_location_prompted', 'true');
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
-      // For returning customers, silently update from IP in background
-      if (userLocation) {
-        api.get('/customer-location/ip-info').then(res => {
-          const ipCountry = res.data?.location?.country_code;
-          if (ipCountry && ipCountry !== userLocation.country_code) {
-            // IP changed — update silently but don't override manual choice
-            // Only update if the stored location wasn't manually set
-            const stored = JSON.parse(localStorage.getItem('oryno_user_location') || '{}');
-            if (!stored.manual_override) {
-              const isAfrican = res.data?.is_in_africa;
-              updateLocation({
-                ...stored,
-                country_code: ipCountry,
-                country_name: res.data?.location?.country || ipCountry,
-                is_in_africa: isAfrican,
-                auto_updated: true,
-              });
-            }
-          }
-        }).catch(() => {});
-      }
+    if (user?.role !== 'customer') return;
+
+    const TRANSACTIONAL_PATTERNS = [
+      /^\/services\/showtimes\//,
+      /^\/services\/cinema\//,
+      /^\/services\/film\//,
+      /^\/services\/package\//,
+      /^\/services\/hotel\//,
+      /^\/services\/restaurant\//,
+      /^\/services\/banquet\//,
+      /^\/services\/travel\/booking/,
+      /^\/services\/car-rental\//,
+      /^\/checkout/,
+      /^\/payment/,
+      /^\/orders\//,
+    ];
+    const onTransactionalPage = TRANSACTIONAL_PATTERNS.some((re) => re.test(location.pathname));
+
+    const hasBeenPrompted = localStorage.getItem('oryno_location_prompted');
+
+    // Auto-resolve from user profile country BEFORE deciding to prompt.
+    if (!userLocation && user?.country) {
+      const isAfrican = [
+        'DZ','AO','BJ','BW','BF','BI','CV','CM','CF','TD','KM','CG','CD','DJ','EG','GQ','ER','SZ','ET','GA','GM','GH','GN','GW','CI','KE','LS','LR','LY','MG','MW','ML','MR','MU','MA','MZ','NA','NE','NG','RW','ST','SN','SC','SL','SO','ZA','SS','SD','TZ','TG','TN','UG','EH','ZM','ZW',
+      ].includes((user.country || '').toUpperCase());
+      updateLocation({
+        country_code: user.country.toUpperCase(),
+        country_name: user.country,
+        is_in_africa: isAfrican,
+        from_profile: true,
+        set_at: new Date().toISOString(),
+      });
+      localStorage.setItem('oryno_location_prompted', 'true');
+      return;
     }
-  }, [user?.role]);
+
+    if (!hasBeenPrompted && !userLocation && !onTransactionalPage) {
+      // First time ever AND user is on a non-transactional page — show the modal.
+      const timer = setTimeout(() => {
+        setShowLocationModal(true);
+        localStorage.setItem('oryno_location_prompted', 'true');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+
+    // For returning customers, silently update from IP in background.
+    if (userLocation) {
+      api.get('/customer-location/ip-info').then(res => {
+        const ipCountry = res.data?.location?.country_code;
+        if (ipCountry && ipCountry !== userLocation.country_code) {
+          const stored = JSON.parse(localStorage.getItem('oryno_user_location') || '{}');
+          if (!stored.manual_override) {
+            const isAfrican = res.data?.is_in_africa;
+            updateLocation({
+              ...stored,
+              country_code: ipCountry,
+              country_name: res.data?.location?.country || ipCountry,
+              is_in_africa: isAfrican,
+              auto_updated: true,
+            });
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [user?.role, user?.country, location.pathname]);
 
   // Icon mapping for dynamic icons from API
   const iconMap = {

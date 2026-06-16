@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   QrCode, CheckCircle, XCircle, RefreshCw,
   Ticket, User, Calendar, MapPin, AlertCircle,
-  Loader2, Shield, Clock, DollarSign, Users, ArrowRight, Search, Bus, Hotel, Utensils, Package
+  Loader2, Shield, Clock, DollarSign, Users, ArrowRight, Search, Bus, Hotel, Utensils, Package,
+  Ban, RotateCcw,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDateShort } from '@/utils/dateUtils';
@@ -135,15 +136,31 @@ export default function Scanner() {
           {result.valid ? (
             <>
               {/* Valid Ticket Card */}
-              <Card className="overflow-hidden border-0 shadow-xl">
-                <div className={`p-5 text-white ${result.checked_in ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gradient-to-r from-emerald-600 to-emerald-700'}`}>
+              <Card className="overflow-hidden border-0 shadow-xl" data-testid="ticket-result-card">
+                <div className={`p-5 text-white ${
+                  result.is_refunded ? 'bg-gradient-to-r from-rose-600 to-red-700' :
+                  result.is_partially_refunded ? 'bg-gradient-to-r from-orange-500 to-rose-500' :
+                  result.open_refund ? 'bg-gradient-to-r from-amber-500 to-orange-600' :
+                  result.checked_in ? 'bg-gradient-to-r from-blue-600 to-blue-700' :
+                  'bg-gradient-to-r from-emerald-600 to-emerald-700'
+                }`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                        {result.checked_in ? <Shield className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
+                        {result.is_refunded ? <Ban className="w-6 h-6" /> :
+                         result.is_partially_refunded ? <RotateCcw className="w-6 h-6" /> :
+                         result.open_refund ? <AlertCircle className="w-6 h-6" /> :
+                         result.checked_in ? <Shield className="w-6 h-6" /> :
+                         <CheckCircle className="w-6 h-6" />}
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold">{result.checked_in ? 'Already Checked In' : 'Valid Ticket'}</h2>
+                        <h2 className="text-xl font-bold" data-testid="ticket-result-title">
+                          {result.is_refunded ? 'Ticket Refunded — Do Not Admit' :
+                           result.is_partially_refunded ? 'Partially Refunded' :
+                           result.open_refund ? 'Refund Pending' :
+                           result.checked_in ? 'Already Checked In' :
+                           'Valid Ticket'}
+                        </h2>
                         <p className="font-mono text-white/80 text-sm">{result.code}</p>
                       </div>
                     </div>
@@ -152,6 +169,60 @@ export default function Scanner() {
                 </div>
 
                 <CardContent className="p-5 space-y-4">
+                  {/* Refund overlay — surfaces fully-refunded, partial, and pending refunds */}
+                  {result.is_refunded && (
+                    <div
+                      className="p-4 rounded-xl border-2 border-rose-300 bg-rose-50 flex items-start gap-3"
+                      data-testid="refund-banner-refunded"
+                    >
+                      <Ban className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-bold text-rose-800">Refund issued — admission denied.</p>
+                        <p className="text-sm text-rose-700 mt-0.5">
+                          {result.refunded_amount > 0
+                            ? `${formatFCFA(result.refunded_amount)} returned to the customer.`
+                            : 'This order was refunded.'}
+                          {' '}If the customer disputes this, escalate to support — do not admit them.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {result.is_partially_refunded && (
+                    <div
+                      className="p-4 rounded-xl border-2 border-orange-300 bg-orange-50 flex items-start gap-3"
+                      data-testid="refund-banner-partial"
+                    >
+                      <RotateCcw className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-bold text-orange-800">Partial refund issued.</p>
+                        <p className="text-sm text-orange-700 mt-0.5">
+                          {formatFCFA(result.refunded_amount)} of {formatFCFA(result.total_amount)} returned.
+                          You may still admit, but please confirm the remaining balance with the customer.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {result.open_refund && !result.is_refunded && !result.is_partially_refunded && (
+                    <div
+                      className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50 flex items-start gap-3"
+                      data-testid="refund-banner-pending"
+                    >
+                      <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-bold text-amber-800">
+                          Refund request {result.open_refund.status === 'approved' ? 'approved — payout pending' : 'pending review'}
+                        </p>
+                        <p className="text-sm text-amber-700 mt-0.5">
+                          Customer asked for {formatFCFA(result.open_refund.requested_amount || 0)} back
+                          {result.open_refund.reason ? ` (${result.open_refund.reason.replace(/_/g, ' ')})` : ''}.
+                          {result.open_refund.requires_manual_processing
+                            ? ' Manual payout pending — admission OK unless support says otherwise.'
+                            : ' Decision pending — please confirm with support before admitting.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Customer */}
                   <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
                     <User className="w-5 h-5 text-slate-400 mt-0.5 shrink-0" />
@@ -233,7 +304,11 @@ export default function Scanner() {
 
               {/* Actions */}
               <div className="flex gap-3">
-                {!result.checked_in && result.status === 'confirmed' && (result.payment_status === 'paid' || result.payment_status === 'verified') ? (
+                {result.is_refunded ? (
+                  <Button disabled className="flex-1 bg-rose-600 h-12 text-base opacity-75" data-testid="refunded-block-btn">
+                    <Ban className="w-5 h-5 mr-2" /> Refunded — Do Not Admit
+                  </Button>
+                ) : !result.checked_in && result.status === 'confirmed' && (result.payment_status === 'paid' || result.payment_status === 'verified') ? (
                   <Button onClick={handleCheckIn} disabled={checkingIn} className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-12 text-base" data-testid="check-in-btn">
                     {checkingIn ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle className="w-5 h-5 mr-2" />}
                     Confirm Check-In
