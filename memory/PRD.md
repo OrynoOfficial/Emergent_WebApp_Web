@@ -1,5 +1,35 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 239: Refactor, ShowtimeDetails customer page, soft-delete UX fix)
+
+### Refactor
+Split the 664-LoC `LocationsAndShowtimesTabs.jsx` into four focused files:
+- `/app/frontend/src/components/management/events/LocationEditor.jsx` — Location modal with full data-testid coverage (description, address, lat/lng, zones, policies, simple-kind, grid rows/cols/aisle).
+- `/app/frontend/src/components/management/events/ShowtimeEditor.jsx` — Showtime modal with class-array testids (description, type, doors, class-color, class-remove, class-add-btn).
+- `/app/frontend/src/components/management/events/SwipableImages.jsx` — shared image carousel.
+- `/app/frontend/src/components/management/events/LocationsAndShowtimesTabs.jsx` — slimmed to the two list sub-tabs that import the editors.
+
+### Customer-side ShowtimeDetails page (`/services/showtimes/:id`)
+New page mirrors the Cinema booking flow but tailored to the Location → Showtime architecture:
+- Fetches `GET /api/event-showtimes/:id` + `GET /api/event-locations/:id` (for policies, layout, venue description).
+- Per-class picker cards with live availability chips (Sold out / Only N left / N available), color dots, perks.
+- Quantity stepper (clamped to min(available_units, 10)), contact info (name/email/phone), live total.
+- "Reserve" CTA → `POST /api/event-showtimes/book` (atomic per-class decrement) → redirects to `/orders?highlight={order_id}` for payment.
+- Past-event + sold-out states correctly disable the CTA.
+
+### EventsResults wiring
+`loadEvents()` now fetches BOTH new showtimes (`/api/event-showtimes/?upcoming_only=true`) AND legacy events in parallel, normalises them into the shared card shape, and `_showtime: true` items route to `/services/showtimes/:id` while legacy events keep going to `/services/events/booking`.
+
+### Soft-delete UX fix
+Backend uses soft-delete (`is_active=False` for locations, `status='cancelled'` for showtimes) — but the management lists were returning everything. Operators clicked delete, got a success toast, but the card stayed on screen → looked broken.
+
+Fix: `LocationsSubTab.load()` now passes `is_active=true` by default; `ShowtimesSubTab` filters out `status === 'cancelled'` on the client. Deleted items now disappear from the grid immediately.
+
+### Verified
+- Frontend testing agent — **iter 228 — 100% pass** on refactor regression + customer booking flow. Manual smoke verified delete UX fix: locations 5→4 and showtimes 3→2 after delete, target cards confirmed gone.
+- Routes registered in `App.jsx`: `/services/showtimes/:id`.
+
+
 ## Latest Changes (Feb 2026 — iter 238: Events Mgmt UI refactor + Cinema CRUD re-verified)
 
 ### Events Management — frontend refactor (`/management/events`)

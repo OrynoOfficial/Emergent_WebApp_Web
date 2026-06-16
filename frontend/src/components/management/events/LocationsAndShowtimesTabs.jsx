@@ -26,7 +26,9 @@ export function LocationsSubTab({ operators, scopeOperatorId, onReload }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const params = scopeOperatorId ? { operator_id: scopeOperatorId } : {};
+      // Default to active-only — soft-deleted locations should disappear from
+      // the management grid immediately after a Deactivate action.
+      const params = { is_active: true, ...(scopeOperatorId ? { operator_id: scopeOperatorId } : {}) };
       const r = await api.get('/event-locations/', { params });
       setItems(r.data.locations || []);
     } catch (err) { console.error(err); }
@@ -140,7 +142,11 @@ export function ShowtimesSubTab({ scopeOperatorId, onReload }) {
         api.get('/event-showtimes/', { params }),
         api.get('/event-locations/', { params: { ...params, is_active: true } }),
       ]);
-      setShowtimes(sRes.data.showtimes || []);
+      // Hide cancelled showtimes from the management grid — they're "deleted"
+      // from the operator's perspective. Backend keeps the row so historical
+      // orders can still resolve `service_id`.
+      const showtimes = (sRes.data.showtimes || []).filter(s => s.status !== 'cancelled');
+      setShowtimes(showtimes);
       setLocations(lRes.data.locations || []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
