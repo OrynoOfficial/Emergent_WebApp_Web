@@ -25,6 +25,23 @@ class CarRentalCreate(BaseModel):
     images: Optional[list] = []
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    # Rich fields (iter 224+)
+    description: Optional[str] = None
+    mileage_policy: Optional[str] = None
+    fuel_policy: Optional[str] = None
+    minimum_driver_age: Optional[int] = None
+    min_rental_days: Optional[int] = None
+    max_rental_days: Optional[int] = None
+    pickup_locations: Optional[list] = []
+    pickup_address: Optional[str] = None
+    pickup_lat: Optional[float] = None
+    pickup_lon: Optional[float] = None
+    trunk_capacity: Optional[str] = None
+    fuel_consumption: Optional[str] = None
+    # Policies (iter 230)
+    policies: Optional[list] = []
+    # Inventory total units (iter 230) — drives "almost sold out" logic
+    total_units: Optional[int] = 1
 
 @router.post("/")
 async def create_car(
@@ -174,6 +191,20 @@ class CarRentalUpdate(BaseModel):
     is_available: Optional[bool] = None
     operator_id: Optional[str] = None
     operator_name: Optional[str] = None
+    description: Optional[str] = None
+    mileage_policy: Optional[str] = None
+    fuel_policy: Optional[str] = None
+    minimum_driver_age: Optional[int] = None
+    min_rental_days: Optional[int] = None
+    max_rental_days: Optional[int] = None
+    pickup_locations: Optional[list] = None
+    pickup_address: Optional[str] = None
+    pickup_lat: Optional[float] = None
+    pickup_lon: Optional[float] = None
+    trunk_capacity: Optional[str] = None
+    fuel_consumption: Optional[str] = None
+    policies: Optional[list] = None
+    total_units: Optional[int] = None
 
 
 @router.put("/{car_id}")

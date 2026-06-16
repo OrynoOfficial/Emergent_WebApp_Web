@@ -37,7 +37,11 @@ class Hotel(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     website: Optional[str] = None
-    
+
+    # Policies (free-form, one per line on the front-end — surfaced in
+    # HotelDetails "Policies" tab and the booking summary).
+    policies: List[str] = []
+
     # Status
     is_active: bool = True
     
@@ -69,7 +73,12 @@ class Room(BaseModel):
     
     # Media
     images: List[str] = []
-    
+
+    # Policies (free-form, one per line)
+    policies: List[str] = []
+    cancellation_policy: Optional[str] = None  # free-text summary line
+    minimum_stay_nights: Optional[int] = None
+
     # Availability
     is_available: bool = True
     

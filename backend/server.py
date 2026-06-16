@@ -40,6 +40,7 @@ from routes.vehicles import router as vehicles_router
 from routes.operators import router as operators_router
 from routes.seat_bookings import router as seat_bookings_router, seat_ws_router
 from routes.rooms import router as rooms_router
+from routes.inventory import router as inventory_router
 from routes.commission import router as commission_router
 from routes.loyalty import router as loyalty_router
 from routes.promo_codes import router as promo_codes_router
@@ -496,6 +497,7 @@ app.include_router(resource_reassignments_router)
 app.include_router(operators_router)
 app.include_router(seat_bookings_router)
 app.include_router(rooms_router)
+app.include_router(inventory_router)
 app.include_router(commission_router)
 app.include_router(loyalty_router)
 app.include_router(promo_codes_router)

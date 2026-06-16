@@ -62,6 +62,8 @@ const DEFAULT_CAR_FORM = {
   pickup_locations: [],
   trunk_capacity: '',
   fuel_consumption: '',
+  policies: [],
+  total_units: 1,
 };
 
 // Car Rental specific dashboard data generator
@@ -787,6 +789,17 @@ export default function CarRentalManagement() {
                 <Label>Hourly Rate (FCFA)</Label>
                 <Input type="number" value={carForm.price_per_hour} onChange={e => setCarForm(p => ({ ...p, price_per_hour: e.target.value }))} placeholder="Optional" />
               </div>
+              <div>
+                <Label>Total Units in Fleet <span className="text-slate-400 font-normal text-xs">(stock)</span></Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={carForm.total_units || 1}
+                  onChange={e => setCarForm(p => ({ ...p, total_units: parseInt(e.target.value) || 1 }))}
+                  placeholder="1"
+                  data-testid="car-form-total-units"
+                />
+              </div>
               <div className="col-span-2">
                 <Label>Pickup Locations <span className="text-slate-400 font-normal text-xs">(comma separated)</span></Label>
                 <Input
@@ -796,6 +809,19 @@ export default function CarRentalManagement() {
                     pickup_locations: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
                   }))}
                   placeholder="Douala Airport, Douala Centre, Yaoundé Airport"
+                />
+              </div>
+              <div className="col-span-2">
+                <Label>Vehicle Policies <span className="text-slate-400 font-normal text-xs">(one per line — shown on the Policies tab in Vehicle Details)</span></Label>
+                <Textarea
+                  rows={4}
+                  value={(carForm.policies || []).join('\n')}
+                  onChange={e => setCarForm(p => ({
+                    ...p,
+                    policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean),
+                  }))}
+                  placeholder={'Driver must be 25+ years old with valid licence\nFuel must be returned at the same level as pickup\nNo smoking inside the vehicle\nSecurity deposit of XAF 100,000 (refundable)'}
+                  data-testid="car-form-policies"
                 />
               </div>
               <div className="col-span-2 flex items-center justify-between bg-emerald-50 rounded-lg border border-emerald-100 p-3">

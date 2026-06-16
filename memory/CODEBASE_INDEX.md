@@ -94,6 +94,7 @@ Every router is mounted in `server.py` with a `/api` prefix. Group by domain:
 - `notifications.py` — `/api/notifications/*` — in-app inbox
 - `communications.py` — service-side messaging (operator <-> customer)
 - `customer_location.py` — `/api/customer-location/*` — last-seen city heuristic for filtering
+- `inventory.py` — `/api/inventory/*` — units / holds / banquet_items (iter 230)
 - `search.py` / `suggestions.py` — `/api/search/*` — global cross-vertical search
 - `validation.py` + `routes/validation.py` (admin tools)
 - `database_management.py` — admin DB inspection tools

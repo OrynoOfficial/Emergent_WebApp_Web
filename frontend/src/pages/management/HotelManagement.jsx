@@ -45,13 +45,15 @@ const DEFAULT_HOTEL_FORM = {
   name: '', description: '', address: '', city: '', country: 'Cameroon',
   star_rating: 3, phone: '', email: '', amenities: [], images: [],
   operator_id: '', operator_name: '',
-  latitude: '', longitude: ''
+  latitude: '', longitude: '',
+  policies: []
 };
 
 const DEFAULT_ROOM_FORM = {
   room_type: 'standard', room_name: '', description: '', base_price: '',
   capacity: 2, bed_type: 'double', amenities: [], beds: 1, floor: 1,
-  size_sqm: 25, total_rooms: 1, available_rooms: 1, images: []
+  size_sqm: 25, total_rooms: 1, available_rooms: 1, images: [],
+  policies: [], cancellation_policy: '', minimum_stay_nights: 1
 };
 
 // Dashboard data now fetched from API via useRealDashboardData hook

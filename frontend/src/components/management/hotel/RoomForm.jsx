@@ -216,6 +216,44 @@ export function RoomForm({ form, onChange, isEditing = false }) {
           className="mt-1.5" 
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Cancellation Policy</Label>
+          <Input
+            value={form.cancellation_policy || ''}
+            onChange={e => updateForm({ cancellation_policy: e.target.value })}
+            placeholder="Free cancellation up to 24h before check-in"
+            className="mt-1.5"
+            data-testid="room-form-cancellation-policy"
+          />
+        </div>
+        <div>
+          <Label>Minimum Stay (nights)</Label>
+          <Input
+            type="number"
+            min={1}
+            value={form.minimum_stay_nights || 1}
+            onChange={e => updateForm({ minimum_stay_nights: parseInt(e.target.value) || 1 })}
+            className="mt-1.5"
+            data-testid="room-form-min-stay"
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label>Room Policies <span className="text-slate-400 text-xs font-normal">(one per line — shown in the room booking modal)</span></Label>
+        <Textarea
+          rows={4}
+          value={(form.policies || []).join('\n')}
+          onChange={e => updateForm({
+            policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
+          })}
+          placeholder={'Breakfast included for 2 guests\nMaximum 2 adults + 1 child\nExtra bed available on request (XAF 5,000/night)'}
+          className="mt-1.5"
+          data-testid="room-form-policies"
+        />
+      </div>
     </div>
   );
 }

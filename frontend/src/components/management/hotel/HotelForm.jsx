@@ -238,6 +238,20 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
           className="mt-1.5" 
         />
       </div>
+
+      <div>
+        <Label>Hotel Policies <span className="text-slate-400 text-xs font-normal">(one per line — shown to customers on the Policies tab)</span></Label>
+        <Textarea
+          rows={5}
+          value={(form.policies || []).join('\n')}
+          onChange={e => updateForm({
+            policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
+          })}
+          placeholder={'Check-in from 14:00, Check-out by 12:00\nNo smoking inside the rooms\nFree cancellation up to 24 hours before arrival\nValid government-issued ID required at check-in'}
+          className="mt-1.5"
+          data-testid="hotel-form-policies"
+        />
+      </div>
     </div>
   );
 }

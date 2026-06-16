@@ -1,5 +1,47 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 230: Policies fields + Inventory engine foundations)
+
+### Phase 1 complete — Data + Management forms
+- **Hotel**: model has new `policies: List[str]` field. `HotelCreate` schema accepts it. `HotelForm.jsx` shows a "Hotel Policies" textarea (one rule per line, `data-testid="hotel-form-policies"`). `DEFAULT_HOTEL_FORM` extended.
+- **Room**: model now has `policies`, `cancellation_policy`, `minimum_stay_nights`. `RoomForm.jsx` adds two side-by-side inputs ("Cancellation Policy", "Minimum Stay") plus a "Room Policies" textarea (`data-testid="room-form-cancellation-policy"`, `room-form-min-stay`, `room-form-policies`). `DEFAULT_ROOM_FORM` extended.
+- **Car Rental**: `CarRentalCreate` + `CarRentalUpdate` schemas now accept the full rich set (description, mileage/fuel policies, min driver age, min/max days, pickup locations + lat/lon, trunk + fuel consumption) **+ new `policies` + new `total_units`** (stock). `CarRentalManagement.jsx` Add/Edit Car modal renders a "Vehicle Policies" textarea + "Total Units in Fleet" input. `DEFAULT_CAR_FORM` extended.
+- **Operator**: `logo_url` and `created_at` were already on the model — no change needed; the Customer-facing UI can read both immediately.
+
+### Inventory engine — backend foundations
+- New models (`/app/backend/models/inventory.py`):
+  - `InventoryUnit` (one physical/logical unit) with statuses: in_stock / reserved / out / returned / damaged / out_of_stock.
+  - `InventoryHold` (rental window linking a unit/quantity to a booking) with status flow: reserved → out → returned (or damaged / cancelled).
+  - `BanquetItem` — **new collection**, separate from existing `banquet_packages` (the user explicitly wanted this split: chairs/plates/cutlery = inventory; DJ/photographer/halls = services).
+- New router (`/app/backend/routes/inventory.py`, prefix `/api/inventory`):
+  - `POST   /holds` — create a hold (used by booking flows). Validates available_units before reserving.
+  - `GET    /holds` — list holds, scoped to the current operator by default.
+  - `POST   /holds/{id}/confirm-return` — operator confirms a return. Accepts `damaged_quantity` + `operator_note`. Damaged units are permanently removed from `total_units`.
+  - `POST   /holds/{id}/cancel` — release a reservation.
+  - `GET    /{entity_type}/{entity_id}/stock` — current `total_units`, `available_units`, and breakdown by hold status. Drives the "Almost sold out" tag.
+  - `POST   /banquet-items` / `GET` / `PUT` / `DELETE` — full CRUD for the new collection.
+- Registered in `server.py`.
+- **Auto-return is opt-out** (user choice 1b): a unit only re-enters stock once the operator clicks "Confirm Return" on the dashboard, with the option to flag damaged quantity.
+
+### Tests
+- New `/app/backend/tests/test_iter230_policies_and_inventory.py` — 4 cases:
+  1. Hotel POST + GET round-trips `policies`.
+  2. Car-rental POST + GET round-trips `policies` + `total_units`.
+  3. Banquet item full lifecycle: create 100 units → hold 30 → stock drops to 70 → confirm return with 2 damaged → total_units drops to 98, available_units → 98.
+  4. Over-subscription returns 409 (asking for 5 when only 2 left).
+- **12/12 backend tests pass** (iter225 + iter230 + user_invite — no regressions).
+
+### Still to do (Phase 2, next iteration)
+- Hotel Details: pull real policies, rooms default→grid, swipeable images, "Choose room" modal.
+- Hotel Booking sidebar: room thumb + policy.
+- Travel Booking sidebar: operator + bus thumbnail.
+- Car Rental Details: real photos, collapsible features, real policies, map only on Features tab, Owner tab with operator logo + registered date, enhanced right rail.
+- Car Rental Results: "Select"→"View Details", distinct amenity colours.
+- Car Rental Search: type/options into filter chips.
+- Operator-side **Inventory Dashboard** UI (confirm-return + damage report + keep-out-of-stock).
+- Wire booking flows to call `POST /api/inventory/holds` on success.
+
+
 ## Latest Changes (Feb 2026 — iter 229: Car Rental Details map fallback + full visual verification)
 
 ### Car Rental Details — live map even without explicit coords
