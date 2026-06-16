@@ -109,6 +109,7 @@ class BanquetCreate(BaseModel):
     capacity_max: Optional[int] = None
     base_price: float
     price_type: str = "per_event"
+    linked_inventory_id: Optional[str] = None
     category_details: Dict[str, Any] = {}
     images: List[str] = []
     amenities: List[str] = []

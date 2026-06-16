@@ -1,6 +1,47 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 232: Phase 3 — Banquet Inventory Split + Damage Lifecycle)
+## Latest Changes (Feb 2026 — iter 232: Unified Service↔Inventory model)
+
+After Phase 3 (iter 231) shipped, a conceptual collision emerged: chairs could be modelled both as a `Service` with `category=rental_item` AND as a standalone `banquet_items` doc. This iteration unifies them following the proven `Vehicles → Routes` pattern:
+
+### Backend
+- **`Banquet` model** — new `linked_inventory_id` field. When `category=rental_item`, this MUST point to a `banquet_items._id`. Backend enforces:
+  - `POST /api/banquets/` → 400 if rental_item without link, 404 if link doesn't resolve, 403 if link belongs to another operator.
+- **New endpoint**: `POST /api/banquets/{id}/auto-link-inventory` — one-click migration for legacy rental_item Services. Creates a `banquet_items` doc (total_units seeded from `max_quantity`/`min_quantity`) and links it. Idempotent.
+- **`GET /api/banquets/`** — rental_item services are now enriched with live `available_units` + `total_units` from the linked inventory doc (single batch lookup).
+- **Cart checkout** — the standalone "Rentable Items" `kind=item` path was deprecated. Every service line now goes through `db.banquets`. For lines where `service.category=rental_item AND linked_inventory_id` is set:
+  - Validates `min_quantity ≤ qty ≤ max_quantity` (Service rule)
+  - Validates `qty ≤ available_units` (Inventory rule) → 409 otherwise
+  - Creates `inventory_hold` against the linked inventory doc, drops `available_units` automatically
+  - Same enforcement applies for `rental_item` services bundled inside packages
+
+### Frontend — Operator side
+- **`Add/Edit Service` modal** (`CategoryAwareFields`):
+  - Renamed `Other` → **`Other Service (not Rental Item)`**
+  - When `Rental Item` is picked, a new `Linked Rental Inventory *` dropdown appears (required). Helper text: *"Stock is tracked in the Rental Inventory tab. The service's base_price is what customers pay; per-booking limits below."*
+  - If the operator has no inventory items, the rest of the form is wrapped in `<fieldset disabled>` with `opacity-50` and a banner: *"You need a Rental Inventory item first"* with a one-click CTA `[Create inventory item]` that closes the modal, jumps to the Rental Inventory tab, and surfaces a toast guiding the operator back.
+  - Save handler validates `linked_inventory_id` is set before posting.
+- **`BanquetManagement.jsx`** — loads operator-scoped `banquet_items` once and feeds them into the modal so the dropdown is instant.
+
+### Frontend — Customer side
+- **`BanquetResults.jsx`** — standalone "Rentable Items" grid removed. Rental Item Services now appear in the unified Services grid with **live stock awareness**:
+  - `Out of Stock` overlay + disabled Add button when `available_units = 0`
+  - `Only N left` pill when `available_units < 20% of total_units`
+  - Add button reads `Sold Out` instead of `Add to Cart` when stock is exhausted
+
+### Tests
+- `/app/backend/tests/test_iter232_service_inventory_link.py` — 7 new tests covering: validation (400/404), enrichment, checkout-creates-hold, overbook 409, min-qty enforcement, and auto-link migration. All pass.
+- Combined with iter231 suites: **15/15 tests passing.**
+
+### The Mental Model (clarified)
+> **Services** = *"What do you sell?"* (customer catalog)
+> **Packages** = *"What combos do you sell?"* (bundles of services)
+> **Rental Inventory** = *"What physical stock do you own?"* (stock engine, invisible to customers, linked from rental_item Services)
+>
+> Exactly mirrors Vehicles (stock) → TravelRoutes (catalog) → Bookings (deduct seats).
+
+
+## Earlier — iter 231: Phase 3 — Banquet Inventory Split + Damage Lifecycle
 
 ### Backend
 - **`models/inventory.py`** — `InventoryHold` extended with `damage_fee` (float), `damage_description`, `item_name` (denormalised), `unit_price` (snapshot at hold-creation).

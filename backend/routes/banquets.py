@@ -29,7 +29,20 @@ async def create_banquet(
     
     operator_id = banquet_data.operator_id or current_user.get("operator_id")
     operator_name = banquet_data.operator_name or current_user.get("operator_name", "")
-    
+
+    # Validation: rental_item services MUST link to a banquet_items inventory doc.
+    if banquet_data.category == "rental_item":
+        if not banquet_data.linked_inventory_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Rental Item services must link to a Rental Inventory item. Create one in the Rental Inventory tab first.",
+            )
+        inv = await db.banquet_items.find_one({"_id": banquet_data.linked_inventory_id})
+        if not inv:
+            raise HTTPException(status_code=404, detail="Linked inventory item not found")
+        if inv.get("operator_id") != operator_id and current_user.get("role") not in ("super_admin", "admin"):
+            raise HTTPException(status_code=403, detail="Linked inventory item belongs to another operator")
+
     banquet = {
         "_id": str(uuid.uuid4()),
         **banquet_data.dict(exclude={"operator_id", "operator_name"}),
@@ -45,6 +58,54 @@ async def create_banquet(
     await db.banquets.insert_one(banquet)
     
     return {"message": "Banquet venue created", "banquet_id": banquet["_id"]}
+
+@router.post("/{banquet_id}/auto-link-inventory")
+async def auto_link_inventory(
+    banquet_id: str,
+    current_user: dict = Depends(require_any_permission(["banquets.edit", "operator.services.edit"])),
+):
+    """One-click migration for legacy rental_item Services with no linked inventory.
+
+    Creates a `banquet_items` doc seeded from the Service's name/price/min_quantity
+    and points `service.linked_inventory_id` at it. Idempotent — returns the existing
+    link if one already exists.
+    """
+    db = get_database()
+    svc = await db.banquets.find_one({"_id": banquet_id})
+    if not svc:
+        raise HTTPException(status_code=404, detail="Service not found")
+    if svc.get("category") != "rental_item":
+        raise HTTPException(status_code=400, detail="Only Rental Item services can be linked to inventory")
+    if svc.get("linked_inventory_id"):
+        return {"inventory_id": svc["linked_inventory_id"], "message": "Already linked", "created": False}
+
+    if current_user.get("role") == "operator" and svc.get("operator_id") != current_user.get("operator_id"):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    seed_total = int(svc.get("max_quantity") or svc.get("min_quantity") or 50)
+    inv = {
+        "_id": str(uuid.uuid4()),
+        "operator_id": svc.get("operator_id"),
+        "operator_name": svc.get("operator_name"),
+        "name": svc.get("name"),
+        "description": svc.get("description"),
+        "category": (svc.get("category_details") or {}).get("item_category") or "other",
+        "unit_price": float(svc.get("base_price") or 0),
+        "images": svc.get("images") or [],
+        "total_units": seed_total,
+        "available_units": seed_total,
+        "policies": [],
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.banquet_items.insert_one(inv)
+    await db.banquets.update_one(
+        {"_id": banquet_id},
+        {"$set": {"linked_inventory_id": inv["_id"], "updated_at": datetime.utcnow()}},
+    )
+    return {"inventory_id": inv["_id"], "message": "Inventory created and linked", "created": True, "total_units": seed_total}
+
 
 @router.get("/")
 async def get_banquets(
@@ -92,6 +153,22 @@ async def get_banquets(
     # Transform _id to id for each banquet
     for banquet in banquets:
         banquet["id"] = str(banquet.pop("_id", ""))
+
+    # Enrich rental_item services with live `available_units` from their linked inventory.
+    # The customer-facing grid uses this to display stock-aware "Only N left" badges.
+    inv_ids = [b.get("linked_inventory_id") for b in banquets if b.get("linked_inventory_id")]
+    if inv_ids:
+        inv_map = {}
+        async for inv in db.banquet_items.find(
+            {"_id": {"$in": inv_ids}},
+            {"_id": 1, "total_units": 1, "available_units": 1},
+        ):
+            inv_map[inv["_id"]] = inv
+        for b in banquets:
+            inv = inv_map.get(b.get("linked_inventory_id"))
+            if inv:
+                b["available_units"] = inv.get("available_units", 0)
+                b["total_units"] = inv.get("total_units", 0)
 
     # --- FOMO inventory enrichment ---------------------------------------
     # Banquets are typically single-event-per-day venues. We expose
@@ -641,9 +718,9 @@ from pydantic import BaseModel  # noqa: E402
 class CartLineInput(BaseModel):
     service_id: str
     quantity: float = 1
-    # "service" (banquets collection) | "item" (banquet_items collection, rentable inventory).
-    # When kind == "item" the line is priced against `unit_price` × quantity and
-    # an inventory hold is created on checkout so available_units stays accurate.
+    # DEPRECATED: legacy field from the standalone "Rentable Items" prototype.
+    # The unified Service↔Inventory model resolves rental_item lines via the
+    # service's linked_inventory_id; this is kept for backward compat only.
     kind: str = "service"
     # Optional hour-count override for per_hour services (e.g. "I want 6h
     # of the photographer instead of the default 4h"). Falls back to the
@@ -754,76 +831,46 @@ async def event_cart_checkout(
     # 2. Hydrate individual services + items.
     line_items_out: list[dict] = []
     subtotal = 0.0
-    item_holds_to_create: list[dict] = []   # populated for `kind=item` lines
+    item_holds_to_create: list[dict] = []   # Holds for any rental_item service whose linked inventory exists.
 
     if payload.line_items:
-        service_lines = [li for li in payload.line_items if li.kind != "item"]
-        item_lines = [li for li in payload.line_items if li.kind == "item"]
+        ids = [li.service_id for li in payload.line_items]
+        svc_by_id = {
+            s["_id"]: s
+            async for s in db.banquets.find({"_id": {"$in": ids}})
+        }
+        missing = [sid for sid in ids if sid not in svc_by_id]
+        if missing:
+            raise HTTPException(status_code=400, detail=f"Services not found: {missing}")
 
-        # --- Standard service-collection lines ----------------------------
-        if service_lines:
-            ids = [li.service_id for li in service_lines]
-            svc_by_id = {
-                s["_id"]: s
-                async for s in db.banquets.find({"_id": {"$in": ids}})
-            }
-            missing = [sid for sid in ids if sid not in svc_by_id]
-            if missing:
-                raise HTTPException(status_code=400, detail=f"Services not found: {missing}")
+        for li in payload.line_items:
+            svc = svc_by_id[li.service_id]
+            line_total, snap = _price_line(svc, li.quantity, li.hours)
+            snap["source"] = "individual"
+            line_items_out.append(snap)
+            subtotal += line_total
 
-            for li in service_lines:
-                line_total, snap = _price_line(svc_by_id[li.service_id], li.quantity, li.hours)
-                snap["source"] = "individual"
-                line_items_out.append(snap)
-                subtotal += line_total
-
-        # --- Banquet-item (rentable inventory) lines ----------------------
-        if item_lines:
-            ids = [li.service_id for li in item_lines]
-            items_by_id = {
-                it["_id"]: it
-                async for it in db.banquet_items.find({"_id": {"$in": ids}})
-            }
-            missing = [iid for iid in ids if iid not in items_by_id]
-            if missing:
-                raise HTTPException(status_code=400, detail=f"Rental items not found: {missing}")
-
-            for li in item_lines:
-                it = items_by_id[li.service_id]
+            # If this is a rental_item Service linked to an inventory doc,
+            # validate stock + queue a hold (created after the order is inserted).
+            if svc.get("category") == "rental_item" and svc.get("linked_inventory_id"):
+                inv_id = svc["linked_inventory_id"]
                 qty = int(li.quantity or 1)
-                unit_price = float(it.get("unit_price") or 0)
-                # Stock check using the same helper that `available_units` uses.
+                # Per-Service constraints (min/max are the customer-facing rules).
+                if svc.get("min_quantity") and qty < int(svc["min_quantity"]):
+                    raise HTTPException(status_code=400, detail=f"'{svc['name']}' has a minimum of {svc['min_quantity']}")
+                if svc.get("max_quantity") and qty > int(svc["max_quantity"]):
+                    raise HTTPException(status_code=400, detail=f"'{svc['name']}' has a maximum of {svc['max_quantity']}")
+                # Inventory constraint.
                 from routes.inventory import _entity_available_units  # local import to avoid cycle
-                avail = await _entity_available_units(db, "banquet_item", it["_id"])
+                avail = await _entity_available_units(db, "banquet_item", inv_id)
                 if avail < qty:
-                    raise HTTPException(
-                        status_code=409,
-                        detail=f"'{it.get('name')}' only has {avail} units available, you requested {qty}.",
-                    )
-                line_total = round(unit_price * qty, 2)
-                snap = {
-                    "source": "item",
-                    "kind": "item",
-                    "service_id": it["_id"],
-                    "service_name": it.get("name"),
-                    "category": "rental_item",
-                    "pricing_model": "per_unit",
-                    "unit_label": "unit",
-                    "quantity": qty,
-                    "unit_price": unit_price,
-                    "line_total": line_total,
-                    "rate_label": f"{int(unit_price):,} / unit",
-                    "operator_id": it.get("operator_id"),
-                    "operator_name": it.get("operator_name"),
-                }
-                line_items_out.append(snap)
-                subtotal += line_total
+                    raise HTTPException(status_code=409, detail=f"'{svc['name']}' has only {avail} units in stock right now.")
                 item_holds_to_create.append({
-                    "entity_id": it["_id"],
-                    "operator_id": it.get("operator_id"),
+                    "entity_id": inv_id,
+                    "operator_id": svc.get("operator_id"),
                     "quantity": qty,
-                    "item_name": it.get("name"),
-                    "unit_price": unit_price,
+                    "item_name": svc.get("name"),
+                    "unit_price": float(svc.get("base_price") or 0),
                 })
 
     # 3. Hydrate packages (one bundle expands into its services with the
@@ -853,6 +900,23 @@ async def event_cart_checkout(
                 if svc:
                     _, snap = _price_line(svc, ln.get("quantity", 1), None)
                     inner_lines.append(snap)
+                    # Bundled rental_item services also reserve inventory.
+                    if svc.get("category") == "rental_item" and svc.get("linked_inventory_id"):
+                        qty = int(ln.get("quantity") or 1)
+                        from routes.inventory import _entity_available_units  # local import
+                        avail = await _entity_available_units(db, "banquet_item", svc["linked_inventory_id"])
+                        if avail < qty:
+                            raise HTTPException(
+                                status_code=409,
+                                detail=f"Bundle '{bundle.get('name')}' needs {qty} units of '{svc['name']}' but only {avail} are in stock.",
+                            )
+                        item_holds_to_create.append({
+                            "entity_id": svc["linked_inventory_id"],
+                            "operator_id": svc.get("operator_id"),
+                            "quantity": qty,
+                            "item_name": svc.get("name"),
+                            "unit_price": float(svc.get("base_price") or 0),
+                        })
 
             line_items_out.append({
                 "source": "package",

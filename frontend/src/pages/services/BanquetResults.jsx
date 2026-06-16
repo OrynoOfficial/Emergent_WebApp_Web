@@ -110,6 +110,14 @@ function SwipeableImages({ images, name, height = 'h-44' }) {
 function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails }) {
   const meta = CATEGORY_META[svc.category] || CATEGORY_META.other;
   const Icon = meta.icon;
+  // Rental Item services carry live stock from their linked banquet_items doc.
+  // We surface a "Only N left" / "Out of stock" pill on the card so customers
+  // get the same scarcity signal the standalone Rentable Items grid used to give.
+  const isRental = svc.category === 'rental_item';
+  const avail = svc.available_units;
+  const total = svc.total_units;
+  const isOutOfStock = isRental && typeof avail === 'number' && avail <= 0;
+  const isLowStock = isRental && typeof avail === 'number' && total > 0 && avail < total * 0.2 && avail > 0;
   return (
     <Card
       className="group overflow-hidden bg-white rounded-2xl border border-teal-100/60 shadow-md hover:shadow-xl hover:border-teal-300 transition-all cursor-pointer"
@@ -123,7 +131,19 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
             <Icon className="w-3 h-3 mr-1" /> {meta.label}
           </Badge>
         </div>
-        {inCart && (
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-slate-900/55 flex items-center justify-center z-10">
+            <Badge className="bg-rose-500 text-white border-0 shadow-md" data-testid={`out-of-stock-badge-${svc.id}`}>Out of Stock</Badge>
+          </div>
+        )}
+        {!isOutOfStock && isLowStock && (
+          <div className="absolute top-3 right-3 z-10">
+            <Badge className="bg-rose-500 text-white border-0 shadow-md" data-testid={`low-stock-badge-${svc.id}`}>
+              Only {avail} left
+            </Badge>
+          </div>
+        )}
+        {!isOutOfStock && !isLowStock && inCart && (
           <div className="absolute top-3 right-3 z-10">
             <Badge className="bg-emerald-500 text-white border-0 shadow-md" data-testid={`in-cart-tag-${svc.id}`}>
               <Sparkles className="w-3 h-3 mr-1" /> In Cart · {qtyInCart}
@@ -205,10 +225,11 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
             <Button
               onClick={(e) => { e.stopPropagation(); onAdd(); }}
               size="sm"
-              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl shadow shadow-teal-500/20"
+              disabled={isOutOfStock}
+              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl shadow shadow-teal-500/20 disabled:opacity-50"
               data-testid={`add-to-cart-${svc.id}`}
             >
-              <Plus className="w-4 h-4 mr-1" /> Add to Cart
+              <Plus className="w-4 h-4 mr-1" /> {isOutOfStock ? 'Sold Out' : 'Add to Cart'}
             </Button>
           )}
         </div>
@@ -702,80 +723,11 @@ export default function BanquetResults() {
           </section>
         )}
 
-        {rentalItems.length > 0 && (categoryTab === 'all' || categoryTab === 'rental_item') && (
-          <section data-testid="rental-items-section">
-            <div className="flex items-center gap-2 mb-4">
-              <Armchair className="w-5 h-5 text-amber-700" />
-              <h2 className="text-lg font-bold text-slate-900">Rentable Items</h2>
-              <Badge className="bg-amber-100 text-amber-700 border-0">Live stock</Badge>
-              <span className="text-xs text-slate-500 hidden sm:inline">— chairs, plates, linens & more</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {rentalItems.map(item => {
-                const q = qtyOfItem(item.id);
-                const avail = item.available_units || 0;
-                const total = item.total_units || 0;
-                const lowStock = avail > 0 && avail < total * 0.2;
-                const cover = item.images?.[0];
-                return (
-                  <Card
-                    key={item.id}
-                    className="overflow-hidden border-amber-200 bg-gradient-to-br from-amber-50/60 to-white hover:shadow-lg transition-shadow"
-                    data-testid={`rental-item-card-${item.id}`}
-                  >
-                    <div className="relative h-28 bg-gradient-to-br from-amber-100 to-orange-100">
-                      {cover ? (
-                        <img src={cover} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Armchair className="w-10 h-10 text-amber-400" />
-                        </div>
-                      )}
-                      {avail <= 0 ? (
-                        <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
-                          <Badge className="bg-rose-500 text-white border-0">Out of Stock</Badge>
-                        </div>
-                      ) : lowStock ? (
-                        <div className="absolute top-1.5 right-1.5">
-                          <Badge className="bg-rose-500 text-white border-0 text-[10px]">Only {avail} left</Badge>
-                        </div>
-                      ) : null}
-                    </div>
-                    <CardContent className="p-2.5 space-y-1.5">
-                      <h3 className="font-semibold text-sm text-slate-900 leading-tight line-clamp-1">{item.name}</h3>
-                      <div className="flex items-baseline justify-between">
-                        <div>
-                          <div className="text-amber-700 font-bold text-base leading-none">{formatFCFA(item.unit_price || 0)}</div>
-                          <div className="text-[10px] text-slate-500">/ unit · {avail} avail</div>
-                        </div>
-                        {q > 0 ? (
-                          <div className="flex items-center gap-0.5">
-                            <Button size="icon" variant="outline" className="h-6 w-6 border-amber-300" onClick={() => updateQty(item.id, Math.max(1, q - 1))} data-testid={`item-dec-${item.id}`}>
-                              <Minus className="w-2.5 h-2.5" />
-                            </Button>
-                            <span className="text-xs font-semibold w-6 text-center" data-testid={`item-qty-${item.id}`}>{q}</span>
-                            <Button size="icon" variant="outline" className="h-6 w-6 border-amber-300" onClick={() => updateQty(item.id, Math.min(avail, q + 1))} data-testid={`item-inc-${item.id}`}>
-                              <Plus className="w-2.5 h-2.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={avail <= 0}
-                            onClick={() => addRentalItem(item, 1)}
-                            className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
-                            data-testid={`add-item-${item.id}`}
-                          >
-                            <Plus className="w-3 h-3 mr-0.5" /> Add
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
+        {rentalItems.length > 0 && false && (categoryTab === 'all' || categoryTab === 'rental_item') && (
+          /* REMOVED in unified Service↔Inventory model — rental_item Services now
+             appear in the main grid below with live stock awareness. Kept as a
+             dead code block to keep the diff small; will be deleted next iter. */
+          <section data-testid="rental-items-section-deprecated" />
         )}
 
         <section>

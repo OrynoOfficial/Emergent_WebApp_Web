@@ -58,7 +58,7 @@ const CATEGORIES = [
   { value: 'catering',       label: 'Catering',              icon: UtensilsCrossed, accent: 'bg-orange-100 text-orange-700' },
   { value: 'decoration',     label: 'Decoration',            icon: Sparkles,        accent: 'bg-rose-100 text-rose-700' },
   { value: 'sound_lighting', label: 'Sound & Lighting',      icon: Music2,          accent: 'bg-cyan-100 text-cyan-700' },
-  { value: 'other',          label: 'Other',                 icon: Box,             accent: 'bg-slate-100 text-slate-700' },
+  { value: 'other',          label: 'Other Service (not Rental Item)', icon: Box,    accent: 'bg-slate-100 text-slate-700' },
 ];
 
 const CATEGORY_BY_VALUE = Object.fromEntries(CATEGORIES.map(c => [c.value, c]));
@@ -109,15 +109,29 @@ const DEFAULT_FORM = {
   email: '',
   operator_id: '',
   operator_name: '',
+  linked_inventory_id: '',
 };
 
 // ────────────────────────────────────────────────────────────────────
 // Category-aware form. Only renders the fields that actually apply to
 // the picked category — keeps the editor short and unambiguous.
+//
+// When `Rental Item` is picked, a `Linked Inventory Item` dropdown is
+// required. If the operator has no inventory items yet, the rest of the
+// form is greyed out and a banner prompts them to create one first
+// (mirrors the Vehicles→Routes UX).
 // ────────────────────────────────────────────────────────────────────
-function CategoryAwareFields({ form, setForm, categoryOperators }) {
+function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems, onCreateInventory }) {
   const cat = form.category || 'hall';
   const allowedModels = PRICING_MODELS_BY_CATEGORY[cat] || ['per_event'];
+  const isRentalItem = cat === 'rental_item';
+  // Filter inventory to operators the form already picked (or show all when no operator chosen yet).
+  const scopedInventory = useMemo(() => {
+    if (!form.operator_id) return inventoryItems;
+    return inventoryItems.filter(it => it.operator_id === form.operator_id);
+  }, [inventoryItems, form.operator_id]);
+  const needsInventoryFirst = isRentalItem && scopedInventory.length === 0;
+  const lockOtherFields = needsInventoryFirst;
 
   // Guard against a desync: when the user rapidly swaps categories the
   // controlled `pricing_model` may end up outside `allowedModels`, which
@@ -159,7 +173,7 @@ function CategoryAwareFields({ form, setForm, categoryOperators }) {
           value={cat}
           onValueChange={(v) => {
             const next = PRICING_MODELS_BY_CATEGORY[v]?.[0] || 'per_event';
-            setForm(p => ({ ...p, category: v, pricing_model: next }));
+            setForm(p => ({ ...p, category: v, pricing_model: next, linked_inventory_id: v === 'rental_item' ? p.linked_inventory_id : '' }));
           }}
         >
           <SelectTrigger data-testid="service-category-select"><SelectValue /></SelectTrigger>
@@ -176,6 +190,73 @@ function CategoryAwareFields({ form, setForm, categoryOperators }) {
         </Select>
       </div>
 
+      {/* ── Rental Item ⇄ Linked Inventory picker ───────────────────────
+          Rental Item services MUST link to a banquet_items doc so stock
+          tracking + return/damage lifecycle kick in. If the operator has
+          no inventory yet, we grey-out the rest of the form and surface
+          a banner with a one-click CTA to create the first item. */}
+      {isRentalItem && (
+        <div className="col-span-2">
+          {needsInventoryFirst ? (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 space-y-3" data-testid="rental-item-needs-inventory-banner">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center flex-shrink-0">
+                  <Armchair className="w-5 h-5 text-amber-800" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-amber-900">You need a Rental Inventory item first</p>
+                  <p className="text-sm text-amber-800 mt-0.5">
+                    Rental Item services track physical stock. Create an inventory item ({form.operator_id ? 'for this operator' : 'first pick an operator above'}), then link it here.
+                  </p>
+                  {form.operator_id && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={onCreateInventory}
+                      className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      data-testid="create-inventory-cta"
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Create inventory item
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Label className="flex items-center gap-1.5">
+                Linked Rental Inventory <span className="text-rose-600">*</span>
+              </Label>
+              <Select
+                value={form.linked_inventory_id || ''}
+                onValueChange={(v) => setForm(p => ({ ...p, linked_inventory_id: v }))}
+              >
+                <SelectTrigger data-testid="linked-inventory-select">
+                  <SelectValue placeholder="Pick the inventory item this service rents out…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scopedInventory.map(it => (
+                    <SelectItem key={it.id} value={it.id}>
+                      <span className="inline-flex items-center gap-2">
+                        <Armchair className="w-3.5 h-3.5" />
+                        {it.name} <span className="text-slate-500 text-xs">— {it.available_units || 0} / {it.total_units || 0} avail</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Stock is tracked in the Rental Inventory tab. The service&apos;s `base_price` is what customers pay; per-booking limits below.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* All fields below are greyed out when a rental_item service has no
+          linked inventory yet — forces the operator to set up stock first. */}
+      <fieldset disabled={lockOtherFields} className={`col-span-2 ${lockOtherFields ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className="grid grid-cols-2 gap-4">
       {/* name */}
       <div className="col-span-2">
         <Label>Service Name</Label>
@@ -341,6 +422,8 @@ function CategoryAwareFields({ form, setForm, categoryOperators }) {
         details={form.category_details || {}}
         onChange={(next) => setForm(p => ({ ...p, category_details: next }))}
       />
+        </div>
+      </fieldset>
     </div>
   );
 }
@@ -1036,6 +1119,19 @@ export default function BanquetManagement() {
   // category dropdown — so the selector only shows operators who
   // actually offer this kind of service.
   const [categoryOperators, setCategoryOperators] = useState([]);
+  // Inventory items the linked-inventory dropdown can pick from.
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const loadInventory = useCallback(async () => {
+    try {
+      const params = scopeOperatorId ? { operator_id: scopeOperatorId, is_active: true } : { is_active: true };
+      const res = await api.get('/inventory/banquet-items', { params });
+      setInventoryItems(res.data.items || []);
+    } catch (err) {
+      console.error('Failed to load inventory items:', err);
+      setInventoryItems([]);
+    }
+  }, [scopeOperatorId]);
+  useEffect(() => { loadInventory(); }, [loadInventory]);
   useEffect(() => {
     if (!isDialogOpen) return;
     const cat = form.category || 'hall';
@@ -1073,6 +1169,7 @@ export default function BanquetManagement() {
         category_details: svc.category_details || {},
         operator_id: svc.operator_id || '',
         operator_name: svc.operator_name || '',
+        linked_inventory_id: svc.linked_inventory_id || '',
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -1114,6 +1211,7 @@ export default function BanquetManagement() {
         email: form.email || null,
         operator_id: form.operator_id || null,
         operator_name: op?.name || form.operator_name || '',
+        linked_inventory_id: form.linked_inventory_id || null,
       };
       if (editing) {
         await api.put(`/banquets/${editing.id}`, payload);
@@ -1266,7 +1364,19 @@ export default function BanquetManagement() {
         form={form}
         previewMeta={previewMeta}
         pricingLabel={PRICING_LABEL}
-        leftColumn={<CategoryAwareFields form={form} setForm={setForm} categoryOperators={categoryOperators} />}
+        leftColumn={
+          <CategoryAwareFields
+            form={form}
+            setForm={setForm}
+            categoryOperators={categoryOperators}
+            inventoryItems={inventoryItems}
+            onCreateInventory={() => {
+              setIsDialogOpen(false);
+              setActiveTab('rentals');
+              toast.info('Create your inventory item, then re-open the Service form to link it.');
+            }}
+          />
+        }
         onSubmit={handleSave}
       />
 
