@@ -1,5 +1,33 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 224: reusable LocationMap + ViewModeToggle rollout + Car Rental polish)
+
+### Reusable Leaflet map component
+- New `/app/frontend/src/components/shared/LocationMap.jsx`. Wraps `react-leaflet` (MapContainer/TileLayer/Marker/Popup) with a globally-applied default-marker icon patch (idempotent). Props: `lat, lon, title, address, zoom, height, nearbyPins, showHeader, headerLabel, showGoogleLink`. Renders a graceful MapPin fallback when no coordinates are available. Can be dropped into any page (`data-testid="location-map"`, optional `data-testid="open-in-google-maps"`).
+- Car Rental Details now renders a "Pickup location" map card plus a "Customer reviews" card backed by `GET /api/ratings?entity_type=car_rental&entity_id=<id>` (graceful empty state when no reviews). Hardcoded `4.9 / (28)` rating badge replaced by a live `reviewStats.average / reviewStats.total` widget that shows `—` when no reviews exist. Owner rating row also hides when zero.
+
+### ViewModeToggle rollout
+- `@/components/management/shared/DataTable.jsx` (SearchFilter helper) now uses the shared `ViewModeToggle` internally (default `'list'`). Any page using `SearchFilter` with `showViewToggle` automatically inherits the consistent toggle.
+- Inline ad-hoc grid/list buttons replaced with the shared `ViewModeToggle` on:
+  - `pages/management/HotelManagement.jsx` (Hotels + Rooms — both default `list`, added `details` mode)
+  - `pages/management/RestaurantManagement.jsx` (default `list`)
+  - `pages/management/PackageShipments.jsx` (`details` falls back to list table)
+  - `pages/management/CustomerServiceManagement.jsx` (added `details` mode)
+  - `pages/admin/Users.jsx`
+- All adopt `data-testid="view-mode-toggle"` and per-mode `view-mode-list / view-mode-grid / view-mode-details`.
+
+### Car Rental Results — colored editable search summary
+- New blue gradient `data-testid="car-rental-search-summary"` card at the top of `/services/car-rental/results`, mirroring the Hotels Results pattern. Shows destination, vehicle count and date range. `data-testid="car-rental-search-edit"` flips it into a 4-field editor (LocationInput + 2× DatePickerField + Apply/Cancel) and applying writes the updated query params back to the URL via `setSearchParams`.
+- Old inline grid/list buttons swapped for the shared `ViewModeToggle` with a new `details` view variant.
+
+### Car Rental Management — richer Add/Edit Car modal
+- `DEFAULT_CAR_FORM` extended with: `description, mileage_policy, fuel_policy, minimum_driver_age, min_rental_days, max_rental_days, pickup_locations[], trunk_capacity, fuel_consumption`.
+- A new "Detailed Information" section in the modal renders: Description textarea, Doors, Trunk Capacity, Fuel Consumption, Mileage Policy select (Unlimited / 100-300 km/day), Fuel Policy select (Full-to-Full / Same-to-Same / Pre-purchase), Minimum Driver Age, Min / Max Rental Days, Hourly Rate, comma-separated Pickup Locations, and an `Available for Booking` Switch with explainer copy.
+
+### Verification (iter_224)
+- Frontend testing agent was blocked by aggressive Cloudflare 429 throttling on the preview URL (`cinema-management-p0.preview.emergentagent.com`) — only `/services/car-rental` (CarRentalSearch shell) + login were verifiable. Code review on all touched files passed (no runtime JS errors observed; pre-existing `react-hooks/purity` warnings unchanged). **Re-run required once the preview rate-limit window resets.**
+
+
 ## Latest Changes (Feb 2026 — iter 223: visible cart countdown + soft warning)
 
 ### Visible cart-hold countdown across the banquet flow
