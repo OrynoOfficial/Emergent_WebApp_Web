@@ -47,6 +47,10 @@ class Operator(BaseModel):
     
     logo_url: Optional[str] = None
     description: Optional[str] = None
+    # Free-form instructions that print on every customer ticket / order detail
+    # (e.g. "Please arrive 30 minutes early. Bag drop closes at boarding −10 min.").
+    # Plain string; line-breaks rendered on the customer side.
+    boarding_instructions: Optional[str] = None
     status: OperatorStatus = OperatorStatus.PENDING
     commission_rate: float = 5.0  # Default 5%
     bank_name: Optional[str] = None
@@ -79,6 +83,7 @@ class OperatorCreate(BaseModel):
     market_segment: str = "sme"
     logo_url: Optional[str] = None
     description: Optional[str] = None
+    boarding_instructions: Optional[str] = None
     commission_rate: float = 5.0
     bank_name: Optional[str] = None
     bank_account: Optional[str] = None
@@ -104,6 +109,7 @@ class OperatorUpdate(BaseModel):
     market_segment: Optional[str] = None
     logo_url: Optional[str] = None
     description: Optional[str] = None
+    boarding_instructions: Optional[str] = None
     status: Optional[OperatorStatus] = None
     commission_rate: Optional[float] = None
     bank_name: Optional[str] = None

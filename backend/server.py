@@ -30,6 +30,8 @@ from routes.travel_routes import router as travel_routes_router
 from routes.travel import router as travel_router
 from routes.car_rental import router as car_rental_router
 from routes.events import router as events_router
+from routes.event_locations import router as event_locations_router
+from routes.event_showtimes import router as event_showtimes_router
 from routes.uploads import router as uploads_router
 from routes.ratings import router as ratings_router
 from routes.analytics import router as analytics_router
@@ -487,6 +489,8 @@ app.include_router(travel_routes_router)
 app.include_router(travel_router)
 app.include_router(car_rental_router)
 app.include_router(events_router)
+app.include_router(event_locations_router)
+app.include_router(event_showtimes_router)
 app.include_router(uploads_router)
 app.include_router(ratings_router)
 app.include_router(analytics_router)
