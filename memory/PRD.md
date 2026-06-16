@@ -1,5 +1,25 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 247: Dedicated Event Poster uploader)
+
+### Backend
+- `EventShowtime` model now carries a top-level **`poster_url`** field (`Optional[str]`), separate from the `images[]` gallery.
+- `EventShowtimeCreate` / `EventShowtimeUpdate` accept and persist `poster_url`.
+- `POST /api/event-showtimes/` and `PUT /api/event-showtimes/{id}` round-trip the field. Legacy showtimes with `poster_url=null` and gallery `images[0]` continue to work as the fallback.
+
+### Frontend
+- `ShowtimeEditor.jsx` — prominent pink-dashed dropzone at the top of the modal ("EVENT POSTER — the hero image customers see when booking"). Single image, large preview, "Replace" / "Remove" actions on hover. The existing `MiniImageUploader` is demoted to a smaller "Additional Gallery" (max 4) below.
+- `ShowtimeDetails.jsx` — Order Summary header now uses the chain `poster_url || images[0] || icon-fallback`. The image is opacity-80 (was 70) so it pops a bit more.
+- `EventsResults.jsx` (grid + list cards) — both prefer `poster_url` when available.
+- `EventPreviewModal.jsx` — poster_url leads the photo array and is deduped.
+
+### Tests — `/app/backend/tests/test_event_poster_url.py` (3 tests, all passing)
+1. `poster_url` persists on create.
+2. `poster_url` updates via PUT.
+3. Showtime without `poster_url` falls back to gallery images cleanly (no breakage).
+
+Combined backend test count is now **19/19 passing** (3 poster + 12 refund + 4 scanner).
+
 ## Latest Changes (Feb 2026 — iter 246: Event booking page now mirrors CinemaBooking)
 
 ### ShowtimeDetails.jsx — Cinema-style refactor (user-requested)

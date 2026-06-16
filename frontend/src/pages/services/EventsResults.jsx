@@ -48,7 +48,7 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
     time: rawEvent.time || rawEvent.doors_open || rawEvent.start_time,
     priceFrom: rawEvent.priceFrom || rawEvent.ticket_price || (rawEvent.ticket_types?.[0]?.price) || 0,
     ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : (rawEvent.available_seats ?? 999)),
-    image: rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
+    image: rawEvent.poster_url || rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
     rating: rawEvent.rating || 4.5,
     contact_email: rawEvent.contact_email,
     contact_phone: rawEvent.contact_phone,
@@ -217,7 +217,7 @@ const EventCardList = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
     time: rawEvent.time || rawEvent.doors_open || rawEvent.start_time,
     priceFrom: rawEvent.priceFrom || rawEvent.ticket_price || (rawEvent.ticket_types?.[0]?.price) || 0,
     ticketsLeft: rawEvent.ticketsLeft ?? (rawEvent.total_capacity != null ? Math.max(0, (rawEvent.total_capacity || 0) - (rawEvent.tickets_sold || 0)) : (rawEvent.available_seats ?? 999)),
-    image: rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
+    image: rawEvent.poster_url || rawEvent.image || rawEvent.cover_image || rawEvent.images?.[0] || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800',
     rating: rawEvent.rating || 4.5,
   };
   const EventIcon = getEventIcon(event.type);

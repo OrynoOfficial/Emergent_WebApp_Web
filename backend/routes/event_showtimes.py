@@ -67,6 +67,7 @@ async def create_showtime(
         "title": payload.title,
         "description": payload.description,
         "event_type": payload.event_type,
+        "poster_url": payload.poster_url,
         "images": payload.images or [],
         "start_datetime": payload.start_datetime,
         "end_datetime": payload.end_datetime,

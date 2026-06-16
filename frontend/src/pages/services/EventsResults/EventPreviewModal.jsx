@@ -117,11 +117,13 @@ export default function EventPreviewModal({ open, onOpenChange, event }) {
 
   const photos = useMemo(() => {
     if (!event) return [];
+    // Prefer the dedicated poster_url first, then gallery, then location photos.
+    const poster = event.poster_url ? [event.poster_url] : [];
     const showtimeImages = event.images || [];
     const locationImages = location?.images || [];
     const legacyImages = event.cover_image ? [event.cover_image, ...(event.images || [])] : event.images || [];
-    const all = isShowtime ? [...showtimeImages, ...locationImages] : legacyImages;
-    return all.filter(Boolean);
+    const all = isShowtime ? [...poster, ...showtimeImages, ...locationImages] : [...poster, ...legacyImages];
+    return [...new Set(all.filter(Boolean))];
   }, [event, location, isShowtime]);
 
   if (!event) return null;

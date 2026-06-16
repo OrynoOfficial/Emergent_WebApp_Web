@@ -224,6 +224,8 @@ export default function ShowtimeDetails() {
       .map((c) => Number(c.price));
     return prices.length ? Math.min(...prices) : 0;
   }, [showtime]);
+  // Poster fallback chain: dedicated poster_url → first gallery image → null.
+  const posterUrl = showtime?.poster_url || showtime?.images?.[0] || null;
 
   // Drive the step indicator off interaction milestones.
   useEffect(() => {
@@ -546,8 +548,8 @@ export default function ShowtimeDetails() {
               {/* Order Summary card with event poster header */}
               <Card className="overflow-hidden border-pink-500/20 bg-white" data-testid="order-summary-card">
                 <div className="relative h-44 bg-gradient-to-br from-pink-700 via-rose-600 to-slate-900 overflow-hidden">
-                  {showtime.images?.[0] ? (
-                    <img src={showtime.images[0]} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                  {posterUrl ? (
+                    <img src={posterUrl} alt={showtime.title} onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-80" data-testid="order-poster-image" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <ImageIcon className="w-24 h-24 text-white/15" />

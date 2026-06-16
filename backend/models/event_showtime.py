@@ -47,6 +47,8 @@ class EventShowtime(BaseModel):
     title: str
     description: Optional[str] = None
     event_type: Optional[str] = None  # concert/conference/workshop/sport/festival/...
+    poster_url: Optional[str] = None  # Hero poster shown on the customer booking page;
+                                       # falls back to images[0] when null.
     images: List[str] = []            # Event-specific posters (independent of Location photos).
     start_datetime: str               # ISO datetime
     end_datetime: str
@@ -84,6 +86,7 @@ class EventShowtimeCreate(BaseModel):
     title: str
     description: Optional[str] = None
     event_type: Optional[str] = None
+    poster_url: Optional[str] = None
     images: List[str] = []
     start_datetime: str
     end_datetime: str
@@ -99,6 +102,7 @@ class EventShowtimeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     event_type: Optional[str] = None
+    poster_url: Optional[str] = None
     images: Optional[List[str]] = None
     start_datetime: Optional[str] = None
     end_datetime: Optional[str] = None
