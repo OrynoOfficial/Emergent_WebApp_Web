@@ -36,17 +36,21 @@ router = APIRouter(prefix="/api/refunds", tags=["refunds"])
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 async def _restore_event_stock(db, order: dict) -> None:
-    """Atomically increment class.available_units on the showtime so the
-    refunded seats become bookable again. Called inside refund approval."""
+    """Atomically increment class.available_units AND remove any reserved
+    seat_ids so the seats become bookable again."""
     bd = order.get("booking_details") or {}
     showtime_id = bd.get("showtime_id") or order.get("service_id")
     class_id = bd.get("class_id")
     qty = int(bd.get("quantity") or 0)
+    seat_ids = bd.get("seat_ids") or []
     if not showtime_id or not class_id or qty <= 0:
         return
+    update = {"$inc": {"classes.$.available_units": qty}}
+    if seat_ids:
+        update["$pull"] = {"classes.$.booked_seats": {"$in": seat_ids}}
     await db.event_showtimes.update_one(
         {"_id": showtime_id, "classes.id": class_id},
-        {"$inc": {"classes.$.available_units": qty}},
+        update,
     )
 
 

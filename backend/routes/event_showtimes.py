@@ -208,6 +208,9 @@ class BookTicketsPayload(BaseModel):
     showtime_id: str
     class_id: str
     quantity: int = 1
+    seat_ids: Optional[List[str]] = None  # When the location is visual-grid /
+                                          # zones, the customer can pick exact
+                                          # seats. len(seat_ids) MUST equal qty.
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
@@ -220,27 +223,49 @@ async def book_tickets(
 ):
     """Atomic class-targeted booking. Uses a positional $inc on the matching
     class element so two concurrent bookings can't both succeed once the last
-    seat is gone."""
+    seat is gone. When seat_ids are sent, each seat is also reserved with
+    `$addToSet` after confirming none of them are already booked."""
     db = get_database()
     if payload.quantity < 1:
         raise HTTPException(status_code=400, detail="Quantity must be ≥ 1")
 
-    # Atomic: only succeeds if available_units ≥ quantity at the moment of update.
-    result = await db.event_showtimes.update_one(
-        {
-            "_id": payload.showtime_id,
-            "classes": {"$elemMatch": {"id": payload.class_id, "available_units": {"$gte": payload.quantity}}},
+    seat_ids = payload.seat_ids or []
+    if seat_ids and len(seat_ids) != payload.quantity:
+        raise HTTPException(status_code=400, detail="seat_ids count must equal quantity")
+    if seat_ids and len(set(seat_ids)) != len(seat_ids):
+        raise HTTPException(status_code=400, detail="Duplicate seat_ids in request")
+
+    # Step 1: Atomic decrement. Includes a $nin guard on booked_seats so we
+    # don't allow double-booking the same seat across two concurrent bookings.
+    match = {
+        "_id": payload.showtime_id,
+        "classes": {
+            "$elemMatch": {
+                "id": payload.class_id,
+                "available_units": {"$gte": payload.quantity},
+            }
         },
-        {"$inc": {"classes.$.available_units": -payload.quantity}},
-    )
+    }
+    if seat_ids:
+        match["classes"]["$elemMatch"]["booked_seats"] = {"$nin": seat_ids}
+
+    update = {"$inc": {"classes.$.available_units": -payload.quantity}}
+    if seat_ids:
+        update["$addToSet"] = {"classes.$.booked_seats": {"$each": seat_ids}}
+
+    result = await db.event_showtimes.update_one(match, update)
     if not result.modified_count:
-        # Check whether the showtime/class even exists vs sold out.
+        # Diagnose the cause.
         showtime = await db.event_showtimes.find_one({"_id": payload.showtime_id})
         if not showtime:
             raise HTTPException(status_code=404, detail="Showtime not found")
         klass = next((c for c in showtime.get("classes", []) if c["id"] == payload.class_id), None)
         if not klass:
             raise HTTPException(status_code=404, detail="Class not found on this showtime")
+        if seat_ids:
+            already = set(klass.get("booked_seats") or []) & set(seat_ids)
+            if already:
+                raise HTTPException(status_code=409, detail=f"Seat(s) just taken: {', '.join(sorted(already))}")
         raise HTTPException(
             status_code=409,
             detail=f"Only {klass.get('available_units', 0)} '{klass['name']}' tickets left — requested {payload.quantity}.",
@@ -249,7 +274,10 @@ async def book_tickets(
     # Persist a booking doc on `orders` so it shows up in My Orders.
     showtime = await db.event_showtimes.find_one({"_id": payload.showtime_id})
     klass = next(c for c in showtime["classes"] if c["id"] == payload.class_id)
-    total = float(klass["price"]) * payload.quantity
+    # Service fee: 3% platform fee on the ticket subtotal.
+    subtotal = float(klass["price"]) * payload.quantity
+    service_fee = round(subtotal * 0.03, 2)
+    total = round(subtotal + service_fee, 2)
     operator_logo_url = None
     if showtime.get("operator_id"):
         op = await db.operators.find_one({"_id": showtime["operator_id"]}, {"logo_url": 1})
@@ -269,7 +297,8 @@ async def book_tickets(
         "operator_id": showtime.get("operator_id"),
         "operator_name": showtime.get("operator_name"),
         "operator_logo_url": operator_logo_url,
-        "subtotal": total,
+        "subtotal": subtotal,
+        "service_fee": service_fee,
         "total_amount": total,
         "currency": klass.get("currency", "XAF"),
         "status": "pending",

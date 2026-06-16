@@ -33,6 +33,9 @@ class TicketClass(BaseModel):
     perks: List[str] = []             # ["Welcome drink", "VIP entrance", ...]
     zone_id: Optional[str] = None     # Optional link to a Location zone (zones layout).
     description: Optional[str] = None
+    booked_seats: List[str] = []      # Seat IDs taken so far ("R3-S12" style). Only used
+                                       # when the parent Location.layout_type is "visual_grid"
+                                       # or "zones" with seat-level selection.
 
 
 class EventShowtime(BaseModel):
