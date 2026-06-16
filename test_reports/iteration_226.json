@@ -1,0 +1,64 @@
+{
+  "summary": "Iter 231 backend + frontend verification of Banquet Inventory Split + Return/Damage Lifecycle. Backend: 2 existing tests in test_iter231_banquet_inventory_lifecycle.py pass; created /app/backend/tests/test_iter231_extended.py with 6 additional tests (operator scoping, holds enrichment, active-rentals summary shape, +/- stock adjust, overbook 409, customer-forbidden create) — all 6 PASS. Frontend (operator side): full /management/banquets → Rental Inventory tab works end-to-end — Items/Active Rentals/History sub-tabs all render with correct data-testids; stock-adjust dialog opens, +2 saves and total_units increments 38→40 with toast 'Stock adjusted by +2'; Active Rentals 4 summary tiles render (Pending Return 6 / Units Out 34 / Returned 5 / Damage Fees 14,000 FCFA); Return flow opens confirm-return-dialog, damage_fee auto-populates to qty×unit_price (1×100=100), saving fires toast 'Returned — 1 damaged units removed from stock, 100 FCFA billed' and the hold appears in History. CRITICAL BUG FOUND on customer side: /services/banquet/results never shows the Rentable Items section for a customer login because GET /api/inventory/banquet-items applies operator scoping for any non-admin role (routes/inventory.py L474-475: `q['operator_id'] = current_user.get('operator_id') or current_user.get('_id')`), and customers have no operator_id, so the query reduces to {operator_id: <customer_user_id>} → 0 rows. Confirmed via direct curl: customer token returns items=[]; same token with explicit ?operator_id=… returns 4 items; admin returns 8. Section is therefore dead code for end-customers.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/inventory/banquet-items", "issue": "Applies operator scoping for ALL non-admin roles including 'customer'. Customers have no operator_id so the query becomes {operator_id: <customer_user_id>} → returns 0 items. Customer-side BanquetResults.jsx (L366) calls this endpoint without operator_id, so the Rentable Items section never renders for real customers. Fix: only scope when role in ('operator', 'staff'); for 'customer'/'guest' return all is_active=true items, or expose a public /api/inventory/public-banquet-items route.", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Customer → /services/banquet/results → Rentable Items section", "issue": "Section never appears for customer accounts because the underlying GET /api/inventory/banquet-items returns empty for non-operator roles (see backend critical bug). All other parts of the page (packages, services) render correctly.", "affected_selectors": ["[data-testid='rental-items-section']", "[data-testid^='rental-item-card-']", "[data-testid^='add-item-']"]}
+    ],
+    "design_issues": []
+  },
+  "verified_via_pytest": [
+    "test_banquet_item_full_lifecycle: create item → hold 10 → mark-out → confirm-return with damaged=3 + fee=4500 → total_units drops 40→37, active-rentals summary shows damage fee, +5 stock-adjust → 42, soft-delete removes from is_active=true listing.",
+    "test_hold_overbook_rejected: hold of qty > available_units returns 409.",
+    "test_banquet_items_operator_scoping: admin ?operator_id=… returns only items where operator_id matches.",
+    "test_holds_listing_enrichment: GET /api/inventory/holds returns item_name + unit_price denormalised on each hold.",
+    "test_active_rentals_summary_shape: response has pending_return:int, total_units_currently_out:int, total_damage_fees_collected:number, by_status:dict.",
+    "test_adjust_stock_negative_and_positive: +10 → new_total_units=30, then -5 → 25.",
+    "test_overbook_returns_409_with_message: second hold over capacity returns 409.",
+    "test_customer_cannot_create_banquet_item: POST /api/inventory/banquet-items returns 401/403 for customer role."
+  ],
+  "verified_via_playwright": [
+    "Two-step login (Login → email → Continue → password → Continue) navigates to /admin/admin-dashboard for admin@test.com.",
+    "/management/banquets shows rentals-tab; clicking renders 3 sub-tabs (rental-items-subtab, active-rentals-subtab, history-subtab) and Items list with 8 cards each carrying adjust-stock-btn, edit-rental-item-btn, delete-rental-item-btn testids.",
+    "add-rental-item-btn opens rental-item-editor dialog with all required fields (name, category, unit-price, total-units, operator-selector, description, photos).",
+    "adjust-stock-btn opens stock-adjust-dialog → +2 delta + reason → save-stock-adjust-btn → dialog closes → 'Stock adjusted by +2' toast → item card total_units bumped 38→40.",
+    "active-rentals-subtab renders 4 summary tiles (summary-pending-return=6, summary-units-out=34, summary-completed=5, summary-damage-fees=14,000 FCFA).",
+    "Each active hold has mark-out-btn-{id} and return-btn-{id} (6 of each).",
+    "return-btn opens confirm-return-dialog; entering damaged_quantity=1 auto-populates damage-fee-input to 100 (qty × unit_price); save fires toast 'Returned — 1 damaged units removed from stock, 100 FCFA billed'.",
+    "history-subtab lists 6 history-hold-{id} cards with damage_fee badges (100, 4500, 5000 FCFA, etc.) and 'returned' status pills.",
+    "/services/banquet/results loads for customer@test.com with packages + services BUT 'Rentable Items' section is absent (rental-items-section testid not in DOM)."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iter231_banquet_inventory_lifecycle.py",
+    "/app/backend/tests/test_iter231_extended.py",
+    "/app/test_reports/pytest/iter231.xml",
+    "/app/test_reports/pytest/iter231_extended.xml"
+  ],
+  "action_items": [
+    "FIX routes/inventory.py L463-481 list_banquet_items: when role == 'customer'/'guest'/None, do NOT apply operator_id scoping. Recommended diff: change `elif role and role not in ('admin','super_admin'):` to `elif role in ('operator','staff'):` so customer browsers see all active items regardless of operator. Alternatively add a separate public route used by BanquetResults.jsx.",
+    "Optionally accept ?city filter on /api/inventory/banquet-items so customers see items scoped to their selected city (matches the city filter applied to /banquets/ in BanquetResults)."
+  ],
+  "critical_code_review_comments": [
+    "routes/inventory.py list_banquet_items conflates 'operator scoping' with 'non-admin scoping' — customers should not be operator-scoped. Same pattern appears at L141 (list_holds) and L178 (list active rentals); review whether customers ever hit those endpoints (they probably do not, but worth a check).",
+    "RentalInventoryTab.jsx is 747 LoC — above the 700-line guideline; consider splitting ItemsSubTab, ActiveRentalsSubTab and HistorySubTab into separate files (they are already extracted as functions but live in one module).",
+    "BanquetResults.jsx is 847 LoC — also above the ceiling; could pull the Rentable Items grid into a small <RentableItemsGrid /> component.",
+    "Item creation toast 'Pick an operator' fires when operator_id is empty even though backend would default to current_user.operator_id; for admin (no operator_id) the UI requires one — minor UX friction but acceptable.",
+    "Soft-delete uses is_active=false; ensure default GET (no is_active filter) does not leak deleted items into the customer flow once the customer-visibility bug is fixed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter231_extended.py (new — 6 additional tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (8/8 pytest)", "frontend": "operator side 100% (Items/Active/History sub-tabs + create item editor + stock adjust + mark-out + return-with-damage + history all verified at runtime); customer side 0% — Rentable Items section blocked by backend scoping bug"},
+  "test_credentials": "admin@test.com / testpassword123 (operator side); customer@test.com / testpassword123 (customer side)",
+  "seed_data_creation": "Each pytest creates and then soft-deletes its own banquet items. Operator-side UI test added one persistent +2 stock-adjust on 'Test Gold Chair' (38→40) and one Pytest OB → returned 1 damaged unit (100 FCFA damage_fee) into history.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend lifecycle is solid — all 8 pytest pass and the operator UI exercises the full create→hold→mark-out→return-with-damage→history flow with damage_fee auto-suggestion, success toasts and live total_units / available_units updates. The only outstanding bug is the customer-visibility of GET /api/inventory/banquet-items: it applies operator scoping for any non-admin role, so customers (no operator_id) get items=[]. Once routes/inventory.py L474 is changed to scope only for role in ('operator','staff'), re-run the playwright check at /services/banquet/results with customer@test.com and confirm rental-items-section + ≥1 rental-item-card-* + add-item-* render. The two-step login pattern (click 'Login to Your Account' → email → Continue → password → submit) is required; the password submit goes through the [type='submit'] button, not the visible 'Continue' label.",
+  "rca of the issue": "GET /api/inventory/banquet-items applies operator scoping unconditionally for any non-admin role. Customer accounts have role='customer' and operator_id=null, so the query becomes {operator_id: <customer_user_id>} (line 475 falls back to current_user._id when operator_id is missing). That id never matches any item.operator_id, so the customer-side BanquetResults.jsx receives items=[] and the entire Rentable Items section is conditionally hidden by `{rentalItems.length > 0 && ...}`. Fix: relax the elif to only scope for true operators/staff, OR expose a public /api/inventory/public-banquet-items endpoint that BanquetResults.jsx can call."
+}

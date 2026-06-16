@@ -105,6 +105,10 @@ export function useEventCart() {
             operator_id: service.operator_id || null,
             operator_name: service.operator_name || '',
             image: service.images?.[0] || null,
+            // `kind: 'item'` flags this line as a rentable banquet_item so the
+            // backend cart checkout creates an inventory hold instead of looking
+            // it up in the `banquets` collection.
+            kind: service._kind || 'service',
           },
         }],
       });

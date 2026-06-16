@@ -1,5 +1,36 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 231: Phase 2 visible polish)
+
+### Car Rental Results
+- **"Select" → "View Details"** on both grid and list cards. Testids: `car-rental-view-details-grid`, `car-rental-view-details-list`.
+- **Distinct amenity chip palette** (5 colours rotated by keyword — sky/indigo/emerald/amber/rose). `FEATURE_CHIP_COLORS` map in `CarRentalResults.jsx`.
+
+### Car Rental Details — major revamp
+- **Collapsible "Vehicle features" panel** (default closed) replacing the wall of individual feature cards. Testids: `car-features-toggle`, `car-features-panel`.
+- **Map only shows on the Features tab** — Navigating to Policies or Owner hides it entirely (`{activeTab === 'features' && <LocationMap />}`).
+- **Real `vehicle.policies`** rendered on the Policies tab with friendly empty state. Testid: `car-policies-content`.
+- **Owner tab** now pulls full operator details (`logo_url`, `name`, `tagline`, `created_at → "Member since …"`, `description`, `phone`, `address`). Falls back gracefully when fields are missing. Testid: `car-owner-content`.
+- **Right rail Pickup Location** is prefilled with the operator's `vehicle.pickup_address` (the address they set in management) in a blue highlight card. Multi-pickup-locations becomes a small "change pickup point" dropdown. Testid: `car-rental-pickup-section`.
+- **Real photos grid** in the hero (replaces the placeholder Car icons) — uses `vehicle.images[0..2]` with sensible fallbacks. Testid: `car-rental-images`.
+
+### Car Rental Search
+- **Type + Options collapsed into a single "Filters" panel** with chip selectors (data-testid `car-rental-search-filters` / `…-toggle` / `…-panel` + `car-type-chip-*` / `driver-option-*`). Reduces visual noise on the primary search form.
+
+### Hotel Booking sidebar
+- "Your Selected Room" mini-card now renders a thumbnail image (`hotel.room_image`), bed-type + capacity + size badges, and the top 3 room policies (`hotel.room_policies`). Testid: `hotel-booking-room-summary`. `HotelDetails.handleReserve` extended to pass `room_image`, `room_bed_type`, `room_capacity`, `room_size_sqm`, `room_policies`, `room_cancellation_policy` via navigate state.
+
+### Hotel Details
+- **Rooms tab defaults to Grid view** (was list). Policies tab already pulled real `hotel.policies` from iter 230's model change — no UI change needed.
+
+### Travel Booking sidebar
+- Outbound summary now shows a **bus thumbnail** (first `vehicle_images` / `images`) + operator name + vehicle name + plate number in a dedicated card above the route line. Testid: `travel-booking-outbound-summary`.
+
+### Verification
+- Live screenshot run confirms: 7 "View Details" buttons, collapsible features (4 included), policies empty state ("No policies set"), Owner card (Oryno Travel & Hospitality), pickup prefilled to "Douala Airport", map disappears when switching to Policies/Owner.
+- Lint clean on all touched files.
+
+
 ## Latest Changes (Feb 2026 — iter 230: Policies fields + Inventory engine foundations)
 
 ### Phase 1 complete — Data + Management forms

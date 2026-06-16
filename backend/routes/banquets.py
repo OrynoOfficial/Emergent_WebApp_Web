@@ -641,6 +641,10 @@ from pydantic import BaseModel  # noqa: E402
 class CartLineInput(BaseModel):
     service_id: str
     quantity: float = 1
+    # "service" (banquets collection) | "item" (banquet_items collection, rentable inventory).
+    # When kind == "item" the line is priced against `unit_price` × quantity and
+    # an inventory hold is created on checkout so available_units stays accurate.
+    kind: str = "service"
     # Optional hour-count override for per_hour services (e.g. "I want 6h
     # of the photographer instead of the default 4h"). Falls back to the
     # service's `duration_hours` when unset.
@@ -747,25 +751,80 @@ async def event_cart_checkout(
     if not payload.line_items and not payload.package_ids:
         raise HTTPException(status_code=400, detail="Cart is empty")
 
-    # 2. Hydrate individual services.
+    # 2. Hydrate individual services + items.
     line_items_out: list[dict] = []
     subtotal = 0.0
+    item_holds_to_create: list[dict] = []   # populated for `kind=item` lines
 
     if payload.line_items:
-        ids = [li.service_id for li in payload.line_items]
-        svc_by_id = {
-            s["_id"]: s
-            async for s in db.banquets.find({"_id": {"$in": ids}})
-        }
-        missing = [sid for sid in ids if sid not in svc_by_id]
-        if missing:
-            raise HTTPException(status_code=400, detail=f"Services not found: {missing}")
+        service_lines = [li for li in payload.line_items if li.kind != "item"]
+        item_lines = [li for li in payload.line_items if li.kind == "item"]
 
-        for li in payload.line_items:
-            line_total, snap = _price_line(svc_by_id[li.service_id], li.quantity, li.hours)
-            snap["source"] = "individual"
-            line_items_out.append(snap)
-            subtotal += line_total
+        # --- Standard service-collection lines ----------------------------
+        if service_lines:
+            ids = [li.service_id for li in service_lines]
+            svc_by_id = {
+                s["_id"]: s
+                async for s in db.banquets.find({"_id": {"$in": ids}})
+            }
+            missing = [sid for sid in ids if sid not in svc_by_id]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Services not found: {missing}")
+
+            for li in service_lines:
+                line_total, snap = _price_line(svc_by_id[li.service_id], li.quantity, li.hours)
+                snap["source"] = "individual"
+                line_items_out.append(snap)
+                subtotal += line_total
+
+        # --- Banquet-item (rentable inventory) lines ----------------------
+        if item_lines:
+            ids = [li.service_id for li in item_lines]
+            items_by_id = {
+                it["_id"]: it
+                async for it in db.banquet_items.find({"_id": {"$in": ids}})
+            }
+            missing = [iid for iid in ids if iid not in items_by_id]
+            if missing:
+                raise HTTPException(status_code=400, detail=f"Rental items not found: {missing}")
+
+            for li in item_lines:
+                it = items_by_id[li.service_id]
+                qty = int(li.quantity or 1)
+                unit_price = float(it.get("unit_price") or 0)
+                # Stock check using the same helper that `available_units` uses.
+                from routes.inventory import _entity_available_units  # local import to avoid cycle
+                avail = await _entity_available_units(db, "banquet_item", it["_id"])
+                if avail < qty:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"'{it.get('name')}' only has {avail} units available, you requested {qty}.",
+                    )
+                line_total = round(unit_price * qty, 2)
+                snap = {
+                    "source": "item",
+                    "kind": "item",
+                    "service_id": it["_id"],
+                    "service_name": it.get("name"),
+                    "category": "rental_item",
+                    "pricing_model": "per_unit",
+                    "unit_label": "unit",
+                    "quantity": qty,
+                    "unit_price": unit_price,
+                    "line_total": line_total,
+                    "rate_label": f"{int(unit_price):,} / unit",
+                    "operator_id": it.get("operator_id"),
+                    "operator_name": it.get("operator_name"),
+                }
+                line_items_out.append(snap)
+                subtotal += line_total
+                item_holds_to_create.append({
+                    "entity_id": it["_id"],
+                    "operator_id": it.get("operator_id"),
+                    "quantity": qty,
+                    "item_name": it.get("name"),
+                    "unit_price": unit_price,
+                })
 
     # 3. Hydrate packages (one bundle expands into its services with the
     # *bundle* line_total credited once; we still store the expanded
@@ -892,6 +951,38 @@ async def event_cart_checkout(
     }
     await db.orders.insert_one(order_doc)
 
+    # Create inventory holds for each rentable banquet_item line. The hold
+    # decrements `available_units` and surfaces to the operator dashboard.
+    hold_ids: list[str] = []
+    for h in item_holds_to_create:
+        hold_doc = {
+            "_id": str(uuid.uuid4()),
+            "entity_type": "banquet_item",
+            "entity_id": h["entity_id"],
+            "operator_id": h["operator_id"],
+            "booking_id": order_id,
+            "customer_id": current_user["_id"],
+            "customer_name": payload.contact_name,
+            "unit_ids": [],
+            "quantity": h["quantity"],
+            "start_date": payload.event_date,
+            "end_date": payload.event_date,
+            "status": "reserved",
+            "damaged_quantity": 0,
+            "damage_fee": 0.0,
+            "damage_description": None,
+            "operator_note": None,
+            "item_name": h["item_name"],
+            "unit_price": h["unit_price"],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
+        await db.inventory_holds.insert_one(hold_doc)
+        hold_ids.append(hold_doc["_id"])
+        # Refresh available_units on the item.
+        from routes.inventory import _refresh_available  # local import to avoid cycle
+        await _refresh_available(db, "banquet_item", h["entity_id"])
+
     return {
         "message": "Event order created",
         "order_id": order_id,
@@ -903,4 +994,5 @@ async def event_cart_checkout(
         "total_price": grand_total,
         "currency": "XAF",
         "line_items": line_items_out,
+        "inventory_hold_ids": hold_ids,
     }

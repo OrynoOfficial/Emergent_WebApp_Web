@@ -11,7 +11,7 @@ import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
 import {
   ArrowLeft, Car, MapPin, Users, Fuel, Settings,
   Star, CalendarIcon, Shield, CheckCircle, Phone,
-  Snowflake, Radio, Navigation, Info, AlertTriangle, MessageSquare
+  Snowflake, Radio, Navigation, Info, AlertTriangle, MessageSquare, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatFCFA } from '@/utils/currency';
@@ -36,6 +36,9 @@ export default function CarRentalDetails() {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState({ average: 0, total: 0 });
+  const [activeTab, setActiveTab] = useState('features');
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const [operator, setOperator] = useState(null);
   const [selectedDates, setSelectedDates] = useState({
     pickup: searchParams.get('pickupDate') ? new Date(searchParams.get('pickupDate')) : new Date(),
     return: searchParams.get('returnDate') ? new Date(searchParams.get('returnDate')) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -46,7 +49,19 @@ export default function CarRentalDetails() {
   useEffect(() => {
     loadVehicle();
     loadReviews();
+    loadOperator();
   }, [id]);
+
+  const loadOperator = async () => {
+    try {
+      // Wait a tick for the vehicle to set so we know which operator
+      const res = await api.get(`/car-rental/${id}`);
+      const opId = res.data?.operator_id;
+      if (!opId) return;
+      const op = await api.get(`/operators/${opId}`);
+      setOperator(op.data || null);
+    } catch (_) { /* best-effort */ }
+  };
 
   const loadVehicle = async () => {
     try {
@@ -206,20 +221,31 @@ export default function CarRentalDetails() {
       </div>
 
       <div className="px-4 py-6">
-        {/* Image Gallery */}
-        <div className="grid grid-cols-3 gap-2 mb-6 h-64 rounded-xl overflow-hidden">
-          <div className="col-span-2 bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-            <Car className="w-28 h-28 text-slate-400" />
-          </div>
-          <div className="space-y-2">
-            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center rounded-tr-xl">
-              <Car className="w-10 h-10 text-slate-400" />
+        {/* Image Gallery (uses real vehicle photos with fallbacks) */}
+        {(() => {
+          const imgs = (vehicle.images && vehicle.images.length > 0)
+            ? vehicle.images
+            : [];
+          const fallback = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600';
+          const main = imgs[0] || fallback;
+          const a = imgs[1] || imgs[0] || fallback;
+          const b = imgs[2] || imgs[1] || imgs[0] || fallback;
+          return (
+            <div className="grid grid-cols-3 gap-2 mb-6 h-64 rounded-xl overflow-hidden" data-testid="car-rental-images">
+              <div className="col-span-2 bg-slate-100 relative">
+                <img src={main} alt={vehicle.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-[calc(50%-4px)] bg-slate-100 rounded-tr-xl overflow-hidden">
+                  <img src={a} alt={`${vehicle.name} 2`} className="w-full h-full object-cover" />
+                </div>
+                <div className="h-[calc(50%-4px)] bg-slate-100 rounded-br-xl overflow-hidden">
+                  <img src={b} alt={`${vehicle.name} 3`} className="w-full h-full object-cover" />
+                </div>
+              </div>
             </div>
-            <div className="h-[calc(50%-4px)] bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center rounded-br-xl">
-              <Car className="w-10 h-10 text-slate-400" />
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
@@ -272,61 +298,106 @@ export default function CarRentalDetails() {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="features" className="w-full">
+            <Tabs defaultValue="features" className="w-full" onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-3 bg-[#082c59]/5 border border-slate-200 rounded-xl">
                 <TabsTrigger value="features" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Features</TabsTrigger>
                 <TabsTrigger value="policies" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Policies</TabsTrigger>
                 <TabsTrigger value="owner" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Owner</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="features" className="mt-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {vehicle.features?.map(feature => (
-                      <div key={feature} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span className="text-sm">{FEATURE_LABELS[feature] || feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="policies" className="mt-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <div className="space-y-3">
-                    {vehicle.policies?.map((policy, i) => (
-                      <div key={i} className="flex items-start gap-3 p-2.5 bg-slate-50 rounded-lg">
-                        <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                        <span className="text-sm">{policy}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="owner" className="mt-4">
-                <div className="bg-white rounded-2xl border border-slate-200 p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 bg-[#082c59]/5 rounded-full flex items-center justify-center border border-slate-200">
-                      <Car className="w-7 h-7 text-[#082c59]" />
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setFeaturesOpen((v) => !v)}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-slate-50 to-white hover:from-slate-100 transition-colors"
+                    data-testid="car-features-toggle"
+                    aria-expanded={featuresOpen}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-[#082c59]" />
+                      <span className="text-sm font-bold text-slate-700">Vehicle features</span>
+                      <span className="text-[11px] text-slate-500">· {(vehicle.features || []).length} included</span>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-base">{vehicle.owner?.name}</h3>
-                      <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
-                        {vehicle.owner?.rating ? (
-                          <>
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                            <span>{vehicle.owner.rating} rating</span>
-                            <span>·</span>
-                          </>
-                        ) : null}
-                        <span>Responds {vehicle.owner?.response_time}</span>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${featuresOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {featuresOpen && (
+                    <div className="p-4 border-t border-slate-200 flex flex-wrap gap-2" data-testid="car-features-panel">
+                      {(vehicle.features || []).length === 0 && (
+                        <p className="text-xs text-slate-500">No features listed by the operator.</p>
+                      )}
+                      {vehicle.features?.map(feature => (
+                        <span key={feature} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-700 capitalize">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" />
+                          {FEATURE_LABELS[feature] || feature.replace(/_/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="policies" className="mt-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5" data-testid="car-policies-content">
+                  {(vehicle.policies || []).length === 0 ? (
+                    <div className="text-center py-6 text-slate-500">
+                      <Info className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      <p className="text-sm">No policies have been set by this operator yet.</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {vehicle.policies.map((policy, i) => (
+                        <li key={i} className="flex items-start gap-3 p-3 bg-amber-50/60 border border-amber-100 rounded-lg">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="text-sm text-slate-700">{policy}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="owner" className="mt-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5" data-testid="car-owner-content">
+                  <div className="flex items-start gap-4">
+                    {operator?.logo_url ? (
+                      <img src={operator.logo_url} alt={operator.name} className="w-16 h-16 rounded-full object-cover border border-slate-200 bg-white shrink-0" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gradient-to-br from-[#082c59]/10 to-blue-100 rounded-full flex items-center justify-center border border-slate-200 shrink-0">
+                        <Car className="w-8 h-8 text-[#082c59]" />
                       </div>
-                      {vehicle.owner?.phone && (
-                        <div className="flex items-center gap-2 text-sm text-slate-600 mt-2">
-                          <Phone className="w-3.5 h-3.5" /> {vehicle.owner.phone}
-                        </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-lg text-slate-900">{operator?.name || vehicle.operator_name || 'Operator'}</h3>
+                      {operator?.tagline && <p className="text-xs text-slate-500 mt-0.5">{operator.tagline}</p>}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 mt-2">
+                        {operator?.created_at && (
+                          <span className="inline-flex items-center gap-1">
+                            <Shield className="w-3 h-3 text-emerald-600" />
+                            Member since {(() => {
+                              try { return format(new Date(operator.created_at), 'MMM yyyy'); } catch (_) { return ''; }
+                            })()}
+                          </span>
+                        )}
+                        {reviewStats.total > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                            {reviewStats.average.toFixed(1)} · {reviewStats.total} reviews
+                          </span>
+                        )}
+                        {(operator?.phone || vehicle.owner?.phone) && (
+                          <span className="inline-flex items-center gap-1">
+                            <Phone className="w-3 h-3" /> {operator?.phone || vehicle.owner?.phone}
+                          </span>
+                        )}
+                      </div>
+                      {operator?.address && (
+                        <p className="text-xs text-slate-500 mt-2 inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3" /> {operator.address}
+                        </p>
+                      )}
+                      {operator?.description && (
+                        <p className="text-sm text-slate-600 mt-3 leading-relaxed">{operator.description}</p>
                       )}
                     </div>
                   </div>
@@ -334,16 +405,18 @@ export default function CarRentalDetails() {
               </TabsContent>
             </Tabs>
 
-            {/* Pickup Location Map */}
-            <LocationMap
-              lat={vehicle.location?.lat}
-              lon={vehicle.location?.lon}
-              title={vehicle.name}
-              address={vehicle.location?.address || vehicle.pickup_locations?.[0] || vehicle.city}
-              showHeader
-              headerLabel="Pickup location"
-              className=""
-            />
+            {/* Pickup Location Map — only on the Features tab */}
+            {activeTab === 'features' && (
+              <LocationMap
+                lat={vehicle.location?.lat}
+                lon={vehicle.location?.lon}
+                title={vehicle.name}
+                address={vehicle.location?.address || vehicle.pickup_locations?.[0] || vehicle.city}
+                showHeader
+                headerLabel="Pickup location"
+                className=""
+              />
+            )}
 
             {/* Customer Reviews */}
             <div id="reviews" className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
@@ -469,14 +542,35 @@ export default function CarRentalDetails() {
                   />
                 </div>
 
-                {/* Pickup Location */}
-                <div>
+                {/* Pickup Location — prefilled with the operator's recorded pickup_address */}
+                <div data-testid="car-rental-pickup-section">
                   <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pickup Location</label>
-                  <select className="w-full border border-slate-200 rounded-xl p-2.5 mt-1.5 bg-white text-sm">
-                    {vehicle.pickup_locations?.map(loc => (
-                      <option key={loc} value={loc}>{loc}</option>
-                    ))}
-                  </select>
+                  {vehicle.pickup_address ? (
+                    <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-3 mt-1.5">
+                      <p className="text-sm font-semibold text-blue-900 flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-blue-700 mt-0.5 shrink-0" />
+                        {vehicle.pickup_address}
+                      </p>
+                      {vehicle.pickup_locations?.length > 1 && (
+                        <select className="mt-2 w-full border border-blue-200 rounded-lg p-2 bg-white text-xs">
+                          <option value="">Or change pickup point...</option>
+                          {vehicle.pickup_locations.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ) : vehicle.pickup_locations?.length > 0 ? (
+                    <select className="w-full border border-slate-200 rounded-xl p-2.5 mt-1.5 bg-white text-sm">
+                      {vehicle.pickup_locations.map(loc => (
+                        <option key={loc} value={loc}>{loc}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-slate-500 mt-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      Pickup details will be confirmed by the operator after booking.
+                    </p>
+                  )}
                 </div>
 
                 <div className="border-t border-slate-200 pt-4 space-y-2 text-sm">

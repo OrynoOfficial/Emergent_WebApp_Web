@@ -806,13 +806,49 @@ export default function HotelBooking() {
                   </div>
                 </div>
 
-                {/* Room Selected - Mini card with label */}
+                {/* Room Selected — Enhanced card with thumbnail, capacity, bed type + policies */}
                 {hotel.room_type && (
-                  <div className="flex items-center gap-3 p-3 bg-[#082c59]/5 rounded-xl border border-[#082c59]/15">
-                    <Bed className="h-5 w-5 text-[#082c59]" />
-                    <div>
-                      <p className="text-xs text-slate-500">Your Selected Room</p>
-                      <p className="font-bold text-[#082c59] text-sm">{hotel.room_type}</p>
+                  <div className="rounded-xl border border-[#082c59]/20 overflow-hidden" data-testid="hotel-booking-room-summary">
+                    {hotel.room_image && (
+                      <div className="h-28 w-full overflow-hidden bg-slate-100">
+                        <img src={hotel.room_image} alt={hotel.room_type} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <div className="p-3 bg-[#082c59]/5 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Bed className="h-4 w-4 text-[#082c59]" />
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">Your Selected Room</p>
+                      </div>
+                      <p className="font-bold text-[#082c59] text-sm leading-tight">{hotel.room_type}</p>
+                      {(hotel.room_bed_type || hotel.room_capacity || hotel.room_size_sqm) && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {hotel.room_bed_type && (
+                            <Badge variant="outline" className="bg-white text-[10px]">{hotel.room_bed_type}</Badge>
+                          )}
+                          {hotel.room_capacity && (
+                            <Badge variant="outline" className="bg-white text-[10px]">{hotel.room_capacity} guests</Badge>
+                          )}
+                          {hotel.room_size_sqm && (
+                            <Badge variant="outline" className="bg-white text-[10px]">{hotel.room_size_sqm} m²</Badge>
+                          )}
+                        </div>
+                      )}
+                      {Array.isArray(hotel.room_policies) && hotel.room_policies.length > 0 && (
+                        <div className="pt-2 border-t border-[#082c59]/10">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Room Policies</p>
+                          <ul className="space-y-0.5">
+                            {hotel.room_policies.slice(0, 3).map((p, i) => (
+                              <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                <span className="mt-1 w-1 h-1 rounded-full bg-[#082c59] shrink-0" />
+                                <span>{p}</span>
+                              </li>
+                            ))}
+                            {hotel.room_policies.length > 3 && (
+                              <li className="text-[10px] text-slate-400">+{hotel.room_policies.length - 3} more</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

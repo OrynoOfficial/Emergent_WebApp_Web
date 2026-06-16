@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { format, addDays } from 'date-fns';
-import { CalendarIcon, MapPin, Search, Car, Fuel, Settings, Shield } from 'lucide-react';
+import { CalendarIcon, MapPin, Search, Car, Fuel, Settings, Shield, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
@@ -28,6 +28,7 @@ export default function CarRentalSearch() {
   const [shakeFields, setShakeFields] = useState({});
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -142,43 +143,78 @@ export default function CarRentalSearch() {
                   </Label>
                 </div>
 
-                {/* Car Type */}
-                <div>
-                  <Label>Vehicle Type</Label>
-                  <Select value={searchParams.car_type} onValueChange={v => setSearchParams(p => ({ ...p, car_type: v }))}>
-                    <SelectTrigger className="bg-white mt-1 h-12">
-                      <Car className="w-4 h-4 mr-2 text-gray-400" />
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {CAR_TYPES.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Advanced Filters (collapsible) */}
+                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden" data-testid="car-rental-search-filters">
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(v => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                    data-testid="car-rental-search-filters-toggle"
+                    aria-expanded={showFilters}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
+                      <span className="text-sm font-semibold text-slate-700">Filters</span>
+                      <span className="text-[11px] text-slate-500">
+                        ({searchParams.car_type && searchParams.car_type !== 'All Types' ? 1 : 0}
+                        {searchParams.with_driver ? '+driver' : ''} active)
+                      </span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showFilters && (
+                    <div className="p-4 border-t border-slate-200 space-y-4" data-testid="car-rental-search-filters-panel">
+                      {/* Vehicle type as chip filters */}
+                      <div>
+                        <Label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">Vehicle Type</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {CAR_TYPES.map(type => {
+                            const active = (searchParams.car_type || 'All Types') === type;
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setSearchParams(p => ({ ...p, car_type: type }))}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                                  active ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                }`}
+                                data-testid={`car-type-chip-${type.toLowerCase().replace(/ /g, '-')}`}
+                              >
+                                {type}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
 
-                {/* With Driver Option */}
-                <div>
-                  <Label className="mb-2 block">Options</Label>
-                  <div className="flex items-center gap-4">
-                    <Button
-                      type="button"
-                      variant={!searchParams.with_driver ? "default" : "outline"}
-                      onClick={() => setSearchParams(p => ({ ...p, with_driver: false }))}
-                      className={cn("h-12", !searchParams.with_driver ? "bg-[#082c59]" : "")}
-                    >
-                      Self Drive
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={searchParams.with_driver ? "default" : "outline"}
-                      onClick={() => setSearchParams(p => ({ ...p, with_driver: true }))}
-                      className={cn("h-12", searchParams.with_driver ? "bg-[#082c59]" : "")}
-                    >
-                      With Driver
-                    </Button>
-                  </div>
+                      {/* Driver options as chips */}
+                      <div>
+                        <Label className="mb-2 block text-xs uppercase tracking-wide text-slate-500">Options</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSearchParams(p => ({ ...p, with_driver: false }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              !searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                            data-testid="driver-option-self"
+                          >
+                            Self Drive
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSearchParams(p => ({ ...p, with_driver: true }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                              searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                            data-testid="driver-option-with"
+                          >
+                            With Driver
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Pickup Date */}

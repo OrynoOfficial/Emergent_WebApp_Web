@@ -65,7 +65,7 @@ export default function HotelDetails() {
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
   const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
-  const [roomViewMode, setRoomViewMode] = useState('list');
+  const [roomViewMode, setRoomViewMode] = useState('grid');
   const [policiesExpanded, setPoliciesExpanded] = useState(false);
   const [nearbyServiceFilter, setNearbyServiceFilter] = useState(null);
   const [nearbyPins, setNearbyPins] = useState([]);
@@ -177,6 +177,13 @@ export default function HotelDetails() {
       price_per_night: roomPrice,
       room_type: room.room_name || room.room_type || 'Standard Room',
       room_id: room.id,
+      // Surface room details on the booking sidebar
+      room_image: (room.images && room.images[0]) || room.image || null,
+      room_bed_type: room.bed_type,
+      room_capacity: room.capacity,
+      room_size_sqm: room.size_sqm,
+      room_policies: room.policies || [],
+      room_cancellation_policy: room.cancellation_policy || null,
       selected_room: room
     };
     

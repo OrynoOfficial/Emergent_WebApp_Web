@@ -37,6 +37,7 @@ import ServicesToolbar from '@/components/management/banquet/ServicesToolbar';
 import ServicesGrid from '@/components/management/banquet/ServicesGrid';
 import ServiceDialog from '@/components/management/banquet/ServiceDialog';
 import ServiceViewModal from '@/components/management/banquet/ServiceViewModal';
+import RentalInventoryTab from '@/components/management/banquet/RentalInventoryTab';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 
 const PAGE_SIZE = 12;
@@ -1174,6 +1175,7 @@ export default function BanquetManagement() {
       tabs={[
         { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { value: 'management', label: 'Services', icon: Layers, testId: 'services-tab' },
+        { value: 'rentals', label: 'Rental Inventory', icon: Armchair, testId: 'rentals-tab' },
         { value: 'packages', label: 'Packages', icon: PackageIcon, testId: 'packages-tab' },
         { value: 'communications', label: 'Communications', icon: MessageSquare },
       ]}
@@ -1239,6 +1241,10 @@ export default function BanquetManagement() {
 
         <TabsContent value="packages" className="mt-6">
           <PackagesTab services={services} scopeOperatorId={scopeOperatorId} />
+        </TabsContent>
+
+        <TabsContent value="rentals" className="mt-6">
+          <RentalInventoryTab operators={operators} scopeOperatorId={scopeOperatorId} />
         </TabsContent>
 
         <TabsContent value="communications" className="mt-6">

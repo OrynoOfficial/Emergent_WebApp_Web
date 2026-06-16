@@ -752,7 +752,7 @@ export default function TravelBooking() {
                   
                   <div className="bg-gradient-to-b from-slate-50 to-white p-5 space-y-4">
                     {/* Outbound Trip */}
-                    <div className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm">
+                    <div className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm" data-testid="travel-booking-outbound-summary">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
@@ -762,6 +762,24 @@ export default function TravelBooking() {
                         </div>
                         <span className="text-[#082c59] font-bold text-sm">{formatCurrency(pricing.outboundPrice)}</span>
                       </div>
+
+                      {/* Bus thumbnail + operator card */}
+                      <div className="flex items-center gap-3 mb-3 p-2 bg-blue-50/40 rounded-lg border border-blue-100/60">
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-blue-100 shrink-0">
+                          {outbound.vehicle_images?.[0] || outbound.images?.[0] ? (
+                            <img src={outbound.vehicle_images?.[0] || outbound.images?.[0]} alt={outbound.vehicle_name || outbound.operator_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Bus className="w-6 h-6 text-blue-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate">{outbound.operator_name}</p>
+                          <p className="text-[11px] text-slate-500 truncate">{outbound.vehicle_name || outbound.vehicle_type || 'Bus'}{outbound.plate_number ? ` · ${outbound.plate_number}` : ''}</p>
+                        </div>
+                      </div>
+
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-3 p-2.5 bg-blue-50/50 rounded-lg">
                           <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
@@ -776,10 +794,6 @@ export default function TravelBooking() {
                             <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                             <span className="text-xs">{outbound.departure_time} – {outbound.arrival_time}</span>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-xs">
-                          <Bus className="w-3 h-3 shrink-0" />
-                          <span>{outbound.operator_name}{outbound.vehicle_type ? ` · ${outbound.vehicle_type}` : ''}</span>
                         </div>
                         {showSeatSelection && selectedSeats.length > 0 && (
                           <div className="flex items-center gap-2 text-xs">

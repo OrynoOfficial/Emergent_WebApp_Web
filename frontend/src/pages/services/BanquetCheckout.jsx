@@ -270,6 +270,7 @@ export default function BanquetCheckout() {
         service_id: it.service_id,
         quantity: it.quantity,
         hours: it.hours || null,
+        kind: it.snapshot?.kind || 'service',
       })),
       package_ids: cart.packages.map(p => p.package_id),
       contact_name: contact.contact_name,

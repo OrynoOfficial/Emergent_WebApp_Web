@@ -45,6 +45,22 @@ const getFeatureIcon = (feature) => {
   }
 };
 
+// Distinct (but limited) palette for amenity chips — 5 colours rotated by feature
+// keyword so users can scan a card at a glance.
+const FEATURE_CHIP_COLORS = {
+  ac:               'bg-sky-50 text-sky-700 border-sky-200',
+  bluetooth:        'bg-indigo-50 text-indigo-700 border-indigo-200',
+  gps:              'bg-emerald-50 text-emerald-700 border-emerald-200',
+  leather:          'bg-amber-50 text-amber-700 border-amber-200',
+  leather_seats:    'bg-amber-50 text-amber-700 border-amber-200',
+  sunroof:          'bg-rose-50 text-rose-700 border-rose-200',
+  cruise_control:   'bg-violet-50 text-violet-700 border-violet-200',
+  backup_camera:    'bg-violet-50 text-violet-700 border-violet-200',
+  usb:              'bg-indigo-50 text-indigo-700 border-indigo-200',
+  power_outlet:     'bg-indigo-50 text-indigo-700 border-indigo-200',
+};
+const getFeatureChipClass = (feature) => FEATURE_CHIP_COLORS[feature] || 'bg-slate-50 text-slate-700 border-slate-200';
+
 const getVehicleTypeColor = (type) => {
   switch (type?.toLowerCase()) {
     case 'luxury': return 'bg-gradient-to-r from-amber-500 to-amber-600 text-white';
@@ -144,7 +160,7 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
           {vehicle.features?.slice(0, 4).map((feature, idx) => {
             const Icon = getFeatureIcon(feature);
             return (
-              <span key={idx} className="flex items-center gap-0.5 text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded capitalize">
+              <span key={idx} className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded capitalize border ${getFeatureChipClass(feature)}`}>
                 <Icon className="h-2.5 w-2.5" /> {feature.replace(/_/g, ' ')}
               </span>
             );
@@ -162,8 +178,8 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
               per day{days > 1 ? ` · ${formatFCFA(totalPrice)} total` : ''}
             </div>
           </div>
-          <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8 px-3 shadow-sm">
-            Select
+          <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8 px-3 shadow-sm" data-testid="car-rental-view-details-grid">
+            View Details
           </Button>
         </div>
       </CardContent>
@@ -263,7 +279,7 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
               {vehicle.features?.map((feature, idx) => {
                 const Icon = getFeatureIcon(feature);
                 return (
-                  <span key={idx} className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 rounded text-[10px] text-slate-600 capitalize border border-slate-100">
+                  <span key={idx} className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] capitalize border ${getFeatureChipClass(feature)}`}>
                     <Icon className="w-2.5 h-2.5" /> {feature.replace(/_/g, ' ')}
                   </span>
                 );
@@ -277,8 +293,8 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
               <div className="text-lg font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
               <div className="text-[10px] text-slate-500">per day{days > 1 ? ` · Total: ${formatFCFA(totalPrice)}` : ''}</div>
             </div>
-            <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-9 px-4 text-xs shadow-sm">
-              Select Vehicle
+            <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-9 px-4 text-xs shadow-sm" data-testid="car-rental-view-details-list">
+              View Details
             </Button>
           </div>
         </div>

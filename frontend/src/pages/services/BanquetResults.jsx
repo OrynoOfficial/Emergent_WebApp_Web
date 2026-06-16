@@ -319,6 +319,7 @@ export default function BanquetResults() {
 
   const [services, setServices] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [rentalItems, setRentalItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryTab, setCategoryTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -359,16 +360,19 @@ export default function BanquetResults() {
     const load = async () => {
       try {
         setLoading(true);
-        const [svcRes, pkgRes] = await Promise.all([
+        const [svcRes, pkgRes, itemsRes] = await Promise.all([
           api.get('/banquets/', { params: { city, limit: 100 } }),
           api.get('/banquets/packages/', { params: { is_active: true, limit: 50 } }).catch(() => ({ data: { packages: [] } })),
+          api.get('/inventory/banquet-items', { params: { is_active: true } }).catch(() => ({ data: { items: [] } })),
         ]);
         setServices(svcRes.data.banquets || svcRes.data.venues || []);
         setPackages(pkgRes.data.packages || []);
+        setRentalItems(itemsRes.data.items || []);
       } catch (err) {
         console.error(err);
         setServices([]);
         setPackages([]);
+        setRentalItems([]);
       } finally {
         setLoading(false);
       }
@@ -399,7 +403,25 @@ export default function BanquetResults() {
   }, [services, categoryTab, searchQuery, sortBy, minPrice, maxPrice]);
 
   const qtyOf = (svcId) => cart.items.find(i => i.service_id === svcId)?.quantity || 0;
+  const qtyOfItem = (itemId) => cart.items.find(i => i.service_id === itemId && i.snapshot?.kind === 'item')?.quantity || 0;
   const isPkgInCart = (pkgId) => !!cart.packages.find(p => p.package_id === pkgId);
+
+  // Customer-side add for rentable inventory. The `_kind: 'item'` flag is
+  // forwarded into the cart's snapshot so checkout creates an inventory hold.
+  const addRentalItem = (item, qty = 1) => {
+    addItem({
+      id: item.id,
+      name: item.name,
+      base_price: item.unit_price,
+      pricing_model: 'per_unit',
+      unit_label: 'unit',
+      category: 'rental_item',
+      operator_id: item.operator_id,
+      operator_name: item.operator_name,
+      images: item.images || [],
+      _kind: 'item',
+    }, qty);
+  };
 
   if (loading) {
     return (
@@ -676,6 +698,82 @@ export default function BanquetResults() {
                   onOpenDetails={() => setDetailItem({ ...pkg, _type: 'package' })}
                 />
               ))}
+            </div>
+          </section>
+        )}
+
+        {rentalItems.length > 0 && (categoryTab === 'all' || categoryTab === 'rental_item') && (
+          <section data-testid="rental-items-section">
+            <div className="flex items-center gap-2 mb-4">
+              <Armchair className="w-5 h-5 text-amber-700" />
+              <h2 className="text-lg font-bold text-slate-900">Rentable Items</h2>
+              <Badge className="bg-amber-100 text-amber-700 border-0">Live stock</Badge>
+              <span className="text-xs text-slate-500 hidden sm:inline">— chairs, plates, linens & more</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {rentalItems.map(item => {
+                const q = qtyOfItem(item.id);
+                const avail = item.available_units || 0;
+                const total = item.total_units || 0;
+                const lowStock = avail > 0 && avail < total * 0.2;
+                const cover = item.images?.[0];
+                return (
+                  <Card
+                    key={item.id}
+                    className="overflow-hidden border-amber-200 bg-gradient-to-br from-amber-50/60 to-white hover:shadow-lg transition-shadow"
+                    data-testid={`rental-item-card-${item.id}`}
+                  >
+                    <div className="relative h-28 bg-gradient-to-br from-amber-100 to-orange-100">
+                      {cover ? (
+                        <img src={cover} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Armchair className="w-10 h-10 text-amber-400" />
+                        </div>
+                      )}
+                      {avail <= 0 ? (
+                        <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
+                          <Badge className="bg-rose-500 text-white border-0">Out of Stock</Badge>
+                        </div>
+                      ) : lowStock ? (
+                        <div className="absolute top-1.5 right-1.5">
+                          <Badge className="bg-rose-500 text-white border-0 text-[10px]">Only {avail} left</Badge>
+                        </div>
+                      ) : null}
+                    </div>
+                    <CardContent className="p-2.5 space-y-1.5">
+                      <h3 className="font-semibold text-sm text-slate-900 leading-tight line-clamp-1">{item.name}</h3>
+                      <div className="flex items-baseline justify-between">
+                        <div>
+                          <div className="text-amber-700 font-bold text-base leading-none">{formatFCFA(item.unit_price || 0)}</div>
+                          <div className="text-[10px] text-slate-500">/ unit · {avail} avail</div>
+                        </div>
+                        {q > 0 ? (
+                          <div className="flex items-center gap-0.5">
+                            <Button size="icon" variant="outline" className="h-6 w-6 border-amber-300" onClick={() => updateQty(item.id, Math.max(1, q - 1))} data-testid={`item-dec-${item.id}`}>
+                              <Minus className="w-2.5 h-2.5" />
+                            </Button>
+                            <span className="text-xs font-semibold w-6 text-center" data-testid={`item-qty-${item.id}`}>{q}</span>
+                            <Button size="icon" variant="outline" className="h-6 w-6 border-amber-300" onClick={() => updateQty(item.id, Math.min(avail, q + 1))} data-testid={`item-inc-${item.id}`}>
+                              <Plus className="w-2.5 h-2.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled={avail <= 0}
+                            onClick={() => addRentalItem(item, 1)}
+                            className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                            data-testid={`add-item-${item.id}`}
+                          >
+                            <Plus className="w-3 h-3 mr-0.5" /> Add
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </section>
         )}

@@ -70,7 +70,11 @@ class InventoryHold(BaseModel):
     status: InventoryHoldStatus = InventoryHoldStatus.RESERVED
     returned_at: Optional[datetime] = None
     damaged_quantity: int = 0
-    operator_note: Optional[str] = None  # For damage reports / keep-out messages
+    damage_fee: float = 0.0           # Charge added to the order's invoice when units are damaged.
+    damage_description: Optional[str] = None  # Operator-supplied note about the damage (broken legs, stained linen, …)
+    operator_note: Optional[str] = None  # General operator note (return condition, etc.)
+    item_name: Optional[str] = None   # Denormalised from the parent entity for fast dashboard rendering.
+    unit_price: float = 0.0           # Snapshot of unit_price at hold-creation time (used to suggest damage fee).
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
