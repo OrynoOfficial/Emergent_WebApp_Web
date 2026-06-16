@@ -1,5 +1,31 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 242: Events Results polish + Cinema-style booking)
+
+### EventsResults header — pink hero (banquet pattern, events colour)
+Replaced the plain title strip with a `bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600` Card hero — same DNA as the banquet teal hero — carrying a PartyPopper icon, city + count + active-filter chips, and an integrated grid/list toggle. Filters (search, type, sort) sit in a separate strip directly below. data-testid: `events-search-hero`.
+
+### EventCardGrid — rich-info cards
+Each result card now surfaces venue + city + date + doors-open + operator (with logo) + class-color badges + **capacity progress bar** (Filling fast / colour-graded). Click anywhere on the card opens the preview modal. data-testids: `event-card-grid-{id}`, `view-details-grid-{id}`.
+
+### EventPreviewModal — sections as cards
+Switched the section list to discrete `<Card>` blocks for clearer visual separation:
+- `event-preview-quickfacts` (Date / Doors / Venue / Capacity)
+- `event-preview-about` (description)
+- `event-preview-operator` (logo + contact)
+- `event-preview-map` (OpenStreetMap embed + Open-in-Maps link footer)
+- `event-preview-seating` (layout-type-aware preview)
+- `event-preview-policies-card` (venue rules checklist)
+- Sticky right Card: starting price + ticket classes + **"Proceed to Booking"** (renamed from "Book Now").
+
+### ShowtimeDetails — Cinema-style polish
+Rebuilt the right rail with the same header-banded card pattern Cinema uses:
+- **Pink** band → "Pick your tickets" (class picker + qty)
+- **Navy** band → "Your details" (name / email / phone)
+- **Navy** band → "Price Breakdown" with line items + Continue CTA
+- After reservation: **emerald** band → "Reservation confirmed" summary, **cyan** band → "Payment method" (PaymentMethodsSelection) → big "Pay {amount}" CTA + edit-reservation link.
+
+
 ## Latest Changes (Feb 2026 — iter 241: Self-hosted QR + Event preview modal + 2-step booking)
 
 ### Self-hosted QR endpoint ✅

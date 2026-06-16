@@ -11,8 +11,7 @@ import { Label } from '@/components/ui/label';
 import {
   ArrowLeft, MapPin, Calendar, Clock, Ticket, Users, Loader2, CheckCircle2,
   Plus, Minus, Flame, Sparkles, Image as ImageIcon, AlertCircle, Building2,
-  CreditCard, User as UserIcon, Mail, Phone, ShieldCheck,
-} from 'lucide-react';
+  CreditCard, User as UserIcon, Mail, Phone, ShieldCheck,} from 'lucide-react';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { format, parseISO, isValid } from 'date-fns';
@@ -279,125 +278,148 @@ export default function ShowtimeDetails() {
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           {step === 1 ? (
             // ─── STEP 1: pick class + qty + contact ──────────────────────
-            <Card className="border-amber-200 shadow-md" data-testid="reserve-card">
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-amber-700" />
-                  <h2 className="font-bold text-slate-900">Pick your tickets</h2>
+            <>
+              {/* Ticket class picker — pink-themed card with header band */}
+              <Card className="overflow-hidden border-pink-200 shadow-lg" data-testid="reserve-card">
+                <div className="bg-gradient-to-r from-pink-600 to-rose-600 p-3">
+                  <h2 className="font-bold text-white flex items-center gap-2">
+                    <Ticket className="w-4 h-4" /> Pick your tickets
+                  </h2>
                 </div>
-
-                <div className="space-y-2" data-testid="ticket-classes">
-                  {(showtime.classes || []).map(c => {
-                    const isActive = selectedClassId === c.id;
-                    const soldOut = (c.available_units ?? 0) <= 0;
-                    const chip = availabilityChip(c);
-                    const ChipIcon = chip.icon;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        disabled={soldOut || isPastShowtime}
-                        onClick={() => { setSelectedClassId(c.id); setQuantity(1); }}
-                        className={`w-full text-left rounded-lg border-2 p-3 transition-all ${
-                          soldOut || isPastShowtime ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
-                          isActive ? 'border-amber-500 bg-amber-50 shadow' : 'border-slate-200 hover:border-amber-300 bg-white'
-                        }`}
-                        data-testid={`class-option-${c.id}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
-                            <span className="font-semibold text-sm text-slate-900 truncate">{c.name}</span>
+                <CardContent className="bg-white p-4 space-y-3">
+                  <div className="space-y-2" data-testid="ticket-classes">
+                    {(showtime.classes || []).map(c => {
+                      const isActive = selectedClassId === c.id;
+                      const soldOut = (c.available_units ?? 0) <= 0;
+                      const chip = availabilityChip(c);
+                      const ChipIcon = chip.icon;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          disabled={soldOut || isPastShowtime}
+                          onClick={() => { setSelectedClassId(c.id); setQuantity(1); }}
+                          className={`w-full text-left rounded-lg border-2 p-3 transition-all ${
+                            soldOut || isPastShowtime ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
+                            isActive ? 'border-pink-500 bg-pink-50 shadow-sm' : 'border-slate-200 hover:border-pink-300 bg-white'
+                          }`}
+                          data-testid={`class-option-${c.id}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
+                              <span className="font-semibold text-sm text-slate-900 truncate">{c.name}</span>
+                            </div>
+                            <span className="font-bold text-pink-700 text-sm whitespace-nowrap">{formatFCFA(c.price)}</span>
                           </div>
-                          <span className="font-bold text-amber-700 text-sm whitespace-nowrap">{formatFCFA(c.price)}</span>
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chip.color}`}>
-                            <ChipIcon className="w-3 h-3" /> {chip.text}
-                          </span>
-                          {(c.perks || []).slice(0, 2).map((p, i) => (
-                            <span key={i} className="text-[10px] text-slate-500">• {p}</span>
-                          ))}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedClass && !isPastShowtime && (
-                  <div className="pt-3 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">Quantity</span>
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" className="w-8 h-8 p-0"
-                          onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                          disabled={quantity <= 1} data-testid="qty-decrement"><Minus className="w-3.5 h-3.5" /></Button>
-                        <span className="font-bold w-8 text-center" data-testid="qty-value">{quantity}</span>
-                        <Button size="sm" variant="outline" className="w-8 h-8 p-0"
-                          onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                          disabled={quantity >= maxQty} data-testid="qty-increment"><Plus className="w-3.5 h-3.5" /></Button>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1">Up to {maxQty} per order</p>
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chip.color}`}>
+                              <ChipIcon className="w-3 h-3" /> {chip.text}
+                            </span>
+                            {(c.perks || []).slice(0, 2).map((p, i) => (
+                              <span key={i} className="text-[10px] text-slate-500">• {p}</span>
+                            ))}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
 
-                {selectedClass && !isPastShowtime && (
-                  <div className="pt-3 border-t border-slate-100 space-y-2">
-                    <p className="text-xs uppercase font-semibold text-slate-500 flex items-center gap-1.5">
-                      <UserIcon className="w-3 h-3" /> Your details
-                    </p>
+                  {selectedClass && !isPastShowtime && (
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-700">Quantity</span>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" className="w-8 h-8 p-0"
+                            onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                            disabled={quantity <= 1} data-testid="qty-decrement"><Minus className="w-3.5 h-3.5" /></Button>
+                          <span className="font-bold w-8 text-center" data-testid="qty-value">{quantity}</span>
+                          <Button size="sm" variant="outline" className="w-8 h-8 p-0"
+                            onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                            disabled={quantity >= maxQty} data-testid="qty-increment"><Plus className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">Up to {maxQty} per order</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Your details — separate card, like cinema */}
+              {selectedClass && !isPastShowtime && (
+                <Card className="overflow-hidden border-slate-200 shadow-md" data-testid="contact-card">
+                  <div className="bg-[#082c59] p-3">
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <UserIcon className="w-4 h-4" /> Your details
+                    </h4>
+                  </div>
+                  <CardContent className="bg-white p-4 space-y-2">
                     <div>
-                      <Label className="text-[10px]">Name *</Label>
-                      <Input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} className="h-9 text-sm" data-testid="contact-name-input" />
+                      <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Name *</Label>
+                      <Input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-name-input" />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-[10px] flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
-                        <Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} className="h-9 text-sm" data-testid="contact-email-input" />
+                        <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
+                        <Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-email-input" />
                       </div>
                       <div>
-                        <Label className="text-[10px] flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
-                        <Input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className="h-9 text-sm" data-testid="contact-phone-input" />
+                        <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
+                        <Input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-phone-input" />
                       </div>
                     </div>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                <div className="pt-3 border-t border-slate-200 bg-slate-50/50 -mx-4 -mb-4 px-4 pb-4 rounded-b-lg">
-                  <div className="flex items-baseline justify-between mb-3">
-                    <span className="text-xs uppercase font-semibold text-slate-500">Total</span>
-                    <span className="text-2xl font-bold text-amber-700" data-testid="total-amount">{formatFCFA(subtotal)}</span>
+              {/* Price breakdown — cinema-style total card */}
+              <Card className="overflow-hidden shadow-lg border border-slate-100" data-testid="events-price-breakdown">
+                <div className="bg-[#082c59] p-3">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Price Breakdown
+                  </h4>
+                </div>
+                <CardContent className="bg-white p-4 space-y-2">
+                  {selectedClass && (
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>{selectedClass.name} × {quantity}</span>
+                      <span className="font-medium tabular-nums">{formatFCFA(selectedClass.price * quantity)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-200 text-pink-700">
+                    <span>Total</span>
+                    <span className="tabular-nums" data-testid="total-amount">{formatFCFA(subtotal)}</span>
                   </div>
                   <Button onClick={handleReserve}
                     disabled={!selectedClass || reserving || isPastShowtime || (selectedClass?.available_units ?? 0) <= 0}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white h-11"
+                    className="w-full bg-pink-600 hover:bg-pink-700 text-white h-11 mt-2 shadow shadow-pink-500/30"
                     data-testid="book-now-btn">
                     {reserving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reserving…</>
                     ) : isPastShowtime ? (<><AlertCircle className="w-4 h-4 mr-2" /> Event has ended</>
                     ) : (<><Ticket className="w-4 h-4 mr-2" /> Continue to payment</>)}
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </>
           ) : (
             // ─── STEP 2: pay ─────────────────────────────────────────────
             <>
-              {/* Order summary */}
-              <Card className="border-emerald-200" data-testid="order-summary-card">
-                <CardContent className="p-4 space-y-2.5">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <h2 className="font-bold text-slate-900">Reservation confirmed</h2>
-                  </div>
-                  <p className="text-xs text-slate-500 -mt-1">Complete payment below to lock in your seats.</p>
-                  <div className="mt-2 space-y-2 bg-emerald-50/60 rounded-lg p-3">
+              {/* Order summary — cinema-style header band */}
+              <Card className="overflow-hidden border-emerald-200 shadow-md" data-testid="order-summary-card">
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-3">
+                  <h2 className="font-bold text-white flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Reservation confirmed
+                  </h2>
+                </div>
+                <CardContent className="bg-white p-4 space-y-2.5">
+                  <p className="text-xs text-slate-500">Complete payment below to lock in your seats.</p>
+                  <div className="bg-emerald-50/60 rounded-lg p-3 space-y-2 border border-emerald-100">
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 rounded-full" style={{ background: selectedClass?.color || '#3b82f6' }} />
                       <span className="font-bold text-sm text-slate-900">{selectedClass?.name}</span>
                       <Badge className="ml-auto bg-slate-900 text-white border-0">× {quantity}</Badge>
                     </div>
-                    <div className="text-xs text-slate-600">{showtime.title}</div>
+                    <div className="text-xs text-slate-600 font-medium">{showtime.title}</div>
                     <div className="text-xs text-slate-500">{fmtDateTime(showtime.start_datetime)}</div>
                     <div className="text-xs text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3" /> {showtime.location_name}</div>
                   </div>
@@ -408,20 +430,18 @@ export default function ShowtimeDetails() {
                 </CardContent>
               </Card>
 
-              {/* Payment */}
-              <Card className="border-cyan-200" data-testid="payment-card">
-                <div className="bg-gradient-to-r from-cyan-50 to-white border-b border-cyan-200 p-3">
+              {/* Payment — cinema-style header band */}
+              <Card className="overflow-hidden border-cyan-200 shadow-md" data-testid="payment-card">
+                <div className="bg-gradient-to-r from-cyan-700 to-blue-700 p-3">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-cyan-100 rounded-lg border border-cyan-300">
-                      <CreditCard className="h-4 w-4 text-cyan-700" />
-                    </div>
+                    <CreditCard className="h-4 w-4 text-white" />
                     <div>
-                      <h3 className="font-bold text-slate-900 text-sm">Payment method</h3>
-                      <p className="text-[10px] text-cyan-700/80 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Secure checkout · Stripe / MoMo / Orange</p>
+                      <h3 className="font-bold text-white text-sm">Payment method</h3>
+                      <p className="text-[10px] text-cyan-100 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Secure checkout · Stripe / MoMo / Orange</p>
                     </div>
                   </div>
                 </div>
-                <CardContent className="p-3">
+                <CardContent className="bg-white p-3">
                   <PaymentMethodsSelection
                     amount={subtotal}
                     orderId={orderId}
@@ -436,7 +456,7 @@ export default function ShowtimeDetails() {
               </Card>
 
               <Button onClick={handlePay} disabled={!selectedPaymentMethod}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-11"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 shadow shadow-emerald-500/30"
                 data-testid="confirm-payment-btn">
                 {selectedPaymentMethod
                   ? <>Pay {formatFCFA(subtotal)}</>

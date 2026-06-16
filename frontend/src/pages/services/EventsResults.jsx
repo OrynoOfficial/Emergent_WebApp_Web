@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle, Building2, Eye } from 'lucide-react';
 import { eventsApi } from '@/api/services';
 import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
@@ -36,12 +36,14 @@ const getEventIcon = (type) => {
   }
 };
 
-// Grid View Event Card
+// Grid View Event Card — rich, info-dense card with venue, organiser, doors,
+// availability chip and class price range. Click anywhere → opens the
+// EventPreviewModal (the modal then pivots to the booking page).
 const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
   const event = {
     ...rawEvent,
     type: rawEvent.type || rawEvent.event_type,
-    venue: rawEvent.venue || rawEvent.venue_name,
+    venue: rawEvent.venue || rawEvent.venue_name || rawEvent.location_name,
     date: rawEvent.date || rawEvent.start_date || rawEvent.event_date,
     time: rawEvent.time || rawEvent.doors_open || rawEvent.start_time,
     priceFrom: rawEvent.priceFrom || rawEvent.ticket_price || (rawEvent.ticket_types?.[0]?.price) || 0,
@@ -51,18 +53,22 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
     contact_email: rawEvent.contact_email,
     contact_phone: rawEvent.contact_phone,
   };
-  // Favourites handled by parent via isFav/toggleFav props
   const EventIcon = getEventIcon(event.type);
   const isEventPast = isPast(event.date, event.time);
-  
+  const classCount = (rawEvent.classes || []).length;
+  const totalCapacity = rawEvent.total_capacity ?? 0;
+  const soldOutPct = totalCapacity > 0
+    ? Math.min(100, Math.round(((totalCapacity - event.ticketsLeft) / totalCapacity) * 100))
+    : 0;
+
   return (
-    <Card 
-      className={`group overflow-hidden bg-white rounded-2xl border-0 shadow-md transition-all duration-300 ${
-        isEventPast 
-          ? 'cursor-not-allowed' 
-          : 'hover:shadow-2xl transform hover:-translate-y-1'
+    <Card
+      className={`group overflow-hidden bg-white rounded-2xl border border-pink-100 shadow-md transition-all duration-300 ${
+        isEventPast ? 'cursor-not-allowed' : 'hover:shadow-2xl hover:border-pink-300 hover:-translate-y-1 cursor-pointer'
       }`}
       style={isEventPast ? { opacity: 0.5, filter: 'grayscale(100%)' } : {}}
+      onClick={() => !isEventPast && onBook(event)}
+      data-testid={`event-card-grid-${event._id || event.id}`}
     >
       {/* Image */}
       <div className="h-48 relative overflow-hidden">
@@ -71,11 +77,10 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
           alt={event.name}
           className={`w-full h-full object-cover transition-transform duration-500 ${!isEventPast && 'group-hover:scale-105'}`}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        
-        {/* Favorite & Subscribe buttons - only show for future events */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+
         {!isEventPast && (
-          <div className="absolute top-3 right-3 z-10 flex gap-1.5">
+          <div className="absolute top-3 right-3 z-10 flex gap-1.5" onClick={(e) => e.stopPropagation()}>
             <SubscribeButton operatorId={event.operator_id} operatorName={event.operator_name} variant="icon" />
             <FavouriteButton
               isFavourite={!!(isFav && isFav(event._id || event.id))}
@@ -86,76 +91,114 @@ const EventCardGrid = ({ event: rawEvent, onBook, isFav, toggleFav }) => {
             />
           </div>
         )}
-        
-        {/* Type Badge & Past Event Badge */}
+
         <div className="absolute top-3 left-3 flex items-center gap-2">
-          <Badge className={`${isEventPast ? 'bg-slate-500' : EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
-            <EventIcon className="w-3 h-3 mr-1" />
-            {event.type}
-          </Badge>
+          {event.type && (
+            <Badge className={`${isEventPast ? 'bg-slate-500' : EVENT_TYPE_COLORS[event.type] || 'bg-pink-600'}`}>
+              <EventIcon className="w-3 h-3 mr-1" />
+              {event.type}
+            </Badge>
+          )}
           {isEventPast && (
             <Badge className="bg-slate-700 text-white">
               <AlertCircle className="w-3 h-3 mr-1" /> Past Event
             </Badge>
           )}
         </div>
-        
-        {/* Rating */}
+
         <div className={`absolute bottom-3 left-3 flex items-center gap-1 text-white text-xs px-2 py-1 rounded-full ${isEventPast ? 'bg-slate-500/60' : 'bg-black/60'}`}>
           <Star className={`w-3 h-3 ${isEventPast ? 'text-slate-300' : 'text-yellow-400 fill-yellow-400'}`} />
           {event.rating}
         </div>
-        
-        {/* Urgency Badge — unified ≤11 FOMO sticker */}
+
         {!isEventPast && (
           <div className="absolute bottom-3 right-3" data-testid={`event-fomo-grid-${event._id || event.id}`}>
             <AlmostSoldOutBadge count={event.ticketsLeft} unit="tickets" />
           </div>
         )}
       </div>
-      
+
       {/* Content */}
-      <CardContent className="p-5">
-        <h3 className={`font-bold text-lg mb-2 line-clamp-2 ${isEventPast ? 'text-slate-400' : 'text-slate-900'}`}>{event.name}</h3>
-        
-        <div className="space-y-2 text-sm text-slate-600 mb-4">
-          <div className="flex items-center gap-2">
-            <MapPin className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
-            <span>{event.venue}, {event.city}</span>
+      <CardContent className="p-4">
+        <h3 className={`font-bold text-base mb-2 line-clamp-2 ${isEventPast ? 'text-slate-400' : 'text-slate-900'}`}>{event.name}</h3>
+
+        {/* Quick facts */}
+        <div className="space-y-1.5 text-xs text-slate-600 mb-3">
+          <div className="flex items-center gap-1.5">
+            <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
+            <span className="truncate">{event.venue}{event.city ? `, ${event.city}` : ''}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
-              <Calendar className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
-              <span>{event.date ? format(new Date(event.date), 'MMM dd, yyyy') : 'TBD'}</span>
+              <Calendar className={`w-3.5 h-3.5 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
+              <span className="font-medium">{event.date ? format(new Date(event.date), 'MMM dd, yyyy') : 'TBD'}</span>
             </div>
             {event.time && (
               <div className="flex items-center gap-1">
-                <Clock className={`w-4 h-4 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
+                <Clock className={`w-3.5 h-3.5 ${isEventPast ? 'text-slate-400' : 'text-pink-500'}`} />
                 <span>{event.time}</span>
               </div>
             )}
           </div>
-          {(event.contact_email || event.contact_phone) && (
-            <div className="flex items-center gap-3 text-xs text-slate-500">
-              {event.contact_phone && <span>{event.contact_phone}</span>}
-              {event.contact_email && <span>{event.contact_email}</span>}
+          {rawEvent.operator_name && (
+            <div className="flex items-center gap-1.5 text-slate-500 pt-0.5">
+              {rawEvent.operator_logo_url ? (
+                <img src={rawEvent.operator_logo_url} alt={rawEvent.operator_name} className="w-4 h-4 rounded-full object-cover" />
+              ) : (
+                <Building2 className="w-3.5 h-3.5 text-pink-400" />
+              )}
+              <span className="truncate text-[11px]">{rawEvent.operator_name}</span>
             </div>
           )}
         </div>
-        
+
+        {/* Class badges (showtime) */}
+        {classCount > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {(rawEvent.classes || []).slice(0, 3).map((c) => (
+              <Badge
+                key={c.id}
+                variant="outline"
+                className="text-[10px] border bg-white"
+                style={{ borderColor: c.color, color: c.color }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full mr-1" style={{ background: c.color }} />
+                {c.name}
+              </Badge>
+            ))}
+            {classCount > 3 && <Badge variant="outline" className="text-[10px] bg-white text-slate-500">+{classCount - 3}</Badge>}
+          </div>
+        )}
+
+        {/* Capacity bar */}
+        {totalCapacity > 0 && !isEventPast && (
+          <div className="mb-3">
+            <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
+              <span>{event.ticketsLeft} of {totalCapacity} available</span>
+              {soldOutPct >= 80 && <span className="text-orange-600 font-semibold">Filling fast</span>}
+            </div>
+            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${soldOutPct >= 80 ? 'bg-orange-500' : soldOutPct >= 50 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                style={{ width: `${soldOutPct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Price & CTA */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <div>
-            <div className="text-xs text-slate-500">From</div>
-            <div className={`text-2xl font-bold ${isEventPast ? 'text-slate-400' : 'text-pink-600'}`}>{formatFCFA(event.priceFrom)}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-wide">From</div>
+            <div className={`text-xl font-bold ${isEventPast ? 'text-slate-400' : 'text-pink-600'}`}>{formatFCFA(event.priceFrom)}</div>
           </div>
           {isEventPast ? (
             <Button disabled className="bg-slate-200 text-slate-400 cursor-not-allowed rounded-xl">
               <AlertCircle className="w-4 h-4 mr-2" /> Ended
             </Button>
           ) : (
-            <Button onClick={() => onBook(event)} className="bg-pink-600 hover:bg-pink-700 rounded-xl" data-testid={`view-details-grid-${event._id || event.id}`}>
-              <Ticket className="w-4 h-4 mr-2" /> View Details
+            <Button onClick={(e) => { e.stopPropagation(); onBook(event); }} className="bg-pink-600 hover:bg-pink-700 rounded-xl shadow shadow-pink-500/30" data-testid={`view-details-grid-${event._id || event.id}`}>
+              <Eye className="w-4 h-4 mr-2" /> View Details
             </Button>
           )}
         </div>
@@ -381,37 +424,70 @@ export default function EventsResults() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-20">
+    <div className="min-h-screen bg-pink-50/30 pb-12">
+      {/* Sticky header — banquet-style hero with the pink/rose events palette */}
+      <div className="bg-white border-b border-pink-100 shadow-sm sticky top-0 z-20">
         <div className="px-4 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/events')} className="gap-2">
+          <div className="flex items-center gap-4 mb-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services/events')} className="gap-2 text-pink-700 hover:bg-pink-50" data-testid="events-back-btn">
               <ArrowLeft className="w-4 h-4" /> Back
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-pink-600">Events {city && `in ${city}`}</h1>
-              <p className="text-sm text-slate-500">
-                {filteredEvents.length} events found
-              </p>
-            </div>
           </div>
 
-          {/* Filters */}
+          {/* Hero — pink/rose gradient (events color, mirrors banquet teal hero) */}
+          <Card className="shadow-sm bg-gradient-to-r from-pink-600 via-rose-500 to-pink-600 text-white mb-4 border-transparent" data-testid="events-search-hero">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-12 h-12 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <PartyPopper className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-xl font-bold truncate">Events {city && `in ${city}`}</h2>
+                    <div className="flex items-center gap-2 text-white/85 text-sm mt-0.5 flex-wrap">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{filteredEvents.length} event{filteredEvents.length === 1 ? '' : 's'} found</span>
+                      {typeFilter !== 'all' && <Badge className="bg-white/20 text-white border-white/30 text-[10px] capitalize">{typeFilter}</Badge>}
+                      {date && <Badge className="bg-white/20 text-white border-white/30 text-[10px]"><Calendar className="w-3 h-3 mr-1" />{date}</Badge>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-white/15 rounded-lg p-0.5">
+                    <Button
+                      variant="ghost" size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className={`text-white hover:bg-white/20 h-8 px-2 ${viewMode === 'grid' ? 'bg-white/25' : ''}`}
+                      data-testid="view-grid-btn"
+                    ><LayoutGrid className="w-4 h-4" /></Button>
+                    <Button
+                      variant="ghost" size="sm"
+                      onClick={() => setViewMode('list')}
+                      className={`text-white hover:bg-white/20 h-8 px-2 ${viewMode === 'list' ? 'bg-white/25' : ''}`}
+                      data-testid="view-list-btn"
+                    ><List className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Filters strip — separate card under the hero */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-400" />
               <Input
                 type="text"
-                placeholder="Search events..."
+                placeholder="Search events…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
+                className="pl-10 bg-white border-pink-200 focus-visible:ring-pink-500"
+                data-testid="events-search-input"
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40 bg-white">
-                <Ticket className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-40 bg-white border-pink-200" data-testid="events-type-filter">
+                <Ticket className="w-4 h-4 mr-2 text-pink-600" />
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -424,8 +500,8 @@ export default function EventsResults() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-48 bg-white border-pink-200" data-testid="events-sort-by">
+                <SlidersHorizontal className="w-4 h-4 mr-2 text-pink-600" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -435,24 +511,6 @@ export default function EventsResults() {
                 <SelectItem value="price_high">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
           </div>
         </div>
       </div>

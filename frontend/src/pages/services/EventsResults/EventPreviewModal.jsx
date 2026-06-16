@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -203,169 +204,189 @@ export default function EventPreviewModal({ open, onOpenChange, event }) {
         </div>
 
         {/* Body — left scroll, right sticky CTA */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
-          <div className="lg:col-span-2 p-5 space-y-5">
-            {/* Quick facts */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="flex items-start gap-2">
-                <Calendar className="w-4 h-4 text-pink-600 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase text-slate-500 font-semibold">Date</p>
-                  <p className="text-xs font-bold truncate">{fmtWhen(event.start_datetime || event.date)}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Clock className="w-4 h-4 text-pink-600 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase text-slate-500 font-semibold">Doors</p>
-                  <p className="text-xs font-bold truncate">{event.doors_open_at || event.time || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-pink-600 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase text-slate-500 font-semibold">Venue</p>
-                  <p className="text-xs font-bold truncate">{event.venue || event.location_name || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <Users className="w-4 h-4 text-pink-600 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase text-slate-500 font-semibold">Capacity</p>
-                  <p className="text-xs font-bold">{location?.capacity ?? event.total_capacity ?? '—'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* About */}
-            {(event.description || event.showtime_description) && (
-              <section>
-                <h3 className="text-sm font-bold text-slate-900 mb-1.5">About this event</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{event.description || event.showtime_description}</p>
-              </section>
-            )}
-
-            {/* Operator card */}
-            {(event.operator_name || event.operator_id) && (
-              <section className="bg-gradient-to-br from-indigo-50 to-white rounded-xl border border-indigo-100 p-3">
-                <div className="flex items-center gap-3">
-                  {event.operator_logo_url ? (
-                    <img src={event.operator_logo_url} alt={event.operator_name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
-                      {(event.operator_name || '?').charAt(0)}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 bg-pink-50/30">
+          <div className="lg:col-span-2 p-5 space-y-4">
+            {/* Quick facts — single card */}
+            <Card className="border-pink-100 shadow-sm" data-testid="event-preview-quickfacts">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="flex items-start gap-2">
+                    <Calendar className="w-4 h-4 text-pink-600 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold">Date</p>
+                      <p className="text-xs font-bold truncate">{fmtWhen(event.start_datetime || event.date)}</p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] uppercase font-semibold text-indigo-600">Organised by</p>
-                    <p className="text-sm font-bold text-slate-900 truncate">{event.operator_name}</p>
                   </div>
-                  {(event.contact_phone || event.contact_email) && (
-                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                      {event.contact_phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{event.contact_phone}</span>}
-                      {event.contact_email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{event.contact_email}</span>}
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-4 h-4 text-pink-600 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold">Doors</p>
+                      <p className="text-xs font-bold truncate">{event.doors_open_at || event.time || '—'}</p>
                     </div>
-                  )}
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-pink-600 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold">Venue</p>
+                      <p className="text-xs font-bold truncate">{event.venue || event.location_name || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Users className="w-4 h-4 text-pink-600 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold">Capacity</p>
+                      <p className="text-xs font-bold">{location?.capacity ?? event.total_capacity ?? '—'}</p>
+                    </div>
+                  </div>
                 </div>
-              </section>
+              </CardContent>
+            </Card>
+
+            {/* About — own card */}
+            {(event.description || event.showtime_description) && (
+              <Card className="border-pink-100 shadow-sm" data-testid="event-preview-about">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-pink-600" /> About this event
+                  </h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">{event.description || event.showtime_description}</p>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Map */}
+            {/* Operator — own card */}
+            {(event.operator_name || event.operator_id) && (
+              <Card className="border-pink-100 shadow-sm" data-testid="event-preview-operator">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    {event.operator_logo_url ? (
+                      <img src={event.operator_logo_url} alt={event.operator_name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow" />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-pink-200 flex items-center justify-center text-pink-700 font-bold text-lg">
+                        {(event.operator_name || '?').charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase font-semibold text-pink-600">Organised by</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{event.operator_name}</p>
+                    </div>
+                    {(event.contact_phone || event.contact_email) && (
+                      <div className="flex flex-col items-end gap-1 text-xs text-slate-600">
+                        {event.contact_phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{event.contact_phone}</span>}
+                        {event.contact_email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{event.contact_email}</span>}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Map — own card */}
             {hasMap && (
-              <section>
-                <h3 className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-pink-600" /> Location
-                </h3>
-                <div className="rounded-xl overflow-hidden border border-slate-200" data-testid="event-preview-map">
-                  <iframe
-                    title="Venue map"
-                    src={mapUrl}
-                    className="w-full h-52 border-0"
-                    loading="lazy"
-                  />
+              <Card className="border-pink-100 shadow-sm overflow-hidden" data-testid="event-preview-map">
+                <div className="px-4 pt-4 pb-2">
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-pink-600" /> Location
+                  </h3>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">
+                <iframe
+                  title="Venue map"
+                  src={mapUrl}
+                  className="w-full h-52 border-0 border-t border-pink-100"
+                  loading="lazy"
+                />
+                <div className="px-4 py-2 text-xs text-slate-500 border-t border-pink-100 bg-pink-50/40">
                   {location?.address && <>{location.address} · </>}
                   {location?.city || event.city}
                   {' · '}
                   <a
                     href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`}
                     target="_blank" rel="noreferrer"
-                    className="text-pink-600 hover:underline"
+                    className="text-pink-600 hover:underline font-medium"
                   >Open in Maps</a>
-                </p>
-              </section>
+                </div>
+              </Card>
             )}
 
-            {/* Seating layout */}
+            {/* Seating layout — own card */}
             {isShowtime && location && (
-              <section>
-                <h3 className="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
-                  <Theater className="w-4 h-4 text-pink-600" /> Seating arrangement
-                </h3>
-                <LayoutPreview location={location} />
-              </section>
+              <Card className="border-pink-100 shadow-sm" data-testid="event-preview-seating">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+                    <Theater className="w-4 h-4 text-pink-600" /> Seating arrangement
+                  </h3>
+                  <LayoutPreview location={location} />
+                </CardContent>
+              </Card>
             )}
 
-            {/* Venue policies */}
+            {/* Venue policies — own card */}
             {policies.length > 0 && (
-              <section>
-                <h3 className="text-sm font-bold text-slate-900 mb-1.5">Venue policies</h3>
-                <ul className="space-y-1.5" data-testid="event-preview-policies">
-                  {policies.map((p, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-slate-700">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                      <span>{p}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+              <Card className="border-pink-100 shadow-sm" data-testid="event-preview-policies-card">
+                <CardContent className="p-4">
+                  <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-pink-600" /> Venue policies
+                  </h3>
+                  <ul className="space-y-1.5" data-testid="event-preview-policies">
+                    {policies.map((p, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-slate-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
             )}
           </div>
 
           {/* Right — sticky ticket panel */}
-          <aside className="lg:sticky lg:top-0 lg:self-start bg-gradient-to-b from-slate-50 to-white p-5 border-l border-slate-100 space-y-3" data-testid="event-preview-panel">
-            <div className="flex items-baseline justify-between">
-              <p className="text-xs uppercase font-semibold text-slate-500">Starting from</p>
-              <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px]">
-                <Star className="w-3 h-3 mr-1 fill-amber-500 text-amber-500" /> {event.rating || 4.5}
-              </Badge>
-            </div>
-            <p className="text-3xl font-bold text-pink-600">{formatFCFA(event.priceFrom || 0)}</p>
+          <aside className="lg:sticky lg:top-0 lg:self-start p-5 space-y-3" data-testid="event-preview-panel">
+            <Card className="border-pink-200 shadow-md">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-xs uppercase font-semibold text-slate-500">Starting from</p>
+                  <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px]">
+                    <Star className="w-3 h-3 mr-1 fill-amber-500 text-amber-500" /> {event.rating || 4.5}
+                  </Badge>
+                </div>
+                <p className="text-3xl font-bold text-pink-600">{formatFCFA(event.priceFrom || 0)}</p>
 
-            {isShowtime && classes.length > 0 && (
-              <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                <p className="text-[10px] uppercase font-semibold text-slate-500">Ticket classes</p>
-                {classes.map(c => {
-                  const chip = availabilityChip(c);
-                  const ChipIcon = chip.icon;
-                  return (
-                    <div key={c.id} className="flex items-center justify-between bg-white border border-slate-100 rounded-lg p-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
-                          <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0 rounded-full border ${chip.color}`}>
-                            <ChipIcon className="w-2.5 h-2.5" /> {chip.text}
-                          </span>
+                {isShowtime && classes.length > 0 && (
+                  <div className="space-y-1.5 pt-2 border-t border-pink-100">
+                    <p className="text-[10px] uppercase font-semibold text-slate-500">Ticket classes</p>
+                    {classes.map(c => {
+                      const chip = availabilityChip(c);
+                      const ChipIcon = chip.icon;
+                      return (
+                        <div key={c.id} className="flex items-center justify-between bg-pink-50/50 border border-pink-100 rounded-lg p-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 truncate">{c.name}</p>
+                              <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0 rounded-full border ${chip.color}`}>
+                                <ChipIcon className="w-2.5 h-2.5" /> {chip.text}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold text-pink-700 whitespace-nowrap">{formatFCFA(c.price)}</span>
                         </div>
-                      </div>
-                      <span className="text-sm font-bold text-pink-700 whitespace-nowrap">{formatFCFA(c.price)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      );
+                    })}
+                  </div>
+                )}
 
-            <Button
-              onClick={handleBook}
-              className="w-full bg-pink-600 hover:bg-pink-700 text-white h-11 mt-2"
-              data-testid="event-preview-book-btn"
-            >
-              <Ticket className="w-4 h-4 mr-2" /> Book Now
-            </Button>
-            <p className="text-[10px] text-center text-slate-500">You'll pick your class and complete payment next.</p>
-            {loadingLoc && <p className="text-[10px] text-slate-400 text-center">Loading venue details…</p>}
+                <Button
+                  onClick={handleBook}
+                  className="w-full bg-pink-600 hover:bg-pink-700 text-white h-11 shadow shadow-pink-500/30"
+                  data-testid="event-preview-book-btn"
+                >
+                  <Ticket className="w-4 h-4 mr-2" /> Proceed to Booking
+                </Button>
+                <p className="text-[10px] text-center text-slate-500">Pick your class & pay on the next page.</p>
+                {loadingLoc && <p className="text-[10px] text-slate-400 text-center">Loading venue details…</p>}
+              </CardContent>
+            </Card>
           </aside>
         </div>
       </DialogContent>
