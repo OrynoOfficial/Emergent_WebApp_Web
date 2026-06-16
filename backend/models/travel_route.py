@@ -30,6 +30,10 @@ class TravelRoute(BaseModel):
     active: bool = False
     valid_from: Optional[str] = None  # ISO date
     valid_to: Optional[str] = None
+    # Pickup / boarding location (used by customer-facing map preview)
+    pickup_address: Optional[str] = None
+    pickup_lat: Optional[float] = None
+    pickup_lon: Optional[float] = None
     edited_field_message: Optional[str] = None  # For tracking edits
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -55,6 +59,9 @@ class TravelRouteCreate(BaseModel):
     amenities: List[str] = []
     valid_from: Optional[str] = None
     valid_to: Optional[str] = None
+    pickup_address: Optional[str] = None
+    pickup_lat: Optional[float] = None
+    pickup_lon: Optional[float] = None
 
 class TravelRouteUpdate(BaseModel):
     from_city: Optional[str] = None
@@ -74,3 +81,6 @@ class TravelRouteUpdate(BaseModel):
     active: Optional[bool] = None
     valid_from: Optional[str] = None
     valid_to: Optional[str] = None
+    pickup_address: Optional[str] = None
+    pickup_lat: Optional[float] = None
+    pickup_lon: Optional[float] = None

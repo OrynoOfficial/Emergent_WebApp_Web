@@ -150,6 +150,40 @@ export function RouteForm({
           onChange={e => updateForm({ valid_to: e.target.value })} 
         />
       </div>
+      <div className="col-span-2 pt-3 border-t border-slate-200 mt-2">
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Pickup / Boarding Location <span className="text-slate-400 font-normal normal-case tracking-normal">(shown on the customer map preview)</span></Label>
+      </div>
+      <div className="col-span-2">
+        <Label>Pickup Address</Label>
+        <Input
+          value={form.pickup_address || ''}
+          onChange={e => updateForm({ pickup_address: e.target.value })}
+          placeholder="e.g. Vatican Express Terminal, Avenue Kennedy, Douala"
+          data-testid="route-form-pickup-address"
+        />
+      </div>
+      <div>
+        <Label>Latitude <span className="text-slate-400 font-normal text-xs">(optional)</span></Label>
+        <Input
+          type="number"
+          step="any"
+          value={form.pickup_lat ?? ''}
+          onChange={e => updateForm({ pickup_lat: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+          placeholder="4.0511"
+          data-testid="route-form-pickup-lat"
+        />
+      </div>
+      <div>
+        <Label>Longitude</Label>
+        <Input
+          type="number"
+          step="any"
+          value={form.pickup_lon ?? ''}
+          onChange={e => updateForm({ pickup_lon: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+          placeholder="9.7679"
+          data-testid="route-form-pickup-lon"
+        />
+      </div>
     </div>
   );
 }

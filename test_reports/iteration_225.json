@@ -1,0 +1,67 @@
+{
+  "summary": "iter225 testing of pre-booking modal + LocationMap + lat/lon form fields + 6 booking-gating banners. Backend: created /app/backend/tests/test_iter225_pickup_and_hotel_coords.py (4 tests). 3/4 PASS: POST /api/travel/routes correctly accepts and persists pickup_address/pickup_lat/pickup_lon; PUT /api/hotels/{id} correctly persists latitude/longitude. 1/4 FAIL — POST /api/hotels/ silently drops latitude/longitude because the HotelCreate Pydantic model in /app/backend/routes/hotels.py (lines 13-25) does NOT declare latitude/longitude fields. This breaks the user story (Add Hotel form writes latitude/longitude on CREATE, but it's never saved). Frontend: code review confirms all required data-testids and gating logic are present and correct in TripDetailsModal.jsx, HotelDetails.jsx (LocationMap integration), HotelForm.jsx, RouteForm.jsx, and all 6 booking pages (gating expressions exactly match spec). Live frontend testing was severely blocked by the same 429 throttling already documented in iter224 — only one transient successful render of /services/travel/results was captured (showing 2 'Departed' / 'Unavailable' trips on 2026-02-15, so the Select CTA was disabled and the modal couldn't be opened at runtime). After 3 retries with up to 120s cool-down between them the preview kept returning 429s and an empty React shell (body.innerText length = 0).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/hotels/", "issue": "HotelCreate Pydantic model in routes/hotels.py L13-25 is missing latitude/longitude — Pydantic silently drops them, so the new Add Hotel form's lat/lon inputs do NOT persist on CREATE. PUT works (uses raw dict body). This breaks the iter225 user story for new hotels.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/auth/login (operator@test.com)", "issue": "Seed operator account returns role='customer' and operator_id=null, so it gets 403 on POST /api/travel/routes. Spec lists operator@test.com as the Operator login. Either the seed is wrong or the spec is stale."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Travel results -> pre-booking modal -> /services/travel/booking", "issue": "Could not click an Available 'Select' button at runtime because (a) the seeded routes for the Yaoundé→Douala/2026-02-15 query came back marked 'Departed' / 'Unavailable' (button disabled) and (b) repeated 429s blanked the React shell on follow-up attempts.", "affected_selectors": ["[data-testid='travel-prebooking-modal']", "[data-testid='travel-modal-continue']", "[data-testid='travel-modal-close']", "[data-testid='location-map']"]},
+      {"flow": "Preview environment", "issue": "Cloudflare 429 rate-limiting on cinema-management-p0.preview.emergentagent.com — same problem as iter224. After ~3 navigations the JS chunks fail to download and React renders a blank body. Even with localStorage-injected auth (to skip the login flow) the lazy-loaded route chunks 429-out.", "affected_selectors": ["all"]}
+    ],
+    "design_issues": []
+  },
+  "verified_via_static_code_review": [
+    "TripDetailsModal.jsx (247 LoC) renders data-testid='travel-prebooking-modal', 'travel-modal-close' (L101), 'travel-modal-continue' (L237) and uses LocationMap.",
+    "HotelDetails.jsx imports LocationMap (L20) and renders <LocationMap .../> in the 'Explore the area' section (L857).",
+    "HotelForm.jsx has data-testid='hotel-form-latitude' (L174) and 'hotel-form-longitude' (L186).",
+    "RouteForm.jsx has 'route-form-pickup-address' (L162), 'route-form-pickup-lat' (L173), 'route-form-pickup-lon' (L184).",
+    "All 6 booking gating banners present: travel-payment-gated, hotel-payment-gated, banquet-payment-gated, cinema-payment-gated, restaurant-payment-gated, laundry-payment-gated. Each wraps PaymentMethodsSelection in opacity-50 pointer-events-none when the documented prerequisites are missing.",
+    "Gating expressions: TravelBooking uses passengers.every(p => p.firstName && p.lastName && p.idNumber); HotelBooking uses firstName && lastName && email && phone; BanquetCheckout uses cart.event_date && contact.contact_name && contact.contact_phone; CinemaBooking uses totalTickets > 0 && selectedSeats.length === totalTickets; RestaurantBooking uses firstName && email && phone; LaundryBooking uses firstName && lastName && phone — all match spec."
+  ],
+  "verified_via_pytest": [
+    "POST /api/travel/routes with pickup_address/pickup_lat/pickup_lon persists correctly (GET returns the values).",
+    "POST /api/travel/routes without pickup fields still works (fields default to None).",
+    "PUT /api/hotels/{id} accepts latitude/longitude in body and persists them (GET returns them)."
+  ],
+  "unverified_due_to_environment": [
+    "Travel pre-booking modal at runtime: opening from a clickable Select button, seat-layout grid, bus pictures grid, amenities chips, operator mini-card, LocationMap presence, Continue CTA navigating to /services/travel/booking, Close button leaving on results.",
+    "Hotel Details 'Explore the area' LocationMap rendering at runtime.",
+    "Operator -> /management/hotels add form (Lat/Lon inputs visible) and Operator -> /management/travel add Route form (pickup section visible).",
+    "All 6 booking-gating banners visible at runtime + greyed PaymentMethodsSelection."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iter225_pickup_and_hotel_coords.py",
+    "/app/test_reports/pytest/iter225.xml"
+  ],
+  "action_items": [
+    "FIX HotelCreate Pydantic model in /app/backend/routes/hotels.py (L13-L25): add `latitude: Optional[float] = None` and `longitude: Optional[float] = None`. Without this, the iter225 Add-Hotel form silently drops coordinates on CREATE.",
+    "Investigate operator@test.com seed: API login currently returns role='customer' / operator_id=null. Either re-seed with role='operator' and an operator_id OR update the testing spec.",
+    "Stale seeded travel routes for Yaoundé→Douala on near-term dates are flagged 'Departed' — seed at least one future-dated 'Available' route so the Select button is enabled and the new modal can be exercised by testers/users.",
+    "Add an ErrorBoundary at the route level so a 429 on a lazy chunk shows a retry UI instead of a blank body (same recommendation as iter224)."
+  ],
+  "critical_code_review_comments": [
+    "HotelCreate model in /app/backend/routes/hotels.py is missing latitude/longitude (root cause of POST drop). Other Hotel fields like is_active aren't in the model either but the doc is built with `**hotel_data.dict(exclude=...)` so anything not in the model is lost.",
+    "HotelDetails.jsx is 1200 LoC — over the 700-line guideline; consider splitting Map/Area + Reviews + Booking sub-sections.",
+    "TravelResults.jsx is 928 LoC — also over the ceiling; splitting filter bar + card grid + TripDetailsModal wiring into separate components would help.",
+    "HotelDetails.jsx still merges hotel.location.{lat,lon} <- hotel.latitude/longitude on load, which is consistent with the LocationMap fallback `lat={hotel.location?.lat ?? hotel.latitude}` — good defensive coding."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter225_pickup_and_hotel_coords.py (new)"
+  ],
+  "success_rate": {
+    "backend": "75% (3/4 pytest, 1 confirmed bug)",
+    "frontend": "static code review 100% pass; runtime verification 5% — blocked by preview 429 + stale 'Departed' seeded routes"
+  },
+  "test_credentials": "customer@test.com / testpassword123, admin@test.com / testpassword123. NOTE: operator@test.com currently logs in as role='customer'.",
+  "seed_data_creation": "Test routes/hotels created during pytest were cleaned up via DELETE in each test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend HotelCreate model bug is the only blocking backend issue — once the main agent adds latitude/longitude to HotelCreate, re-run /app/backend/tests/test_iter225_pickup_and_hotel_coords.py to confirm. Frontend can be exercised via two-step login (email -> Continue -> password) OR by injecting access_token into localStorage; the location-picker modal blocks the first interaction so click 'Skip for Now' first. Use a future date with a fresh 'pending/active' route to get an Available trip card with an enabled 'Select' button. Preview keeps 429-ing — pace requests heavily (>=90s between heavier flows).",
+  "rca of the issue": "POST /api/hotels/ ignores latitude/longitude because the Pydantic schema HotelCreate (routes/hotels.py L13-L25) doesn't declare them. The handler then builds the document with `**hotel_data.dict(exclude={'operator_id','operator_name'})`, so any field not declared in HotelCreate is silently dropped. PUT works because update_hotel takes a bare `dict` body. Fix: extend HotelCreate with `latitude: Optional[float] = None` and `longitude: Optional[float] = None`."
+}

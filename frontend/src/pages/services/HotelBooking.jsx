@@ -916,7 +916,14 @@ export default function HotelBooking() {
                 </h3>
               </div>
               <div className="p-5">
-                <PaymentMethodsSelection
+                {!isFormValid && (
+                  <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="hotel-payment-gated">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Complete the guest information (name, email and phone) above to choose a payment method.
+                  </div>
+                )}
+                <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
+                  <PaymentMethodsSelection
                     onCheckoutAbandoned={handleCheckoutAbandoned}
                   amount={pricing.total}
                   customerPhone={formData.phone}
@@ -931,6 +938,7 @@ export default function HotelBooking() {
                   onProcessingChange={handleProcessingChange}
                   onMethodSelected={setSelectedPaymentMethod}
                 />
+                </div>
 
                 <Button
                   onClick={handlePayButtonClick}

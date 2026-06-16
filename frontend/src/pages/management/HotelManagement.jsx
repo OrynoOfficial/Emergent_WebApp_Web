@@ -44,7 +44,8 @@ const ROOM_TYPES = ['standard', 'deluxe', 'suite', 'penthouse', 'family', 'execu
 const DEFAULT_HOTEL_FORM = {
   name: '', description: '', address: '', city: '', country: 'Cameroon',
   star_rating: 3, phone: '', email: '', amenities: [], images: [],
-  operator_id: '', operator_name: ''
+  operator_id: '', operator_name: '',
+  latitude: '', longitude: ''
 };
 
 const DEFAULT_ROOM_FORM = {

@@ -51,7 +51,8 @@ const DEFAULT_ROUTE_FORM = {
   from_city: '', to_city: '', departure_time: '', arrival_time: '',
   duration: '', price: '', vehicle_id: '', vehicle_name: '',
   vehicle_type: 'normal', total_seats: 0, amenities: [],
-  valid_from: '', valid_to: ''
+  valid_from: '', valid_to: '',
+  pickup_address: '', pickup_lat: '', pickup_lon: ''
 };
 
 const DEFAULT_VEHICLE_FORM = {

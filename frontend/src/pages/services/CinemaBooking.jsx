@@ -793,6 +793,13 @@ export default function CinemaBooking() {
                   </div>
                 </div>
                 <CardContent className="p-4">
+                  {(totalTickets === 0 || selectedSeats.length !== totalTickets) && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="cinema-payment-gated">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      {totalTickets === 0 ? 'Pick at least one ticket above to choose a payment method.' : `Select ${totalTickets} seat${totalTickets > 1 ? 's' : ''} (currently ${selectedSeats.length}) to unlock payment.`}
+                    </div>
+                  )}
+                  <div className={(totalTickets === 0 || selectedSeats.length !== totalTickets) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={totalTickets === 0 || selectedSeats.length !== totalTickets}>
                   <PaymentMethodsSelection
                     amount={pricing.total}
                     orderId={orderId}
@@ -803,6 +810,7 @@ export default function CinemaBooking() {
                     onMethodSelected={setSelectedPaymentMethod}
                     onCheckoutAbandoned={handleCheckoutAbandoned}
                   />
+                  </div>
                 </CardContent>
               </Card>
 

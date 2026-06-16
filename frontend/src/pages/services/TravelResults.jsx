@@ -24,6 +24,7 @@ import { useFavourites } from '../../hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
+import TripDetailsModal from '@/components/services/TripDetailsModal';
 
 const safeParse = (dateString, formatString, backupDate = new Date()) => {
   try {
@@ -407,6 +408,9 @@ export default function TravelResults() {
   const [previewImage, setPreviewImage] = useState(null);
   const [previewTitle, setPreviewTitle] = useState('');
 
+  // Pre-booking modal state
+  const [modalTrip, setModalTrip] = useState(null);
+
   const from = searchParams.get('from') || '';
   const to = searchParams.get('to') || '';
   const date = searchParams.get('date') || format(new Date(), 'yyyy-MM-dd');
@@ -542,7 +546,12 @@ export default function TravelResults() {
     if (isPast(trip.tripDate, trip.departure_time)) {
       return;
     }
-    
+    // Open pre-booking modal first; final navigation is handled by handleConfirmTrip
+    setModalTrip(trip);
+  };
+
+  const handleConfirmTrip = (trip) => {
+    setModalTrip(null);
     if (isRoundTrip && view === 'outbound') {
       setSelectedOutbound(trip);
       setView('return');
@@ -550,14 +559,14 @@ export default function TravelResults() {
       // Prepare booking data and store in sessionStorage
       const searchData = { from, to, date, passengers };
       if (returnDate) searchData.returnDate = returnDate;
-      
+
       const bookingData = isRoundTrip
         ? { outbound: selectedOutbound, return: trip, ...searchData, isRoundTrip: true }
         : { outbound: trip, ...searchData, isRoundTrip: false };
-      
+
       // Store in sessionStorage for the booking page
       sessionStorage.setItem('selectedTrip', JSON.stringify(bookingData));
-      
+
       // Navigate to the booking page
       navigate('/services/travel/booking', { state: bookingData });
     }
@@ -906,6 +915,14 @@ export default function TravelResults() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Pre-booking Trip Details Modal */}
+      <TripDetailsModal
+        open={!!modalTrip}
+        onOpenChange={(o) => !o && setModalTrip(null)}
+        trip={modalTrip}
+        onContinue={handleConfirmTrip}
+      />
     </div>
   );
 }

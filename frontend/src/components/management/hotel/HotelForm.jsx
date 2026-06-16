@@ -160,6 +160,33 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
           className="mt-1.5" 
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Latitude <span className="text-slate-400 font-normal text-xs">(optional, for map pin)</span></Label>
+          <Input
+            type="number"
+            step="any"
+            placeholder="3.848"
+            value={form.latitude ?? ''}
+            onChange={e => updateForm({ latitude: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+            className="mt-1.5"
+            data-testid="hotel-form-latitude"
+          />
+        </div>
+        <div>
+          <Label>Longitude</Label>
+          <Input
+            type="number"
+            step="any"
+            placeholder="11.5021"
+            value={form.longitude ?? ''}
+            onChange={e => updateForm({ longitude: e.target.value === '' ? '' : parseFloat(e.target.value) })}
+            className="mt-1.5"
+            data-testid="hotel-form-longitude"
+          />
+        </div>
+      </div>
       
       <div className="grid grid-cols-2 gap-4">
         <div>

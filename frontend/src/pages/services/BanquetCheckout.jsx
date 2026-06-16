@@ -812,6 +812,13 @@ export default function BanquetCheckout() {
                   </h4>
                 </div>
                 <div className="bg-slate-50 p-5">
+                  {(!cart.event_date || !contact.contact_name || !contact.contact_phone) && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="banquet-payment-gated">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Fill the event date and contact details above before choosing a payment method.
+                    </div>
+                  )}
+                  <div className={(!cart.event_date || !contact.contact_name || !contact.contact_phone) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!cart.event_date || !contact.contact_name || !contact.contact_phone}>
                   <PaymentMethodsSelection
                     amount={grandTotal}
                     orderId={orderId}
@@ -829,6 +836,7 @@ export default function BanquetCheckout() {
                     triggerPayment={triggerPayment}
                     onMethodSelected={setSelectedPaymentMethod}
                   />
+                  </div>
                   <Button
                     onClick={handleConfirm}
                     disabled={submitting}

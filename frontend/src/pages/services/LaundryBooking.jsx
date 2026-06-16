@@ -978,6 +978,13 @@ export default function LaundryBooking() {
                   </h4>
                 </div>
                 <div className="bg-slate-50 p-5">
+                  {(!booking.firstName || !booking.lastName || !booking.phone) && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="laundry-payment-gated">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Enter your name and phone above to choose a payment method.
+                    </div>
+                  )}
+                  <div className={(!booking.firstName || !booking.lastName || !booking.phone) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!booking.firstName || !booking.lastName || !booking.phone}>
                   <PaymentMethodsSelection
                     amount={total}
                     orderId={orderId}
@@ -996,6 +1003,7 @@ export default function LaundryBooking() {
                     triggerPayment={triggerPayment}
                     onMethodSelected={setSelectedPaymentMethod}
                   />
+                  </div>
                   <Button
                     onClick={handleSubmit}
                     disabled={paymentInProgress}

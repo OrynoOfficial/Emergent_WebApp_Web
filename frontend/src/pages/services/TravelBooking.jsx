@@ -938,7 +938,14 @@ export default function TravelBooking() {
                     </h4>
                   </div>
                   <div className="bg-slate-50 p-5">
-                    <PaymentMethodsSelection
+                    {!isFormValid && (
+                      <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="travel-payment-gated">
+                        <Users className="w-3.5 h-3.5" />
+                        Complete every passenger's First name, Last name and ID/Passport number to choose a payment method.
+                      </div>
+                    )}
+                    <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
+                      <PaymentMethodsSelection
                     onCheckoutAbandoned={handleCheckoutAbandoned}
                       amount={pricing.total}
                       customerPhone={passengers[0]?.phoneNumber}
@@ -968,6 +975,7 @@ export default function TravelBooking() {
                       onProcessingChange={handleProcessingChange}
                       onMethodSelected={setSelectedPaymentMethod}
                     />
+                    </div>
                     
                     <Button
                       onClick={handlePayButtonClick}
@@ -976,7 +984,7 @@ export default function TravelBooking() {
                       data-testid="book-trip-btn"
                     >
                       {paymentInProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bus className="mr-2 h-4 w-4" />}
-                      {paymentInProgress ? 'Processing...' : !selectedPaymentMethod ? 'Select a payment method above' : `Book Trip · ${formatCurrency(pricing.total)}`}
+                      {paymentInProgress ? 'Processing...' : !isFormValid ? 'Complete passenger details' : !selectedPaymentMethod ? 'Select a payment method above' : `Book Trip · ${formatCurrency(pricing.total)}`}
                     </Button>
                   </div>
                 </div>

@@ -487,6 +487,13 @@ export default function RestaurantBooking() {
                   </h4>
                 </div>
                 <div className="bg-slate-50 p-5">
+                  {!isFormValid && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2" data-testid="restaurant-payment-gated">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Add your contact details (name, email and phone) above to choose a payment method.
+                    </div>
+                  )}
+                  <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
                   <PaymentMethodsSelection
                     onCheckoutAbandoned={handleCheckoutAbandoned}
                     amount={pricing.total}
@@ -507,6 +514,7 @@ export default function RestaurantBooking() {
                     onProcessingChange={handleProcessingChange}
                     onMethodSelected={setSelectedPaymentMethod}
                 />
+                  </div>
                   
                   <Button
                     onClick={handleSubmit}

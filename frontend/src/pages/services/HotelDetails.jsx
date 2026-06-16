@@ -17,6 +17,7 @@ import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import LocationMap from '@/components/shared/LocationMap';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -455,7 +456,14 @@ export default function HotelDetails() {
         api.get(`/rooms/?hotel_id=${id}&check_in=${bookingParams.checkIn.toISOString().split('T')[0]}&check_out=${bookingParams.checkOut.toISOString().split('T')[0]}`)
       ]);
       
-      setHotel(hotelRes.data);
+      // Map the hotel doc and inject location.lat/lon from backend latitude/longitude
+      const hotelDoc = hotelRes.data || {};
+      setHotel({
+        ...hotelDoc,
+        location: hotelDoc.location || (hotelDoc.latitude && hotelDoc.longitude
+          ? { lat: hotelDoc.latitude, lon: hotelDoc.longitude }
+          : null),
+      });
       setRooms(roomsRes.data.rooms || []);
     } catch (err) {
       console.error('Failed to load hotel:', err);
@@ -839,47 +847,21 @@ export default function HotelDetails() {
                 )}
               </div>
 
-              {/* Explore Area - Enhanced with Live Map & Platform Services */}
+              {/* Explore Area - Live Map (uses shared LocationMap) */}
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                 <div className="p-5">
                   <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                     <Navigation className="h-5 w-5 text-[#082c59]" />
                     Explore the area
                   </h3>
-                  <div className="aspect-[16/10] rounded-xl overflow-hidden mb-4 bg-slate-100 border border-slate-200">
-                    {mapCenter ? (
-                      <MapContainer center={mapCenter} zoom={14} style={{ width: '100%', height: '100%' }} scrollWheelZoom={false}>
-                        <TileLayer
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <Marker position={mapCenter}>
-                          <Popup><b>{hotel.name}</b><br />{hotel.address}</Popup>
-                        </Marker>
-                        {nearbyPins.map(pin => (
-                          <Marker key={pin.id} position={[pin.lat, pin.lon]} icon={getServiceIcon(pin.type)}>
-                            <Popup>{pin.name}</Popup>
-                          </Marker>
-                        ))}
-                      </MapContainer>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400">
-                        <MapPin className="w-12 h-12" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="font-semibold text-sm text-slate-800">{hotel.address}</p>
-                  {hasLocation && (
-                    <a 
-                      href={`https://www.google.com/maps/search/?api=1&query=${hotel.location.lat},${hotel.location.lon}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-sm text-[#082c59] hover:underline"
-                    >
-                      View in Google Maps &gt;
-                    </a>
-                  )}
-                  
+                  <LocationMap
+                    lat={hotel.location?.lat ?? hotel.latitude}
+                    lon={hotel.location?.lon ?? hotel.longitude}
+                    title={hotel.name}
+                    address={hotel.address}
+                    nearbyPins={nearbyPins}
+                  />
+
                   {/* Nearby Landmarks */}
                   {hotel.landmarks && hotel.landmarks.length > 0 && (
                     <div className="mt-4 space-y-3">
