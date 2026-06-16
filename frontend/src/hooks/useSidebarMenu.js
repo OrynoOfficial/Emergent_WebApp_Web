@@ -11,7 +11,7 @@ import {
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
   Percent, HeadphonesIcon, Film, Briefcase, FileText,
   QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus,
-  Monitor, BarChart3, Megaphone
+  Monitor, BarChart3, Megaphone, RotateCcw
 } from 'lucide-react';
 
 const USER_ROLES = {
@@ -245,6 +245,18 @@ export default function useSidebarMenu() {
     // Customer Service (Admin/Super Admin standalone)
     if (isSuperAdmin || isAdmin) {
       items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
+    }
+
+    // Refunds queue — admin/super-admin only. Sidebar surfaces a pending count
+    // badge so admins see new requests the moment they log in.
+    if (isSuperAdmin || isAdmin) {
+      items.push({
+        key: 'refunds',
+        label: 'Refunds',
+        icon: RotateCcw,
+        path: '/admin/refunds',
+        badgeKey: 'refunds-pending',
+      });
     }
 
     // Admin Config (below Customer Service)

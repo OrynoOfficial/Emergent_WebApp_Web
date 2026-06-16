@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '../../hooks/useCommissionRate';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -266,6 +267,13 @@ export default function TravelBooking() {
     setReturnSelectedSeats(seats);
   }, []);
 
+  // Resolve effective commission rate.
+  const { rate: effectiveCommissionRate } = useCommissionRate(
+    'travel',
+    bookingData?.outbound?.operator_id,
+    { fallback: 5 },
+  );
+
   const calculatePricing = () => {
     if (!bookingData?.outbound) return { base: 0, extras: 0, commission: 0, total: 0 };
     
@@ -273,7 +281,7 @@ export default function TravelBooking() {
     const returnPrice = bookingData.return ? bookingData.return.price * (bookingData.passengers || 1) : 0;
     const base = outboundPrice + returnPrice;
     const extras = extraLuggage * EXTRA_LUGGAGE_PRICE;
-    const commissionRate = 5;
+    const commissionRate = effectiveCommissionRate;
     // Commission only on trip price, NOT on luggage
     const commission = base * (commissionRate / 100);
     

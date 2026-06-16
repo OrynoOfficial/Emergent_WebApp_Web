@@ -16,6 +16,7 @@ import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import { rePayExisting } from '@/utils/paymentRetry';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import CinemaSeatMap, { buildDefaultLayout } from '@/components/cinema/CinemaSeatMap';
@@ -99,6 +100,13 @@ export default function CinemaBooking() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [ticketCounts, setTicketCounts] = useState({ adult: 1, child: 0, senior: 0 });
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Resolve commission rate dynamically from the platform hierarchy.
+  const { rate: effectiveCommissionRate } = useCommissionRate(
+    'cinema',
+    film?.operator_id || showtime?.operator_id,
+    { fallback: 5 },
+  );
 
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [isSelf, setIsSelf] = useState(false);
@@ -281,7 +289,7 @@ export default function CinemaBooking() {
     const vipSurcharge = hasVipPricing ? vipSeatCount * vipSurchargePerSeat : 0;
     const beforeFee = subtotal + vipSurcharge;
     const promoDiscount = promoApplied ? Math.min(beforeFee, (promoApplied.discount_amount || (beforeFee * (promoApplied.discount_percent || 0) / 100)) || 0) : 0;
-    const commissionRate = 5;
+    const commissionRate = effectiveCommissionRate;
     const commission = (beforeFee - promoDiscount) * (commissionRate / 100);
     const total = beforeFee - promoDiscount + commission;
     return {

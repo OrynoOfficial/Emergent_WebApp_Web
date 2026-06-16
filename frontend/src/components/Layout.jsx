@@ -78,6 +78,21 @@ export default function Layout({ children }) {
   
   // Loyalty tier state
   const [loyaltyTier, setLoyaltyTier] = useState(null);
+
+  // Sidebar badge counts — refresh every 60s while the layout is mounted so
+  // admins see new pending refund requests without needing a page reload.
+  const [badgeCounts, setBadgeCounts] = useState({ 'refunds-pending': 0 });
+  useEffect(() => {
+    const fetchRefundCount = () => {
+      if (!(isAdmin || isSuperAdmin)) return;
+      api.get('/refunds', { params: { status_filter: 'pending', limit: 1 } })
+        .then(res => setBadgeCounts(prev => ({ ...prev, 'refunds-pending': res.data?.total ?? 0 })))
+        .catch(() => {});
+    };
+    fetchRefundCount();
+    const t = setInterval(fetchRefundCount, 60000);
+    return () => clearInterval(t);
+  }, [isAdmin, isSuperAdmin]);
   
   useEffect(() => {
     if (user?.role === 'customer') {
@@ -473,7 +488,7 @@ export default function Layout({ children }) {
         to={item.path}
         onClick={() => setSidebarOpen(false)}
         className={`
-          flex items-center gap-3 px-4 py-3 rounded-lg mb-1
+          relative flex items-center gap-3 px-4 py-3 rounded-lg mb-1
           transition-all duration-200 ease-out
           ${isActive
             ? 'bg-white/15 border-l-3 border-l-[#4D96FF] text-white'
@@ -487,6 +502,14 @@ export default function Layout({ children }) {
           style={{ color: iconColor }} 
         />
         <span className="font-medium">{item.label}</span>
+        {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
+          <span
+            className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm ring-2 ring-[#082c59]"
+            data-testid={`sidebar-badge-${item.badgeKey}`}
+          >
+            {badgeCounts[item.badgeKey] > 99 ? '99+' : badgeCounts[item.badgeKey]}
+          </span>
+        )}
       </Link>
     );
   };

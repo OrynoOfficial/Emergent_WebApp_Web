@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '../../hooks/useCommissionRate';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -231,13 +232,20 @@ export default function HotelBooking() {
     loadData();
   }, [navigate, user]);
 
+  // Resolve effective commission rate (platform hierarchy).
+  const { rate: effectiveCommissionRate } = useCommissionRate(
+    'hotels',
+    hotel?.operator_id,
+    { fallback: 5 },
+  );
+
   useEffect(() => {
     if (hotel && searchParams) {
       const nights = calculateNights();
       const baseAmount = hotel.price_per_night * nights;
       const taxes = baseAmount * 0.1;
       const subtotal = baseAmount + taxes;
-      const commissionRate = 5;
+      const commissionRate = effectiveCommissionRate;
       const commissionAmount = subtotal * (commissionRate / 100);
       const total = subtotal + commissionAmount;
 
@@ -248,7 +256,7 @@ export default function HotelBooking() {
         totalAmount: total
       });
     }
-  }, [hotel, searchParams]);
+  }, [hotel, searchParams, effectiveCommissionRate]);
 
   const calculateNights = () => {
     if (!searchParams?.checkIn || !searchParams?.checkOut) return 1;

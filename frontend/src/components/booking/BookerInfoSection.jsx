@@ -19,6 +19,16 @@ import api from '@/api/client';
  *  - isSelf: controlled toggle state
  *  - onSelfChange(checked): callback for toggle
  */
+// Accent presets — each service can pass `accent="events" | "cinema" | "hotel" | ...`
+// to themed-restyle the header gradient, focus rings, toggle, and self-fill chip.
+const ACCENTS = {
+  navy:    { from: 'from-[#082c59]', to: 'to-[#0a4a8f]', solid: 'bg-[#082c59]', text: 'text-[#082c59]', ring: 'focus:ring-[#082c59]/20', tint: 'bg-[#082c59]/10 border-[#082c59]/30', toggleOn: 'data-[state=checked]:bg-[#082c59]' },
+  cinema:  { from: 'from-cyan-600',  to: 'to-cyan-700',  solid: 'bg-cyan-600',  text: 'text-cyan-700',  ring: 'focus:ring-cyan-500/30',  tint: 'bg-cyan-50 border-cyan-300',           toggleOn: 'data-[state=checked]:bg-cyan-600' },
+  events:  { from: 'from-pink-600',  to: 'to-rose-600',  solid: 'bg-pink-600',  text: 'text-pink-700',  ring: 'focus:ring-pink-500/30',  tint: 'bg-pink-50 border-pink-300',           toggleOn: 'data-[state=checked]:bg-pink-600' },
+  hotel:   { from: 'from-amber-600', to: 'to-orange-600', solid: 'bg-amber-600', text: 'text-amber-700', ring: 'focus:ring-amber-500/30', tint: 'bg-amber-50 border-amber-300',         toggleOn: 'data-[state=checked]:bg-amber-600' },
+  travel:  { from: 'from-emerald-600', to: 'to-teal-600', solid: 'bg-emerald-600', text: 'text-emerald-700', ring: 'focus:ring-emerald-500/30', tint: 'bg-emerald-50 border-emerald-300', toggleOn: 'data-[state=checked]:bg-emerald-600' },
+};
+
 export function BookerInfoSection({
   title = 'Guest Information',
   subtitle = 'Who will be checking in?',
@@ -31,10 +41,12 @@ export function BookerInfoSection({
   user,
   isSelf = false,
   onSelfChange,
+  accent = 'navy',
 }) {
+  const a = ACCENTS[accent] || ACCENTS.navy;
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-      <div className="bg-gradient-to-r from-[#082c59] to-[#0a4a8f] p-5">
+      <div className={`bg-gradient-to-r ${a.from} ${a.to} p-5`}>
         <div className="flex items-center gap-3 text-white">
           <div className="p-2 bg-white/20 rounded-xl">
             <User className="h-6 w-6" />
@@ -49,17 +61,17 @@ export function BookerInfoSection({
       <div className="p-6">
         {/* Self-fill toggle */}
         <div className={`mb-6 p-4 rounded-xl border-2 transition-all ${
-          isSelf ? 'bg-[#082c59]/10 border-[#082c59]/30' : 'bg-slate-100 border-slate-300'
+          isSelf ? a.tint : 'bg-slate-100 border-slate-300'
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className={`h-5 w-5 ${isSelf ? 'text-[#082c59]' : 'text-slate-500'}`} />
+              <CheckCircle2 className={`h-5 w-5 ${isSelf ? a.text : 'text-slate-500'}`} />
               <span className="font-semibold text-slate-800">{toggleLabel}</span>
             </div>
             <Switch
               checked={isSelf}
               onCheckedChange={onSelfChange}
-              className="data-[state=checked]:bg-[#082c59] data-[state=unchecked]:bg-slate-400"
+              className={`${a.toggleOn} data-[state=unchecked]:bg-slate-400`}
             />
           </div>
           <p className="text-sm text-slate-500 mt-2 ml-8">Auto-fill with your profile information</p>
@@ -78,7 +90,7 @@ export function BookerInfoSection({
                 value={firstName}
                 onChange={(e) => onChange('firstName', e.target.value)}
                 disabled={isSelf}
-                className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                className={`pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 ${a.ring}`}
                 placeholder="Enter first name"
                 data-testid="booker-first-name"
               />
@@ -96,7 +108,7 @@ export function BookerInfoSection({
                 value={lastName}
                 onChange={(e) => onChange('lastName', e.target.value)}
                 disabled={isSelf}
-                className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                className={`pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 ${a.ring}`}
                 placeholder="Enter last name"
                 data-testid="booker-last-name"
               />
@@ -114,7 +126,7 @@ export function BookerInfoSection({
                 type="email"
                 value={email}
                 onChange={(e) => onChange('email', e.target.value)}
-                className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                className={`pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 ${a.ring}`}
                 placeholder="Enter email address"
                 data-testid="booker-email"
               />
@@ -132,7 +144,7 @@ export function BookerInfoSection({
                 value={phone}
                 onChange={(e) => onChange('phone', e.target.value)}
                 disabled={isSelf}
-                className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                className={`pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 ${a.ring}`}
                 placeholder="+237 xxx xxx xxx"
                 data-testid="booker-phone"
               />

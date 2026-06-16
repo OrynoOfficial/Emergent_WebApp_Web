@@ -34,12 +34,13 @@ async def create_commission_config(
 async def get_commission_configs(
     service_type: Optional[str] = None,
     operator_id: Optional[str] = None,
-    is_active: Optional[bool] = True,
+    is_active: Optional[str] = "true",
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(require_permission("commission.view"))
 ):
-    """Get commission configurations - requires commission.view permission"""
+    """Get commission configurations - requires commission.view permission.
+    Pass is_active=all to include inactive configs (management UI uses this)."""
     db = get_database()
     
     query = {}
@@ -47,13 +48,69 @@ async def get_commission_configs(
         query["service_type"] = service_type
     if operator_id:
         query["$or"] = [{"operator_id": operator_id}, {"operator_id": None}]
-    if is_active is not None:
-        query["is_active"] = is_active
+    if is_active is not None and str(is_active).lower() != "all":
+        query["is_active"] = str(is_active).lower() in ("true", "1", "yes")
     
-    configs = await db.commission_configs.find(query, {"_id": 0}).sort("service_type", 1).skip(skip).limit(limit).to_list(limit)
+    configs = await db.commission_configs.find(query).sort("service_type", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.commission_configs.count_documents(query)
     
     return {"configs": configs, "total": total}
+
+@router.get("/resolve")
+async def resolve_commission_rate(
+    service_type: str,
+    operator_id: Optional[str] = None,
+):
+    """Return the effective commission rate for a (service_type, operator_id) pair.
+
+    Resolution order (highest priority first):
+      1. OPERATOR_SPECIFIC — exact match on (service_type, operator_id)
+      2. CATEGORY_DEFAULT  — (service_type, operator_id=None)
+      3. GLOBAL_DEFAULT    — (service_type="*", operator_id=None)
+      4. Hardcoded fallback (5%)
+
+    Returns: { rate, source, config_id?, commission_type, min_amount?, max_amount? }
+
+    Public endpoint — read-only and called from booking pages, so we don't
+    gate on a permission. The customer-facing service fee derives from this.
+    """
+    db = get_database()
+
+    async def _find(filt):
+        return await db.commission_configs.find_one({**filt, "is_active": True})
+
+    config = None
+    source = None
+    if operator_id:
+        config = await _find({"service_type": service_type, "operator_id": operator_id})
+        if config:
+            source = "operator"
+    if not config:
+        config = await _find({"service_type": service_type, "operator_id": None})
+        if config:
+            source = "category"
+    if not config:
+        config = await _find({"service_type": "*", "operator_id": None})
+        if config:
+            source = "global"
+
+    if not config:
+        return {
+            "rate": 5.0,
+            "source": "fallback",
+            "config_id": None,
+            "commission_type": "percentage",
+        }
+
+    return {
+        "rate": float(config.get("base_rate", 5.0)),
+        "source": source,
+        "config_id": config.get("_id"),
+        "commission_type": config.get("commission_type", "percentage"),
+        "min_amount": config.get("min_amount"),
+        "max_amount": config.get("max_amount"),
+    }
+
 
 @router.get("/calculate")
 async def calculate_commission(
@@ -109,14 +166,11 @@ async def calculate_commission(
 async def update_commission_config(
     config_id: str,
     config_data: CommissionConfigUpdate,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("commission.edit"))
 ):
-    """Update a commission configuration (admin only)"""
+    """Update a commission configuration."""
     db = get_database()
-    
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
+
     update_data = {k: v for k, v in config_data.dict().items() if v is not None}
     update_data["updated_at"] = datetime.utcnow()
     
@@ -130,13 +184,10 @@ async def update_commission_config(
 @router.delete("/{config_id}")
 async def delete_commission_config(
     config_id: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(require_permission("commission.edit"))
 ):
-    """Delete a commission configuration (admin only)"""
+    """Delete a commission configuration."""
     db = get_database()
-    
-    if current_user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Admin access required")
     
     result = await db.commission_configs.delete_one({"_id": config_id})
     

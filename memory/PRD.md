@@ -1,5 +1,42 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 248: Service-colour consistency, seat surfacing, commission wiring, refunds badge)
+
+### 🎨 Showtime page colour consistency (`ShowtimeDetails.jsx`)
+- `BookerInfoSection` now accepts an `accent` prop with presets: `navy` (default), `cinema`, `events`, `hotel`, `travel`. The events booking page passes `accent="events"` so the contact card matches the rest of the page (pink/rose) — no more navy `#082c59` outlier inside the pink card stack.
+- Price Breakdown header switched from `#082c59` to a pink→rose gradient + the total amount text is now `text-pink-700`.
+
+### 🪑 Selected seats surfaced on Ticket details (`ShowtimeDetails.jsx`)
+- New `ticket-details-seats` row inside the right-rail Ticket details card. Shows live `selectedSeats.length / quantity` + each picked seat as a tinted badge using the ticket class colour. Empty state reads "Pick seats on the left to see them here".
+
+### 💰 Commission hierarchy now wired end-to-end
+**Backend** (`routes/commission.py` + `models/commission.py`)
+- New endpoint `GET /api/commission-config/resolve?service_type=…&operator_id=…` returning `{ rate, source, config_id, commission_type, min_amount, max_amount }`.
+- Resolution order = **OPERATOR_SPECIFIC → CATEGORY_DEFAULT (service_type) → GLOBAL_DEFAULT (service_type="*") → 5% hardcoded fallback**.
+- `GET /` now accepts `is_active=all` (or true/false) so the management UI can list inactive configs too.
+- `PUT/DELETE` gated by the `commission.edit` permission instead of a raw `role=="admin"` check — super_admins now pass through correctly.
+
+**Frontend hook** (`hooks/useCommissionRate.js`)
+- `useCommissionRate(serviceType, operatorId, { fallback })` calls the resolve endpoint with a 5-min in-memory cache. Returns `{ rate, source, loading }`.
+
+**Booking pages wired**
+- `ShowtimeDetails.jsx` → `useCommissionRate('events', showtime.operator_id)` (was hardcoded 3%).
+- `CinemaBooking.jsx` → `useCommissionRate('cinema', film/showtime.operator_id)` (was hardcoded 5%).
+- `HotelBooking.jsx` → `useCommissionRate('hotels', hotel.operator_id)` (was hardcoded 5%).
+- `TravelBooking.jsx` → `useCommissionRate('travel', outbound.operator_id)` (was hardcoded 5%).
+
+**Management UI** (`CommissionManagement.jsx`)
+- Previously kept all rows in component state with hardcoded defaults — now CRUDs against `/api/commission-config/`. Auto-loads on mount, full create/update/delete/toggle-active. Operator picker hydrates from `/api/operators`. Translation layer maps between the UI's `config_type` + `service_category` shape and the backend's flat `service_type` + `operator_id` columns.
+
+### 🔔 Sidebar Refunds pending badge
+- `useSidebarMenu.js` now exposes a top-level **"Refunds"** item (admin/super-admin) at `/admin/refunds` with `badgeKey: 'refunds-pending'`.
+- `Layout.jsx` polls `/api/refunds?status_filter=pending&limit=1` every 60s and renders a red bubble (`sidebar-badge-refunds-pending`) with the live count (`99+` cap).
+- `GET /api/refunds` now also returns `total` so the badge math works.
+
+### Test coverage
+- `tests/test_commission_resolution.py` — 6 new pytest cases covering fallback, global, category, operator priorities, inactive filtering, and super_admin CRUD permissions.
+- Combined backend suite is now **25/25 passing** (6 commission + 3 poster + 12 refund + 4 scanner).
+
 ## Latest Changes (Feb 2026 — iter 247: Dedicated Event Poster uploader)
 
 ### Backend

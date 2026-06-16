@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import ManagementShell from '../../components/management/shared/ManagementShell';
+import api from '../../api/client';
+import { toast } from 'sonner';
 
 const SERVICE_CATEGORIES = [
   { value: 'travel', label: 'Travel Services' },
@@ -22,21 +24,63 @@ const SERVICE_CATEGORIES = [
   { value: 'restaurants', label: 'Restaurants' },
   { value: 'packages', label: 'Package Delivery' },
   { value: 'events', label: 'Events' },
-  { value: 'entertainment', label: 'Entertainment' },
+  { value: 'cinema', label: 'Cinema' },
   { value: 'pressing', label: 'Laundry Services' },
   { value: 'banquet', label: 'Banquet Equipment' }
 ];
 
-const DEFAULT_CONFIGS = [
-  { id: '1', config_type: 'global_default', commission_rate: 13, is_active: true, updated_date: new Date().toISOString(), last_updated_by_name: 'System' },
-  { id: '2', config_type: 'service_category', service_category: 'hotels', commission_rate: 15, is_active: true, updated_date: new Date().toISOString(), last_updated_by_name: 'Admin' },
-  { id: '3', config_type: 'service_category', service_category: 'travel', commission_rate: 10, is_active: true, updated_date: new Date().toISOString(), last_updated_by_name: 'Admin' },
-];
+// ── Mapping helpers — convert between the frontend's `config_type` /
+// `service_category` shape and the backend's flat `service_type` / `operator_id`
+// columns. Backend convention:
+//   global  → service_type="*"  operator_id=null
+//   category→ service_type=<cat>operator_id=null
+//   operator→ service_type=<cat>operator_id=<id>
+// ───────────────────────────────────────────────────────────────────────────
+function toConfigType(serviceType, operatorId) {
+  if (operatorId) return 'operator_specific';
+  if (!serviceType || serviceType === '*') return 'global_default';
+  return 'service_category';
+}
+
+function backendToUI(doc) {
+  return {
+    id: doc._id || doc.id,
+    config_type: toConfigType(doc.service_type, doc.operator_id),
+    service_category: doc.service_type === '*' ? '' : doc.service_type,
+    operator_id: doc.operator_id || '',
+    operator_name: doc.operator_name || '',
+    commission_rate: doc.base_rate,
+    is_active: doc.is_active,
+    notes: doc.description || '',
+    updated_date: doc.updated_at,
+    last_updated_by_name: doc.created_by || 'Admin',
+  };
+}
+
+function uiToBackend(form) {
+  const serviceType =
+    form.config_type === 'global_default'
+      ? '*'
+      : (form.service_category || '');
+  return {
+    name: form.config_type === 'global_default'
+      ? 'Global Default'
+      : (form.config_type === 'service_category'
+          ? `${form.service_category} default`
+          : `${form.service_category} · ${form.operator_name || form.operator_id}`),
+    description: form.notes || null,
+    service_type: serviceType,
+    commission_type: 'percentage',
+    base_rate: Number(form.commission_rate),
+    operator_id: form.operator_id || null,
+    operator_name: form.operator_name || null,
+  };
+}
 
 export default function CommissionManagement() {
-  const [configs, setConfigs] = useState(DEFAULT_CONFIGS);
+  const [configs, setConfigs] = useState([]);
   const [operators, setOperators] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
   const [activeTab, setActiveTab] = useState('global');
@@ -46,10 +90,35 @@ export default function CommissionManagement() {
     config_type: 'global_default',
     service_category: '',
     operator_id: '',
+    operator_name: '',
     commission_rate: 13,
     is_active: true,
     notes: ''
   });
+
+  const loadConfigs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/commission-config/', { params: { limit: 100, is_active: 'all' } });
+      setConfigs((res.data?.configs || []).map(backendToUI));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to load commission configs');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loadOperators = useCallback(async () => {
+    try {
+      const res = await api.get('/operators', { params: { limit: 200 } });
+      setOperators(res.data?.operators || res.data || []);
+    } catch {/* operators are optional */}
+  }, []);
+
+  useEffect(() => {
+    loadConfigs();
+    loadOperators();
+  }, [loadConfigs, loadOperators]);
 
   const handleOpenDialog = (config = null) => {
     if (config) {
@@ -58,6 +127,7 @@ export default function CommissionManagement() {
         config_type: config.config_type,
         service_category: config.service_category || '',
         operator_id: config.operator_id || '',
+        operator_name: config.operator_name || '',
         commission_rate: config.commission_rate,
         is_active: config.is_active,
         notes: config.notes || ''
@@ -68,6 +138,7 @@ export default function CommissionManagement() {
         config_type: activeTab === 'global' ? 'global_default' : activeTab === 'category' ? 'service_category' : 'operator_specific',
         service_category: '',
         operator_id: '',
+        operator_name: '',
         commission_rate: 13,
         is_active: true,
         notes: ''
@@ -77,39 +148,55 @@ export default function CommissionManagement() {
   };
 
   const handleSave = async () => {
+    if (formData.config_type !== 'global_default' && !formData.service_category) {
+      toast.error('Pick a service category'); return;
+    }
+    if (formData.config_type === 'operator_specific' && !formData.operator_id) {
+      toast.error('Pick an operator'); return;
+    }
     setIsSaving(true);
     try {
-      const newConfig = {
-        id: editingConfig?.id || String(Date.now()),
-        ...formData,
-        commission_rate: Number(formData.commission_rate),
-        updated_date: new Date().toISOString(),
-        last_updated_by_name: 'Admin'
-      };
-
+      const payload = uiToBackend(formData);
       if (editingConfig) {
-        setConfigs(prev => prev.map(c => c.id === editingConfig.id ? newConfig : c));
+        // Backend update only patches certain fields.
+        await api.put(`/commission-config/${editingConfig.id}`, {
+          name: payload.name,
+          description: payload.description,
+          base_rate: payload.base_rate,
+          is_active: formData.is_active,
+        });
+        toast.success('Commission updated');
       } else {
-        setConfigs(prev => [...prev, newConfig]);
+        await api.post('/commission-config/', payload);
+        toast.success('Commission config created');
       }
-
       setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Failed to save:', error);
+      loadConfigs();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Save failed');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = (id) => {
-    if (!confirm('Are you sure you want to delete this configuration?')) return;
-    setConfigs(prev => prev.filter(c => c.id !== id));
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this commission configuration?')) return;
+    try {
+      await api.delete(`/commission-config/${id}`);
+      toast.success('Deleted');
+      loadConfigs();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Delete failed');
+    }
   };
 
-  const handleToggleActive = (config) => {
-    setConfigs(prev => prev.map(c => 
-      c.id === config.id ? { ...c, is_active: !c.is_active } : c
-    ));
+  const handleToggleActive = async (config) => {
+    try {
+      await api.put(`/commission-config/${config.id}`, { is_active: !config.is_active });
+      loadConfigs();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Update failed');
+    }
   };
 
   const getConfigsByType = (type) => configs.filter(c => c.config_type === type);
@@ -274,19 +361,47 @@ export default function CommissionManagement() {
               </Select>
             </div>
 
-            {formData.config_type === 'service_category' && (
+            {(formData.config_type === 'service_category' || formData.config_type === 'operator_specific') && (
               <div>
                 <Label>Service Category</Label>
                 <Select
                   value={formData.service_category}
                   onValueChange={(value) => setFormData({ ...formData, service_category: value })}
                 >
-                  <SelectTrigger className="bg-white">
+                  <SelectTrigger className="bg-white" data-testid="commission-category-select">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     {SERVICE_CATEGORIES.map(cat => (
                       <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {formData.config_type === 'operator_specific' && (
+              <div>
+                <Label>Operator</Label>
+                <Select
+                  value={formData.operator_id}
+                  onValueChange={(value) => {
+                    const op = operators.find((o) => (o._id || o.id) === value);
+                    setFormData((p) => ({
+                      ...p,
+                      operator_id: value,
+                      operator_name: op?.business_name || op?.name || '',
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="bg-white" data-testid="commission-operator-select">
+                    <SelectValue placeholder="Select operator" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-72">
+                    {operators.map((op) => (
+                      <SelectItem key={op._id || op.id} value={op._id || op.id}>
+                        {op.business_name || op.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

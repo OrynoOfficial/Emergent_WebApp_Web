@@ -171,12 +171,13 @@ async def list_refunds(status_filter: Optional[str] = None,
     q = {}
     if status_filter:
         q["status"] = status_filter
+    total = await db.refunds.count_documents(q)
     cursor = db.refunds.find(q).sort("created_at", -1).limit(200)
     items = []
     async for r in cursor:
         r["id"] = r.pop("_id")
         items.append(r)
-    return {"refunds": items}
+    return {"refunds": items, "total": total}
 
 
 @router.post("/{refund_id}/approve")

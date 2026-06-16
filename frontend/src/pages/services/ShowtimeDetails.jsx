@@ -21,8 +21,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 
-const SERVICE_FEE_PCT = 0.03; // mirrors backend constant
+// Default hardcoded rate used only as a fallback before the resolve API replies.
+const DEFAULT_FEE_PCT = 0.03;
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const STEPS = [
@@ -202,6 +204,14 @@ export default function ShowtimeDetails() {
 
   // Reset seats when class or quantity changes
   useEffect(() => { setSelectedSeats([]); }, [selectedClassId, quantity]);
+
+  // Resolve commission rate from the platform hierarchy.
+  const { rate: commissionRatePct } = useCommissionRate(
+    'events',
+    showtime?.operator_id,
+    { fallback: DEFAULT_FEE_PCT * 100 },
+  );
+  const SERVICE_FEE_PCT = (commissionRatePct || DEFAULT_FEE_PCT * 100) / 100;
 
   // ── Derived state ────────────────────────────────────────────────────────
   const selectedClass = useMemo(
@@ -527,6 +537,7 @@ export default function ShowtimeDetails() {
                     title="Contact Information"
                     subtitle="Where should we send your tickets?"
                     toggleLabel="Use my account details"
+                    accent="events"
                     firstName={formData.firstName}
                     lastName={formData.lastName}
                     email={formData.email}
@@ -652,6 +663,34 @@ export default function ShowtimeDetails() {
                     </div>
                   </div>
 
+                  {/* Selected seats — surfaces user's picks right inside Ticket details */}
+                  {needsSeatPicker && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-slate-100" data-testid="ticket-details-seats">
+                      <Armchair className="w-3.5 h-3.5 text-pink-600 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] uppercase text-slate-500 font-semibold">Selected seats</p>
+                          <span className="text-[10px] font-bold text-pink-700 tabular-nums">{selectedSeats.length}/{quantity}</span>
+                        </div>
+                        {selectedSeats.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {selectedSeats.map((s) => (
+                              <Badge
+                                key={s}
+                                className="text-[10px] border-0 px-1.5 py-0.5"
+                                style={{ background: `${selectedClass?.color || '#ec4899'}22`, color: selectedClass?.color || '#ec4899' }}
+                              >
+                                {s}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 italic mt-0.5">Pick seats on the left to see them here</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                     {showtime.operator_logo_url ? (
                       <img src={showtime.operator_logo_url} alt={showtime.operator_name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow" />
@@ -682,9 +721,9 @@ export default function ShowtimeDetails() {
                 </CardContent>
               </Card>
 
-              {/* Price Breakdown — Cinema-style with #082c59 header */}
+              {/* Price Breakdown — pink/rose header to match Events service colour */}
               <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100" data-testid="events-price-breakdown">
-                <div className="bg-[#082c59] p-4">
+                <div className="bg-gradient-to-r from-pink-600 to-rose-600 p-4">
                   <h4 className="font-bold text-white flex items-center gap-2">
                     <Receipt className="w-4 h-4" /> Price Breakdown
                   </h4>
@@ -706,7 +745,7 @@ export default function ShowtimeDetails() {
                     </div>
                     <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
                       <span className="font-bold text-slate-900">Total</span>
-                      <span className="text-2xl font-bold text-[#082c59] tabular-nums" data-testid="total-amount">{formatFCFA(grandTotal)}</span>
+                      <span className="text-2xl font-bold text-pink-700 tabular-nums" data-testid="total-amount">{formatFCFA(grandTotal)}</span>
                     </div>
                   </div>
                 </div>
