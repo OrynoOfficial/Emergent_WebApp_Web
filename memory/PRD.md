@@ -1,5 +1,30 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 238: Events Mgmt UI refactor + Cinema CRUD re-verified)
+
+### Events Management — frontend refactor (`/management/events`)
+Completed the pivot from flat Events to **Location → Showtime** architecture (backend was done in iter 237). The Management tab now contains three nested sub-tabs:
+
+- **Locations** (`events-tab-locations`) — operator-managed venues with photos, address, lat/long, capacity, and 3 layout types (Simple kind, Visual grid rows×cols, Named zones). Editor exposes `add-location-btn` → `location-editor` modal → `save-location-btn`.
+- **Showtimes** (`events-tab-showtimes`) — scheduled instances at a Location with per-class VIP/Standard/etc. tiers (name, price, total seats, colour). Editor exposes `add-showtime-btn` → `showtime-editor` modal → `save-showtime-btn`.
+- **Legacy Events** (`events-tab-legacy`) — read-only banner; no `Add Event` button; existing legacy events still editable via the pre-existing form (now titled "Edit Legacy Event").
+
+Files:
+- `/app/frontend/src/pages/management/EventsManagement.jsx` — rewritten as a thin orchestrator that delegates to LocationsSubTab/ShowtimesSubTab and keeps a Legacy tab for old events.
+- `/app/frontend/src/components/management/events/LocationsAndShowtimesTabs.jsx` — exports `LocationsSubTab`, `ShowtimesSubTab`, `LocationEditor`, `ShowtimeEditor`.
+
+### Cinema Showtime CRUD — confirmed working
+Original P0 from previous handoff (Quick Edit / Replace / Delete don't work for operators) re-verified end-to-end as `mani-monroe@netflix.com`:
+- `cinema.manage_screenings` permission is granted → PermissionGate uses `hasAnyPermission(["cinema.manage_screenings","operator.services.edit"])` → buttons appear.
+- Edit → opens dialog → "Showtime updated" toast persists changes.
+- Replace → opens Replace dialog with reason picker.
+- Delete → correctly blocks when active bookings reference the showtime (HTTP 409 + clear toast: "1 active booking(s) reference this showtime. Use 'Replace' to migrate them…").
+
+### Verified
+- **Frontend testing agent — iter 227 — 100% pass** on all 4 review bullets (Cinema CRUD via prior manual verification, Events Locations create, Showtimes create, Legacy tab read-only).
+- New Location + Showtime persisted via the UI: "QA Test Venue 1781639545" (Douala, 300 cap, Simple/theater_rows) hosting "QA Concert 1781639555" (Standard class, 5000 FCFA × 100 units).
+
+
 ## Latest Changes (Feb 2026 — iter 236: operator_logo_url enrichment platform-wide)
 
 The travel-routes listing got `operator_logo_url` enrichment in iter 235. This iteration extends the same batch-load pattern to **Hotels, Car Rentals, and Banquets** so every customer-facing catalog endpoint carries the operator's brand without an extra round-trip.
