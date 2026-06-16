@@ -197,6 +197,56 @@ export default function BookingConfirmation() {
               </div>
             </div>
 
+            {/* Extra-luggage manifest — printed on the ticket so security and
+                boarding staff can verify each bag's contents at a glance. */}
+            {Array.isArray(booking.details?.extra_luggage_descriptions) && booking.details.extra_luggage_descriptions.length > 0 && (
+              <div className="border border-amber-200 bg-amber-50/60 rounded-lg p-4 mb-6" data-testid="ticket-luggage-manifest">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-200 text-amber-800 text-xs font-bold">
+                    {booking.details.extra_luggage_descriptions.length}
+                  </span>
+                  <h3 className="font-semibold text-amber-900">Extra Luggage Manifest</h3>
+                  <Badge className="ml-auto bg-amber-100 text-amber-800 border-amber-200 text-[10px]">Show at boarding</Badge>
+                </div>
+                <ol className="space-y-2">
+                  {booking.details.extra_luggage_descriptions.map((desc, idx) => (
+                    <li key={idx} className="flex gap-3 items-start text-sm" data-testid={`ticket-luggage-bag-${idx}`}>
+                      <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-amber-300 text-amber-800 text-[11px] font-bold shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <p className="text-slate-700 leading-snug">{desc}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[11px] text-amber-700/80 italic mt-3">
+                  Contents declared by the passenger. Please ensure they match what's actually inside.
+                </p>
+              </div>
+            )}
+
+            {/* Operator brand strip — uses operator.logo_url when available,
+                otherwise falls back to a clean monogram avatar. Sits on every
+                ticket so customers know who they're travelling with. */}
+            {(booking.operator_name || booking.operator_logo_url) && (
+              <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg mb-6" data-testid="ticket-operator-strip">
+                {booking.operator_logo_url ? (
+                  <img
+                    src={booking.operator_logo_url}
+                    alt={booking.operator_name || 'Operator'}
+                    className="w-12 h-12 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#082c59] to-[#0a3a73] text-white flex items-center justify-center font-bold shrink-0">
+                    {(booking.operator_name || '?').slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 font-medium">Operated by</p>
+                  <p className="font-semibold text-slate-900 truncate">{booking.operator_name || 'Operator'}</p>
+                </div>
+              </div>
+            )}
+
             {/* Payment Info */}
             <div className="border-t pt-6">
               <h3 className="font-semibold mb-4 flex items-center gap-2">

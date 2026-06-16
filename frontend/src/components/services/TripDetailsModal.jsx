@@ -175,8 +175,23 @@ export default function TripDetailsModal({ open, onOpenChange, trip, onContinue 
                 <ShieldCheck className="w-3 h-3 mr-1" /> Insured
               </Badge>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold leading-tight">{trip.operator_name}</h2>
-            <p className="text-sm text-white/80 mt-1">{trip.vehicle_name || trip.operator_name}</p>
+            {/* Operator brand: real logo when uploaded, otherwise large title.
+                The logo is bottom-aligned with the name so the visual weight
+                matches across operators with and without a logo. */}
+            <div className="flex items-center gap-3">
+              {trip.operator_logo_url && (
+                <img
+                  src={trip.operator_logo_url}
+                  alt={trip.operator_name}
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/95 object-contain p-1 shadow-md shrink-0"
+                  data-testid="trip-modal-operator-logo"
+                />
+              )}
+              <div className="min-w-0">
+                <h2 className="text-2xl sm:text-3xl font-bold leading-tight truncate">{trip.operator_name}</h2>
+                <p className="text-sm text-white/80 mt-1 truncate">{trip.vehicle_name || trip.operator_name}</p>
+              </div>
+            </div>
 
             {/* Route + time strip — glass cards */}
             <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">

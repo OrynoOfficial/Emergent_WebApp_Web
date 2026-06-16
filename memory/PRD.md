@@ -1,6 +1,31 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 234: 5 UX polish fixes)
+## Latest Changes (Feb 2026 — iter 235: Ticket renderer wiring)
+
+Both P3 follow-ups from iter 234 are done.
+
+### 1. Extra-luggage manifest on the e-ticket / order detail
+- **`OrderDetailModal.jsx`** — new amber-styled "Extra Luggage Manifest" section that appears whenever `order.booking_details.extra_luggage_descriptions` is non-empty. Shows a count badge, each bag chip-numbered (`#1`, `#2`, ...) with the customer's description, plus a footer note for staff: *"Contents declared at booking. Show this list at boarding for verification."*
+- **`BookingConfirmation.jsx`** — same manifest pattern next to the QR code so first-time travellers see it on the post-payment confirmation screen.
+
+### 2. Operator logo wired everywhere
+- **Backend `orders.py`**: `POST /api/orders/create` now resolves `operators.logo_url` for the booking's operator and stores it as `order.operator_logo_url`. `GET /api/orders/{id}` backfills the field for legacy orders (operators that uploaded a logo after the order was created).
+- **Backend `travel_routes.py`**: `GET /api/travel/routes` now batch-loads `operator_logo_url` per route so the customer-facing TripDetailsModal renders the brand without an extra round-trip.
+- **Frontend `OrderDetailModal.jsx`**: operator name row now shows the logo (small thumbnail) when available, falling back gracefully when not.
+- **Frontend `TripDetailsModal.jsx`**: header pairs the operator logo with the operator name in a flex row instead of an initials-only avatar.
+- **Frontend `BookingConfirmation.jsx`**: new "Operated by" strip with logo + operator name on every confirmation page.
+
+### Tests (`/app/backend/tests/test_iter235_ticket_renderer_wiring.py`)
+- `test_operator_logo_url_persisted_on_orders` — sets a logo on an operator, places an order, asserts `order.operator_logo_url` round-trips.
+- `test_extra_luggage_descriptions_persist_on_travel_order` — declared bag manifest survives create → fetch.
+- `test_travel_routes_enriched_with_operator_logo` — public routes list carries `operator_logo_url`.
+
+### Verified
+- **25/25 pytest pass** (iter 231/232/233/234/235 combined)
+- Visual: order detail modal shows the operator logo + the full luggage manifest section as expected
+
+
+## Earlier — iter 234: 5 UX polish fixes
 
 ### 1. Car Rental Search — compact filter at the tail of Pickup Location
 - The filter button now sits **inside the Pickup Location row** (not as a separate inline panel)

@@ -249,7 +249,17 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </div>
                 <div>
                   <p className="text-xs text-slate-500">Operator</p>
-                  <p className="text-sm font-medium">{order.operator_name || order.booking_details?.operator_name || 'N/A'}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {(order.operator_logo_url || order.booking_details?.operator_logo_url) && (
+                      <img
+                        src={order.operator_logo_url || order.booking_details.operator_logo_url}
+                        alt={order.operator_name || 'Operator'}
+                        className="w-6 h-6 rounded bg-white object-contain border border-slate-200 shrink-0"
+                        data-testid="order-detail-operator-logo"
+                      />
+                    )}
+                    <p className="text-sm font-medium">{order.operator_name || order.booking_details?.operator_name || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -348,6 +358,35 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               )}
             </div>
           </div>
+
+          {/* Extra-luggage manifest — printed on the customer's order detail
+              so it doubles as a boarding-time reference. Operators and
+              station staff can verify each bag's contents at a glance. */}
+          {Array.isArray(order.booking_details?.extra_luggage_descriptions) && order.booking_details.extra_luggage_descriptions.length > 0 && (
+            <div data-testid="order-luggage-manifest">
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold">
+                  {order.booking_details.extra_luggage_descriptions.length}
+                </span>
+                Extra Luggage Manifest
+              </h3>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                <ol className="space-y-2">
+                  {order.booking_details.extra_luggage_descriptions.map((desc, idx) => (
+                    <li key={idx} className="flex gap-3 items-start text-sm" data-testid={`order-luggage-bag-${idx}`}>
+                      <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-amber-300 text-amber-800 text-[11px] font-bold shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <p className="text-slate-700 leading-snug">{desc}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[11px] text-amber-700/80 italic mt-3">
+                  Contents declared at booking. Show this list at boarding for verification.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Vehicle Info — for travel bookings */}
           {(order.service_type === 'travel' || order.service_category === 'travel') && (

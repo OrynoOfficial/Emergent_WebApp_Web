@@ -265,6 +265,14 @@ async def create_direct_order(
                     operator_id = svc.get("operator_id")
                     operator_name = operator_name or svc.get("operator_name", "")
 
+    # Pull the operator's logo so the customer's order detail / e-ticket can
+    # render the real brand instead of a generic monogram.
+    operator_logo_url = None
+    if operator_id:
+        op_logo_doc = await db.operators.find_one({"_id": operator_id}, {"logo_url": 1})
+        if op_logo_doc:
+            operator_logo_url = op_logo_doc.get("logo_url")
+
     # ── Anti-self-booking safeguard ────────────────────────────────────────
     # Operators (owners + team members) must not book in their own name —
     # either as a customer self-booking on /services/*/booking (blocked at
@@ -528,6 +536,7 @@ async def create_direct_order(
             "service_name": f"{order_data.service_name} (Outbound)",
             "operator_id": operator_id,
             "operator_name": operator_name,
+            "operator_logo_url": operator_logo_url,
             "subtotal": outbound_price,
             "total_amount": outbound_price,
             "final_amount": outbound_price,
@@ -552,6 +561,7 @@ async def create_direct_order(
             "service_name": f"{order_data.service_name} (Return)",
             "operator_id": operator_id,
             "operator_name": operator_name,
+            "operator_logo_url": operator_logo_url,
             "subtotal": return_price,
             "total_amount": return_price,
             "final_amount": return_price,
@@ -631,6 +641,7 @@ async def create_direct_order(
         "service_name": order_data.service_name,
         "operator_id": operator_id,
         "operator_name": operator_name,
+        "operator_logo_url": operator_logo_url,
         "subtotal": subtotal,
         "tax": 0,
         "discount": booking_details.get("promo_discount", 0),
@@ -866,6 +877,13 @@ async def get_order(
     order = {k: v for k, v in order.items() if k != "_id"}
     order["id"] = order_id_val
     order = await _enrich_order_with_route(order, db)
+
+    # Backfill operator_logo_url for legacy orders created before iter 235.
+    if not order.get("operator_logo_url") and order.get("operator_id"):
+        op_doc = await db.operators.find_one({"_id": order["operator_id"]}, {"logo_url": 1})
+        if op_doc and op_doc.get("logo_url"):
+            order["operator_logo_url"] = op_doc["logo_url"]
+
     return order
 
 @router.put("/{order_id}/cancel")

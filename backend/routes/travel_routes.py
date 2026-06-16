@@ -110,9 +110,19 @@ async def get_travel_routes(
     routes = await db.travel_routes.find(query).sort("departure_time", 1).skip(skip).limit(limit).to_list(limit)
     total = await db.travel_routes.count_documents(query)
     
-    # Transform _id to id and enrich with vehicle info
+    # Batch-load operator logos so the customer modals/cards can render the
+    # real brand instead of a generic monogram.
+    op_ids = list({r.get("operator_id") for r in routes if r.get("operator_id")})
+    logo_map = {}
+    if op_ids:
+        async for op in db.operators.find({"_id": {"$in": op_ids}}, {"_id": 1, "logo_url": 1}):
+            logo_map[op["_id"]] = op.get("logo_url")
+
+    # Transform _id to id and enrich with vehicle + operator-logo info
     for route in routes:
         route["id"] = str(route.pop("_id", ""))
+        if route.get("operator_id") in logo_map:
+            route["operator_logo_url"] = logo_map[route["operator_id"]]
         vehicle_id = route.get("vehicle_id")
         if vehicle_id:
             vehicle = await db.vehicles.find_one({"_id": vehicle_id}, {"images": 1, "plate_number": 1, "vehicle_name": 1, "name": 1})
