@@ -1,68 +1,115 @@
-// Single-page booking layout for the new Location → Showtime architecture.
-// LEFT (2/3):  Pick tickets · Your details · Seat selection (when applicable)
-// RIGHT (1/3): Ticket details · Price breakdown · Payment method · Pay button
-//
-// Order creation + payment is one atomic flow now (no more 2-step). The order
-// is created on the FIRST interaction with PaymentMethodsSelection (which
-// already handles the gateway redirect).
+// Event booking page — design mirrors CinemaBooking.jsx (cyan-on-slate +
+// step indicator + hero card + 2/3 + 1/3 grid). The "Ticket details" /
+// venue-policies panel is preserved on the right rail per product request.
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   ArrowLeft, MapPin, Calendar, Clock, Ticket, Loader2,
   Plus, Minus, Flame, Sparkles, AlertCircle, Building2,
-  CreditCard, User as UserIcon, Mail, Phone, ShieldCheck, Theater, CheckCircle2,
-  Image as ImageIcon, Receipt,
+  CreditCard, User, CheckCircle2, Theater, Armchair, PartyPopper,
+  Image as ImageIcon, Receipt, ShieldCheck,
 } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { toast } from 'sonner';
+
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
-import { format, parseISO, isValid } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 
-const SERVICE_FEE_PCT = 0.03;   // mirrors backend constant; safe duplicate.
+const SERVICE_FEE_PCT = 0.03; // mirrors backend constant
+
+// ── helpers ─────────────────────────────────────────────────────────────────
+const STEPS = [
+  { num: 1, label: 'Tickets', icon: Ticket },
+  { num: 2, label: 'Details', icon: User },
+  { num: 3, label: 'Payment', icon: CreditCard },
+];
+
+function StepIndicator({ currentStep }) {
+  return (
+    <div className="flex items-center justify-center mb-10">
+      {STEPS.map((step, idx) => {
+        const Icon = step.icon;
+        const reached = currentStep >= step.num;
+        const passed = currentStep > step.num;
+        return (
+          <React.Fragment key={step.num}>
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                  reached
+                    ? 'bg-pink-600 text-white shadow-[0_0_25px_rgba(244,114,182,0.35)]'
+                    : 'bg-slate-200 text-slate-500 border border-slate-300'
+                }`}
+                data-testid={`booking-step-${step.num}`}
+              >
+                {passed ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+              </div>
+              <span className={`text-[11px] mt-2 font-medium tracking-wide uppercase ${reached ? 'text-pink-700' : 'text-slate-500'}`}>
+                {step.label}
+              </span>
+            </div>
+            {idx < STEPS.length - 1 && (
+              <div className={`w-16 h-0.5 mx-3 mt-[-18px] rounded-full transition-all ${passed ? 'bg-pink-500' : 'bg-slate-200'}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
   const d = parseISO(iso);
   return isValid(d) ? format(d, 'EEE, MMM d, yyyy · HH:mm') : iso;
 }
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = parseISO(iso);
+  return isValid(d) ? format(d, 'EEE, MMM d, yyyy') : iso;
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = parseISO(iso);
+  return isValid(d) ? format(d, 'HH:mm') : iso;
+}
 function availabilityChip(c) {
   const avail = c.available_units ?? 0;
   const total = c.total_units ?? 0;
   if (avail <= 0) return { text: 'Sold out', color: 'bg-rose-100 text-rose-700 border-rose-200', icon: AlertCircle };
   if (total > 0 && avail / total <= 0.2) return { text: `Only ${avail} left`, color: 'bg-orange-100 text-orange-700 border-orange-200', icon: Flame };
-  return { text: `${avail} left`, color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Sparkles };
+  return { text: `${avail} available`, color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Sparkles };
 }
 
-// ── Seat picker for visual_grid venues. Cinema-like UI; wired to the
-//    location.grid_rows/cols defined in the Management → Locations editor.
+// ── Seat picker ─────────────────────────────────────────────────────────────
 function SeatPicker({ location, selectedClass, selectedSeats, setSelectedSeats, quantity }) {
   const rows = Math.max(1, Math.min(20, Number(location?.grid_rows) || 8));
   const cols = Math.max(1, Math.min(26, Number(location?.grid_cols) || 12));
   const aisle = Number(location?.grid_aisle_after) || 0;
   const booked = new Set(selectedClass?.booked_seats || []);
-  const classColor = selectedClass?.color || '#3b82f6';
+  const classColor = selectedClass?.color || '#ec4899';
 
   const toggle = (seatId) => {
     if (booked.has(seatId)) return;
-    setSelectedSeats(prev => {
-      if (prev.includes(seatId)) return prev.filter(s => s !== seatId);
-      if (prev.length >= quantity) return [...prev.slice(1), seatId];   // rolling selection
+    setSelectedSeats((prev) => {
+      if (prev.includes(seatId)) return prev.filter((s) => s !== seatId);
+      if (prev.length >= quantity) return [...prev.slice(1), seatId];
       return [...prev, seatId];
     });
   };
 
   return (
-    <div className="bg-slate-50 rounded-xl p-4">
+    <div className="bg-slate-50 rounded-xl p-5">
       <div className="flex flex-col items-center">
         <div className="w-2/3 h-1.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 mb-1.5" />
-        <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-3">STAGE / SCREEN</p>
+        <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-4">STAGE / SCREEN</p>
         <div className="space-y-1.5">
           {Array.from({ length: rows }).map((_, r) => (
             <div key={r} className="flex items-center gap-1.5">
@@ -107,24 +154,33 @@ function SeatPicker({ location, selectedClass, selectedSeats, setSelectedSeats, 
   );
 }
 
+// ── Main page ───────────────────────────────────────────────────────────────
 export default function ShowtimeDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isOperatorUser } = useAuth();
+
   const [showtime, setShowtime] = useState(null);
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Ticket / seat state
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSeats, setSelectedSeats] = useState([]);
-  const [contact, setContact] = useState({ name: '', email: '', phone: '' });
 
-  // Payment wiring — order is created lazily on "Pay" click.
+  // Booker info (Cinema-style first/last/email/phone + self-fill toggle)
+  const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [isSelf, setIsSelf] = useState(false);
+
+  // Payment state
+  const [currentStep, setCurrentStep] = useState(1);
   const [reserving, setReserving] = useState(false);
   const [orderId, setOrderId] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [triggerPayment, setTriggerPayment] = useState(false);
 
+  // ── Fetch ────────────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -135,7 +191,7 @@ export default function ShowtimeDetails() {
           const lRes = await api.get(`/event-locations/${sRes.data.location_id}`);
           setLocation(lRes.data);
         }
-        const firstAvailable = (sRes.data.classes || []).find(c => (c.available_units ?? 0) > 0);
+        const firstAvailable = (sRes.data.classes || []).find((c) => (c.available_units ?? 0) > 0);
         if (firstAvailable) setSelectedClassId(firstAvailable.id);
       } catch {
         toast.error('Showtime not found');
@@ -144,22 +200,13 @@ export default function ShowtimeDetails() {
     })();
   }, [id, navigate]);
 
-  useEffect(() => {
-    if (user) {
-      setContact(c => ({
-        name: c.name || user.name || '',
-        email: c.email || user.email || '',
-        phone: c.phone || user.phone || '',
-      }));
-    }
-  }, [user]);
-
-  // Reset seats whenever class or qty changes — keeps state consistent.
+  // Reset seats when class or quantity changes
   useEffect(() => { setSelectedSeats([]); }, [selectedClassId, quantity]);
 
+  // ── Derived state ────────────────────────────────────────────────────────
   const selectedClass = useMemo(
-    () => (showtime?.classes || []).find(c => c.id === selectedClassId),
-    [showtime, selectedClassId]
+    () => (showtime?.classes || []).find((c) => c.id === selectedClassId),
+    [showtime, selectedClassId],
   );
   const needsSeatPicker = location?.layout_type === 'visual_grid';
   const subtotal = selectedClass ? Number(selectedClass.price) * quantity : 0;
@@ -171,19 +218,60 @@ export default function ShowtimeDetails() {
     const d = parseISO(showtime.start_datetime);
     return isValid(d) && d.getTime() < Date.now();
   }, [showtime]);
+  const startingPrice = useMemo(() => {
+    const prices = (showtime?.classes || [])
+      .filter((c) => (c.available_units ?? 0) > 0)
+      .map((c) => Number(c.price));
+    return prices.length ? Math.min(...prices) : 0;
+  }, [showtime]);
+
+  // Drive the step indicator off interaction milestones.
+  useEffect(() => {
+    if (!selectedClass) return;
+    if (formData.firstName && formData.email && formData.phone) {
+      setCurrentStep((s) => Math.max(s, 3));
+    } else if (selectedSeats.length === quantity || !needsSeatPicker) {
+      setCurrentStep((s) => Math.max(s, 2));
+    } else {
+      setCurrentStep(1);
+    }
+  }, [selectedClass, selectedSeats.length, quantity, needsSeatPicker, formData.firstName, formData.email, formData.phone]);
+
+  // Booker self-fill toggle (mirrors CinemaBooking.handleSelfChange)
+  const handleSelfChange = async (checked) => {
+    setIsSelf(checked);
+    if (checked) {
+      try {
+        const res = await api.get('/auth/me');
+        const profile = res.data;
+        const fullName = profile.full_name || '';
+        const parts = fullName.trim().split(/\s+/);
+        setFormData((p) => ({
+          ...p,
+          firstName: profile.first_name || parts[0] || '',
+          lastName: profile.last_name || parts.slice(1).join(' ') || '',
+          email: profile.email || p.email,
+          phone: profile.phone || p.phone || '',
+        }));
+      } catch { /* user already in context */ }
+    } else {
+      setFormData((p) => ({ ...p, firstName: '', lastName: '', phone: '' }));
+    }
+  };
 
   const canPay = !!selectedClass
-    && !!contact.name?.trim()
+    && !!formData.firstName?.trim()
+    && !!formData.email?.trim()
+    && !!formData.phone?.trim()
     && !isPastShowtime
     && (selectedClass?.available_units ?? 0) >= quantity
     && (!needsSeatPicker || selectedSeats.length === quantity)
     && !!selectedPaymentMethod;
 
-  // Reserve seats (creates the order in pending) THEN trigger the payment
-  // gateway via PaymentMethodsSelection. PMS handles success/error callbacks.
+  // ── Booking flow ─────────────────────────────────────────────────────────
   const handlePay = async () => {
     if (!selectedPaymentMethod) { toast.error('Pick a payment method'); return; }
-    if (!contact.name?.trim()) { toast.error('Name is required'); return; }
+    if (!formData.firstName?.trim()) { toast.error('First name is required'); return; }
     if (needsSeatPicker && selectedSeats.length !== quantity) {
       toast.error(`Select ${quantity} seat${quantity > 1 ? 's' : ''}`); return;
     }
@@ -194,300 +282,498 @@ export default function ShowtimeDetails() {
         class_id: selectedClassId,
         quantity,
         seat_ids: needsSeatPicker ? selectedSeats : null,
-        contact_name: contact.name,
-        contact_phone: contact.phone || null,
-        contact_email: contact.email || null,
+        contact_name: `${formData.firstName} ${formData.lastName}`.trim(),
+        contact_phone: formData.phone || null,
+        contact_email: formData.email || null,
       });
       setOrderId(res.data.order_id);
-      setTriggerPayment(true);     // PaymentMethodsSelection fires the gateway.
+      setTriggerPayment(true);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Reservation failed');
     } finally { setReserving(false); }
   };
 
-  const handlePaymentInitiated = ({ success, message }) => {
+  const handlePaymentInitiated = ({ success, message } = {}) => {
     setTriggerPayment(false);
     if (success) {
       toast.success('Payment confirmed — see you at the show!');
       navigate(`/orders?highlight=${orderId}`);
-    } else {
-      toast.error(message || 'Payment failed — your reservation will expire shortly');
+    } else if (message) {
+      toast.error(message);
     }
   };
 
+  // ── Guards ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-pink-50">
-        <Loader2 className="h-12 w-12 animate-spin text-pink-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-pink-50">
+        <div className="text-center">
+          <div className="relative w-20 h-20 mx-auto">
+            <div className="absolute inset-0 border-4 border-pink-500/30 rounded-full animate-pulse" />
+            <PartyPopper className="h-10 w-10 text-pink-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
+          </div>
+          <p className="text-pink-700 mt-4 font-medium tracking-wide uppercase text-xs">Loading showtime…</p>
+        </div>
       </div>
     );
   }
   if (!showtime) return null;
+  if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-pink-50/30 pb-12">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
+      {/* Ambient pink glow */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -right-32 w-[28rem] h-[28rem] bg-rose-400/5 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur border-b border-pink-100 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2 text-pink-700 hover:bg-pink-50" data-testid="showtime-back-btn">
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Button>
-          <div className="flex-1 min-w-0">
-            <p className="text-pink-600 text-[10px] tracking-[0.2em] uppercase">Event Booking</p>
-            <h1 className="text-lg font-bold text-slate-900 truncate" data-testid="showtime-title">{showtime.title}</h1>
+      <div className="relative bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-30">
+        <div className="max-w-[1472px] mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-slate-900 hover:bg-slate-100" data-testid="showtime-back-btn">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="text-pink-600/70 text-[11px] tracking-[0.3em] uppercase">Event Booking</p>
+              <h1 className="text-xl font-bold text-slate-900 truncate" data-testid="showtime-title">{showtime.title}</h1>
+            </div>
           </div>
-          {showtime.operator_logo_url && (
-            <img src={showtime.operator_logo_url} alt={showtime.operator_name} className="w-9 h-9 rounded-full object-cover border-2 border-white shadow" />
-          )}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ───────── LEFT (2/3) — pick tickets, contact, seats ───────── */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Pick your tickets */}
-          <Card className="overflow-hidden border-pink-200 shadow-md" data-testid="reserve-card">
-            <div className="bg-gradient-to-r from-pink-600 to-rose-600 p-3">
-              <h2 className="font-bold text-white flex items-center gap-2"><Ticket className="w-4 h-4" /> Pick your tickets</h2>
+      <div className="relative max-w-[1472px] mx-auto px-4 py-8">
+        <StepIndicator currentStep={currentStep} />
+
+        {/* Hero card */}
+        <Card className="relative overflow-hidden mb-8 border-pink-500/20 bg-white" data-testid="event-hero">
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-500/5 via-transparent to-rose-500/5 pointer-events-none" />
+          <CardContent className="relative p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="flex items-center gap-5">
+                {showtime.operator_logo_url ? (
+                  <img
+                    src={showtime.operator_logo_url}
+                    alt={showtime.operator_name}
+                    className="w-16 h-16 rounded-2xl object-cover shadow-lg shadow-pink-500/20 border-2 border-white"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-700 flex items-center justify-center shadow-lg shadow-pink-500/25">
+                    <PartyPopper className="w-8 h-8 text-white" />
+                  </div>
+                )}
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-tight">{showtime.title}</h2>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-slate-600">
+                    <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-pink-600" />{showtime.location_name}</span>
+                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-pink-600" />{fmtDate(showtime.start_datetime)}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-pink-600" />{fmtTime(showtime.start_datetime)}</span>
+                    {showtime.event_type && (
+                      <Badge className="bg-pink-600 text-white border border-pink-700/40 uppercase text-[10px] tracking-wider">{showtime.event_type}</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-pink-600/70 text-[10px] tracking-[0.3em] uppercase mb-1">Starting from</p>
+                <p className="text-3xl font-bold text-slate-900">{formatFCFA(startingPrice)}</p>
+                <p className="text-slate-500 text-xs">per ticket</p>
+              </div>
             </div>
-            <CardContent className="bg-white p-4 space-y-3">
-              <div className="space-y-2" data-testid="ticket-classes">
-                {(showtime.classes || []).map(c => {
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* ───────── LEFT — tickets, seats, booker ───────── */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Tickets */}
+            <Card className="overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow rounded-2xl" data-testid="reserve-card">
+              <div className="h-1 bg-gradient-to-r from-pink-400 via-pink-500 to-rose-400" />
+              <div className="bg-gradient-to-r from-pink-50 to-white border-b border-pink-100 p-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-pink-100 rounded-xl border border-pink-200">
+                    <Ticket className="h-5 w-5 text-pink-700" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Pick your tickets</h3>
+                    <p className="text-xs text-pink-700/80">Choose a tier and how many — colour matches the seat preview</p>
+                  </div>
+                </div>
+              </div>
+              <CardContent className="p-5 space-y-3" data-testid="ticket-classes">
+                {(showtime.classes || []).map((c) => {
                   const isActive = selectedClassId === c.id;
                   const soldOut = (c.available_units ?? 0) <= 0;
                   const chip = availabilityChip(c);
                   const ChipIcon = chip.icon;
                   return (
                     <button
-                      key={c.id} type="button" disabled={soldOut || isPastShowtime}
+                      key={c.id}
+                      type="button"
+                      disabled={soldOut || isPastShowtime}
                       onClick={() => { setSelectedClassId(c.id); setQuantity(1); }}
-                      className={`w-full text-left rounded-lg border-2 p-3 transition-all ${
+                      className={`w-full text-left rounded-xl border-2 p-4 transition-all ${
                         soldOut || isPastShowtime ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' :
                         isActive ? 'border-pink-500 bg-pink-50 shadow-sm' : 'border-slate-200 hover:border-pink-300 bg-white'
                       }`}
-                      data-testid={`class-option-${c.id}`}>
+                      data-testid={`class-option-${c.id}`}
+                    >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: c.color || '#3b82f6' }} />
+                          <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-white" style={{ background: c.color || '#ec4899' }} />
                           <span className="font-semibold text-sm text-slate-900 truncate">{c.name}</span>
                         </div>
-                        <span className="font-bold text-pink-700 text-sm whitespace-nowrap">{formatFCFA(c.price)}</span>
+                        <span className="font-bold text-pink-700 text-sm whitespace-nowrap tabular-nums">{formatFCFA(c.price)}</span>
                       </div>
-                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                      <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                         <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${chip.color}`}>
                           <ChipIcon className="w-3 h-3" /> {chip.text}
                         </span>
-                        {(c.perks || []).slice(0, 2).map((p, i) => <span key={i} className="text-[10px] text-slate-500">• {p}</span>)}
+                        {(c.perks || []).slice(0, 3).map((p, i) => <span key={i} className="text-[10px] text-slate-500">• {p}</span>)}
                       </div>
                     </button>
                   );
                 })}
-              </div>
-              {selectedClass && !isPastShowtime && (
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-700">Quantity</span>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" className="w-8 h-8 p-0"
-                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      disabled={quantity <= 1} data-testid="qty-decrement"><Minus className="w-3.5 h-3.5" /></Button>
-                    <span className="font-bold w-8 text-center" data-testid="qty-value">{quantity}</span>
-                    <Button size="sm" variant="outline" className="w-8 h-8 p-0"
-                      onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                      disabled={quantity >= maxQty} data-testid="qty-increment"><Plus className="w-3.5 h-3.5" /></Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Your details */}
-          {selectedClass && !isPastShowtime && (
-            <Card className="overflow-hidden border-slate-200 shadow-md" data-testid="contact-card">
-              <div className="bg-[#082c59] p-3">
-                <h4 className="font-bold text-white flex items-center gap-2"><UserIcon className="w-4 h-4" /> Your details</h4>
-              </div>
-              <CardContent className="bg-white p-4 space-y-2">
-                <div>
-                  <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Name *</Label>
-                  <Input value={contact.name} onChange={e => setContact(c => ({ ...c, name: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-name-input" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold flex items-center gap-1"><Mail className="w-3 h-3" /> Email</Label>
-                    <Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-email-input" />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold flex items-center gap-1"><Phone className="w-3 h-3" /> Phone</Label>
-                    <Input value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} className="h-9 text-sm mt-1" data-testid="contact-phone-input" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Seat picker (visual_grid only) */}
-          {selectedClass && needsSeatPicker && !isPastShowtime && (
-            <Card className="overflow-hidden border-amber-200 shadow-md" data-testid="seat-picker-card">
-              <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-3 flex items-center justify-between">
-                <h4 className="font-bold text-white flex items-center gap-2"><Theater className="w-4 h-4" /> Pick your seats</h4>
-                <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
-                  {selectedSeats.length} / {quantity} selected
-                </Badge>
-              </div>
-              <CardContent className="bg-white p-4">
-                <SeatPicker
-                  location={location}
-                  selectedClass={selectedClass}
-                  selectedSeats={selectedSeats}
-                  setSelectedSeats={setSelectedSeats}
-                  quantity={quantity}
-                />
-                {selectedSeats.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="text-[10px] uppercase font-semibold text-slate-500 mb-1.5">Your seats</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedSeats.map(s => (
-                        <Badge key={s} className="text-[11px] border-0" style={{ background: `${selectedClass.color || '#3b82f6'}22`, color: selectedClass.color || '#3b82f6' }}>{s}</Badge>
-                      ))}
+                {selectedClass && !isPastShowtime && (
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between bg-slate-50 -mx-5 -mb-5 px-5 py-4 rounded-b-2xl">
+                    <div>
+                      <p className="font-semibold text-slate-800 text-sm">Quantity</p>
+                      <p className="text-[11px] text-slate-500">Up to {maxQty} per booking</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-9 w-9 rounded-full border-slate-300 bg-white text-slate-900 hover:bg-slate-100 hover:border-pink-400/40"
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        disabled={quantity <= 1}
+                        data-testid="qty-decrement"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <span className="w-8 text-center text-slate-900 text-lg font-bold tabular-nums" data-testid="qty-value">{quantity}</span>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="h-9 w-9 rounded-full border-pink-300 bg-pink-100 text-pink-700 hover:bg-pink-200"
+                        onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                        disabled={quantity >= maxQty}
+                        data-testid="qty-increment"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
-          )}
-        </div>
 
-        {/* ───────── RIGHT (1/3) — summary, breakdown, payment ───────── */}
-        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          {/* Ticket details + policy */}
-          <Card className="overflow-hidden border-pink-200 shadow-md" data-testid="ticket-details-card">
-            <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-3">
-              <h4 className="font-bold text-white flex items-center gap-2"><Sparkles className="w-4 h-4" /> Ticket details</h4>
-            </div>
-            <CardContent className="bg-white p-4 space-y-3 text-sm">
-              {showtime.images?.[0] ? (
-                <img src={showtime.images[0]} alt="" className="w-full h-28 object-cover rounded-lg" />
-              ) : (
-                <div className="w-full h-28 rounded-lg bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-pink-300" />
-                </div>
-              )}
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-pink-600 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] uppercase text-slate-500 font-semibold">Date</p>
-                    <p className="text-xs font-bold text-slate-800">{fmtDateTime(showtime.start_datetime)}</p>
-                    {showtime.doors_open_at && <p className="text-[10px] text-slate-500">Doors {showtime.doors_open_at}</p>}
+            {/* Seat picker (visual_grid only) */}
+            {selectedClass && needsSeatPicker && !isPastShowtime && (
+              <Card className="overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow rounded-2xl" data-testid="seat-picker-card">
+                <div className="h-1 bg-gradient-to-r from-pink-400 via-pink-500 to-rose-400" />
+                <div className="bg-gradient-to-r from-pink-50 to-white border-b border-pink-100 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-pink-100 rounded-xl border border-pink-200">
+                        <Armchair className="h-5 w-5 text-pink-700" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900">Select your seats</h3>
+                        <p className="text-xs text-pink-700/80">Choose {quantity} seat{quantity !== 1 ? 's' : ''} on the {selectedClass.name} tier</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-pink-100 text-pink-700 border-pink-200">{selectedSeats.length} / {quantity}</Badge>
                   </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-pink-600 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] uppercase text-slate-500 font-semibold">Location</p>
-                    <p className="text-xs font-bold text-slate-800">{showtime.location_name}</p>
-                    {location && (
-                      <p className="text-[10px] text-slate-500">{[location.address, location.city].filter(Boolean).join(' · ')}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Theater className="w-3.5 h-3.5 text-pink-600 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] uppercase text-slate-500 font-semibold">Seating plan</p>
-                    <p className="text-xs font-bold text-slate-800 capitalize">{location?.layout_type?.replace('_', ' ') || '—'}</p>
-                    <p className="text-[10px] text-slate-500">{location?.capacity ?? '—'} capacity</p>
-                  </div>
-                </div>
-                {/* Operator block */}
-                <div className="pt-2 mt-2 border-t border-slate-100 flex items-center gap-2">
-                  {showtime.operator_logo_url ? (
-                    <img src={showtime.operator_logo_url} alt={showtime.operator_name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
-                      <Building2 className="w-4 h-4 text-pink-600" />
+                <CardContent className="p-6">
+                  <SeatPicker
+                    location={location}
+                    selectedClass={selectedClass}
+                    selectedSeats={selectedSeats}
+                    setSelectedSeats={setSelectedSeats}
+                    quantity={quantity}
+                  />
+                  {selectedSeats.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] uppercase font-semibold text-slate-500 mb-2">Your seats</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedSeats.map((s) => (
+                          <Badge
+                            key={s}
+                            className="text-[11px] border-0"
+                            style={{ background: `${selectedClass.color || '#ec4899'}22`, color: selectedClass.color || '#ec4899' }}
+                          >
+                            {s}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] uppercase font-semibold text-pink-600">Organised by</p>
-                    <p className="text-xs font-bold text-slate-900 truncate">{showtime.operator_name}</p>
-                    {(showtime.operator_phone || showtime.operator_email) && (
-                      <p className="text-[10px] text-slate-500 truncate">{showtime.operator_phone || showtime.operator_email}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Contact info — Cinema-style BookerInfoSection */}
+            {selectedClass && !isPastShowtime && (
+              <Card className="overflow-hidden border-pink-200 bg-white" data-testid="contact-card">
+                <div className="p-2">
+                  <BookerInfoSection
+                    title="Contact Information"
+                    subtitle="Where should we send your tickets?"
+                    toggleLabel="Use my account details"
+                    firstName={formData.firstName}
+                    lastName={formData.lastName}
+                    email={formData.email}
+                    phone={formData.phone}
+                    onChange={(field, value) => setFormData((p) => ({ ...p, [field]: value }))}
+                    user={user}
+                    isSelf={isSelf}
+                    onSelfChange={handleSelfChange}
+                  />
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* ───────── RIGHT — summary, ticket details, price, payment ───────── */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="sticky top-24 space-y-6">
+
+              {/* Order Summary card with event poster header */}
+              <Card className="overflow-hidden border-pink-500/20 bg-white" data-testid="order-summary-card">
+                <div className="relative h-44 bg-gradient-to-br from-pink-700 via-rose-600 to-slate-900 overflow-hidden">
+                  {showtime.images?.[0] ? (
+                    <img src={showtime.images[0]} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-full h-full object-cover opacity-70" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <ImageIcon className="w-24 h-24 text-white/15" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/70 to-transparent" />
+                  {showtime.event_type && (
+                    <Badge className="absolute top-3 left-3 bg-pink-500/30 text-pink-100 border border-pink-400/40 uppercase tracking-wider text-[10px] backdrop-blur-sm">
+                      {showtime.event_type}
+                    </Badge>
+                  )}
+                  <div className="absolute bottom-3 left-4 right-4">
+                    <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow">{showtime.title}</h3>
+                    {showtime.operator_name && (
+                      <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/95 text-pink-700 font-semibold text-[11px] uppercase tracking-wide shadow-sm">
+                        <Building2 className="w-3 h-3" /> {showtime.operator_name}
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-              {(location?.policies || []).length > 0 && (
-                <div className="bg-slate-50 rounded-lg p-2.5 space-y-1">
-                  <p className="text-[10px] uppercase font-semibold text-slate-500">Venue policies</p>
-                  <ul className="text-[11px] text-slate-700 space-y-0.5">
-                    {(location.policies || []).slice(0, 4).map((p, i) => (
-                      <li key={i} className="flex gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-600 mt-0.5 flex-shrink-0" />{p}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Price breakdown */}
-          <Card className="overflow-hidden shadow-lg" data-testid="events-price-breakdown">
-            <div className="bg-[#082c59] p-3">
-              <h4 className="font-bold text-white flex items-center gap-2"><Receipt className="w-4 h-4" /> Price Breakdown</h4>
+                <CardContent className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-3 pb-4 border-b border-slate-200">
+                    <div className="col-span-2">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-pink-600" /> Venue
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">{showtime.location_name || '—'}</p>
+                      {location && (
+                        <p className="text-[11px] text-slate-500">{[location.address, location.city].filter(Boolean).join(' · ')}</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-pink-600" /> Date
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">{fmtDate(showtime.start_datetime)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-pink-600" /> Showtime
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 leading-tight">
+                        {fmtTime(showtime.start_datetime)}
+                        {showtime.doors_open_at ? ` · doors ${showtime.doors_open_at}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selected ticket + seats */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <h4 className="font-semibold text-slate-900 text-sm flex items-center gap-1.5">
+                        <Ticket className="w-4 h-4 text-pink-600" /> {selectedClass?.name || 'Ticket'}
+                      </h4>
+                      <span className="text-xs text-slate-500 tabular-nums">× {quantity}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {needsSeatPicker && selectedSeats.length > 0 ? (
+                        selectedSeats.map((s) => (
+                          <Badge
+                            key={s}
+                            className="text-[11px] border-0"
+                            style={{ background: `${selectedClass?.color || '#ec4899'}22`, color: selectedClass?.color || '#ec4899' }}
+                          >
+                            {s}
+                          </Badge>
+                        ))
+                      ) : needsSeatPicker ? (
+                        <span className="text-slate-500 text-sm italic">No seats selected yet</span>
+                      ) : (
+                        <span className="text-slate-500 text-sm">General admission</span>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Ticket details — KEPT per user request. Venue policies + organiser. */}
+              <Card className="overflow-hidden border-slate-200 bg-white shadow-sm rounded-2xl" data-testid="ticket-details-card">
+                <div className="h-1 bg-gradient-to-r from-pink-400 via-pink-500 to-rose-400" />
+                <div className="bg-gradient-to-r from-pink-50 to-white border-b border-pink-100 p-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-pink-100 rounded-lg border border-pink-300">
+                      <Sparkles className="h-4 w-4 text-pink-700" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">Ticket details</h4>
+                      <p className="text-[11px] text-pink-700/80">Venue plan, policies and organiser</p>
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="p-4 space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <Theater className="w-3.5 h-3.5 text-pink-600 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] uppercase text-slate-500 font-semibold">Seating plan</p>
+                      <p className="text-xs font-bold text-slate-800 capitalize">{location?.layout_type?.replace('_', ' ') || '—'}</p>
+                      <p className="text-[10px] text-slate-500">{location?.capacity ?? '—'} capacity</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                    {showtime.operator_logo_url ? (
+                      <img src={showtime.operator_logo_url} alt={showtime.operator_name} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+                        <Building2 className="w-4 h-4 text-pink-600" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] uppercase font-semibold text-pink-600">Organised by</p>
+                      <p className="text-xs font-bold text-slate-900 truncate">{showtime.operator_name}</p>
+                      {(showtime.operator_phone || showtime.operator_email) && (
+                        <p className="text-[10px] text-slate-500 truncate">{showtime.operator_phone || showtime.operator_email}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {(location?.policies || []).length > 0 && (
+                    <div className="bg-slate-50 rounded-lg p-2.5 space-y-1">
+                      <p className="text-[10px] uppercase font-semibold text-slate-500">Venue policies</p>
+                      <ul className="text-[11px] text-slate-700 space-y-0.5">
+                        {(location.policies || []).slice(0, 4).map((p, i) => (
+                          <li key={i} className="flex gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-600 mt-0.5 flex-shrink-0" />{p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Price Breakdown — Cinema-style with #082c59 header */}
+              <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-100" data-testid="events-price-breakdown">
+                <div className="bg-[#082c59] p-4">
+                  <h4 className="font-bold text-white flex items-center gap-2">
+                    <Receipt className="w-4 h-4" /> Price Breakdown
+                  </h4>
+                </div>
+                <div className="bg-white p-5">
+                  <div className="space-y-2 text-sm">
+                    {selectedClass && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>{selectedClass.name} × {quantity}</span>
+                        <span className="font-medium text-slate-800 tabular-nums">{formatFCFA(subtotal)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-500">
+                      <span>
+                        Service fee ({Math.round(SERVICE_FEE_PCT * 100)}%)
+                        <span className="block text-[10px] text-slate-400 mt-0.5">Platform · 24/7 support · secure payment</span>
+                      </span>
+                      <span className="font-medium tabular-nums" data-testid="service-fee">+{formatFCFA(serviceFee)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-3 mt-3 border-t border-slate-200">
+                      <span className="font-bold text-slate-900">Total</span>
+                      <span className="text-2xl font-bold text-[#082c59] tabular-nums" data-testid="total-amount">{formatFCFA(grandTotal)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <Card className="overflow-hidden border-pink-200 bg-white" data-testid="payment-card">
+                <div className="bg-gradient-to-r from-pink-50 to-white border-b border-pink-200 p-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-pink-100 rounded-lg border border-pink-300">
+                      <CreditCard className="h-4 w-4 text-pink-700" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm">Payment method</h3>
+                      <p className="text-[11px] text-pink-700/80 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Stripe · MoMo · Orange</p>
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="p-4">
+                  {!selectedClass && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5" /> Pick a ticket above to choose a payment method.
+                    </div>
+                  )}
+                  {selectedClass && needsSeatPicker && selectedSeats.length !== quantity && (
+                    <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5" /> Select {quantity} seat{quantity > 1 ? 's' : ''} (currently {selectedSeats.length}) to unlock payment.
+                    </div>
+                  )}
+                  <div className={(!selectedClass || (needsSeatPicker && selectedSeats.length !== quantity)) ? 'opacity-50 pointer-events-none' : ''}>
+                    <PaymentMethodsSelection
+                      amount={grandTotal}
+                      orderId={orderId}
+                      customerEmail={formData.email}
+                      customerPhone={formData.phone}
+                      serviceDetails={{ name: showtime.title }}
+                      triggerPayment={triggerPayment}
+                      onPaymentInitiated={handlePaymentInitiated}
+                      onMethodSelected={setSelectedPaymentMethod}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Confirm CTA — Cinema-style gradient pill */}
+              <Button
+                onClick={handlePay}
+                disabled={!canPay || reserving}
+                data-testid="book-now-btn"
+                className="w-full h-13 py-6 rounded-xl bg-gradient-to-r from-pink-500 via-pink-400 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-bold text-base shadow-[0_8px_30px_-8px_rgba(244,114,182,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
+              >
+                {reserving ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing…</>
+                ) : isPastShowtime ? (
+                  <><AlertCircle className="w-5 h-5 mr-2" /> Event ended</>
+                ) : !selectedClass ? (
+                  'Pick a ticket'
+                ) : needsSeatPicker && selectedSeats.length !== quantity ? (
+                  `Select ${Math.max(0, quantity - selectedSeats.length)} more seat(s)`
+                ) : !formData.firstName?.trim() || !formData.email?.trim() || !formData.phone?.trim() ? (
+                  'Fill in your details'
+                ) : !selectedPaymentMethod ? (
+                  'Choose a payment method'
+                ) : (
+                  <>Confirm booking · {formatFCFA(grandTotal)}</>
+                )}
+              </Button>
             </div>
-            <CardContent className="bg-white p-4 space-y-1.5 text-sm">
-              {selectedClass && (
-                <div className="flex justify-between text-slate-600">
-                  <span>{selectedClass.name} × {quantity}</span>
-                  <span className="tabular-nums font-medium">{formatFCFA(subtotal)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-slate-600">
-                <div>
-                  <span>Service fee</span>
-                  <p className="text-[10px] text-slate-400">{Math.round(SERVICE_FEE_PCT * 100)}% to keep the platform running, support 24/7, and secure your payment.</p>
-                </div>
-                <span className="tabular-nums font-medium" data-testid="service-fee">{formatFCFA(serviceFee)}</span>
-              </div>
-              <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-200 text-pink-700">
-                <span>Total</span>
-                <span className="tabular-nums" data-testid="total-amount">{formatFCFA(grandTotal)}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment method */}
-          <Card className="overflow-hidden border-cyan-200 shadow-md" data-testid="payment-card">
-            <div className="bg-gradient-to-r from-cyan-700 to-blue-700 p-3 flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-white" />
-              <div>
-                <h3 className="font-bold text-white text-sm">Payment method</h3>
-                <p className="text-[10px] text-cyan-100 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Secure checkout · Stripe / MoMo / Orange</p>
-              </div>
-            </div>
-            <CardContent className="bg-white p-3">
-              <PaymentMethodsSelection
-                amount={grandTotal}
-                orderId={orderId}
-                customerEmail={contact.email}
-                customerPhone={contact.phone}
-                serviceDetails={{ name: showtime.title }}
-                triggerPayment={triggerPayment}
-                onPaymentInitiated={handlePaymentInitiated}
-                onMethodSelected={setSelectedPaymentMethod}
-              />
-            </CardContent>
-          </Card>
-
-          <Button onClick={handlePay} disabled={!canPay || reserving}
-            className="w-full bg-pink-600 hover:bg-pink-700 text-white h-12 shadow shadow-pink-500/30"
-            data-testid="book-now-btn">
-            {reserving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Reserving…</> :
-             isPastShowtime ? <><AlertCircle className="w-4 h-4 mr-2" />Event ended</> :
-             !selectedPaymentMethod ? 'Choose a payment method' :
-             needsSeatPicker && selectedSeats.length !== quantity ? `Select ${quantity} seat${quantity > 1 ? 's' : ''}` :
-             <>Pay {formatFCFA(grandTotal)}</>}
-          </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,23 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 246: Event booking page now mirrors CinemaBooking)
+
+### ShowtimeDetails.jsx — Cinema-style refactor (user-requested)
+The Event booking page now matches the design language of `CinemaBooking.jsx` so all booking pages feel cohesive across services. The **Ticket details** panel was preserved verbatim per the user's request; the rest was rebuilt.
+
+- **Sticky header**: "EVENT BOOKING" eyebrow + title (same as cinema's pattern).
+- **Step indicator** (`booking-step-1/2/3`): Tickets → Details → Payment with pink active state, mirroring cinema's cyan version. Auto-advances based on interaction milestones.
+- **Hero card** (`event-hero`): operator logo (or PartyPopper icon), title, venue/date/time/event-type badges, and "Starting from {min ticket price}" pricing block on the right — direct port of cinema's hero.
+- **2/3 + 1/3 grid**:
+  - LEFT — `reserve-card` (ticket class picker with pink accent strip + icon-in-tile header + pill availability chips + Cinema-style +/- quantity stepper at the bottom), `seat-picker-card` (when `visual_grid`), `contact-card` (Cinema's `BookerInfoSection` with "Use my account details" self-fill toggle).
+  - RIGHT (sticky) — `order-summary-card` (pink-rose gradient poster header, venue/date/time grid, selected ticket + seats), **`ticket-details-card` (preserved)** — seating plan + organiser + venue policies, `events-price-breakdown` (#082c59 header matching cinema), `payment-card` with payment gating notices, and the Confirm CTA pink gradient pill.
+- All 14 testids render; backend regression suite (16 tests) still 100% green.
+
+### What stays from the previous iteration
+- 3% service fee constant + math (`SERVICE_FEE_PCT = 0.03`).
+- Backend `seat_ids` persisted in `booking_details` so the refund flow can release seats.
+- Operator self-booking guard (`<OperatorBookingBlock />` when role=operator).
+
 ## Latest Changes (Feb 2026 — iter 245: Scanner refund overlay + smart location resolve)
 
 ### Scanner — refund-aware (`pages/utility/Scanner.jsx` + `routes/orders.py`)
