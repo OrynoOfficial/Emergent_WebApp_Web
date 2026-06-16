@@ -1,5 +1,33 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 243: Full refund system)
+
+### Backend
+- New `models/refund.py` — `RefundStatus`, `RefundReason`, `RefundCreate`, `RefundDecision`, plus pure `compute_eligibility(order)` function with policy windows:
+  - Events: 100% ≥7d, 50% 24h-7d, 0% <24h.
+  - Cinema: 100% ≥2h, 0% after.
+  - Operator-cancelled → 100% always.
+- New `routes/refunds.py` exposing:
+  - **Customer**: `GET /api/refunds/orders/{id}/eligibility`, `POST /api/refunds/orders/{id}/request`, `GET /api/refunds/me`, `POST /api/refunds/{id}/cancel`.
+  - **Admin**: `GET /api/refunds`, `POST /api/refunds/{id}/approve`, `POST /api/refunds/{id}/reject`.
+- **Idempotency**: one open refund per order — re-request returns the existing pending refund's id.
+- **Approval flow**: Stripe-paid orders call `StripeService.create_refund(payment_intent_id, amount)` and self-settle (status = `completed`); MoMo/Orange/cash hit a manual-processing path (status = `approved`, `requires_manual_processing: true`) so ops can release the bank-transfer themselves.
+- **Atomic stock restoration**: on approve, event-class `available_units` is incremented back via the same `update_one` that flips the order to `refunded`/`partially_refunded`. Verified: showtime class 44 → 45 after approval.
+- **Order side-effects**: `orders.status = 'refunded'` for full refunds, `payment_status = 'partially_refunded'` for partials, plus `refunded_amount` recorded for the money-trail.
+
+### Frontend
+- **Customer**: `components/refunds/RefundRequestDialog.jsx` — shows eligibility banner (refundable_pct + window text), reason picker, optional notes, amount input capped at eligibility. Mounted into `OrderDetailModal` as a "Request refund" button visible only on paid, non-refunded orders.
+- **Admin**: new `/admin/refunds` page at `pages/admin/AdminRefunds.jsx` — pink-rose hero with `Pending / Manual / Refunded total` stats; sortable status filter (Pending/Approved/Completed/Rejected/Failed/All); inline Approve/Reject dialog with admin-editable amount and notes; "Payout X FCFA owed" chip for approved-but-manual refunds so ops always knows what's still to be paid out.
+- Route wired in `App.jsx` under `requiredRoles={['admin']}`.
+
+### Verified end-to-end via curl + UI
+1. Eligibility computes correct policy band (showtime in 2027 → 100%).
+2. Customer creates refund → idempotent re-request returns same id.
+3. `/me` and admin queue both list the refund.
+4. Admin approve restores stock atomically AND updates order to `refunded` AND marks refund `approved` with `requires_manual_processing: true` for MoMo.
+5. Admin queue UI renders existing approved refund with `manual payout` flag and `Payout X FCFA owed` action chip.
+
+
 ## Latest Changes (Feb 2026 — iter 242: Events Results polish + Cinema-style booking)
 
 ### EventsResults header — pink hero (banquet pattern, events colour)

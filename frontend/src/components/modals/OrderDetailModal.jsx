@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,8 @@ import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
 import MoneyTrail from '@/components/payment/MoneyTrail';
 import EventTicket from '@/components/tickets/EventTicket';
+import RefundRequestDialog from '@/components/refunds/RefundRequestDialog';
+import { RefreshCcw } from 'lucide-react';
 
 const getStatusConfig = (status) => {
   const configs = {
@@ -117,6 +119,7 @@ const generateQRCodeUrl = (order) => {
 };
 
 export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onDownloadReceipt }) {
+  const [refundOpen, setRefundOpen] = useState(false);
   if (!order) return null;
 
   const statusConfig = getStatusConfig(order.status);
@@ -1047,6 +1050,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               Cancel Order
             </Button>
           )}
+          {/* Refund request — only on paid orders that aren't already refunded */}
+          {['completed', 'paid', 'verified', 'captured', 'succeeded'].includes((order.payment_status || '').toLowerCase())
+            && !['refunded', 'cancelled'].includes((order.status || '').toLowerCase()) && (
+            <Button
+              variant="outline"
+              onClick={() => setRefundOpen(true)}
+              className="text-rose-600 border-rose-200 hover:bg-rose-50"
+              data-testid="open-refund-request-btn"
+            >
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Request refund
+            </Button>
+          )}
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
@@ -1062,6 +1078,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           </Button>
         </DialogFooter>
       </DialogContent>
+      <RefundRequestDialog
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
+        order={order}
+      />
     </Dialog>
   );
 }

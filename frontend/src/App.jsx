@@ -47,6 +47,7 @@ import PrivacyPolicy from './pages/static/PrivacyPolicy';
 // Admin Pages
 import CommissionManagement from './pages/admin/CommissionManagement';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminRefunds from './pages/admin/AdminRefunds';
 import Permissions from './pages/admin/Permissions';
 import OperatorsManagement from './pages/admin/OperatorsManagement';
 import OperatorCategoriesPage from './pages/admin/OperatorCategoriesPage';
@@ -653,7 +654,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/admin/refunds"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <AdminRefunds />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/admin/permissions"
             element={
