@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 import { toast } from 'sonner';
 import api from '@/api/client';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
@@ -69,6 +70,7 @@ export default function PackageBooking() {
   const getImg = (img) => (img?.startsWith('/api') ? `${backendUrl}${img}` : img);
 
   const [service, setService] = useState(null);
+  const { rate: effectiveCommissionRate } = useCommissionRate('packages', service?.operator_id, { fallback: 5 });
   const [searchParams, setSearchParams] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
@@ -168,7 +170,7 @@ export default function PackageBooking() {
   };
 
   const getPrice = () => Number(service?.calculated_price || 0);
-  const getCommission = () => Math.round(getPrice() * 0.05);
+  const getCommission = () => Math.round(getPrice() * (effectiveCommissionRate / 100));
   const getTotalPrice = () => getPrice() + getCommission();
 
   const handleMoMoDialogOpen = () => {

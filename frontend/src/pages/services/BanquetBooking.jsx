@@ -19,6 +19,7 @@ import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
@@ -72,6 +73,7 @@ export default function BanquetBooking() {
   const navigate = useNavigate();
   const { user, isOperatorUser } = useAuth();
   const [venue, setVenue] = useState(null);
+  const { rate: effectiveCommissionRate } = useCommissionRate('banquet', venue?.operator_id, { fallback: 5 });
   const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1);
   const [booking, setBooking] = useState({
@@ -168,7 +170,7 @@ export default function BanquetBooking() {
     return total;
   };
 
-  const getCommission = () => Math.round(calculateTotal() * 0.05);
+  const getCommission = () => Math.round(calculateTotal() * (effectiveCommissionRate / 100));
   const getTotalWithCommission = () => calculateTotal() + getCommission();
 
   const handlePaymentInitiated = async (response) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '../../hooks/useCommissionRate';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -74,6 +75,7 @@ export default function CarRentalBooking() {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   const [car, setCar] = useState(null);
+  const { rate: effectiveCommissionRate } = useCommissionRate('car_rental', car?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
@@ -208,7 +210,7 @@ export default function CarRentalBooking() {
     }, 0);
     
     const subtotal = base + extrasTotal;
-    const commissionRate = 5;
+    const commissionRate = effectiveCommissionRate;
     const commission = subtotal * (commissionRate / 100);
     
     return {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '../../hooks/useCommissionRate';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -69,6 +70,7 @@ export default function EventBooking() {
   const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
+  const { rate: effectiveCommissionRate } = useCommissionRate('events', event?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
@@ -141,7 +143,7 @@ export default function EventBooking() {
     const selectedTicket = TICKET_TYPES.find(t => t.id === ticketType);
     const basePrice = (event.priceFrom || event.price || 5000) * (selectedTicket?.multiplier || 1);
     const subtotal = basePrice * quantity;
-    const commissionRate = 5;
+    const commissionRate = effectiveCommissionRate;
     const commission = subtotal * (commissionRate / 100);
     
     return {

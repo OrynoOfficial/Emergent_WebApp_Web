@@ -1,5 +1,23 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 249: All booking pages on commission hook)
+
+The remaining 5 booking pages that previously hardcoded their service fee are now on the dynamic `useCommissionRate(serviceType, operatorId)` hook:
+
+| Page | Hook call | Was |
+| --- | --- | --- |
+| `RestaurantBooking.jsx` | `useCommissionRate('restaurants', restaurant.operator_id)` | hardcoded 5% |
+| `CarRentalBooking.jsx` | `useCommissionRate('car_rental', car.operator_id)` | hardcoded 5% |
+| `EventBooking.jsx` (legacy) | `useCommissionRate('events', event.operator_id)` | hardcoded 5% |
+| `BanquetBooking.jsx` | `useCommissionRate('banquet', venue.operator_id)` | hardcoded 0.05 |
+| `PackageBooking.jsx` | `useCommissionRate('packages', service.operator_id)` | hardcoded 0.05 |
+
+Combined with the 4 wired last iteration (ShowtimeDetails, CinemaBooking, HotelBooking, TravelBooking), **all 9 booking pages now resolve commission via the platform hierarchy**: operator-specific → category default → global default → 5% fallback.
+
+Verified via `/api/commission-config/resolve` smoke check: every service_type returns 5% fallback today (no configs seeded). Admins can now create configs in CommissionManagement and the changes will flow to every booking page in ≤5 min (hook cache TTL).
+
+Backend test suite: **25/25 still passing**.
+
 ## Latest Changes (Feb 2026 — iter 248: Service-colour consistency, seat surfacing, commission wiring, refunds badge)
 
 ### 🎨 Showtime page colour consistency (`ShowtimeDetails.jsx`)

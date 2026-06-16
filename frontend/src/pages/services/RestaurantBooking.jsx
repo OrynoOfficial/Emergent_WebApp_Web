@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
+import { useCommissionRate } from '../../hooks/useCommissionRate';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -62,6 +63,7 @@ export default function RestaurantBooking() {
 
   const [restaurant, setRestaurant] = useState(null);
   const [orderData, setOrderData] = useState(null);
+  const { rate: effectiveCommissionRate } = useCommissionRate('restaurants', restaurant?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
   const [paymentInProgress, setPaymentInProgress] = useState(false);
   const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
@@ -155,7 +157,7 @@ export default function RestaurantBooking() {
     
     // Use order data from menu page (full price, no deposit)
     const itemsTotal = orderData?.subtotal || orderData?.total || 0;
-    const commissionRate = 5;
+    const commissionRate = effectiveCommissionRate;
     const commission = itemsTotal * (commissionRate / 100);
     
     let discount = orderData?.discount || 0;
