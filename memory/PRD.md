@@ -1,5 +1,19 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 228: Production-style frontend serve fixes Cloudflare 429s)
+
+### Root cause for "no visible changes" (final)
+- Vite dev-server was serving ~600 individual ES module requests on every page load. Cloudflare in front of the preview host was throttling them with 429s — silently dropping random component chunks (Dialog, map, payment, etc.). The user saw a half-rendered page that *looked* like yesterday's UI.
+- **Fix**: `frontend/package.json` `start` script is now `vite build && vite preview --port 3000 --host 0.0.0.0 --strictPort`. The preview now ships **13 large bundled files** instead of 600+ small ones. Cloudflare no longer throttles.
+- Build takes ~12s. Hot reload was already disabled platform-wide (see existing `disableViteHmrClient` plugin in `vite.config.js`), so this is a strict upgrade: more reliable for the user, only ~12s slower for me on each `supervisorctl restart frontend`.
+- **For future agents**: after editing frontend code, run `cd /app/frontend && yarn build` then `sudo supervisorctl restart frontend`, OR rely on the next supervisor restart. The dev-mode HMR loop is no longer in use.
+
+### Live-screenshot verification — everything works end-to-end now
+- **Car Rental Results**: defaults to **Grid** view, rich cards, "ALMOST SOLD OUT" tag visible on multiple cards in both grid and list — bug confirmed fixed.
+- **Travel pre-booking modal**: opens, hero glass cards render, **seat layout is collapsed by default** (default closed), expands cleanly, Leaflet map renders with actual OpenStreetMap tiles + pin (no more blank), policies section pulls from `route.policies[]`, full UX matches the spec.
+- Seeded data updated: `travel_routes.valid_to → 2027-12-31`, Yaoundé→Douala routes now have `pickup_lat=3.848`, `pickup_lon=11.5021`, address "Mvan Bus Terminal, Yaoundé", and 4 sample policies — so operators / customers see the new fields with real data immediately.
+
+
 ## Latest Changes (Feb 2026 — iter 227: TripDetailsModal polish + Leaflet-in-Dialog fix + Car Rental card polish)
 
 ### Reusable Leaflet fix (applies to every map in the app)

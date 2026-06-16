@@ -8,6 +8,8 @@
 
 | You want to… | Look here |
 | --- | --- |
+> **⚠️ Important runtime note (iter 228)**: the frontend now serves a **bundled production build** (`vite build && vite preview`), not the Vite dev server. Reason: Cloudflare 429-throttled the dev server's hundreds of unbundled requests, which manifested as "no visible changes" for users. After editing any frontend file, run `cd /app/frontend && yarn build` (≈12s) and then `sudo supervisorctl restart frontend` for the change to reach the browser. Hot reload is **disabled** platform-wide (see `disableViteHmrClient` in `vite.config.js`).
+
 | Add or modify an API endpoint | `/app/backend/routes/<domain>.py` |
 | Define / extend a DB schema | `/app/backend/models/<domain>.py` (extend `BaseDocument`) |
 | Add a customer-facing service page | `/app/frontend/src/pages/services/` |
