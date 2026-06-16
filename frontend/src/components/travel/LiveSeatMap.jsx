@@ -324,62 +324,98 @@ export default function LiveSeatMap({
 
       <CardContent>
         {/* Legend */}
-        <div className="flex flex-wrap gap-3 mb-4 text-xs">
+        <div className="flex flex-wrap gap-2 mb-3 text-[11px]">
           {[
             { label: 'Available', style: 'bg-emerald-50 border-emerald-300' },
-            { label: 'Your Selection', style: 'bg-blue-500 border-blue-600 text-white' },
-            { label: 'Reserved', style: 'bg-amber-100 border-amber-400' },
-            { label: 'Booked', style: 'bg-red-50 border-red-300' },
+            { label: 'Yours',     style: 'bg-blue-500 border-blue-600 text-white' },
+            { label: 'Held',      style: 'bg-amber-100 border-amber-400' },
+            { label: 'Booked',    style: 'bg-red-50 border-red-300' },
           ].map(item => (
-            <div key={item.label} className="flex items-center gap-1.5">
-              <div className={`w-5 h-5 rounded border ${item.style}`} />
+            <div key={item.label} className="flex items-center gap-1">
+              <div className={`w-3.5 h-3.5 rounded border ${item.style}`} />
               <span className="text-slate-600">{item.label}</span>
             </div>
           ))}
         </div>
 
-        {/* Bus front */}
-        <div className="text-center mb-3">
-          <div className="inline-block bg-slate-100 text-slate-500 text-xs font-medium px-4 py-1.5 rounded-t-xl border border-b-0 border-slate-200">
-            FRONT
+        {/* Bus body — driver cabin on top, then a tighter seat grid with a
+            visible centre aisle. Smaller seat tiles (32px) so the whole
+            layout fits in ~⅓ less vertical space. */}
+        <div className="max-w-[280px] mx-auto">
+          {/* Driver cabin (front of bus) */}
+          <div className="relative h-10 bg-gradient-to-b from-slate-300 to-slate-200 rounded-t-3xl border-x-2 border-t-2 border-slate-300 flex items-center justify-center">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Driver</span>
+            <div className="absolute -bottom-px left-1/2 -translate-x-1/2 w-12 h-1 rounded-full bg-slate-400" />
           </div>
-        </div>
 
-        {/* Seat grid */}
-        <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${layout?.columns || 4}, 1fr)` }}>
-            {seat_map.map((seat, idx) => {
-              const visualStatus = getVisualStatus(seat);
-              const isAisle = layout?.aisle_after && ((idx % (layout.columns || 4)) === layout.aisle_after - 1);
-              const SeatIcon = STATUS_ICONS[visualStatus] || Armchair;
-              const isClickable = visualStatus === 'available' || visualStatus === 'selected' || visualStatus === 'own_reserved';
-
+          {/* Cabin walls + seats */}
+          <div className="border-x-2 border-slate-300 bg-slate-50/60 px-2 py-3">
+            {(() => {
+              const cols = layout?.columns || 4;
+              const aisleAfter = layout?.aisle_after ?? Math.floor(cols / 2);
+              // Render seats row by row so we can inject a visible aisle.
+              const rows = [];
+              for (let i = 0; i < seat_map.length; i += cols) {
+                rows.push(seat_map.slice(i, i + cols));
+              }
               return (
-                <React.Fragment key={seat.seat_number}>
-                  <button
-                    onClick={() => handleSeatClick(seat)}
-                    disabled={!isClickable || syncing}
-                    className={cn(
-                      "relative flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all text-xs font-bold min-h-[48px]",
-                      STATUS_STYLES[visualStatus] || STATUS_STYLES.available,
-                      syncing && isClickable && "opacity-60"
-                    )}
-                    title={`Seat ${seat.seat_number} — ${visualStatus}`}
-                    data-testid={`seat-${seat.seat_number}`}
-                  >
-                    <SeatIcon className="w-4 h-4 mb-0.5" />
-                    {seat.seat_number}
-                  </button>
-                  {isAisle && <div className="col-span-0 w-0" />}
-                </React.Fragment>
+                <div className="space-y-1.5">
+                  {rows.map((row, rIdx) => (
+                    <div key={rIdx} className="flex items-center justify-center gap-1">
+                      {row.map((seat, cIdx) => {
+                        const visualStatus = getVisualStatus(seat);
+                        const SeatIcon = STATUS_ICONS[visualStatus] || Armchair;
+                        const isClickable = visualStatus === 'available' || visualStatus === 'selected' || visualStatus === 'own_reserved';
+                        const seatBtn = (
+                          <button
+                            key={`s-${seat.seat_number}`}
+                            onClick={() => handleSeatClick(seat)}
+                            disabled={!isClickable || syncing}
+                            className={cn(
+                              "relative flex flex-col items-center justify-center rounded-md border-2 transition-all text-[10px] font-bold w-9 h-9 leading-none",
+                              STATUS_STYLES[visualStatus] || STATUS_STYLES.available,
+                              syncing && isClickable && "opacity-60",
+                            )}
+                            title={`Seat ${seat.seat_number} — ${visualStatus}`}
+                            data-testid={`seat-${seat.seat_number}`}
+                          >
+                            <SeatIcon className="w-3 h-3 mb-0.5" />
+                            <span className="text-[9px]">{seat.seat_number}</span>
+                          </button>
+                        );
+                        // Insert the aisle marker AFTER the column at index `aisleAfter - 1`.
+                        // The aisle is a thin dashed strip representing the walking corridor.
+                        if (cIdx === aisleAfter - 1 && cIdx < row.length - 1) {
+                          return (
+                            <React.Fragment key={`f-${seat.seat_number}`}>
+                              {seatBtn}
+                              <div
+                                className="w-3 h-9 flex items-center justify-center"
+                                aria-hidden="true"
+                              >
+                                <div className="w-px h-full border-l border-dashed border-slate-300" />
+                              </div>
+                            </React.Fragment>
+                          );
+                        }
+                        return seatBtn;
+                      })}
+                    </div>
+                  ))}
+                </div>
               );
-            })}
+            })()}
+          </div>
+
+          {/* Bus rear */}
+          <div className="h-3 bg-slate-200 rounded-b-2xl border-x-2 border-b-2 border-slate-300 flex items-center justify-center">
+            <span className="text-[8px] uppercase tracking-widest text-slate-400">REAR</span>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="flex justify-between mt-4 text-xs text-slate-500">
-          <span>{statistics?.available || 0} available</span>
+        <div className="flex justify-between mt-3 text-[11px] text-slate-500 max-w-[280px] mx-auto">
+          <span>{statistics?.available || 0} avail</span>
           <span>{statistics?.booked || 0} booked</span>
           <span>{statistics?.reserved || 0} held</span>
         </div>

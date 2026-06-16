@@ -46,7 +46,9 @@ const DEFAULT_HOTEL_FORM = {
   star_rating: 3, phone: '', email: '', amenities: [], images: [],
   operator_id: '', operator_name: '',
   latitude: '', longitude: '',
-  policies: []
+  policies: [],
+  check_in_time: 'From 14:00',
+  check_out_time: 'Before 12:00',
 };
 
 const DEFAULT_ROOM_FORM = {

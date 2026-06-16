@@ -717,21 +717,27 @@ export default function HotelBooking() {
               </div>
               
               <div className="p-5 space-y-4">
-                {/* Check-in / Check-out Policy */}
+                {/* Check-in / Check-out — values now come from `hotel.check_in_time`
+                    and `hotel.check_out_time` (string fields on the Hotel model).
+                    Falls back to sensible defaults if the operator hasn't set them. */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Clock className="h-3.5 w-3.5 text-emerald-600" />
                       <p className="text-xs font-semibold text-emerald-700">Check-in</p>
                     </div>
-                    <p className="font-bold text-slate-900 text-sm">From 14:00</p>
+                    <p className="font-bold text-slate-900 text-sm" data-testid="hotel-checkin-time">
+                      {hotel.check_in_time || 'From 14:00'}
+                    </p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Clock className="h-3.5 w-3.5 text-amber-600" />
                       <p className="text-xs font-semibold text-amber-700">Check-out</p>
                     </div>
-                    <p className="font-bold text-slate-900 text-sm">Before 12:00</p>
+                    <p className="font-bold text-slate-900 text-sm" data-testid="hotel-checkout-time">
+                      {hotel.check_out_time || 'Before 12:00'}
+                    </p>
                   </div>
                 </div>
                 
@@ -774,38 +780,6 @@ export default function HotelBooking() {
               </div>
               
               <div className="p-5 space-y-3">
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-500 font-medium">{t('checkIn')}</p>
-                    <p className="font-bold text-slate-900">{format(new Date(searchParams.checkIn), 'MMM dd')}</p>
-                    <p className="text-xs text-slate-500">{format(new Date(searchParams.checkIn), 'yyyy')}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs text-slate-500 font-medium">{t('checkOut')}</p>
-                    <p className="font-bold text-slate-900">{format(new Date(searchParams.checkOut), 'MMM dd')}</p>
-                    <p className="text-xs text-slate-500">{format(new Date(searchParams.checkOut), 'yyyy')}</p>
-                  </div>
-                </div>
-
-                {/* Guests - Mini card */}
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-slate-500">Guests</p>
-                    <p className="font-bold text-slate-900 text-sm">{searchParams.adults} {t('adults')}{searchParams.children > 0 ? ` + ${searchParams.children} ${t('children')}` : ''}</p>
-                  </div>
-                </div>
-
-                {/* Nights - Mini card */}
-                <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                  <Calendar className="h-5 w-5 text-indigo-600" />
-                  <div>
-                    <p className="text-xs text-slate-500">Duration</p>
-                    <p className="font-bold text-slate-900 text-sm">{nights} {t('nights')}</p>
-                  </div>
-                </div>
-
                 {/* Room Selected — Enhanced card with thumbnail, capacity, bed type + policies */}
                 {hotel.room_type && (
                   <div className="rounded-xl border border-[#082c59]/20 overflow-hidden" data-testid="hotel-booking-room-summary">
@@ -852,6 +826,30 @@ export default function HotelBooking() {
                     </div>
                   </div>
                 )}
+
+                {/* Compact one-liner: dates + guests + duration sit right under
+                    the selected room to conserve vertical real-estate. Replaces
+                    the three large cards we used to render here. */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs" data-testid="hotel-booking-trip-line">
+                  <div className="flex items-center gap-1.5 text-slate-700">
+                    <Calendar className="h-3.5 w-3.5 text-[#082c59]" />
+                    <span className="font-semibold">{format(new Date(searchParams.checkIn), 'MMM dd')}</span>
+                    <span className="text-slate-400">→</span>
+                    <span className="font-semibold">{format(new Date(searchParams.checkOut), 'MMM dd')}</span>
+                  </div>
+                  <span className="text-slate-300">·</span>
+                  <div className="flex items-center gap-1 text-slate-700">
+                    <Users className="h-3.5 w-3.5 text-blue-600" />
+                    <span className="font-semibold">{searchParams.adults}{searchParams.children > 0 ? ` + ${searchParams.children}` : ''}</span>
+                    <span className="text-slate-500">{t('adults')}{searchParams.children > 0 ? ` + ${t('children')}` : ''}</span>
+                  </div>
+                  <span className="text-slate-300">·</span>
+                  <div className="flex items-center gap-1 text-slate-700">
+                    <Clock className="h-3.5 w-3.5 text-indigo-600" />
+                    <span className="font-semibold">{nights}</span>
+                    <span className="text-slate-500">{t('nights')}</span>
+                  </div>
+                </div>
 
                 <Separator />
 

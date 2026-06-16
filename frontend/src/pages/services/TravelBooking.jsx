@@ -212,6 +212,10 @@ export default function TravelBooking() {
   
   // Extras
   const [extraLuggage, setExtraLuggage] = useState(0);
+  // Per-piece content description for each extra luggage item.
+  // Required when extraLuggage > 0; printed on the e-ticket so security
+  // and the operator both know what's inside. Max 100 words / piece.
+  const [luggageDescriptions, setLuggageDescriptions] = useState([]);
   const EXTRA_LUGGAGE_PRICE = 3000;
   
   // Promo code
@@ -420,6 +424,22 @@ export default function TravelBooking() {
       }
     }
 
+    // Extra luggage must have content descriptions — they print on the
+    // e-ticket and help station/airport security.
+    if (extraLuggage > 0) {
+      for (let i = 0; i < extraLuggage; i++) {
+        const desc = (luggageDescriptions[i] || '').trim();
+        if (!desc) {
+          toast.error(`Please describe what's inside extra bag #${i + 1}`);
+          return;
+        }
+        if (desc.split(/\s+/).length > 100) {
+          toast.error(`Bag #${i + 1} description must be 100 words or less`);
+          return;
+        }
+      }
+    }
+
     setPaymentInProgress(true);
     setShowPaymentOverlay(true);
     setTravelCurrentStep(3);
@@ -463,6 +483,8 @@ export default function TravelBooking() {
             selected_seats: selectedSeats,
             return_seats: returnSelectedSeats,
             extra_luggage: extraLuggage,
+            // Per-piece content descriptions printed on the e-ticket.
+            extra_luggage_descriptions: luggageDescriptions.slice(0, extraLuggage),
             promo_code: appliedPromo?.code,
             promo_discount: pricing.discount
           }
@@ -712,7 +734,11 @@ export default function TravelBooking() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setExtraLuggage(Math.max(0, extraLuggage - 1))}
+                      onClick={() => {
+                        const next = Math.max(0, extraLuggage - 1);
+                        setExtraLuggage(next);
+                        setLuggageDescriptions(d => d.slice(0, next));
+                      }}
                       disabled={extraLuggage === 0}
                       className="bg-white hover:bg-slate-100 border-slate-300 h-10 w-10 rounded-full"
                     >
@@ -722,13 +748,63 @@ export default function TravelBooking() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setExtraLuggage(extraLuggage + 1)}
+                      onClick={() => {
+                        const next = extraLuggage + 1;
+                        setExtraLuggage(next);
+                        setLuggageDescriptions(d => [...d, '']);
+                      }}
                       className="bg-white hover:bg-slate-100 border-slate-300 h-10 w-10 rounded-full"
                     >
                       <Plus className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
+
+                {/* Per-piece content description — required when at least one
+                    extra luggage is added. Helps security and prints on the
+                    e-ticket so airport/station staff can scan compliance fast. */}
+                {extraLuggage > 0 && (
+                  <div className="mt-3 space-y-2" data-testid="luggage-descriptions-block">
+                    <p className="text-xs text-slate-600 font-medium">
+                      📝 Describe what's inside each extra bag <span className="text-rose-600">*</span>
+                      <span className="text-slate-400 font-normal"> — printed on your ticket, max 100 words / piece</span>
+                    </p>
+                    {Array.from({ length: extraLuggage }).map((_, idx) => {
+                      const value = luggageDescriptions[idx] || '';
+                      const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
+                      const overLimit = wordCount > 100;
+                      return (
+                        <div key={idx} className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 border-b border-slate-200">
+                            <span className="text-xs font-semibold text-slate-700">Bag #{idx + 1}</span>
+                            <span className={`text-[10px] font-medium ${overLimit ? 'text-rose-600' : 'text-slate-500'}`}>
+                              {wordCount}/100 words
+                            </span>
+                          </div>
+                          <textarea
+                            value={value}
+                            onChange={(e) => {
+                              const text = e.target.value;
+                              // Soft-limit: stop accepting input once 100 words is reached.
+                              const words = text.trim() ? text.trim().split(/\s+/) : [];
+                              if (words.length > 100) return;
+                              setLuggageDescriptions(d => {
+                                const next = [...d];
+                                while (next.length < extraLuggage) next.push('');
+                                next[idx] = text;
+                                return next;
+                              });
+                            }}
+                            placeholder="e.g. Clothes, shoes, books and a laptop charger…"
+                            rows={2}
+                            className="w-full px-3 py-2 text-sm focus:outline-none resize-none"
+                            data-testid={`luggage-description-${idx}`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 </div>
               </div>
             </div>

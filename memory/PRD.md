@@ -1,6 +1,45 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 233: Car Rental lifecycle parity + Operator logo upload)
+## Latest Changes (Feb 2026 — iter 234: 5 UX polish fixes)
+
+### 1. Car Rental Search — compact filter at the tail of Pickup Location
+- The filter button now sits **inside the Pickup Location row** (not as a separate inline panel)
+- Clicking it opens a small **Popover** (~280px) with chip-based Vehicle Type + Self-Drive/With-Driver toggles
+- A blue badge on the button shows the count of active filters
+- The old expanding inline panel was removed; total search-form height dropped ~120px
+
+### 2. Car Rental Details — pickup map shrunk
+- `LocationMap` height reduced from default to `h-44` (~176px) on the Features tab. No longer dominates the page.
+
+### 3. Hotel Booking sidebar — one-liner under Selected Room
+- The three big cards (Check-in, Check-out, Guests, Duration) were collapsed into a single inline row positioned **directly under the Selected Room card**. Format: `Dec 18 → Dec 22 · 2 adults · 4 nights`. Saves ~140px of vertical space.
+
+### 4. Hotel "highlighted policies" — now operator-editable
+- **Backend**: `Hotel` model gains `check_in_time` and `check_out_time` (string) — surfaced in GET responses.
+- **Frontend** (HotelForm.jsx): two new inputs in the Operator's hotel admin form: *Check-in Time* (placeholder "From 14:00") and *Check-out Time* (placeholder "Before 12:00").
+- **Booking page**: the green/amber highlighted cards now read `hotel.check_in_time` / `hotel.check_out_time`, falling back to "From 14:00" / "Before 12:00" if unset (no breakage for legacy hotels).
+- **Test**: `/app/backend/tests/test_iter234_hotel_checkin_times.py` — round-trips a custom "From 16:00" / "Before 11:00" pair.
+
+### 5. Travel Booking — improved bus seat layout
+- Bus body now mimics a real coach: top driver cabin (with a slim steering-wheel bar), seat grid inside cabin walls, and a "REAR" footer
+- Seats reduced from 48px tiles to 36px tiles → entire layout fits in ~⅓ less vertical space
+- **Visible centre aisle**: dashed-line gap between the columns either side of `aisle_after`. Previously was a 0-width div that didn't render at all.
+- Compact 4-icon legend at the top
+- Stats row (avail / booked / held) sits under the bus
+
+### 6. Travel Booking — extra luggage descriptions (max 100 words / piece)
+- When the customer increments the Extra Luggage counter, a new section appears under it asking them to **describe the contents of each bag**
+- Soft-limit textareas: typing is blocked once 100 words is reached (live word counter turns rose)
+- Validation before checkout: every bag must have a non-empty description; error toast names the offending bag (`Please describe what's inside extra bag #2`)
+- Descriptions sent on the booking payload as `extra_luggage_descriptions: string[]` — backend stores them on the order so the e-ticket generator can print them
+
+### Verified
+- 22/22 pytest pass (iter 231/232/233/234 combined)
+- Visual: Car Rental Search filter popover renders correctly with chips
+- Lint: clean across all 6 touched files
+
+
+## Earlier — iter 233: Car Rental lifecycle parity + Operator logo upload
 
 ### P1 — Car Rental Return/Damage Lifecycle Parity
 - **Backend** `POST /api/car-rental/book` now:

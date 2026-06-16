@@ -247,10 +247,39 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
           onChange={e => updateForm({
             policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
           })}
-          placeholder={'Check-in from 14:00, Check-out by 12:00\nNo smoking inside the rooms\nFree cancellation up to 24 hours before arrival\nValid government-issued ID required at check-in'}
+          placeholder={'No smoking inside the rooms\nFree cancellation up to 24 hours before arrival\nValid government-issued ID required at check-in'}
           className="mt-1.5"
           data-testid="hotel-form-policies"
         />
+      </div>
+
+      {/* Highlighted check-in / check-out times — these power the prominent
+          green/amber badges on the Hotel Booking summary card. Stored as plain
+          strings on `hotels.check_in_time` / `check_out_time` so operators
+          can write what they like ("From 14:00", "Anytime", "After 16:00"). */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Check-in Time <span className="text-slate-400 text-xs font-normal">(highlighted on booking)</span></Label>
+          <input
+            type="text"
+            value={form.check_in_time || ''}
+            onChange={e => updateForm({ check_in_time: e.target.value })}
+            placeholder="From 14:00"
+            className="mt-1.5 w-full px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            data-testid="hotel-form-checkin-time"
+          />
+        </div>
+        <div>
+          <Label>Check-out Time <span className="text-slate-400 text-xs font-normal">(highlighted on booking)</span></Label>
+          <input
+            type="text"
+            value={form.check_out_time || ''}
+            onChange={e => updateForm({ check_out_time: e.target.value })}
+            placeholder="Before 12:00"
+            className="mt-1.5 w-full px-3 py-2 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            data-testid="hotel-form-checkout-time"
+          />
+        </div>
       </div>
     </div>
   );

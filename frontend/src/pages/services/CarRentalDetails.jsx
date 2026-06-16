@@ -414,6 +414,7 @@ export default function CarRentalDetails() {
                 address={vehicle.location?.address || vehicle.pickup_locations?.[0] || vehicle.city}
                 showHeader
                 headerLabel="Pickup location"
+                height="h-44"
                 className=""
               />
             )}

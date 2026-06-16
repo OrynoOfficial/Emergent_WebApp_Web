@@ -41,6 +41,11 @@ class Hotel(BaseModel):
     # Policies (free-form, one per line on the front-end — surfaced in
     # HotelDetails "Policies" tab and the booking summary).
     policies: List[str] = []
+    # Highlighted check-in / check-out time strings (e.g. "From 14:00",
+    # "Before 12:00"). Surfaced as the prominent green/amber badges on
+    # the booking summary card.
+    check_in_time: Optional[str] = "From 14:00"
+    check_out_time: Optional[str] = "Before 12:00"
 
     # Status
     is_active: bool = True
