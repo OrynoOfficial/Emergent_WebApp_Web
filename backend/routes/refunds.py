@@ -162,6 +162,29 @@ async def cancel_refund(refund_id: str, current_user: dict = Depends(get_current
 
 
 # ── Admin endpoints ─────────────────────────────────────────────────────────
+async def _enrich_refund_with_customer(db, refund: dict) -> dict:
+    """Attach a thin customer block to a refund row so the admin queue can
+    render the booker without a second round-trip per row."""
+    user_id = refund.get("user_id")
+    if user_id:
+        u = await db.users.find_one({"_id": user_id}, {
+            "first_name": 1, "last_name": 1, "full_name": 1,
+            "email": 1, "phone": 1, "created_at": 1, "country": 1, "city": 1,
+        })
+        if u:
+            full = u.get("full_name") or " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip() or u.get("email")
+            refund["customer"] = {
+                "id": user_id,
+                "name": full,
+                "email": u.get("email"),
+                "phone": u.get("phone"),
+                "country": u.get("country"),
+                "city": u.get("city"),
+                "joined_at": u.get("created_at").isoformat() if hasattr(u.get("created_at", ""), "isoformat") else u.get("created_at"),
+            }
+    return refund
+
+
 @router.get("")
 async def list_refunds(status_filter: Optional[str] = None,
                        current_user: dict = Depends(get_current_active_user)):
@@ -176,8 +199,63 @@ async def list_refunds(status_filter: Optional[str] = None,
     items = []
     async for r in cursor:
         r["id"] = r.pop("_id")
+        await _enrich_refund_with_customer(db, r)
         items.append(r)
     return {"refunds": items, "total": total}
+
+
+@router.get("/{refund_id}/details")
+async def refund_details(refund_id: str,
+                          current_user: dict = Depends(get_current_active_user)):
+    """Rich detail view used by the admin queue's per-row modal — joins the
+    refund row to the originating order, the booker's user profile, and
+    (when applicable) the customer's lifetime totals so the reviewer can make
+    an informed decision without leaving the page."""
+    if not _is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin only")
+    db = get_database()
+
+    refund = await db.refunds.find_one({"_id": refund_id})
+    if not refund:
+        raise HTTPException(status_code=404, detail="Refund not found")
+    refund["id"] = refund.pop("_id")
+
+    order = await db.orders.find_one({"_id": refund.get("order_id")})
+    if order:
+        order["id"] = order.pop("_id")
+
+    customer = None
+    user_id = refund.get("user_id")
+    if user_id:
+        u = await db.users.find_one({"_id": user_id})
+        if u:
+            full = u.get("full_name") or " ".join(filter(None, [u.get("first_name"), u.get("last_name")])).strip() or u.get("email")
+            # Lifetime totals — cheap aggregate, scoped to confirmed orders.
+            lifetime_pipeline = [
+                {"$match": {"user_id": user_id, "payment_status": {"$in": ["paid", "completed", "verified"]}}},
+                {"$group": {"_id": None, "spent": {"$sum": "$total_amount"}, "count": {"$sum": 1}}},
+            ]
+            lifetime = await db.orders.aggregate(lifetime_pipeline).to_list(1)
+            refund_pipeline = [
+                {"$match": {"user_id": user_id, "status": {"$in": ["completed", "approved"]}}},
+                {"$group": {"_id": None, "amount": {"$sum": "$approved_amount"}, "count": {"$sum": 1}}},
+            ]
+            past_refunds = await db.refunds.aggregate(refund_pipeline).to_list(1)
+            customer = {
+                "id": user_id,
+                "name": full,
+                "email": u.get("email"),
+                "phone": u.get("phone"),
+                "country": u.get("country"),
+                "city": u.get("city"),
+                "joined_at": u.get("created_at").isoformat() if hasattr(u.get("created_at", ""), "isoformat") else u.get("created_at"),
+                "lifetime_spent": float(lifetime[0]["spent"]) if lifetime else 0,
+                "total_orders": int(lifetime[0]["count"]) if lifetime else 0,
+                "total_refunds_count": int(past_refunds[0]["count"]) if past_refunds else 0,
+                "total_refunded_amount": float(past_refunds[0]["amount"]) if past_refunds else 0,
+            }
+
+    return {"refund": refund, "order": order, "customer": customer}
 
 
 @router.post("/{refund_id}/approve")

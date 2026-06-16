@@ -30,6 +30,7 @@ import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
+import OperatorCommissionCell from '@/components/admin/OperatorCommissionCell';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotel', 'travel', 'car_rental', 'restaurant', 'events', 'cinema', 'laundry', 'banquet', 'package'];
@@ -538,6 +539,7 @@ export default function OperatorsManagement() {
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Owner</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Date Joined</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Status</th>
+                    <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Commission</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Revenue</th>
                     <th className="py-4 px-6 text-right text-sm font-semibold text-slate-600">Actions</th>
                   </tr>
@@ -590,6 +592,12 @@ export default function OperatorsManagement() {
                       </td>
                       <td className="py-4 px-6">
                         {getStatusBadge(operator.status)}
+                      </td>
+                      <td className="py-4 px-6">
+                        <OperatorCommissionCell
+                          operatorId={operator.id}
+                          serviceTypes={operator.service_types || []}
+                        />
                       </td>
                       <td className="py-4 px-6 font-medium text-slate-900">
                         {formatFCFA(operator.revenue || 0)}

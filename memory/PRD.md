@@ -1,5 +1,31 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 250: Refunds UX overhaul + operator commission preview)
+
+### 🔄 Refunds page reworked (`/admin/refunds`)
+- **Neutral header**: switched from rose-gradient to a clean white slate card with coloured stat lozenges (amber/blue/emerald) — no more "everything looks like an error".
+- **Customer column added**: shows customer name + email per row. Hovering surfaces a tooltip with phone, city/country, and join date.
+- **Row click opens a rich detail modal** (`refund-detail-modal`) with:
+  - 4-card summary: Requested / Eligible (with policy %) / Order total / Approved.
+  - **Customer block** with phone, joined date, **lifetime spent** (FCFA + order count), and **past refunds** (total amount + count) — so admins immediately see if a customer is a repeat-refunder.
+  - **Service & ticket block**: order #, service type, service name, payment method, ticket class, quantity, and seat badges when applicable.
+  - **Refund context block**: reason, customer notes, admin notes, request/decision timestamps.
+- **Active queue vs History tabs**: pending/approved live in "Active queue" (default); completed/rejected/failed/cancelled live under "History" so admins can audit past decisions without scrolling.
+- Status chip buttons replace the previous dropdown for one-click filtering inside each tab.
+
+### 📊 Backend enrichment
+- `GET /api/refunds` rows now include a `customer` block (name/email/phone/city/country/joined_at).
+- New `GET /api/refunds/{id}/details` endpoint returns `{ refund, order, customer }` with customer lifetime stats (orders + refunds aggregates) so the modal can render without secondary fetches.
+
+### 💼 Operators table — Commission preview column
+- New `OperatorCommissionCell` component injected into `OperatorsManagement.jsx`. For each operator row it concurrently calls `/api/commission-config/resolve?service_type=…&operator_id=…` per service the operator offers and surfaces the "most specific" rate as a badge (operator > category > global > fallback).
+- Source-coloured pill: emerald = operator override, sky = category default, violet = global default, slate = 5% fallback.
+- Hover shows the **per-service-type breakdown** with the source label so admins instantly see which operators have explicit overrides vs inherit the global default.
+
+### Tests
+- `tests/test_refund_details_modal.py` — 3 new pytest cases (modal endpoint returns refund+order+customer, admin-only gate, list rows include customer block).
+- Combined backend suite is now **28/28 passing** (3 refund-details + 12 refund + 4 scanner + 6 commission + 3 poster).
+
 ## Latest Changes (Feb 2026 — iter 249: All booking pages on commission hook)
 
 The remaining 5 booking pages that previously hardcoded their service fee are now on the dynamic `useCommissionRate(serviceType, operatorId)` hook:
