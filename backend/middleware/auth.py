@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from utils.auth import decode_token
 from utils.cache import cache_get, cache_set, cache_delete
+from utils.token_revocation import is_access_token_revoked
 from config.database import get_database
 from typing import Optional, List
 
@@ -39,6 +40,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Server-side revocation check — supports proper logout and admin-driven
+    # session termination. Cached in-process so this is a hashtable lookup
+    # on the hot path.
+    jti = payload.get("jti")
+    if jti and await is_access_token_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been terminated. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

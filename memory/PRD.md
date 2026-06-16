@@ -1,5 +1,36 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 240: Auth hardening + Event e-ticket renderer)
+
+### Auth security overhaul ✅
+Hardened the JWT auth flow per zero-trust principles. All existing sessions are invalidated on rollout.
+
+- **Short-lived access tokens** — 30 min TTL (was 8 h).
+- **Rotating refresh tokens** — 14-day TTL. Each use issues a brand-new refresh in the SAME `family_id`; the previous token is immediately marked `revoked_at`. Replay-attack guard: if a token already marked revoked is presented again, the **entire family is nuked** and every descendant becomes unusable (forces re-login).
+- **Server-side logout** — new `POST /api/auth/logout` revokes the current access token's `jti` AND the refresh family. The auth middleware checks every request against the `revoked_access_tokens` Mongo collection (fronted by a 60s in-process TTL cache so the hot path stays O(1)).
+- **TTL self-cleanup** — both `refresh_tokens` and `revoked_access_tokens` carry Mongo TTL indexes on `expires_at`, so revoked rows evict automatically.
+- **Frontend** — `AuthContext.logout()` now calls the server endpoint before clearing local state. The existing axios refresh interceptor already handles the rotation pattern.
+
+End-to-end verified via curl: login ✓, refresh rotates ✓, reuse detected ✓ ("Refresh token reuse detected; session terminated"), logout invalidates access ("Session has been terminated. Please log in again.") and burns the refresh family ✓.
+
+### Per-showtime e-ticket renderer ✅
+New `/app/frontend/src/components/tickets/EventTicket.jsx` — used by `OrderDetailModal` whenever `service_type === 'event'`. Front face shows:
+- Class badge with the operator's class **color dot** (e.g., blue for Standard, gold for VIP)
+- Event type pill (`Concert`, `Conference`, …) + qty badge (`× 3`)
+- Title + description + 16×16 poster thumbnail
+- WHEN (start + doors_open), WHERE (venue + city + address), HOLDER, PAID
+- Operator logo
+- Optional `Includes` row showing class perks
+
+Back face (dark panel, with perforation-dot styling between):
+- "Important Info" — present this ticket, doors open at X
+- "Venue Rules" — bullet list of the location's `policies` array
+
+Booking endpoint `/api/event-showtimes/book` was extended to enrich `booking_details` with `location_policies`, `location_address`, `location_city`, `class_color`, `class_perks`, `doors_open_at`, `showtime_description`, `showtime_image`, and `showtime_type` so the ticket renders without extra round-trips.
+
+End-to-end verified: customer booked 3× Standard tickets for "QA Refactor Showtime" at "QA Refactor Test" (Douala), opened the order, and the e-ticket rendered with all 4 venue policies, doors-open time, class color, and perforation styling. data-testids: `event-ticket`, `event-ticket-title`, `event-ticket-class-badge`, `event-ticket-qty-badge`, `event-ticket-policies`.
+
+
 ## Latest Changes (Feb 2026 — iter 239: Refactor, ShowtimeDetails customer page, soft-delete UX fix)
 
 ### Refactor

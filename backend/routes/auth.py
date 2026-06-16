@@ -20,7 +20,14 @@ from utils.rate_limit import (
 )
 from config.database import get_database
 from middleware.auth import get_current_active_user, invalidate_user_cache
-from datetime import datetime, timedelta
+from utils.token_revocation import (
+    persist_refresh_token,
+    get_refresh_token_record,
+    mark_refresh_token_revoked,
+    revoke_refresh_family,
+    revoke_access_token,
+)
+from datetime import datetime, timedelta, timezone
 import uuid
 import os
 import logging
@@ -195,7 +202,15 @@ async def login(credentials: UserLogin, request: Request):
         data={"sub": user["_id"], "email": user["email"]},
         timeout_minutes=session_timeout
     )
-    refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
+    refresh = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
+    await persist_refresh_token(
+        user_id=user["_id"],
+        jti=refresh["jti"],
+        family_id=refresh["family_id"],
+        parent_jti=None,
+        expires_at=refresh["expires_at"],
+    )
+    refresh_token = refresh["token"]
     
     # Build operator context if user is assigned to an operator
     operator_context = None
@@ -434,73 +449,132 @@ async def reset_password(payload: ResetPasswordRequest, request: Request):
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(request: Request):
-    """Refresh access token using refresh token"""
+    """Refresh access token using a rotating refresh token.
+
+    Each successful refresh:
+      * revokes the presented refresh token,
+      * issues a brand-new refresh token in the SAME `family_id`,
+      * issues a fresh short-lived access token.
+
+    Reuse-attack guard: if the presented refresh token has already been
+    revoked (someone is replaying an old token), the ENTIRE family is
+    nuked — every token in the family becomes unusable and the user must
+    log in again.
+    """
     from utils.auth import decode_token
-    from pydantic import BaseModel
-    
-    class RefreshRequest(BaseModel):
-        refresh_token: str
-    
+
     db = get_database()
-    
+
     try:
         body = await request.json()
         refresh_token_str = body.get("refresh_token")
-        
+
         if not refresh_token_str:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Refresh token required"
-            )
-        
-        # Decode and validate refresh token
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Refresh token required")
+
         payload = decode_token(refresh_token_str)
-        
-        if payload.get("type") != "refresh":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
-            )
-        
+        if not payload or payload.get("type") != "refresh":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+
+        jti = payload.get("jti")
+        family_id = payload.get("family_id")
         user_id = payload.get("sub")
+        if not jti or not family_id or not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed refresh token")
+
+        record = await get_refresh_token_record(jti)
+        if record is None:
+            # Token signed by us but never persisted — treat as compromised.
+            await revoke_refresh_family(family_id)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token not recognised")
+
+        if record.get("revoked_at") is not None:
+            # REUSE DETECTED — burn down the whole family.
+            await revoke_refresh_family(family_id)
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token reuse detected; session terminated")
+
         user = await db.users.find_one({"_id": user_id})
-        
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
-            )
-        
-        if user["status"] != "active":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Account is not active"
-            )
-        
-        # Get dynamic session timeout from system settings
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        if user.get("status") != "active":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is not active")
+
         from routes.system_settings import get_session_timeout_minutes
         session_timeout = await get_session_timeout_minutes()
-        
-        # Create new tokens with dynamic timeout
-        access_token = create_access_token(
+
+        new_access = create_access_token(
             data={"sub": user["_id"], "email": user["email"]},
-            timeout_minutes=session_timeout
+            timeout_minutes=session_timeout,
         )
-        new_refresh_token = create_refresh_token(data={"sub": user["_id"], "email": user["email"]})
-        
+        new_refresh = create_refresh_token(
+            data={"sub": user["_id"], "email": user["email"]},
+            family_id=family_id,
+            parent_jti=jti,
+        )
+
+        # Rotate: revoke the old, persist the new.
+        await mark_refresh_token_revoked(jti)
+        await persist_refresh_token(
+            user_id=user["_id"],
+            jti=new_refresh["jti"],
+            family_id=new_refresh["family_id"],
+            parent_jti=jti,
+            expires_at=new_refresh["expires_at"],
+        )
+
         return {
-            "access_token": access_token,
-            "refresh_token": new_refresh_token,
-            "token_type": "bearer"
+            "access_token": new_access,
+            "refresh_token": new_refresh["token"],
+            "token_type": "bearer",
         }
-        
+
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token"
+            detail="Invalid or expired refresh token",
         )
+
+
+@router.post("/logout")
+async def logout(request: Request, current_user: dict = Depends(get_current_active_user)):
+    """Server-side logout — revokes the current access token's `jti` AND the
+    refresh family it belongs to. From this moment on the presented
+    `Authorization: Bearer <token>` is rejected by every protected route.
+    """
+    from utils.auth import decode_token
+
+    # Revoke the current access token by its JTI.
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        access_payload = decode_token(auth_header[7:])
+        if access_payload and access_payload.get("jti"):
+            exp = access_payload.get("exp")
+            expires_at = datetime.fromtimestamp(exp, tz=timezone.utc) if exp else datetime.utcnow() + timedelta(hours=1)
+            await revoke_access_token(
+                jti=access_payload["jti"],
+                user_id=current_user["_id"],
+                expires_at=expires_at,
+            )
+
+    # Optionally revoke the refresh family the client sent us, so the same
+    # browser instance can't auto-refresh into a new access token.
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    refresh_token_str = (body or {}).get("refresh_token")
+    if refresh_token_str:
+        rpayload = decode_token(refresh_token_str)
+        if rpayload and rpayload.get("family_id"):
+            await revoke_refresh_family(rpayload["family_id"])
+
+    # Invalidate the cached user payload so any cached state is dropped.
+    await invalidate_user_cache(current_user["_id"])
+    return {"message": "Logged out"}
+
 
 @router.post("/setup-2fa")
 async def setup_2fa(current_user: dict = Depends(get_current_active_user)):

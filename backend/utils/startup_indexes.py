@@ -268,6 +268,14 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
     IndexSpec("otps", [("phone", ASCENDING), ("purpose", ASCENDING)], "ix_otp_phone_purpose"),
     IndexSpec("otps", [("email", ASCENDING), ("purpose", ASCENDING)], "ix_otp_email_purpose", sparse=True),
     IndexSpec("otps", [("expires_at", ASCENDING)], "ix_otp_ttl", expire_after_seconds=0, sparse=True),
+
+    # ── refresh_tokens (rotating refresh + family revocation) ──────────
+    IndexSpec("refresh_tokens", [("expires_at", ASCENDING)], "ix_refresh_tokens_ttl", expire_after_seconds=0),
+    IndexSpec("refresh_tokens", [("family_id", ASCENDING)], "ix_refresh_tokens_family"),
+    IndexSpec("refresh_tokens", [("user_id", ASCENDING)], "ix_refresh_tokens_user"),
+
+    # ── revoked_access_tokens (server-side logout blacklist) ───────────
+    IndexSpec("revoked_access_tokens", [("expires_at", ASCENDING)], "ix_revoked_access_tokens_ttl", expire_after_seconds=0),
 ]
 
 

@@ -256,6 +256,10 @@ async def book_tickets(
         if op:
             operator_logo_url = op.get("logo_url")
 
+    # Pull location info so the e-ticket can render venue policies / address
+    # / map link without an extra round-trip on the customer side.
+    location = await db.event_locations.find_one({"_id": showtime["location_id"]}) or {}
+
     order = {
         "_id": str(uuid.uuid4()),
         "user_id": current_user["_id"],
@@ -273,12 +277,24 @@ async def book_tickets(
         "booking_details": {
             "showtime_id": payload.showtime_id,
             "showtime_title": showtime["title"],
+            "showtime_description": showtime.get("description"),
+            "showtime_type": showtime.get("event_type"),
+            "showtime_image": (showtime.get("images") or [None])[0],
             "location_id": showtime["location_id"],
             "location_name": showtime["location_name"],
+            "location_address": location.get("address"),
+            "location_city": location.get("city"),
+            "location_latitude": location.get("latitude"),
+            "location_longitude": location.get("longitude"),
+            "location_policies": location.get("policies") or [],
             "start_datetime": showtime["start_datetime"],
+            "end_datetime": showtime.get("end_datetime"),
+            "doors_open_at": showtime.get("doors_open_at"),
             "class_id": payload.class_id,
             "class_name": klass["name"],
             "class_price": klass["price"],
+            "class_color": klass.get("color"),
+            "class_perks": klass.get("perks") or [],
             "quantity": payload.quantity,
             "contact_name": payload.contact_name,
             "contact_phone": payload.contact_phone,

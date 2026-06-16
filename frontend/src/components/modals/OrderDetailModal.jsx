@@ -44,6 +44,7 @@ import {
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
 import MoneyTrail from '@/components/payment/MoneyTrail';
+import EventTicket from '@/components/tickets/EventTicket';
 
 const getStatusConfig = (status) => {
   const configs = {
@@ -681,6 +682,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </div>
               );
             })()
+          )}
+
+          {/* Event Showtime Ticket — new Location → Showtime architecture */}
+          {(order.service_type === 'event' || order.service_category === 'event') && (
+            <EventTicket order={order} />
           )}
 
           {/* Laundry / Pressing Order Info */}

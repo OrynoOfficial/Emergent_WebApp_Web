@@ -145,7 +145,17 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Server-side revocation: invalidate the access token's JTI + the refresh
+    // family so the captured token can no longer authenticate any request.
+    // Best-effort — even if the server call fails, we still clear local state.
+    try {
+      const refresh_token = localStorage.getItem('refresh_token');
+      await api.post('/auth/logout', refresh_token ? { refresh_token } : {});
+    } catch (err) {
+      // Token may already be expired/revoked — that's fine.
+      console.debug('Server logout call failed (continuing with client cleanup):', err?.message);
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');

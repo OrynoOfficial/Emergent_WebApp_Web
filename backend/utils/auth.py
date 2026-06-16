@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import uuid
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from config.settings import settings
@@ -27,11 +28,9 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, timeout_minutes: Optional[int] = None) -> str:
     """Create a JWT access token
-    
-    Args:
-        data: Token payload data
-        expires_delta: Optional explicit expiration timedelta
-        timeout_minutes: Optional session timeout in minutes (from system settings)
+
+    Every access token carries a unique `jti` so it can be revoked server-side
+    on logout (see `revoked_access_tokens` Mongo collection).
     """
     to_encode = data.copy()
     if expires_delta:
@@ -40,18 +39,43 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None, t
         expire = datetime.utcnow() + timedelta(minutes=timeout_minutes)
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode.update({"exp": expire, "type": "access"})
+
+    to_encode.update({
+        "exp": expire,
+        "type": "access",
+        "jti": to_encode.get("jti") or str(uuid.uuid4()),
+    })
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def create_refresh_token(data: dict) -> str:
-    """Create a JWT refresh token"""
+def create_refresh_token(data: dict, family_id: Optional[str] = None, parent_jti: Optional[str] = None) -> dict:
+    """Create a JWT refresh token + return the (token, jti, family_id) tuple so
+    the caller can persist it in the `refresh_tokens` collection.
+
+    Rotation rules (enforced in /api/auth/refresh):
+      - Each refresh issues a new token in the SAME `family_id`.
+      - The previous token is immediately marked `revoked_at`.
+      - If a refresh token presented for use has `revoked_at` set already,
+        the entire family is revoked (reuse-attack detection).
+    """
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    jti = str(uuid.uuid4())
+    fam = family_id or str(uuid.uuid4())
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+        "jti": jti,
+        "family_id": fam,
+    })
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+    return {
+        "token": encoded_jwt,
+        "jti": jti,
+        "family_id": fam,
+        "parent_jti": parent_jti,
+        "expires_at": expire,
+    }
 
 def decode_token(token: str) -> dict:
     """Decode a JWT token"""
