@@ -1,5 +1,27 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 229: Car Rental Details map fallback + full visual verification)
+
+### Car Rental Details — live map even without explicit coords
+- `CarRentalDetails.jsx` now resolves the pickup map location with a fallback chain:
+  1. `raw.location` if the doc already has one,
+  2. `{ latitude, longitude }` pair if present,
+  3. `{ lat, lon }` shorthand,
+  4. `{ pickup_lat, pickup_lon }`,
+  5. **city centre fallback** (Douala / Yaoundé / Bafoussam) when none of the above exist.
+- Result: every vehicle's Details page renders a real Leaflet map with the pin placed in (or near) the pickup city — verified via screenshot on the Toyota Land Cruiser (city = "Douala") → tiles, streets, pin all render.
+
+### End-to-end Car Rental flow — screenshot-verified
+Live tested at https://cinema-management-p0.preview.emergentagent.com (bundled build):
+- ✅ Results page **defaults to Grid**, rich cards (city + operator + policy chips + rating), "ALMOST SOLD OUT" tag in **both** grid and list views (4 badges found by testid in List — the previously missing tag is back).
+- ✅ Colored editable search summary at the top with `Edit` action.
+- ✅ Details page: live Leaflet map + correct pin (Douala streets visible), real-ratings widget ("— (0)" not hardcoded "4.9 (28)"), "No reviews yet" empty state in the Customer reviews card.
+- ✅ Booking page: sequential gating — "Add Extras (Required)" warning, Driver Information section disabled with "Please confirm your extras selection first" message, payment block + Final Step button + 3 unchecked status indicators on the right rail.
+
+### Seeded data
+- Toyota Land Cruiser (`9652ec04-…`) now has `description`, `mileage_policy=200 km/day included`, `fuel_policy=Full to Full`, `trunk_capacity=590L`, `fuel_consumption=12L/100km`, `pickup_locations=[Douala Airport, Douala Centre, Yaoundé Centre]` — so the operator UI changes are visible end-to-end on this car.
+
+
 ## Latest Changes (Feb 2026 — iter 228: Production-style frontend serve fixes Cloudflare 429s)
 
 ### Root cause for "no visible changes" (final)

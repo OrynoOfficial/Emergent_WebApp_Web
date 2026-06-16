@@ -60,6 +60,22 @@ export default function CarRentalDetails() {
       }
       // Normalise the shape so the UI works for either backend.
       const raw = res.data || {};
+      // Coalesce a location object from any of the schemas we've seen.
+      const locFromRaw = raw.location
+        || (raw.latitude && raw.longitude ? { lat: raw.latitude, lon: raw.longitude } : null)
+        || (raw.lat && raw.lon ? { lat: raw.lat, lon: raw.lon } : null)
+        || (raw.pickup_lat && raw.pickup_lon ? { lat: raw.pickup_lat, lon: raw.pickup_lon } : null);
+      // City-centre fallback for the most common pickup cities — keeps the map
+      // populated even when the operator hasn't supplied explicit coordinates.
+      const CITY_FALLBACK = {
+        douala: { lat: 4.0511, lon: 9.7679 },
+        yaoundé: { lat: 3.848, lon: 11.5021 },
+        yaounde: { lat: 3.848, lon: 11.5021 },
+        bafoussam: { lat: 5.4781, lon: 10.4179 },
+      };
+      const cityKey = String(raw.city || raw.pickup_city || '').trim().toLowerCase();
+      const finalLoc = locFromRaw || CITY_FALLBACK[cityKey] || null;
+
       const normalised = {
         ...raw,
         id: raw.id || raw._id || id,
@@ -69,6 +85,7 @@ export default function CarRentalDetails() {
         type: raw.type || raw.vehicle_type,
         rating: raw.rating ?? raw.average_rating ?? 0,
         reviews_count: raw.reviews_count ?? raw.total_ratings ?? 0,
+        location: finalLoc ? { ...finalLoc, address: finalLoc.address || raw.address || raw.city || raw.pickup_locations?.[0] } : null,
         owner: raw.owner || {
           name: raw.operator_name,
           rating: raw.operator_rating,
