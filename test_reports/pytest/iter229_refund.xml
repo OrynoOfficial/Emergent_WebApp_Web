@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="12" time="1.261" timestamp="2026-06-16T21:55:40.951984+00:00" hostname="agent-env-d63e2092-11de-402a-b6bc-93ac6ac15c8c"><testcase classname="backend.tests.test_refund_lifecycle" name="test_eligibility_blocks_unpaid_orders" time="0.519" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_eligibility_full_refund_window" time="0.094" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_request_unpaid_refund_returns_400" time="0.018" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_request_idempotency" time="0.024" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_other_user_cannot_request_or_see_refund" time="0.272" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_admin_approve_manual_payment_restores_inventory" time="0.035" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_admin_approve_stripe_completes_refund_and_marks_order" time="0.025"><failure message="ModuleNotFoundError: No module named 'routes'">backend/tests/test_refund_lifecycle.py:268: in test_admin_approve_stripe_completes_refund_and_marks_order
+    with patch(
+/usr/local/lib/python3.11/unittest/mock.py:1430: in __enter__
+    self.target = self.getter()
+                  ^^^^^^^^^^^^^
+/usr/local/lib/python3.11/pkgutil.py:700: in resolve_name
+    mod = importlib.import_module(modname)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1204: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1176: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1140: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'routes'</failure></testcase><testcase classname="backend.tests.test_refund_lifecycle" name="test_admin_reject_refund_keeps_inventory_booked" time="0.031" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_customer_can_cancel_pending_refund" time="0.028" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_my_refunds_lists_only_own" time="0.028" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_non_admin_cannot_approve_or_list" time="0.029" /><testcase classname="backend.tests.test_refund_lifecycle" name="test_double_approve_blocked" time="0.029" /></testsuite></testsuites>

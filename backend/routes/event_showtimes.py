@@ -325,6 +325,7 @@ async def book_tickets(
             "class_color": klass.get("color"),
             "class_perks": klass.get("perks") or [],
             "quantity": payload.quantity,
+            "seat_ids": seat_ids or [],
             "contact_name": payload.contact_name,
             "contact_phone": payload.contact_phone,
             "contact_email": payload.contact_email,
