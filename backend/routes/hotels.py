@@ -121,8 +121,23 @@ async def get_hotels(
             # Fallback to a default price or hotel's stored price
             hotel["price_per_night"] = hotel.get("base_price", 50000)
             hotel["available_rooms"] = int(hotel.get("available_rooms") or 0)
-    
+
+    await _enrich_with_operator_logos(db, hotels)
     return {"hotels": hotels, "total": total}
+
+
+# Local helper so each list/detail endpoint can backfill operator_logo_url.
+async def _enrich_with_operator_logos(db, docs: list) -> None:
+    """Attach `operator_logo_url` to each doc by batch-loading the parent operators."""
+    op_ids = list({d.get("operator_id") for d in docs if d.get("operator_id")})
+    if not op_ids:
+        return
+    logo_map = {}
+    async for op in db.operators.find({"_id": {"$in": op_ids}}, {"_id": 1, "logo_url": 1}):
+        logo_map[op["_id"]] = op.get("logo_url")
+    for d in docs:
+        if d.get("operator_id") in logo_map:
+            d["operator_logo_url"] = logo_map[d["operator_id"]]
 
 
 @router.get("/management/my-hotels")
@@ -206,6 +221,12 @@ async def get_hotel(hotel_id: str):
     hotel = await db.hotels.find_one({"_id": hotel_id})
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
+    # Surface the parent operator's brand logo so the customer-facing
+    # HotelDetails owner tab can render it.
+    if hotel.get("operator_id"):
+        op = await db.operators.find_one({"_id": hotel["operator_id"]}, {"logo_url": 1})
+        if op and op.get("logo_url"):
+            hotel["operator_logo_url"] = op["logo_url"]
     return hotel
 
 @router.put("/{hotel_id}")

@@ -1,6 +1,37 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 235: Ticket renderer wiring)
+## Latest Changes (Feb 2026 — iter 236: operator_logo_url enrichment platform-wide)
+
+The travel-routes listing got `operator_logo_url` enrichment in iter 235. This iteration extends the same batch-load pattern to **Hotels, Car Rentals, and Banquets** so every customer-facing catalog endpoint carries the operator's brand without an extra round-trip.
+
+### Backend
+- **`hotels.py`** — `GET /api/hotels/` and `GET /api/hotels/{id}` now batch/single-load `operator_logo_url`.
+- **`car_rental.py`** — `GET /api/car-rental/` and `GET /api/car-rental/{id}` enriched with the same pattern.
+- **`banquets.py`** — `GET /api/banquets/` and `GET /api/banquets/{id}` enriched (sits next to the existing FOMO + linked-inventory enrichment).
+
+### Pattern (consistent across all 4 catalogs)
+```python
+op_ids = list({d.get("operator_id") for d in docs if d.get("operator_id")})
+logo_map = {}
+async for op in db.operators.find({"_id": {"$in": op_ids}}, {"_id": 1, "logo_url": 1}):
+    logo_map[op["_id"]] = op.get("logo_url")
+for d in docs:
+    if d.get("operator_id") in logo_map:
+        d["operator_logo_url"] = logo_map[d["operator_id"]]
+```
+Single Mongo round-trip per listing, regardless of how many results.
+
+### Tests (`/app/backend/tests/test_iter236_operator_logo_enrichment.py`)
+- `test_hotels_listing_carries_operator_logo_url` — listing + detail
+- `test_car_rental_listing_carries_operator_logo_url` — listing + detail
+- `test_banquets_listing_carries_operator_logo_url` — listing + detail
+
+### Verified
+- **28/28 pytest pass** (iter 231→236 combined)
+- No frontend changes needed: `CarRentalDetails`, `TripDetailsModal`, `HotelDetails`, `OrderDetailModal`, and `BookingConfirmation` already conditionally render `operator_logo_url` when present (wired in earlier iterations).
+
+
+## Earlier — iter 235: Ticket renderer wiring
 
 Both P3 follow-ups from iter 234 are done.
 

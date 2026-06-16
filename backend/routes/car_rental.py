@@ -105,6 +105,18 @@ async def get_cars(
     cars = await db.car_rentals.find(query).skip(skip).limit(limit).to_list(limit)
     total = await db.car_rentals.count_documents(query)
 
+    # --- Operator brand enrichment ---------------------------------------
+    # Single batch lookup so each car carries its operator's logo_url for the
+    # customer-facing CarRentalResults / CarRentalDetails owner tab.
+    op_ids = list({c.get("operator_id") for c in cars if c.get("operator_id")})
+    logo_map = {}
+    if op_ids:
+        async for op in db.operators.find({"_id": {"$in": op_ids}}, {"_id": 1, "logo_url": 1}):
+            logo_map[op["_id"]] = op.get("logo_url")
+    for c in cars:
+        if c.get("operator_id") in logo_map:
+            c["operator_logo_url"] = logo_map[c["operator_id"]]
+
     # --- FOMO inventory enrichment ---------------------------------------
     # Each car_rentals row = 1 vehicle. For the "Almost sold out" badge to be
     # meaningful, we expose `units_available` per (operator_id, vehicle_type)
@@ -171,6 +183,11 @@ async def get_car(car_id: str):
     if not car:
         raise HTTPException(status_code=404, detail="Car not found")
     car["id"] = str(car.pop("_id", ""))
+    # Operator brand on the customer-facing details page.
+    if car.get("operator_id"):
+        op = await db.operators.find_one({"_id": car["operator_id"]}, {"logo_url": 1})
+        if op and op.get("logo_url"):
+            car["operator_logo_url"] = op["logo_url"]
     return car
 
 

@@ -194,7 +194,18 @@ async def get_banquets(
         for b in banquets:
             taken = len(taken_by_venue.get(b["id"], set()))
             b["slots_available"] = max(0, 30 - taken)
-    
+
+    # Operator brand enrichment — single batch lookup so each card carries
+    # the operator's logo for owner-strip / receipt rendering downstream.
+    op_ids = list({b.get("operator_id") for b in banquets if b.get("operator_id")})
+    if op_ids:
+        logo_map = {}
+        async for op in db.operators.find({"_id": {"$in": op_ids}}, {"_id": 1, "logo_url": 1}):
+            logo_map[op["_id"]] = op.get("logo_url")
+        for b in banquets:
+            if b.get("operator_id") in logo_map:
+                b["operator_logo_url"] = logo_map[b["operator_id"]]
+
     return {"banquets": banquets, "total": total}
 
 @router.get("/{banquet_id}")
@@ -205,6 +216,10 @@ async def get_banquet(banquet_id: str):
     if not banquet:
         raise HTTPException(status_code=404, detail="Banquet venue not found")
     banquet["id"] = banquet.pop("_id")
+    if banquet.get("operator_id"):
+        op = await db.operators.find_one({"_id": banquet["operator_id"]}, {"logo_url": 1})
+        if op and op.get("logo_url"):
+            banquet["operator_logo_url"] = op["logo_url"]
     return banquet
 
 @router.put("/{banquet_id}")
