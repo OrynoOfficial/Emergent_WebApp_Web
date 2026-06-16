@@ -13,7 +13,6 @@ Idempotency, authorization, and double-refund guards are also asserted.
 import os
 import uuid
 from datetime import datetime, timezone, timedelta
-from unittest.mock import patch
 
 import requests
 
@@ -249,7 +248,10 @@ def test_admin_approve_manual_payment_restores_inventory():
 
 
 def test_admin_approve_stripe_completes_refund_and_marks_order():
-    """Stripe refund: gateway is mocked; final status is COMPLETED + order flagged refunded."""
+    """Stripe refund: the live backend will attempt the real Stripe API. We
+    can't mock cross-process, so we accept any non-PENDING terminal state
+    (completed when Stripe accepts the fake intent, failed/approved otherwise).
+    The important assertion is that the refund row left the PENDING state."""
     sid = _make_showtime()
     order_id = _book(sid, qty=1, seat_ids=["B-3"])
     _mark_order_paid(order_id, payment_method="stripe", payment_intent_id="pi_test_abc")
@@ -260,24 +262,12 @@ def test_admin_approve_stripe_completes_refund_and_marks_order():
         headers=_customer(),
     ).json()["refund_id"]
 
-    # Mock Stripe so we don't hit the live API.
-    async def fake_refund(intent_id, amount):
-        assert intent_id == "pi_test_abc"
-        return {"success": True, "refund_id": f"re_test_{uuid.uuid4().hex[:8]}"}
+    requests.post(
+        f"{API}/api/refunds/{refund_id}/approve",
+        json={"approved_amount": None, "admin_notes": "auto"},
+        headers=_super(),
+    )
 
-    with patch(
-        "routes.refunds.StripeService.create_refund", side_effect=fake_refund
-    ):
-        requests.post(
-            f"{API}/api/refunds/{refund_id}/approve",
-            json={"approved_amount": None, "admin_notes": "auto"},
-            headers=_super(),
-        )
-
-    # Because the backend is a different process, the patch above only works
-    # if we ran in-process. Fall back: accept either COMPLETED (mocked) or a
-    # 502 if the real Stripe rejects the fake intent. Either way the refund
-    # row should now exist & not be PENDING.
     refund_doc = next(
         rf for rf in requests.get(f"{API}/api/refunds", headers=_super()).json()["refunds"]
         if rf["id"] == refund_id

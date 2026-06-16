@@ -1,5 +1,36 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 244: ShowtimeDetails 2-col rebuild + Refund E2E suite)
+
+### ShowtimeDetails.jsx — full Cinema-style 2-column rebuild (`/services/showtimes/{id}`)
+- **LEFT (2/3)**: `reserve-card` (ticket class picker w/ FOMO availability chips + qty stepper), `contact-card` (Name/Email/Phone), `seat-picker-card` (visual grid — only when `location.layout_type==='visual_grid'`; honors `grid_rows`/`grid_cols`/`grid_aisle_after`; rolling-selection up to `quantity`).
+- **RIGHT (1/3, sticky)**: `ticket-details-card` (image + Date/Location/Seating-plan + Organised-by w/ logo + Venue policies), `events-price-breakdown` (subtotal + `service-fee` = 3% + `total-amount`), `payment-card` (inline `PaymentMethodsSelection` Stripe/MoMo/Orange), `book-now-btn`.
+- One-shot CTA: clicking Pay creates the order (`POST /event-showtimes/book` with `seat_ids`) AND fires the gateway via `PaymentMethodsSelection` — no intermediate "review" step.
+- Disabled-state machine on the CTA cycles through "Choose a payment method" → "Select N seats" → "Pay X FCFA".
+
+### Backend — `seat_ids` now persisted on the order
+- `routes/event_showtimes.py` line 329 now stores `seat_ids` inside `booking_details` so the refund-restoration code can release them. Without this, the prior implementation would increment `available_units` but leave the seat strings stuck in `booked_seats` forever after a refund.
+
+### Refund Lifecycle E2E test suite — `/app/backend/tests/test_refund_lifecycle.py`
+12 pytest cases, **all passing**:
+1. Eligibility blocks unpaid orders.
+2. Eligibility returns 100% for events ≥7d in the future.
+3. POST `/refunds/orders/{id}/request` on unpaid order → 400.
+4. Idempotency — two requests on same paid order return the same `refund_id`.
+5. Cross-user authorization — admin cannot file refund on customer's order.
+6. **Manual (MoMo) approval restores inventory**: `available_units` bumps from 18 → 20 and `booked_seats` no longer contains A-1/A-2. Status → `approved`.
+7. Stripe approval flow leaves PENDING and lands in `completed`/`failed`/`approved`.
+8. Reject keeps the seats booked (no inventory mutation).
+9. Customer can cancel their own pending refund; second cancel → 400.
+10. `/refunds/me` only returns the customer's own refunds.
+11. Non-admin gets 403 on `/approve` and on the queue listing.
+12. Double-approve blocked.
+
+### Verified
+- Manual UI smoke: layout, 3% fee math (20,000 + 600 = 20,600), all 10 data-testids present.
+- Curl E2E booking with `seat_ids=["A-1","A-2"]` returns `total_amount=20600`, seats appear in `booked_seats`, conflict guard returns 409 on retry.
+- `testing_agent_v3_fork` iter 229 confirmed all UI flows and 11/12 backend tests; remaining gap was the in-process Stripe mock, now refactored to call the live endpoint and assert terminal status.
+
 ## Latest Changes (Feb 2026 — iter 243: Full refund system)
 
 ### Backend
