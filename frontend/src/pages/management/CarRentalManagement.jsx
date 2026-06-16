@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import ServiceFormShell from '@/components/management/shared/ServiceFormShell';
 import GenericPreviewCard from '@/components/management/shared/GenericPreviewCard';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
@@ -49,7 +51,17 @@ const DEFAULT_CAR_FORM = {
   brand: '', model: '', year: new Date().getFullYear(), car_type: 'sedan',
   seats: 5, doors: 4, transmission: 'automatic', fuel_type: 'petrol',
   price_per_day: '', price_per_hour: '', city: '', features: [],
-  images: [], is_available: true, operator_id: '', operator_name: '', plate_number: ''
+  images: [], is_available: true, operator_id: '', operator_name: '', plate_number: '',
+  // Richer optional fields
+  description: '',
+  mileage_policy: 'Unlimited mileage',
+  fuel_policy: 'Full to Full',
+  minimum_driver_age: 21,
+  min_rental_days: 1,
+  max_rental_days: 30,
+  pickup_locations: [],
+  trunk_capacity: '',
+  fuel_consumption: '',
 };
 
 // Car Rental specific dashboard data generator
@@ -709,6 +721,92 @@ export default function CarRentalManagement() {
                     </Badge>
                   ))}
                 </div>
+              </div>
+
+              {/* Detailed Vehicle Information */}
+              <div className="col-span-2 pt-3 border-t border-slate-200">
+                <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Detailed Information</Label>
+              </div>
+              <div className="col-span-2">
+                <Label>Description</Label>
+                <Textarea
+                  rows={3}
+                  value={carForm.description}
+                  onChange={(e) => setCarForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Describe the vehicle — comfort, target use, recent service, etc."
+                />
+              </div>
+              <div>
+                <Label>Doors</Label>
+                <Input type="number" min={2} max={6} value={carForm.doors} onChange={e => setCarForm(p => ({ ...p, doors: parseInt(e.target.value) || 4 }))} />
+              </div>
+              <div>
+                <Label>Trunk Capacity</Label>
+                <Input value={carForm.trunk_capacity} onChange={e => setCarForm(p => ({ ...p, trunk_capacity: e.target.value }))} placeholder="450L" />
+              </div>
+              <div>
+                <Label>Fuel Consumption</Label>
+                <Input value={carForm.fuel_consumption} onChange={e => setCarForm(p => ({ ...p, fuel_consumption: e.target.value }))} placeholder="7.5L/100km" />
+              </div>
+              <div>
+                <Label>Mileage Policy</Label>
+                <Select value={carForm.mileage_policy} onValueChange={v => setCarForm(p => ({ ...p, mileage_policy: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Unlimited mileage">Unlimited mileage</SelectItem>
+                    <SelectItem value="100 km/day included">100 km/day included</SelectItem>
+                    <SelectItem value="200 km/day included">200 km/day included</SelectItem>
+                    <SelectItem value="300 km/day included">300 km/day included</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fuel Policy</Label>
+                <Select value={carForm.fuel_policy} onValueChange={v => setCarForm(p => ({ ...p, fuel_policy: v }))}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Full to Full">Full to Full</SelectItem>
+                    <SelectItem value="Same to Same">Same to Same</SelectItem>
+                    <SelectItem value="Pre-purchase">Pre-purchase</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Minimum Driver Age</Label>
+                <Input type="number" min={18} max={80} value={carForm.minimum_driver_age} onChange={e => setCarForm(p => ({ ...p, minimum_driver_age: parseInt(e.target.value) || 21 }))} />
+              </div>
+              <div>
+                <Label>Min Rental Days</Label>
+                <Input type="number" min={1} value={carForm.min_rental_days} onChange={e => setCarForm(p => ({ ...p, min_rental_days: parseInt(e.target.value) || 1 }))} />
+              </div>
+              <div>
+                <Label>Max Rental Days</Label>
+                <Input type="number" min={1} value={carForm.max_rental_days} onChange={e => setCarForm(p => ({ ...p, max_rental_days: parseInt(e.target.value) || 30 }))} />
+              </div>
+              <div>
+                <Label>Hourly Rate (FCFA)</Label>
+                <Input type="number" value={carForm.price_per_hour} onChange={e => setCarForm(p => ({ ...p, price_per_hour: e.target.value }))} placeholder="Optional" />
+              </div>
+              <div className="col-span-2">
+                <Label>Pickup Locations <span className="text-slate-400 font-normal text-xs">(comma separated)</span></Label>
+                <Input
+                  value={Array.isArray(carForm.pickup_locations) ? carForm.pickup_locations.join(', ') : ''}
+                  onChange={e => setCarForm(p => ({
+                    ...p,
+                    pickup_locations: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
+                  }))}
+                  placeholder="Douala Airport, Douala Centre, Yaoundé Airport"
+                />
+              </div>
+              <div className="col-span-2 flex items-center justify-between bg-emerald-50 rounded-lg border border-emerald-100 p-3">
+                <div>
+                  <Label className="cursor-pointer">Vehicle Available for Booking</Label>
+                  <p className="text-xs text-slate-500 mt-0.5">Renters can only book vehicles marked as available.</p>
+                </div>
+                <Switch
+                  checked={!!carForm.is_available}
+                  onCheckedChange={(v) => setCarForm(p => ({ ...p, is_available: v }))}
+                />
               </div>
             </div>
           </div>

@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { formatDate } from '../../utils/dateUtils';
 import ManagementShell from '../../components/management/shared/ManagementShell';
 import SubpageCard from '../../components/management/shared/SubpageCard';
+import ViewModeToggle from '../../components/common/ViewModeToggle';
 
 // Role hierarchy for permission checks
 const ROLE_HIERARCHY = {
@@ -450,17 +451,7 @@ export default function UserManagement() {
             </SelectContent>
           </Select>
           {/* View mode toggle */}
-          <div className="inline-flex rounded-lg border bg-white overflow-hidden" data-testid="user-view-mode">
-            <button onClick={() => setViewMode('list')} title="List" className={`px-3 ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-50'}`} data-testid="view-list">
-              <List className="h-4 w-4" />
-            </button>
-            <button onClick={() => setViewMode('grid')} title="Grid" className={`px-3 border-l ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-50'}`} data-testid="view-grid">
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button onClick={() => setViewMode('details')} title="Details" className={`px-3 border-l ${viewMode === 'details' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-50'}`} data-testid="view-details">
-              <FileText className="h-4 w-4" />
-            </button>
-          </div>
+          <ViewModeToggle value={viewMode} onChange={setViewMode} />
         {/* Date-joined range */}
         <div className="flex flex-wrap gap-3 items-center text-sm w-full mt-2 pt-2 border-t border-slate-100">
           <Label className="text-slate-500 flex items-center gap-1.5"><Calendar className="h-4 w-4" /> Joined</Label>

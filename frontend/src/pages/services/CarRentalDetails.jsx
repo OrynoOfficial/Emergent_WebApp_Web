@@ -6,11 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import DatePickerModal from '@/components/shared/DatePickerModal';
-import { format, differenceInDays } from 'date-fns';
-import { 
-  ArrowLeft, Car, MapPin, Users, Fuel, Settings, 
+import LocationMap from '@/components/shared/LocationMap';
+import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
+import {
+  ArrowLeft, Car, MapPin, Users, Fuel, Settings,
   Star, CalendarIcon, Shield, CheckCircle, Phone,
-  Snowflake, Radio, Navigation, Info, AlertTriangle
+  Snowflake, Radio, Navigation, Info, AlertTriangle, MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatFCFA } from '@/utils/currency';
@@ -33,6 +34,8 @@ export default function CarRentalDetails() {
   const [searchParams] = useSearchParams();
   const [vehicle, setVehicle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ average: 0, total: 0 });
   const [selectedDates, setSelectedDates] = useState({
     pickup: searchParams.get('pickupDate') ? new Date(searchParams.get('pickupDate')) : new Date(),
     return: searchParams.get('returnDate') ? new Date(searchParams.get('returnDate')) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -42,13 +45,38 @@ export default function CarRentalDetails() {
 
   useEffect(() => {
     loadVehicle();
+    loadReviews();
   }, [id]);
 
   const loadVehicle = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/vehicles/${id}`);
-      setVehicle(res.data);
+      // Primary: car-rental endpoint. Fallback: legacy /vehicles endpoint.
+      let res;
+      try {
+        res = await api.get(`/car-rental/${id}`);
+      } catch (_) {
+        res = await api.get(`/vehicles/${id}`);
+      }
+      // Normalise the shape so the UI works for either backend.
+      const raw = res.data || {};
+      const normalised = {
+        ...raw,
+        id: raw.id || raw._id || id,
+        name: raw.name || `${raw.make || ''} ${raw.model || ''}`.trim() || raw.vehicle_name || 'Vehicle',
+        brand: raw.brand || raw.make,
+        model: raw.model,
+        type: raw.type || raw.vehicle_type,
+        rating: raw.rating ?? raw.average_rating ?? 0,
+        reviews_count: raw.reviews_count ?? raw.total_ratings ?? 0,
+        owner: raw.owner || {
+          name: raw.operator_name,
+          rating: raw.operator_rating,
+          phone: raw.operator_phone,
+          response_time: raw.operator_response_time || '< 1 hour',
+        },
+      };
+      setVehicle(normalised);
     } catch (error) {
       console.error('Failed to load vehicle:', error);
       // Mock data
@@ -67,10 +95,10 @@ export default function CarRentalDetails() {
         fuel_consumption: '7.5L/100km',
         trunk_capacity: '450L',
         features: ['ac', 'bluetooth', 'gps', 'leather', 'sunroof', 'cruise_control', 'backup_camera'],
-        rating: 4.9,
+        rating: 0,
         trips: 34,
-        reviews_count: 28,
-        description: 'Experience luxury and comfort with the Mercedes C-Class. Perfect for business trips or special occasions. Features premium leather interior, advanced infotainment system, and smooth automatic transmission.',
+        reviews_count: 0,
+        description: 'Experience luxury and comfort with the Mercedes C-Class. Perfect for business trips or special occasions.',
         policies: [
           'Minimum rental: 1 day',
           'Maximum rental: 30 days',
@@ -81,9 +109,10 @@ export default function CarRentalDetails() {
           'Valid license required'
         ],
         pickup_locations: ['Yaoundé Airport', 'Yaoundé Centre', 'Douala Airport', 'Douala Centre'],
+        location: { lat: 3.848, lon: 11.5021, address: 'Yaoundé Centre' },
         owner: {
           name: 'Premium Auto Rentals',
-          rating: 4.8,
+          rating: 0,
           phone: '+237 699 123 456',
           response_time: '< 1 hour'
         },
@@ -91,6 +120,26 @@ export default function CarRentalDetails() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReviews = async () => {
+    try {
+      const res = await api.get('/ratings', {
+        params: { entity_type: 'car_rental', entity_id: id, limit: 20 },
+      });
+      const data = res.data || {};
+      const list = data.ratings || [];
+      setReviews(list);
+      const total = data.total ?? list.length;
+      const avg = list.length
+        ? list.reduce((acc, r) => acc + (r.rating || 0), 0) / list.length
+        : 0;
+      setReviewStats({ average: Number(avg.toFixed(1)), total });
+    } catch (error) {
+      // Ratings are best-effort. Leave defaults (0/0).
+      setReviews([]);
+      setReviewStats({ average: 0, total: 0 });
     }
   };
 
@@ -169,9 +218,11 @@ export default function CarRentalDetails() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
-                      <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                      <span className="text-lg font-bold">{vehicle.rating}</span>
-                      <span className="text-xs text-slate-500">({vehicle.reviews_count})</span>
+                      <Star className={`w-5 h-5 ${reviewStats.total > 0 ? 'text-amber-500 fill-amber-500' : 'text-slate-300'}`} />
+                      <span className="text-lg font-bold">
+                        {reviewStats.total > 0 ? reviewStats.average.toFixed(1) : '—'}
+                      </span>
+                      <span className="text-xs text-slate-500">({reviewStats.total})</span>
                     </div>
                   </div>
                 </div>
@@ -246,9 +297,13 @@ export default function CarRentalDetails() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-base">{vehicle.owner?.name}</h3>
                       <div className="flex items-center gap-2 text-sm text-slate-600 mt-1">
-                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span>{vehicle.owner?.rating} rating</span>
-                        <span>·</span>
+                        {vehicle.owner?.rating ? (
+                          <>
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                            <span>{vehicle.owner.rating} rating</span>
+                            <span>·</span>
+                          </>
+                        ) : null}
                         <span>Responds {vehicle.owner?.response_time}</span>
                       </div>
                       {vehicle.owner?.phone && (
@@ -261,6 +316,89 @@ export default function CarRentalDetails() {
                 </div>
               </TabsContent>
             </Tabs>
+
+            {/* Pickup Location Map */}
+            <LocationMap
+              lat={vehicle.location?.lat}
+              lon={vehicle.location?.lon}
+              title={vehicle.name}
+              address={vehicle.location?.address || vehicle.pickup_locations?.[0] || vehicle.city}
+              showHeader
+              headerLabel="Pickup location"
+              className=""
+            />
+
+            {/* Customer Reviews */}
+            <div id="reviews" className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-[#082c59]" />
+                    Customer reviews
+                  </h3>
+                  {reviewStats.total > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-[#082c59] text-white text-base px-3 py-1">
+                        {reviewStats.average.toFixed(1)}
+                      </Badge>
+                      <span className="text-sm text-slate-500">{reviewStats.total} review{reviewStats.total !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                </div>
+
+                {reviews.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <Star className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm">No reviews yet. Be the first to rent and review this vehicle.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.slice(0, 6).map((review, idx) => (
+                      <div key={review.id || idx} className="border-b border-slate-100 last:border-b-0 pb-4 last:pb-0">
+                        <div className="flex items-start justify-between gap-3 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-full bg-[#082c59]/10 flex items-center justify-center text-[#082c59] font-semibold text-sm">
+                              {(review.user_name || review.reviewer_name || 'U').slice(0, 1).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">
+                                {review.user_name || review.reviewer_name || 'Verified Customer'}
+                              </p>
+                              {review.created_at && (
+                                <p className="text-[11px] text-slate-500">
+                                  {(() => {
+                                    try { return formatDistanceToNow(new Date(review.created_at), { addSuffix: true }); }
+                                    catch (_) { return ''; }
+                                  })()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <Star
+                                key={n}
+                                className={`w-3.5 h-3.5 ${n <= (review.rating || 0) ? 'text-amber-500 fill-amber-500' : 'text-slate-200'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        {(review.review || review.comment) && (
+                          <p className="text-sm text-slate-600 leading-relaxed pl-11">
+                            {review.review || review.comment}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                    {reviewStats.total > 6 && (
+                      <p className="text-center text-sm text-slate-500 pt-2">
+                        Showing 6 of {reviewStats.total} reviews
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Sidebar - Booking Widget */}
@@ -344,11 +482,6 @@ export default function CarRentalDetails() {
                     Final Step
                   </Button>
                   <p className="text-center text-xs text-slate-500">You will not be charged yet</p>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs text-slate-500 justify-center pt-2">
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Free cancellation up to 24h before</span>
                 </div>
               </div>
             </div>

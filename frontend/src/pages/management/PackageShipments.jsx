@@ -19,6 +19,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import Pagination from '@/components/common/Pagination';
@@ -162,7 +163,7 @@ export default function PackageShipments() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [page, setPage] = useState(1);
   const [advancePkg, setAdvancePkg] = useState(null);
   const [advanceForm, setAdvanceForm] = useState({ status: '', location: '', note: '', delivery_photos: [] });
@@ -490,22 +491,7 @@ export default function PackageShipments() {
                 </div>
               </SheetContent>
             </Sheet>
-            <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-3 h-10 flex items-center gap-1.5 text-xs ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-                data-testid="shipment-view-grid"
-              >
-                <LayoutGrid className="w-4 h-4" /><span className="hidden sm:inline">Grid</span>
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 h-10 flex items-center gap-1.5 text-xs ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-                data-testid="shipment-view-list"
-              >
-                <List className="w-4 h-4" /><span className="hidden sm:inline">List</span>
-              </button>
-            </div>
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </div>
         </div>
       </div>
@@ -528,7 +514,7 @@ export default function PackageShipments() {
               </Button>
             </PermissionGate>
           </Card>
-        ) : viewMode === 'list' ? (
+        ) : viewMode === 'list' || viewMode === 'details' ? (
           <Card className="overflow-hidden bg-white" data-testid="shipment-list-view">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

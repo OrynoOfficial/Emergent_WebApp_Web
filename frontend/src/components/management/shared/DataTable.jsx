@@ -8,6 +8,7 @@ import {
   Search, Filter, ChevronLeft, ChevronRight, ArrowUpDown,
   Grid3X3, List, Rows3, RefreshCw, Download, Plus, MoreVertical
 } from 'lucide-react';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuSeparator
@@ -24,7 +25,7 @@ export function SearchFilter({
   onFilterChange,
   filterValues = {},
   showViewToggle = false,
-  viewMode = 'grid',
+  viewMode = 'list',
   onViewModeChange,
   actions,
   onRefresh,
@@ -62,38 +63,7 @@ export function SearchFilter({
       </div>
       <div className="flex gap-2">
         {showViewToggle && (
-          <div className="flex bg-slate-100 rounded-lg p-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
-              onClick={() => onViewModeChange('list')}
-              data-testid="view-mode-list"
-              title="List"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
-              onClick={() => onViewModeChange('grid')}
-              data-testid="view-mode-grid"
-              title="Grid"
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`h-8 w-8 ${viewMode === 'details' ? 'bg-white shadow-sm' : ''}`}
-              onClick={() => onViewModeChange('details')}
-              data-testid="view-mode-details"
-              title="Details"
-            >
-              <Rows3 className="h-4 w-4" />
-            </Button>
-          </div>
+          <ViewModeToggle value={viewMode} onChange={onViewModeChange} />
         )}
         {onRefresh && (
           <Button variant="outline" size="icon" onClick={onRefresh}>

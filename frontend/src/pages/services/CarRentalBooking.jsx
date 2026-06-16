@@ -40,16 +40,6 @@ const StepIndicator = ({ currentStep }) => {
     { num: 3, label: 'Payment' }
   ];
 
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
-
   return (
     <div className="flex items-center justify-center mb-8">
       {steps.map((step, idx) => (
@@ -105,6 +95,16 @@ export default function CarRentalBooking() {
   const [extrasConfirmed, setExtrasConfirmed] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
+  // Abandon any pending unpaid order if the user closes the
+  // payment modal, navigates away, or closes the tab.
+  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
+    setOrderId(null);
+    setTriggerPayment(false);
+    setPaymentInProgress(false);
+    setShowPaymentOverlay(false);
+  });
+  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
+
   // Check if driver info is complete
   const isDriverInfoComplete = formData.firstName && formData.email && formData.phone && formData.licenseNumber;
   
@@ -138,7 +138,7 @@ export default function CarRentalBooking() {
         if (user?.email) {
           setFormData(prev => ({ ...prev, email: user.email }));
         }
-      } catch (error) {
+      } catch {
         navigate('/services/car-rental');
       } finally {
         setIsLoading(false);
@@ -293,8 +293,7 @@ export default function CarRentalBooking() {
         setOrderId(response.data.order_id || response.data.id);
         setTriggerPayment(true);
       }
-    } catch (error) {
-      toast.error('Failed to create booking');
+    } catch { toast.error('Failed to create booking');
       setPaymentInProgress(false);
       setShowPaymentOverlay(false);
     }

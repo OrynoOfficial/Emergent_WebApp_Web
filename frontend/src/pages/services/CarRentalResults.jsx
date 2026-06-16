@@ -9,7 +9,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
   ArrowLeft, Car, MapPin, Users, Fuel, Settings, Star, SlidersHorizontal,
   Snowflake, Radio, Navigation, Shield, LayoutGrid, List, Search,
-  ChevronLeft, ChevronRight, X, Loader2, Gauge, Calendar, Check
+  ChevronLeft, ChevronRight, X, Loader2, Gauge, Calendar, CalendarDays, Check, Edit2
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
@@ -17,6 +17,9 @@ import { useFavourites } from '@/hooks/useFavourites';
 import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
+import LocationInput from '@/components/shared/LocationInput';
+import DatePickerField from '@/components/shared/DatePickerField';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { getLocationParam } from '@/components/LocationSelectionModal';
 import { differenceInDays, format } from 'date-fns';
 
@@ -198,11 +201,11 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
 export default function CarRentalResults() {
 
   const { isFav, toggleFav } = useFavourites('car_rental');
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');
@@ -211,6 +214,27 @@ export default function CarRentalResults() {
   const pickupLocation = searchParams.get('pickup') || '';
   const pickupDate = searchParams.get('pickupDate') || '';
   const returnDate = searchParams.get('returnDate') || '';
+
+  // Editable search state
+  const [isEditingSearch, setIsEditingSearch] = useState(false);
+  const [editPickup, setEditPickup] = useState(pickupLocation);
+  const [editPickupDate, setEditPickupDate] = useState(pickupDate);
+  const [editReturnDate, setEditReturnDate] = useState(returnDate);
+
+  useEffect(() => {
+    setEditPickup(pickupLocation);
+    setEditPickupDate(pickupDate);
+    setEditReturnDate(returnDate);
+  }, [pickupLocation, pickupDate, returnDate]);
+
+  const handleUpdateSearch = () => {
+    const newParams = new URLSearchParams();
+    if (editPickup) newParams.set('pickup', editPickup);
+    if (editPickupDate) newParams.set('pickupDate', editPickupDate);
+    if (editReturnDate) newParams.set('returnDate', editReturnDate);
+    setSearchParams(newParams);
+    setIsEditingSearch(false);
+  };
   
   const days = useMemo(() => {
     if (!pickupDate || !returnDate) return 1;
@@ -308,17 +332,94 @@ export default function CarRentalResults() {
       <div className="bg-white border-b shadow-sm sticky top-0 z-20">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4 mb-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/services/car-rental')} className="gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back
+            <Button variant="ghost" size="icon" onClick={() => navigate('/services/car-rental')} className="hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-[#082c59]">Available Vehicles</h1>
-              <p className="text-sm text-slate-500">
-                {filteredVehicles.length} vehicles found • {pickupLocation && `${pickupLocation} • `}
-                {pickupDate && returnDate && `${format(new Date(pickupDate), 'MMM d')} - ${format(new Date(returnDate), 'MMM d')} (${days} days)`}
-              </p>
-            </div>
           </div>
+
+          {/* Highlighted Editable Search Summary */}
+          <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a4a8f] text-white mb-4" data-testid="car-rental-search-summary">
+            <CardContent className="p-3">
+              {isEditingSearch ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Pickup Location</label>
+                    <LocationInput
+                      value={editPickup}
+                      onChange={setEditPickup}
+                      serviceType="car-rental"
+                      placeholder="Enter city"
+                      iconColor="text-white/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Pickup Date</label>
+                    <DatePickerField
+                      value={editPickupDate}
+                      onChange={setEditPickupDate}
+                      placeholder="Pickup"
+                      title="Pickup Date"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-white/70 mb-0.5 block">Return Date</label>
+                    <DatePickerField
+                      value={editReturnDate}
+                      onChange={setEditReturnDate}
+                      placeholder="Return"
+                      title="Return Date"
+                      minDate={editPickupDate ? new Date(editPickupDate) : new Date()}
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button size="sm" onClick={handleUpdateSearch} className="bg-white text-[#082c59] hover:bg-white/90 h-9 flex-1" data-testid="car-rental-search-apply">
+                      <Check className="w-4 h-4 mr-1" /> Apply
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditingSearch(false)} className="text-white hover:bg-white/10 h-9">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="text-base font-bold leading-tight truncate">
+                          Cars in {pickupLocation || 'All Cities'}
+                        </h2>
+                        <div className="flex items-center gap-1.5 text-white/70 text-xs mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          <span>{filteredVehicles.length} vehicles found</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/20 text-xs">
+                      {pickupDate && returnDate && (
+                        <span className="flex items-center gap-1">
+                          <CalendarDays className="w-3.5 h-3.5 text-white/60" />
+                          {format(new Date(pickupDate), 'MMM d')} – {format(new Date(returnDate), 'MMM d')}
+                          <span className="text-white/60">· {days} day{days !== 1 ? 's' : ''}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsEditingSearch(true)}
+                    className="text-white hover:bg-white/10 h-9 shrink-0"
+                    data-testid="car-rental-search-edit"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 mr-1" /> Edit
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-3">
@@ -369,24 +470,7 @@ export default function CarRentalResults() {
                 <SelectItem value="rating">Top Rated</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </div>
         </div>
       </div>
@@ -410,6 +494,21 @@ export default function CarRentalResults() {
                 vehicle={vehicle}
                 days={days}
                 onSelect={handleSelectVehicle}
+                isFav={isFav}
+                toggleFav={toggleFav}
+              />
+            ))}
+          </div>
+        ) : viewMode === 'details' ? (
+          <div className="space-y-6">
+            {filteredVehicles.map((vehicle) => (
+              <VehicleCardList
+                key={vehicle.id}
+                vehicle={vehicle}
+                days={days}
+                onSelect={handleSelectVehicle}
+                isFav={isFav}
+                toggleFav={toggleFav}
               />
             ))}
           </div>
@@ -421,6 +520,8 @@ export default function CarRentalResults() {
                 vehicle={vehicle}
                 days={days}
                 onSelect={handleSelectVehicle}
+                isFav={isFav}
+                toggleFav={toggleFav}
               />
             ))}
           </div>

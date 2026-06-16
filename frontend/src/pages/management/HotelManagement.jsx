@@ -21,6 +21,7 @@ import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { toast } from 'sonner';
 
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
@@ -66,7 +67,7 @@ export default function HotelManagement() {
   
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [roomViewMode, setRoomViewMode] = useState('list');
   const [hotelSearch, setHotelSearch] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
@@ -374,23 +375,8 @@ export default function HotelManagement() {
                         </Badge>
                       )}
                     </Button>
-                    <div className="flex border rounded-lg overflow-hidden">
-                      <Button 
-                        variant={viewMode === 'grid' ? 'default' : 'ghost'} 
-                        size="sm" 
-                        onClick={() => setViewMode('grid')} 
-                        className={`rounded-none ${viewMode === 'grid' ? 'bg-[#082c59]' : ''}`}
-                      >
-                        <Grid3X3 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant={viewMode === 'list' ? 'default' : 'ghost'} 
-                        size="sm" 
-                        onClick={() => setViewMode('list')} 
-                        className={`rounded-none ${viewMode === 'list' ? 'bg-[#082c59]' : ''}`}
-                      >
-                        <List className="h-4 w-4" />
-                      </Button>
+                    <div className="flex items-center">
+                      <ViewModeToggle value={viewMode} onChange={setViewMode} />
                     </div>
                     <PermissionGate permission="hotels.create">
                       <Button onClick={() => openHotelDialog()} className="bg-[#082c59] gap-2" data-testid="add-hotel-btn">
@@ -479,6 +465,20 @@ export default function HotelManagement() {
               />
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedHotels.map(hotel => (
+                  <HotelCard
+                    key={hotel._id || hotel.id}
+                    hotel={hotel}
+                    viewMode="grid"
+                    isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)}
+                    onEdit={() => openHotelDialog(hotel)}
+                    onDelete={() => confirmDeleteHotel(hotel)}
+                    onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }}
+                  />
+                ))}
+              </div>
+            ) : viewMode === 'details' ? (
+              <div className="space-y-6">
                 {paginatedHotels.map(hotel => (
                   <HotelCard
                     key={hotel._id || hotel.id}
@@ -583,24 +583,7 @@ export default function HotelManagement() {
                       </div>
                       <div className="flex gap-2">
                         {/* View Mode Toggle */}
-                        <div className="flex border rounded-lg overflow-hidden">
-                          <Button 
-                            variant={roomViewMode === 'grid' ? 'default' : 'ghost'} 
-                            size="sm" 
-                            onClick={() => setRoomViewMode('grid')} 
-                            className={`rounded-none ${roomViewMode === 'grid' ? 'bg-[#082c59]' : ''}`}
-                          >
-                            <Grid3X3 className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant={roomViewMode === 'list' ? 'default' : 'ghost'} 
-                            size="sm" 
-                            onClick={() => setRoomViewMode('list')} 
-                            className={`rounded-none ${roomViewMode === 'list' ? 'bg-[#082c59]' : ''}`}
-                          >
-                            <List className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <ViewModeToggle value={roomViewMode} onChange={setRoomViewMode} />
                         <Button 
                           variant={showRoomFilters ? 'default' : 'outline'} 
                           onClick={() => setShowRoomFilters(!showRoomFilters)} 
@@ -670,6 +653,19 @@ export default function HotelManagement() {
                   />
                 ) : roomViewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedRooms.map(room => (
+                      <RoomCard
+                        key={room.id || room._id}
+                        room={room}
+                        onEdit={openRoomDialog}
+                        onDelete={confirmDeleteRoom}
+                        onReplace={setReplaceRoom}
+                        viewMode="grid"
+                      />
+                    ))}
+                  </div>
+                ) : roomViewMode === 'details' ? (
+                  <div className="space-y-6">
                     {paginatedRooms.map(room => (
                       <RoomCard
                         key={room.id || room._id}

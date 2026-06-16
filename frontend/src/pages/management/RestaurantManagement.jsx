@@ -250,7 +250,7 @@ export default function RestaurantManagement() {
   
   // UI state
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);

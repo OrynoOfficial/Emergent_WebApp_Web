@@ -21,6 +21,7 @@ import {
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -874,7 +875,7 @@ export default function CustomerServiceManagement() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [chatBotOpen, setChatBotOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
   const [operatorFilter, setOperatorFilter] = useState('');
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
@@ -1021,10 +1022,7 @@ export default function CustomerServiceManagement() {
                   ))}
                 </TabsList>
               </Tabs>
-              <div className="flex bg-slate-100/80 rounded-lg p-0.5 border border-slate-200/50">
-                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><List className="h-4 w-4" /></button>
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[#082c59]' : 'text-slate-400'}`}><LayoutGrid className="h-4 w-4" /></button>
-              </div>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
             </SubpageCard>
 
             {/* Search */}
@@ -1063,6 +1061,10 @@ export default function CustomerServiceManagement() {
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {tickets.map(t => <AdminTicketCardGrid key={t.id} ticket={t} onView={() => handleViewTicket(t)} />)}
+              </div>
+            ) : viewMode === 'details' ? (
+              <div className="space-y-4">
+                {tickets.map(t => <AdminTicketCard key={t.id} ticket={t} isSelected={selectedTickets.includes(t.id)} onSelect={handleSelectTicket} onView={() => handleViewTicket(t)} onAssign={(t) => { setTicketToAssign(t); setShowAssignModal(true); }} />)}
               </div>
             ) : (
               <div className="space-y-2.5">
