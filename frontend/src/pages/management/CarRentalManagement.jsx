@@ -19,7 +19,7 @@ import {
   Car, Plus, Edit, Trash2, MapPin, Users, DollarSign,
   LayoutDashboard, MessageSquare, TrendingUp, RefreshCw,
   Fuel, Settings, Eye, Search, Calendar, Gauge, ChevronLeft, ChevronRight, Building2,
-  Banknote, Receipt, Replace as ReplaceIcon
+  Banknote, Receipt, Replace as ReplaceIcon, RotateCcw
 } from 'lucide-react';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
@@ -36,6 +36,7 @@ import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import CarRentalsLifecycleTab from '@/components/management/car-rental/CarRentalsLifecycleTab';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -453,6 +454,7 @@ export default function CarRentalManagement() {
         tabs={[
           { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { value: 'management', label: 'Fleet Management', icon: Car },
+          { value: 'rentals', label: 'Active Rentals', icon: RotateCcw, testId: 'car-rentals-tab' },
           { value: 'communications', label: 'Communications', icon: MessageSquare },
         ]}
         activeTab={activeTab}
@@ -595,6 +597,10 @@ export default function CarRentalManagement() {
               pageSize={PAGE_SIZE}
               itemLabel="car"
             />
+          </TabsContent>
+
+          <TabsContent value="rentals" className="mt-6">
+            <CarRentalsLifecycleTab scopeOperatorId={scopeOperatorId} />
           </TabsContent>
 
           <TabsContent value="communications" className="mt-6">

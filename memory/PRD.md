@@ -1,6 +1,34 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 232: Unified Service↔Inventory model)
+## Latest Changes (Feb 2026 — iter 233: Car Rental lifecycle parity + Operator logo upload)
+
+### P1 — Car Rental Return/Damage Lifecycle Parity
+- **Backend** `POST /api/car-rental/book` now:
+  - Validates `available_units ≥ 1` via the shared inventory engine → returns 409 with vehicle name if fully booked
+  - Creates an `inventory_holds` doc (entity_type=car_rental, quantity=1) tied to the booking
+  - Refreshes `available_units` on the car so the next customer sees accurate stock
+- **Frontend** — new **Active Rentals** tab in `/management/car-rental` (`CarRentalsLifecycleTab.jsx`):
+  - 4 summary tiles (Pending Return, Cars on the Road, Returned, Damage Fees Collected)
+  - Sub-tabs: **Active Rentals** (Mark Out / Return actions per hold) + **History**
+  - **Confirm Return dialog** auto-suggests damage_fee = 5× daily rate when a vehicle is marked damaged; on submit, the fee posts to the customer's invoice and `car_rentals.total_units` is decremented (totalled vehicle stops showing as available)
+  - Permission gated on `car_rental.edit`
+- **Tests** — `/app/backend/tests/test_iter233_car_rental_lifecycle.py`: 3/3 pass (booking creates hold + drops stock, overbook returns 409, return-with-damage decrements fleet).
+
+### P3 — Operator Logo Upload
+- **Edit Operator modal** (`OperatorsManagement.jsx`) — new **Brand Identity** section sits between Basic Information and Geography:
+  - `MiniImageUploader` slot (max 1, folder=`operator-logos`, accent=amber)
+  - Helper text: *"Shown on bookings, receipts, the customer-facing owner tab, and any place this operator appears."*
+  - Hint: *"PNG or JPG, square aspect ratio recommended."*
+  - Saves to `operators.logo_url` via existing `PUT /api/operators/{id}` (model already had the field)
+- Removes the "placeholder logo" gap called out in PRD's Mocked section.
+
+### Verified
+- **21/21 pytest pass** (iter 231/232/233 suites combined)
+- Visual: Car Rental Active Rentals tab renders 4 summary tiles + 4 active holds with Mark Out / Return buttons + 250,000 FCFA in tracked damage fees from the test booking
+- Visual: Edit Operator modal shows the Brand Identity section with logo upload slot
+
+
+## Earlier — iter 232: Unified Service↔Inventory model
 
 After Phase 3 (iter 231) shipped, a conceptual collision emerged: chairs could be modelled both as a `Service` with `category=rental_item` AND as a standalone `banquet_items` doc. This iteration unifies them following the proven `Vehicles → Routes` pattern:
 

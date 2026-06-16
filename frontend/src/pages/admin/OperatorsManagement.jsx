@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { AdminModal, FormField, StyledInput, StyledSelect } from '@/components/shared/AdminModal';
 import AddOperatorWizard from '@/components/admin/AddOperatorWizard';
 import OperatorCategoryAssign from '@/components/admin/OperatorCategoryAssign';
+import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import OperatorSectionTabs from '@/components/admin/OperatorSectionTabs';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
@@ -947,6 +948,34 @@ export default function OperatorsManagement() {
                     </SelectContent>
                   </Select>
                 </FormField>
+              </div>
+            </div>
+          </AdminModal.Section>
+
+          <AdminModal.Section title="Brand Identity" icon={<Building className="w-4 h-4" />}>
+            <div className="p-4 bg-amber-50/40 rounded-xl border border-amber-100">
+              <div className="flex items-start gap-4">
+                {editForm.logo_url ? (
+                  <div className="w-20 h-20 rounded-xl bg-white border-2 border-amber-200 overflow-hidden shadow-sm flex-shrink-0">
+                    <img src={editForm.logo_url} alt="logo" className="w-full h-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 rounded-xl bg-white border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-400 flex-shrink-0">
+                    <Building className="w-8 h-8" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Label className="text-xs uppercase text-amber-700 font-semibold">Operator Logo</Label>
+                  <p className="text-[11px] text-slate-500 mb-2">Shown on bookings, receipts, the customer-facing owner tab, and any place this operator appears.</p>
+                  <MiniImageUploader
+                    images={editForm.logo_url ? [editForm.logo_url] : []}
+                    onChange={(imgs) => setEditForm(p => ({ ...p, logo_url: imgs[0] || '' }))}
+                    max={1}
+                    folder="operator-logos"
+                    accent="amber"
+                    helperText="PNG or JPG, square aspect ratio recommended."
+                  />
+                </div>
               </div>
             </div>
           </AdminModal.Section>

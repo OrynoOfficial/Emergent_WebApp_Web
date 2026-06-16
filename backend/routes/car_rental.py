@@ -305,13 +305,23 @@ async def create_car_rental_booking(
     booking_data: CarRentalBookingCreate,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Create a car rental booking"""
+    """Create a car rental booking + reserve an inventory hold so the
+    available_units count drops in real time. Mirrors the banquet flow."""
     db = get_database()
-    
+
+    # Stock check using the same engine that powers banquet rentals.
+    from routes.inventory import _entity_available_units, _refresh_available  # local import
+    vehicle = await db.car_rentals.find_one({"_id": booking_data.vehicle_id})
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    avail = await _entity_available_units(db, "car_rental", booking_data.vehicle_id)
+    if avail < 1:
+        raise HTTPException(status_code=409, detail=f"'{vehicle.get('make','')} {vehicle.get('model','')}' is fully booked for the requested period.")
+
     # Generate booking number
     booking_count = await db.orders.count_documents({"service_category": "car_rental"})
     booking_number = f"CAR-{booking_count + 1:06d}"
-    
+
     booking = {
         "_id": str(uuid.uuid4()),
         "booking_number": booking_number,
@@ -338,14 +348,40 @@ async def create_car_rental_booking(
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    
     await db.orders.insert_one(booking)
-    
+
+    # Create inventory hold (1 unit per car booking).
+    hold_doc = {
+        "_id": str(uuid.uuid4()),
+        "entity_type": "car_rental",
+        "entity_id": booking_data.vehicle_id,
+        "operator_id": vehicle.get("operator_id"),
+        "booking_id": booking["_id"],
+        "customer_id": current_user["_id"],
+        "customer_name": booking_data.driver_name,
+        "unit_ids": [],
+        "quantity": 1,
+        "start_date": booking_data.pickup_date,
+        "end_date": booking_data.return_date,
+        "status": "reserved",
+        "damaged_quantity": 0,
+        "damage_fee": 0.0,
+        "damage_description": None,
+        "operator_note": None,
+        "item_name": f"{vehicle.get('make','')} {vehicle.get('model','')}".strip(),
+        "unit_price": float(vehicle.get("price_per_day") or 0),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.inventory_holds.insert_one(hold_doc)
+    await _refresh_available(db, "car_rental", booking_data.vehicle_id)
+
     return {
         "success": True,
         "message": "Car rental booked successfully",
         "booking_id": booking["_id"],
-        "booking_number": booking_number
+        "booking_number": booking_number,
+        "inventory_hold_id": hold_doc["_id"],
     }
 
 
