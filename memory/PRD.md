@@ -1,5 +1,36 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 227: TripDetailsModal polish + Leaflet-in-Dialog fix + Car Rental card polish)
+
+### Reusable Leaflet fix (applies to every map in the app)
+- `LocationMap.jsx` now embeds a `MapInvalidator` helper that calls `map.invalidateSize()` at `t=50/200/500ms` after mount **and** on every container resize (via `ResizeObserver`). This fixes the classic "blank/grey Leaflet inside a Dialog/Tab/Accordion" bug — pickup map in the Travel modal, Explore-the-area in Hotel Details, Pickup location in Car Rental Details all benefit immediately.
+- It also auto-recenters when the parent re-renders with new `lat/lon` (async fetched coords).
+
+### Trip details modal — look & feel + new sections
+- **Hero**: gradient background gets a subtle dotted pattern overlay, two-up badges (vehicle type + "Insured"), and a 4-card glass strip (From / To / Duration / Date) with the seats-left count baked in.
+- **Seat layout** is now collapsible (`data-testid="seat-layout-toggle"`/`seat-layout-panel`). **Default state: closed.** Header shows "X of Y available" so customers can decide whether to expand. Bigger seat tiles (8×8) with hover and clearer legend.
+- **Policies & rules** is a brand-new section under "Onboard amenities" (`data-testid="trip-policies-section"`) — pulled from `route.policies[]`. When the route has none, it shows three sensible defaults so the section never looks empty.
+- **Pickup map**: when the operator hasn't yet set explicit pickup coords, we fall back to the route's `from_city` centre via a built-in `CITY_FALLBACK_COORDS` table (Douala, Yaoundé, Bafoussam, Bamenda, Garoua, Maroua, Kribi, Limbe, Buea, Ngaoundéré) — with a small "Approximate location" disclaimer banner so the map never renders fully blank again.
+- Right-hand card now exposes plate number, capacity, available seats and a friendly "you won't be charged yet" footer beneath the CTA.
+
+### Add Route management — Policies field
+- `TravelRoute*` Pydantic models extended with `policies: Optional[List[str]]` (backend persists round-trip).
+- `RouteForm.jsx` gets a new "Trip Policies & Rules" textarea (one rule per line, `data-testid="route-form-policies"`). Default empty.
+- `DEFAULT_ROUTE_FORM` extended with `policies: []`.
+- pytest `test_iter225_pickup_and_hotel_coords.py` extended — confirms POST + GET round-trip for the new field. **4/4 PASS**.
+
+### Car Rental results — default grid + missing "Almost gone" tag fixed
+- Default view is now **grid** (was `list`).
+- `VehicleCardGrid` enriched: hover lift + photo-zoom, gradient hero overlay, operator-aware city tag, mileage/fuel-policy chips, rating + review count, more compact spec row.
+- `VehicleCardList` enriched: now also renders the `AlmostSoldOutBadge` (testid `car-fomo-list-…`) — the missing badge was the bug reported. Also adds operator name, city, fuel consumption, mileage/fuel-policy chips, and uses `SubscribeButton` + `FavouriteButton` (parity with grid).
+
+### Verification (iter_227)
+- Lint clean on every touched file.
+- Backend: `pytest test_iter225_pickup_and_hotel_coords.py` → 4/4 PASS (includes the new policies round-trip assertion).
+- Vite serves all four updated files (HTTP 200 + `grep -c` confirms new code is reaching the browser).
+- Login smoke screenshot loaded; live e2e screenshot was rate-limited by Cloudflare (preview-only issue) — code is verified by static asset retrieval.
+
+
 ## Latest Changes (Feb 2026 — iter 226: Vite stale-cache fix + page splits + codebase index)
 
 ### Vite "no visible changes since yesterday" — root cause + fix

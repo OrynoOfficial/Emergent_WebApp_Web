@@ -1,6 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
@@ -182,6 +183,20 @@ export function RouteForm({
           onChange={e => updateForm({ pickup_lon: e.target.value === '' ? '' : parseFloat(e.target.value) })}
           placeholder="9.7679"
           data-testid="route-form-pickup-lon"
+        />
+      </div>
+      <div className="col-span-2 pt-3 border-t border-slate-200 mt-2">
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Trip Policies & Rules <span className="text-slate-400 font-normal normal-case tracking-normal">(one per line — shown to customers in the trip preview)</span></Label>
+      </div>
+      <div className="col-span-2">
+        <Textarea
+          rows={4}
+          value={(form.policies || []).join('\n')}
+          onChange={e => updateForm({
+            policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
+          })}
+          placeholder={'Arrive 30 minutes before departure\nValid government-issued ID required\nFree cancellation up to 24 hours before departure'}
+          data-testid="route-form-policies"
         />
       </div>
     </div>

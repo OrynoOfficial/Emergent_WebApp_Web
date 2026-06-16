@@ -61,45 +61,59 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   const totalPrice = vehicle.price_per_day * days;
   const defaultImage = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800';
   const image = vehicle.images?.[0] || vehicle.image || defaultImage;
+  const city = vehicle.city || vehicle.pickup_locations?.[0];
 
   return (
-    <Card className="group overflow-hidden bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300">
+    <Card className="group overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
       {/* Image */}
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="relative h-44 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
         <img src={image} alt={vehicle.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
         <div className="absolute top-2 right-2 z-10 flex gap-1.5">
           <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name} variant="icon" />
           <FavouriteButton
             isFavourite={!!(isFav && isFav(vehicle._id || vehicle.id))}
             onToggle={() => toggleFav && toggleFav(vehicle)}
             testId={`favourite-${vehicle._id || vehicle.id}`}
-            className="p-1.5 rounded-full bg-white/80 hover:bg-white shadow-sm transition-all"
+            className="p-1.5 rounded-full bg-white/90 hover:bg-white shadow-sm transition-all"
             emptyClass="text-slate-500"
           />
         </div>
-        <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 ${getVehicleTypeColor(vehicle.type)}`}>
+        <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 shadow-sm ${getVehicleTypeColor(vehicle.type)}`}>
           {vehicle.type}
         </Badge>
-        {vehicle.rating && (
-          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+        {vehicle.rating ? (
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/70 backdrop-blur text-white text-[10px] px-2 py-0.5 rounded-full">
             <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {vehicle.rating}
+            {vehicle.reviews_count ? <span className="text-white/70">({vehicle.reviews_count})</span> : null}
           </div>
-        )}
+        ) : null}
         {vehicle.units_available != null && (
           <div className="absolute bottom-2 left-2 z-10" data-testid={`car-fomo-grid-${vehicle._id || vehicle.id}`}>
             <AlmostSoldOutBadge count={vehicle.units_available} unit="cars" />
           </div>
         )}
       </div>
-      
-      <CardContent className="p-3">
-        <h3 className="font-bold text-sm text-slate-900 mb-0.5">{vehicle.name}</h3>
-        <p className="text-[10px] text-slate-500 mb-2">{vehicle.year} · {vehicle.brand}</p>
-        
+
+      <CardContent className="p-3.5">
+        <div className="flex items-start justify-between gap-2 mb-0.5">
+          <h3 className="font-bold text-sm text-slate-900 leading-tight">{vehicle.name}</h3>
+          {vehicle.year && <span className="text-[10px] text-slate-500 shrink-0">{vehicle.year}</span>}
+        </div>
+        <p className="text-[11px] text-slate-500 mb-2 flex items-center gap-1">
+          <Settings className="w-3 h-3" /> {vehicle.brand}{vehicle.model ? ` · ${vehicle.model}` : ''}
+          {city && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{city}</span>
+            </>
+          )}
+        </p>
+
         {/* Specs Row */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <span className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded">
-            <Users className="w-3 h-3" /> {vehicle.seats}
+            <Users className="w-3 h-3" /> {vehicle.seats} seats
           </span>
           <span className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded capitalize">
             <Settings className="w-3 h-3" /> {vehicle.transmission}
@@ -108,26 +122,47 @@ const VehicleCardGrid = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
             <Fuel className="w-3 h-3" /> {vehicle.fuel_type}
           </span>
         </div>
-        
-        {/* Features */}
+
+        {/* Policy highlights */}
+        {(vehicle.mileage_policy || vehicle.fuel_policy) && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {vehicle.mileage_policy && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center gap-1">
+                <Gauge className="w-2.5 h-2.5" /> {vehicle.mileage_policy}
+              </span>
+            )}
+            {vehicle.fuel_policy && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                {vehicle.fuel_policy}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Features (max 4) */}
         <div className="flex flex-wrap gap-1 mb-2.5">
-          {vehicle.features?.slice(0, 3).map((feature, idx) => {
+          {vehicle.features?.slice(0, 4).map((feature, idx) => {
             const Icon = getFeatureIcon(feature);
             return (
-              <span key={idx} className="flex items-center gap-0.5 text-[10px] text-slate-500">
-                <Icon className="h-2.5 w-2.5" /> {feature}
+              <span key={idx} className="flex items-center gap-0.5 text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded capitalize">
+                <Icon className="h-2.5 w-2.5" /> {feature.replace(/_/g, ' ')}
               </span>
             );
           })}
+          {vehicle.features?.length > 4 && (
+            <span className="text-[10px] text-slate-400">+{vehicle.features.length - 4}</span>
+          )}
         </div>
-        
+
         {/* Price & CTA */}
         <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
           <div>
             <div className="text-lg font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
-            <div className="text-[10px] text-slate-500">per day{days > 1 ? ` · ${formatFCFA(totalPrice)} total` : ''}</div>
+            <div className="text-[10px] text-slate-500">
+              per day{days > 1 ? ` · ${formatFCFA(totalPrice)} total` : ''}
+            </div>
           </div>
-          <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8 px-3">
+          <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg text-xs h-8 px-3 shadow-sm">
             Select
           </Button>
         </div>
@@ -141,54 +176,108 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
   const totalPrice = vehicle.price_per_day * days;
   const defaultImage = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800';
   const image = vehicle.images?.[0] || vehicle.image || defaultImage;
+  const city = vehicle.city || vehicle.pickup_locations?.[0];
 
   return (
-    <Card className="overflow-hidden bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+    <Card className="overflow-hidden bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
       <div className="flex flex-col md:flex-row">
         {/* Image */}
-        <div className="md:w-56 relative h-44 md:h-auto md:min-h-[160px] flex-shrink-0">
+        <div className="md:w-60 relative h-48 md:h-auto md:min-h-[176px] flex-shrink-0">
           <img src={image} alt={vehicle.name} className="w-full h-full object-cover" />
-          <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 ${getVehicleTypeColor(vehicle.type)}`}>
+          <Badge className={`absolute top-2 left-2 capitalize text-[10px] px-2 py-0.5 shadow-sm ${getVehicleTypeColor(vehicle.type)}`}>
             {vehicle.type}
           </Badge>
-          {vehicle.rating && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full">
-              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {vehicle.rating} ({vehicle.trips} trips)
+          <div className="absolute top-2 right-2 flex gap-1.5">
+            <SubscribeButton operatorId={vehicle.operator_id} operatorName={vehicle.operator_name} variant="icon" />
+            <FavouriteButton
+              isFavourite={!!(isFav && isFav(vehicle._id || vehicle.id))}
+              onToggle={() => toggleFav && toggleFav(vehicle)}
+              testId={`favourite-list-${vehicle._id || vehicle.id}`}
+              className="p-1.5 rounded-full bg-white/90 hover:bg-white shadow-sm transition-all"
+              emptyClass="text-slate-500"
+            />
+          </div>
+          {vehicle.rating ? (
+            <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/70 backdrop-blur text-white text-[10px] px-2 py-0.5 rounded-full">
+              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" /> {vehicle.rating}
+              {vehicle.reviews_count ? <span className="text-white/70">({vehicle.reviews_count})</span> : null}
+            </div>
+          ) : null}
+          {vehicle.units_available != null && (
+            <div className="absolute bottom-2 left-2 z-10" data-testid={`car-fomo-list-${vehicle._id || vehicle.id}`}>
+              <AlmostSoldOutBadge count={vehicle.units_available} unit="cars" />
             </div>
           )}
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 p-4 flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-base text-slate-900 mb-0.5">{vehicle.name}</h3>
-            <p className="text-xs text-slate-500 mb-3">{vehicle.year} · {vehicle.brand} {vehicle.model}</p>
-            
-            <div className="flex flex-wrap gap-3 mb-2 text-xs text-slate-600">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900 leading-tight">{vehicle.name}</h3>
+                <p className="text-xs text-slate-500 mt-0.5 flex items-center flex-wrap gap-x-2">
+                  <span>{vehicle.year} · {vehicle.brand} {vehicle.model}</span>
+                  {city && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{city}</span>
+                    </>
+                  )}
+                  {vehicle.operator_name && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-600">by <span className="font-medium">{vehicle.operator_name}</span></span>
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 mt-3 mb-2 text-xs text-slate-600">
               <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.seats} seats</span>
               <span className="flex items-center gap-1 capitalize"><Settings className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.transmission}</span>
               <span className="flex items-center gap-1 capitalize"><Fuel className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.fuel_type}</span>
+              {vehicle.fuel_consumption && (
+                <span className="flex items-center gap-1"><Gauge className="w-3.5 h-3.5 text-[#082c59]" /> {vehicle.fuel_consumption}</span>
+              )}
             </div>
-            
+
+            {/* Policy highlights */}
+            {(vehicle.mileage_policy || vehicle.fuel_policy) && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {vehicle.mileage_policy && (
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                    {vehicle.mileage_policy}
+                  </span>
+                )}
+                {vehicle.fuel_policy && (
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                    Fuel: {vehicle.fuel_policy}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-1.5">
               {vehicle.features?.map((feature, idx) => {
                 const Icon = getFeatureIcon(feature);
                 return (
                   <span key={idx} className="flex items-center gap-1 px-2 py-0.5 bg-slate-50 rounded text-[10px] text-slate-600 capitalize border border-slate-100">
-                    <Icon className="w-2.5 h-2.5" /> {feature}
+                    <Icon className="w-2.5 h-2.5" /> {feature.replace(/_/g, ' ')}
                   </span>
                 );
               })}
             </div>
           </div>
-          
+
           {/* Price & CTA */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-3">
             <div>
               <div className="text-lg font-bold text-[#082c59]">{formatFCFA(vehicle.price_per_day)}</div>
               <div className="text-[10px] text-slate-500">per day{days > 1 ? ` · Total: ${formatFCFA(totalPrice)}` : ''}</div>
             </div>
-            <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-9 px-4 text-xs">
+            <Button onClick={() => onSelect(vehicle)} size="sm" className="bg-[#082c59] hover:bg-[#0a3a75] rounded-lg h-9 px-4 text-xs shadow-sm">
               Select Vehicle
             </Button>
           </div>
@@ -205,7 +294,7 @@ export default function CarRentalResults() {
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('all');

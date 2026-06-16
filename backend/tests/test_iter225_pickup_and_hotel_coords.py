@@ -51,6 +51,7 @@ class TestTravelRoutePickup:
             "pickup_address": "TEST_Mvan Bus Terminal",
             "pickup_lat": 3.8480,
             "pickup_lon": 11.5021,
+            "policies": ["Arrive 30 minutes early", "Valid ID required"],
         }
         r = requests.post(f"{BASE_URL}/api/travel/routes", headers=headers, json=payload, timeout=30)
         assert r.status_code == 200, f"unexpected {r.status_code}: {r.text}"
@@ -64,6 +65,7 @@ class TestTravelRoutePickup:
         assert data.get("pickup_address") == "TEST_Mvan Bus Terminal"
         assert data.get("pickup_lat") == 3.8480
         assert data.get("pickup_lon") == 11.5021
+        assert data.get("policies") == ["Arrive 30 minutes early", "Valid ID required"]
 
         # Cleanup
         requests.delete(f"{BASE_URL}/api/travel/routes/{route_id}", headers=headers, timeout=30)

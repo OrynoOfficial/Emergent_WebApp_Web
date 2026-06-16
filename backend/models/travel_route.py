@@ -34,6 +34,8 @@ class TravelRoute(BaseModel):
     pickup_address: Optional[str] = None
     pickup_lat: Optional[float] = None
     pickup_lon: Optional[float] = None
+    # Trip policies / rules surfaced in the customer pre-booking modal
+    policies: List[str] = []
     edited_field_message: Optional[str] = None  # For tracking edits
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -62,6 +64,7 @@ class TravelRouteCreate(BaseModel):
     pickup_address: Optional[str] = None
     pickup_lat: Optional[float] = None
     pickup_lon: Optional[float] = None
+    policies: Optional[List[str]] = None
 
 class TravelRouteUpdate(BaseModel):
     from_city: Optional[str] = None
@@ -84,3 +87,4 @@ class TravelRouteUpdate(BaseModel):
     pickup_address: Optional[str] = None
     pickup_lat: Optional[float] = None
     pickup_lon: Optional[float] = None
+    policies: Optional[List[str]] = None

@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapPin, Navigation } from 'lucide-react';
@@ -33,6 +33,53 @@ export const getServicePinIcon = (type) => {
     iconAnchor: [12, 12],
   });
 };
+
+/**
+ * Forces Leaflet to recompute its container size after the map mounts,
+ * after a short delay (covers <Dialog> open animations) and on resize.
+ * This fixes the classic "blank/grey map inside a Dialog/Tab/Accordion" bug.
+ */
+function MapInvalidator({ center, zoom }) {
+  const map = useMap();
+  const ref = useRef({ lastCenter: null, lastZoom: null });
+
+  useEffect(() => {
+    // Run invalidateSize a few times to cover the dialog's open animation.
+    const timers = [50, 200, 500].map((ms) =>
+      setTimeout(() => {
+        try { map.invalidateSize(false); } catch (e) { /* unmounted */ }
+      }, ms)
+    );
+
+    // Re-invalidate when the container is resized (e.g. accordion expand).
+    let resizeObs = null;
+    const container = map.getContainer();
+    if (window.ResizeObserver && container) {
+      resizeObs = new ResizeObserver(() => {
+        try { map.invalidateSize(false); } catch (e) { /* unmounted */ }
+      });
+      resizeObs.observe(container);
+    }
+
+    return () => {
+      timers.forEach(clearTimeout);
+      if (resizeObs) resizeObs.disconnect();
+    };
+  }, [map]);
+
+  // Re-centre when props change (e.g. parent fetches coords asynchronously).
+  useEffect(() => {
+    if (!center) return;
+    const [lat, lon] = center;
+    const prev = ref.current;
+    if (prev.lastCenter?.[0] !== lat || prev.lastCenter?.[1] !== lon || prev.lastZoom !== zoom) {
+      map.setView(center, zoom, { animate: false });
+      ref.current = { lastCenter: center, lastZoom: zoom };
+    }
+  }, [map, center, zoom]);
+
+  return null;
+}
 
 /**
  * Reusable Location Map.
@@ -71,6 +118,7 @@ export default function LocationMap({
     <div className={`${height} ${rounded} overflow-hidden bg-slate-100 border border-slate-200`} data-testid="location-map">
       {center ? (
         <MapContainer center={center} zoom={zoom} style={{ width: '100%', height: '100%' }} scrollWheelZoom={false}>
+          <MapInvalidator center={center} zoom={zoom} />
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
