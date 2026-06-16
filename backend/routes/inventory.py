@@ -464,6 +464,7 @@ async def create_banquet_item(payload: BanquetItemCreate, current_user: dict = D
 async def list_banquet_items(
     operator_id: Optional[str] = None,
     is_active: Optional[bool] = None,
+    city: Optional[str] = None,
     current_user: dict = Depends(get_current_active_user),
 ):
     db = get_database()
@@ -471,11 +472,25 @@ async def list_banquet_items(
     role = (current_user or {}).get("role")
     if operator_id:
         q["operator_id"] = operator_id
-    elif role and role not in ("admin", "super_admin"):
+    elif role in ("operator", "staff"):
+        # Only true operator/staff roles are scoped to their own inventory.
+        # Customers, admins and super-admins see all items unless they pass
+        # an explicit ?operator_id filter (admins for ops dashboards).
         q["operator_id"] = current_user.get("operator_id") or current_user.get("_id")
     if is_active is not None:
         q["is_active"] = is_active
     items = await db.banquet_items.find(q).sort("created_at", -1).to_list(500)
+
+    # Optional city filter — banquet_items don't store a city directly, so
+    # we route through the parent operator's primary city when provided.
+    if city and items:
+        op_ids = list({it.get("operator_id") for it in items if it.get("operator_id")})
+        ops_with_city = {op["_id"] async for op in db.operators.find(
+            {"_id": {"$in": op_ids}, "city": {"$regex": city, "$options": "i"}},
+            {"_id": 1},
+        )}
+        items = [it for it in items if it.get("operator_id") in ops_with_city]
+
     for it in items:
         it["id"] = it.pop("_id", None)
     return {"items": items, "total": len(items)}

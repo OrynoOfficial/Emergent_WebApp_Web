@@ -1,6 +1,43 @@
 # Oryno Platform - PRD
 
-## Latest Changes (Feb 2026 — iter 231: Phase 2 visible polish)
+## Latest Changes (Feb 2026 — iter 232: Phase 3 — Banquet Inventory Split + Damage Lifecycle)
+
+### Backend
+- **`models/inventory.py`** — `InventoryHold` extended with `damage_fee` (float), `damage_description`, `item_name` (denormalised), `unit_price` (snapshot at hold-creation).
+- **`routes/inventory.py`** ↓ all permission decorators now use `require_any_permission` with `[banquets.*, car_rental.*, operator.services.*, services.*]` so operators with banquet sales can manage their own inventory.
+  - `POST /api/inventory/holds/{id}/confirm-return` — accepts `damage_fee`, `damage_description`. When fee > 0 AND the hold is linked to an order, appends a `damage_charge` line to `orders.booking_details.damage_charges`, increments `orders.total_amount`, and mirrors the same to `banquet_bookings.damage_charges` + `total_price`.
+  - `POST /api/inventory/holds/{id}/mark-out` — operator confirms units have physically left the warehouse (`reserved` → `out`).
+  - `POST /api/inventory/banquet-items/{id}/adjust-stock` — manual stock delta (positive=restock, negative=write-off) audited in new `inventory_adjustments` collection.
+  - `GET /api/inventory/active-rentals?entity_type=banquet_item` — compact summary `{by_status, pending_return, total_units_currently_out, total_damage_fees_collected}`.
+  - `GET /api/inventory/banquet-items` — fixed customer visibility (was over-scoped, returned 0 for `customer` role). Now only `operator`/`staff` roles are scoped; customers, admins and super-admins see all `is_active=true` items. Added optional `?city` filter routed through the parent operator's city.
+  - `GET /api/inventory/holds` — enriches each hold with `item_name`/`unit_price` (falls back to a best-effort lookup for legacy holds).
+- **`routes/banquets.py`** — `CartLineInput` gains `kind` field (`service` | `item`). At `POST /api/banquets/cart/checkout`, lines with `kind=item` are looked up in `banquet_items`, priced at `unit_price × quantity`, and an inventory hold is automatically created so `available_units` stays accurate. Returns `inventory_hold_ids` in the response.
+
+### Frontend — Operator side
+- **`components/management/banquet/RentalInventoryTab.jsx`** (new) — wired as the 'Rental Inventory' tab in `BanquetManagement.jsx`. Three sub-tabs:
+  - **Items** (`rental-items-subtab`): CRUD grid of rentable items with cover image, live stock (available/total), low-stock badge, Stock / Edit / Delete actions.
+  - **Active Rentals** (`active-rentals-subtab`): 4 summary tiles (Pending Return, Units Out, Returned, Damage Fees Collected) + list of `reserved`/`out` holds with **Mark Out** and **Return** actions.
+  - **History** (`history-subtab`): completed/damaged/cancelled holds with damage_fee badges.
+  - **Confirm-Return dialog** auto-suggests `damage_fee = damaged_qty × unit_price` once the operator enters a damaged count. Damage description is captured and surfaced on the order invoice.
+  - **Stock-Adjust dialog** lets operators add/remove inventory outside of bookings (restock, lost, write-off).
+
+### Frontend — Customer side
+- **`pages/services/BanquetResults.jsx`** — new "Rentable Items" section (`rental-items-section`) below packages with compact grid. Each card shows live stock, "Only N left" / "Out of Stock" badges, and a quantity stepper / Add button that pushes to the event cart with `kind: 'item'`.
+- **`hooks/useEventCart.js`** — `addItem` now reads `service._kind` and stamps `snapshot.kind` (`'service' | 'item'`) so the backend cart checkout can route inventory items into hold creation.
+- **`pages/services/BanquetCheckout.jsx`** — forwards `kind` from cart snapshot into the cart-checkout payload.
+
+### Tests
+- `/app/backend/tests/test_iter231_banquet_inventory_lifecycle.py` (2 tests pass): full-lifecycle (create → hold → mark-out → confirm-return with damage_fee → stock check → adjust-stock → soft-delete) + overbook 409.
+- `/app/backend/tests/test_iter231_extended.py` (6 tests pass, written by testing agent): operator scoping, holds-list enrichment, active-rentals summary shape, +/- stock adjust, overbook 409 with message, customer-cannot-create.
+
+### Verification
+- Backend: 8/8 pytest pass.
+- Operator UI: Items create/edit/delete/stock-adjust + Active Rentals Mark Out + Return-with-damage_fee + History all verified at runtime.
+- Customer UI: Rentable Items section now renders for `customer@test.com` — 8 items, Out of Stock badges, Add buttons, all working.
+- Lint: clean.
+
+
+## Earlier — iter 231: Phase 2 visible polish
 
 ### Car Rental Results
 - **"Select" → "View Details"** on both grid and list cards. Testids: `car-rental-view-details-grid`, `car-rental-view-details-list`.
