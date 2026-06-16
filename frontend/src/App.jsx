@@ -107,6 +107,7 @@ import Events from './pages/services/Events';
 import EventsSearch from './pages/services/EventsSearch';
 import EventsResults from './pages/services/EventsResults';
 import EventBooking from './pages/services/EventBooking';
+import ShowtimeDetails from './pages/services/ShowtimeDetails';
 
 // New Service Pages
 import BanquetSearch from './pages/services/BanquetSearch';
@@ -449,7 +450,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/services/showtimes/:id"
+            element={
+              <ProtectedRoute>
+                <ShowtimeDetails />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Banquet Routes */}
           <Route
             path="/services/banquet"

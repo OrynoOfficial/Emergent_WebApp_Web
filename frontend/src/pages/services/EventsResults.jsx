@@ -289,8 +289,39 @@ export default function EventsResults() {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      const res = await eventsApi.search({ city, date });
-      setEvents(res.data.events || []);
+      // Fetch both new-architecture Showtimes and legacy Events in parallel.
+      const [legacyRes, showtimesRes] = await Promise.all([
+        eventsApi.search({ city, date }).catch(() => ({ data: { events: [] } })),
+        api.get('/event-showtimes/', { params: { upcoming_only: true, ...(city ? { city } : {}) } }).catch(() => ({ data: { showtimes: [] } })),
+      ]);
+
+      // Normalise showtimes into the same card shape EventsResults already renders,
+      // while keeping a `_showtime: true` marker so click routes to /services/showtimes/:id.
+      const normalisedShowtimes = (showtimesRes.data.showtimes || []).map(s => {
+        const minPrice = (s.classes || []).reduce((m, c) => (c.price < m ? c.price : m), Infinity);
+        const totalAvail = (s.classes || []).reduce((sum, c) => sum + (c.available_units || 0), 0);
+        const totalCap = (s.classes || []).reduce((sum, c) => sum + (c.total_units || 0), 0);
+        return {
+          ...s,
+          _showtime: true,
+          id: s.id,
+          name: s.title,
+          venue: s.location_name,
+          city: city || s.location_city || '',
+          date: s.start_datetime ? s.start_datetime.split('T')[0] : '',
+          time: s.start_datetime ? s.start_datetime.split('T')[1]?.slice(0, 5) : '',
+          type: s.event_type,
+          priceFrom: minPrice === Infinity ? 0 : minPrice,
+          ticketsLeft: totalAvail,
+          total_capacity: totalCap,
+          tickets_sold: totalCap - totalAvail,
+          image: (s.images || [])[0],
+          operator_id: s.operator_id,
+          operator_name: s.operator_name,
+        };
+      });
+
+      setEvents([...normalisedShowtimes, ...(legacyRes.data.events || [])]);
     } catch (error) {
       console.error('Failed to load events:', error);
       setEvents([]);
@@ -328,7 +359,12 @@ export default function EventsResults() {
   }, [events, sortBy, searchQuery, typeFilter]);
 
   const handleBook = (event) => {
-    // Prevent booking past events
+    // New-architecture showtime → dedicated detail page with class picker.
+    if (event._showtime) {
+      navigate(`/services/showtimes/${event.id}`);
+      return;
+    }
+    // Legacy events: keep the old behaviour.
     if (isPast(event.date, event.time)) {
       return;
     }

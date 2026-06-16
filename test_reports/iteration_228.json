@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend testing for the LocationsAndShowtimesTabs.jsx refactor + new customer-side ShowtimeDetails page. Operator-side: Location editor + Showtime editor open with all expected data-testids, both saved successfully with the correct toasts. Customer-side: /services/events/results merges new showtimes from /api/event-showtimes; clicking 'Get Tickets' on a showtime card correctly routes to /services/showtimes/{id}; class picker, qty +/-, total, contact inputs all work; booking POST /api/event-showtimes/book succeeded and redirected to /orders?highlight=<order_id>; sold-out showtimes correctly disable book-now-btn. Order appeared in My Orders list as Pending.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dialog modals (LocationEditor, ShowtimeEditor)", "issues": ["React warning: 'Missing Description or aria-describedby={undefined} for DialogContent.' — accessibility issue, non-blocking. Add a <DialogDescription /> or aria-describedby."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Non-blocking: Add <DialogDescription /> (or aria-describedby) to LocationEditor / ShowtimeEditor DialogContent to silence the Radix a11y warning.",
+    "Optional: Seed a legacy event in test fixtures so the /services/events/booking legacy route can be regression-tested in UI (currently no legacy events present; routing code path is exercised only by showtime items)."
+  ],
+  "critical_code_review_comments": [
+    "ShowtimeDetails.jsx (line ~65): on 404, navigate('/services/events') is hard-coded; that route doesn't exist in App.jsx (it's /services/events/results). Fallback could leave the user on a blank page.",
+    "LocationEditor.jsx: on edit mode the OperatorSelector is intentionally hidden (line 118 `{!editing && ...}`) — confirm this is intended so admins can't move a location across operators after creation.",
+    "ShowtimeEditor.jsx form-reset effect resets on every `open` toggle even when editing — fine, but `editing` is a non-stable object reference so setForm runs whenever parent re-renders; consider stabilising via editing?.id.",
+    "ShowtimeDetails.jsx: useEffect dependency `[id, navigate]` re-runs on every navigate identity change; React Router's navigate is referentially stable but worth a useCallback wrapper if a future refactor breaks that.",
+    "Console: net::ERR_NAME_NOT_RESOLVED appears on the showtime detail page — probably an external image asset on operator_logo_url. Should be wrapped in onError fallback."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend only)", "frontend": "100%"},
+  "test_credentials": "admin@test.com / testpassword123, customer@test.com / testpassword123",
+  "seed_data_creation": "Created via UI: Location 'QA Refactor Test' (Douala, zones layout, General zone cap 200) and Showtime 'QA Refactor Showtime' (Standard 3000 FCFA × 50). Booked 1 × GA ticket (5,000 FCFA) on existing 'Pytest BI Show' → order 7a64422f-9d91-4755-9dcd-85ccecda60b7.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Refactor + customer booking flow validated end-to-end. All targeted data-testids confirmed present and writable. Sold-out branch verified (Pytest Concert db90e8 — both VIP and Standard classes were Sold out, book-now-btn correctly disabled). Available branch verified (Pytest BI Show — GA class with 4 available → reserved 1 ticket → /orders redirect succeeded). Legacy /services/events/booking route is wired up in code but no legacy event currently in seed data to exercise via UI; backend tests should cover that path."
+}
