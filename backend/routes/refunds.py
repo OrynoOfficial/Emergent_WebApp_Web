@@ -59,6 +59,13 @@ def _is_admin(user: dict) -> bool:
     return role in ("admin", "super_admin", "superadmin")
 
 
+# Statuses that represent a settled, refundable payment. The codebase
+# emits "completed" from gateway webhooks (MoMo/Stripe), "paid" from the
+# admin verification flow (cash/manual bookings), and "verified" from
+# scanner validations — all three should be treated as refundable.
+PAID_STATUSES = ("completed", "paid", "verified")
+
+
 # ── Customer endpoints ──────────────────────────────────────────────────────
 @router.get("/orders/{order_id}/eligibility", response_model=EligibilityResult)
 async def check_eligibility(order_id: str, current_user: dict = Depends(get_current_active_user)):
@@ -68,7 +75,7 @@ async def check_eligibility(order_id: str, current_user: dict = Depends(get_curr
         raise HTTPException(status_code=404, detail="Order not found")
     if order["user_id"] != current_user["_id"] and not _is_admin(current_user):
         raise HTTPException(status_code=403, detail="Not your order")
-    if order.get("payment_status") != "completed":
+    if order.get("payment_status") not in PAID_STATUSES:
         return EligibilityResult(eligible=False, eligible_amount=0.0,
                                  window="Order not paid — nothing to refund",
                                  refundable_pct=0)
@@ -88,7 +95,7 @@ async def request_refund(order_id: str, payload: RefundCreate,
         raise HTTPException(status_code=404, detail="Order not found")
     if order["user_id"] != current_user["_id"]:
         raise HTTPException(status_code=403, detail="Not your order")
-    if order.get("payment_status") != "completed":
+    if order.get("payment_status") not in PAID_STATUSES:
         raise HTTPException(status_code=400, detail="Order is not paid")
     if order.get("status") in ("refunded", "cancelled"):
         raise HTTPException(status_code=400, detail="Order already refunded or cancelled")

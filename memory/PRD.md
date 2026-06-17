@@ -1,5 +1,32 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 262: Refund logic fix + rich Request-a-refund modal)
+
+### Bugs fixed
+1. **"Order not paid" false negative.** Refunds.py only accepted `payment_status == "completed"` (the value emitted by MoMo/Stripe webhooks). But cash & admin-verified bookings get `"paid"`, and validated tickets get `"verified"`. Travel/manual orders therefore showed "Order not paid · 0 FCFA · Not auto-refundable" even after a successful booking. Now refunds accept `("completed", "paid", "verified")` via a centralised `PAID_STATUSES` constant — matches the values already used by reports/orders aggregation code.
+2. **No Travel refund policy.** The `compute_eligibility` function had explicit rules for `event` and `cinema` only — Travel fell through to a generic "admin review · 100%" branch with no schedule. Added the Travel tier: **100% ≥48h · 50% 24h-48h · 0% <24h** before departure. If the order has no departure datetime stored, the calculator returns 100% pending admin review (matches today's data shape, since travel orders don't yet persist `departure_datetime`).
+
+### Eligibility response now richer
+`GET /api/refunds/orders/{id}/eligibility` returns:
+```
+{ eligible, eligible_amount, window, refundable_pct, operator_initiated,
+  service_type, total_paid, hours_until_service, service_date,
+  policy: [{ threshold, refund_pct, active }, ...] }
+```
+The `policy` array always includes the full schedule for the service type with the currently-active tier flagged.
+
+### Refund modal overhauled (`RefundRequestDialog.jsx`)
+- Themed header that follows refundability (emerald = 100%, amber = partial, rose = not auto-refundable).
+- 3-column "money trail": **Paid · Refundable · Until service** with countdown to service date.
+- Service-date context line ("Service scheduled for Sat, Oct 12 · 14:30").
+- **Policy schedule table** showing all tiers, with the active tier dark-pilled. This single addition answers the user's "How are refunds calculated?" question at-a-glance.
+- Heads-up amber callout when outside policy window: "Submit anyway — admin can still grant goodwill refund."
+- Footer reminder about admin review timeline + payment-method credit-back.
+
+### Verified ✅
+- Backend: curl on `/refunds/orders/{id}/eligibility` for a paid travel order returns rich policy + `eligible_amount: 13,000 FCFA · 100% refundable`.
+- Frontend: live screenshot of the new modal shows themed header, money trail, policy schedule, all rendering correctly.
+
 ## Latest Changes (Feb 2026 — iter 261: 5-pack UX fixes: commission audit, layout overflow, ticket visibility, slim stat chips)
 
 ### Commission 13% global config — now actually applied everywhere
