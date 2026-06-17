@@ -123,7 +123,7 @@ export default function AdminDashboard() {
       let avgRating = 0;
       let totalRatings = 0;
       try {
-        const ratingsRes = await api.get('/ratings/', { params: { limit: 1 } });
+        const ratingsRes = await api.get('/ratings/all', { params: { limit: 1 } });
         totalRatings = ratingsRes.data?.total || 0;
         avgRating = ratingsRes.data?.average_rating || 4.5;
       } catch (e) {

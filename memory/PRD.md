@@ -1,5 +1,41 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 244: UX polish — refund readout, ratings compact rows, ticket cards)
+
+### Refund Request dialog
+- **Amount is now policy-determined, not user-editable.** Removed the `<Input type="number">` and the `requestedAmount` state. The dialog now shows a tone-coloured read-only readout (data-testid `refund-amount-readout` / `refund-amount-value`) displaying `eligibility.refundable_pct` + the computed `eligible_amount`. Submit posts `requested_amount: eligibility?.eligible_amount ?? null` so the server stores the policy-determined value.
+
+### Ratings page (Admin + Operator views)
+- **Stats chips moved INSIDE the filter Card**, sitting directly below the search Input row (data-testid `admin-ratings-stats` / `operator-ratings-stats`). No more separate strip above.
+- **Per-review rows are now compact clickable lines** (data-testid `admin-rating-row-{id}` / `operator-rating-row-{id}`) — single-line layout with avatar + truncated comment + stars + service badge.
+- **Clicking any row opens a preview modal** (data-testid `rating-preview-modal` / `operator-rating-preview-modal`) with the full review and actions:
+  - Admin modal: Flag / Unflag / Hide / Show / Delete.
+  - Operator modal: Respond CTA → inline textarea → Submit closes both reply and modal.
+- Customer view intentionally unchanged (different layout, no local search bar).
+
+### Customer Service ticket cards
+- Both `AdminTicketCard` (list) and `AdminTicketCardGrid` (grid) now use `bg-white border border-slate-200 p-3 rounded-lg shadow-sm` — smaller (p-3) and distinct from the page background. Selected state still rings `[#082c59]`.
+
+### Per-listing refund policy pickers (iter 242–243 follow-through)
+- Wired `<CancellationPolicyPicker scope="listing">` into the remaining 5 service editors:
+  - Cinema → `ShowtimeFormDialog.jsx` (data-testid `cinema-showtime-refund-policy`). Backend: PUT allowed-set + `refund_policy_preset` query param on legacy POST + JSON body on the body-based POST.
+  - Event → `ShowtimeEditor.jsx` (data-testid `event-showtime-refund-policy`). Backend: added `refund_policy` to EventShowtimeCreate + Update.
+  - Car Rental → inline form in `CarRentalManagement.jsx` (data-testid `car-form-refund-policy`). Backend: added to CarRentalCreate + Update.
+  - Banquet → `CategoryAwareFields` in `BanquetManagement.jsx` (data-testid `banquet-form-refund-policy`). Backend: added to BanquetCreate + Update.
+  - Laundry → `PressingFormBody.jsx` (data-testid `pressing-form-refund-policy`). Backend: added to PressingCreate + Update.
+- Fixed `_SERVICE_COLLECTIONS` mapping for `cinema` → `showtimes` (was incorrectly pointing to `event_showtimes`).
+
+### Minor housekeeping
+- `AdminDashboard.jsx` now calls `/ratings/all?limit=1` (was hitting `/ratings/?limit=1` which 422'd because of missing `entity_type`/`entity_id`).
+
+### Verified end-to-end
+- iter 244 testing pass: 4/4 UX tweaks confirmed live on the rebuilt Vite preview bundle (Ratings stats-inside-card, compact rows + preview modal, white ticket cards, refund readout source-level).
+- Refund dialog e2e blocked only by absence of paid+within-window orders for `customer@test.com` — source-level change verified.
+
+### Build/deploy gotcha
+- The frontend runs `vite build && vite preview` (NOT `vite dev`). Any change to `.jsx`/`.js` files needs `sudo supervisorctl restart frontend` + ~20s rebuild before the new bundle is served. Hot reload is disabled.
+
+
 ## Latest Changes (Feb 2026 — iter 264: Per-operator + per-listing refund policy overrides)
 
 ### Hybrid override model (per your spec)
