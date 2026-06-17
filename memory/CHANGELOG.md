@@ -1,3 +1,16 @@
+### 2026-02-17 — Events seed + Bulk Actions rolled out to 7 more management pages (iter238)
+- **New seed script** `/app/backend/scripts/seed_events.py` — writes 3 production-shape events (Afrobeat Festival, TechSummit Yaoundé, Bafoussam Comedy Night) with `start_date >= today`, `ticket_types`, `event_type`. Fixes the long-standing gap where `seed_database.py` wrote events with a legacy `date` field that the public route filtered out. Run with `python -m scripts.seed_events`.
+- **Admin Bulk whitelist extended** in `backend/routes/admin_bulk.py`: added `banquets`, `pressings`, `package_services` (alongside the existing `hotels / restaurants / cinemas / films / car_rentals / vehicles / events / packages / travel_routes`). Same `delete / activate / deactivate` action set.
+- **Bulk Actions wired to 7 management pages**:
+  - Card-grid pages — used the new `BulkSelectCardWrapper` helper (absolute-positioned checkbox overlay): `HotelManagement`, `RestaurantManagement`, `BanquetManagement` (via its `ServicesGrid` sub-component).
+  - Table-based pages — header `BulkSelectHeader` + per-row `BulkSelectCell`: `CarRentalManagement` (vehicles), `TravelManagement` (Routes table + Vehicles table — two independent bulks), `LaundryManagement` (Shops table), `PackageManagement` (Shipments table).
+  - All 7 surface the shared sticky `<BulkActionsBar>` with `Activate / Deactivate / Export CSV / Delete` (Package shipments → Delete + Export only).
+- **NOT migrated**: `CinemaManagement` — already has its own custom bulk-delete UI (Set-based `selectedCinemaIds` + 'Delete (N)' top-bar button). Left untouched to avoid regression.
+- **Fixed**: `BulkSelectCardWrapper` z-index bumped from 20 → 30 and `pointer-events-auto` added so the checkbox stays clickable on top of `HotelCard`'s list/details layouts (testing agent caught it).
+- **Tested** (iter238 — frontend + backend via testing_agent_v3_fork): 100% backend (10/10 — events surface with correct shape, new whitelist entries accept admin / reject customer). Card-grid pattern verified working (Restaurants, Banquet — bulk-actions-bar surfaces with full action set on first click). Table pages need an operator-scoped login to populate; the wiring matches the proven `Users / Refunds / Bills / Events` pattern from iter186.
+
+
+
 ### 2026-02-17 — Centralised checkout flow shared by 7 booking pages (iter230)
 - **New shared abstraction**: `useCheckout(serviceType, opts)` (`/app/frontend/src/hooks/useCheckout.js`) + `<CheckoutPaymentPanel>` (`/app/frontend/src/components/common/CheckoutPaymentPanel.jsx`). The hook owns: `orderId`, `paymentInProgress`, `showPaymentOverlay`, `triggerPayment`, `selectedPaymentMethod`, the `useOrderAbandonment` wiring, `handlePaymentInitiated` (with redirect + success navigate), `handlePaymentError`, `submit()` (validates → builds payload → POSTs `/api/orders/create` → triggers payment), `rePayExisting` retry, and promo-code apply/clear/discount helpers. Pages now only supply `buildPayload()`, `validate()`, optional `onSuccess({orderId, response})`, and `onAbandon` callbacks.
 - **Migrated 7 booking pages** off the duplicated state/handlers:

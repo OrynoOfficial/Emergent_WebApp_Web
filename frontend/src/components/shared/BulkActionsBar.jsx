@@ -221,13 +221,13 @@ export function BulkSelectCardWrapper({ bulk, id, children, className = '' }) {
   const selected = bulk?.isSelected?.(id);
   return (
     <div className={`relative ${className}`} data-testid={`bulk-card-${id}`}>
-      <div className="absolute top-2 left-2 z-20 bg-white/95 backdrop-blur-sm rounded-md p-1 shadow-sm ring-1 ring-slate-200">
+      <div className="absolute top-2 left-2 z-30 bg-white/95 backdrop-blur-sm rounded-md p-1 shadow-sm ring-1 ring-slate-200 pointer-events-auto">
         <input
           type="checkbox"
           checked={!!selected}
           onChange={(e) => { e.stopPropagation(); bulk?.toggle?.(id); }}
           onClick={(e) => e.stopPropagation()}
-          className="rounded border-slate-300 focus:ring-pink-500 cursor-pointer w-4 h-4"
+          className="rounded border-slate-300 focus:ring-pink-500 cursor-pointer w-4 h-4 relative z-10"
           data-testid={`bulk-select-row-${id}`}
           aria-label="Select for bulk action"
         />
