@@ -19,9 +19,10 @@ import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookerInfoSection } from '@/components/booking/BookerInfoSection';
-import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import CheckoutPaymentPanel from '@/components/common/CheckoutPaymentPanel';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { useCommissionRate } from '@/hooks/useCommissionRate';
+import { useCheckout } from '@/hooks/useCheckout';
 
 // Default hardcoded rate used only as a fallback before the resolve API replies.
 const DEFAULT_FEE_PCT = 0.03;
@@ -177,10 +178,6 @@ export default function ShowtimeDetails() {
 
   // Payment state
   const [currentStep, setCurrentStep] = useState(1);
-  const [reserving, setReserving] = useState(false);
-  const [orderId, setOrderId] = useState(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [triggerPayment, setTriggerPayment] = useState(false);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -249,7 +246,36 @@ export default function ShowtimeDetails() {
     }
   }, [selectedClass, selectedSeats.length, quantity, needsSeatPicker, formData.firstName, formData.email, formData.phone]);
 
-  // Booker self-fill toggle (mirrors CinemaBooking.handleSelfChange)
+  // ── Centralised checkout (handles order creation, payment trigger,
+  //    abandonment delete, promo). Custom endpoint = atomic per-class
+  //    reservation that returns `{ success, order_id, total_amount }`.
+  const checkout = useCheckout('events', {
+    operatorId: showtime?.operator_id,
+    customOrderEndpoint: '/event-showtimes/book',
+    validate: () => {
+      if (!selectedPaymentMethod) { toast.error('Pick a payment method'); return false; }
+      if (!formData.firstName?.trim()) { toast.error('First name is required'); return false; }
+      if (!formData.email?.trim()) { toast.error('Email is required'); return false; }
+      if (!formData.phone?.trim()) { toast.error('Phone is required'); return false; }
+      if (needsSeatPicker && selectedSeats.length !== quantity) {
+        toast.error(`Select ${quantity} seat${quantity > 1 ? 's' : ''}`); return false;
+      }
+      return true;
+    },
+    buildPayload: () => ({
+      showtime_id: showtime.id,
+      class_id: selectedClassId,
+      quantity,
+      seat_ids: needsSeatPicker ? selectedSeats : null,
+      contact_name: `${formData.firstName} ${formData.lastName}`.trim(),
+      contact_phone: formData.phone || null,
+      contact_email: formData.email || null,
+    }),
+    successMessage: 'Payment confirmed — see you at the show!',
+    successPath: '/orders',
+    createErrorMessage: 'Reservation failed',
+  });
+  const { paymentInProgress, selectedPaymentMethod } = checkout.state;
   const handleSelfChange = async (checked) => {
     setIsSelf(checked);
     if (checked) {
@@ -281,39 +307,7 @@ export default function ShowtimeDetails() {
     && !!selectedPaymentMethod;
 
   // ── Booking flow ─────────────────────────────────────────────────────────
-  const handlePay = async () => {
-    if (!selectedPaymentMethod) { toast.error('Pick a payment method'); return; }
-    if (!formData.firstName?.trim()) { toast.error('First name is required'); return; }
-    if (needsSeatPicker && selectedSeats.length !== quantity) {
-      toast.error(`Select ${quantity} seat${quantity > 1 ? 's' : ''}`); return;
-    }
-    setReserving(true);
-    try {
-      const res = await api.post('/event-showtimes/book', {
-        showtime_id: showtime.id,
-        class_id: selectedClassId,
-        quantity,
-        seat_ids: needsSeatPicker ? selectedSeats : null,
-        contact_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        contact_phone: formData.phone || null,
-        contact_email: formData.email || null,
-      });
-      setOrderId(res.data.order_id);
-      setTriggerPayment(true);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Reservation failed');
-    } finally { setReserving(false); }
-  };
-
-  const handlePaymentInitiated = ({ success, message } = {}) => {
-    setTriggerPayment(false);
-    if (success) {
-      toast.success('Payment confirmed — see you at the show!');
-      navigate(`/orders?highlight=${orderId}`);
-    } else if (message) {
-      toast.error(message);
-    }
-  };
+  const handlePay = checkout.submit;
 
   // ── Guards ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -776,15 +770,13 @@ export default function ShowtimeDetails() {
                     </div>
                   )}
                   <div className={(!selectedClass || (needsSeatPicker && selectedSeats.length !== quantity)) ? 'opacity-50 pointer-events-none' : ''}>
-                    <PaymentMethodsSelection
+                    <CheckoutPaymentPanel
+                      checkout={checkout}
                       amount={grandTotal}
-                      orderId={orderId}
+                      serviceName={showtime.title}
                       customerEmail={formData.email}
                       customerPhone={formData.phone}
                       serviceDetails={{ name: showtime.title }}
-                      triggerPayment={triggerPayment}
-                      onPaymentInitiated={handlePaymentInitiated}
-                      onMethodSelected={setSelectedPaymentMethod}
                     />
                   </div>
                 </CardContent>
@@ -793,11 +785,11 @@ export default function ShowtimeDetails() {
               {/* Confirm CTA — Cinema-style gradient pill */}
               <Button
                 onClick={handlePay}
-                disabled={!canPay || reserving}
+                disabled={!canPay || paymentInProgress}
                 data-testid="book-now-btn"
                 className="w-full h-13 py-6 rounded-xl bg-gradient-to-r from-pink-500 via-pink-400 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-bold text-base shadow-[0_8px_30px_-8px_rgba(244,114,182,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01]"
               >
-                {reserving ? (
+                {paymentInProgress ? (
                   <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing…</>
                 ) : isPastShowtime ? (
                   <><AlertCircle className="w-5 h-5 mr-2" /> Event ended</>

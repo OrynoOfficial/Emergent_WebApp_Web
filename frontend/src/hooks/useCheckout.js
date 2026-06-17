@@ -52,6 +52,16 @@ export function useCheckout(serviceType, {
   // page unload, navigation). Lets pages reset their own service-specific
   // state (e.g. currentStep) that lives outside the hook.
   onAbandon = null,
+  // ── Custom order-creation endpoint ────────────────────────────────────
+  // Default is `POST /orders/create` with the standard wrapper shape.
+  // Pages that already have a domain-specific reservation endpoint
+  // (e.g. `/event-showtimes/book`, `/banquets/cart/checkout`) set this
+  // to that path. When set, `buildPayload` returns the EXACT body the
+  // endpoint expects (no service_type/currency wrapper is added), and
+  // `extractOrderId(resData)` pulls the order id out of the response
+  // (default: `resData.order_id || resData.id`).
+  customOrderEndpoint = null,
+  extractOrderId = (data) => data?.order_id || data?.id,
 } = {}) {
   const navigate = useNavigate();
 
@@ -141,17 +151,22 @@ export function useCheckout(serviceType, {
       return;
     }
 
-    const orderPayload = {
-      service_type: serviceType,
-      currency: 'XAF',
-      status: 'pending',
-      payment_status: 'pending',
-      ...payload,
-    };
+    // Build the request body. Custom endpoints get the payload verbatim
+    // (they have their own wire contract); the default /orders/create
+    // path merges the payload into the standard wrapper.
+    const orderPayload = customOrderEndpoint
+      ? payload
+      : {
+          service_type: serviceType,
+          currency: 'XAF',
+          status: 'pending',
+          payment_status: 'pending',
+          ...payload,
+        };
 
     try {
-      const response = await api.post('/orders/create', orderPayload);
-      const newId = response.data?.order_id || response.data?.id;
+      const response = await api.post(customOrderEndpoint || '/orders/create', orderPayload);
+      const newId = extractOrderId(response.data);
       if (newId) {
         setOrderId(newId);
         setTriggerPayment(true);

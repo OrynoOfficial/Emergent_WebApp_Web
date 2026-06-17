@@ -30,7 +30,8 @@ import { toast } from 'sonner';
 import { formatFCFA } from '@/utils/currency';
 import { useEventCart } from '@/hooks/useEventCart';
 import { useAuth } from '@/contexts/AuthContext';
-import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import { useCheckout } from '@/hooks/useCheckout';
+import CheckoutPaymentPanel from '@/components/common/CheckoutPaymentPanel';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { cn } from '@/lib/utils';
 
@@ -196,23 +197,12 @@ export default function BanquetCheckout() {
   });
   const [eventDateOpen, setEventDateOpen] = useState(false);
   const [eventTime, setEventTime] = useState('17:00');
-  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
-  const [orderId, setOrderId] = useState(null);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   // Promo code (mirrors Laundry pattern)
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoError, setPromoError] = useState('');
-
-  // Step indicator — derived from form state, no effect needed.
-  const currentStep = useMemo(() => {
-    if (selectedPaymentMethod) return 3;
-    if (cart.event_date && contact.contact_name && contact.contact_phone) return 2;
-    return 1;
-  }, [selectedPaymentMethod, cart.event_date, contact.contact_name, contact.contact_phone]);
 
   const setField = (k, v) => setContact(c => ({ ...c, [k]: v }));
 
@@ -265,12 +255,19 @@ export default function BanquetCheckout() {
     if (!cart.event_date) { toast.error('Please pick your event date.'); return false; }
     if (!contact.contact_name?.trim()) { toast.error('Please enter a contact name.'); return false; }
     if (!contact.contact_phone?.trim()) { toast.error('Please enter a phone number.'); return false; }
+    if (!selectedPaymentMethod) { toast.error('Please choose a payment method.'); return false; }
     return true;
   };
 
-  const ensureOrder = async () => {
-    if (orderId) return orderId;
-    const payload = {
+  // ── Centralised checkout — custom endpoint `/banquets/cart/checkout`
+  //    handles cart-line creation, package expansion, and order persistence.
+  //    Hook handles order abandonment automatically (X / unload / back) so
+  //    pending orders no longer leak into the orders collection.
+  const checkout = useCheckout('banquet', {
+    customOrderEndpoint: '/banquets/cart/checkout',
+    extractOrderId: (data) => data?.order_id || data?._id || data?.id || data?.order_number,
+    validate,
+    buildPayload: () => ({
       event_date: cart.event_date,
       event_time: eventTime,
       expected_guests: cart.expected_guests || 0,
@@ -290,49 +287,33 @@ export default function BanquetCheckout() {
       promo_code: appliedPromo?.code,
       promo_discount: discount,
       service_fee: serviceFee,
-    };
-    const res = await api.post('/banquets/cart/checkout', payload);
-    const data = res.data || {};
-    const newId = data.order_id || data._id || data.id || data.order_number;
-    if (!newId) throw new Error('Failed to create order');
-    setOrderId(newId);
-    // Snapshot for success screen (cart will be cleared on payment success)
-    setSuccess({ ...data, event_date: cart.event_date });
-    return newId;
-  };
-
-  const handleConfirm = async () => {
-    if (!validate()) return;
-    if (!selectedPaymentMethod) { toast.error('Please choose a payment method.'); return; }
-    if (orderId) { setTriggerPayment(true); return; }
-    setSubmitting(true);
-    try {
-      await ensureOrder();
-      setTriggerPayment(true);
-    } catch (err) {
-      const d = err.response?.data?.detail;
-      const msg = Array.isArray(d) && d[0]?.msg ? `${d[0].loc?.slice(-1)?.[0] || 'Field'}: ${d[0].msg}` : (typeof d === 'string' ? d : err.message || 'Checkout failed');
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePaymentInitiated = async (response) => {
-    setSubmitting(false);
-    setTriggerPayment(false);
-    if (response?.opening_modal) return;
-    if (response?.success || response?.transactionRef) {
-      if (appliedPromo?.code && orderId && discount > 0) {
-        try { await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${orderId}&discount_amount=${discount}`); } catch { /* non-blocking */ }
+    }),
+    successMessage: 'Event booked!',
+    successPath: '/orders',
+    createErrorMessage: 'Checkout failed',
+    onSuccess: async ({ orderId: id }) => {
+      // Record promo usage AFTER payment success so abandoned attempts
+      // don't burn the code.
+      if (appliedPromo?.code && id && discount > 0) {
+        try {
+          await api.post(
+            `/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${id}&discount_amount=${discount}`,
+          );
+        } catch { /* non-blocking */ }
       }
-      toast.success('Event booked!');
+      setSuccess({ order_id: id, event_date: cart.event_date });
       clear();
-      navigate('/orders');
-    } else {
-      toast.error(`Payment Failed: ${response?.message || 'Unknown error'}`);
-    }
-  };
+    },
+  });
+  const { orderId, paymentInProgress, selectedPaymentMethod } = checkout.state;
+  const handleConfirm = checkout.submit;
+
+  // Step indicator — derived from form state + payment method selection.
+  const currentStep = useMemo(() => {
+    if (selectedPaymentMethod) return 3;
+    if (cart.event_date && contact.contact_name && contact.contact_phone) return 2;
+    return 1;
+  }, [selectedPaymentMethod, cart.event_date, contact.contact_name, contact.contact_phone]);
 
   // Operator self-booking guard (after hooks)
   if (user?.role === 'operator' || isOperatorUser) return <OperatorBookingBlock />;
@@ -859,9 +840,10 @@ export default function BanquetCheckout() {
                     </div>
                   )}
                   <div className={(!cart.event_date || !contact.contact_name || !contact.contact_phone) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!cart.event_date || !contact.contact_name || !contact.contact_phone}>
-                  <PaymentMethodsSelection
+                  <CheckoutPaymentPanel
+                    checkout={checkout}
                     amount={grandTotal}
-                    orderId={orderId}
+                    serviceName="Event Services"
                     customerPhone={contact.contact_phone}
                     customerEmail={contact.contact_email}
                     serviceDetails={{
@@ -869,21 +851,15 @@ export default function BanquetCheckout() {
                       service_title: 'Event Services',
                       order_id: orderId,
                     }}
-                    serviceName="Event Services"
-                    onPaymentInitiated={handlePaymentInitiated}
-                    onPaymentError={(error) => toast.error(error.message)}
-                    onRequestCreateOrder={ensureOrder}
-                    triggerPayment={triggerPayment}
-                    onMethodSelected={setSelectedPaymentMethod}
                   />
                   </div>
                   <Button
                     onClick={handleConfirm}
-                    disabled={submitting}
+                    disabled={paymentInProgress}
                     className="w-full mt-4 bg-gradient-to-r from-teal-700 to-cyan-600 hover:from-teal-800 hover:to-cyan-700 text-white h-12 font-semibold rounded-xl shadow-md shadow-teal-300/40 disabled:opacity-60"
                     data-testid="co-confirm-btn"
                   >
-                    {submitting ? (
+                    {paymentInProgress ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing…</>
                     ) : (
                       <><PartyPopper className="w-4 h-4 mr-2" />Confirm &amp; Pay {formatFCFA(grandTotal)}</>

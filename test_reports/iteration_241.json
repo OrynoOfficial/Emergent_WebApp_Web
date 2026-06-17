@@ -1,0 +1,32 @@
+{
+  "summary": "Code-review verification of the migration of ShowtimeDetails.jsx and BanquetCheckout.jsx to the shared useCheckout hook + CheckoutPaymentPanel wrapper. Verified the abandonment wiring is structurally correct end-to-end: useCheckout returns handleCheckoutAbandoned -> abandonOrder(id) -> abandonPendingOrder() -> DELETE /api/orders/{id}/abandon (idempotent, swallows 409 already-paid). CheckoutPaymentPanel passes handleCheckoutAbandoned into PaymentMethodsSelection as onCheckoutAbandoned. PaymentMethodsSelection fires it from both Stripe modal onClose AND MoMo closeMoMoDialog(force=true) per the request. Both pages reset orderId/triggerPayment via the resetState callback in useOrderAbandonment so a second Confirm starts a fresh order. Live UI playwright testing of MoMo X / Stripe X was NOT executed due to token-budget constraints in this iteration — main agent should self-verify by booking on /services/showtimes/{id} and /services/banquet/checkout, opening the payment modal, closing it, and confirming GET /api/orders/{order_id} returns 404.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Main agent: please self-verify the two abandonment flows (MoMo X + Stripe X on ShowtimeDetails AND BanquetCheckout) by booking and abandoning the payment modal, then curl GET /api/orders/{order_id} to confirm 404. The structural wiring is correct so this should pass, but no live abandonment was exercised in this iteration.",
+    "Minor (non-blocking) — useOrderAbandonment.js line 38 uses `import.meta.env.VITE_API_URL` inside the beforeunload keepalive fetch. This only fires on tab-close (not on modal-X which uses the api client correctly via abandonPendingOrder). If VITE_API_URL isn't defined in frontend/.env, the keepalive beacon would POST to an empty origin. The modal-cancel path (the actual bug being fixed) is unaffected since it goes through @/api/client.",
+    "Minor — ShowtimeDetails.jsx never wires `onAbandon` into useCheckout, so closing the payment modal correctly resets orderId/triggerPayment but does NOT reset the page-level currentStep back to 2. Cosmetic only — currentStep is re-derived from formData+seats in a useEffect."
+  ],
+  "critical_code_review_comments": [
+    "ShowtimeDetails.jsx (lines 252-277): useCheckout('events', { customOrderEndpoint: '/event-showtimes/book', ... }) — buildPayload returns the exact event-booking body (showtime_id, class_id, quantity, seat_ids, contact_*). extractOrderId is omitted so it falls back to data.order_id || data.id which matches the backend response {success, order_id, total_amount}. CheckoutPaymentPanel (lines 773-780) receives the checkout object and auto-wires onCheckoutAbandoned. Confirm CTA wired to checkout.submit (line 310). ✓",
+    "BanquetCheckout.jsx (lines 266-307): useCheckout('banquet', { customOrderEndpoint: '/banquets/cart/checkout', extractOrderId: data => data?.order_id || data?._id || data?.id || data?.order_number, ... }) — buildPayload returns the cart-line + contact body. onSuccess records promo usage post-pay so abandoned attempts don't burn the code (good). CheckoutPaymentPanel (lines 843-854) wired. ✓",
+    "useCheckout.js (lines 80-92): useOrderAbandonment is wired with a resetState callback that nulls orderId, triggerPayment, paymentInProgress, showPaymentOverlay AND calls optional onAbandon. handleCheckoutAbandoned({orderId}) calls abandonOrder(id). ✓",
+    "useOrderAbandonment.js (lines 60-66): explicit abandon(id) calls abandonPendingOrder which DELETEs /api/orders/{id}/abandon via the api client (correct origin). Idempotent (409 handled). Also fires on unmount (line 53). ✓",
+    "CheckoutPaymentPanel.jsx (lines 17-33): correctly forwards handleCheckoutAbandoned as onCheckoutAbandoned to PaymentMethodsSelection. ✓",
+    "PaymentMethodsSelection.jsx — referenced lines 367 (MoMo closeMoMoDialog force=true) and 905 (Stripe modal onClose) both call onCheckoutAbandoned per the request brief. Structural wiring verified by code review, not by live UI exercise.",
+    "Backend contract per request: POST /event-showtimes/book returns {success, order_id, total_amount}; POST /banquets/cart/checkout returns {order_id} (extractor covers all four shapes); DELETE /api/orders/{id}/abandon only deletes pending+unpaid. All extractors and idempotency are correctly aligned."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not retested (request was frontend-only)", "frontend": "code review only — no live UI exercise this iteration"},
+  "test_credentials": "customer@test.com / testpassword123; MoMo sandbox 237670000001 (success), 237670000000 (cancelled), 237670000006 (fail), 237670000008 (timeout)",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Migration is structurally correct via code review. To live-verify: (1) login customer@test.com, (2) go to /services/showtimes/{any-active-id}, pick class, fill form, select MoMo, Confirm -> modal opens -> click X / 'Choose a different payment method' -> network tab should show DELETE /api/orders/{id}/abandon returning {success:true, deleted:true}. (3) Repeat for Stripe modal (close X). (4) Same on /services/banquet/checkout. (5) Happy-path: MoMo phone ending in 1 (237670000001) should land on /orders. The frontend uses `vite build && vite preview` (per iter_240) — if you don't see your code changes, run `sudo supervisorctl restart frontend` before retesting.",
+  "rca of the issue": "Original bug: PaymentMethodsSelection on ShowtimeDetails.jsx and BanquetCheckout.jsx was missing the onCheckoutAbandoned prop, so when the user X'd the Stripe modal or cancelled MoMo, the page's local handler nulled orderId without calling DELETE /api/orders/{id}/abandon — leaving the order as `pending` in MongoDB. Fix: migrating both pages to useCheckout + CheckoutPaymentPanel automatically wires handleCheckoutAbandoned -> abandonPendingOrder -> DELETE endpoint. Verified end-to-end by code review; awaiting main-agent self-verification of live UI flows."
+}
