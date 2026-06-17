@@ -1,5 +1,38 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 252: 10-item Banquet/Admin UX polish)
+
+### ✅ Punch-list (10 items, completion of previous 15)
+
+1. **Refunds nested under Transactions** — `useSidebarMenu.js`: removed standalone Refunds, added it inside Transactions submenu as `All Orders → Refunds (badge) → All Receipts → All Bookings → All Bills`.
+2. **Hotel/Room Policies free-typing** — `HotelForm.jsx` / `RoomForm.jsx`: textareas now use raw `split('\n')` (no in-flight trim/filter), so multi-line content and blank lines survive while typing. `HotelManagement.handleSaveHotel/Room` trims+filters on submit.
+3. **BulkActionsBar moved to TOP** — `BulkActionsBar.jsx`: switched from `fixed bottom-4 … z-40` to `fixed top-20 … z-50 max-w-[95vw]` so the bar is always visible (no more bottom-of-screen clipping).
+4. **Bulk actions on three subpages**:
+   - **Rental Inventory** (`RentalInventoryTab.jsx`) — `BulkSelectCardWrapper` + bar with Activate/Deactivate/Delete/Export against the new `banquet_items` collection in `admin_bulk.py`.
+   - **Event Locations** (`LocationsAndShowtimesTabs.jsx`) — full Activate/Deactivate/Delete/Export, deletes cascade to `event_showtimes`.
+   - **Event Showtimes** — Delete + Export (no activate/deactivate by design).
+5. **Linked Inventory search** — `BanquetManagement.CategoryAwareFields`: added autoFocus search input atop the Linked Inventory Select; client-side filter on name + category.
+6. **Banquet City + Address for ALL categories** — moved out of the `hall`-only block so Rental, Canopy, Photographer, Catering etc. also capture location for live-map enrichment.
+7. **Banquet Packages operator parsing** — `PackagesTab` now mounts an `OperatorSelector` for admin/super-admin, defaults to `scopeOperatorId` for operators, guards save with "Pick the operator that owns this package", filters bundle-eligible services to the chosen operator, and sends `operator_id` explicitly in the payload (matching backend `/banquets/packages/` requirement).
+8. **Banquet Results — In Cart click + modal CTA**:
+   - `ServiceCard` / `PackageCard`: the "In Cart" badge is now a `<button>` (testid preserved) with `ring-2` highlight + "View" affordance, calls `onOpenCart()` to open the cart drawer.
+   - `BanquetDetailsModal`: the disabled "In cart" CTA became an active "In cart — review" button that closes the modal and opens the cart drawer.
+9. **DatePickerModal centering** — `DatePickerModal.jsx`: wrapper now uses `p-4 overflow-y-auto`, dialog has `max-h-[calc(100vh-2rem)]` + `mx-auto my-auto` so the calendar never clips off the bottom on small viewports.
+10. **Banquet Checkout field migration** — `BanquetCheckout.jsx`:
+    - City field moved to Event Details, read-only when derived from `cart.city` or first item's snapshot (`useEventCart` now stores `service.city`), with a "Locked to your search city — services you picked operate in <city>." hint.
+    - Event Location/Address and Special Requests moved from "Your Information" → "Event Details" (order: Date/Time/Guests/Type → City → Location/Address → Special Requests).
+    - "Your Information" now only collects Name, Phone, Email.
+
+### 🔬 Testing
+- `testing_agent_v3_fork` (iter 240): Issue 1 + Issue 3 verified end-to-end via Playwright. Backend `test_iter240_bulk_banquet.py` confirms `admin/bulk` accepts `banquet_items`, `event_locations`, `event_showtimes` and still rejects unknown collections.
+- Self-verified Issues 1, 8a, 10 via screenshot (sidebar shows no top-level Refunds; In-Cart badge renders with new button styling + "View"; checkout City field shows locked teal background with hint; Location/Address + Special Requests are inside Event Details).
+- Issues 2, 4a-c, 5, 6, 7, 8b, 9 source-reviewed; main agent recommends user verification.
+
+### ⚠️ Heads-up for next sessions
+- Frontend runs `vite build && vite preview` (NO hot reload). After source edits, **always** `sudo supervisorctl restart frontend` or the served bundle stays stale.
+
+
+
 ## Latest Changes (Feb 2026 — iter 251: Cleanup script, bulk actions, frequent refunder, DB indexes, INDEX.md)
 
 ### 🧹 Reusable cleanup script
