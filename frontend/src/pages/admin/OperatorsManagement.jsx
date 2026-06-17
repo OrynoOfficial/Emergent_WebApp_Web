@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,9 +64,12 @@ export default function OperatorsManagement() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // iter 247: pre-seed the search input from the ?search=<id_or_name> query
+  // param so deep links from global search land pre-filtered.
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [serviceFilter, setServiceFilter] = useState('all');
   const [ownerFilter, setOwnerFilter] = useState('');
@@ -159,8 +162,13 @@ export default function OperatorsManagement() {
   };
 
   const filteredOperators = operators.filter(op => {
-    const matchesSearch = op.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      op.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    // iter 247: also match against the operator _id so global-search deep
+    // links of the form ?search=<operator_id> land pre-filtered.
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q
+      || op.name?.toLowerCase().includes(q)
+      || op.email?.toLowerCase().includes(q)
+      || (op._id || op.id || '').toString().toLowerCase().includes(q);
     const matchesStatus = statusFilter === 'all' || op.status === statusFilter;
     const matchesService = serviceFilter === 'all' || op.service_types?.includes(serviceFilter);
     const matchesOwner = !ownerFilter || op.owner_name?.toLowerCase().includes(ownerFilter.toLowerCase()) || op.owner_email?.toLowerCase().includes(ownerFilter.toLowerCase());

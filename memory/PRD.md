@@ -1,5 +1,59 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 247: Global Search overhaul + SmartSearchBar omnibar)
+
+### Global search (`GET /api/search/`)
+- **Rewritten** to query the **current** canonical collections (was hitting stale `events`, `cinema_movies`, `rental_vehicles`, `banquet_venues`):
+  - Events  → `event_showtimes`
+  - Cinema  → `films` (with `showtimes` for booking deep links)
+  - Cars    → `car_rentals`
+  - Banquets→ `banquets`
+  - Laundry → `pressings` (newly indexed)
+  - Hotels, Restaurants, Travel Routes, Operators all on current schema.
+- Each result row now carries `{type, label, subtitle, deep_link, thumbnail, icon, color, meta}`.
+- **Accent + case insensitive** (`_ai_pattern()`) — "yaounde" matches "Yaoundé".
+- Results are **grouped by type** (`by_type` map) for the new "View all" preview modal.
+- Admin/super_admin also see `users` and `orders` rows.
+- Deep links resolve to detail pages (`/services/showtimes/:id`, `/services/hotels/details/:id`, …) rather than results pages, so a click lands on the booking page directly.
+
+### Global search dropdown UI (`Layout.jsx`)
+- Rows now render real **thumbnails** (poster/logo/image) with graceful fallback to the existing colour-swatched service icon.
+- Sticky **"View all N results"** header at the top of the dropdown — opens a new full-screen scrollable preview modal grouped by type.
+- `handleSearchSelect()` honours `row.deep_link || row.path`.
+
+### `GlobalSearchAllModal` (new)
+- `/app/frontend/src/components/search/GlobalSearchAllModal.jsx`
+- Grouped sections (Locations / Operators / Hotels / Events / Cinema / …) with rich rows (40px thumbnail, label, subtitle, optional city chip).
+- Clicking a row pivots to its `deep_link` and closes the modal.
+
+### `SmartSearchBar` omnibar (new)
+- `/app/frontend/src/components/search/SmartSearchBar.jsx`
+- Replaces the "free-text input + city dropdown" combo on Hotels, Events, Cinema results pages.
+- Typing surfaces **colour-coded chip suggestions** in three groups:
+  - **Places** (red MapPin chips)
+  - **Operators** (violet Building2 chips)
+  - **Listings** (service-typed chips — Hotel/Calendar/Film)
+- Multiple chips compose AND-style. `clearAll()` resets all chips.
+- Export: `applySmartFilters(items, filters, getters)` helper for parents.
+
+### Wiring
+- `HotelsResults.jsx`, `EventsResults.jsx`, `CinemaResults.jsx` all replace `searchTerm`/`searchQuery` with `smartFilters` and route filtering through chip sets.
+- Cinema additionally keeps a small free-text input as a **genre keyword shortcut** because cinema fans search by genre.
+
+### Operator deep-link pre-filter
+- `OperatorsManagement.jsx` now reads `?search=<id_or_name>` from the URL and seeds its search input. The filter also matches `op._id` so global-search-generated UUIDs land correctly.
+
+### New shared util
+- `/app/frontend/src/utils/icons.js` — single-source `getIconComponent(iconName)` resolver mirroring `Layout.jsx`'s existing iconMap. Used by `GlobalSearchAllModal`.
+
+### Verified
+- Backend pytest: 4/4 (`/app/backend/tests/test_iter247_global_search.py`).
+- Frontend e2e (iter247): Cysoul-row thumbnail + subtitle, "View all" modal grouping + deep-link pivot, Hotels/Events/Cinema SmartSearchBar chip add+clear, Operator deep link pre-filter on `/admin/operators?search=`.
+
+### Build pipeline notes
+- The Vite preview pipeline caught two build-blocking artefacts during iter247 (`CinemaResults.jsx` had stale duplicated JSX; `GlobalSearchAllModal` imported a non-existent util). Both fixed. Worth wiring a pre-commit `vite build` gate.
+
+
 ## Latest Changes (Feb 2026 — iter 246: Customer event search leak + accent search)
 
 ### Bug 1 — cancelled events leaked into customer search for admins/operators
