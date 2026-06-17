@@ -18,6 +18,7 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
   const [form, setForm] = useState({
     location_id: '', title: '', description: '', event_type: 'concert',
     start_datetime: '', end_datetime: '', poster_url: '', images: [],
+    status: 'published',
     classes: [{ ...DEFAULT_CLASS, name: 'Standard' }],
   });
   const [posterUploading, setPosterUploading] = useState(false);
@@ -26,12 +27,14 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
       setForm({
         ...editing,
         poster_url: editing.poster_url || '',
+        status: editing.status || 'published',
         classes: editing.classes?.length ? editing.classes : [{ ...DEFAULT_CLASS, name: 'Standard' }],
       });
     } else {
       setForm({
         location_id: '', title: '', description: '', event_type: 'concert',
         start_datetime: '', end_datetime: '', poster_url: '', images: [],
+        status: 'published',
         classes: [{ ...DEFAULT_CLASS, name: 'Standard' }],
       });
     }
@@ -40,15 +43,18 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
   const uploadPoster = async (file) => {
     if (!file) return;
     const fd = new FormData();
-    fd.append('files', file);
+    // Backend `/api/uploads/` (single) expects field name 'file' — using
+    // 'files' silently 422s and was causing the editor to white-screen.
+    fd.append('file', file);
     fd.append('folder', 'event-showtimes');
     setPosterUploading(true);
     try {
       const res = await api.post('/uploads/', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const url = res.data.urls?.[0] || res.data.files?.[0]?.url;
+      const url = res.data?.file_url || res.data?.urls?.[0] || res.data?.files?.[0]?.url;
       if (url) setForm((p) => ({ ...p, poster_url: url }));
+      else toast.error('Upload succeeded but no URL was returned');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Poster upload failed');
+      toast.error(err?.response?.data?.detail || 'Poster upload failed');
     } finally {
       setPosterUploading(false);
     }
@@ -184,6 +190,19 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
             <div>
               <Label>End</Label>
               <Input type="datetime-local" value={form.end_datetime} onChange={e => setForm(p => ({ ...p, end_datetime: e.target.value }))} data-testid="showtime-end-input" />
+            </div>
+            <div className="col-span-2">
+              <Label className="flex items-center gap-2">
+                Visibility
+                <span className="text-[10px] font-normal text-slate-400 normal-case">— Draft is hidden from customers until you publish</span>
+              </Label>
+              <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                <SelectTrigger data-testid="showtime-status-select"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="published" data-testid="status-option-published">🟢 Active — visible to customers</SelectItem>
+                  <SelectItem value="draft" data-testid="status-option-draft">⚪ Draft — saved but hidden</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

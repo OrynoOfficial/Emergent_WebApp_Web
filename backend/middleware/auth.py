@@ -215,6 +215,42 @@ async def get_current_active_user(current_user: dict = Depends(get_current_user)
     return current_user
 
 
+# Optional-auth security: same Bearer scheme but `auto_error=False` so a missing
+# Authorization header yields `credentials=None` instead of a 403. Useful for
+# customer-facing endpoints that return a *richer* response when logged in.
+_optional_security = HTTPBearer(auto_error=False)
+
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_security),
+) -> Optional[dict]:
+    """Returns the active user when a valid Bearer token is supplied, else None.
+    Never raises — anonymous customers can hit endpoints that use this dep."""
+    if not credentials:
+        return None
+    try:
+        payload = decode_token(credentials.credentials)
+        if not payload or payload.get("type") != "access":
+            return None
+        if await is_access_token_revoked(credentials.credentials):
+            return None
+        # Mirror get_current_user's cache lookup pattern.
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        cached = await cache_get("user", user_id)
+        if cached:
+            return cached if cached.get("status") == "active" else None
+        db = get_database()
+        user = await db.users.find_one({"_id": user_id})
+        if not user or user.get("status") != "active":
+            return None
+        await cache_set("user", user_id, user)
+        return user
+    except Exception:
+        return None
+
+
 async def require_role(required_roles: list):
     """Dependency to check user role"""
     async def role_checker(current_user: dict = Depends(get_current_active_user)):

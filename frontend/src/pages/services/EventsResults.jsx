@@ -335,22 +335,23 @@ export default function EventsResults() {
   const loadEvents = async () => {
     setLoading(true);
     try {
-      // Fetch both new-architecture Showtimes and legacy Events in parallel.
-      const [legacyRes, showtimesRes] = await Promise.all([
-        eventsApi.search({ city, date }).catch(() => ({ data: { events: [] } })),
-        api.get('/event-showtimes/', { params: { upcoming_only: true, ...(city ? { city } : {}) } }).catch(() => ({ data: { showtimes: [] } })),
-      ]);
+      // Showtimes are now the *only* source for the customer-facing events
+      // results page. The legacy `events` collection was retired alongside the
+      // legacy management subpage; we no longer query it.
+      const res = await api
+        .get('/event-showtimes/', { params: { upcoming_only: true, ...(city ? { city } : {}) } })
+        .catch(() => ({ data: { showtimes: [] } }));
 
-      // Normalise showtimes into the same card shape EventsResults already renders,
-      // while keeping a `_showtime: true` marker so click routes to /services/showtimes/:id.
-      const normalisedShowtimes = (showtimesRes.data.showtimes || []).map(s => {
+      // Normalise showtimes into the same card shape EventsResults already
+      // renders. `_showtime: true` flags routing to /services/showtimes/:id.
+      const normalisedShowtimes = (res.data.showtimes || []).map(s => {
         const minPrice = (s.classes || []).reduce((m, c) => (c.price < m ? c.price : m), Infinity);
         const totalAvail = (s.classes || []).reduce((sum, c) => sum + (c.available_units || 0), 0);
         const totalCap = (s.classes || []).reduce((sum, c) => sum + (c.total_units || 0), 0);
         return {
           ...s,
           _showtime: true,
-          id: s.id,
+          id: s.id || s._id,
           name: s.title,
           venue: s.location_name,
           city: city || s.location_city || '',
@@ -361,13 +362,14 @@ export default function EventsResults() {
           ticketsLeft: totalAvail,
           total_capacity: totalCap,
           tickets_sold: totalCap - totalAvail,
-          image: (s.images || [])[0],
+          // Use the showtime's poster first, fall back to gallery, then a default.
+          image: s.poster_url || (s.images || [])[0],
           operator_id: s.operator_id,
           operator_name: s.operator_name,
         };
       });
 
-      setEvents([...normalisedShowtimes, ...(legacyRes.data.events || [])]);
+      setEvents(normalisedShowtimes);
     } catch (error) {
       console.error('Failed to load events:', error);
       setEvents([]);

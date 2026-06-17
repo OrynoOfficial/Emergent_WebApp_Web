@@ -1,0 +1,35 @@
+{
+  "summary": "Verified all 5 fixes: legacy events tab/Dialog deleted, OperatorsManagement table now horizontally scrollable (overflow-x-auto + min-w-[900px]), ShowtimeEditor poster upload no longer white-screens (field renamed 'files' -> 'file'), new Visibility select defaults to 'Active — visible to customers' (status='published') with both draft + published options, and /services/events/results pulls live data from /api/event-showtimes/. Backend: anonymous + customer get only status='published' showtimes; admin can fetch drafts explicitly; admin_bulk now rejects collection='events' with HTTP 400 while still accepting banquets/pressings/event_showtimes.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/services/events/results (when logged in as super_admin)", "issues": ["Draft showtime 'Cysoul Concert' is visible because list_showtimes does not force status=published for admin/super_admin roles. Anonymous + customer viewers correctly never see drafts (verified). Consider also forcing status=published for admin/super_admin when calling from the customer-facing route, OR rely on the seeded data being cleaned up. Backend tests confirm anonymous and customer never see Cysoul. This is a UX nit only."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_event_showtimes_iter.py",
+    "/app/test_reports/pytest/iter_event_showtimes.xml"
+  ],
+  "action_items": [
+    "Optional UX: in EventsResults.jsx OR in the backend listing endpoint, force status=published whenever the call is made from the public /services/events/results page, so admins browsing that page don't see their own drafts."
+  ],
+  "critical_code_review_comments": [
+    "ShowtimeEditor: form.status default + reset in useEffect both set to 'published' — matches spec.",
+    "uploadPoster() now sends FormData with 'file' (single) instead of 'files' — matches /api/uploads/ contract; 422 white-screen fixed.",
+    "event_showtimes.list_showtimes: anonymous/customer are correctly clamped to status=published (verified by backend tests). Admin/operator still see all statuses (intentional).",
+    "admin_bulk.ALLOWED_COLLECTIONS no longer contains 'events' — 400 returned as expected.",
+    "OperatorsManagement.jsx wrapper now matches Users.jsx pattern (overflow-x-auto + min-w-[900px]).",
+    "EventsResults.loadEvents only queries /event-showtimes/ now — legacy eventsApi.search removed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_event_showtimes_iter.py (new)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (5/5 fixes verified)"},
+  "test_credentials": "superadmin@oryno.com / testpassword123; customer@test.com / testpassword123",
+  "seed_data_creation": "Created one test event-showtimes poster upload (1x1 PNG) — uploaded to /api/static/event-showtimes/. Modal closed before save so no DB rows added.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login flow is two-step: (1) click 'Login to Your Account' (2) fill email + click Continue (3) fill password + Continue. The legacy 'Cysoul Concert' draft showtime is still in the DB on purpose as a visibility filter test fixture. /management/events default outer tab is 'Dashboard' — must click the 'Management' outer tab (no testid) to reveal events-tab-locations / events-tab-showtimes. Customer-facing list route is /services/events/results (not /services/events which is the search landing)."
+}

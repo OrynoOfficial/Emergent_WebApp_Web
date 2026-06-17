@@ -45,7 +45,6 @@ ALLOWED_COLLECTIONS = {
     "films":          {"cascade": [], "active_field": "is_active"},
     "car_rentals":    {"cascade": ["vehicles"], "active_field": "is_active"},
     "vehicles":       {"cascade": [], "active_field": "is_active"},
-    "events":         {"cascade": [], "active_field": "is_active"},
     "packages":       {"cascade": [], "active_field": "is_active"},
     "package_services": {"cascade": [], "active_field": "is_active"},
     "travel_routes":  {"cascade": [], "active_field": "is_active"},

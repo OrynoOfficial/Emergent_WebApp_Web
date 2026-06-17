@@ -13,7 +13,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from config.database import get_database
-from middleware.auth import get_current_active_user
+from middleware.auth import get_current_active_user, get_current_user_optional
 from models.event_showtime import (
     EventShowtimeCreate,
     EventShowtimeUpdate,
@@ -91,20 +91,35 @@ async def list_showtimes(
     status: Optional[str] = None,
     city: Optional[str] = None,
     upcoming_only: bool = False,
-    current_user: Optional[dict] = Depends(get_current_active_user),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
-    """Listing is open to logged-in users; operator/staff are scoped to their own showtimes."""
+    """Listing is OPEN — anonymous customers see all `active` showtimes.
+    Operator/staff see their own (any status). Admin/super_admin see everything."""
     db = get_database()
     q = {}
     role = (current_user or {}).get("role")
+    is_anonymous = current_user is None
+    is_customer = role == "customer"
+    is_operator_scope = role in ("operator", "staff")
+
     if operator_id:
         q["operator_id"] = operator_id
-    elif role in ("operator", "staff"):
+    elif is_operator_scope:
         q["operator_id"] = current_user.get("operator_id") or current_user.get("_id")
     if location_id:
         q["location_id"] = location_id
+
     if status:
-        q["status"] = status
+        # Caller explicitly asked for a specific status — honour it, but force
+        # `published` for anonymous/customer callers so drafts never leak.
+        if (is_anonymous or is_customer) and status != ShowtimeStatus.PUBLISHED.value:
+            q["status"] = ShowtimeStatus.PUBLISHED.value
+        else:
+            q["status"] = status
+    elif is_anonymous or is_customer:
+        # Default: hide drafts/cancelled/sold-out etc. from customer-facing views.
+        q["status"] = ShowtimeStatus.PUBLISHED.value
+
     if upcoming_only:
         q["start_datetime"] = {"$gte": datetime.utcnow().isoformat()}
 

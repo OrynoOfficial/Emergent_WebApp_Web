@@ -541,8 +541,8 @@ export default function OperatorsManagement() {
       ) : (
         <>
           {viewMode === 'list' && (
-            <div className="bg-white rounded-xl shadow-sm border overflow-hidden" data-testid="operators-list-view">
-              <table className="w-full">
+            <div className="bg-white rounded-xl shadow-sm border overflow-x-auto" data-testid="operators-list-view">
+              <table className="w-full min-w-[900px]">
                 <thead className="bg-slate-50 border-b">
                   <tr>
                     <th className="py-4 px-4 w-10">
