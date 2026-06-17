@@ -472,63 +472,21 @@ export default function OperatorsManagement() {
         )}
       </SubpageCard>
 
-      {/* Stats Cards (dynamic — reflects active filters) */}
+      {/* Stats (mirrors Users page compact style — keeps the layout
+          inside 1366px viewports without horizontal overflow). */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="operators-stats-grid">
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg"><Building className="h-5 w-5 text-blue-600" /></div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-                <p className="text-sm text-slate-500">Total Operators</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg"><CheckCircle className="h-5 w-5 text-green-600" /></div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-                <p className="text-sm text-slate-500">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg"><Clock className="h-5 w-5 text-yellow-600" /></div>
-              <div>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
-                <p className="text-sm text-slate-500">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg"><Ban className="h-5 w-5 text-red-600" /></div>
-              <div>
-                <p className="text-2xl font-bold text-red-600">{stats.suspended}</p>
-                <p className="text-sm text-slate-500">Suspended</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg"><DollarSign className="h-5 w-5 text-purple-600" /></div>
-              <div>
-                <p className="text-lg font-bold text-slate-900">{formatFCFA(stats.totalRevenue)}</p>
-                <p className="text-sm text-slate-500">Total Revenue</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Total Operators', count: stats.total, color: 'bg-slate-100 text-slate-700' },
+          { label: 'Active', count: stats.active, color: 'bg-green-100 text-green-700' },
+          { label: 'Pending', count: stats.pending, color: 'bg-yellow-100 text-yellow-700' },
+          { label: 'Suspended', count: stats.suspended, color: 'bg-red-100 text-red-700' },
+          { label: 'Total Revenue', count: formatFCFA(stats.totalRevenue), color: 'bg-purple-100 text-purple-700', isCurrency: true },
+        ].map((stat) => (
+          <div key={stat.label} className={`p-3 rounded-lg ${stat.color}`}>
+            <p className={`${stat.isCurrency ? 'text-base' : 'text-2xl'} font-bold truncate`} title={String(stat.count)}>{stat.count}</p>
+            <p className="text-sm">{stat.label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Operators — list / grid / details */}
@@ -542,7 +500,7 @@ export default function OperatorsManagement() {
         <>
           {viewMode === 'list' && (
             <div className="bg-white rounded-xl shadow-sm border overflow-x-auto" data-testid="operators-list-view">
-              <table className="w-full min-w-[900px]">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-slate-50 border-b">
                   <tr>
                     <th className="py-4 px-4 w-10">

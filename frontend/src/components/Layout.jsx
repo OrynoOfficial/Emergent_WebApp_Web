@@ -637,7 +637,7 @@ export default function Layout({ children }) {
       {renderFlyout()}
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-72">
+      <div className="flex-1 lg:ml-72 min-w-0 overflow-x-hidden">
         {/* Top bar */}
         <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/60 px-4 lg:px-8 py-4 sticky top-0 z-30 shadow-sm safe-area-top">
           <div className="flex items-center justify-between">

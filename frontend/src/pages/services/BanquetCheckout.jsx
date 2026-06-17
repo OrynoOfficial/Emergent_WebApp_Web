@@ -31,6 +31,7 @@ import { formatFCFA } from '@/utils/currency';
 import { useEventCart } from '@/hooks/useEventCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 import CheckoutPaymentPanel from '@/components/common/CheckoutPaymentPanel';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { cn } from '@/lib/utils';
@@ -215,7 +216,19 @@ export default function BanquetCheckout() {
 
   // ── Pricing ────────────────────────────────────────────────────────────
   const subtotalBeforeDiscount = totals.total;
-  const serviceFee = Math.round(subtotalBeforeDiscount * 0.05);
+  // Banquet carts can span multiple operators — when all items share the
+  // same operator we can resolve operator-specific commission; otherwise
+  // fall back to the global/category default. Empty cart → null (global).
+  const cartOperatorId = useMemo(() => {
+    const opIds = Array.from(new Set([
+      ...cart.items.map(i => i.snapshot?.operator_id).filter(Boolean),
+      ...cart.packages.map(p => p.snapshot?.operator_id).filter(Boolean),
+    ]));
+    return opIds.length === 1 ? opIds[0] : null;
+  }, [cart.items, cart.packages]);
+  const { rate: effectiveCommissionRate } = useCommissionRate('banquet', cartOperatorId, { fallback: 5 });
+  const serviceFeePct = (effectiveCommissionRate ?? 5) / 100;
+  const serviceFee = Math.round(subtotalBeforeDiscount * serviceFeePct);
 
   const discount = useMemo(() => {
     if (!appliedPromo) return 0;
@@ -766,7 +779,7 @@ export default function BanquetCheckout() {
                     )}
                     <div className="flex justify-between text-slate-600">
                       <span className="flex items-center gap-1.5">
-                        Service fee (5%)
+                        Service fee ({Math.round((effectiveCommissionRate ?? 5))}%)
                       </span>
                       <span className="font-medium">+{formatFCFA(serviceFee)}</span>
                     </div>

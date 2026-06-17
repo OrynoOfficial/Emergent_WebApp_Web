@@ -35,8 +35,8 @@ export const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, tea
   return (
     <div
       data-testid={`ticket-card-${ticket.id}`}
-      className={`p-4 rounded-xl transition-all cursor-pointer hover:shadow-lg bg-gradient-to-r from-[#082c59]/[0.03] via-slate-50/50 to-slate-100/40 border border-slate-200/50 shadow-sm ${
-        isSelected ? 'ring-2 ring-[#082c59] shadow-lg' : 'hover:border-[#082c59]/20 hover:shadow-md'
+      className={`p-4 rounded-xl transition-all cursor-pointer hover:shadow-lg bg-white border border-slate-200 shadow-sm ${
+        isSelected ? 'ring-2 ring-[#082c59] shadow-lg border-[#082c59]/40' : 'hover:border-[#082c59]/30 hover:shadow-md'
       }`}
       onClick={onView}
     >
@@ -51,7 +51,7 @@ export const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, tea
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-xs font-mono text-slate-500 bg-white/60 px-2 py-0.5 rounded-md border border-slate-200/50">{ticket.ticket_number}</span>
+                <span className="text-xs font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">{ticket.ticket_number}</span>
                 <Badge className={`${priorityConfig.bg} ${priorityConfig.text} text-[10px] px-1.5 py-0 h-5 shadow-sm`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${priorityConfig.dot} mr-1`}></span>
                   {ticket.priority}
@@ -89,13 +89,13 @@ export const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, tea
             )}
           </div>
 
-          <div className="flex items-center justify-between pt-2 border-t border-slate-200/40">
+          <div className="flex items-center justify-between pt-2 border-t border-slate-200">
             <div className="flex items-center gap-3 text-xs text-slate-500">
-              <div className="flex items-center gap-1 bg-white/60 px-2 py-1 rounded-md border border-slate-200/30">
+              <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">
                 <User className="w-3.5 h-3.5" />
                 <span className="font-medium">{ticket.customer_name}</span>
               </div>
-              <div className="flex items-center gap-1 bg-white/60 px-2 py-1 rounded-md border border-slate-200/30">
+              <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">
                 {getCategoryIcon(ticket.category)}
                 <span className="capitalize">{ticket.category}</span>
               </div>
@@ -107,7 +107,7 @@ export const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, tea
             
             <div className="flex items-center gap-2">
               {ticket.assigned_to_name ? (
-                <div className="flex items-center gap-1.5 text-xs bg-white/60 px-2.5 py-1.5 rounded-full shadow-sm border border-slate-200/30">
+                <div className="flex items-center gap-1.5 text-xs bg-slate-50 px-2.5 py-1.5 rounded-full shadow-sm border border-slate-200">
                   <Avatar className="w-5 h-5">
                     <AvatarFallback className="text-[10px] bg-[#082c59] text-white">
                       {ticket.assigned_to_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
@@ -125,7 +125,7 @@ export const TicketCard = ({ ticket, isSelected, onSelect, onView, onAssign, tea
                 </Button>
               )}
               {ticket.response_count > 0 && (
-                <Badge variant="outline" className="text-xs h-6 bg-white/60 shadow-sm border-slate-200/30">
+                <Badge variant="outline" className="text-xs h-6 bg-slate-50 shadow-sm border-slate-200">
                   <MessageSquare className="w-3 h-3 mr-1" />{ticket.response_count}
                 </Badge>
               )}

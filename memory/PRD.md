@@ -1,5 +1,33 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 261: 5-pack UX fixes: commission audit, layout overflow, ticket visibility, slim stat chips)
+
+### Commission 13% global config — now actually applied everywhere
+- Backend `/api/commission-config/resolve` returned 13% for all 10 service types ✅
+- Found 2 frontend pages still hardcoded at 5%:
+  - `LaundryBooking.jsx` line 337 → now uses `useCommissionRate('pressing', service?.operator_id, { fallback: 5 })` and renders the dynamic percentage in the "Service fee (N%)" label.
+  - `BanquetCheckout.jsx` line 218 → now uses `useCommissionRate('banquet', cartOperatorId, { fallback: 5 })`. Multi-operator carts fall back to global; single-operator carts resolve operator-specific overrides.
+
+### Operator Management horizontal overflow fix (1366px+)
+- Page was bleeding 346px past the viewport. Root cause was the main content wrapper `<div className="flex-1 lg:ml-72">` in `Layout.jsx` had no `min-w-0`, so flex children with `min-w-[Npx]` (tables, grids) inflated the page.
+- Fix: added `min-w-0 overflow-x-hidden` to the main content wrapper. The list table's `overflow-x-auto` now actually scrolls internally instead of pushing the body wide.
+- Replaced the 5 huge OperatorsManagement stat cards with the same compact `bg-{color}-100/p-3/rounded-lg` pills used by `Users.jsx`. Table `min-w` reduced from 900px → 800px.
+
+### Customer Service ticket cards now distinguishable
+- `TicketCard.jsx`: removed near-transparent gradient (`from-[#082c59]/[0.03]`) + 50%-opacity slate borders. Now solid `bg-white border border-slate-200 shadow-sm` on every ticket row with a stronger selected-ring color.
+- `TicketDetailModal.jsx`: original message card upgraded from `bg-slate-50/70 border border-slate-100` → solid `bg-white border border-slate-200 shadow-sm`. Modal body now uses `bg-slate-50/60` so the cards "float" against contrast. Sidebar pills (Status, Priority, Category, Assigned, Requester, Created) all gained `border-slate-200 shadow-sm`.
+
+### Ratings page — slim chip stat strip + pagination everywhere
+- Replaced 13 large stat `<Card>`s across `CustomerRatingsView`, `OperatorRatingsView`, and `AdminRatingsView` with single-row compact chips (`px-3 py-1.5 rounded-full bg-{color}-50 border …`). Page space reclaimed: ~60% vertical reduction above the fold.
+- Added pagination (10 items/page) to `OperatorRatingsView` and `CustomerRatingsView` — `AdminRatingsView` already had pagination.
+- Inline distribution chip shows `5★ N · 4★ N · 3★ N · 2★ N · 1★ N` instead of a separate stack.
+
+### Verified ✅
+- Operators page at 1366px viewport: `scrollWidth === viewport` (1366).
+- Backend commission resolve for all 10 service types returns `13% (source=global)`.
+- Ratings page screenshot shows slim chip strip rendering correctly with all expected counts.
+- Customer Service: ticket cards have visible borders + shadow; modal content cards have proper contrast.
+
 ## Latest Changes (Feb 2026 — iter 260: ShowtimeDetails + BanquetCheckout → useCheckout. Order-abandonment leak fixed.)
 
 ### Bug fix — pending orders no longer leak on payment cancel/timeout

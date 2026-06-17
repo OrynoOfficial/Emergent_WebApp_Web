@@ -104,10 +104,10 @@ export const TicketDetailModal = ({
 
         <div className="flex flex-1 overflow-hidden">
           {/* Main Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/60">
             <ScrollArea className="flex-1 p-6">
-              {/* Original Message */}
-              <div className="mb-6 p-4 rounded-xl bg-slate-50/70 border border-slate-100">
+              {/* Original Message — distinct card against modal body */}
+              <div className="mb-6 p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
                 <div className="flex items-start gap-3 mb-3">
                   <Avatar className="w-9 h-9">
                     <AvatarFallback className="bg-[#082c59] text-white text-xs">
@@ -143,12 +143,12 @@ export const TicketDetailModal = ({
                   {ticket.messages.slice(1).map((response, idx) => (
                     <div
                       key={idx}
-                      className={`p-3.5 rounded-xl ${
+                      className={`p-3.5 rounded-xl shadow-sm ${
                         response.is_internal
-                          ? 'bg-amber-50/70 border border-amber-100'
+                          ? 'bg-amber-50 border border-amber-200'
                           : response.sender_type === 'agent'
-                          ? 'bg-[#082c59]/5 border border-[#082c59]/10 ml-4'
-                          : 'bg-slate-50 border border-slate-100 mr-4'
+                          ? 'bg-[#082c59]/5 border border-[#082c59]/20 ml-4'
+                          : 'bg-white border border-slate-200 mr-4'
                       }`}
                     >
                       <div className="flex items-start gap-2.5">
@@ -208,7 +208,7 @@ export const TicketDetailModal = ({
           </div>
 
           {/* Sidebar */}
-          <div className="w-64 border-l bg-slate-50/50 p-4 overflow-auto hidden lg:block">
+          <div className="w-64 border-l border-slate-200 bg-slate-100/70 p-4 overflow-auto hidden lg:block">
             <h4 className="font-semibold text-xs text-slate-500 uppercase tracking-wider mb-4">Details</h4>
 
             <div className="space-y-4">
@@ -239,7 +239,7 @@ export const TicketDetailModal = ({
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Assigned To</label>
                 {ticket.assigned_to_name ? (
-                  <div className="flex items-center gap-2 p-2 bg-white rounded-lg border text-xs">
+                  <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-xs">
                     <Avatar className="w-5 h-5">
                       <AvatarFallback className="text-[8px] bg-[#082c59] text-white">
                         {ticket.assigned_to_name.split(' ').map(n => n[0]).join('').substring(0, 2)}
@@ -256,7 +256,7 @@ export const TicketDetailModal = ({
 
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Category</label>
-                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border text-xs">
+                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-xs">
                   {getCategoryIcon(ticket.category)}
                   <span className="capitalize">{ticket.category}</span>
                 </div>
@@ -264,7 +264,7 @@ export const TicketDetailModal = ({
 
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Requester</label>
-                <div className="p-2 bg-white rounded-lg border text-xs space-y-1">
+                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-xs space-y-1">
                   <p className="font-medium">{ticket.customer_name}</p>
                   {ticket.customer_email && <p className="text-slate-500">{ticket.customer_email}</p>}
                   <Badge className="text-[9px] bg-slate-100 text-slate-600 capitalize">{ticket.user_type || 'customer'}</Badge>
@@ -273,7 +273,7 @@ export const TicketDetailModal = ({
 
               <div>
                 <label className="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Created</label>
-                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border text-xs">
+                <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-sm text-xs">
                   <Calendar className="w-3.5 h-3.5 text-slate-400" />
                   {new Date(ticket.created_at).toLocaleString()}
                 </div>

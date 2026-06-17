@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useCommissionRate } from '@/hooks/useCommissionRate';
 
 // Fallback catalog for laundry-only shops (per kg shops don't have items)
 const ITEM_TYPES = [
@@ -334,7 +335,10 @@ export default function LaundryBooking() {
   );
 
   const subtotalBeforeDiscount = itemsSubtotal + expressSurcharge + pickupFee;
-  const serviceFee = Math.round(subtotalBeforeDiscount * 0.05);
+  // Resolve commission via the platform hierarchy (operator > category > global > 5% fallback).
+  const { rate: effectiveCommissionRate } = useCommissionRate('pressing', service?.operator_id, { fallback: 5 });
+  const serviceFeePct = (effectiveCommissionRate ?? 5) / 100;
+  const serviceFee = Math.round(subtotalBeforeDiscount * serviceFeePct);
 
   // Promo discount comes from the shared checkout hook (centralised
   // /api/promo-codes/validate flow + normalized discount shape).
@@ -834,7 +838,7 @@ export default function LaundryBooking() {
                       </div>
                     )}
                     <div className="flex justify-between text-slate-600">
-                      <span>Service fee (5%)</span>
+                      <span>Service fee ({Math.round((effectiveCommissionRate ?? 5))}%)</span>
                       <span className="font-medium">+{formatFCFA(serviceFee)}</span>
                     </div>
 

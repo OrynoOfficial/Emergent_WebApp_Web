@@ -97,6 +97,8 @@ function CustomerRatingsView() {
   const [newRating, setNewRating] = useState(5);
   const [newReview, setNewReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     fetchRatings();
@@ -199,47 +201,17 @@ function CustomerRatingsView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <Star className="h-6 w-6 text-amber-600 fill-amber-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
-                <p className="text-sm text-slate-600">Total Reviews</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <ThumbsUp className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-slate-900">{stats.helpful}</p>
-                <p className="text-sm text-slate-600">Helpful Votes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Award className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-slate-900">{stats.average}</p>
-                <p className="text-sm text-slate-600">Average Rating</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats — slim chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="customer-ratings-stats">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Total Reviews <span className="font-bold">{stats.total}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
+          <ThumbsUp className="h-3.5 w-3.5" /> Helpful Votes <span className="font-bold">{stats.helpful}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+          <Award className="h-3.5 w-3.5" /> Average Rating <span className="font-bold">{stats.average}</span>
+        </div>
       </div>
 
       {/* ── Awaiting rating section ───────────────────────────────────── */}
@@ -390,8 +362,9 @@ function CustomerRatingsView() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="space-y-4">
-          {ratings.map((review) => {
+          {ratings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             
@@ -475,6 +448,22 @@ function CustomerRatingsView() {
             );
           })}
         </div>
+        {/* Pagination */}
+        {ratings.length > ITEMS_PER_PAGE && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-sm text-slate-500">
+              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, ratings.length)} of {ratings.length}
+            </span>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.ceil(ratings.length / ITEMS_PER_PAGE) }, (_, i) => (
+                <button key={i} onClick={() => setPage(i + 1)} className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`} data-testid={`cust-page-${i + 1}`}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       {/* Edit Dialog */}
@@ -518,6 +507,8 @@ function OperatorRatingsView() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Determine operator's assigned service types
   const assignedServices = useMemo(() => {
@@ -679,60 +670,20 @@ function OperatorRatingsView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-100 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-                <p className="text-xs text-slate-600">Total Reviews</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-100 rounded-lg">
-                <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.average}</p>
-                <p className="text-xs text-slate-600">Avg Rating</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.responded}</p>
-                <p className="text-xs text-slate-600">Responded</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-rose-100 rounded-lg">
-                <MessageCircle className="h-5 w-5 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
-                <p className="text-xs text-slate-600">Needs Response</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Overview — slim chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="operator-ratings-stats">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
+          <BarChart3 className="h-3.5 w-3.5" /> Total <span className="font-bold">{stats.total}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+          <CheckCircle className="h-3.5 w-3.5" /> Responded <span className="font-bold">{stats.responded}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+          <MessageCircle className="h-3.5 w-3.5" /> Needs Response <span className="font-bold">{stats.pending}</span>
+        </div>
       </div>
 
       {/* Filters */}
@@ -792,8 +743,9 @@ function OperatorRatingsView() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="space-y-4">
-          {filteredRatings.map((review) => {
+          {filteredRatings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             const needsResponse = !review.operator_response;
@@ -923,6 +875,22 @@ function OperatorRatingsView() {
             );
           })}
         </div>
+        {/* Pagination */}
+        {filteredRatings.length > ITEMS_PER_PAGE && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-sm text-slate-500">
+              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredRatings.length)} of {filteredRatings.length}
+            </span>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.ceil(filteredRatings.length / ITEMS_PER_PAGE) }, (_, i) => (
+                <button key={i} onClick={() => setPage(i + 1)} className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`} data-testid={`op-page-${i + 1}`}>
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
@@ -1200,91 +1168,41 @@ function AdminRatingsView() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-100 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
-                <p className="text-xs text-slate-600">Total Reviews</p>
-              </div>
+      {/* Stats Overview — slim chip strip (compact, 1-row at lg) */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="admin-ratings-stats">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium" data-testid="stat-total">
+          <BarChart3 className="h-3.5 w-3.5" /> Total <span className="font-bold">{stats.total}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium" data-testid="stat-avg">
+          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium" data-testid="stat-responded">
+          <CheckCircle className="h-3.5 w-3.5" /> Responded <span className="font-bold">{stats.responded}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium" data-testid="stat-pending">
+          <MessageCircle className="h-3.5 w-3.5" /> Needs Response <span className="font-bold">{stats.pending}</span>
+        </div>
+        <button
+          onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            showFlaggedOnly
+              ? 'bg-orange-500 text-white border-orange-500'
+              : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+          }`}
+          data-testid="stat-flagged"
+        >
+          <Flag className="h-3.5 w-3.5" /> {showFlaggedOnly ? 'Showing Flagged' : 'Flagged'} <span className="font-bold">{stats.flagged}</span>
+        </button>
+        {/* Rating distribution — compact inline bars */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[10px] text-purple-700 font-medium" data-testid="stat-distribution">
+          {[5, 4, 3, 2, 1].map(star => (
+            <div key={star} className="flex items-center gap-0.5" title={`${star}★ — ${stats.byRating?.[star] || 0} reviews`}>
+              <span>{star}★</span>
+              <span className="font-bold">{stats.byRating?.[star] || 0}</span>
+              {star !== 1 && <span className="text-purple-300">·</span>}
             </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-amber-100 rounded-lg">
-                <Star className="h-5 w-5 text-amber-600 fill-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.average}</p>
-                <p className="text-xs text-slate-600">Avg Rating</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.responded}</p>
-                <p className="text-xs text-slate-600">Responded</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-rose-50 to-pink-50 border-0">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-rose-100 rounded-lg">
-                <MessageCircle className="h-5 w-5 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.pending}</p>
-                <p className="text-xs text-slate-600">Needs Response</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-0 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-orange-100 rounded-lg">
-                <Flag className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900">{stats.flagged}</p>
-                <p className="text-xs text-slate-600">{showFlaggedOnly ? 'Showing Flagged' : 'Flagged'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0">
-          <CardContent className="p-4">
-            <div className="text-xs space-y-1">
-              {[5,4,3,2,1].map(star => (
-                <div key={star} className="flex items-center gap-2">
-                  <span className="w-3">{star}★</span>
-                  <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-amber-400 rounded-full"
-                      style={{ width: `${stats.total ? (stats.byRating[star] / stats.total) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right text-slate-500">{stats.byRating[star] || 0}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
 
       {/* Filters */}
