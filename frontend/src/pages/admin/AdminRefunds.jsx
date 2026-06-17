@@ -339,8 +339,10 @@ export default function AdminRefunds() {
   useEffect(() => { load(); }, [load]);
 
   // Whenever the parent view toggles, reset the inner status filter to a sane default.
+  // iter 248: history defaults to "all" (which excludes pending/approved — those
+  // are queue items, not history). Queue defaults to "pending".
   useEffect(() => {
-    setStatusFilter(view === 'queue' ? 'pending' : 'completed');
+    setStatusFilter(view === 'queue' ? 'pending' : 'all');
   }, [view]);
 
   const filtered = refunds.filter(r => {
@@ -355,7 +357,10 @@ export default function AdminRefunds() {
 
   const openAction = (refund, action) => {
     setActioning({ refund, action });
-    setAdminAmount(String(refund.requested_amount || 0));
+    // iter 248: admin can no longer alter the price. Always use the
+    // policy-determined eligible amount (or the customer-requested if eligible
+    // is missing). Display is read-only.
+    setAdminAmount(String(refund.eligible_amount ?? refund.requested_amount ?? 0));
     setAdminNotes('');
   };
   const close = () => { setActioning(null); setAdminAmount(''); setAdminNotes(''); };
@@ -375,6 +380,8 @@ export default function AdminRefunds() {
     setSubmitting(true);
     try {
       const payload = {
+        // Admin cannot alter the amount — server treats eligible_amount as
+        // the source of truth, we just echo it for clarity.
         approved_amount: action === 'approve' ? Number(adminAmount) : null,
         admin_notes: adminNotes || null,
       };
@@ -387,6 +394,23 @@ export default function AdminRefunds() {
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Action failed');
     } finally { setSubmitting(false); }
+  };
+
+  // iter 248: manual completion of MoMo / Orange / cash payouts.
+  // Stripe refunds auto-COMPLETE on approve so this path only triggers for
+  // requires_manual_processing rows that sit at APPROVED until ops pays out.
+  const markCompleted = async (refund) => {
+    const ref = window.prompt(
+      "Enter the MoMo / Orange / bank reference for the payout (optional but recommended for audit):"
+    );
+    if (ref === null) return; // user cancelled
+    try {
+      await api.post(`/refunds/${refund.id}/complete`, { proof_reference: ref || null });
+      toast.success('Marked as completed — customer notified.');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not mark complete');
+    }
   };
 
   const totals = {
@@ -555,9 +579,19 @@ export default function AdminRefunds() {
                                 </Button>
                               </div>
                             ) : r.status === 'approved' && r.requires_manual_processing ? (
-                              <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px]">
-                                <AlertCircle className="w-3 h-3 mr-1" /> Payout {formatFCFA(r.approved_amount)} owed
-                              </Badge>
+                              <div className="flex flex-col items-center gap-1">
+                                <Badge className="bg-amber-100 text-amber-800 border-0 text-[10px]">
+                                  <AlertCircle className="w-3 h-3 mr-1" /> Payout {formatFCFA(r.approved_amount)} owed
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  onClick={(e) => { e.stopPropagation(); markCompleted(r); }}
+                                  data-testid={`complete-refund-${r.id}`}
+                                >
+                                  <Check className="w-3 h-3 mr-1" /> Mark paid out
+                                </Button>
+                              </div>
                             ) : (
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-slate-500" data-testid={`view-refund-${r.id}`}>
                                 <Eye className="w-3 h-3 mr-1" /> View

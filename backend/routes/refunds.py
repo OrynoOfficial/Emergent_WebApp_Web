@@ -22,6 +22,7 @@ from typing import Optional
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
 from config.database import get_database
 from middleware.auth import get_current_active_user
@@ -275,7 +276,7 @@ async def request_refund(order_id: str, payload: RefundCreate,
         notification_type="refund_submitted",
         dedupe_key=f"refund_submitted:{refund_id}",
         data={"refund_id": refund_id, "order_id": order_id, "status": RefundStatus.PENDING},
-        action_url=f"/orders",
+        action_url="/orders",
         source="refunds",
     )
 
@@ -574,3 +575,73 @@ async def reject_refund(refund_id: str, payload: RefundDecision,
         )
 
     return {"refund_id": refund_id, "status": RefundStatus.REJECTED}
+
+
+
+# ── Manual completion (MoMo / Orange / Cash) ───────────────────────────────
+class RefundCompletePayload(BaseModel):
+    proof_reference: Optional[str] = None  # e.g. MoMo financial_id, bank ref, cash voucher
+    admin_notes: Optional[str] = None
+
+
+@router.post("/{refund_id}/complete")
+async def complete_refund(
+    refund_id: str,
+    payload: RefundCompletePayload,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Mark a manually-paid refund as COMPLETED.
+
+    Used when a Stripe-less provider (MoMo, Orange, cash, bank transfer) has
+    already been paid out by ops. Stripe refunds auto-transition to COMPLETED
+    on approval and never hit this endpoint.
+    """
+    if not _is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin only")
+    db = get_database()
+    refund = await db.refunds.find_one({"_id": refund_id})
+    if not refund:
+        raise HTTPException(status_code=404, detail="Refund not found")
+    if refund["status"] != RefundStatus.APPROVED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only approved refunds can be marked complete (current status: {refund['status']}).",
+        )
+
+    now = datetime.now(timezone.utc)
+    await db.refunds.update_one({"_id": refund_id}, {"$set": {
+        "status": RefundStatus.COMPLETED,
+        "gateway_refund_id": payload.proof_reference or refund.get("gateway_refund_id"),
+        "admin_notes": ((refund.get("admin_notes") or "") + " | " + (payload.admin_notes or "")).strip(" |"),
+        "completed_at": now,
+        "completed_by": current_user["_id"],
+        "updated_at": now,
+    }})
+
+    order = await db.orders.find_one({"_id": refund["order_id"]})
+    if order:
+        await db.orders.update_one({"_id": order["_id"]}, {"$set": {
+            "status": "refunded",
+            "payment_status": "refunded",
+            "refunded_at": now,
+            "updated_at": now,
+        }})
+        await create_notification(
+            db,
+            user_id=order["user_id"],
+            title="Refund completed",
+            message=(
+                f"Your refund of {refund.get('approved_amount') or 0:,.0f} {order.get('currency') or 'XAF'} "
+                f"for order #{order.get('order_number') or order['_id'][:8]} has been paid out. "
+                f"Expect funds on your "
+                + ("card within 5–10 business days." if order.get("payment_method") == "stripe"
+                   else "MoMo / Orange wallet within 2–3 business days.")
+            ),
+            notification_type="refund_completed",
+            dedupe_key=f"refund_completed:{refund_id}",
+            data={"refund_id": refund_id, "order_id": order["_id"]},
+            action_url="/orders",
+            source="refunds",
+        )
+
+    return {"refund_id": refund_id, "status": RefundStatus.COMPLETED, "proof_reference": payload.proof_reference}

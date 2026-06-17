@@ -31,7 +31,11 @@ import api from '@/api/client';
 
 // Visual identity for each ledger event type. Kept small & high-contrast.
 const EVENT_META = {
-  intent_created: { Icon: Clock, color: 'text-slate-500 bg-slate-100', label: 'Payment initiated' },
+  // iter 248: "intent_created" is just a QUOTE — the amount the checkout page
+  // showed when the user clicked Pay. The order total can change before the
+  // gateway actually captures (e.g. discount auto-applied, item removed,
+  // currency snapshot). To avoid misleading customers we relabel and grey it.
+  intent_created: { Icon: Clock, color: 'text-slate-500 bg-slate-100', label: 'Payment initiated (quote)', secondary: true },
   authorized: { Icon: ShieldCheck, color: 'text-blue-600 bg-blue-50', label: 'Authorized' },
   captured: { Icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50', label: 'Captured' },
   failed: { Icon: XCircle, color: 'text-rose-600 bg-rose-50', label: 'Failed' },
@@ -191,6 +195,29 @@ export default function MoneyTrail({ orderId }) {
         <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2 px-1">
           Timeline · {events.length} event{events.length !== 1 ? 's' : ''}
         </p>
+        {/* iter 248: explain the common quote-vs-captured delta inline so
+            customers (and finance) don't open a ticket about it. */}
+        {(() => {
+          const intent = events.find((e) => e.event_type === 'intent_created');
+          const cap = events.find((e) => e.event_type === 'captured');
+          if (intent && cap && intent.amount && cap.amount && Math.abs(intent.amount - cap.amount) > 1) {
+            const delta = intent.amount - cap.amount;
+            return (
+              <div
+                className="mb-2 mx-1 text-[11px] bg-amber-50 border border-amber-200 text-amber-800 rounded px-2.5 py-1.5 flex items-start gap-1.5"
+                data-testid="money-trail-quote-explainer"
+              >
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>
+                  <strong>{formatFCFA(Math.abs(delta))}</strong> {delta > 0 ? 'less' : 'more'} captured than initiated.
+                  The "initiated" amount is the checkout quote at the moment Pay was clicked. The order total can change before settlement
+                  (auto-discount, edited cart, currency snapshot). The <strong>captured</strong> value below is the authoritative settled amount.
+                </span>
+              </div>
+            );
+          }
+          return null;
+        })()}
         {/* Connector line */}
         <div className="absolute left-[15px] top-7 bottom-2 w-[2px] bg-slate-200" aria-hidden />
         <ol className="space-y-3">
@@ -205,10 +232,13 @@ export default function MoneyTrail({ orderId }) {
                 </div>
                 <div className={`flex-1 ${isLast ? '' : 'pb-1'}`}>
                   <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div className="font-medium text-sm text-slate-800">{meta.label}</div>
+                    <div className={`font-medium text-sm ${meta.secondary ? 'text-slate-500' : 'text-slate-800'}`}>{meta.label}</div>
                     <div className="flex items-center gap-1.5">
                       {ev.amount != null && ev.amount !== 0 && (
-                        <Badge variant="outline" className="text-[11px]">
+                        <Badge
+                          variant="outline"
+                          className={`text-[11px] ${meta.secondary ? 'text-slate-500 border-dashed border-slate-300' : ''}`}
+                        >
                           {formatFCFA(ev.amount)} {ev.currency || ''}
                         </Badge>
                       )}

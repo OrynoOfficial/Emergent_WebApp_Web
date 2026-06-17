@@ -231,8 +231,21 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
         )}
 
         <div className="space-y-4 py-3">
-          {/* Ticket invalidated banner — appears when a refund request has stripped the QR/barcode. */}
-          {order.ticket_invalidated && (
+          {/* Ticket invalidated / Money refunded banners (iter 245+248). */}
+          {order.status === 'refunded' ? (
+            <div
+              data-testid="money-refunded-banner"
+              className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <p className="text-xs text-emerald-800">
+                <span className="font-semibold">Money refunded.</span>{' '}
+                {order.payment_method === 'stripe'
+                  ? `${formatFCFA(order.refunded_amount || order.total_amount)} will land on your original card within 5–10 business days.`
+                  : `Expect ${formatFCFA(order.refunded_amount || order.total_amount)} on your MoMo / Orange wallet within 2–3 business days.`}
+              </p>
+            </div>
+          ) : order.ticket_invalidated && (
             <div
               data-testid="ticket-invalidated-banner"
               className="rounded-xl border-2 border-rose-200 bg-rose-50 p-3 flex items-center gap-2"

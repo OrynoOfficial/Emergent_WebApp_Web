@@ -1,0 +1,38 @@
+{
+  "summary": "iter 248 refund/money-trail UX. Backend POST /api/refunds/{id}/complete is solid (4/4 pytest tests pass: happy path + state guard + admin-only + 404). Frontend: Money Trail explainer + 'Payment initiated (quote)' label + Captured label + 'Money refunded' banner (with MoMo 2–3 biz days ETA, NO ticket-invalidated banner) all render correctly on order 688db2d1. Admin refunds page: 'Mark paid out' button shows on approved+manual rows with the correct data-testid; History sub-tab defaults to 'all' filter (chip is active, queue-only chips pending/approved are excluded). ONE FAIL: AdminRefunds approve dialog's 'Approved amount' input is NOT locked — feature #4 was missed by main agent.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminRefunds approve dialog",
+        "issue": "PRD #4 not implemented in source. The Input at /app/frontend/src/pages/admin/AdminRefunds.jsx:631–636 lacks `disabled`, `readOnly`, slate-100 background, and the required hint 'Locked by the active refund policy. To grant a different amount, edit the policy schedule first.' Tested live: disabled=null, readonly=null, computed bg=rgb(255,255,255), hint text reads 'Can grant more or less than requested. Capped at order total.' The value IS correctly pre-populated to eligible_amount (7500), so openAction wiring works — only the lock/styling/hint copy is missing.",
+        "selector": "[data-testid='admin-approved-amount']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter248_refund_complete.py",
+    "/app/test_reports/pytest/iter248.xml"
+  ],
+  "action_items": [
+    "AdminRefunds.jsx ~L631: wrap the Approved-amount Input with `disabled readOnly className='mt-1 bg-slate-100 cursor-not-allowed'` and replace the hint <p> with 'Locked by the active refund policy. To grant a different amount, edit the policy schedule first.' Keep the existing value/onChange so the approved_amount still posts as eligible_amount."
+  ],
+  "critical_code_review_comments": [
+    "refunds.py /complete: gateway_refund_id falls back to refund.get('gateway_refund_id') when proof omitted — fine, but consider rejecting blank proof for non-cash methods to enforce auditability.",
+    "refunds.py: admin_notes concatenation strips ' |' edges but could yield ' | newnote' when previous note empty. Minor cosmetic.",
+    "AdminRefunds.jsx is now 673 lines — approaching the 700-line split threshold; consider extracting the ActionDialog & history sub-tab into their own components."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter248_refund_complete.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "5/6 = 83%"},
+  "test_credentials": "Customer customer@test.com / testpassword123 ; Admin admin@test.com / testpassword123",
+  "seed_data_creation": "Temporarily reassigned order 688db2d1 + payment f39b0f41 user_id to customer@test.com to view discrepancy; REVERTED back to original owner (23b78ad0). Seeded one PENDING + one APPROVED+manual test refund (TEST248_* prefix) on customer's account for admin UI verification; CLEANED UP after run.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Only the AdminRefunds approve-dialog lock remains. After main-agent applies the readOnly+disabled+slate-bg+new hint change and rebuilds the vite bundle, re-run a quick playwright assertion against [data-testid='admin-approved-amount'] for `disabled` AND `readonly` attributes, slate-ish bg, and the new hint copy. All other 5 acceptance criteria already verified passing.",
+  "rca of the issue": "Main agent updated PRD/spec for feature #4 but did not modify the JSX at line 631. The Input still uses the old freely-editable variant; nothing in the diff added disabled/readOnly props or replaced the hint <p>. Pure missing-implementation, not a regression."
+}
