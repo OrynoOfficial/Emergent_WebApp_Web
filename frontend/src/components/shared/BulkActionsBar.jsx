@@ -110,7 +110,7 @@ export default function BulkActionsBar({
               <span className="ml-1">Deactivate</span>
             </Button>
           )}
-          {(onExport || selectedRows.length > 0) && (
+          {onExport && (
             <Button size="sm" variant="ghost" className="text-slate-300 hover:bg-slate-800 hover:text-white h-8" onClick={handleExportCsv} data-testid="bulk-export-btn">
               <Download className="w-3.5 h-3.5" />
               <span className="ml-1">Export CSV</span>

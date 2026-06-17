@@ -516,6 +516,11 @@ export default function BillsManagement() {
         selectedRows={bulk.selectedRows}
         onClear={bulk.clear}
         onDelete={bulkDelete}
+        onExport={(rows) => rows.map(b => ({
+          id: b.id, customer: b.customer_name, email: b.customer_email,
+          service: b.service_type, total: b.total, status: b.status,
+          payment: b.payment_method, created: b.created_at,
+        }))}
       />
     </>
   );

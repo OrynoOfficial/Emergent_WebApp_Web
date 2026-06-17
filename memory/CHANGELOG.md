@@ -1,3 +1,16 @@
+### 2026-02-17 — System Cleanup admin UI + Bulk Actions wired to 4 more management pages (iter186)
+- **New super-admin route** `/admin/ops/cleanup` (`SystemCleanup.jsx`): one-click dry-run preview and Apply that wraps `backend/scripts/cleanup_test_data.py` via the new `backend/routes/admin_ops.py` (gated by `require_super_admin`). Shows a 4-column table (`Test Users / Orders / Showtimes / Locations` matched + the cascade deletes per collection), a "Protected accounts (never deleted)" amber card with the 4 seed emails, and an AlertDialog confirmation before any delete. Sidebar surfaces it under **System → System Cleanup** (super_admin only).
+- **Bulk Actions rolled out** beyond Operators — now wired into:
+  - `/admin/users` → header `users-bulk-select-all`, per-row checkboxes, BulkActionsBar with Activate/Deactivate/Export CSV/Delete.
+  - `/admin/refunds` → header `refunds-bulk-select-all` + Delete only (Export intentionally not provided; the bulk-export-btn no longer renders on this page).
+  - `/admin/bills` → header `bills-bulk-select-all` + Delete + Export CSV (no activate/deactivate — bills have no active flag).
+  - `/management/events` (legacy Events table) → header `events-bulk-select-all` + Activate/Deactivate/Export/Delete.
+- **Shared `BulkActionsBar` tightened**: Export button now renders ONLY when `onExport` is explicitly provided (dropped the `selectedRows.length>0` fallback) so pages that should not export (e.g. Refunds) stay clean.
+- **Backend pytest coverage**: `test_admin_ops_cleanup.py` — verifies `/api/admin/ops/cleanup/preview` is super_admin-only (admin → 403), unauthenticated → 401/403, super_admin → 200 with the expected stats shape. Combined with existing `test_admin_bulk.py`, 8/8 pass.
+- **Tested** (iter186 — frontend e2e via testing_agent_v3_fork): 6/7 acceptance criteria fully verified PASS — System Cleanup preview/apply/forbidden flows ✔, Users/Bills/Operators bulk bars ✔. Refunds was a partial pass on the original run because the Export button was leaking through — fixed in the same iteration by tightening `BulkActionsBar`. Events legacy table couldn't be exercised because the dev env has 0 legacy events; the wiring is in place and consistent with the other pages.
+
+
+
 ### 2026-02-15 — Management consolidation rolled out to 5 more pages + Banquet refactored to use the shared shell (iter217)
 - **Built `<ManagementShell>`** (shared nav-card chrome) and `<SubpageCard>` (shared subpage modal-strip) under `/components/management/shared/`. Reusable across the marketplace.
 - **Migrated**: `CinemaManagement.jsx`, `HotelManagement.jsx`, `LaundryManagement.jsx`, `TravelManagement.jsx`, `CarRentalManagement.jsx`, and retroactively `BanquetManagement.jsx` — all six now render a single nav Card containing title + collapsible (subtitle + scope filter + Refresh + TabsList). Testid prefixes: `cinema-mgmt`, `hotel-mgmt`, `laundry-mgmt`, `travel-mgmt`, `carrental-mgmt`, `bq-mgmt`.

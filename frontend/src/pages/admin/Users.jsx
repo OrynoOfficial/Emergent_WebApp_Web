@@ -782,6 +782,9 @@ export default function UserManagement() {
         onDelete={bulkDelete}
         onActivate={bulkActivate}
         onDeactivate={bulkDeactivate}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, name: r.full_name, email: r.email, role: r.role, status: r.status, operator: r.operator_name || '', joined: r.created_at,
+        }))}
       />
 
       {/* User Detail Modal */}

@@ -578,6 +578,11 @@ export default function EventsManagement() {
         onDelete={bulkEventsDelete}
         onActivate={bulkEventsActivate}
         onDeactivate={bulkEventsDeactivate}
+        onExport={(rows) => rows.map(e => ({
+          id: e._id || e.id, name: e.name || e.title, type: e.event_type || e.type,
+          venue: e.venue_name || e.venue || '', date: e.start_date || e.date,
+          capacity: e.total_capacity || e.capacity, price: e.ticket_price,
+        }))}
       />
     </>
   );

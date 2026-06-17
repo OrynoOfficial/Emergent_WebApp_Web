@@ -1195,6 +1195,11 @@ export default function OperatorsManagement() {
         onDelete={bulkDelete}
         onActivate={bulkActivate}
         onDeactivate={bulkDeactivate}
+        onExport={(rows) => rows.map(o => ({
+          id: o.id, name: o.name, email: o.contact_email || o.email || '',
+          status: o.status, service_types: (o.service_types || []).join('|'),
+          created: o.created_at,
+        }))}
       />
     </>
   );
