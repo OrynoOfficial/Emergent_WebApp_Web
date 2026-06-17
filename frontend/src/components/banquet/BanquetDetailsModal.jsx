@@ -14,6 +14,8 @@ import {
   ChevronLeft, ChevronRight, Plus, Minus, Package as PackageIcon, Sparkles,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { getServiceCoords } from '@/utils/cityCoords';
+import LocationMap from '@/components/shared/LocationMap';
 
 const PRICING_SUFFIX = {
   per_event: 'flat', per_person: '/ person', per_hour: '/ hour',
@@ -131,6 +133,26 @@ function ServiceDetails({ svc, qtyInCart, onAdd, onSetQty, onOpenCart, hideAddCt
             </div>
           </div>
         )}
+
+        {/* Live location map — uses lat/lon when present, otherwise falls back
+            to the city's centroid via getServiceCoords(). Hidden entirely when
+            the service has neither (e.g. operator hasn't filled city yet). */}
+        {(() => {
+          const coords = getServiceCoords(svc);
+          if (!coords) return null;
+          return (
+            <div data-testid="banquet-service-map">
+              <LocationMap
+                lat={coords.lat}
+                lon={coords.lon}
+                title={svc.name}
+                address={svc.address || svc.city}
+                height={compact ? 'h-36' : 'h-44'}
+                showGoogleLink
+              />
+            </div>
+          );
+        })()}
 
         <div className="grid grid-cols-2 gap-2.5 text-sm">
           {(svc.capacity_min != null || svc.capacity_max != null) && (
@@ -333,6 +355,44 @@ function PackageDetails({ pkg, inCart, onAdd, onRemove, onPickService }) {
             })}
           </div>
         </div>
+
+        {/* Bundle map — pin every member service that has a usable
+            location. The first pin doubles as the centre. Hidden when no
+            member has a city/lat-lon yet. */}
+        {(() => {
+          const pins = memberSvcs
+            .map((m, idx) => {
+              const c = getServiceCoords(m.full);
+              if (!c) return null;
+              return {
+                id: m.service_id || `${idx}`,
+                lat: c.lat,
+                lon: c.lon,
+                name: m.full?.name || m.service_name || 'Bundle service',
+                type: 'banquet',
+              };
+            })
+            .filter(Boolean);
+          if (pins.length === 0) return null;
+          const [first, ...rest] = pins;
+          return (
+            <div data-testid="banquet-package-map">
+              <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">
+                Where it happens
+              </p>
+              <LocationMap
+                lat={first.lat}
+                lon={first.lon}
+                title={pkg.name}
+                address={first.name}
+                nearbyPins={rest}
+                height="h-44"
+                zoom={pins.length > 1 ? 11 : 13}
+                showGoogleLink
+              />
+            </div>
+          );
+        })()}
 
         <div className="bg-teal-50 rounded-lg p-3 border border-teal-200 text-sm">
           {pkg.subtotal && (

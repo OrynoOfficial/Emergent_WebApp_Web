@@ -1,5 +1,13 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 253: Banquet live maps in preview modals)
+
+- `utils/cityCoords.js` — new helper. `getCityCoords(name)` + `getServiceCoords(svc)` resolve a coord pair from `svc.latitude/longitude`, `svc.location.lat/lon`, or fallback to a 17-city Cameroon lookup (Douala, Yaoundé, Bafoussam, Bamenda, Buea, Limbé, Kribi, Garoua, Ngaoundéré, Maroua, Bertoua, Ebolowa, Edéa, Kumba, Dschang). Case- and accent-tolerant.
+- `BanquetDetailsModal.jsx`:
+  - **ServiceDetails** now mounts a `<LocationMap>` (testid `banquet-service-map`) below the address pill — `height="h-44"` (or `h-36` when nested/compact), title = svc.name, address = svc.address || svc.city, `showGoogleLink`.
+  - **PackageDetails** renders a "Where it happens" section with a single `<LocationMap>` (testid `banquet-package-map`). The first member service with coords becomes the centre marker; every other member becomes a `nearbyPins[]` entry, so customers see all bundle locations on one map. Zoom drops to 11 when ≥2 pins (regional view).
+- Verified ✅: clicking the 360 Wedding Deluxe Package opens the modal with a Leaflet map centred on Limbe, OpenStreetMap tiles loaded, member services list shows per-service city (Limbe, Douala, Douala).
+
 ## Latest Changes (Feb 2026 — iter 252: 10-item Banquet/Admin UX polish)
 
 ### ✅ Punch-list (10 items, completion of previous 15)
