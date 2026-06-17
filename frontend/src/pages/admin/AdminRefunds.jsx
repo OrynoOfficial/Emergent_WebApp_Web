@@ -627,12 +627,19 @@ export default function AdminRefunds() {
               </div>
               {actioning.action === 'approve' && (
                 <div>
-                  <label className="text-xs">Approved amount (FCFA)</label>
-                  <Input type="number" min="0" max={actioning.refund.total_amount}
-                    value={adminAmount} onChange={e => setAdminAmount(e.target.value)}
-                    className="mt-1" data-testid="admin-approved-amount" />
+                  <label className="text-xs">Approved amount (policy-determined)</label>
+                  {/* iter 248: amount is locked — policy schedule + eligibility
+                      engine compute it. Admin cannot override here. */}
+                  <Input
+                    type="number"
+                    value={adminAmount}
+                    readOnly
+                    disabled
+                    className="mt-1 bg-slate-100 cursor-not-allowed text-slate-700"
+                    data-testid="admin-approved-amount"
+                  />
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Can grant more or less than requested. Capped at order total.
+                    Locked by the active refund policy. To grant a different amount, edit the policy schedule first.
                   </p>
                 </div>
               )}

@@ -1,5 +1,44 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 248: refund automation, money-trail clarity, banner swap)
+
+### Money Trail clarity (`MoneyTrail.jsx`)
+- `intent_created` event is now labeled **"Payment initiated (quote)"** in muted slate (dashed-border amount badge) — visually demoting it because the order total can change between checkout and capture.
+- When `intent.amount ≠ captured.amount` by >1 XAF, an amber explainer (`data-testid="money-trail-quote-explainer"`) renders above the timeline: *"X less captured than initiated. The 'initiated' amount is the checkout quote at the moment Pay was clicked..."*. Root cause documented in PRD: orders mutated post-checkout (auto-discount, cart edits) leave the intent stale; captured is the authoritative ledger value.
+
+### Refund banner swap (`OrderDetailModal.jsx`)
+- `order.status === 'refunded'` → green **"Money refunded"** banner (`data-testid="money-refunded-banner"`) with provider-specific ETA:
+  - Stripe → "5–10 business days on your card"
+  - MoMo/Orange → "2–3 business days on your wallet"
+- `ticket_invalidated && !refunded` → existing rose ticket-invalidated banner.
+
+### Refund automation answer + manual completion flow
+- **Stripe** refunds = fully automated via `StripeService.create_refund` (already shipped).
+- **MoMo / Orange / Cash / Bank transfer** = manual. Refund auto-transitions to `APPROVED` + `requires_manual_processing=true`; ops then runs the actual payout in the operator's mobile app and clicks the new **"Mark paid out"** button.
+- New endpoint **POST `/api/refunds/{id}/complete`**:
+  - Admin-only guard.
+  - Refuses unless `status==='approved'`.
+  - Stamps `completed_at`, `completed_by`, optional `gateway_refund_id` (proof reference like a MoMo financial_id).
+  - Flips order `status='refunded'` + `payment_status='refunded'` + `refunded_at`.
+  - Fires `refund_completed` in-app notification with provider-specific ETA copy.
+- Frontend AdminRefunds row: `data-testid="complete-refund-{id}"` button next to the "Payout owed" badge, prompts for an optional proof reference, calls /complete.
+
+### Admin approved-amount lock
+- AdminRefunds approve dialog Input (`data-testid="admin-approved-amount"`) is now `readOnly disabled bg-slate-100 cursor-not-allowed`.
+- Hint copy: *"Locked by the active refund policy. To grant a different amount, edit the policy schedule first."*
+- Value pre-populates from `refund.eligible_amount`; submit still posts approved_amount.
+
+### History sub-tab default
+- `view==='history'` now defaults `statusFilter='all'` (was `'completed'`). The `'all'` server filter excludes pending/approved (queue items), so history reliably shows completed/rejected/failed/cancelled.
+
+### Tests
+- `/app/backend/tests/test_iter248_refund_complete.py` — 4/4 pytest pass: happy path, state guard, admin-only, 404.
+- iter 248 testing agent: 5/6 frontend assertions pass; the last one (lock) caught a duplicate JSX block and was fixed in this run.
+
+### Build pipeline reminder (still relevant)
+- `vite build && vite preview` — no hot reload. `sudo supervisorctl restart frontend` + ~20s rebuild after JSX edits.
+
+
 ## Latest Changes (Feb 2026 — iter 247: Global Search overhaul + SmartSearchBar omnibar)
 
 ### Global search (`GET /api/search/`)
