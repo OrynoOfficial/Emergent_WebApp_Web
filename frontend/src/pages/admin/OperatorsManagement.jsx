@@ -31,6 +31,8 @@ import Pagination from '@/components/common/Pagination';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
 import OperatorCommissionCell from '@/components/admin/OperatorCommissionCell';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 const OPERATOR_STATUS = ['all', 'active', 'pending', 'suspended', 'inactive'];
 const SERVICE_TYPES = ['all', 'hotel', 'travel', 'car_rental', 'restaurant', 'events', 'cinema', 'laundry', 'banquet', 'package'];
@@ -177,6 +179,16 @@ export default function OperatorsManagement() {
 
   // Reset page when filters change
   useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, serviceFilter, ownerFilter, dateFrom, dateTo]);
+
+  // Bulk selection — operates on the visible (paginated) rows.
+  const bulk = useBulkSelection(paginatedOperators, { idKey: 'id' });
+  const runBulk = async (action) => {
+    await api.post('/admin/bulk', { collection: 'operators', action, ids: bulk.selectedIds });
+    await fetchOperators();
+  };
+  const bulkDelete   = () => runBulk('delete');
+  const bulkActivate = () => runBulk('activate');
+  const bulkDeactivate = () => runBulk('deactivate');
 
   const getServiceBadge = (service) => {
     const colors = SERVICE_COLORS[service] || { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' };
@@ -533,6 +545,13 @@ export default function OperatorsManagement() {
               <table className="w-full">
                 <thead className="bg-slate-50 border-b">
                   <tr>
+                    <th className="py-4 px-4 w-10">
+                      <BulkSelectHeader
+                        allSelected={bulk.allSelected}
+                        partiallySelected={bulk.partiallySelected}
+                        onToggleAll={bulk.toggleAll}
+                      />
+                    </th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Operator</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Services</th>
                     <th className="py-4 px-6 text-left text-sm font-semibold text-slate-600">Location</th>
@@ -547,6 +566,13 @@ export default function OperatorsManagement() {
                 <tbody className="divide-y">
                   {paginatedOperators.map((operator) => (
                     <tr key={operator.id} className="hover:bg-slate-50 transition-colors" data-testid={`operator-row-${operator.id}`}>
+                      <td className="py-4 px-4">
+                        <BulkSelectCell
+                          selected={bulk.isSelected(operator.id)}
+                          onToggle={bulk.toggle}
+                          id={operator.id}
+                        />
+                      </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-[#082c59]/10 rounded-lg flex items-center justify-center">
@@ -1159,6 +1185,17 @@ export default function OperatorsManagement() {
       </Dialog>
       </TabsContent>
       </ManagementShell>
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="operator"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        onActivate={bulkActivate}
+        onDeactivate={bulkDeactivate}
+      />
     </>
   );
 }

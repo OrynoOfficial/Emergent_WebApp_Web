@@ -52,6 +52,7 @@ from routes.activity_log import router as activity_log_router
 from routes.events_management import router as events_management_router
 from routes.qr import router as qr_router
 from routes.refunds import router as refunds_router
+from routes.admin_bulk import router as admin_bulk_router
 from routes.pressing import router as pressing_router
 from routes.banquets import router as banquets_router, packages_router as banquet_packages_router, cart_router as banquet_cart_router
 from routes.cinema import router as cinema_router
@@ -511,6 +512,7 @@ app.include_router(employees_router)
 app.include_router(events_management_router)
 app.include_router(qr_router)
 app.include_router(refunds_router)
+app.include_router(admin_bulk_router)
 app.include_router(pressing_router)
 app.include_router(banquets_router)
 # Include packages_router AFTER banquets so that /packages/ on the

@@ -201,6 +201,35 @@ async def list_refunds(status_filter: Optional[str] = None,
         r["id"] = r.pop("_id")
         await _enrich_refund_with_customer(db, r)
         items.append(r)
+
+    # Single-pass risk-flag attachment — one aggregation across every unique
+    # user_id in the response, so the queue rows can flag frequent refunders
+    # without N+1 round-trips.
+    user_ids = [r.get("user_id") for r in items if r.get("user_id")]
+    if user_ids:
+        unique_ids = list(set(user_ids))
+        orders_agg = await db.orders.aggregate([
+            {"$match": {"user_id": {"$in": unique_ids}, "payment_status": {"$in": ["paid", "completed", "verified"]}}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+        ]).to_list(len(unique_ids))
+        refunds_agg = await db.refunds.aggregate([
+            {"$match": {"user_id": {"$in": unique_ids}, "status": {"$in": ["completed", "approved"]}}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+        ]).to_list(len(unique_ids))
+        order_counts = {x["_id"]: x["count"] for x in orders_agg}
+        refund_counts = {x["_id"]: x["count"] for x in refunds_agg}
+        for r in items:
+            uid = r.get("user_id")
+            if not uid or not r.get("customer"):
+                continue
+            oc = order_counts.get(uid, 0)
+            rc = refund_counts.get(uid, 0)
+            rate = (rc / oc) if oc > 0 else 0
+            if rc >= 10 and rate > 0.5:
+                r["customer"]["risk_flag"] = "suspicious"
+            elif rc >= 5 or rate > 0.3:
+                r["customer"]["risk_flag"] = "frequent_refunder"
+
     return {"refunds": items, "total": total}
 
 
@@ -241,6 +270,15 @@ async def refund_details(refund_id: str,
                 {"$group": {"_id": None, "amount": {"$sum": "$approved_amount"}, "count": {"$sum": 1}}},
             ]
             past_refunds = await db.refunds.aggregate(refund_pipeline).to_list(1)
+            total_orders = int(lifetime[0]["count"]) if lifetime else 0
+            refund_count = int(past_refunds[0]["count"]) if past_refunds else 0
+            refund_rate = (refund_count / total_orders) if total_orders > 0 else 0
+            # Heuristic risk flags surfaced to the admin UI.
+            risk_flag = None
+            if refund_count >= 10 and refund_rate > 0.5:
+                risk_flag = "suspicious"
+            elif refund_count >= 5 or refund_rate > 0.3:
+                risk_flag = "frequent_refunder"
             customer = {
                 "id": user_id,
                 "name": full,
@@ -250,9 +288,11 @@ async def refund_details(refund_id: str,
                 "city": u.get("city"),
                 "joined_at": u.get("created_at").isoformat() if hasattr(u.get("created_at", ""), "isoformat") else u.get("created_at"),
                 "lifetime_spent": float(lifetime[0]["spent"]) if lifetime else 0,
-                "total_orders": int(lifetime[0]["count"]) if lifetime else 0,
-                "total_refunds_count": int(past_refunds[0]["count"]) if past_refunds else 0,
+                "total_orders": total_orders,
+                "total_refunds_count": refund_count,
                 "total_refunded_amount": float(past_refunds[0]["amount"]) if past_refunds else 0,
+                "refund_rate": round(refund_rate, 3),
+                "risk_flag": risk_flag,
             }
 
     return {"refund": refund, "order": order, "customer": customer}

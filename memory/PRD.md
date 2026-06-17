@@ -1,5 +1,39 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 251: Cleanup script, bulk actions, frequent refunder, DB indexes, INDEX.md)
+
+### 🧹 Reusable cleanup script
+- `backend/scripts/cleanup_test_data.py` — surgical pattern-based deletion of test/QA-created data across `users`, `orders`, `bookings`, `refunds`, `receipts`, `bills`, `ticket_validations`, `event_locations`, `event_showtimes`, `commission_configs`, plus aged tokens.
+- Dry-run by default; `--apply` to execute. Never touches the 4 protected seed accounts.
+- Initial run cleared 845 rows (236 orders, 220 showtimes, 230 locations, 138 refunds, 21 test users).
+
+### 📦 Bulk actions everywhere
+- **Shared infrastructure**:
+  - `frontend/src/hooks/useBulkSelection.js` — selection state machine.
+  - `frontend/src/components/shared/BulkActionsBar.jsx` — sticky bottom bar with **Activate / Deactivate / Export CSV / Delete** + confirmation alert. Reusable `BulkSelectHeader` and `BulkSelectCell`.
+  - `backend/routes/admin_bulk.py` — `POST /api/admin/bulk` accepts `{collection, action, ids}`, gated by `admin.delete` permission. Whitelist of 24 collections, with cascading delete for parent rows (e.g. delete operator → also deletes its bookings/bills; delete event_location → its showtimes).
+- **Wired into**:
+  - `OperatorsManagement.jsx` (canonical example — header checkbox, per-row checkbox, sticky bar with all 4 actions).
+- **Pattern documented in INDEX.md** so the remaining management pages can be wired iteratively with ~20 LoC changes each.
+
+### 🚨 Frequent refunder badge
+- Backend computes `risk_flag` per customer in both `GET /api/refunds` (batch aggregation) and `GET /api/refunds/{id}/details` (single user):
+  - `frequent_refunder` if ≥5 past refunds OR > 30% refund rate.
+  - `suspicious` if ≥10 past refunds AND > 50% refund rate.
+- Frontend:
+  - **Inline chip** on queue customer cell: ⚠️ (amber) or 🚨 (rose).
+  - **Bordered alert block** at the top of the Customer card in the detail modal with the count, rate, and recommended action.
+
+### 🗃 DB indexes
+- 17 new indexes added in `backend/utils/startup_indexes.py` covering: `refunds` (status+created / user / order), `commission_configs` (resolve cascade), `event_showtimes` (operator+status+start / location+start / status+start), `event_locations` (operator+active / city+active), `ticket_validations` (order / scanner+created / created), `bills` (user+created / op+status / status+due), `receipts` (order / user+created).
+- Verified live: `mongosh db.refunds.getIndexes()` confirms all new indexes present.
+
+### 📖 INDEX.md
+- New `/app/memory/INDEX.md` — comprehensive navigation aid: file-tree map, route ↔ page ↔ backend table, cross-cutting concerns (auth/perms/payments/bulk/etc.), reusable hooks/helpers cheat-sheet, MongoDB hot-collection index, test layout, service colour tokens, and "when in doubt" recipes.
+
+### Tests
+- `tests/test_admin_bulk.py` — 5 new pytest cases (happy path, toggle, unknown collection, customer cannot call, unknown action). **33/33 backend tests passing** (5 bulk + 12 refund + 4 scanner + 6 commission + 3 poster + 3 refund-details).
+
 ## Latest Changes (Feb 2026 — iter 250: Refunds UX overhaul + operator commission preview)
 
 ### 🔄 Refunds page reworked (`/admin/refunds`)

@@ -276,6 +276,57 @@ INDEX_DEFINITIONS: list[IndexSpec] = [
 
     # ── revoked_access_tokens (server-side logout blacklist) ───────────
     IndexSpec("revoked_access_tokens", [("expires_at", ASCENDING)], "ix_revoked_access_tokens_ttl", expire_after_seconds=0),
+
+    # ── refunds ────────────────────────────────────────────────────────
+    # Hot paths: list pending for admin queue, customer's own refunds by user,
+    # order lookup during eligibility check + restoration.
+    IndexSpec("refunds", [("status", ASCENDING), ("created_at", DESCENDING)],
+              "ix_refunds_status_created"),
+    IndexSpec("refunds", [("user_id", ASCENDING), ("created_at", DESCENDING)],
+              "ix_refunds_user_created"),
+    IndexSpec("refunds", [("order_id", ASCENDING)], "ix_refunds_order"),
+
+    # ── commission_configs ────────────────────────────────────────────
+    # The `/resolve` endpoint hits this on EVERY booking-page render — must
+    # be sub-ms even at 10k+ configs. Composite (service_type, operator_id,
+    # is_active) supports the operator → category → global cascade.
+    IndexSpec("commission_configs",
+              [("service_type", ASCENDING), ("operator_id", ASCENDING), ("is_active", ASCENDING)],
+              "ix_commission_resolve"),
+
+    # ── event_showtimes / event_locations ─────────────────────────────
+    # Discovery: customers list by location + date; operators list by op_id.
+    IndexSpec("event_showtimes", [("operator_id", ASCENDING), ("status", ASCENDING), ("start_datetime", ASCENDING)],
+              "ix_showtimes_op_status_start"),
+    IndexSpec("event_showtimes", [("location_id", ASCENDING), ("start_datetime", ASCENDING)],
+              "ix_showtimes_location_start"),
+    IndexSpec("event_showtimes", [("status", ASCENDING), ("start_datetime", ASCENDING)],
+              "ix_showtimes_public_listing"),
+    IndexSpec("event_locations", [("operator_id", ASCENDING), ("is_active", ASCENDING)],
+              "ix_event_locations_op_active"),
+    IndexSpec("event_locations", [("city", ASCENDING), ("is_active", ASCENDING)],
+              "ix_event_locations_city_active"),
+
+    # ── ticket_validations / scan logs ────────────────────────────────
+    # Operator scanner endpoints query by order_id (already on orders index)
+    # but the validation history page lists by created_at DESC per operator.
+    IndexSpec("ticket_validations", [("order_id", ASCENDING)], "ix_validations_order"),
+    IndexSpec("ticket_validations", [("scanned_by", ASCENDING), ("created_at", DESCENDING)],
+              "ix_validations_scanner", sparse=True),
+    IndexSpec("ticket_validations", [("created_at", DESCENDING)], "ix_validations_created"),
+
+    # ── bills ─────────────────────────────────────────────────────────
+    IndexSpec("bills", [("user_id", ASCENDING), ("created_at", DESCENDING)],
+              "ix_bills_user_created", sparse=True),
+    IndexSpec("bills", [("operator_id", ASCENDING), ("status", ASCENDING)],
+              "ix_bills_op_status", sparse=True),
+    IndexSpec("bills", [("status", ASCENDING), ("due_date", ASCENDING)],
+              "ix_bills_status_due"),
+
+    # ── receipts ──────────────────────────────────────────────────────
+    IndexSpec("receipts", [("order_id", ASCENDING)], "ix_receipts_order", sparse=True),
+    IndexSpec("receipts", [("user_id", ASCENDING), ("created_at", DESCENDING)],
+              "ix_receipts_user_created"),
 ]
 
 

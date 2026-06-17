@@ -41,7 +41,15 @@ function CustomerHoverCard({ customer }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" className="text-left" data-testid={`customer-trigger-${customer.id}`}>
-            <p className="font-medium text-slate-800 text-sm leading-tight">{customer.name || '—'}</p>
+            <p className="font-medium text-slate-800 text-sm leading-tight flex items-center gap-1">
+              {customer.name || '—'}
+              {customer.risk_flag === 'suspicious' && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-200" data-testid="risk-chip-suspicious">🚨</span>
+              )}
+              {customer.risk_flag === 'frequent_refunder' && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200" data-testid="risk-chip-frequent">⚠️</span>
+              )}
+            </p>
             <p className="text-[11px] text-slate-500 truncate max-w-[160px]">{customer.email}</p>
           </button>
         </TooltipTrigger>
@@ -136,7 +144,30 @@ function RefundDetailModal({ refundId, onClose }) {
               </div>
               <CardContent className="p-4">
                 {customer ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <>
+                    {customer.risk_flag && (
+                      <div
+                        className={`mb-3 p-3 rounded-lg border-l-4 flex items-start gap-2 ${
+                          customer.risk_flag === 'suspicious'
+                            ? 'bg-rose-50 border-rose-500 text-rose-900'
+                            : 'bg-amber-50 border-amber-500 text-amber-900'
+                        }`}
+                        data-testid={`risk-badge-${customer.risk_flag}`}
+                      >
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <div className="flex-1 text-xs">
+                          <p className="font-bold uppercase tracking-wide">
+                            {customer.risk_flag === 'suspicious' ? '🚨 Suspicious refund pattern' : '⚠️ Frequent refunder'}
+                          </p>
+                          <p className="text-[11px] mt-0.5">
+                            {customer.total_refunds_count} refund{customer.total_refunds_count !== 1 ? 's' : ''} on {customer.total_orders} order{customer.total_orders !== 1 ? 's' : ''}
+                            {' '}({Math.round((customer.refund_rate || 0) * 100)}% rate).
+                            {customer.risk_flag === 'suspicious' ? ' Review carefully before approving.' : ' Worth a closer look.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                     <div>
                       <p className="text-[10px] uppercase text-slate-500">Name</p>
                       <p className="font-semibold text-slate-900">{customer.name}</p>
@@ -164,6 +195,7 @@ function RefundDetailModal({ refundId, onClose }) {
                       <p className="text-[10px] text-slate-500">{customer.total_refunds_count} refunded</p>
                     </div>
                   </div>
+                  </>
                 ) : (
                   <p className="text-xs text-slate-500 italic">Customer profile not available.</p>
                 )}
