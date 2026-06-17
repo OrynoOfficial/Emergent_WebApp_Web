@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Upload, X, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import GeocodePinRow from '@/components/shared/GeocodePinRow';
 
 // Reusable Image Uploader component
 function ImageUploader({ images, onChange, maxImages = 6 }) {
@@ -95,8 +96,10 @@ const PRICE_RANGES = [
 ];
 
 export function RestaurantForm({ form, onChange, operators = [], isEditing = false }) {
-  const updateForm = (field, value) => {
-    onChange({ ...form, [field]: value });
+  // Optional `extra` lets callers update multiple fields atomically without
+  // racing two setState calls (e.g. editing address invalidates the pin).
+  const updateForm = (field, value, extra) => {
+    onChange({ ...form, [field]: value, ...(extra || {}) });
   };
 
   const toggleArrayValue = (field, value) => {
@@ -144,7 +147,7 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
             <Label>Address</Label>
             <Input
               value={form.address || ''}
-              onChange={(e) => updateForm('address', e.target.value)}
+              onChange={(e) => updateForm('address', e.target.value, { latitude: null, longitude: null })}
               placeholder="Street address"
               className="mt-1"
             />
@@ -155,7 +158,7 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
               <Label>City *</Label>
               <Input
                 value={form.city || ''}
-                onChange={(e) => updateForm('city', e.target.value)}
+                onChange={(e) => updateForm('city', e.target.value, { latitude: null, longitude: null })}
                 placeholder="City"
                 className="mt-1"
               />
@@ -170,6 +173,19 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
               />
             </div>
           </div>
+
+          {/* One-click geocoder — stamps a precise lat/lon pin on the
+              restaurant doc so the customer-facing live map zooms to the
+              actual venue. Operator can re-pin or clear at any time. */}
+          <GeocodePinRow
+            city={form.city}
+            address={form.address}
+            latitude={typeof form.latitude === 'number' ? form.latitude : null}
+            longitude={typeof form.longitude === 'number' ? form.longitude : null}
+            onPin={({ lat, lon }) => updateForm('latitude', lat, { longitude: lon })}
+            onClear={() => updateForm('latitude', null, { longitude: null })}
+            testIdPrefix="restaurant-form-geocode"
+          />
         </div>
 
         {/* Contact */}

@@ -10,6 +10,7 @@ import { Upload, RefreshCw, X, Info, Check } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import GeocodePinRow from '@/components/shared/GeocodePinRow';
 
 const HOTEL_AMENITIES = ['wifi', 'pool', 'gym', 'spa', 'restaurant', 'bar', 'parking', 'room_service', 'concierge', 'business_center', 'laundry', 'airport_shuttle'];
 
@@ -156,37 +157,24 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
         <Label>Address *</Label>
         <Input 
           value={form.address || ''} 
-          onChange={e => updateForm({ address: e.target.value })} 
+          onChange={e => updateForm({ address: e.target.value, latitude: null, longitude: null })} 
           className="mt-1.5" 
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Latitude <span className="text-slate-400 font-normal text-xs">(optional, for map pin)</span></Label>
-          <Input
-            type="number"
-            step="any"
-            placeholder="3.848"
-            value={form.latitude ?? ''}
-            onChange={e => updateForm({ latitude: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-            className="mt-1.5"
-            data-testid="hotel-form-latitude"
-          />
-        </div>
-        <div>
-          <Label>Longitude</Label>
-          <Input
-            type="number"
-            step="any"
-            placeholder="11.5021"
-            value={form.longitude ?? ''}
-            onChange={e => updateForm({ longitude: e.target.value === '' ? '' : parseFloat(e.target.value) })}
-            className="mt-1.5"
-            data-testid="hotel-form-longitude"
-          />
-        </div>
-      </div>
+      {/* One-click geocoder — pins the hotel on the customer-facing map
+          based on address + city. Replaces the old manual lat/lon
+          inputs; if precise tuning is ever needed, operator clears the
+          pin and types coords directly. */}
+      <GeocodePinRow
+        city={form.city}
+        address={form.address}
+        latitude={typeof form.latitude === 'number' ? form.latitude : null}
+        longitude={typeof form.longitude === 'number' ? form.longitude : null}
+        onPin={({ lat, lon }) => updateForm({ latitude: lat, longitude: lon })}
+        onClear={() => updateForm({ latitude: null, longitude: null })}
+        testIdPrefix="hotel-form-geocode"
+      />
       
       <div className="grid grid-cols-2 gap-4">
         <div>

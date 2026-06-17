@@ -28,6 +28,7 @@ import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import GeocodePinRow from '@/components/shared/GeocodePinRow';
 import { geocodeAddress } from '@/utils/geocode';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
@@ -116,94 +117,6 @@ const DEFAULT_FORM = {
   operator_name: '',
   linked_inventory_id: '',
 };
-
-// ────────────────────────────────────────────────────────────────────
-// One-click geocoder row used by the Banquet service form. Calls the
-// Nominatim API (free, key-less) with the form's address+city and stamps
-// `latitude`/`longitude` on the form. Sits below the location inputs so
-// operators see immediate feedback (success badge with truncated
-// display_name, or a "not found" hint). The customer-facing live map in
-// BanquetDetailsModal prefers these precise coords over city-centroid.
-// ────────────────────────────────────────────────────────────────────
-function GeocodePinRow({ form, setForm }) {
-  const [busy, setBusy] = React.useState(false);
-  const [hit, setHit] = React.useState(null); // last successful resolution
-  const [missed, setMissed] = React.useState(false);
-  const hasPin = typeof form.latitude === 'number' && typeof form.longitude === 'number';
-
-  const handlePin = async () => {
-    const query = [form.address, form.city, 'Cameroon'].filter(Boolean).join(', ');
-    if (!query) {
-      toast.error('Add a city or address first');
-      return;
-    }
-    setBusy(true);
-    setMissed(false);
-    try {
-      const r = await geocodeAddress(query);
-      if (r) {
-        setForm(p => ({ ...p, latitude: r.lat, longitude: r.lon }));
-        setHit(r);
-        toast.success('Pinned on map');
-      } else {
-        setHit(null);
-        setMissed(true);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleClear = () => {
-    setForm(p => ({ ...p, latitude: null, longitude: null }));
-    setHit(null);
-    setMissed(false);
-  };
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-      <MapPin className="w-4 h-4 text-pink-600 flex-shrink-0" />
-      <div className="text-xs text-slate-600 mr-auto min-w-0">
-        {hasPin ? (
-          <span className="text-emerald-700 font-medium" data-testid="banquet-form-geocode-status">
-            Pinned · {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
-            {hit?.display_name && (
-              <span className="text-slate-500 ml-1.5 hidden md:inline">— {hit.display_name.split(',').slice(0, 2).join(',')}</span>
-            )}
-          </span>
-        ) : missed ? (
-          <span className="text-amber-700" data-testid="banquet-form-geocode-status">
-            Couldn’t find that address. Try refining the city/address and pin again.
-          </span>
-        ) : (
-          <span className="text-slate-500">No pin yet — customer-facing map will fall back to city centre.</span>
-        )}
-      </div>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={handlePin}
-        disabled={busy || (!form.city && !form.address)}
-        data-testid="banquet-form-geocode-btn"
-      >
-        {busy ? 'Pinning…' : hasPin ? 'Re-pin' : 'Pin on Map'}
-      </Button>
-      {hasPin && (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="text-rose-600 hover:bg-rose-50"
-          onClick={handleClear}
-          data-testid="banquet-form-geocode-clear-btn"
-        >
-          Clear
-        </Button>
-      )}
-    </div>
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────
 // Category-aware form. Only renders the fields that actually apply to
@@ -432,7 +345,15 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
             the save payload so customer-facing maps zoom to the actual spot
             instead of the city centre. */}
       <div className="col-span-2">
-        <GeocodePinRow form={form} setForm={setForm} />
+        <GeocodePinRow
+          city={form.city}
+          address={form.address}
+          latitude={form.latitude}
+          longitude={form.longitude}
+          onPin={({ lat, lon }) => setForm(p => ({ ...p, latitude: lat, longitude: lon }))}
+          onClear={() => setForm(p => ({ ...p, latitude: null, longitude: null }))}
+          testIdPrefix="banquet-form-geocode"
+        />
       </div>
 
       {showCapacity && (
@@ -577,6 +498,10 @@ function PackagesTab({ services, scopeOperatorId, operators = [] }) {
   const [form, setForm] = useState({
     name: '', description: '', services: [], discount_percent: 0, is_active: true,
     operator_id: '', operator_name: '',
+    // Package-level location — overrides member-service locations on the
+    // customer-facing live map (e.g. wedding bundle hosted in Yaoundé even
+    // if individual services are based in Douala).
+    city: '', address: '', latitude: null, longitude: null,
   });
 
   // Only services owned by the selected operator can be bundled — mirrors the
@@ -612,6 +537,7 @@ function PackagesTab({ services, scopeOperatorId, operators = [] }) {
       operator_name: scopeOperatorId
         ? (operators.find(o => (o._id || o.id) === scopeOperatorId)?.name || '')
         : '',
+      city: '', address: '', latitude: null, longitude: null,
     });
     setOpen(true);
   }
@@ -627,6 +553,10 @@ function PackagesTab({ services, scopeOperatorId, operators = [] }) {
       is_active: pkg.is_active !== false,
       operator_id: pkg.operator_id || '',
       operator_name: pkg.operator_name || '',
+      city: pkg.city || '',
+      address: pkg.address || '',
+      latitude: typeof pkg.latitude === 'number' ? pkg.latitude : null,
+      longitude: typeof pkg.longitude === 'number' ? pkg.longitude : null,
     });
     setOpen(true);
   }
@@ -644,12 +574,28 @@ function PackagesTab({ services, scopeOperatorId, operators = [] }) {
       return;
     }
     try {
+      // Silently geocode the package's own location when it has city/address
+      // but no pin yet, so the customer-facing map can zoom to the bundle's
+      // venue instead of bouncing between each member service.
+      let { latitude, longitude } = form;
+      if ((latitude == null || longitude == null) && (form.address || form.city)) {
+        const queryParts = [form.address, form.city, 'Cameroon'].filter(Boolean).join(', ');
+        const hit = await geocodeAddress(queryParts);
+        if (hit) {
+          latitude = hit.lat;
+          longitude = hit.lon;
+        }
+      }
       const payload = {
         ...form,
         discount_percent: Number(form.discount_percent) || 0,
         // Send operator_id explicitly so admin-created packages aren't
         // orphaned (and so Edit re-saves preserve original ownership).
         operator_id: form.operator_id || undefined,
+        city: form.city || null,
+        address: form.address || null,
+        latitude: typeof latitude === 'number' ? latitude : null,
+        longitude: typeof longitude === 'number' ? longitude : null,
       };
       if (editing) await api.put(`/banquets/packages/${editing.id}`, payload);
       else await api.post('/banquets/packages/', payload);
@@ -892,6 +838,44 @@ function PackagesTab({ services, scopeOperatorId, operators = [] }) {
                 placeholder="What this package covers, ideal guest count, etc."
               />
             </div>
+
+            {/* ── Package-level location ──
+                Even though each member service has its own city/address, the
+                bundle itself happens at ONE venue (a wedding hall, a hotel
+                garden, etc.). We capture that here so the customer-facing
+                live map shows the package's actual location instead of pin-
+                hopping between member services. Member services keep their
+                own locations on their own pages. */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label>Event City</Label>
+                <Input
+                  value={form.city}
+                  onChange={e => setForm(p => ({ ...p, city: e.target.value, latitude: null, longitude: null }))}
+                  placeholder="Douala"
+                  data-testid="banquet-package-city-input"
+                />
+              </div>
+              <div>
+                <Label>Event Venue / Address</Label>
+                <Input
+                  value={form.address}
+                  onChange={e => setForm(p => ({ ...p, address: e.target.value, latitude: null, longitude: null }))}
+                  placeholder="Where the bundle gets delivered"
+                  data-testid="banquet-package-address-input"
+                />
+              </div>
+            </div>
+            <GeocodePinRow
+              city={form.city}
+              address={form.address}
+              latitude={form.latitude}
+              longitude={form.longitude}
+              onPin={({ lat, lon }) => setForm(p => ({ ...p, latitude: lat, longitude: lon }))}
+              onClear={() => setForm(p => ({ ...p, latitude: null, longitude: null }))}
+              testIdPrefix="banquet-package-geocode"
+              helperText="No pin yet — the package map will fall back to the bundle’s city centre, then to its member services."
+            />
 
             {/* Operator picker — admin/super-admin must scope packages to an
                 operator (the backend requires operator_id). Operators have it

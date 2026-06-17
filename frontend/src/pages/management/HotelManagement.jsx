@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import OperatorBookingsList from '@/components/management/shared/OperatorBookingsList';
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
+import { geocodeAddress } from '@/utils/geocode';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import PermissionGate from '@/components/common/PermissionGate';
@@ -215,9 +216,24 @@ export default function HotelManagement() {
     if ((hotelForm.images || []).length < 5) { toast.error('Please upload at least 5 images'); return; }
     try {
       setSaving(true);
+      // Auto-geocode silently when the operator filled in city/address but
+      // didn't click "Pin on Map" themselves — guarantees a fresh hotel
+      // never lands in the DB without coords.
+      let latitude = typeof hotelForm.latitude === 'number' ? hotelForm.latitude : null;
+      let longitude = typeof hotelForm.longitude === 'number' ? hotelForm.longitude : null;
+      if ((latitude == null || longitude == null) && (hotelForm.address || hotelForm.city)) {
+        const queryParts = [hotelForm.address, hotelForm.city, 'Cameroon'].filter(Boolean).join(', ');
+        const hit = await geocodeAddress(queryParts);
+        if (hit) {
+          latitude = hit.lat;
+          longitude = hit.lon;
+        }
+      }
       const operator = operators.find(op => (op._id || op.id) === hotelForm.operator_id);
       const data = {
         ...hotelForm,
+        latitude,
+        longitude,
         operator_name: operator?.name || hotelForm.operator_name || '',
         // Trim/filter policies right before save so operators can freely type
         // multi-line content (including blank intermediate lines) without

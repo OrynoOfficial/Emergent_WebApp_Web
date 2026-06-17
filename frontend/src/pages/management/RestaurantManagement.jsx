@@ -19,6 +19,7 @@ import OperatorBookingsList from '@/components/management/shared/OperatorBooking
 import ReplaceResourceModal from '@/components/management/shared/ReplaceResourceModal';
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
+import { geocodeAddress } from '@/utils/geocode';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
@@ -53,7 +54,10 @@ const CATEGORY_COLORS = {
 const DEFAULT_RESTAURANT_FORM = {
   name: '', description: '', cuisine_type: [], address: '', city: '', country: 'Cameroon',
   phone: '', email: '', price_range: 'moderate', features: [], opening_hours: {}, images: [],
-  operator_id: '', operator_name: ''
+  operator_id: '', operator_name: '',
+  // Map pin set by the geocoder so customer-facing detail page shows a
+  // pixel-accurate live map instead of the city centroid.
+  latitude: null, longitude: null,
 };
 
 const DEFAULT_MENU_ITEM = {
@@ -388,11 +392,21 @@ export default function RestaurantManagement() {
     
     try {
       setSaving(true);
+      // Auto-geocode silently when address/city exist but no pin set.
+      let payload = { ...restaurantForm };
+      if ((payload.latitude == null || payload.longitude == null) && (payload.address || payload.city)) {
+        const queryParts = [payload.address, payload.city, payload.country || 'Cameroon'].filter(Boolean).join(', ');
+        const hit = await geocodeAddress(queryParts);
+        if (hit) {
+          payload.latitude = hit.lat;
+          payload.longitude = hit.lon;
+        }
+      }
       if (editingRestaurant) {
-        await api.put(`/restaurants/${editingRestaurant.id}`, restaurantForm);
+        await api.put(`/restaurants/${editingRestaurant.id}`, payload);
         toast.success('Restaurant updated');
       } else {
-        await api.post('/restaurants/', restaurantForm);
+        await api.post('/restaurants/', payload);
         toast.success('Restaurant created');
       }
       setIsRestaurantDialogOpen(false);

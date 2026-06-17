@@ -176,6 +176,12 @@ class BanquetPackageCreate(BaseModel):
     services: List[PackageServiceLine]
     discount_percent: float = 0   # 0–100
     is_active: bool = True
+    # Package-level venue. Overrides member-service locations on the
+    # customer-facing live map so the bundle pins where it actually happens.
+    city: Optional[str] = None
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class BanquetPackageUpdate(BaseModel):
     name: Optional[str] = None
@@ -184,4 +190,8 @@ class BanquetPackageUpdate(BaseModel):
     images: Optional[List[str]] = None
     services: Optional[List[PackageServiceLine]] = None
     discount_percent: Optional[float] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     is_active: Optional[bool] = None

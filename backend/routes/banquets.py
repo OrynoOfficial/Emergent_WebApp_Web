@@ -562,11 +562,18 @@ async def create_banquet_package(
         "name": package.name,
         "description": package.description,
         "image_url": package.image_url,
+        "images": package.images or [],
         "services": lines,
         "discount_percent": package.discount_percent,
         "subtotal": subtotal,
         "total_price": total_price,
         "is_active": package.is_active,
+        # Package-level venue captured at create-time; overrides member
+        # service locations on the customer-facing live map.
+        "city": package.city,
+        "address": package.address,
+        "latitude": package.latitude,
+        "longitude": package.longitude,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -578,6 +585,7 @@ async def create_banquet_package(
 async def list_banquet_packages(
     operator_id: Optional[str] = None,
     is_active: Optional[bool] = None,
+    city: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_active_user),
@@ -589,6 +597,11 @@ async def list_banquet_packages(
       • operator role: scoped to their own operator (cannot peek at rivals).
       • customer role: every `is_active=true` bundle across operators —
         this is the marketplace catalogue, not a private ops view.
+
+    City filter: when `city` is provided we match it case-insensitively
+    against the package's OWN city. Legacy packages with no city set
+    fall back to matching ANY member service's city, so the customer
+    isn't shown a bundle that has zero footprint in the searched city.
     """
     db = get_database()
     role = current_user.get("role", "")
@@ -609,6 +622,18 @@ async def list_banquet_packages(
         # Customers should never see disabled bundles.
         query["is_active"] = True
 
+    if city:
+        # Case-insensitive exact-match on the bundle's own city. Legacy
+        # bundles (no city set) are post-filtered after we hydrate their
+        # member services below — they only survive if at least one
+        # member is in the searched city.
+        city_regex = {"$regex": f"^{city}$", "$options": "i"}
+        query["$or"] = [
+            {"city": city_regex},
+            {"city": {"$in": [None, ""]}},
+            {"city": {"$exists": False}},
+        ]
+
     packages = await db.banquet_packages.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     total = await db.banquet_packages.count_documents(query)
 
@@ -621,6 +646,7 @@ async def list_banquet_packages(
                 "_id": 1, "name": 1, "category": 1, "base_price": 1,
                 "unit_label": 1, "pricing_model": 1, "images": 1,
                 "description": 1, "city": 1, "address": 1,
+                "latitude": 1, "longitude": 1,
                 "capacity_min": 1, "capacity_max": 1, "duration_hours": 1,
                 "min_quantity": 1, "amenities": 1, "category_details": 1,
                 "phone": 1, "email": 1, "operator_id": 1, "operator_name": 1,
@@ -638,8 +664,6 @@ async def list_banquet_packages(
                 line["base_price"] = svc.get("base_price")
                 line["unit_label"] = svc.get("unit_label")
                 line["pricing_model"] = svc.get("pricing_model")
-                # Customer modal needs the full service shape for its
-                # nested-detail dialog (photos, capacity, contact, etc.).
                 line["service"] = {
                     "id": svc["_id"],
                     "name": svc.get("name"),
@@ -651,6 +675,8 @@ async def list_banquet_packages(
                     "description": svc.get("description"),
                     "city": svc.get("city"),
                     "address": svc.get("address"),
+                    "latitude": svc.get("latitude"),
+                    "longitude": svc.get("longitude"),
                     "capacity_min": svc.get("capacity_min"),
                     "capacity_max": svc.get("capacity_max"),
                     "duration_hours": svc.get("duration_hours"),
@@ -661,6 +687,28 @@ async def list_banquet_packages(
                     "email": svc.get("email"),
                     "operator_name": svc.get("operator_name"),
                 }
+
+    # Legacy/null-city packages: keep them only when at least one member
+    # service is in the searched city. Bundles that don't operate in the
+    # city the customer searched should never show up.
+    if city:
+        city_norm = city.strip().lower()
+        kept = []
+        for p in packages:
+            own_city = (p.get("city") or "").strip().lower()
+            if own_city:
+                if own_city == city_norm:
+                    kept.append(p)
+                continue
+            # Legacy: scan member-service cities (already hydrated via svc_docs).
+            member_cities = {
+                (svc_docs.get(line["service_id"], {}).get("city") or "").strip().lower()
+                for line in p.get("services", [])
+            }
+            if city_norm in member_cities:
+                kept.append(p)
+        packages = kept
+        total = len(packages)
 
     return {"packages": packages, "total": total}
 

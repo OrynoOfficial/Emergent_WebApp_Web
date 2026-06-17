@@ -1,5 +1,38 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 255: Package-level venue + Hotel/Restaurant geocoders)
+
+### New: Banquet Package own location
+- `BanquetPackage` form gained **Event City / Event Venue + GeocodePinRow** (`testid: banquet-package-{city|address|geocode}-input/btn`). Defaults reset the pin on any field edit.
+- `handleSave` silently auto-geocodes the bundle's own city+address when no pin set; sends `city`, `address`, `latitude`, `longitude` in POST/PUT.
+- `backend/models/banquet.py` — `BanquetPackageCreate` & `BanquetPackageUpdate` now accept `city`, `address`, `latitude`, `longitude`.
+- `backend/routes/banquets.py`:
+  - `POST /banquets/packages/` persists the four new fields on the doc.
+  - `GET /banquets/packages/` accepts `?city=` query param. Strict match against the package's own city; legacy bundles (no city) survive the filter only when at least one member service is in the searched city. Member-service projection now exposes `latitude` / `longitude` so the modal map can still fall back to them.
+- `BanquetResults.jsx` — packages fetch now sends `city` so customers no longer see Douala bundles when they searched Yaoundé.
+- `BanquetDetailsModal.PackageDetails`:
+  - Map priority: package's own coords → city centroid → member-service aggregate (legacy).
+  - Adds a "Bundle venue · <address>, <city>" caption when the package itself is pinned, vs. a "Showing member-service locations · operator hasn't pinned the bundle venue yet" caption in fallback mode.
+
+### Refactor: shared `GeocodePinRow`
+- Extracted from BanquetManagement → `/app/frontend/src/components/shared/GeocodePinRow.jsx`. Generic API (`{ city, address, latitude, longitude, onPin, onClear, testIdPrefix, helperText }`) — no caller-side coupling.
+- `BanquetManagement` (service form + package form) now consumes the shared component.
+
+### New: GeocodePinRow on Hotel + Restaurant editors
+- `HotelForm.jsx`:
+  - Removed the manual lat/lon `<Input type="number">` pair.
+  - Mounted `<GeocodePinRow testIdPrefix="hotel-form-geocode" />` right after Address.
+  - `HotelManagement.handleSaveHotel` silently auto-geocodes when missing → sends `latitude/longitude` in payload.
+- `RestaurantForm.jsx`:
+  - `updateForm` extended to accept an optional `extra` batch-patch object so editing Address/City can atomically null out the pin.
+  - Mounted `<GeocodePinRow testIdPrefix="restaurant-form-geocode" />` under Country.
+- `RestaurantManagement.handleSaveRestaurant` silently auto-geocodes when missing.
+- Backend `Restaurant` model already accepted `latitude/longitude` (no change needed).
+
+### Verified ✅
+- Yaoundé / Avenue Kennedy → `(3.8657, 11.5205) — Avenue KENNEDY, Centre Commercial` via Nominatim, displayed inside the new Package modal.
+- Source-review pass on HotelForm + RestaurantForm — pattern identical to verified Banquet implementation.
+
 ## Latest Changes (Feb 2026 — iter 254: Banquet venue geocoding)
 
 - `utils/geocode.js` — thin Nominatim (OpenStreetMap) wrapper. Free, key-less, country-biased to Cameroon by default. Caller-side fallback to `cityCoords.js` when the address is unresolvable.

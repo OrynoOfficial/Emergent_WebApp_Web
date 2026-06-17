@@ -395,7 +395,7 @@ export default function BanquetResults() {
         setLoading(true);
         const [svcRes, pkgRes, itemsRes] = await Promise.all([
           api.get('/banquets/', { params: { city, limit: 100 } }),
-          api.get('/banquets/packages/', { params: { is_active: true, limit: 50 } }).catch(() => ({ data: { packages: [] } })),
+          api.get('/banquets/packages/', { params: { is_active: true, city: city || undefined, limit: 50 } }).catch(() => ({ data: { packages: [] } })),
           api.get('/inventory/banquet-items', { params: { is_active: true, city: city || undefined } }).catch(() => ({ data: { items: [] } })),
         ]);
         setServices(svcRes.data.banquets || svcRes.data.venues || []);

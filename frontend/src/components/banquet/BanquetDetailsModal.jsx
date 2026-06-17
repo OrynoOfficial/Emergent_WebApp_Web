@@ -356,10 +356,41 @@ function PackageDetails({ pkg, inCart, onAdd, onRemove, onPickService }) {
           </div>
         </div>
 
-        {/* Bundle map — pin every member service that has a usable
-            location. The first pin doubles as the centre. Hidden when no
-            member has a city/lat-lon yet. */}
+        {/* Bundle map — the customer-facing location of THE BUNDLE.
+            Priority order:
+              1. The package's own lat/lon (set on the Package form).
+              2. The package's city via the centroid lookup.
+              3. The first member service that has coords (legacy fallback).
+            Member services keep their own pins on their own pages — this
+            override only applies at the bundle level. Hidden when nothing
+            resolves. */}
         {(() => {
+          const pkgCoords = getServiceCoords(pkg);
+          if (pkgCoords) {
+            return (
+              <div data-testid="banquet-package-map">
+                <p className="text-[11px] uppercase text-slate-500 tracking-wide font-semibold mb-2">
+                  Where it happens
+                </p>
+                <LocationMap
+                  lat={pkgCoords.lat}
+                  lon={pkgCoords.lon}
+                  title={pkg.name}
+                  address={pkg.address || pkg.city || ''}
+                  height="h-44"
+                  zoom={13}
+                  showGoogleLink
+                />
+                {(pkg.city || pkg.address) && (
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Bundle venue · {[pkg.address, pkg.city].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
+            );
+          }
+          // Legacy fallback: aggregate member-service pins when the bundle
+          // itself has no location yet.
           const pins = memberSvcs
             .map((m, idx) => {
               const c = getServiceCoords(m.full);
@@ -390,6 +421,9 @@ function PackageDetails({ pkg, inCart, onAdd, onRemove, onPickService }) {
                 zoom={pins.length > 1 ? 11 : 13}
                 showGoogleLink
               />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Showing member-service locations · operator hasn’t pinned the bundle venue yet.
+              </p>
             </div>
           );
         })()}
