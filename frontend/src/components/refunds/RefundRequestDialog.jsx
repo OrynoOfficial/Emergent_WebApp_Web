@@ -105,6 +105,16 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
     return { tone: 'rose', label: 'Not auto-refundable' };
   }, [eligibility]);
 
+  // "Custom policy" attribution — surfaced as a small badge below the
+  // policy table when an operator or listing override is in effect.
+  const policySourceBadge = useMemo(() => {
+    const src = eligibility?.policy_source;
+    if (!src || src === 'platform') return null;
+    return src === 'listing'
+      ? { label: 'Custom policy for this listing', tone: 'blue' }
+      : { label: 'Custom operator policy', tone: 'purple' };
+  }, [eligibility]);
+
   const toneClasses = {
     emerald: {
       ring: 'bg-emerald-50 border-emerald-200',
@@ -211,6 +221,14 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
                   <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                     Refund policy {eligibility.service_type ? `(${SERVICE_LABEL[eligibility.service_type] || eligibility.service_type})` : ''}
                   </p>
+                  {policySourceBadge && (
+                    <Badge className={cn(
+                      'text-[10px] font-semibold ml-auto',
+                      policySourceBadge.tone === 'purple' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-blue-100 text-blue-700 border-blue-200'
+                    )}>
+                      {policySourceBadge.label}
+                    </Badge>
+                  )}
                 </div>
                 <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 bg-white">
                   {eligibility.policy.map((tier, i) => (

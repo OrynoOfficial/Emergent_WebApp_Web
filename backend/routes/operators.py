@@ -613,6 +613,82 @@ async def update_operator(
     
     return {"message": "Operator updated"}
 
+
+# ── Refund policies (per-operator + per-service-type override) ─────────────
+# Hybrid model: operator sets a default that listings inherit, but each
+# listing (hotel, showtime, route…) can override via its own
+# `refund_policy` field. Both fall back to the platform default when
+# unset. Resolution order is implemented in routes/refunds.py::_load_policies.
+@router.get("/{operator_id}/refund-policies")
+async def get_operator_refund_policies(
+    operator_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Read the operator-level refund policies for all service types."""
+    db = get_database()
+    op = await db.operators.find_one(
+        {"_id": operator_id},
+        {"refund_policies": 1, "default_refund_policy": 1, "owner_user_id": 1},
+    )
+    if not op:
+        raise HTTPException(status_code=404, detail="Operator not found")
+    return {
+        "operator_id": operator_id,
+        "default": op.get("default_refund_policy"),
+        "by_service": op.get("refund_policies") or {},
+    }
+
+
+@router.put("/{operator_id}/refund-policies/{service_type}")
+async def set_operator_refund_policy(
+    operator_id: str,
+    service_type: str,
+    payload: dict,
+    current_user: dict = Depends(require_permission("operators.edit")),
+):
+    """Set the operator-level refund policy for ONE service type.
+
+    Payload shape:
+        { "preset": "strict" | "standard" | "flexible" | "custom" | null,
+          "custom_tiers": [ {threshold_hours, refund_pct, label}, ... ] }
+
+    Setting ``preset`` to ``null`` clears the override and falls back to
+    the platform default for that service.
+    """
+    db = get_database()
+    op = await db.operators.find_one({"_id": operator_id}, {"owner_user_id": 1})
+    if not op:
+        raise HTTPException(status_code=404, detail="Operator not found")
+    is_super_admin = current_user["role"] == "super_admin"
+    if not is_super_admin and op.get("owner_user_id") != current_user["_id"]:
+        raise HTTPException(status_code=403, detail="You can only edit your own operator")
+
+    preset = (payload or {}).get("preset")
+    custom_tiers = (payload or {}).get("custom_tiers") or []
+    valid_presets = {"strict", "standard", "flexible", "custom", None, ""}
+    if preset not in valid_presets:
+        raise HTTPException(status_code=400, detail=f"Invalid preset '{preset}'")
+    if preset == "custom" and not custom_tiers:
+        raise HTTPException(status_code=400, detail="Custom preset requires at least one tier")
+
+    if not preset:
+        # Clear the override
+        await db.operators.update_one(
+            {"_id": operator_id},
+            {"$unset": {f"refund_policies.{service_type}": ""}, "$set": {"updated_at": datetime.utcnow()}},
+        )
+        return {"message": f"Cleared {service_type} policy — using platform default"}
+
+    policy = {"preset": preset}
+    if preset == "custom":
+        policy["custom_tiers"] = custom_tiers
+    await db.operators.update_one(
+        {"_id": operator_id},
+        {"$set": {f"refund_policies.{service_type}": policy, "updated_at": datetime.utcnow()}},
+    )
+    return {"message": f"Set {service_type} policy to {preset}"}
+
+
 @router.delete("/{operator_id}")
 async def delete_operator(
     operator_id: str,

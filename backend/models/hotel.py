@@ -82,6 +82,10 @@ class Room(BaseModel):
     # Policies (free-form, one per line)
     policies: List[str] = []
     cancellation_policy: Optional[str] = None  # free-text summary line
+    # Structured refund policy override (drives the Refund Request modal).
+    # Shape: { preset: "strict"|"standard"|"flexible"|"custom", custom_tiers: [...] }
+    # When None, falls back to operator-level then platform default.
+    refund_policy: Optional[dict] = None
     minimum_stay_nights: Optional[int] = None
 
     # Availability

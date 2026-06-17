@@ -27,11 +27,24 @@ from config.database import get_database
 from middleware.auth import get_current_active_user
 from models.refund import (
     RefundCreate, RefundDecision, RefundStatus, EligibilityResult,
-    compute_eligibility,
+    compute_eligibility, list_presets_for, PRESET_DEFINITIONS,
 )
 from services.stripe_service import StripeService
 
 router = APIRouter(prefix="/api/refunds", tags=["refunds"])
+
+
+# ── Public reference data ────────────────────────────────────────────────────
+@router.get("/presets")
+async def get_presets(service_type: Optional[str] = None):
+    """Return preset packs available for a service (Strict / Standard / Flexible).
+
+    Used by the operator settings & service editors to render the picker.
+    Omitting ``service_type`` returns the full catalog.
+    """
+    if service_type:
+        return {"service_type": service_type, "presets": list_presets_for(service_type)}
+    return {st: list_presets_for(st) for st in PRESET_DEFINITIONS.keys()}
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -66,6 +79,68 @@ def _is_admin(user: dict) -> bool:
 PAID_STATUSES = ("completed", "paid", "verified")
 
 
+# Service-type → (collection, key field on order pointing to the listing)
+_SERVICE_COLLECTIONS = {
+    "hotel": ("hotels", "service_id"),
+    "cinema": ("event_showtimes", "showtime_id"),
+    "event": ("event_showtimes", "showtime_id"),
+    "events": ("event_showtimes", "showtime_id"),
+    "travel": ("travel_routes", "service_id"),
+    "transport": ("travel_routes", "service_id"),
+    "restaurant": ("restaurants", "service_id"),
+    "car_rental": ("car_rentals", "service_id"),
+    "rental": ("car_rentals", "service_id"),
+    "banquet": ("banquets", "service_id"),
+    "laundry": ("pressing_services", "service_id"),
+    "pressing": ("pressing_services", "service_id"),
+}
+
+
+async def _load_policies(db, order: dict) -> tuple[Optional[dict], Optional[dict]]:
+    """Fetch (operator_policy, listing_policy) for this order. Either can be
+    None — in which case `compute_eligibility` falls through to the platform
+    default. Lookups are best-effort: any DB hiccup just skips the override."""
+    operator_policy: Optional[dict] = None
+    listing_policy: Optional[dict] = None
+
+    service_type = (order.get("service_type") or "").lower()
+
+    # Operator-level — stored on `operators.refund_policies` keyed by service
+    # type, with optional fallback `operators.default_refund_policy`.
+    op_id = order.get("operator_id")
+    if op_id:
+        try:
+            op = await db.operators.find_one(
+                {"_id": op_id},
+                {"refund_policies": 1, "default_refund_policy": 1},
+            )
+            if op:
+                per_service = (op.get("refund_policies") or {}).get(service_type)
+                operator_policy = per_service or op.get("default_refund_policy")
+        except Exception:
+            pass
+
+    # Listing-level — `service.refund_policy` (separate from the existing
+    # free-text `cancellation_policy` summary field on hotel/banquet which is
+    # shown to customers on the booking page).
+    info = _SERVICE_COLLECTIONS.get(service_type)
+    if info:
+        coll_name, key_field = info
+        listing_id = order.get(key_field) or (order.get("booking_details") or {}).get(key_field)
+        if listing_id:
+            try:
+                listing = await db[coll_name].find_one(
+                    {"_id": listing_id},
+                    {"refund_policy": 1},
+                )
+                if listing:
+                    listing_policy = listing.get("refund_policy")
+            except Exception:
+                pass
+
+    return operator_policy, listing_policy
+
+
 # ── Customer endpoints ──────────────────────────────────────────────────────
 @router.get("/orders/{order_id}/eligibility", response_model=EligibilityResult)
 async def check_eligibility(order_id: str, current_user: dict = Depends(get_current_active_user)):
@@ -83,7 +158,8 @@ async def check_eligibility(order_id: str, current_user: dict = Depends(get_curr
         return EligibilityResult(eligible=False, eligible_amount=0.0,
                                  window="Already refunded or cancelled",
                                  refundable_pct=0)
-    return compute_eligibility(order)
+    op_pol, listing_pol = await _load_policies(db, order)
+    return compute_eligibility(order, operator_policy=op_pol, listing_policy=listing_pol)
 
 
 @router.post("/orders/{order_id}/request")

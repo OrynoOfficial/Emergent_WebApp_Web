@@ -11,6 +11,7 @@ import api from '@/api/client';
 import { toast } from 'sonner';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import GeocodePinRow from '@/components/shared/GeocodePinRow';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 const HOTEL_AMENITIES = ['wifi', 'pool', 'gym', 'spa', 'restaurant', 'bar', 'parking', 'room_service', 'concierge', 'business_center', 'laundry', 'airport_shuttle'];
 
@@ -268,6 +269,18 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
             data-testid="hotel-form-checkout-time"
           />
         </div>
+      </div>
+
+      {/* Refund / cancellation policy — overrides the operator-level
+          default. Drives the rich Refund Request modal customers see. */}
+      <div data-testid="hotel-form-refund-policy">
+        <Label className="mb-2 block">Refund Policy <span className="text-slate-400 text-xs font-normal">(overrides operator default for this hotel)</span></Label>
+        <CancellationPolicyPicker
+          serviceType="hotel"
+          scope="listing"
+          value={form.refund_policy}
+          onChange={(v) => updateForm({ refund_policy: v })}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,88 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 264: Per-operator + per-listing refund policy overrides)
+
+### Hybrid override model (per your spec)
+- **Listing level** wins (e.g. one specific hotel) → **Operator level** (default for all the operator's listings) → **Platform default** (the "Standard" preset).
+- 3 named preset packs per service: **Strict** / **Standard** / **Flexible** + ``"custom"`` for advanced ops that want to author their own tiers via API.
+- Both override slots can be cleared via `null` to fall back up the chain.
+
+### Backend
+- **`models/refund.py`**: introduced `PRESET_DEFINITIONS` (9 services × 3 presets = 27 schedules), `get_preset()`, `list_presets_for()`, `_tiers_from_custom()` validator, `_resolve_tiers()` resolver (returns `(tiers, source_label)`).
+- **`compute_eligibility(order, *, operator_policy=, listing_policy=)`** — accepts both overrides as optional kwargs; sets `policy_source` on the result so the UI knows where the active schedule came from (`platform`/`operator`/`listing`).
+- **`models/hotel.py`**: added `refund_policy: Optional[dict]` field. Kept the existing free-text `cancellation_policy` summary string untouched — they serve different purposes (display vs computation).
+- **`routes/refunds.py`**:
+  - `_load_policies(db, order)` looks up operator + listing overrides automatically. Best-effort: any DB hiccup just skips the override and falls back to the platform default.
+  - `GET /api/refunds/presets[?service_type=…]` — public reference data for the picker.
+- **`routes/operators.py`** (per-operator config):
+  - `GET /api/operators/{id}/refund-policies` — read all per-service overrides + default.
+  - `PUT /api/operators/{id}/refund-policies/{service_type}` — set/clear with shape `{preset, custom_tiers}`. Validates preset names and requires owner / super-admin auth.
+
+### Frontend
+- **`CancellationPolicyPicker.jsx`** — reusable component for any service editor. Renders 3 preset cards (Shield/Sparkles/Zap icons, themed accents) with the full tier preview inline + a "Reset to default" chip. Already wired into `HotelForm`.
+- **`RefundRequestDialog.jsx`** — surfaces a "Custom operator policy" or "Custom policy for this listing" badge next to the policy header when the resolved schedule isn't the platform default. Customers see exactly who set the terms.
+
+### Test coverage — 29 tests passing
+Added 4 override-specific tests in `test_refund_policies.py`:
+- `test_operator_strict_preset_overrides_platform_default`
+- `test_listing_flexible_preset_beats_operator_strict` (proves precedence)
+- `test_custom_tiers_supported_for_advanced_operators` (4-tier custom schedule)
+- `test_policy_source_defaults_to_platform_when_no_overrides`
+
+### Verified end-to-end ✅
+- `PUT /api/operators/{id}/refund-policies/hotel {preset:"strict"}` → applies → eligibility on the Pytest Hotel order now returns the **Strict** schedule (`≥ 30 days`, `7-30 days`, `< 7 days`) with `source: operator` instead of the platform "Standard" default.
+- Live screenshot confirms purple "Custom operator policy" badge appears next to the policy header in the Refund Request dialog.
+
+### Next-step pattern (already documented)
+Operators that want listing-level overrides only need to add `<CancellationPolicyPicker serviceType="..." scope="listing" value={form.refund_policy} onChange={...} />` to any service editor (Cinema, Travel route, Restaurant, etc.) + add `refund_policy: Optional[dict]` to the matching backend model. Hotel is wired now as the template.
+
+## Latest Changes (Feb 2026 — iter 263: Refund policies wired across all 9 services + 25-test coverage)
+
+### Universal policy schedule (now active on every service type)
+
+| Service | Schedule |
+|---------|----------|
+| Cinema | 100% ≥2h · 0% <2h before showtime |
+| Event | 100% ≥7d · 50% 24h-7d · 0% <24h before event |
+| Travel | 100% ≥48h · 50% 24h-48h · 0% <24h before departure |
+| **Hotel (new)** | 100% ≥7d · 50% 24h-7d · 0% <24h before check-in |
+| **Restaurant (new)** | 100% ≥24h · 50% 6h-24h · 0% <6h before reservation |
+| **Car rental (new)** | 100% ≥48h · 50% 24h-48h · 0% <24h before pick-up |
+| **Banquet (new)** | 100% ≥14d · 50% 7-14d · 0% <7d before event |
+| **Laundry/Pressing (new)** | 100% pre-pickup · 50% in-progress · 0% post-delivery |
+| **Package (new)** | 100% before sub-services · 50% mid-execution · 0% after delivery — admin reviews per sub-item |
+| Operator-cancelled | 100% always (overrides any schedule) |
+
+### Date-field combination (precision to the minute)
+`compute_eligibility` now uses `_combine_date_time(date, time)` which merges the historically-split fields into a tz-aware datetime:
+
+| Service | Source fields → combined |
+|---------|--------------------------|
+| Cinema | `show_date` + `show_time` (default 20:00) |
+| Travel | `travel_date` + `departure_time` (default 08:00) |
+| Hotel | `check_in` (default 14:00 check-in time) |
+| Restaurant | `date` + `time` (default 19:00) |
+| Car rental | `pickup_date` + `pickup_time` (default 10:00) |
+| Banquet | `event_date` + `event_time` (default 17:00) |
+| Laundry | `pickup_date` + `pickup_time` (default 09:00) |
+| Event | `start_datetime` (already ISO) |
+
+### Engine refactor (DRY)
+Replaced 3 hand-coded per-service if/elif branches with a `_TIME_SCHEDULES` table + `_resolve_schedule()` helper. Adding a new policy is now 1 line. The `_tiers()` factory eliminated 70 lines of repetitive `PolicyTier` boilerplate.
+
+### Test coverage — 25 tests passing
+Created `/app/backend/tests/test_refund_policies.py` exercising the full happy-path / partial / non-refundable / missing-date matrix for all 9 service types + operator-cancel override. Run via `cd /app/backend && python -m pytest tests/test_refund_policies.py -v`.
+
+### Verified end-to-end ✅
+Curl on `/api/refunds/orders/{id}/eligibility` for one real order of each service type returns the correct active tier:
+- Hotel (`937afad0`): 100% · 196 days before check-in · full 3-tier policy visible ✅
+- Cinema (`fcc3eeec`): 100% · 1077h before showtime ✅
+- Event (`74328a4b`): 100% · 4732h before event ✅
+- Restaurant (`ee69a0bc`): 0% · -2858h (past) ✅
+- Package (`7bc6af4b`): 100% admin review with sub-item tiers ✅
+
+Frontend modal screenshots verify the policy table renders correctly for hotel (`refund-hotel.png`).
+
 ## Latest Changes (Feb 2026 — iter 262: Refund logic fix + rich Request-a-refund modal)
 
 ### Bugs fixed
