@@ -49,6 +49,7 @@ ALLOWED_COLLECTIONS = {
     "package_services": {"cascade": [], "active_field": "is_active"},
     "travel_routes":  {"cascade": [], "active_field": "is_active"},
     "banquets":       {"cascade": [], "active_field": "is_active"},
+    "banquet_items":  {"cascade": [], "active_field": "is_active"},
     "pressings":      {"cascade": [], "active_field": "is_active"},
     "commission_configs": {"cascade": [], "active_field": "is_active"},
     "promo_codes":    {"cascade": [], "active_field": "is_active"},

@@ -184,12 +184,13 @@ export default function useSidebarMenu() {
       items.push({ key: 'shipments', label: 'Shipments', icon: Package, path: '/management/shipments' });
     }
 
-    // Transactions (Admin/Super Admin: All Orders, All Receipts, All Bookings as submenu)
+    // Transactions (Admin/Super Admin: All Orders, Refunds, All Receipts, All Bookings as submenu)
     if (isSuperAdmin || isAdmin) {
       items.push({
         key: 'transactions', label: 'Transactions', icon: Receipt, isDropdown: true,
         submenu: [
           { key: 'all-orders', label: 'All Orders', path: '/orders', icon: Ticket },
+          { key: 'refunds', label: 'Refunds', path: '/admin/refunds', icon: RotateCcw, badgeKey: 'refunds-pending' },
           { key: 'all-receipts', label: 'All Receipts', path: '/receipts', icon: Receipt },
           { key: 'all-bookings', label: 'All Bookings', path: '/admin/bookings', icon: QrCode },
           { key: 'all-bills', label: 'All Bills', path: '/admin/bills', icon: CreditCard },
@@ -247,17 +248,9 @@ export default function useSidebarMenu() {
       items.push({ key: 'customer-service', label: 'Customer Service', icon: HeadphonesIcon, path: '/management/customer-service' });
     }
 
-    // Refunds queue — admin/super-admin only. Sidebar surfaces a pending count
-    // badge so admins see new requests the moment they log in.
-    if (isSuperAdmin || isAdmin) {
-      items.push({
-        key: 'refunds',
-        label: 'Refunds',
-        icon: RotateCcw,
-        path: '/admin/refunds',
-        badgeKey: 'refunds-pending',
-      });
-    }
+    // Refunds queue is now nested under Transactions (above) for admin/super-admin.
+    // The sidebar entry below has been removed so it doesn't appear as a
+    // duplicate top-level item.
 
     // Admin Config (below Customer Service)
     if (adminSubmenu.length > 0) {

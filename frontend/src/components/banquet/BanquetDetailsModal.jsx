@@ -90,7 +90,7 @@ function SwipeableGallery({ images, name, height = 'h-72' }) {
 }
 
 // ── SERVICE details — used standalone AND as the nested view ────────────────
-function ServiceDetails({ svc, qtyInCart, onAdd, onSetQty, hideAddCta = false, compact = false, inCartBadge = false }) {
+function ServiceDetails({ svc, qtyInCart, onAdd, onSetQty, onOpenCart, hideAddCta = false, compact = false, inCartBadge = false }) {
   const detailEntries = Object.entries(svc.category_details || {})
     .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0));
   const inCart = qtyInCart > 0;
@@ -212,12 +212,13 @@ function ServiceDetails({ svc, qtyInCart, onAdd, onSetQty, hideAddCta = false, c
               <span className="text-xs text-slate-500">Add to your event cart</span>
             )}
             <Button
-              onClick={inCart ? null : onAdd}
-              disabled={inCart}
-              className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white"
+              onClick={inCart ? onOpenCart : onAdd}
+              className={inCart
+                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 hover:border-emerald-400 ring-1 ring-emerald-300/50'
+                : 'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white'}
               data-testid="modal-add-to-cart"
             >
-              {inCart ? <><Sparkles className="w-4 h-4 mr-1.5" /> In cart</> : <><Plus className="w-4 h-4 mr-1.5" /> Add to Cart</>}
+              {inCart ? <><Sparkles className="w-4 h-4 mr-1.5" /> In cart — review</> : <><Plus className="w-4 h-4 mr-1.5" /> Add to Cart</>}
             </Button>
           </div>
         )}
@@ -366,7 +367,7 @@ function PackageDetails({ pkg, inCart, onAdd, onRemove, onPickService }) {
 export default function BanquetDetailsModal({
   open, onOpenChange, item, services = [],
   qtyInCart = 0, inCart = false,
-  onAdd, onSetQty, onRemove,
+  onAdd, onSetQty, onRemove, onOpenCart,
   inCartSvcIds = [],  // ids of services already in cart (used for In-Cart badge inside nested modal)
 }) {
   // Build the package member list (if applicable) so the nested overlay
@@ -415,6 +416,7 @@ export default function BanquetDetailsModal({
               qtyInCart={qtyInCart}
               onAdd={onAdd}
               onSetQty={onSetQty}
+              onOpenCart={onOpenCart}
               inCartBadge={qtyInCart > 0}
             />
           ) : null}

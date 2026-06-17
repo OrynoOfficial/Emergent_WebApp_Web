@@ -247,7 +247,7 @@ export function RoomForm({ form, onChange, isEditing = false }) {
           rows={4}
           value={(form.policies || []).join('\n')}
           onChange={e => updateForm({
-            policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
+            policies: e.target.value.split('\n')
           })}
           placeholder={'Breakfast included for 2 guests\nMaximum 2 adults + 1 child\nExtra bed available on request (XAF 5,000/night)'}
           className="mt-1.5"

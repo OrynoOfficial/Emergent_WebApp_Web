@@ -216,7 +216,14 @@ export default function HotelManagement() {
     try {
       setSaving(true);
       const operator = operators.find(op => (op._id || op.id) === hotelForm.operator_id);
-      const data = { ...hotelForm, operator_name: operator?.name || hotelForm.operator_name || '' };
+      const data = {
+        ...hotelForm,
+        operator_name: operator?.name || hotelForm.operator_name || '',
+        // Trim/filter policies right before save so operators can freely type
+        // multi-line content (including blank intermediate lines) without
+        // losing their cursor on every keystroke.
+        policies: (hotelForm.policies || []).map(s => (s || '').trim()).filter(Boolean),
+      };
       if (editingHotel) { 
         await api.put(`/hotels/${editingHotel._id || editingHotel.id}`, data); 
         toast.success('Hotel updated'); 
@@ -282,7 +289,8 @@ export default function HotelManagement() {
         base_price: parseFloat(roomForm.base_price) || 0, 
         hotel_id: selectedHotel._id || selectedHotel.id, 
         total_rooms: parseInt(roomForm.total_rooms) || 1, 
-        available_rooms: parseInt(roomForm.available_rooms) || 1 
+        available_rooms: parseInt(roomForm.available_rooms) || 1,
+        policies: (roomForm.policies || []).map(s => (s || '').trim()).filter(Boolean),
       };
       delete data.price_per_night; delete data.name; delete data.room_number;
       if (editingRoom) { 

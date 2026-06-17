@@ -104,6 +104,7 @@ export function useEventCart() {
             unit_label: service.unit_label || null,
             operator_id: service.operator_id || null,
             operator_name: service.operator_name || '',
+            city: service.city || null,
             image: service.images?.[0] || null,
             // `kind: 'item'` flags this line as a rentable banquet_item so the
             // backend cart checkout creates an inventory hold instead of looking

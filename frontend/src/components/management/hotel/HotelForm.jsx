@@ -245,7 +245,7 @@ export function HotelForm({ form, onChange, operators = [], isEditing = false })
           rows={5}
           value={(form.policies || []).join('\n')}
           onChange={e => updateForm({
-            policies: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
+            policies: e.target.value.split('\n')
           })}
           placeholder={'No smoking inside the rooms\nFree cancellation up to 24 hours before arrival\nValid government-issued ID required at check-in'}
           className="mt-1.5"

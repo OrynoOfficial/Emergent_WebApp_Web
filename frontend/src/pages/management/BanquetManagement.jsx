@@ -127,12 +127,17 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
   const cat = form.category || 'hall';
   const allowedModels = PRICING_MODELS_BY_CATEGORY[cat] || ['per_event'];
   const isRentalItem = cat === 'rental_item';
+  // Local search box for the Linked Inventory dropdown so operators with
+  // dozens of stock items don't have to scroll endlessly.
+  const [inventorySearch, setInventorySearch] = useState('');
   // Filter inventory to operators the form already picked (or show all when no operator chosen yet).
   const scopedInventory = useMemo(() => {
-    if (!form.operator_id) return inventoryItems;
-    return inventoryItems.filter(it => it.operator_id === form.operator_id);
-  }, [inventoryItems, form.operator_id]);
-  const needsInventoryFirst = isRentalItem && scopedInventory.length === 0;
+    const base = !form.operator_id ? inventoryItems : inventoryItems.filter(it => it.operator_id === form.operator_id);
+    if (!inventorySearch.trim()) return base;
+    const q = inventorySearch.trim().toLowerCase();
+    return base.filter(it => (it.name || '').toLowerCase().includes(q) || (it.category || '').toLowerCase().includes(q));
+  }, [inventoryItems, form.operator_id, inventorySearch]);
+  const needsInventoryFirst = isRentalItem && scopedInventory.length === 0 && !inventorySearch.trim();
   const lockOtherFields = needsInventoryFirst;
 
   // Guard against a desync: when the user rapidly swaps categories the
@@ -147,7 +152,6 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
   }, [cat]);
 
   const showCapacity = cat === 'hall' || cat === 'canopy';
-  const showAddress = cat === 'hall';
   const showUnitFields = ['rental_item', 'canopy'].includes(cat);
   const showDuration = ['per_hour'].includes(form.pricing_model);
 
@@ -237,6 +241,23 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
                   <SelectValue placeholder="Pick the inventory item this service rents out…" />
                 </SelectTrigger>
                 <SelectContent>
+                  <div className="px-2 pb-1.5 sticky top-0 bg-white z-10 border-b border-slate-100 mb-1">
+                    <Input
+                      autoFocus
+                      value={inventorySearch}
+                      onChange={(e) => setInventorySearch(e.target.value)}
+                      placeholder="Search inventory by name or category…"
+                      className="h-8 text-xs"
+                      data-testid="linked-inventory-search-input"
+                      // Keep Radix Select from intercepting space / arrow keys
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {scopedInventory.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-slate-500 text-center">
+                      No inventory matches “{inventorySearch}”.
+                    </div>
+                  )}
                   {scopedInventory.map(it => (
                     <SelectItem key={it.id} value={it.id}>
                       <span className="inline-flex items-center gap-2">
@@ -276,31 +297,40 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
         />
       </div>
 
-      {/* hall-only: subtype + address + capacity */}
+      {/* hall-only: subtype */}
       {cat === 'hall' && (
-        <>
-          <div>
-            <Label>Venue Type</Label>
-            <Select value={form.venue_type || 'hall'} onValueChange={v => setForm(p => ({ ...p, venue_type: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {VENUE_SUBTYPES.map(v => (<SelectItem key={v} value={v} className="capitalize">{v}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} placeholder="Douala" />
-          </div>
-        </>
-      )}
-
-      {showAddress && (
         <div className="col-span-2">
-          <Label>Address</Label>
-          <Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Rue Joss, Douala" />
+          <Label>Venue Type</Label>
+          <Select value={form.venue_type || 'hall'} onValueChange={v => setForm(p => ({ ...p, venue_type: v }))}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {VENUE_SUBTYPES.map(v => (<SelectItem key={v} value={v} className="capitalize">{v}</SelectItem>))}
+            </SelectContent>
+          </Select>
         </div>
       )}
+
+      {/* Location — shown on EVERY category so live-maps + Banquet results
+          can geo-tag each service (chairs delivered to Douala, photographer
+          available in Yaoundé, etc.). Stored on `city` + `address`. */}
+      <div>
+        <Label>City</Label>
+        <Input
+          value={form.city}
+          onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
+          placeholder="Douala"
+          data-testid="service-city-input"
+        />
+      </div>
+      <div>
+        <Label>Address / Pickup Point</Label>
+        <Input
+          value={form.address}
+          onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+          placeholder={cat === 'hall' ? 'Rue Joss, Douala' : 'Where this service operates or items are picked up'}
+          data-testid="service-address-input"
+        />
+      </div>
 
       {showCapacity && (
         <>
@@ -433,13 +463,25 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
 // ────────────────────────────────────────────────────────────────────
 // Packages tab — operator-built bundles
 // ────────────────────────────────────────────────────────────────────
-function PackagesTab({ services, scopeOperatorId }) {
+function PackagesTab({ services, scopeOperatorId, operators = [] }) {
+  const { user } = useAuth();
+  const isAdminOrSuper = user?.role === 'super_admin' || user?.role === 'admin';
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
-  const [form, setForm] = useState({ name: '', description: '', services: [], discount_percent: 0, is_active: true });
+  const [form, setForm] = useState({
+    name: '', description: '', services: [], discount_percent: 0, is_active: true,
+    operator_id: '', operator_name: '',
+  });
+
+  // Only services owned by the selected operator can be bundled — mirrors the
+  // backend ownership check in /banquets/packages/.
+  const eligibleServices = useMemo(() => {
+    if (!form.operator_id) return services;
+    return services.filter(s => s.operator_id === form.operator_id);
+  }, [services, form.operator_id]);
 
   const load = useCallback(async () => {
     try {
@@ -459,7 +501,15 @@ function PackagesTab({ services, scopeOperatorId }) {
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: '', description: '', images: [], services: [], discount_percent: 0, is_active: true });
+    setForm({
+      name: '', description: '', images: [], services: [], discount_percent: 0, is_active: true,
+      // Default operator_id to the active scope so operators don't have to
+      // pick it manually. Admin/super-admin can still override via the picker.
+      operator_id: scopeOperatorId || '',
+      operator_name: scopeOperatorId
+        ? (operators.find(o => (o._id || o.id) === scopeOperatorId)?.name || '')
+        : '',
+    });
     setOpen(true);
   }
 
@@ -472,6 +522,8 @@ function PackagesTab({ services, scopeOperatorId }) {
       services: (pkg.services || []).map(s => ({ service_id: s.service_id, quantity: s.quantity || 1 })),
       discount_percent: pkg.discount_percent || 0,
       is_active: pkg.is_active !== false,
+      operator_id: pkg.operator_id || '',
+      operator_name: pkg.operator_name || '',
     });
     setOpen(true);
   }
@@ -481,8 +533,21 @@ function PackagesTab({ services, scopeOperatorId }) {
       toast.error('Pick at least one service and give the package a name.');
       return;
     }
+    // Admin/super-admin MUST explicitly pick an operator — otherwise the backend
+    // 400s ("operator_id is required") on package creation. Operators have
+    // operator_id auto-stamped from their JWT so this guard only fires for admins.
+    if (isAdminOrSuper && !form.operator_id) {
+      toast.error('Pick the operator that owns this package.');
+      return;
+    }
     try {
-      const payload = { ...form, discount_percent: Number(form.discount_percent) || 0 };
+      const payload = {
+        ...form,
+        discount_percent: Number(form.discount_percent) || 0,
+        // Send operator_id explicitly so admin-created packages aren't
+        // orphaned (and so Edit re-saves preserve original ownership).
+        operator_id: form.operator_id || undefined,
+      };
       if (editing) await api.put(`/banquets/packages/${editing.id}`, payload);
       else await api.post('/banquets/packages/', payload);
       toast.success(editing ? 'Package updated' : 'Package created');
@@ -521,11 +586,11 @@ function PackagesTab({ services, scopeOperatorId }) {
 
   const subtotal = useMemo(() => {
     return form.services.reduce((sum, line) => {
-      const svc = services.find(s => s.id === line.service_id);
+      const svc = eligibleServices.find(s => s.id === line.service_id) || services.find(s => s.id === line.service_id);
       if (!svc) return sum;
       return sum + (Number(svc.base_price) || 0) * (line.quantity || 1);
     }, 0);
-  }, [form.services, services]);
+  }, [form.services, eligibleServices, services]);
   const total = subtotal * (1 - (Number(form.discount_percent) || 0) / 100);
 
   return (
@@ -724,6 +789,32 @@ function PackagesTab({ services, scopeOperatorId }) {
                 placeholder="What this package covers, ideal guest count, etc."
               />
             </div>
+
+            {/* Operator picker — admin/super-admin must scope packages to an
+                operator (the backend requires operator_id). Operators have it
+                auto-stamped from their JWT so this section is hidden. */}
+            {isAdminOrSuper && (
+              <div>
+                <OperatorSelector
+                  value={form.operator_id || ''}
+                  onChange={(id, name) => setForm(p => ({
+                    ...p, operator_id: id, operator_name: name,
+                    // Drop services that don't belong to the newly-picked
+                    // operator so the backend ownership check stays happy.
+                    services: (p.services || []).filter(s => {
+                      const svc = services.find(x => x.id === s.service_id);
+                      return !svc || svc.operator_id === id;
+                    }),
+                  }))}
+                  operators={operators}
+                  testId="banquet-package-operator-selector"
+                />
+                {!form.operator_id && (
+                  <p className="text-xs text-amber-600 mt-1">Pick the operator that owns this package — bundles can only mix services from a single operator.</p>
+                )}
+              </div>
+            )}
+
             <div>
               <Label>Package photos</Label>
               <MiniImageUploader
@@ -738,9 +829,13 @@ function PackagesTab({ services, scopeOperatorId }) {
             <div>
               <Label>Services in this bundle</Label>
               <div className="mt-2 space-y-2 max-h-72 overflow-y-auto border rounded-md p-2 bg-slate-50/50">
-                {services.length === 0 ? (
-                  <p className="text-sm text-slate-500 text-center py-4">Add some services first &mdash; they&apos;ll show up here.</p>
-                ) : services.map(svc => {
+                {eligibleServices.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    {isAdminOrSuper && !form.operator_id
+                      ? 'Pick an operator above to load their services.'
+                      : 'Add some services first — they\u2019ll show up here.'}
+                  </p>
+                ) : eligibleServices.map(svc => {
                   const line = form.services.find(s => s.service_id === svc.id);
                   const meta = CATEGORY_BY_VALUE[svc.category] || CATEGORY_BY_VALUE.other;
                   const Icon = meta.icon;
@@ -1352,7 +1447,7 @@ export default function BanquetManagement() {
         </TabsContent>
 
         <TabsContent value="packages" className="mt-6">
-          <PackagesTab services={services} scopeOperatorId={scopeOperatorId} />
+          <PackagesTab services={services} scopeOperatorId={scopeOperatorId} operators={operators} />
         </TabsContent>
 
         <TabsContent value="rentals" className="mt-6">

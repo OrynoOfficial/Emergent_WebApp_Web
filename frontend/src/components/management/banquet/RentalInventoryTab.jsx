@@ -34,6 +34,8 @@ import {
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { toast } from 'sonner';
+import BulkActionsBar, { BulkSelectCardWrapper } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 const ITEM_CATEGORIES = [
   { value: 'seating',    label: 'Seating',     icon: Armchair },
@@ -382,6 +384,16 @@ function ItemsSubTab({ items, loading, operators, onReload }) {
   const [editing, setEditing] = useState(null);
   const [stockItem, setStockItem] = useState(null);
 
+  // Bulk selection for the visible items grid.
+  const bulk = useBulkSelection(items, { idKey: 'id' });
+  const _bulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'banquet_items', action, ids });
+    onReload?.();
+  };
+  const bulkDelete     = (ids) => _bulkRun('delete', ids);
+  const bulkActivate   = (ids) => _bulkRun('activate', ids);
+  const bulkDeactivate = (ids) => _bulkRun('deactivate', ids);
+
   const handleDelete = async (item) => {
     if (!confirm(`Deactivate "${item.name}"?`)) return;
     try {
@@ -425,7 +437,8 @@ function ItemsSubTab({ items, loading, operators, onReload }) {
             const cover = item.images?.[0];
             const lowStock = (item.available_units || 0) < (item.total_units || 0) * 0.2;
             return (
-              <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow border-amber-100" data-testid={`rental-item-card-${item.id}`}>
+              <BulkSelectCardWrapper key={item.id} bulk={bulk} id={item.id}>
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow border-amber-100" data-testid={`rental-item-card-${item.id}`}>
                 <div className="relative h-32 bg-gradient-to-br from-amber-100 to-orange-100">
                   {cover ? (
                     <img src={cover} alt={item.name} className="w-full h-full object-cover" />
@@ -483,10 +496,26 @@ function ItemsSubTab({ items, loading, operators, onReload }) {
                   </div>
                 </CardContent>
               </Card>
+              </BulkSelectCardWrapper>
             );
           })}
         </div>
       )}
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="item"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        onActivate={bulkActivate}
+        onDeactivate={bulkDeactivate}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, name: r.name, category: r.category, operator: r.operator_name,
+          unit_price: r.unit_price, total: r.total_units, available: r.available_units,
+        }))}
+      />
 
       <ItemEditor
         open={editorOpen} onOpenChange={setEditorOpen}

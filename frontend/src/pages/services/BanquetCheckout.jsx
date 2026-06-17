@@ -524,16 +524,51 @@ export default function BanquetCheckout() {
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-slate-700 font-medium">City</Label>
+                    {(() => {
+                      // Prefer the city captured from the customer's original
+                      // search (cart.city). Fall back to the first cart item
+                      // snapshot's city when present. Read-only when derived
+                      // so guests can't accidentally route their event to a
+                      // city the picked services don't operate in.
+                      const derivedCity = cart.city || cart.items.find(i => i.snapshot?.city)?.snapshot?.city || '';
+                      const isLocked = !!derivedCity;
+                      return (
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                          <Input
+                            value={isLocked ? derivedCity : (cart.city || '')}
+                            readOnly={isLocked}
+                            onChange={isLocked ? undefined : (e) => setMeta({ city: e.target.value })}
+                            placeholder="Douala, Yaoundé…"
+                            className={`pl-10 h-11 ${isLocked ? 'bg-teal-50 text-teal-800 cursor-not-allowed' : 'bg-slate-50'}`}
+                            data-testid="co-event-city"
+                            aria-readonly={isLocked || undefined}
+                          />
+                          {isLocked && (
+                            <p className="text-[11px] text-teal-700 mt-1">
+                              Locked to your search city — services you picked operate in {derivedCity}.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-slate-700 font-medium">Event Location / Address</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input
-                        value={cart.city || ''}
-                        onChange={(e) => setMeta({ city: e.target.value })}
-                        placeholder="Douala, Yaoundé…"
-                        className="pl-10 h-11 bg-slate-50"
-                        data-testid="co-event-city"
-                      />
+                      <Input value={contact.address} onChange={(e) => setField('address', e.target.value)} placeholder="Where will the event take place?" className="pl-10 h-11 bg-slate-50" data-testid="co-contact-address" />
                     </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label className="text-slate-700 font-medium">Special Requests</Label>
+                    <Textarea
+                      value={contact.special_requests}
+                      onChange={(e) => setField('special_requests', e.target.value)}
+                      placeholder="Anything we should know? (dietary, layout, parking…)"
+                      className="bg-slate-50"
+                      data-testid="co-contact-requests"
+                    />
                   </div>
                 </div>
               </div>
@@ -572,23 +607,6 @@ export default function BanquetCheckout() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input value={contact.contact_email} onChange={(e) => setField('contact_email', e.target.value)} placeholder="you@example.com" className="pl-10 h-11 bg-slate-50" type="email" data-testid="co-contact-email" />
                     </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-slate-700 font-medium">Event Location / Address</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input value={contact.address} onChange={(e) => setField('address', e.target.value)} placeholder="Where will the event take place?" className="pl-10 h-11 bg-slate-50" data-testid="co-contact-address" />
-                    </div>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="text-slate-700 font-medium">Special Requests</Label>
-                    <Textarea
-                      value={contact.special_requests}
-                      onChange={(e) => setField('special_requests', e.target.value)}
-                      placeholder="Anything we should know? (dietary, layout, parking…)"
-                      className="bg-slate-50"
-                      data-testid="co-contact-requests"
-                    />
                   </div>
                 </div>
               </div>

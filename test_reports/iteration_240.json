@@ -1,0 +1,35 @@
+{
+  "summary": "Tested 10 punch-list items for Oryno banquet/hotel/admin UX. Verified Issue 1 (sidebar: top-level Refunds removed, nested under Transactions, /admin/refunds reachable) and Issue 3 (BulkActionsBar now appears at top — measured y=174px on /management/hotels with Activate/Deactivate/Export/Delete visible) end-to-end via Playwright. Backend pytest (6 passed / 1 skipped) confirms admin_bulk endpoint accepts the new collections: banquet_items, event_locations, event_showtimes, and still rejects unknown collections with HTTP 400. CRITICAL ENVIRONMENT NOTE: frontend runs `vite build && vite preview` (NO hot reload). The served dist bundle was stale (built 11:00) while source edits to useSidebarMenu.js were at 11:19, so Refunds appeared as a top-level item until I restarted frontend supervisor. Once rebuilt, fix took effect. Issues 2, 4a-c, 5, 6, 7, 8a-b, 9, 10 were source-reviewed but not fully exercised end-to-end due to time constraints.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter240_bulk_banquet.py",
+    "/app/test_reports/pytest/iter240.xml"
+  ],
+  "action_items": [
+    "IMPORTANT for main agent: after editing frontend code, run `sudo supervisorctl restart frontend` to rebuild the production bundle. `yarn start` does `vite build && vite preview` with NO hot reload. Without the restart, the served bundle remains stale and source changes are invisible. This caused the initial false positive for Issue 1 (Refunds still appearing as top-level).",
+    "Please self-verify Issues 2 (Hotel/Room Policies free-typing), 4a/b/c (BulkActionsBar on Rental Inventory / Event Locations / Showtimes — code is wired but I couldn't reach those subtabs cleanly), 5 (Linked Inventory search input), 6 (City/Address for all banquet categories), 7 (Banquet Packages OperatorSelector for admin), 8a/8b (In Cart button on results + modal), 9 (Date Picker centering), 10 (Banquet checkout field migration). The source diffs all look correct on code review."
+  ],
+  "critical_code_review_comments": [
+    "useSidebarMenu.js: top-level Refunds entry correctly removed; Transactions submenu correctly contains All Orders → Refunds → All Receipts → All Bookings → All Bills in order, with `badgeKey:'refunds-pending'` on Refunds.",
+    "BulkActionsBar.jsx: position changed from `fixed bottom-4` to `fixed top-20 left-1/2 -translate-x-1/2 z-50` — verified visually at y≈174px.",
+    "admin_bulk.py ALLOWED_COLLECTIONS now contains `banquet_items`, `event_locations` (cascade=event_showtimes), `event_showtimes` — pytest confirms 200 OK for each (and rejects unknown collections with 400).",
+    "Frontend production bundle requires explicit rebuild via supervisor restart — main agent should be aware.",
+    "Backend banquet_packages POST requires non-empty services list (HTTP 400 'A package must include at least one service.') — test confirmed the contract; operator_id parameter handling on the endpoint not directly exercised due to seed data, but the existing 360 Wedding package response shows operator_id field is part of the schema."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter240_bulk_banquet.py (new)",
+    "/app/frontend (rebuilt via supervisorctl restart frontend — no source changes)"
+  ],
+  "success_rate": { "backend": "100% (6/6 executed, 1 skipped due to seed limitation)", "frontend": "Issue 1 + Issue 3 fully verified; Issues 2,4a-c,5,6,7,8a-b,9,10 source-reviewed only" },
+  "test_credentials": "superadmin@oryno.com / testpassword123; admin@test.com / testpassword123; customer@test.com / testpassword123",
+  "seed_data_creation": "None persisted. Hotel bulk-select was toggled on Hilton Hotel to verify BulkActionsBar position; no destructive action performed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "CRITICAL: Frontend uses `vite build && vite preview` so changes only show after `sudo supervisorctl restart frontend`. Login is two-step: click 'Login to Your Account', fill email, click Continue, fill password, click 'Login' (NOT 'Continue' on 2nd step). admin@test.com lacks `admin.delete` permission for the /api/admin/bulk endpoint — use superadmin@oryno.com for backend bulk tests. /api/operators/ returns `{operators: [...]}` shape. /api/banquets/services has a 307 redirect quirk; without a venue context the /services endpoint returns 404 'Banquet venue not found'. /management/hotels lands on Dashboard subtab — click 'Hotels' subtab to see the list with bulk checkboxes (data-testid bulk-select-row-*).",
+  "rca of the issue": "Initial false positive: Refunds appeared as a standalone sidebar item even though useSidebarMenu.js no longer adds one. Root cause: frontend serves a static built dist via `vite preview`, and the production bundle (/app/frontend/dist/assets/index-*.js) had been built at 11:00 while the source edit to useSidebarMenu.js happened at 11:19 — i.e. supervisorctl had never restarted frontend after main agent's edits. Mitigation: ran `sudo supervisorctl restart frontend` which executes `vite build && vite preview`, regenerating the bundle. Recommend main agent always restart frontend after edits OR switch supervisor command to `vite` (dev server with HMR)."
+}

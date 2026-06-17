@@ -1,6 +1,6 @@
 // Locations + Showtimes sub-tabs for EventsManagement. The heavy editors
 // live in their own files now (LocationEditor.jsx / ShowtimeEditor.jsx).
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import SwipableImages from './SwipableImages';
 import LocationEditor from './LocationEditor';
 import ShowtimeEditor from './ShowtimeEditor';
+import BulkActionsBar, { BulkSelectCardWrapper } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 // ── Locations sub-tab ────────────────────────────────────────────────────────
 export function LocationsSubTab({ operators, scopeOperatorId, onReload }) {
@@ -36,6 +38,19 @@ export function LocationsSubTab({ operators, scopeOperatorId, onReload }) {
   }, [scopeOperatorId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Bulk selection on the visible locations grid. Memoize the input so the
+  // hook's internal cleanup effect doesn't keep firing on every render.
+  const memoItems = useMemo(() => items, [items]);
+  const bulk = useBulkSelection(memoItems, { idKey: 'id' });
+  const _bulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'event_locations', action, ids });
+    load();
+    onReload?.();
+  };
+  const bulkDelete     = (ids) => _bulkRun('delete', ids);
+  const bulkActivate   = (ids) => _bulkRun('activate', ids);
+  const bulkDeactivate = (ids) => _bulkRun('deactivate', ids);
 
   const handleDelete = async (loc) => {
     if (!confirm(`Deactivate "${loc.name}"?`)) return;
@@ -75,7 +90,8 @@ export function LocationsSubTab({ operators, scopeOperatorId, onReload }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map(loc => (
-            <Card key={loc.id} className="overflow-hidden hover:shadow-lg transition-shadow border-indigo-100" data-testid={`location-card-${loc.id}`}>
+            <BulkSelectCardWrapper key={loc.id} bulk={bulk} id={loc.id}>
+            <Card className="overflow-hidden hover:shadow-lg transition-shadow border-indigo-100" data-testid={`location-card-${loc.id}`}>
               <SwipableImages images={loc.images} />
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start justify-between gap-2">
@@ -113,9 +129,25 @@ export function LocationsSubTab({ operators, scopeOperatorId, onReload }) {
                 </div>
               </CardContent>
             </Card>
+            </BulkSelectCardWrapper>
           ))}
         </div>
       )}
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="location"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        onActivate={bulkActivate}
+        onDeactivate={bulkDeactivate}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, name: r.name, city: r.city, capacity: r.capacity,
+          layout: r.layout_type, zones: (r.zones || []).length,
+        }))}
+      />
 
       <LocationEditor
         open={open} onOpenChange={setOpen}
@@ -153,6 +185,16 @@ export function ShowtimesSubTab({ scopeOperatorId, onReload }) {
   }, [scopeOperatorId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Bulk selection on the visible showtimes grid. Memoize input for stability.
+  const memoShowtimes = useMemo(() => showtimes, [showtimes]);
+  const bulk = useBulkSelection(memoShowtimes, { idKey: 'id' });
+  const _bulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'event_showtimes', action, ids });
+    load();
+    onReload?.();
+  };
+  const bulkDelete = (ids) => _bulkRun('delete', ids);
 
   const handleDelete = async (s) => {
     if (!confirm(`Cancel "${s.title}"?`)) return;
@@ -203,7 +245,8 @@ export function ShowtimesSubTab({ scopeOperatorId, onReload }) {
             const totalAvail = (s.classes || []).reduce((sum, c) => sum + (c.available_units || 0), 0);
             const sold = totalCap - totalAvail;
             return (
-              <Card key={s.id} className="overflow-hidden hover:shadow-lg transition-shadow border-amber-100" data-testid={`showtime-card-${s.id}`}>
+              <BulkSelectCardWrapper key={s.id} bulk={bulk} id={s.id}>
+              <Card className="overflow-hidden hover:shadow-lg transition-shadow border-amber-100" data-testid={`showtime-card-${s.id}`}>
                 <SwipableImages images={s.images} height="h-32" />
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -254,10 +297,25 @@ export function ShowtimesSubTab({ scopeOperatorId, onReload }) {
                   </div>
                 </CardContent>
               </Card>
+              </BulkSelectCardWrapper>
             );
           })}
         </div>
       )}
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="showtime"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, title: r.title, location: r.location_name,
+          start: r.start_datetime, status: r.status,
+          classes: (r.classes || []).length,
+        }))}
+      />
 
       <ShowtimeEditor
         open={open} onOpenChange={setOpen}

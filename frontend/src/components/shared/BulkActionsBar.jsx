@@ -87,7 +87,7 @@ export default function BulkActionsBar({
   return (
     <>
       <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 px-4 py-3 flex items-center gap-3 min-w-[480px]"
+        className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700 px-4 py-3 flex items-center gap-3 min-w-[480px] max-w-[95vw]"
         data-testid="bulk-actions-bar"
       >
         <div className="flex items-center gap-2">

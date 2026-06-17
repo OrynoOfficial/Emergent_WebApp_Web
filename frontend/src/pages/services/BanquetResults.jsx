@@ -107,7 +107,7 @@ function SwipeableImages({ images, name, height = 'h-44' }) {
 }
 
 // ── Service card ────────────────────────────────────────────────────────────
-function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails }) {
+function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails, onOpenCart }) {
   const meta = CATEGORY_META[svc.category] || CATEGORY_META.other;
   const Icon = meta.icon;
   // Rental Item services carry live stock from their linked banquet_items doc.
@@ -144,11 +144,17 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
           </div>
         )}
         {!isOutOfStock && !isLowStock && inCart && (
-          <div className="absolute top-3 right-3 z-10">
-            <Badge className="bg-emerald-500 text-white border-0 shadow-md" data-testid={`in-cart-tag-${svc.id}`}>
-              <Sparkles className="w-3 h-3 mr-1" /> In Cart · {qtyInCart}
+          <button
+            type="button"
+            className="absolute top-3 right-3 z-10 group/incart"
+            onClick={(e) => { e.stopPropagation(); onOpenCart?.(); }}
+            data-testid={`in-cart-tag-${svc.id}`}
+            title="Open your event cart"
+          >
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 shadow-md ring-2 ring-white/60 group-hover/incart:ring-emerald-200 transition cursor-pointer">
+              <Sparkles className="w-3 h-3 mr-1" /> In Cart · {qtyInCart} <span className="ml-1 underline-offset-2 group-hover/incart:underline">View</span>
             </Badge>
-          </div>
+          </button>
         )}
       </div>
       <CardContent className="p-4 space-y-2.5">
@@ -239,7 +245,7 @@ function ServiceCard({ svc, inCart, qtyInCart, onAdd, onSetQty, onOpenDetails })
 }
 
 // ── Package card ────────────────────────────────────────────────────────────
-function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) {
+function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails, onOpenCart }) {
   // Resolve each line to its full service. Prefer the enriched `line.service`
   // returned by the backend (always present), fall back to the loaded services
   // list (which may be empty when the city filter yields no services).
@@ -267,11 +273,17 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails }) 
           )}
         </div>
         {inCart && (
-          <div className="absolute top-3 right-3 z-10">
-            <Badge className="bg-emerald-500 text-white border-0 shadow-md" data-testid={`in-cart-tag-pkg-${pkg.id}`}>
-              <Sparkles className="w-3 h-3 mr-1" /> In Cart
+          <button
+            type="button"
+            className="absolute top-3 right-3 z-10 group/incart"
+            onClick={(e) => { e.stopPropagation(); onOpenCart?.(); }}
+            data-testid={`in-cart-tag-pkg-${pkg.id}`}
+            title="Open your event cart"
+          >
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 shadow-md ring-2 ring-white/60 group-hover/incart:ring-emerald-200 transition cursor-pointer">
+              <Sparkles className="w-3 h-3 mr-1" /> In Cart <span className="ml-1 underline-offset-2 group-hover/incart:underline">View</span>
             </Badge>
-          </div>
+          </button>
         )}
       </div>
       <CardContent className="p-4 space-y-2.5">
@@ -717,6 +729,7 @@ export default function BanquetResults() {
                   onAdd={() => addPackage(pkg)}
                   onRemove={() => removePackage(pkg.id)}
                   onOpenDetails={() => setDetailItem({ ...pkg, _type: 'package' })}
+                  onOpenCart={() => setCartOpen(true)}
                 />
               ))}
             </div>
@@ -753,6 +766,7 @@ export default function BanquetResults() {
                     onAdd={() => addItem(svc, svc.min_quantity || 1)}
                     onSetQty={(n) => updateQty(svc.id, n)}
                     onOpenDetails={() => setDetailItem(svc)}
+                    onOpenCart={() => setCartOpen(true)}
                   />
                 );
               })}
@@ -777,6 +791,7 @@ export default function BanquetResults() {
         }}
         onSetQty={(n) => detailItem && updateQty(detailItem.id, n)}
         onRemove={() => detailItem && removePackage(detailItem.id)}
+        onOpenCart={() => { setDetailItem(null); setCartOpen(true); }}
       />
 
       <EventCartDrawer
