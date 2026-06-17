@@ -1,3 +1,17 @@
+### 2026-02-17 — Retired legacy Events, fixed showtime UX bugs, public events search (iter239)
+- **Legacy `events` collection retired.**
+  - Removed the 'Legacy Events' TabsTrigger + the entire TabsContent block + dialog + trailing BulkActionsBar from `EventsManagement.jsx`. Sub-tabs are now just **Locations** + **Showtimes**.
+  - Dropped `events` from `admin_bulk.py` `ALLOWED_COLLECTIONS` — bulk operations on this collection now return 400.
+  - Rewrote `scripts/seed_events.py` to (a) wipe leftover legacy `events` rows on startup and (b) seed 3 production-shape `event_locations` + 3 published `event_showtimes` (Afrobeat Festival 2026, TechSummit Yaoundé, Bafoussam Comedy Night) with poster URLs and class pricing.
+- **Operators table no longer stretches off screen** — `OperatorsManagement.jsx` table wrapper switched from `overflow-hidden` → `overflow-x-auto` and the table got `min-w-[900px]`, mirroring `Users.jsx`.
+- **Showtime poster upload no longer white-screens** — `ShowtimeEditor.jsx` was POSTing to `/api/uploads/` with form field `files` (plural), but the single-upload endpoint expects `file` (singular). Renamed → matches `MiniImageUploader` pattern. Also reads `res.data.file_url` first.
+- **Showtime Draft/Active picker** — `ShowtimeEditor.jsx` `form.status` defaults to `'published'` (not `'draft'`). Added a 'Visibility' Select (data-testid `showtime-status-select`) with two options: `🟢 Active — visible to customers` and `⚪ Draft — saved but hidden`. Customers / anonymous never see drafts even if an admin tries to filter by `?status=draft`.
+- **Customer-facing Events results now pulls from Showtimes** — `EventsResults.jsx` `loadEvents()` dropped the legacy `eventsApi.search` call; it now queries ONLY `/api/event-showtimes/?upcoming_only=true`. The card image prefers `poster_url`, then `images[0]`. `_showtime: true` flag continues to route clicks to `/services/showtimes/:id`.
+- **Public event-showtimes listing** — added `get_current_user_optional` dep in `middleware/auth.py` (returns `None` for anonymous, never raises). `routes/event_showtimes.py` `list_showtimes` now uses it: anonymous + customer callers always get `status='published'` (drafts/cancelled/sold-out hidden); operator/staff scoped to their own showtimes; admin/super_admin see everything (or a specific status if explicitly filtered).
+- **Tested** (iter239 — both via testing_agent_v3_fork): 100% backend (7/7) and 100% frontend (5/5). All 5 user-reported issues verified fixed. One non-blocking polish suggestion remains (force `status=published` server-side when the public /services/events/results path is used — minor admin-self-view edge case).
+
+
+
 ### 2026-02-17 — Events seed + Bulk Actions rolled out to 7 more management pages (iter238)
 - **New seed script** `/app/backend/scripts/seed_events.py` — writes 3 production-shape events (Afrobeat Festival, TechSummit Yaoundé, Bafoussam Comedy Night) with `start_date >= today`, `ticket_types`, `event_type`. Fixes the long-standing gap where `seed_database.py` wrote events with a legacy `date` field that the public route filtered out. Run with `python -m scripts.seed_events`.
 - **Admin Bulk whitelist extended** in `backend/routes/admin_bulk.py`: added `banquets`, `pressings`, `package_services` (alongside the existing `hotels / restaurants / cinemas / films / car_rentals / vehicles / events / packages / travel_routes`). Same `delete / activate / deactivate` action set.
