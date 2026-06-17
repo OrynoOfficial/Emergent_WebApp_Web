@@ -1,5 +1,22 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 246: Customer event search leak + accent search)
+
+### Bug 1 — cancelled events leaked into customer search for admins/operators
+- `GET /api/event-showtimes/` only auto-restricts to `status='published'` when the caller is anonymous or `role='customer'`. Admins/operators/staff browsing the customer-facing `/services/events/results` page saw cancelled events too.
+- Fix: frontend `EventsResults.jsx` now sends `status=published` explicitly so the customer view is consistent regardless of who's logged in.
+- Repro before fix: `GET /api/event-showtimes/?upcoming_only=true&city=Douala` returned *Afrobeat Festival 2026* + *UI Smoke Show* (both cancelled) when logged in as super_admin. After fix: returns `[]` as expected.
+
+### Bug 2 — city search was accent + case sensitive
+- "Yaounde" (no accent) returned 0 results even though the venue cities are stored as "Yaoundé".
+- Fix: `_accent_insensitive_pattern(city)` in `routes/event_showtimes.py` expands each vowel to a character class (`a → [aàáâãäå]`, `e → [eéèêë]`, …), then we still apply Mongo's `$options: 'i'` for case insensitivity.
+- "Yaounde", "yaounde", "YAOUNDE", "Yaoundé" all now match the same 2 published showtimes.
+
+### Where the picker / search collections live (for future debugging)
+- Customer search reads `event_showtimes` ONLY. The legacy `events` collection was retired.
+- Management Center → Showtimes subtab also reads `/event-showtimes/` (with operator scoping). Locations subtab reads `/event-locations/`.
+
+
 ## Latest Changes (Feb 2026 — iter 245: Refund lifecycle + ticket invalidation + UX polish)
 
 ### Refund-request lifecycle (backend)

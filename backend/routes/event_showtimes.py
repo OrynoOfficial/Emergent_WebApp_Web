@@ -5,6 +5,8 @@ carries its own `classes[]` (VIP / Standard / ...). Booking decrements
 
 Permissions mirror `event_locations`.
 """
+import re
+import unicodedata
 import uuid
 from datetime import datetime
 from typing import Optional, List
@@ -28,6 +30,30 @@ _VIEW_PERMS = ["events.view", "operator.services.view", "services.view"]
 _CREATE_PERMS = ["events.create", "operator.services.create", "services.manage"]
 _EDIT_PERMS = ["events.edit", "operator.services.edit", "services.manage"]
 _DELETE_PERMS = ["events.delete", "operator.services.delete", "services.manage"]
+
+
+# iter 246: accent + case insensitive city matching. Users typing "Yaounde"
+# must still find shows hosted in "Yaoundé". MongoDB regex doesn't honour
+# diacritic-insensitive collation, so we expand each vowel into a char-class.
+_ACCENT_CLASSES = {
+    "a": "[aàáâãäå]", "e": "[eéèêë]", "i": "[iíìîï]",
+    "o": "[oóòôõö]", "u": "[uúùûü]", "c": "[cç]",
+    "n": "[nñ]", "y": "[yýÿ]",
+}
+
+
+def _accent_insensitive_pattern(s: str) -> str:
+    """Build a regex pattern matching ``s`` regardless of common diacritics.
+
+    "Yaounde" → "Y[aàáâãäå][uúùûü][oóòôõö][nñ]d[eéèêë]"  (case-insensitive
+    via the ``$options: i`` flag on the Mongo regex). NFD-fold first so
+    "Yaoundé" input also expands cleanly.
+    """
+    folded = "".join(
+        c for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn"
+    )
+    return "".join(_ACCENT_CLASSES.get(c.lower(), re.escape(c)) for c in folded)
 
 
 def _hydrate_classes(class_inputs: List[TicketClassInput]) -> list[dict]:
@@ -126,12 +152,14 @@ async def list_showtimes(
     showtimes = await db.event_showtimes.find(q).sort("start_datetime", 1).to_list(500)
 
     # Optional city filter: re-query the parent location collection once.
+    # iter 246: accent + case insensitive match so "Yaounde" matches "Yaoundé".
     if city and showtimes:
         loc_ids = list({s["location_id"] for s in showtimes})
+        pattern = _accent_insensitive_pattern(city)
         ok_ids = {
             l["_id"]
             async for l in db.event_locations.find(
-                {"_id": {"$in": loc_ids}, "city": {"$regex": city, "$options": "i"}},
+                {"_id": {"$in": loc_ids}, "city": {"$regex": pattern, "$options": "i"}},
                 {"_id": 1},
             )
         }

@@ -338,8 +338,11 @@ export default function EventsResults() {
       // Showtimes are now the *only* source for the customer-facing events
       // results page. The legacy `events` collection was retired alongside the
       // legacy management subpage; we no longer query it.
+      // iter 246: explicitly pin `status=published` so admins/operators browsing
+      // the customer search don't accidentally see cancelled/draft showtimes
+      // (the backend only auto-restricts for anonymous + customer roles).
       const res = await api
-        .get('/event-showtimes/', { params: { upcoming_only: true, ...(city ? { city } : {}) } })
+        .get('/event-showtimes/', { params: { upcoming_only: true, status: 'published', ...(city ? { city } : {}) } })
         .catch(() => ({ data: { showtimes: [] } }));
 
       // Normalise showtimes into the same card shape EventsResults already
