@@ -1,3 +1,22 @@
+### 2026-02-17 — Centralised checkout flow shared by 7 booking pages (iter230)
+- **New shared abstraction**: `useCheckout(serviceType, opts)` (`/app/frontend/src/hooks/useCheckout.js`) + `<CheckoutPaymentPanel>` (`/app/frontend/src/components/common/CheckoutPaymentPanel.jsx`). The hook owns: `orderId`, `paymentInProgress`, `showPaymentOverlay`, `triggerPayment`, `selectedPaymentMethod`, the `useOrderAbandonment` wiring, `handlePaymentInitiated` (with redirect + success navigate), `handlePaymentError`, `submit()` (validates → builds payload → POSTs `/api/orders/create` → triggers payment), `rePayExisting` retry, and promo-code apply/clear/discount helpers. Pages now only supply `buildPayload()`, `validate()`, optional `onSuccess({orderId, response})`, and `onAbandon` callbacks.
+- **Migrated 7 booking pages** off the duplicated state/handlers:
+  - `EventBooking.jsx` (500 LOC) — simplest pattern.
+  - `RestaurantBooking.jsx` (539 LOC) — keeps its own promo state (different UX); `onSuccess` records promo usage + clears sessionStorage.
+  - `CarRentalBooking.jsx` (680 LOC).
+  - `PackageBooking.jsx` (600 LOC) — `buildPayload` is async (creates the package via `/api/packages/` first, then the order).
+  - `CinemaBooking.jsx` (849 LOC) — uses the hook's centralised `checkout.promo.{code,apply,clear}` helpers; `onAbandon` resets `currentStep` to 2.
+  - `HotelBooking.jsx` (1015 LOC) — `onSuccess` posts `/api/rooms/bookings/reserve` after payment.
+  - `TravelBooking.jsx` (1096 LOC) — `onSuccess` posts `/api/seat-bookings/confirm` for outbound + return and records promo usage.
+- **Intentionally NOT migrated**:
+  - `ShowtimeDetails.jsx` — uses a different `/event-showtimes/book` endpoint; its checkout flow is already lean (no overlay, no abandonment, no rePay).
+  - `LaundryBooking.jsx` — has a unique `onRequestCreateOrder` lazy-create hook on `PaymentMethodsSelection`; retrofitting it would complicate the central hook for one consumer.
+  - `BanquetCheckout.jsx` — uses `/banquets/cart/checkout` instead of `/orders/create`.
+- **Result**: ~600 lines of duplicated state/handlers removed across the 7 migrated pages. Bundle size shrunk by ~3 KB (4545 → 4542 kB minified). New shared hook is 240 lines with full docstring; new shared component is 30 lines.
+- **Tested** (iter230 — frontend e2e via testing_agent_v3_fork): 6/9 PASS clean (RestaurantBooking, CarRentalBooking, PackageBooking, CinemaBooking, LaundryBooking, ShowtimeDetails), HotelBooking INCONCLUSIVE (synthetic sessionStorage seed not realistic enough — no runtime error), TravelBooking PARTIAL (only seat-map prereq step rendered — no error), EventBooking NOT TESTED (0 seeded events). 0 console errors / ReferenceErrors across all migrated pages.
+
+
+
 ### 2026-02-17 — System Cleanup admin UI + Bulk Actions wired to 4 more management pages (iter186)
 - **New super-admin route** `/admin/ops/cleanup` (`SystemCleanup.jsx`): one-click dry-run preview and Apply that wraps `backend/scripts/cleanup_test_data.py` via the new `backend/routes/admin_ops.py` (gated by `require_super_admin`). Shows a 4-column table (`Test Users / Orders / Showtimes / Locations` matched + the cascade deletes per collection), a "Protected accounts (never deleted)" amber card with the 4 seed emails, and an AlertDialog confirmation before any delete. Sidebar surfaces it under **System → System Cleanup** (super_admin only).
 - **Bulk Actions rolled out** beyond Operators — now wired into:
