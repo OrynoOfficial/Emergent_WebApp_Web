@@ -1,5 +1,42 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 245: Refund lifecycle + ticket invalidation + UX polish)
+
+### Refund-request lifecycle (backend)
+- **Scanned tickets are now blocked** from refund: any `order.checked_in` or `order.scanned_at` returns HTTP 400 *"This ticket has already been scanned and cannot be refunded."*
+- On refund submit, the order flips `status` → `'refund_requested'`, snapshots `pre_refund_status`, and sets `ticket_invalidated: true` so the e-ticket immediately stops being scannable.
+- **In-app notifications** now fire at every refund transition:
+  - submit → `refund_submitted` ("Refund request received")
+  - approve → `refund_approved` ("Refund approved")
+  - reject  → `refund_rejected` ("Refund request declined")
+  All use `dedupe_key=refund_<state>:<refund_id>` so re-runs don't spam the inbox.
+- **Reject flow reverts the ticket** to `pre_refund_status` AND clears `ticket_invalidated`, UNLESS the service date has already elapsed — in that case the order becomes `'expired'` and the ticket stays invalidated. `_service_date_expired(order)` covers `start_datetime`/`show_date`/`check_out`/etc.
+- **Approve flow** keeps the ticket invalidated (whether full or partial refund). Full refund flips order → `refunded`; partial reverts the order status to `pre_refund_status` and sets `payment_status='partially_refunded'`.
+
+### Event order_number bug
+- `POST /api/event-showtimes/book` previously persisted an order with **no `order_number`** — the Cysoul concert booking was the surfacing instance. Now generates `EVT-YYYYMMDD-NNNNN` from `db.orders.count_documents({service_type: 'event'}) + 1`.
+
+### OrderDetailModal layout
+- Status badge moved to the SAME line as the "Order Details" title (right-aligned via `justify-between`).
+- "Booked on …" timestamp moved out of the right-rail and placed as a thin line BETWEEN the DialogHeader and the operator hero strip — collapses ~40px of vertical whitespace.
+- New `data-testid="ticket-invalidated-banner"` rose alert when `order.ticket_invalidated`.
+- `getStatusConfig` extended with `refund_requested` ("Refund Request Submitted"), `refunded`, and `expired` variants.
+- `EventTicket` + QR section now hidden when `ticket_invalidated`. "Request refund" button hidden for invalidated, scanned, refund_requested, refunded, cancelled, or expired orders.
+
+### Orders page cards
+- Grid + list cards now `bg-white border border-slate-200 shadow-sm` (was `bg-slate-100 border-2 border-slate-300`).
+- Reduced padding (p-3), smaller icon tiles (w-8/w-11), tighter typography (text-sm titles, h-7 buttons).
+
+### Customer Service default view
+- `useState('grid')` (was `'list'`).
+
+### Tests
+- `/app/backend/tests/test_iter245_refund_lifecycle.py` — 5/5 pytest passing: order_number prefix, refund flow, scanned-ticket guard, reject revert, reject-after-expiry, approve full path.
+
+### Build/deploy reminder
+- Frontend uses `vite build && vite preview` — any `.jsx/.js` change needs `sudo supervisorctl restart frontend` + ~20s rebuild. Backend hot-reloads via supervisor + uvicorn `--reload`.
+
+
 ## Latest Changes (Feb 2026 — iter 244: UX polish — refund readout, ratings compact rows, ticket cards)
 
 ### Refund Request dialog
