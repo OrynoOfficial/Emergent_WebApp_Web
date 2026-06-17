@@ -1,5 +1,24 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 258: Order Detail revamp + MoMo modal portrait)
+
+### Order Detail Modal (`/app/frontend/src/components/modals/OrderDetailModal.jsx`)
+- **Operator hero strip** added right under "Order Details" heading — logo + name + service-type badge. Testid `order-detail-operator-strip`.
+- **Service Info + Booking Details merged** into a single dense card. Replaced 4 separate `grid grid-cols-2` rows with a single row-filtered key/value grid that renders only the cells that have data (no empty placeholders, no redundant section dividers). Saves ~200px vertical.
+- **Extra Luggage Manifest moved** to directly under the "Your Vehicle" card (was before the vehicle). Boarding-time flow now reads ticket → vehicle → luggage.
+- **Customer Information** compacted to a 3-column `Icon + Label + Value` grid (Name/Phone/Email/ID all on one row on desktop). Passengers > 1 collapse into wrap-pill badges instead of a stacked list. Saves ~120px.
+- **Payment Summary** redesigned:
+  - Hero navy gradient banner with "TOTAL PAID" + amount (`payment-summary-total`) + status pill (`payment-summary-status`).
+  - Subtotal/Tax/Discount line items only when present (no skeleton zeros).
+  - Footer strip: Wallet icon + method badge.
+
+### MoneyTrail (`/app/frontend/src/components/payment/MoneyTrail.jsx`)
+- Snapshot card got a dashboard-style hero: dark gradient header with state pill + state icon + provider badge + refresh, three KPI cards (Captured/Refunded/Net) with `divide-x` separators, payment_id footer.
+- Timeline header ("Timeline · N events") + connector line repositioned so it visually anchors the events.
+
+### MoMo confirmation modal — portrait re-shape
+- `PaymentMethodsSelection.jsx`: width `max-w-[440px]` → `max-w-[360px]` (narrower), added `max-h-[92vh]` + `flex flex-col`. The inner `h-full overflow-y-auto` panel now handles internal scrolling so the card reads top-to-bottom on every viewport.
+
 ## Latest Changes (Feb 2026 — iter 257: Laundry → useCheckout + DatePicker portal)
 
 ### Laundry migration (smallest-first)

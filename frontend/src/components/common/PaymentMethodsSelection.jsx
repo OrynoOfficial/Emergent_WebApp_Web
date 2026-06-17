@@ -639,10 +639,11 @@ const PaymentMethodsSelection = ({
         <DialogContent
           data-testid="momo-payment-modal"
           showCloseButton={false}
-          /* Square-ish layout: capped at ~440px square so the card doesn't
-             stretch across wide desktop screens. Mobile still goes full
-             width (no h-screen — that's what made it feel stretched). */
-          className="!max-w-none w-[92vw] max-w-[440px] sm:max-w-[440px] p-0 border-0 rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+          /* Portrait-shaped layout — narrower (~360px) and taller, so the
+             card reads top-to-bottom instead of stretching across desktop
+             screens. Max-height lets the body scroll internally if the
+             content overflows on smaller laptops. */
+          className="!max-w-none w-[92vw] max-w-[360px] sm:max-w-[360px] max-h-[92vh] p-0 border-0 rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530] flex flex-col"
           onPointerDownOutside={(e) => {
             // Block outside-click close while still pending so the user
             // doesn't accidentally cancel an in-flight authorisation.

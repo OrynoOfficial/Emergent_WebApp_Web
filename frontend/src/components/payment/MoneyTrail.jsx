@@ -129,47 +129,70 @@ export default function MoneyTrail({ orderId }) {
   const { snapshot, events } = data;
   return (
     <div className="space-y-4" data-testid="money-trail">
-      {/* Snapshot card — the derived current state */}
-      {snapshot && (
-        <div className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Badge className={`${STATE_COLOR[snapshot.state] || 'bg-slate-100 text-slate-700'} border-0`}>
-                {String(snapshot.state).replace(/_/g, ' ')}
-              </Badge>
-              <ProviderBadge provider={snapshot.provider} />
-              {snapshot.in_dispute && (
-                <Badge className="bg-orange-100 text-orange-700 border-0">In dispute</Badge>
-              )}
+      {/* Snapshot card — the derived current state. Reads like a finance
+          dashboard: hero state pill + three numbers (captured/refunded/net)
+          on dedicated cards instead of a flat grid. */}
+      {snapshot && (() => {
+        const StateIcon = (EVENT_META[snapshot.state]?.Icon) ||
+          (snapshot.state === 'captured' ? CheckCircle2 :
+           snapshot.state === 'refunded' || snapshot.state === 'partially_refunded' ? ArrowDownCircle :
+           snapshot.state === 'failed' ? XCircle :
+           snapshot.state === 'authorized' ? ShieldCheck :
+           snapshot.state === 'disputed' ? ShieldAlert : Clock);
+        const stateColor = STATE_COLOR[snapshot.state] || 'bg-slate-100 text-slate-700';
+        return (
+          <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm" data-testid="money-trail-snapshot">
+            {/* Header strip — large state, refresh button on the right */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-700 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${stateColor} ring-2 ring-white/40`}>
+                  <StateIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-white/60 font-semibold">Current state</p>
+                  <p className="text-sm font-bold text-white capitalize">{String(snapshot.state).replace(/_/g, ' ')}</p>
+                </div>
+                <div className="flex items-center gap-1 ml-2">
+                  <ProviderBadge provider={snapshot.provider} />
+                  {snapshot.in_dispute && (
+                    <Badge className="bg-orange-200 text-orange-800 border-0 text-[10px]">In dispute</Badge>
+                  )}
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={load} data-testid="money-trail-refresh" className="text-white/70 hover:text-white hover:bg-white/10">
+                <RotateCcw className="w-3.5 h-3.5" />
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={load} data-testid="money-trail-refresh">
-              <RotateCcw className="w-3.5 h-3.5" />
-            </Button>
+            {/* Three KPI cards */}
+            <div className="grid grid-cols-3 divide-x divide-slate-200 bg-white">
+              <div className="px-4 py-3 text-center">
+                <div className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Captured</div>
+                <div className="font-bold text-emerald-700 text-base mt-0.5">{formatFCFA(snapshot.captured_amount || 0)}</div>
+              </div>
+              <div className="px-4 py-3 text-center">
+                <div className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Refunded</div>
+                <div className="font-bold text-purple-700 text-base mt-0.5">{formatFCFA(snapshot.refunded_amount || 0)}</div>
+              </div>
+              <div className="px-4 py-3 text-center bg-slate-50">
+                <div className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Net</div>
+                <div className="font-bold text-slate-900 text-base mt-0.5">{formatFCFA(snapshot.net_amount || 0)}</div>
+              </div>
+            </div>
+            {/* Payment id footer */}
+            <div className="bg-slate-50 px-4 py-1.5 border-t border-slate-100 text-[10px] text-slate-400 uppercase tracking-wider">
+              payment_id · <span className="font-mono normal-case text-slate-500">{data.payment_id}</span>
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-xs">
-            <div>
-              <div className="text-slate-500 mb-0.5">Captured</div>
-              <div className="font-bold text-emerald-700">{formatFCFA(snapshot.captured_amount || 0)}</div>
-            </div>
-            <div>
-              <div className="text-slate-500 mb-0.5">Refunded</div>
-              <div className="font-bold text-purple-700">{formatFCFA(snapshot.refunded_amount || 0)}</div>
-            </div>
-            <div>
-              <div className="text-slate-500 mb-0.5">Net</div>
-              <div className="font-bold text-slate-900">{formatFCFA(snapshot.net_amount || 0)}</div>
-            </div>
-          </div>
-          <div className="mt-2 text-[10px] text-slate-400 uppercase tracking-wider">
-            payment_id: <span className="font-mono normal-case text-slate-500">{data.payment_id}</span>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* Vertical stepper */}
+      {/* Vertical stepper — each event in chronological order */}
       <div className="relative">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2 px-1">
+          Timeline · {events.length} event{events.length !== 1 ? 's' : ''}
+        </p>
         {/* Connector line */}
-        <div className="absolute left-[15px] top-2 bottom-2 w-[2px] bg-slate-200" aria-hidden />
+        <div className="absolute left-[15px] top-7 bottom-2 w-[2px] bg-slate-200" aria-hidden />
         <ol className="space-y-3">
           {events.map((ev, idx) => {
             const meta = EVENT_META[ev.event_type] || { Icon: Clock, color: 'text-slate-500 bg-slate-100', label: ev.event_type };

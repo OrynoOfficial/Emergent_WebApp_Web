@@ -40,6 +40,8 @@ import {
   Sparkles,
   Home,
   CheckCircle2,
+  Building2,
+  Wallet,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
@@ -161,6 +163,39 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           </DialogTitle>
         </DialogHeader>
 
+        {/* ── Operator hero strip ─────────────────────────────────────────
+            Surfaces the operator name + logo right after the modal heading
+            so customers immediately know WHO they're booked with. Previously
+            this was buried inside the Service Info grid and customers
+            scrolled past it. */}
+        {(order.operator_name || order.operator_logo_url || order.booking_details?.operator_logo_url) && (
+          <div
+            className="mt-2 mb-1 flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5 shadow-sm"
+            data-testid="order-detail-operator-strip"
+          >
+            {(order.operator_logo_url || order.booking_details?.operator_logo_url) ? (
+              <img
+                src={order.operator_logo_url || order.booking_details.operator_logo_url}
+                alt={order.operator_name || 'Operator'}
+                className="h-10 w-10 rounded-lg bg-white object-contain border border-slate-200 shrink-0"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-lg bg-[#082c59]/10 flex items-center justify-center shrink-0">
+                <Building2 className="h-5 w-5 text-[#082c59]" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Operator</p>
+              <p className="text-sm font-bold text-slate-900 truncate">
+                {order.operator_name || order.booking_details?.operator_name || 'Operator'}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-[10px] uppercase tracking-wide bg-white border-slate-300 text-slate-600 capitalize hidden sm:inline-flex">
+              {(order.service_category || order.service_type)?.replace('_', ' ') || 'Service'}
+            </Badge>
+          </div>
+        )}
+
         <div className="space-y-6 py-4">
           {/* Status Badge */}
           <div className="flex items-center justify-between">
@@ -216,7 +251,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
 
           <Separator />
 
-          {/* Service Info */}
+          {/* Service + Booking summary — merged into a single dense block
+              so customers don't scroll through redundant section dividers.
+              Operator info now lives in the hero strip above, so we don't
+              repeat it here. */}
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Service Information</h3>
             {order.checked_in && (
@@ -235,8 +273,8 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </div>
               </div>
             )}
-            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-              {/* Show departure and destination for travel */}
+            <div className="bg-slate-50 rounded-lg p-4 space-y-2.5">
+              {/* Route/Title row */}
               {(order.booking_details?.departure_city && order.booking_details?.destination_city) ? (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-emerald-600" />
@@ -247,152 +285,47 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               ) : (
                 <h4 className="font-bold text-lg text-slate-900">{order.service_name || order.service_title || 'Service'}</h4>
               )}
-              
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                <div>
-                  <p className="text-xs text-slate-500">Service Category</p>
-                  <p className="text-sm font-medium capitalize">{(order.service_category || order.service_type)?.replace('_', ' ') || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Operator</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {(order.operator_logo_url || order.booking_details?.operator_logo_url) && (
-                      <img
-                        src={order.operator_logo_url || order.booking_details.operator_logo_url}
-                        alt={order.operator_name || 'Operator'}
-                        className="w-6 h-6 rounded bg-white object-contain border border-slate-200 shrink-0"
-                        data-testid="order-detail-operator-logo"
-                      />
-                    )}
-                    <p className="text-sm font-medium">{order.operator_name || order.booking_details?.operator_name || 'N/A'}</p>
+
+              {/* Compact 2-column key/value grid covering Date / Time /
+                  Check-in/out / Vehicle Type / Guests / Seats / Arrival.
+                  Each row is a fragment rendered ONLY when the value
+                  exists — keeps the section as tall as the data warrants. */}
+              {(() => {
+                const bd = order.booking_details || {};
+                const si = bd.showtime_info || {};
+                const serviceDate = bd.travel_date || bd.service_date || bd.show_date || si.show_date || order.service_date;
+                const checkIn = bd.check_in;
+                const checkOut = bd.check_out;
+                const serviceTime = order.service_time || bd.service_time || bd.travel_time || bd.departure_time || bd.show_time || si.show_time;
+                const arrivalLabel = bd.arrival_time ? 'Arrival Time' : 'End Time';
+                const arrivalValue = bd.arrival_time || bd.end_time || si.end_time;
+                const vehicleType = bd.vehicle_type;
+                const guests = bd.guests;
+                const seats = bd.selected_seats?.length > 0 ? bd.selected_seats.join(', ') : null;
+                const rows = [
+                  serviceDate && { label: 'Service Date', value: formatDate(serviceDate), testId: 'service-date' },
+                  serviceTime && { label: 'Service Time', value: serviceTime, testId: 'service-time' },
+                  checkIn && { label: 'Check-in', value: formatDate(checkIn) },
+                  checkOut && { label: 'Check-out', value: formatDate(checkOut) },
+                  arrivalValue && { label: arrivalLabel, value: arrivalValue },
+                  vehicleType && { label: 'Vehicle Type', value: vehicleType },
+                  guests && { label: 'Guests', value: guests },
+                  seats && { label: 'Seats', value: seats },
+                ].filter(Boolean);
+                if (rows.length === 0) return null;
+                return (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-200">
+                    {rows.map((r, i) => (
+                      <div key={i} className="min-w-0">
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">{r.label}</p>
+                        <p className="text-sm font-semibold text-slate-800 truncate" data-testid={r.testId}>{r.value}</p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
           </div>
-
-          {/* Booking Details */}
-          <div>
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Booking Details</h3>
-            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-slate-500">Service Type</p>
-                  <p className="text-sm font-medium capitalize">{(order.service_type || order.service_category)?.replace('_', ' ') || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Service Date</p>
-                  <p className="text-sm font-medium" data-testid="service-date">
-                    {(() => {
-                      const d = order.booking_details?.travel_date
-                        || order.booking_details?.service_date
-                        || order.booking_details?.check_in
-                        || order.booking_details?.show_date
-                        || order.booking_details?.showtime_info?.show_date
-                        || order.service_date;
-                      return d ? formatDate(d) : 'N/A';
-                    })()}
-                  </p>
-                </div>
-              </div>
-
-              {/* Service Time: prefer operator/customer-selected service_time, else route departure_time */}
-              {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.arrival_time || order.booking_details?.show_time || order.booking_details?.showtime_info?.show_time) && (
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  {(order.service_time || order.booking_details?.service_time || order.booking_details?.travel_time || order.booking_details?.departure_time || order.booking_details?.show_time || order.booking_details?.showtime_info?.show_time) && (
-                    <div>
-                      <p className="text-xs text-slate-500">Service Time</p>
-                      <p className="text-sm font-medium" data-testid="service-time">
-                        {order.service_time
-                          || order.booking_details?.service_time
-                          || order.booking_details?.travel_time
-                          || order.booking_details?.departure_time
-                          || order.booking_details?.show_time
-                          || order.booking_details?.showtime_info?.show_time}
-                      </p>
-                    </div>
-                  )}
-                  {(order.booking_details?.arrival_time || order.booking_details?.end_time || order.booking_details?.showtime_info?.end_time) && (
-                    <div>
-                      <p className="text-xs text-slate-500">{order.booking_details?.arrival_time ? 'Arrival Time' : 'End Time'}</p>
-                      <p className="text-sm font-medium">{order.booking_details?.arrival_time || order.booking_details?.end_time || order.booking_details?.showtime_info?.end_time}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Check-in/Check-out for hotels */}
-              {(order.booking_details?.check_in || order.booking_details?.check_out) && (
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  {order.booking_details?.check_in && (
-                    <div>
-                      <p className="text-xs text-slate-500">Check-in</p>
-                      <p className="text-sm font-medium">{formatDate(order.booking_details.check_in)}</p>
-                    </div>
-                  )}
-                  {order.booking_details?.check_out && (
-                    <div>
-                      <p className="text-xs text-slate-500">Check-out</p>
-                      <p className="text-sm font-medium">{formatDate(order.booking_details.check_out)}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Additional details */}
-              {(order.booking_details?.vehicle_type || order.booking_details?.guests || order.booking_details?.selected_seats?.length > 0) && (
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                  {order.booking_details?.vehicle_type && (
-                    <div>
-                      <p className="text-xs text-slate-500">Vehicle Type</p>
-                      <p className="text-sm font-medium">{order.booking_details.vehicle_type}</p>
-                    </div>
-                  )}
-                  {order.booking_details?.guests && (
-                    <div>
-                      <p className="text-xs text-slate-500">Guests</p>
-                      <p className="text-sm font-medium">{order.booking_details.guests}</p>
-                    </div>
-                  )}
-                  {order.booking_details?.selected_seats?.length > 0 && (
-                    <div>
-                      <p className="text-xs text-slate-500">Seats</p>
-                      <p className="text-sm font-medium">{order.booking_details.selected_seats.join(', ')}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Extra-luggage manifest — printed on the customer's order detail
-              so it doubles as a boarding-time reference. Operators and
-              station staff can verify each bag's contents at a glance. */}
-          {Array.isArray(order.booking_details?.extra_luggage_descriptions) && order.booking_details.extra_luggage_descriptions.length > 0 && (
-            <div data-testid="order-luggage-manifest">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold">
-                  {order.booking_details.extra_luggage_descriptions.length}
-                </span>
-                Extra Luggage Manifest
-              </h3>
-              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                <ol className="space-y-2">
-                  {order.booking_details.extra_luggage_descriptions.map((desc, idx) => (
-                    <li key={idx} className="flex gap-3 items-start text-sm" data-testid={`order-luggage-bag-${idx}`}>
-                      <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-amber-300 text-amber-800 text-[11px] font-bold shrink-0">
-                        #{idx + 1}
-                      </span>
-                      <p className="text-slate-700 leading-snug">{desc}</p>
-                    </li>
-                  ))}
-                </ol>
-                <p className="text-[11px] text-amber-700/80 italic mt-3">
-                  Contents declared at booking. Show this list at boarding for verification.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Vehicle Info — for travel bookings */}
           {(order.service_type === 'travel' || order.service_category === 'travel') && (
@@ -452,6 +385,35 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </div>
               );
             })()
+          )}
+
+          {/* Extra-luggage manifest — directly under "Your Vehicle" since
+              passengers reference both side-by-side at boarding. Operators
+              and station staff can verify each bag's contents at a glance. */}
+          {Array.isArray(order.booking_details?.extra_luggage_descriptions) && order.booking_details.extra_luggage_descriptions.length > 0 && (
+            <div data-testid="order-luggage-manifest">
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold">
+                  {order.booking_details.extra_luggage_descriptions.length}
+                </span>
+                Extra Luggage Manifest
+              </h3>
+              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                <ol className="space-y-2">
+                  {order.booking_details.extra_luggage_descriptions.map((desc, idx) => (
+                    <li key={idx} className="flex gap-3 items-start text-sm" data-testid={`order-luggage-bag-${idx}`}>
+                      <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-amber-300 text-amber-800 text-[11px] font-bold shrink-0">
+                        #{idx + 1}
+                      </span>
+                      <p className="text-slate-700 leading-snug">{desc}</p>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-[11px] text-amber-700/80 italic mt-3">
+                  Contents declared at booking. Show this list at boarding for verification.
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Screening Info — for cinema bookings */}
@@ -891,66 +853,61 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             })()
           )}
 
-          {/* Customer Info */}
+          {/* Customer Info — compact 3-column grid so Name/Phone/Email sit
+              on a single row on desktop instead of stacking. Saves ~120px
+              of vertical space. */}
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Customer Information</h3>
-            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-              {/* Get customer name from various sources */}
+            <div className="bg-slate-50 rounded-lg p-3.5 text-sm">
               {(() => {
-                const customerName = order.customer_name || 
-                  (order.booking_details?.passengers?.[0] && 
+                const customerName = order.customer_name ||
+                  (order.booking_details?.passengers?.[0] &&
                     `${order.booking_details.passengers[0].first_name || ''} ${order.booking_details.passengers[0].last_name || ''}`.trim()) ||
-                  (order.booking_details?.firstName && order.booking_details?.lastName && 
+                  (order.booking_details?.firstName && order.booking_details?.lastName &&
                     `${order.booking_details.firstName} ${order.booking_details.lastName}`) ||
                   null;
-                
-                const idNumber = order.booking_details?.passengers?.[0]?.id_number || 
-                  order.booking_details?.idNumber ||
-                  null;
-                
-                const phone = order.customer_phone || 
+                const idNumber = order.booking_details?.passengers?.[0]?.id_number ||
+                  order.booking_details?.idNumber || null;
+                const phone = order.customer_phone ||
                   order.booking_details?.passengers?.[0]?.phone ||
-                  order.booking_details?.phone ||
-                  null;
-
+                  order.booking_details?.phone || null;
+                const email = order.customer_email || order.user_email;
+                const cells = [
+                  { icon: User,  label: 'Name',  value: customerName || email || 'N/A' },
+                  phone   && { icon: Phone, label: 'Phone', value: phone },
+                  email   && { icon: Mail,  label: 'Email', value: email },
+                  idNumber && { icon: Hash, label: 'ID / Passport', value: idNumber },
+                ].filter(Boolean);
                 return (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <p className="text-xs text-slate-500">Customer Name</p>
-                      <p className="text-sm font-medium">{customerName || order.user_email || 'N/A'}</p>
-                    </div>
-                    {idNumber && (
-                      <div>
-                        <p className="text-xs text-slate-500">ID/Passport Number</p>
-                        <p className="text-sm font-medium">{idNumber}</p>
-                      </div>
-                    )}
-                    {phone && (
-                      <div>
-                        <p className="text-xs text-slate-500">Phone Number</p>
-                        <p className="text-sm font-medium">{phone}</p>
-                      </div>
-                    )}
-                    {(order.customer_email || order.user_email) && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-slate-500">Email</p>
-                        <p className="text-sm font-medium">{order.customer_email || order.user_email}</p>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-2">
+                    {cells.map((c, i) => {
+                      const Icon = c.icon;
+                      return (
+                        <div key={i} className="flex items-start gap-1.5 min-w-0">
+                          <Icon className="h-3.5 w-3.5 text-slate-400 mt-0.5 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium leading-tight">{c.label}</p>
+                            <p className="text-sm font-medium text-slate-800 truncate">{c.value}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })()}
-              
-              {/* Show all passengers if more than one */}
+
+              {/* Additional passengers — collapsed into a compact line */}
               {order.booking_details?.passengers?.length > 1 && (
-                <div className="pt-3 border-t border-slate-200">
-                  <p className="text-xs text-slate-500 mb-2">All Passengers ({order.booking_details.passengers.length})</p>
-                  <div className="space-y-1">
+                <div className="pt-2.5 mt-2.5 border-t border-slate-200">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium mb-1">
+                    All Passengers ({order.booking_details.passengers.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
                     {order.booking_details.passengers.map((p, idx) => (
-                      <p key={idx} className="text-sm text-slate-700">
-                        {idx + 1}. {p.first_name} {p.last_name} 
-                        {p.id_number && <span className="text-slate-500 ml-2">(ID: {p.id_number})</span>}
-                      </p>
+                      <Badge key={idx} variant="outline" className="bg-white border-slate-200 text-slate-700 text-[11px] font-normal">
+                        {idx + 1}. {p.first_name} {p.last_name}
+                        {p.id_number && <span className="text-slate-400 ml-1">· {p.id_number}</span>}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -970,38 +927,65 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
 
           <Separator />
 
-          {/* Payment Summary */}
+          {/* Payment Summary — hero total + line-items breakdown + method
+              pill. The total is the eye-catching anchor because that's what
+              the customer cares about most. */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Payment Summary</h3>
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-medium">{formatFCFA(order.subtotal || order.amount || 0)}</span>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-emerald-600" /> Payment Summary
+            </h3>
+            <div className="rounded-xl border-2 border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white overflow-hidden">
+              {/* Hero total banner */}
+              <div className="bg-gradient-to-r from-[#082c59] to-[#0a3b78] text-white p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/70 font-semibold">Total Paid</p>
+                  <p className="text-2xl font-bold mt-0.5" data-testid="payment-summary-total">
+                    {formatFCFA(order.total_amount || order.final_amount || 0)}
+                  </p>
+                </div>
+                <Badge
+                  className={`px-2.5 py-1 text-[10px] uppercase tracking-wide font-semibold ${
+                    (order.payment_status || '').toLowerCase() === 'paid' || (order.payment_status || '').toLowerCase() === 'completed'
+                      ? 'bg-emerald-100 text-emerald-800 border-0'
+                      : 'bg-amber-100 text-amber-800 border-0'
+                  }`}
+                  data-testid="payment-summary-status"
+                >
+                  {order.payment_status || 'pending'}
+                </Badge>
               </div>
-              {order.tax > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Tax</span>
-                  <span className="font-medium">{formatFCFA(order.tax)}</span>
+
+              {/* Line items breakdown — only render when there's at least
+                  one component to show (subtotal/tax/discount), otherwise
+                  the banner above is the entire summary. */}
+              {((order.subtotal && order.subtotal !== order.total_amount) || order.tax > 0 || order.discount > 0) && (
+                <div className="p-4 space-y-1.5 text-sm">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subtotal</span>
+                    <span className="font-medium">{formatFCFA(order.subtotal || order.amount || 0)}</span>
+                  </div>
+                  {order.tax > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Tax</span>
+                      <span className="font-medium">{formatFCFA(order.tax)}</span>
+                    </div>
+                  )}
+                  {order.discount > 0 && (
+                    <div className="flex justify-between text-emerald-700">
+                      <span className="inline-flex items-center gap-1">🎟️ Discount</span>
+                      <span className="font-medium">-{formatFCFA(order.discount)}</span>
+                    </div>
+                  )}
                 </div>
               )}
-              {order.discount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Discount</span>
-                  <span className="font-medium text-green-600">-{formatFCFA(order.discount)}</span>
-                </div>
-              )}
-              <Separator className="my-2" />
-              <div className="flex justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="font-bold text-lg text-[#082c59]">
-                  {formatFCFA(order.total_amount || order.final_amount || 0)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t">
-                <CreditCard className="h-4 w-4 text-slate-400" />
-                <span className="text-sm text-slate-600">
-                  Payment: {order.payment_method || 'Not specified'} • {order.payment_status || 'Pending'}
-                </span>
+
+              {/* Payment method strip */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-t border-emerald-100">
+                <CreditCard className="h-4 w-4 text-slate-400 shrink-0" />
+                <span className="text-xs text-slate-500">Method</span>
+                <Badge variant="outline" className="bg-white border-slate-300 text-slate-700 font-medium text-[11px] capitalize">
+                  {order.payment_method || 'Not specified'}
+                </Badge>
               </div>
             </div>
           </div>
