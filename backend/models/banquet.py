@@ -60,6 +60,8 @@ class Banquet(BaseModel):
     venue_type: Optional[str] = None          # hall, garden, rooftop
     address: Optional[str] = None
     city: Optional[str] = None
+    latitude: Optional[float] = None          # set by frontend geocoder
+    longitude: Optional[float] = None
     capacity_min: Optional[int] = None
     capacity_max: Optional[int] = None
     base_price: float
@@ -105,6 +107,8 @@ class BanquetCreate(BaseModel):
     venue_type: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     capacity_min: Optional[int] = None
     capacity_max: Optional[int] = None
     base_price: float
@@ -133,6 +137,8 @@ class BanquetUpdate(BaseModel):
     venue_type: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     capacity_min: Optional[int] = None
     capacity_max: Optional[int] = None
     base_price: Optional[float] = None

@@ -1,5 +1,16 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 254: Banquet venue geocoding)
+
+- `utils/geocode.js` — thin Nominatim (OpenStreetMap) wrapper. Free, key-less, country-biased to Cameroon by default. Caller-side fallback to `cityCoords.js` when the address is unresolvable.
+- `BanquetManagement.jsx`:
+  - `DEFAULT_FORM` + `openDialog(svc)` now carry `latitude`/`longitude` (hydrated from `svc.latitude`/`svc.location.lat` on edit).
+  - New `<GeocodePinRow>` sits under City/Address with **Pin on Map** / **Re-pin** / **Clear** actions. Shows a green "Pinned · lat, lon — display_name" line on success or an amber "Couldn't find that address" hint on miss.
+  - Editing City or Address auto-invalidates the saved pin so a stale coord pair never survives a relocation.
+  - `handleSave` silently re-geocodes when lat/lon are missing and we have an address/city, then ships `latitude`/`longitude` in the POST/PUT payload.
+- `backend/models/banquet.py` — `Banquet`, `BanquetCreate`, `BanquetUpdate` now accept `latitude: Optional[float]` and `longitude: Optional[float]`.
+- Verified ✅: Creating a Hall in Douala / Rue Joss resolved to `(4.0454, 9.6934) — Rue Joss, Bali` via Nominatim and rendered "Pinned" with Re-pin + Clear actions. `getServiceCoords` in `cityCoords.js` already prefers `svc.latitude/longitude` so the customer-facing live map will zoom to the exact venue rather than the city centroid.
+
 ## Latest Changes (Feb 2026 — iter 253: Banquet live maps in preview modals)
 
 - `utils/cityCoords.js` — new helper. `getCityCoords(name)` + `getServiceCoords(svc)` resolve a coord pair from `svc.latitude/longitude`, `svc.location.lat/lon`, or fallback to a 17-city Cameroon lookup (Douala, Yaoundé, Bafoussam, Bamenda, Buea, Limbé, Kribi, Garoua, Ngaoundéré, Maroua, Bertoua, Ebolowa, Edéa, Kumba, Dschang). Case- and accent-tolerant.

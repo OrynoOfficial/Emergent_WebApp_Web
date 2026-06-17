@@ -28,6 +28,7 @@ import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
+import { geocodeAddress } from '@/utils/geocode';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
@@ -97,6 +98,8 @@ const DEFAULT_FORM = {
   venue_type: 'hall',
   address: '',
   city: '',
+  latitude: null,
+  longitude: null,
   capacity_min: 50,
   capacity_max: 200,
   base_price: '',
@@ -113,6 +116,94 @@ const DEFAULT_FORM = {
   operator_name: '',
   linked_inventory_id: '',
 };
+
+// ────────────────────────────────────────────────────────────────────
+// One-click geocoder row used by the Banquet service form. Calls the
+// Nominatim API (free, key-less) with the form's address+city and stamps
+// `latitude`/`longitude` on the form. Sits below the location inputs so
+// operators see immediate feedback (success badge with truncated
+// display_name, or a "not found" hint). The customer-facing live map in
+// BanquetDetailsModal prefers these precise coords over city-centroid.
+// ────────────────────────────────────────────────────────────────────
+function GeocodePinRow({ form, setForm }) {
+  const [busy, setBusy] = React.useState(false);
+  const [hit, setHit] = React.useState(null); // last successful resolution
+  const [missed, setMissed] = React.useState(false);
+  const hasPin = typeof form.latitude === 'number' && typeof form.longitude === 'number';
+
+  const handlePin = async () => {
+    const query = [form.address, form.city, 'Cameroon'].filter(Boolean).join(', ');
+    if (!query) {
+      toast.error('Add a city or address first');
+      return;
+    }
+    setBusy(true);
+    setMissed(false);
+    try {
+      const r = await geocodeAddress(query);
+      if (r) {
+        setForm(p => ({ ...p, latitude: r.lat, longitude: r.lon }));
+        setHit(r);
+        toast.success('Pinned on map');
+      } else {
+        setHit(null);
+        setMissed(true);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleClear = () => {
+    setForm(p => ({ ...p, latitude: null, longitude: null }));
+    setHit(null);
+    setMissed(false);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+      <MapPin className="w-4 h-4 text-pink-600 flex-shrink-0" />
+      <div className="text-xs text-slate-600 mr-auto min-w-0">
+        {hasPin ? (
+          <span className="text-emerald-700 font-medium" data-testid="banquet-form-geocode-status">
+            Pinned · {form.latitude.toFixed(4)}, {form.longitude.toFixed(4)}
+            {hit?.display_name && (
+              <span className="text-slate-500 ml-1.5 hidden md:inline">— {hit.display_name.split(',').slice(0, 2).join(',')}</span>
+            )}
+          </span>
+        ) : missed ? (
+          <span className="text-amber-700" data-testid="banquet-form-geocode-status">
+            Couldn’t find that address. Try refining the city/address and pin again.
+          </span>
+        ) : (
+          <span className="text-slate-500">No pin yet — customer-facing map will fall back to city centre.</span>
+        )}
+      </div>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={handlePin}
+        disabled={busy || (!form.city && !form.address)}
+        data-testid="banquet-form-geocode-btn"
+      >
+        {busy ? 'Pinning…' : hasPin ? 'Re-pin' : 'Pin on Map'}
+      </Button>
+      {hasPin && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="text-rose-600 hover:bg-rose-50"
+          onClick={handleClear}
+          data-testid="banquet-form-geocode-clear-btn"
+        >
+          Clear
+        </Button>
+      )}
+    </div>
+  );
+}
 
 // ────────────────────────────────────────────────────────────────────
 // Category-aware form. Only renders the fields that actually apply to
@@ -312,12 +403,16 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
 
       {/* Location — shown on EVERY category so live-maps + Banquet results
           can geo-tag each service (chairs delivered to Douala, photographer
-          available in Yaoundé, etc.). Stored on `city` + `address`. */}
+          available in Yaoundé, etc.). Stored on `city` + `address`, with
+          optional `latitude`/`longitude` pin set by the geocoder. */}
       <div>
         <Label>City</Label>
         <Input
           value={form.city}
-          onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
+          // Touching the city invalidates any previously-pinned coords so a
+          // stale pin doesn't survive a relocation. Operator clicks Pin again
+          // to refresh.
+          onChange={e => setForm(p => ({ ...p, city: e.target.value, latitude: null, longitude: null }))}
           placeholder="Douala"
           data-testid="service-city-input"
         />
@@ -326,10 +421,18 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
         <Label>Address / Pickup Point</Label>
         <Input
           value={form.address}
-          onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+          onChange={e => setForm(p => ({ ...p, address: e.target.value, latitude: null, longitude: null }))}
           placeholder={cat === 'hall' ? 'Rue Joss, Douala' : 'Where this service operates or items are picked up'}
           data-testid="service-address-input"
         />
+      </div>
+
+      {/* ── Geocoder row — operator pins the exact venue on a map by hitting
+            Nominatim. Stored on form.latitude / form.longitude and sent in
+            the save payload so customer-facing maps zoom to the actual spot
+            instead of the city centre. */}
+      <div className="col-span-2">
+        <GeocodePinRow form={form} setForm={setForm} />
       </div>
 
       {showCapacity && (
@@ -1278,6 +1381,8 @@ export default function BanquetManagement() {
         operator_id: svc.operator_id || '',
         operator_name: svc.operator_name || '',
         linked_inventory_id: svc.linked_inventory_id || '',
+        latitude: typeof svc.latitude === 'number' ? svc.latitude : (svc.location?.lat ?? null),
+        longitude: typeof svc.longitude === 'number' ? svc.longitude : (svc.location?.lon ?? null),
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -1294,6 +1399,18 @@ export default function BanquetManagement() {
     const price = parseFloat(form.base_price);
     if (!price || price <= 0) { toast.error('Base price must be greater than 0'); return; }
     try {
+      // Auto-geocode silently when we have an address/city but no pin yet.
+      // Operator can still click "Pin on Map" manually for finer control;
+      // this just makes sure new venues are never created without coords.
+      let { latitude, longitude } = form;
+      if ((latitude == null || longitude == null) && (form.address || form.city)) {
+        const queryParts = [form.address, form.city, 'Cameroon'].filter(Boolean).join(', ');
+        const hit = await geocodeAddress(queryParts);
+        if (hit) {
+          latitude = hit.lat;
+          longitude = hit.lon;
+        }
+      }
       const op = (categoryOperators.length ? categoryOperators : operators).find(o => (o._id || o.id) === form.operator_id);
       const payload = {
         category: form.category,
@@ -1303,6 +1420,8 @@ export default function BanquetManagement() {
         venue_type: form.category === 'hall' ? form.venue_type : null,
         address: form.address || null,
         city: form.city || null,
+        latitude: typeof latitude === 'number' ? latitude : null,
+        longitude: typeof longitude === 'number' ? longitude : null,
         capacity_min: form.capacity_min !== '' ? parseInt(form.capacity_min, 10) : null,
         capacity_max: form.capacity_max !== '' ? parseInt(form.capacity_max, 10) : null,
         base_price: price,
