@@ -28,6 +28,8 @@ import DatePickerField from '@/components/shared/DatePickerField';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -88,6 +90,16 @@ export default function EventsManagement() {
     () => filteredEvents.slice((eventPage - 1) * PAGE_SIZE, eventPage * PAGE_SIZE),
     [filteredEvents, eventPage]
   );
+
+  // Bulk selection on the visible event rows. Backend cascade is no-op for events.
+  const eventBulk = useBulkSelection(pagedEvents, { idKey: '_id' });
+  const bulkEventsRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'events', action, ids });
+    await loadEvents();
+  };
+  const bulkEventsDelete     = (ids) => bulkEventsRun('delete', ids);
+  const bulkEventsActivate   = (ids) => bulkEventsRun('activate', ids);
+  const bulkEventsDeactivate = (ids) => bulkEventsRun('deactivate', ids);
 
   const handleViewEvent = (event) => {
     setViewingEvent(event);
@@ -298,6 +310,14 @@ export default function EventsManagement() {
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr>
+                          <th className="px-3 py-3 w-8">
+                            <BulkSelectHeader
+                              allSelected={eventBulk.allSelected}
+                              partiallySelected={eventBulk.partiallySelected}
+                              onToggleAll={eventBulk.toggleAll}
+                              testid="events-bulk-select-all"
+                            />
+                          </th>
                           <th className="px-4 py-3">Event</th>
                           <th className="px-4 py-3">Type</th>
                           <th className="px-4 py-3">Venue</th>
@@ -310,6 +330,13 @@ export default function EventsManagement() {
                       <tbody>
                         {pagedEvents.map(event => (
                           <tr key={event._id || event.id} className="border-b border-slate-100 hover:bg-slate-50">
+                            <td className="px-3 py-3 w-8">
+                              <BulkSelectCell
+                                selected={eventBulk.isSelected(event._id || event.id)}
+                                onToggle={eventBulk.toggle}
+                                id={event._id || event.id}
+                              />
+                            </td>
                             <td className="px-4 py-3 font-medium text-slate-900">{event.name || event.title}</td>
                             <td className="px-4 py-3 capitalize text-slate-700">{event.event_type || event.type || '—'}</td>
                             <td className="px-4 py-3 text-slate-700">{event.venue_name || event.venue || '—'}{event.city ? `, ${event.city}` : ''}</td>
@@ -541,6 +568,17 @@ export default function EventsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkActionsBar
+        count={eventBulk.count}
+        entityLabel="event"
+        selectedIds={eventBulk.selectedIds}
+        selectedRows={eventBulk.selectedRows}
+        onClear={eventBulk.clear}
+        onDelete={bulkEventsDelete}
+        onActivate={bulkEventsActivate}
+        onDeactivate={bulkEventsDeactivate}
+      />
     </>
   );
 }

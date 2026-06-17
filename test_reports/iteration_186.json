@@ -1,0 +1,51 @@
+{
+  "summary": "Frontend e2e testing of (1) /admin/ops/cleanup SystemCleanup page and (2) bulk selection extension to Users/Refunds/Bills/Events. 6 of 8 acceptance criteria fully verified, 1 not exercisable due to empty data, 1 minor deviation on Refunds.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "EventsManagement (legacy events tab)",
+        "issue": "events-bulk-select-all header checkbox is not rendered when there are 0 legacy events. In current preview DB there are 0 legacy events, so the entire <table> (header included) is replaced by an empty-state card ('No legacy events.'). The select-all checkbox is therefore never visible/testable in this env. Code at line 318 of EventsManagement.jsx wires BulkSelectHeader correctly, so this is a render-gating issue (or an env data gap).",
+        "selector": "[data-testid='events-bulk-select-all']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "/admin/refunds bulk bar",
+        "issue": "Spec calls for 'Delete only — no activate/deactivate' on Refunds, but bulk-export-btn ALSO appears because the shared BulkActionsBar shows the Export button whenever selectedRows.length > 0 (line 113 of components/shared/BulkActionsBar.jsx: `{(onExport || selectedRows.length > 0) && ...}`). AdminRefunds.jsx does NOT pass onExport, but the fallback path still surfaces the button (uses selectedRows directly as CSV). Non-destructive but deviates from the explicit acceptance criterion.",
+        "affected_selectors": ["[data-testid='bulk-export-btn']", "[data-testid='bulk-actions-bar']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_186.json"],
+  "verified_acceptance_criteria": [
+    "PASS: Super admin can open /admin/ops/cleanup; cleanup-preview-btn present; Preview button click renders results table (38 orders / 28 refunds / 44 showtimes / 44 locations etc. — total '154 rows will be deleted'). Protected accounts card visible listing admin@test.com, customer@test.com, operator@test.com, superadmin@oryno.com.",
+    "PASS: cleanup-apply-btn opens AlertDialog ([role='alertdialog']); Cancel button closes it cleanly — verified no apply was issued (we did NOT click confirm per safety instruction).",
+    "PASS: admin@test.com on /admin/ops/cleanup sees [data-testid='cleanup-forbidden'] (Super-admin only card); cleanup-preview-btn NOT present.",
+    "PASS: /admin/users — users-bulk-select-all present, select-all surfaces bulk-actions-bar with bulk-count='13', all 4 buttons present (activate/deactivate/export/delete), bulk-clear-btn hides bar.",
+    "PARTIAL PASS: /admin/refunds — refunds-bulk-select-all present, select-all surfaces bar with bulk-count='14', bulk-delete-btn present, no activate/deactivate. Minor deviation: bulk-export-btn ALSO present (see integration_issues).",
+    "PASS: /admin/bills — bills-bulk-select-all present, bar with count='8', bulk-delete-btn + bulk-export-btn, NO activate/deactivate (correct).",
+    "NOT EXERCISABLE: /management/events legacy table — env has 0 legacy events so the table (and its header checkbox) is not rendered. Required: Management tab → Legacy Events sub-tab → List view. Code wires it correctly but unverifiable in-browser without seed data.",
+    "PASS (regression): /admin/operators — bulk-select-all checkbox triggers bulk-actions-bar."
+  ],
+  "action_items": [
+    "OPTIONAL (spec deviation): On AdminRefunds.jsx, hide bulk-export-btn — easiest fix is to update shared/BulkActionsBar.jsx to only show Export when onExport prop is explicitly provided (drop the `|| selectedRows.length > 0` fallback) OR pass `onExport={null}` and gate strictly on prop presence. Currently a non-destructive but unwanted button is visible.",
+    "Render the events-bulk-select-all header (and the bulk wiring) even when filteredEvents is empty, so the contract is testable. Alternatively, seed at least 1 legacy event in dev env (or document that legacy events are deprecated and the bulk header is OK to omit).",
+    "Consider adding a data-testid on the inner ManagementShell tabs (Dashboard/Management/Communications) — currently the tab triggers have no testId because the page does not set tabs[].testId, which made selecting the Management tab brittle (had to use get_by_role('tab', name='Management'))."
+  ],
+  "critical_code_review_comments": [
+    "shared/BulkActionsBar.jsx line 113: `{(onExport || selectedRows.length > 0) && (...)}` causes the Export button to leak onto pages that intentionally don't expose export (e.g., Refunds). Tighten gate to `{onExport && (...)}`.",
+    "EventsManagement.jsx renders the legacy events table only when filteredEvents.length > 0 (table is replaced by empty state). The shared BulkSelectHeader/BulkSelectCell wiring is correct but invisible when list is empty.",
+    "ManagementShell tabs don't expose a per-tab data-testid (EventsManagement passes plain {value,label,icon} without testId), which forces fragile role/name-based selectors in tests."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "85% (6/7 testable criteria pass cleanly, 1 partial)"},
+  "test_credentials": "superadmin@oryno.com / testpassword123, admin@test.com / testpassword123 (both work; logged in via fetch + localStorage seeding to bypass CF bot detection on the preview URL)",
+  "seed_data_creation": "None. Did NOT click 'Apply cleanup' (per instruction) — only previewed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login via page.evaluate fetch to /api/auth/login then write access_token/refresh_token/user(JSON.stringified) to localStorage — CF blocks urllib. SystemCleanup, Users, Refunds, Bills bulk all work. Events page Management tab uses radix Tabs — use page.get_by_role('tab', name='Management').first.click() (the ManagementShell tab triggers lack testIds). Inside Management, click [data-testid='events-tab-legacy'] then List view. With current data (0 legacy events) the bulk header won't render — seed legacy events to test or have main agent move BulkSelectHeader outside the conditional rows table.",
+  "rca of the issue": "1) Refunds Export button leak: shared BulkActionsBar OR-condition allows Export to render even when consumer didn't pass onExport. 2) Events bulk header non-render: EventsManagement gates the entire <table> + header behind filteredEvents.length > 0; empty state replaces it. Both are simple gating decisions in the component code — no API/business-logic bug."
+}

@@ -18,6 +18,8 @@ import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 const STATUS_COLORS = {
   pending:    'bg-amber-100 text-amber-800 border-amber-200',
@@ -358,6 +360,15 @@ export default function AdminRefunds() {
   };
   const close = () => { setActioning(null); setAdminAmount(''); setAdminNotes(''); };
 
+  // Bulk selection on the filtered list. Only `delete` is allowed for refunds
+  // — activate/deactivate doesn't apply (status transitions go through the
+  // proper approve / reject endpoints).
+  const bulk = useBulkSelection(filtered, { idKey: 'id' });
+  const bulkDelete = async (ids) => {
+    await api.post('/admin/bulk', { collection: 'refunds', action: 'delete', ids });
+    await load();
+  };
+
   const submit = async () => {
     if (!actioning) return;
     const { refund, action } = actioning;
@@ -471,6 +482,14 @@ export default function AdminRefunds() {
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b text-xs uppercase text-slate-500">
                       <tr>
+                        <th className="px-3 py-2.5 w-8">
+                          <BulkSelectHeader
+                            allSelected={bulk.allSelected}
+                            partiallySelected={bulk.partiallySelected}
+                            onToggleAll={bulk.toggleAll}
+                            testid="refunds-bulk-select-all"
+                          />
+                        </th>
                         <th className="text-left px-4 py-2.5">Refund</th>
                         <th className="text-left px-4 py-2.5">Customer</th>
                         <th className="text-left px-4 py-2.5">Service / Order</th>
@@ -489,6 +508,13 @@ export default function AdminRefunds() {
                           onClick={(e) => { if (!e.target.closest('button')) setDetailId(r.id); }}
                           data-testid={`refund-row-${r.id}`}
                         >
+                          <td className="px-3 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
+                            <BulkSelectCell
+                              selected={bulk.isSelected(r.id)}
+                              onToggle={bulk.toggle}
+                              id={r.id}
+                            />
+                          </td>
                           <td className="px-4 py-2.5">
                             <p className="font-mono text-[11px]">{r.id.slice(0, 8)}…</p>
                             <p className="text-[10px] text-slate-500">
@@ -598,6 +624,15 @@ export default function AdminRefunds() {
 
       {/* Detail modal */}
       {detailId && <RefundDetailModal refundId={detailId} onClose={() => setDetailId(null)} />}
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="refund"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+      />
     </div>
   );
 }

@@ -20,6 +20,8 @@ import { formatDate } from '../../utils/dateUtils';
 import ManagementShell from '../../components/management/shared/ManagementShell';
 import SubpageCard from '../../components/management/shared/SubpageCard';
 import ViewModeToggle from '../../components/common/ViewModeToggle';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '../../components/shared/BulkActionsBar';
+import { useBulkSelection } from '../../hooks/useBulkSelection';
 
 // Role hierarchy for permission checks
 const ROLE_HIERARCHY = {
@@ -357,6 +359,16 @@ export default function UserManagement() {
     setPage(1);
   }, [filters.search, filters.role, filters.status, filters.operator_id, filters.joined_from, filters.joined_to, viewMode]);
 
+  // Bulk selection on the visible page (super_admin / admin only — non-self, non-protected handled server-side).
+  const bulk = useBulkSelection(pagedUsers, { idKey: 'id' });
+  const runBulk = async (action) => {
+    await api.post('/admin/bulk', { collection: 'users', action, ids: bulk.selectedIds });
+    await fetchUsers();
+  };
+  const bulkDelete = () => runBulk('delete');
+  const bulkActivate = () => runBulk('activate');
+  const bulkDeactivate = () => runBulk('deactivate');
+
   const operatorOptions = useMemo(() => {
     const map = new Map();
     users.forEach(u => { if (u.operator_id && !map.has(u.operator_id)) map.set(u.operator_id, u.operator_name || u.operator_id.slice(0, 8)); });
@@ -612,6 +624,14 @@ export default function UserManagement() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-slate-50 border-b">
               <tr>
+                <th className="py-4 px-3 w-10">
+                  <BulkSelectHeader
+                    allSelected={bulk.allSelected}
+                    partiallySelected={bulk.partiallySelected}
+                    onToggleAll={bulk.toggleAll}
+                    testid="users-bulk-select-all"
+                  />
+                </th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">User</th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Role</th>
                 <th className="py-4 px-4 text-left text-sm font-semibold text-slate-600">Operator</th>
@@ -627,6 +647,13 @@ export default function UserManagement() {
 
                 return (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors" data-testid={`user-row-${user.id}`}>
+                    <td className="py-4 px-3 w-10">
+                      <BulkSelectCell
+                        selected={bulk.isSelected(user.id)}
+                        onToggle={bulk.toggle}
+                        id={user.id}
+                      />
+                    </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#082c59]/10 flex items-center justify-center">
@@ -745,6 +772,17 @@ export default function UserManagement() {
       )}
       </TabsContent>
       </ManagementShell>
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="user"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+        onActivate={bulkActivate}
+        onDeactivate={bulkDeactivate}
+      />
 
       {/* User Detail Modal */}
       <UserDetailModal

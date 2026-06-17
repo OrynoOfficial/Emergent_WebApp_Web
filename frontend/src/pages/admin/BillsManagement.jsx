@@ -20,6 +20,8 @@ import Pagination from '@/components/common/Pagination';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
 import { TabsContent } from '@/components/ui/tabs';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 const BILL_STATUS = ['all', 'paid', 'pending', 'overdue', 'cancelled'];
 const PAYMENT_METHODS = ['all', 'mtn_momo', 'orange_money', 'card', 'bank_transfer', 'cash'];
@@ -168,6 +170,13 @@ export default function BillsManagement() {
   if (filterKey !== prevFilterKey) { setPrevFilterKey(filterKey); setPage(1); }
   const totalPages = Math.max(1, Math.ceil(filteredBills.length / PAGE_SIZE));
   const pagedBills = useMemo(() => filteredBills.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredBills, page]);
+
+  // Bulk selection (delete only; bills don't have an active/inactive flag).
+  const bulk = useBulkSelection(pagedBills, { idKey: 'id' });
+  const bulkDelete = async (ids) => {
+    await api.post('/admin/bulk', { collection: 'bills', action: 'delete', ids });
+    await loadBills();
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -382,6 +391,14 @@ export default function BillsManagement() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b">
                 <tr>
+                  <th className="p-3 w-10">
+                    <BulkSelectHeader
+                      allSelected={bulk.allSelected}
+                      partiallySelected={bulk.partiallySelected}
+                      onToggleAll={bulk.toggleAll}
+                      testid="bills-bulk-select-all"
+                    />
+                  </th>
                   <th className="text-left p-4 font-medium">Invoice</th>
                   <th className="text-left p-4 font-medium">Customer</th>
                   <th className="text-left p-4 font-medium">Description</th>
@@ -395,6 +412,13 @@ export default function BillsManagement() {
               <tbody>
                 {pagedBills.map(bill => (
                     <tr key={bill.id} className="border-b hover:bg-slate-50">
+                      <td className="p-3 w-10">
+                        <BulkSelectCell
+                          selected={bulk.isSelected(bill.id)}
+                          onToggle={bulk.toggle}
+                          id={bill.id}
+                        />
+                      </td>
                       <td className="p-4 font-mono text-sm">{bill.id}</td>
                       <td className="p-4">
                         <div>
@@ -484,6 +508,15 @@ export default function BillsManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      <BulkActionsBar
+        count={bulk.count}
+        entityLabel="bill"
+        selectedIds={bulk.selectedIds}
+        selectedRows={bulk.selectedRows}
+        onClear={bulk.clear}
+        onDelete={bulkDelete}
+      />
     </>
   );
 }

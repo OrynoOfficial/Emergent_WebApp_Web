@@ -11,7 +11,7 @@ import {
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
   Percent, HeadphonesIcon, Film, Briefcase, FileText,
   QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus,
-  Monitor, BarChart3, Megaphone, RotateCcw
+  Monitor, BarChart3, Megaphone, RotateCcw, Trash2
 } from 'lucide-react';
 
 const USER_ROLES = {
@@ -274,6 +274,7 @@ export default function useSidebarMenu() {
     systemSubmenu.push({ key: 'sys-config', label: 'Sys Config', path: '/settings', icon: Settings });
     if (canViewActivity || isOperator) systemSubmenu.push({ key: 'audit-logs', label: 'Audit Logs', path: '/admin/audit-log', icon: History });
     if (isSuperAdmin && canViewCommission) systemSubmenu.push({ key: 'commission', label: 'Commission', path: '/admin/commission', icon: Percent });
+    if (isSuperAdmin) systemSubmenu.push({ key: 'cleanup', label: 'System Cleanup', path: '/admin/ops/cleanup', icon: Trash2 });
 
     items.push({ key: 'system', label: 'System', icon: Monitor, isDropdown: true, submenu: systemSubmenu });
 
