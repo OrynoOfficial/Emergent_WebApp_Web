@@ -17,13 +17,13 @@ import {
   FileText, Gift, Tag, ChevronRight
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
+import CheckoutPaymentPanel from '../../components/common/CheckoutPaymentPanel';
+import { useCheckout } from '../../hooks/useCheckout';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { toast } from 'sonner';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const translations = {
   en: {
@@ -155,22 +155,7 @@ export default function HotelBooking() {
   const [hotel, setHotel] = useState(null);
   const [searchParams, setSearchParams] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
-
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -194,6 +179,65 @@ export default function HotelBooking() {
     totalAmount: 0
   });
   const [bookingAmenitiesExpanded, setBookingAmenitiesExpanded] = useState(false);
+
+  // Centralised checkout flow. After a successful payment we also need to call
+  // `/rooms/bookings/reserve` to actually book the room — that lives in `onSuccess`.
+  const checkout = useCheckout('hotel', {
+    operatorId: hotel?.operator_id,
+    successMessage: '',  // we toast manually after reservation succeeds in onSuccess
+    createErrorMessage: 'Failed to create order',
+    successPath: '/services/hotels',
+    validate: () => {
+      const ok = formData.firstName && formData.lastName && formData.email && formData.phone;
+      if (!ok) { toast.error('Please fill all required booking details.'); return false; }
+      return true;
+    },
+    buildPayload: () => {
+      const p = calculateTotalAmount();
+      return {
+        service_id: hotel.id,
+        service_name: hotel.name,
+        total_amount: p.total,
+        booking_details: {
+          ...formData,
+          hotel_id: hotel.id,
+          hotel_name: hotel.name,
+          check_in: searchParams?.checkIn,
+          check_out: searchParams?.checkOut,
+          adults: searchParams?.adults,
+          children: searchParams?.children,
+          nights: calculateNights(),
+          room_type: hotel.room_type || 'Standard',
+          promo_code: appliedPromo?.code,
+          promo_discount: p.discount,
+        },
+      };
+    },
+    onSuccess: async () => {
+      try {
+        const reservationPayload = {
+          hotel_id: hotel.hotel_id || hotel.id,
+          room_id: hotel.room_id || hotel.id,
+          check_in_date: searchParams.checkIn,
+          check_out_date: searchParams.checkOut,
+          guests: (searchParams.adults || 1) + (searchParams.children || 0),
+          guest_name: `${formData.firstName} ${formData.lastName}`,
+          guest_email: formData.email,
+          guest_phone: formData.phone,
+          special_requests: formData.specialRequests || '',
+        };
+        const reservationResponse = await api.post('/rooms/bookings/reserve', reservationPayload);
+        toast.success(`${t('bookingSuccess')} Booking #${reservationResponse.data.booking_id}`);
+      } catch (error) {
+        console.error('Reservation creation failed:', error);
+        toast.error(error.response?.data?.detail || 'Reservation failed. Please try again.');
+      } finally {
+        sessionStorage.removeItem('selectedHotel');
+        sessionStorage.removeItem('hotelSearchParams');
+      }
+    },
+  });
+  const { orderId, paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
   const t = useCallback((key, params = {}) => {
     let translation = translations[language][key] || key;
@@ -366,49 +410,6 @@ export default function HotelBooking() {
     setPromoError('');
   };
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-
-    // Stripe modal opened — not a payment outcome.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      toast.info(response.message || t('redirecting'));
-      window.location.href = response.redirectUrl;
-      return;
-    }
-
-    if (response.success || response.transactionRef) {
-      try {
-        const reservationPayload = {
-          hotel_id: hotel.hotel_id || hotel.id,
-          room_id: hotel.room_id || hotel.id,
-          check_in_date: searchParams.checkIn,
-          check_out_date: searchParams.checkOut,
-          guests: (searchParams.adults || 1) + (searchParams.children || 0),
-          guest_name: `${formData.firstName} ${formData.lastName}`,
-          guest_email: formData.email,
-          guest_phone: formData.phone,
-          special_requests: formData.specialRequests || ''
-        };
-
-        const reservationResponse = await api.post('/rooms/bookings/reserve', reservationPayload);
-        
-        toast.success(`${t('bookingSuccess')} Booking #${reservationResponse.data.booking_id}`);
-        sessionStorage.removeItem('selectedHotel');
-        sessionStorage.removeItem('hotelSearchParams');
-        navigate('/services/hotels');
-      } catch (error) {
-        console.error('Reservation creation failed:', error);
-        toast.error(error.response?.data?.detail || 'Reservation failed. Please try again.');
-      }
-    } else {
-      toast.error(`${t('bookingFailed')}: ${response.message || 'Unknown error'}`);
-    }
-  };
-
   const nights = calculateNights();
   const pricing = calculateTotalAmount();
   const isFormValid = formData.firstName && formData.lastName && formData.email && formData.phone;
@@ -434,72 +435,13 @@ export default function HotelBooking() {
     }
   };
 
-  const handlePayButtonClick = async () => {
-    if (!isBookingDataComplete || paymentInProgress) {
-      alert('Please fill all required booking details.');
-      return;
-    }
-    
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
+  const handlePayButtonClick = () => {
     setCurrentStep(3);
-    
-    try {
-      if (!orderId) {
-        const orderPayload = {
-          service_type: 'hotel',
-          service_id: hotel.id,
-          service_name: hotel.name,
-          total_amount: pricing.total,
-          currency: 'XAF',
-          status: 'pending',
-          payment_status: 'pending',
-          booking_details: {
-            ...formData,
-            hotel_id: hotel.id,
-            hotel_name: hotel.name,
-            check_in: searchParams?.checkIn,
-            check_out: searchParams?.checkOut,
-            adults: searchParams?.adults,
-            children: searchParams?.children,
-            nights: calculateNights(),
-            room_type: hotel.room_type || 'Standard',
-            promo_code: appliedPromo?.code,
-            promo_discount: pricing.discount
-          }
-        };
+    checkout.submit();
+  };
 
-        const response = await api.post('/orders/create', orderPayload);
-        
-        if (response.data && (response.data.order_id || response.data._id || response.data.id)) {
-          const newOrderId = response.data.order_id || response.data._id || response.data.id;
-          setOrderId(newOrderId);
-          setTriggerPayment(true);
-        } else {
-          throw new Error('Failed to create order');
-        }
-      } else {
-        setTriggerPayment(true);
-      }
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to create order. Please try again.');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
-  
-  const handleMoMoDialogOpen = () => {
-    setShowPaymentOverlay(false);
-    setPaymentInProgress(false);
-  };
-  
-  const handleProcessingChange = (isProcessing) => {
-    setShowPaymentOverlay(isProcessing);
-    if (!isProcessing) {
-      setPaymentInProgress(false);
-    }
-  };
+  const handleMoMoDialogOpen = () => { /* overlay handled by useCheckout */ };
+  const handleProcessingChange = () => { /* overlay handled by useCheckout */ };
 
   if (isLoading) {
     return (
@@ -965,21 +907,15 @@ export default function HotelBooking() {
                   </div>
                 )}
                 <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
-                  <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
-                  amount={pricing.total}
-                  customerPhone={formData.phone}
-                  customerEmail={formData.email}
-                  serviceDetails={serviceDetailsForPayment}
-                  onPaymentInitiated={handlePaymentInitiated}
-                  disabled={paymentInProgress}
-                  triggerPayment={triggerPayment}
-                  onTrigger={() => setPaymentInProgress(true)}
-                  orderId={orderId}
-                  onMoMoDialogOpen={handleMoMoDialogOpen}
-                  onProcessingChange={handleProcessingChange}
-                  onMethodSelected={setSelectedPaymentMethod}
-                />
+                  <CheckoutPaymentPanel
+                    checkout={checkout}
+                    amount={pricing.total}
+                    customerPhone={formData.phone}
+                    customerEmail={formData.email}
+                    serviceDetails={serviceDetailsForPayment}
+                    serviceName={hotel?.name || 'Hotel'}
+                    disabled={paymentInProgress}
+                  />
                 </div>
 
                 <Button

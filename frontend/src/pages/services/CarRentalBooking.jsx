@@ -15,15 +15,14 @@ import {
   Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield, Edit2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
-import { rePayExisting } from '../../utils/paymentRetry';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
+import CheckoutPaymentPanel from '../../components/common/CheckoutPaymentPanel';
+import { useCheckout } from '../../hooks/useCheckout';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const EXTRAS = [
   { id: 'none', name: 'No Extras', price: 0, icon: Check, description: 'Continue without extras' },
@@ -77,11 +76,7 @@ export default function CarRentalBooking() {
   const [car, setCar] = useState(null);
   const { rate: effectiveCommissionRate } = useCommissionRate('car_rental', car?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [orderId, setOrderId] = useState(null);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -95,17 +90,40 @@ export default function CarRentalBooking() {
   const [isSelf, setIsSelf] = useState(false);
   const [selectedExtras, setSelectedExtras] = useState([]);
   const [extrasConfirmed, setExtrasConfirmed] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
-  // Abandon any pending unpaid order if the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
+  // Centralised checkout flow.
+  const checkout = useCheckout('car_rental', {
+    operatorId: car?.operator_id,
+    successMessage: 'Booking confirmed!',
+    createErrorMessage: 'Failed to create booking',
+    validate: () => {
+      if (!formData.firstName || !formData.email || !formData.phone || !formData.licenseNumber) {
+        toast.error('Please fill in all required fields');
+        return false;
+      }
+      return true;
+    },
+    buildPayload: () => {
+      const p = calculatePricing();
+      setCurrentStep(3);
+      return {
+        service_id: car.id,
+        service_name: car.name,
+        total_amount: p.total,
+        booking_details: {
+          ...formData,
+          car_id: car.id,
+          car_name: car.name,
+          pickup_date: car.pickupDate,
+          return_date: car.returnDate,
+          pickup_location: car.pickupLocation,
+          extras: selectedExtras,
+          days: p.days,
+        },
+      };
+    },
   });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
+  const { paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
   // Check if driver info is complete
   const isDriverInfoComplete = formData.firstName && formData.email && formData.phone && formData.licenseNumber;
@@ -225,81 +243,7 @@ export default function CarRentalBooking() {
     };
   };
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-
-    // Stripe modal opened — not a payment outcome.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      toast.info('Redirecting to payment...');
-      window.location.href = response.redirectUrl;
-      return;
-    }
-
-    if (response.success || response.transactionRef) {
-      toast.success('Booking confirmed!');
-      navigate('/orders');
-    }
-  };
-
-  const handlePaymentError = (error) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-    toast.error(error.message || 'Payment failed');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.firstName || !formData.email || !formData.phone || !formData.licenseNumber) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    // Reuse existing order — user previously cancelled the modal.
-    if (orderId) { rePayExisting(setTriggerPayment); return; }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-    setCurrentStep(3);
-
-    try {
-      const pricing = calculatePricing();
-      const orderPayload = {
-        service_type: 'car_rental',
-        service_id: car.id,
-        service_name: car.name,
-        total_amount: pricing.total,
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
-        booking_details: {
-          ...formData,
-          car_id: car.id,
-          car_name: car.name,
-          pickup_date: car.pickupDate,
-          return_date: car.returnDate,
-          pickup_location: car.pickupLocation,
-          extras: selectedExtras,
-          days: pricing.days
-        }
-      };
-
-      const response = await api.post('/orders/create', orderPayload);
-      
-      if (response.data?.order_id || response.data?.id) {
-        setOrderId(response.data.order_id || response.data.id);
-        setTriggerPayment(true);
-      }
-    } catch { toast.error('Failed to create booking');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
+  const handleSubmit = checkout.submit;
 
   const pricing = calculatePricing();
 
@@ -626,15 +570,10 @@ export default function CarRentalBooking() {
                 </div>
                 <div className="bg-white p-5">
                   <div className={!canSelectPayment ? 'opacity-50 pointer-events-none' : ''}>
-                    <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
+                    <CheckoutPaymentPanel
+                      checkout={checkout}
                       amount={pricing.total}
-                      orderId={orderId}
                       serviceName={car?.name || 'Car Rental'}
-                      onPaymentInitiated={handlePaymentInitiated}
-                      onPaymentError={handlePaymentError}
-                      triggerPayment={triggerPayment}
-                      onMethodSelected={(method) => setSelectedPaymentMethod(method)}
                     />
                   </div>
                 </div>

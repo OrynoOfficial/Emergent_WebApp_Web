@@ -14,10 +14,9 @@ import { formatCurrency } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
 import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
-import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
-import { rePayExisting } from '@/utils/paymentRetry';
+import CheckoutPaymentPanel from '@/components/common/CheckoutPaymentPanel';
+import { useCheckout } from '@/hooks/useCheckout';
 import { useCommissionRate } from '@/hooks/useCommissionRate';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import CinemaSeatMap, { buildDefaultLayout } from '@/components/cinema/CinemaSeatMap';
 import { format, parseISO, isValid } from 'date-fns';
@@ -111,58 +110,70 @@ export default function CinemaBooking() {
   const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [isSelf, setIsSelf] = useState(false);
 
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
-  // Promo code (Hotel-style apply/clear)
-  const [promoCode, setPromoCode] = useState('');
-  const [promoApplied, setPromoApplied] = useState(null); // {code, discount_percent?, discount_amount?}
-  const [promoSubmitting, setPromoSubmitting] = useState(false);
-
-  const applyPromoCode = async () => {
-    const code = (promoCode || '').trim();
-    if (!code) return;
-    setPromoSubmitting(true);
-    try {
-      // Validate against the unified promo-codes endpoint. Pass the order_amount
-      // so the backend computes the discount, and the operator_id so operator-scoped
-      // codes accept the booking.
-      const pricing = calculatePricing();
-      const orderAmount = (pricing?.subtotal || 0) + (pricing?.vipSurcharge || 0);
-      const operatorId = film?.operator_id || showtime?.operator_id;
-      const res = await api.post('/promo-codes/validate', {
-        code,
-        service_type: 'cinema',
-        order_amount: orderAmount,
-        operator_id: operatorId,
-      });
-      const data = res.data || {};
-      if (data.valid === false) {
-        toast.error(data.message || 'Promo code is not valid');
-        setPromoApplied(null);
-      } else {
-        setPromoApplied({
-          code: data.code || code,
-          discount_percent: data.discount_type === 'percentage' ? data.discount_value : null,
-          discount_amount: data.discount_amount ?? (data.discount_type === 'fixed' ? data.discount_value : null),
-          message: data.name || `Promo "${code}" applied`,
-        });
-        toast.success(data.name || `Promo "${code}" applied`);
+  // Centralised checkout flow (state + handlers + abandon + promo helpers).
+  const checkout = useCheckout('cinema', {
+    operatorId: film?.operator_id || showtime?.operator_id,
+    successMessage: 'Tickets booked!',
+    createErrorMessage: 'Failed to create order',
+    onAbandon: () => setCurrentStep(2),
+    validate: () => {
+      if (!formData.firstName || !formData.email || !formData.phone) {
+        toast.error('Please fill in all required fields');
+        return false;
       }
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not validate promo code');
-      setPromoApplied(null);
-    } finally {
-      setPromoSubmitting(false);
-    }
+      const totalSelected = ticketCounts.adult + ticketCounts.child + ticketCounts.senior;
+      if (selectedSeats.length !== totalSelected) {
+        toast.error('Please select seats matching your ticket count');
+        return false;
+      }
+      return true;
+    },
+    buildPayload: () => {
+      const pricing = calculatePricing();
+      setCurrentStep(3);
+      return {
+        service_id: showtime?.id,
+        service_name: `${film?.title} — ${showtime?.cinema_name}`,
+        total_amount: pricing.total,
+        booking_details: {
+          ...formData,
+          film_id: film?.id,
+          film_title: film?.title,
+          showtime_id: showtime?.id,
+          cinema_name: showtime?.cinema_name,
+          screen_name: showtime?.screen_name,
+          show_time: showtime?.start_time,
+          tickets: ticketCounts,
+          seats: selectedSeats,
+          seat_count: selectedSeats.length,
+          promo_code: checkout?.promo?.applied?.code,
+          promo_discount: pricing.promoDiscount,
+        },
+      };
+    },
+    onSuccess: async ({ orderId: id }) => {
+      // Record promo usage if applied (non-blocking).
+      const applied = checkout?.promo?.applied;
+      if (applied?.code && id) {
+        try {
+          const pricing = calculatePricing();
+          await api.post(`/promo-codes/use?code=${encodeURIComponent(applied.code)}&order_id=${id}&discount_amount=${pricing.promoDiscount || 0}`);
+        } catch { /* non-blocking */ }
+      }
+    },
+  });
+  const { orderId, paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
+  // Use the hook's centralised promo helpers throughout this page.
+  const promoCode = checkout.promo.code;
+  const setPromoCode = checkout.promo.setCode;
+  const promoApplied = checkout.promo.applied;
+  const promoSubmitting = checkout.promo.applying;
+  const applyPromoCode = () => {
+    const pricing = calculatePricing();
+    const orderAmount = (pricing?.subtotal || 0) + (pricing?.vipSurcharge || 0);
+    return checkout.promo.apply(orderAmount);
   };
-
-  const clearPromoCode = () => {
-    setPromoApplied(null);
-    setPromoCode('');
-  };
+  const clearPromoCode = () => checkout.promo.clear();
 
   useEffect(() => { loadData(); /* eslint-disable-next-line */ }, [showtimeId]);
 
@@ -314,76 +325,7 @@ export default function CinemaBooking() {
 
   const pricing = calculatePricing();
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-    if (response.opening_modal) return;
-    if (response.redirectUrl) {
-      toast.info('Redirecting to payment...');
-      window.location.href = response.redirectUrl;
-      return;
-    }
-    if (response.success || response.transactionRef) {
-      toast.success('Booking confirmed! Enjoy your movie!');
-      navigate('/orders');
-    }
-  };
-
-  const handlePaymentError = (error) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-    toast.error(error.message || 'Payment failed');
-  };
-
-  const handleSubmit = async () => {
-    if (selectedSeats.length !== totalTickets) {
-      toast.error(`Please select ${totalTickets} seat${totalTickets > 1 ? 's' : ''}`);
-      return;
-    }
-    if (!formData.firstName || !formData.email || !formData.phone) {
-      toast.error('Please fill in all contact details');
-      setCurrentStep(2);
-      return;
-    }
-    if (orderId) { rePayExisting(setTriggerPayment); return; }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-    setCurrentStep(3);
-    try {
-      const orderPayload = {
-        service_type: 'cinema',
-        service_id: showtimeId,
-        service_name: `${film?.title} - ${showtime?.cinema_name}`,
-        total_amount: pricing.total,
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
-        booking_details: {
-          ...formData,
-          film_title: film?.title,
-          cinema: showtime?.cinema_name,
-          screen: showtime?.screen_name,
-          show_date: showtime?.show_date,
-          show_time: showtime?.show_time,
-          seats: selectedSeats,
-          ticket_counts: ticketCounts,
-        },
-      };
-      const response = await api.post('/orders/create', orderPayload);
-      const newId = response.data?.order_id || response.data?.id;
-      if (newId) {
-        setOrderId(newId);
-        setTriggerPayment(true);
-      }
-    } catch {
-      toast.error('Failed to create booking');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
+  const handleSubmit = checkout.submit;
 
   // Update step indicator based on user progress
   useEffect(() => {
@@ -391,20 +333,6 @@ export default function CinemaBooking() {
       setCurrentStep((s) => Math.max(s, 2));
     }
   }, [selectedSeats, totalTickets]);
-
-  // Centralised abandonment safety net: hard-deletes the pending order if the
-  // user closes the payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setCurrentStep(2);
-  });
-
-  // Called when the customer closes the Stripe/MoMo modal WITHOUT a
-  // successful payment.
-  const handleCheckoutAbandoned = ({ orderId: abandonedId } = {}) => abandonOrder(abandonedId);
 
   if (loading) {
     return (
@@ -808,15 +736,10 @@ export default function CinemaBooking() {
                     </div>
                   )}
                   <div className={(totalTickets === 0 || selectedSeats.length !== totalTickets) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={totalTickets === 0 || selectedSeats.length !== totalTickets}>
-                  <PaymentMethodsSelection
+                  <CheckoutPaymentPanel
+                    checkout={checkout}
                     amount={pricing.total}
-                    orderId={orderId}
                     serviceName={film?.title || 'Cinema'}
-                    onPaymentInitiated={handlePaymentInitiated}
-                    onPaymentError={handlePaymentError}
-                    triggerPayment={triggerPayment}
-                    onMethodSelected={setSelectedPaymentMethod}
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
                   />
                   </div>
                 </CardContent>

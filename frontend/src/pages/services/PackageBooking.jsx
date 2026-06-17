@@ -19,11 +19,10 @@ import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { useCommissionRate } from '@/hooks/useCommissionRate';
 import { toast } from 'sonner';
 import api from '@/api/client';
-import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
+import CheckoutPaymentPanel from '@/components/common/CheckoutPaymentPanel';
 import PaymentProcessingOverlay from '@/components/common/PaymentProcessingOverlay';
 import MiniImageUploader from '@/components/shared/MiniImageUploader';
-import { rePayExisting } from '@/utils/paymentRetry';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
+import { useCheckout } from '@/hooks/useCheckout';
 
 const formatHours = (h) => {
   if (!h && h !== 0) return '—';
@@ -73,22 +72,7 @@ export default function PackageBooking() {
   const { rate: effectiveCommissionRate } = useCommissionRate('packages', service?.operator_id, { fallback: 5 });
   const [searchParams, setSearchParams] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
   const [trackingNumber, setTrackingNumber] = useState(null);
-
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
 
   const [isSenderSelf, setIsSenderSelf] = useState(false);
 
@@ -173,46 +157,8 @@ export default function PackageBooking() {
   const getCommission = () => Math.round(getPrice() * (effectiveCommissionRate / 100));
   const getTotalPrice = () => getPrice() + getCommission();
 
-  const handleMoMoDialogOpen = () => {
-    // MoMo dialog is taking over the flow — hide our processing overlay
-    setShowPaymentOverlay(false);
-    setPaymentInProgress(false);
-  };
-
-  const handleProcessingChange = (isProcessing) => {
-    setShowPaymentOverlay(isProcessing);
-    if (!isProcessing) setPaymentInProgress(false);
-  };
-
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-
-    // Stripe modal opened — not a payment outcome. Don't surface error toast.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      toast.info('Redirecting to payment...');
-      window.location.href = response.redirectUrl;
-      return;
-    }
-    if (response.success || response.transactionRef) {
-      toast.success(`Booking confirmed! Tracking: ${trackingNumber || 'check your email'}`);
-      sessionStorage.removeItem('selectedPackageService');
-      sessionStorage.removeItem('packageBookingParams');
-      navigate('/orders');
-    } else {
-      toast.error(`Payment Failed: ${response.message || 'Unknown error'}`);
-    }
-  };
-
-  const handlePaymentError = (error) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-    toast.error(error.message || 'Payment failed');
-  };
+  const handleMoMoDialogOpen = () => { /* overlay handled by useCheckout */ };
+  const handleProcessingChange = () => { /* overlay handled by useCheckout */ };
 
   const isFormValid = (
     booking.sender_name && booking.sender_phone && booking.sender_address &&
@@ -221,33 +167,26 @@ export default function PackageBooking() {
     (booking.package_photos?.length || 0) >= 3
   );
 
-  // Step indicator: 1=sender filling, 2=package filling, 3=payment ready
-  const senderDone = booking.sender_name && booking.sender_phone && booking.sender_address &&
-                      booking.receiver_name && booking.receiver_phone && booking.receiver_address;
-  const packageDone = booking.package_description && (booking.package_photos?.length || 0) >= 3;
-  const currentStep = paymentInProgress ? 3 : (packageDone ? 3 : (senderDone ? 2 : 1));
-
-  const handleSubmit = async () => {
-    if (!isFormValid) {
-      const missing = [];
-      if (!booking.sender_name || !booking.sender_phone || !booking.sender_address) missing.push('sender details');
-      if (!booking.receiver_name || !booking.receiver_phone || !booking.receiver_address) missing.push('receiver details');
-      if (!booking.package_description) missing.push('package description');
-      if ((booking.package_photos?.length || 0) < 3) missing.push('3 package photos');
-      toast.error(`Please complete: ${missing.join(', ')}`);
-      return;
-    }
-
-    // Already created the package + order on a prior attempt that the user
-    // closed without paying — just re-open the payment dialog with the
-    // existing orderId. Prevents duplicate packages, duplicate orders, and
-    // double charges.
-    if (orderId) { rePayExisting(setTriggerPayment); return; }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-
-    try {
+  // Centralised checkout flow. The package itself is created in `buildPayload`
+  // (so the overlay covers the whole 2-step flow), and its tracking number is
+  // remembered so we can show it after a successful payment.
+  const checkout = useCheckout('package', {
+    operatorId: service?.operator_id,
+    successMessage: '',  // we toast with the tracking number in onSuccess
+    createErrorMessage: 'Failed to create booking',
+    validate: () => {
+      if (!isFormValid) {
+        const missing = [];
+        if (!booking.sender_name || !booking.sender_phone || !booking.sender_address) missing.push('sender details');
+        if (!booking.receiver_name || !booking.receiver_phone || !booking.receiver_address) missing.push('receiver details');
+        if (!booking.package_description) missing.push('package description');
+        if ((booking.package_photos?.length || 0) < 3) missing.push('3 package photos');
+        toast.error(`Please complete: ${missing.join(', ')}`);
+        return false;
+      }
+      return true;
+    },
+    buildPayload: async () => {
       const packagePayload = {
         package_service_id: service.id,
         sender: {
@@ -276,21 +215,15 @@ export default function PackageBooking() {
         notes: booking.notes || null,
         package_photos: booking.package_photos || [],
       };
-
       const pkgRes = await api.post('/packages/', packagePayload);
       const newTracking = pkgRes.data?.tracking_number;
       const packageId = pkgRes.data?.package_id;
       if (!packageId) throw new Error('Failed to register package');
       setTrackingNumber(newTracking);
-
-      const orderPayload = {
-        service_type: 'package',
+      return {
         service_id: packageId,
         service_name: `${searchParams.origin_city} → ${searchParams.destination_city}`,
         total_amount: getTotalPrice(),
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
         booking_details: {
           ...booking,
           package_id: packageId,
@@ -313,19 +246,22 @@ export default function PackageBooking() {
           package_photos: booking.package_photos,
         },
       };
+    },
+    onSuccess: () => {
+      toast.success(`Booking confirmed! Tracking: ${trackingNumber || 'check your email'}`);
+      sessionStorage.removeItem('selectedPackageService');
+      sessionStorage.removeItem('packageBookingParams');
+    },
+  });
+  const { paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
-      const orderRes = await api.post('/orders/create', orderPayload);
-      const newOrderId = orderRes.data?.order_id || orderRes.data?.id;
-      if (!newOrderId) throw new Error('Failed to create order');
-      setOrderId(newOrderId);
-      setTriggerPayment(true);
-    } catch (error) {
-      console.error(error);
-      toast.error(error?.response?.data?.detail || error.message || 'Failed to create booking');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
+  // Step indicator: 1=sender filling, 2=package filling, 3=payment ready
+  const senderDone = booking.sender_name && booking.sender_phone && booking.sender_address &&
+                      booking.receiver_name && booking.receiver_phone && booking.receiver_address;
+  const packageDone = booking.package_description && (booking.package_photos?.length || 0) >= 3;
+  const currentStep = paymentInProgress ? 3 : (packageDone ? 3 : (senderDone ? 2 : 1));
+
+  const handleSubmit = checkout.submit;
 
   if (loading) {
     return (
@@ -559,21 +495,13 @@ export default function PackageBooking() {
                     </div>
                   )}
                   <div className={!isFormValid ? 'pointer-events-none opacity-50' : ''}>
-                    <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
+                    <CheckoutPaymentPanel
+                      checkout={checkout}
                       amount={getTotalPrice()}
-                      orderId={orderId}
                       serviceName={service?.name || 'Package Delivery'}
                       customerPhone={booking.sender_phone}
                       customerEmail={booking.sender_email}
                       serviceDetails={{ service_id: service?.id, service_name: service?.name, operator_id: service?.operator_id }}
-                      onPaymentInitiated={handlePaymentInitiated}
-                      onPaymentError={handlePaymentError}
-                      onMoMoDialogOpen={handleMoMoDialogOpen}
-                      onProcessingChange={handleProcessingChange}
-                      onTrigger={() => setPaymentInProgress(true)}
-                      triggerPayment={triggerPayment}
-                      onMethodSelected={setSelectedPaymentMethod}
                       disabled={paymentInProgress}
                     />
                   </div>

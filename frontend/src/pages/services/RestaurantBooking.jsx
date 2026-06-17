@@ -15,15 +15,14 @@ import {
   User, Calendar, Phone, Mail, MessageSquare, Loader2, ShoppingBag, DollarSign, ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
-import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
-import { rePayExisting } from '../../utils/paymentRetry';
+import CheckoutPaymentPanel from '../../components/common/CheckoutPaymentPanel';
+import { useCheckout } from '../../hooks/useCheckout';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 // Step indicator for restaurant booking
 const RestaurantStepIndicator = ({ currentStep }) => {
@@ -65,23 +64,8 @@ export default function RestaurantBooking() {
   const [orderData, setOrderData] = useState(null);
   const { rate: effectiveCommissionRate } = useCommissionRate('restaurants', restaurant?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
   const [restaurantCurrentStep, setRestaurantCurrentStep] = useState(1);
 
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
-  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -94,6 +78,54 @@ export default function RestaurantBooking() {
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [promoError, setPromoError] = useState('');
+
+  // Centralised checkout flow. We keep this page's custom promo logic
+  // (appliedPromo/promoError) and only delegate payment state + handlers.
+  const checkout = useCheckout('restaurant', {
+    operatorId: restaurant?.operator_id,
+    successMessage: 'Reservation confirmed!',
+    createErrorMessage: 'Failed to create reservation',
+    validate: () => {
+      if (!formData.firstName || !formData.email || !formData.phone) {
+        toast.error('Please fill in all required fields');
+        return false;
+      }
+      return true;
+    },
+    buildPayload: () => {
+      const p = calculatePricing();
+      setRestaurantCurrentStep(3);
+      return {
+        service_id: restaurant?.id || restaurant?._id,
+        service_name: restaurant?.name,
+        total_amount: p.total,
+        booking_details: {
+          ...formData,
+          restaurant_id: restaurant?.id || restaurant?._id,
+          restaurant_name: restaurant?.name,
+          date: orderData?.reservation_date,
+          time: orderData?.reservation_time,
+          guests: orderData?.guests,
+          order_type: orderData?.order_type || 'dine-in',
+          items: orderData?.items?.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
+          promo_code: appliedPromo?.code,
+          promo_discount: p.discount,
+        },
+      };
+    },
+    onSuccess: async ({ orderId: id }) => {
+      // Record promo usage if applied (non-blocking).
+      if (appliedPromo?.code && id) {
+        try {
+          const p = calculatePricing();
+          await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${id}&discount_amount=${p.discount}`);
+        } catch { /* non-blocking */ }
+      }
+      sessionStorage.removeItem('restaurantOrder');
+      sessionStorage.removeItem('selectedRestaurant');
+    },
+  });
+  const { orderId, paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
   useEffect(() => {
     try {
@@ -200,86 +232,10 @@ export default function RestaurantBooking() {
     }
   };
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
+  const handleSubmit = checkout.submit;
 
-    // Stripe modal opened — not a payment outcome.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      window.location.href = response.redirectUrl;
-      return;
-    }
-
-    if (response.success || response.transactionRef) {
-      // Record promo usage if applied
-      if (appliedPromo?.code) {
-        try {
-          await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${orderId}&discount_amount=${pricing.discount}`);
-        } catch { /* non-blocking */ }
-      }
-      toast.success('Reservation confirmed!');
-      sessionStorage.removeItem('restaurantOrder');
-      sessionStorage.removeItem('selectedRestaurant');
-      navigate('/orders');
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.firstName || !formData.email || !formData.phone) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (orderId) { rePayExisting(setTriggerPayment); return; }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-    setRestaurantCurrentStep(3);
-
-    try {
-      const p = calculatePricing();
-      const orderPayload = {
-        service_type: 'restaurant',
-        service_id: restaurant?.id || restaurant?._id,
-        service_name: restaurant?.name,
-        total_amount: p.total,
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
-        booking_details: {
-          ...formData,
-          restaurant_id: restaurant?.id || restaurant?._id,
-          restaurant_name: restaurant?.name,
-          date: orderData?.reservation_date,
-          time: orderData?.reservation_time,
-          guests: orderData?.guests,
-          order_type: orderData?.order_type || 'dine-in',
-          items: orderData?.items?.map(i => ({ name: i.name, price: i.price, quantity: i.quantity })),
-          promo_code: appliedPromo?.code,
-          promo_discount: p.discount
-        }
-      };
-
-      const response = await api.post('/orders/create', orderPayload);
-      
-      if (response.data?.order_id || response.data?.id) {
-        setOrderId(response.data.order_id || response.data.id);
-        setTriggerPayment(true);
-      }
-    } catch (error) {
-      toast.error('Failed to create reservation');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
-
-  const handleMoMoDialogOpen = () => { setShowPaymentOverlay(false); setPaymentInProgress(false); };
-  const handleProcessingChange = (isProcessing) => { setShowPaymentOverlay(isProcessing); if (!isProcessing) setPaymentInProgress(false); };
+  const handleMoMoDialogOpen = () => { /* overlay handled by useCheckout */ };
+  const handleProcessingChange = () => { /* overlay handled by useCheckout */ };
 
   const pricing = calculatePricing();
   const isFormValid = formData.firstName && formData.email && formData.phone;
@@ -496,9 +452,10 @@ export default function RestaurantBooking() {
                     </div>
                   )}
                   <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
-                  <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
+                  <CheckoutPaymentPanel
+                    checkout={checkout}
                     amount={pricing.total}
+                    serviceName={restaurant?.name}
                     customerPhone={formData.phone}
                     customerEmail={formData.email}
                     serviceDetails={{
@@ -507,15 +464,8 @@ export default function RestaurantBooking() {
                       operator_id: restaurant?.operator_id,
                       operator_name: restaurant?.operator_name,
                     }}
-                    onPaymentInitiated={handlePaymentInitiated}
                     disabled={paymentInProgress}
-                    triggerPayment={triggerPayment}
-                    onTrigger={() => setPaymentInProgress(true)}
-                    orderId={orderId}
-                    onMoMoDialogOpen={handleMoMoDialogOpen}
-                    onProcessingChange={handleProcessingChange}
-                    onMethodSelected={setSelectedPaymentMethod}
-                />
+                  />
                   </div>
                   
                   <Button

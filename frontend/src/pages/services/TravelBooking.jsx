@@ -12,14 +12,14 @@ import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
 import { ArrowLeft, Bus, MapPin, Clock, Users, CreditCard, Armchair, Plus, Minus, CheckCircle2, X, Loader2, Calendar, DollarSign, ShoppingBag, ChevronRight, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
+import CheckoutPaymentPanel from '../../components/common/CheckoutPaymentPanel';
+import { useCheckout } from '../../hooks/useCheckout';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import LiveSeatMap from '../../components/travel/LiveSeatMap';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { toast } from 'sonner';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 // Step indicator for travel booking
 const TravelStepIndicator = ({ currentStep }) => {
@@ -184,22 +184,7 @@ export default function TravelBooking() {
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
   const [travelCurrentStep, setTravelCurrentStep] = useState(1);
-
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
   
   // Passengers
   const [passengers, setPassengers] = useState([]);
@@ -335,205 +320,123 @@ export default function TravelBooking() {
     }
   };
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-
-    // Stripe modal opened — not a payment outcome.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      window.location.href = response.redirectUrl;
-    } else if (response.success || response.transactionRef) {
-      // Payment successful - navigate after handling seats
-      try {
-        // Reserve seats if seat selection was enabled
-        if (showSeatSelection && selectedSeats.length > 0) {
-          const outboundDate = bookingData.outbound.tripDate 
-            ? format(new Date(bookingData.outbound.tripDate), 'yyyy-MM-dd') 
-            : bookingData.departureDate || bookingData.travelDate;
-          
-          try {
-            // Confirm the booking — locks reserved seats as BOOKED permanently
-            await api.post('/seat-bookings/confirm', {
-              route_id: bookingData.outbound.id,
-              travel_date: outboundDate,
-              seat_numbers: selectedSeats,
-              order_id: response.booking_id || response.transactionRef || orderId,
-              passengers: passengers.map((p, idx) => ({
-                seat_number: selectedSeats[idx],
-                name: `${p.firstName} ${p.lastName}`,
-                id_number: p.idNumber,
-                phone: p.phoneNumber
-              }))
-            });
-
-            // Handle return trip if exists
-            if (bookingData.return && returnSelectedSeats.length > 0) {
-              await api.post('/seat-bookings/confirm', {
-                route_id: bookingData.return.id,
-                travel_date: bookingData.returnDate,
-                seat_numbers: returnSelectedSeats,
-                order_id: response.booking_id || response.transactionRef || orderId,
-                passengers: passengers.map((p, idx) => ({
-                  seat_number: returnSelectedSeats[idx],
-                  name: `${p.firstName} ${p.lastName}`,
-                  id_number: p.idNumber,
-                  phone: p.phoneNumber
-                }))
-              });
-            }
-          } catch (seatError) {
-            console.error('Seat booking error:', seatError);
-            // Continue with navigation even if seat booking fails
-          }
-        }
-
-        // Record promo code usage if applied
-        if (appliedPromo?.code) {
-          try {
-            await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${response.booking_id || response.transactionRef || orderId}&discount_amount=${pricing.discount}`);
-          } catch { /* promo usage recording is non-blocking */ }
-        }
-
-        toast.success('Travel booking confirmed!');
-        sessionStorage.removeItem('selectedTrip');
-        navigate('/orders');
-      } catch (error) {
-        console.error('Booking confirmation failed:', error);
-        // Still navigate since payment was successful
-        toast.success('Payment successful! Booking may need manual seat assignment.');
-        sessionStorage.removeItem('selectedTrip');
-        navigate('/services/travel');
-      }
-    } else {
-      toast.error(`Booking Failed: ${response.message || 'Unknown error'}`);
-    }
-  };
-
-  const handlePayButtonClick = async () => {
-    // Validate passengers
-    const isValid = passengers.every(p => p.firstName && p.lastName && p.idNumber);
-    if (!isValid) {
-      toast.error('Please fill in all traveler details');
-      return;
-    }
-
-    // Validate seat selection if enabled
-    if (showSeatSelection) {
-      if (selectedSeats.length < passengers.length) {
-        toast.error('Please select a seat for each passenger');
-        return;
-      }
-      if (bookingData?.return && returnSelectedSeats.length < passengers.length) {
-        toast.error('Please select return seats for each passenger');
-        return;
-      }
-    }
-
-    // Extra luggage must have content descriptions — they print on the
-    // e-ticket and help station/airport security.
-    if (extraLuggage > 0) {
-      for (let i = 0; i < extraLuggage; i++) {
-        const desc = (luggageDescriptions[i] || '').trim();
-        if (!desc) {
-          toast.error(`Please describe what's inside extra bag #${i + 1}`);
-          return;
-        }
-        if (desc.split(/\s+/).length > 100) {
-          toast.error(`Bag #${i + 1} description must be 100 words or less`);
-          return;
-        }
-      }
-    }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-    setTravelCurrentStep(3);
-
-    try {
-      // Create order if not already created
-      if (!orderId) {
-        // Get departure and destination from various possible field names
-        const departureCity = bookingData.outbound.from_city || bookingData.outbound.origin || bookingData.outbound.departure_city || 'Unknown';
-        const destinationCity = bookingData.outbound.to_city || bookingData.outbound.destination || bookingData.outbound.arrival_city || 'Unknown';
-        
-        const orderPayload = {
-          service_type: 'travel',
-          service_id: bookingData.outbound.id,
-          service_name: `Bus: ${departureCity} → ${destinationCity}`,
-          total_amount: pricing.total,
-          currency: 'XAF',
-          status: 'pending',
-          payment_status: 'pending',
-          booking_details: {
-            departure_city: departureCity,
-            destination_city: destinationCity,
-            departure_time: bookingData.outbound.departure_time,
-            arrival_time: bookingData.outbound.arrival_time,
-            service_time: bookingData.outbound.departure_time,
-            travel_time: bookingData.outbound.departure_time,
-            operator_id: bookingData.outbound.operator_id,
-            operator_name: bookingData.outbound.operator_name,
-            vehicle_type: bookingData.outbound.vehicle_type,
-            travel_date: bookingData.outbound?.tripDate || bookingData.date || bookingData.departureDate || bookingData.travelDate,
-            service_date: bookingData.outbound?.tripDate || bookingData.date || bookingData.departureDate || bookingData.travelDate,
-            return_date: bookingData.returnDate,
-            is_round_trip: bookingData.isRoundTrip,
-            outbound_price: pricing.outboundPrice + (pricing.extras / (bookingData.isRoundTrip ? 2 : 1)) + (pricing.commission / (bookingData.isRoundTrip ? 2 : 1)),
-            passengers: passengers.map(p => ({
-              first_name: p.firstName,
-              last_name: p.lastName,
-              id_number: p.idNumber,
-              phone: p.phoneNumber
-            })),
-            selected_seats: selectedSeats,
-            return_seats: returnSelectedSeats,
-            extra_luggage: extraLuggage,
-            // Per-piece content descriptions printed on the e-ticket.
-            extra_luggage_descriptions: luggageDescriptions.slice(0, extraLuggage),
-            promo_code: appliedPromo?.code,
-            promo_discount: pricing.discount
-          }
-        };
-
-        const response = await api.post('/orders/create', orderPayload);
-        
-        if (response.data && (response.data.order_id || response.data._id || response.data.id)) {
-          const newOrderId = response.data.order_id || response.data._id || response.data.id;
-          setOrderId(newOrderId);
-          setTriggerPayment(true);
-        } else {
-          throw new Error('Failed to create order');
-        }
-      } else {
-        setTriggerPayment(true);
-      }
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to create order. Please try again.');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
-  
-  // Callback when MoMo dialog opens - hide the overlay since MoMo has its own UI
-  const handleMoMoDialogOpen = () => {
-    setShowPaymentOverlay(false);
-    setPaymentInProgress(false);
-  };
-  
-  // Callback when payment processing state changes
-  const handleProcessingChange = (isProcessing) => {
-    setShowPaymentOverlay(isProcessing);
-    if (!isProcessing) {
-      setPaymentInProgress(false);
-    }
-  };
-
   const pricing = calculatePricing();
   const isFormValid = passengers.every(p => p.firstName && p.lastName && p.idNumber);
+
+  // Centralised checkout flow. Seat confirmation + promo usage tracking happen
+  // in onSuccess (after payment) — same behaviour as the legacy handler.
+  const checkout = useCheckout('travel', {
+    operatorId: bookingData?.outbound?.operator_id,
+    successMessage: 'Travel booking confirmed!',
+    successPath: '/orders',
+    createErrorMessage: 'Failed to create order',
+    validate: () => {
+      if (!isFormValid) { toast.error('Please fill in all traveler details'); return false; }
+      if (showSeatSelection) {
+        if (selectedSeats.length < passengers.length) {
+          toast.error('Please select a seat for each passenger'); return false;
+        }
+        if (bookingData?.return && returnSelectedSeats.length < passengers.length) {
+          toast.error('Please select return seats for each passenger'); return false;
+        }
+      }
+      if (extraLuggage > 0) {
+        for (let i = 0; i < extraLuggage; i++) {
+          const desc = (luggageDescriptions[i] || '').trim();
+          if (!desc) { toast.error(`Please describe what's inside extra bag #${i + 1}`); return false; }
+          if (desc.split(/\s+/).length > 100) { toast.error(`Bag #${i + 1} description must be 100 words or less`); return false; }
+        }
+      }
+      return true;
+    },
+    buildPayload: () => {
+      const departureCity = bookingData.outbound.from_city || bookingData.outbound.origin || bookingData.outbound.departure_city || 'Unknown';
+      const destinationCity = bookingData.outbound.to_city || bookingData.outbound.destination || bookingData.outbound.arrival_city || 'Unknown';
+      setTravelCurrentStep(3);
+      return {
+        service_id: bookingData.outbound.id,
+        service_name: `Bus: ${departureCity} → ${destinationCity}`,
+        total_amount: pricing.total,
+        booking_details: {
+          departure_city: departureCity,
+          destination_city: destinationCity,
+          departure_time: bookingData.outbound.departure_time,
+          arrival_time: bookingData.outbound.arrival_time,
+          service_time: bookingData.outbound.departure_time,
+          travel_time: bookingData.outbound.departure_time,
+          operator_id: bookingData.outbound.operator_id,
+          operator_name: bookingData.outbound.operator_name,
+          vehicle_type: bookingData.outbound.vehicle_type,
+          travel_date: bookingData.outbound?.tripDate || bookingData.date || bookingData.departureDate || bookingData.travelDate,
+          service_date: bookingData.outbound?.tripDate || bookingData.date || bookingData.departureDate || bookingData.travelDate,
+          return_date: bookingData.returnDate,
+          is_round_trip: bookingData.isRoundTrip,
+          outbound_price: pricing.outboundPrice + (pricing.extras / (bookingData.isRoundTrip ? 2 : 1)) + (pricing.commission / (bookingData.isRoundTrip ? 2 : 1)),
+          passengers: passengers.map(p => ({
+            first_name: p.firstName,
+            last_name: p.lastName,
+            id_number: p.idNumber,
+            phone: p.phoneNumber,
+          })),
+          selected_seats: selectedSeats,
+          return_seats: returnSelectedSeats,
+          extra_luggage: extraLuggage,
+          extra_luggage_descriptions: luggageDescriptions.slice(0, extraLuggage),
+          promo_code: appliedPromo?.code,
+          promo_discount: pricing.discount,
+        },
+      };
+    },
+    onSuccess: async ({ orderId: id, response }) => {
+      // Reserve seats if seat selection was enabled.
+      try {
+        if (showSeatSelection && selectedSeats.length > 0) {
+          const outboundDate = bookingData.outbound.tripDate
+            ? format(new Date(bookingData.outbound.tripDate), 'yyyy-MM-dd')
+            : bookingData.departureDate || bookingData.travelDate;
+          await api.post('/seat-bookings/confirm', {
+            route_id: bookingData.outbound.id,
+            travel_date: outboundDate,
+            seat_numbers: selectedSeats,
+            order_id: response?.booking_id || response?.transactionRef || id,
+            passengers: passengers.map((p, idx) => ({
+              seat_number: selectedSeats[idx],
+              name: `${p.firstName} ${p.lastName}`,
+              id_number: p.idNumber,
+              phone: p.phoneNumber,
+            })),
+          });
+          if (bookingData.return && returnSelectedSeats.length > 0) {
+            await api.post('/seat-bookings/confirm', {
+              route_id: bookingData.return.id,
+              travel_date: bookingData.returnDate,
+              seat_numbers: returnSelectedSeats,
+              order_id: response?.booking_id || response?.transactionRef || id,
+              passengers: passengers.map((p, idx) => ({
+                seat_number: returnSelectedSeats[idx],
+                name: `${p.firstName} ${p.lastName}`,
+                id_number: p.idNumber,
+                phone: p.phoneNumber,
+              })),
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Seat booking error:', e);
+      }
+      // Record promo usage (non-blocking).
+      if (appliedPromo?.code) {
+        try {
+          await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${response?.booking_id || response?.transactionRef || id}&discount_amount=${pricing.discount}`);
+        } catch { /* non-blocking */ }
+      }
+      sessionStorage.removeItem('selectedTrip');
+    },
+  });
+  const { orderId, paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
+  const handlePayButtonClick = checkout.submit;
+  const handleMoMoDialogOpen = () => { /* overlay handled by useCheckout */ };
+  const handleProcessingChange = () => { /* overlay handled by useCheckout */ };
 
   if (isLoading) {
     return (
@@ -1043,36 +946,30 @@ export default function TravelBooking() {
                       </div>
                     )}
                     <div className={!isFormValid ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!isFormValid}>
-                      <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
-                      amount={pricing.total}
-                      customerPhone={passengers[0]?.phoneNumber}
-                      customerEmail={user?.email}
-                      serviceDetails={{
-                        service_category: 'travel',
-                        service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
-                        operator_id: outbound.operator_id,
-                        operator_name: outbound.operator_name,
-                        booking_details: {
-                          outbound,
-                          return: returnTrip,
-                          passengers,
-                          extraLuggage,
-                          selectedSeats: showSeatSelection ? selectedSeats : [],
-                          returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
-                          seat_booking_ids: showSeatSelection ? seatBookingIds : [],
-                          return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
-                        }
-                      }}
-                      onPaymentInitiated={handlePaymentInitiated}
-                      disabled={paymentInProgress}
-                      triggerPayment={triggerPayment}
-                      onTrigger={() => setPaymentInProgress(true)}
-                      orderId={orderId}
-                      onMoMoDialogOpen={handleMoMoDialogOpen}
-                      onProcessingChange={handleProcessingChange}
-                      onMethodSelected={setSelectedPaymentMethod}
-                    />
+                      <CheckoutPaymentPanel
+                        checkout={checkout}
+                        amount={pricing.total}
+                        serviceName={`Bus: ${outbound.from_city || outbound.origin || outbound.departure_city} → ${outbound.to_city || outbound.destination || outbound.arrival_city}`}
+                        customerPhone={passengers[0]?.phoneNumber}
+                        customerEmail={user?.email}
+                        serviceDetails={{
+                          service_category: 'travel',
+                          service_title: `${outbound.from_city || outbound.origin || outbound.departure_city} to ${outbound.to_city || outbound.destination || outbound.arrival_city}${isRoundTrip ? ' (Round Trip)' : ''}`,
+                          operator_id: outbound.operator_id,
+                          operator_name: outbound.operator_name,
+                          booking_details: {
+                            outbound,
+                            return: returnTrip,
+                            passengers,
+                            extraLuggage,
+                            selectedSeats: showSeatSelection ? selectedSeats : [],
+                            returnSelectedSeats: showSeatSelection ? returnSelectedSeats : [],
+                            seat_booking_ids: showSeatSelection ? seatBookingIds : [],
+                            return_seat_booking_ids: showSeatSelection ? returnSeatBookingIds : []
+                          }
+                        }}
+                        disabled={paymentInProgress}
+                      />
                     </div>
                     
                     <Button

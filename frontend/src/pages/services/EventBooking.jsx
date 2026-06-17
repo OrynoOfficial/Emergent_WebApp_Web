@@ -15,15 +15,14 @@ import {
   Loader2, User, Phone, Mail, CheckCircle2, Star, Music, Trophy, Laugh
 } from 'lucide-react';
 import { format } from 'date-fns';
-import PaymentMethodsSelection from '../../components/common/PaymentMethodsSelection';
-import { rePayExisting } from '../../utils/paymentRetry';
+import CheckoutPaymentPanel from '../../components/common/CheckoutPaymentPanel';
+import { useCheckout } from '../../hooks/useCheckout';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
 import CommissionBreakdown from '../../components/common/CommissionBreakdown';
 import { formatCurrency } from '../../utils/currency';
 import api from '../../api/client';
 import { BookerInfoSection } from '../../components/booking/BookerInfoSection';
 import { toast } from 'sonner';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
 
 const TICKET_TYPES = [
   { id: 'standard', name: 'Standard', multiplier: 1, color: 'bg-slate-500' },
@@ -72,22 +71,7 @@ export default function EventBooking() {
   const [event, setEvent] = useState(null);
   const { rate: effectiveCommissionRate } = useCommissionRate('events', event?.operator_id, { fallback: 5 });
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [showPaymentOverlay, setShowPaymentOverlay] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
-  const [orderId, setOrderId] = useState(null);
-
-  // Abandon any pending unpaid order when the user closes the
-  // payment modal, navigates away, or closes the tab.
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
-    if (typeof setShowPaymentOverlay === 'function') setShowPaymentOverlay(false);
-  });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -99,6 +83,39 @@ export default function EventBooking() {
   const [isSelf, setIsSelf] = useState(false);
   const [ticketType, setTicketType] = useState('standard');
   const [quantity, setQuantity] = useState(1);
+
+  // Centralised checkout flow (state + handlers + abandon-tracking + promo helpers).
+  const checkout = useCheckout('event', {
+    operatorId: event?.operator_id,
+    successMessage: 'Tickets booked successfully!',
+    createErrorMessage: 'Failed to create booking',
+    validate: () => {
+      if (!formData.firstName || !formData.email || !formData.phone) {
+        toast.error('Please fill in all required fields');
+        return false;
+      }
+      return true;
+    },
+    buildPayload: () => {
+      const p = calculatePricing();
+      setCurrentStep(3);
+      return {
+        service_id: event.id,
+        service_name: event.name,
+        total_amount: p.total,
+        booking_details: {
+          ...formData,
+          event_id: event.id,
+          event_name: event.name,
+          event_date: event.date,
+          event_time: event.time,
+          ticket_type: ticketType,
+          quantity,
+        },
+      };
+    },
+  });
+  const { paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
   useEffect(() => {
     const loadData = () => {
@@ -156,80 +173,7 @@ export default function EventBooking() {
     };
   };
 
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-
-    // Stripe modal opened — not a payment outcome.
-    if (response.opening_modal) return;
-
-    if (response.redirectUrl) {
-      toast.info('Redirecting to payment...');
-      window.location.href = response.redirectUrl;
-      return;
-    }
-
-    if (response.success || response.transactionRef) {
-      toast.success('Tickets booked successfully!');
-      navigate('/orders');
-    }
-  };
-
-  const handlePaymentError = (error) => {
-    setPaymentInProgress(false);
-    setShowPaymentOverlay(false);
-    setTriggerPayment(false);
-    toast.error(error.message || 'Payment failed');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.firstName || !formData.email || !formData.phone) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (orderId) { rePayExisting(setTriggerPayment); return; }
-
-    setPaymentInProgress(true);
-    setShowPaymentOverlay(true);
-    setCurrentStep(3);
-
-    try {
-      const pricing = calculatePricing();
-      const orderPayload = {
-        service_type: 'event',
-        service_id: event.id,
-        service_name: event.name,
-        total_amount: pricing.total,
-        currency: 'XAF',
-        status: 'pending',
-        payment_status: 'pending',
-        booking_details: {
-          ...formData,
-          event_id: event.id,
-          event_name: event.name,
-          event_date: event.date,
-          event_time: event.time,
-          ticket_type: ticketType,
-          quantity
-        }
-      };
-
-      const response = await api.post('/orders/create', orderPayload);
-      
-      if (response.data?.order_id || response.data?.id) {
-        setOrderId(response.data.order_id || response.data.id);
-        setTriggerPayment(true);
-      }
-    } catch (error) {
-      toast.error('Failed to create booking');
-      setPaymentInProgress(false);
-      setShowPaymentOverlay(false);
-    }
-  };
+  const handleSubmit = checkout.submit;
 
   const pricing = calculatePricing();
 
@@ -459,16 +403,11 @@ export default function EventBooking() {
                         Select Payment Method
                       </h4>
                     </div>
-                    <PaymentMethodsSelection
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
+                    <CheckoutPaymentPanel
+                      checkout={checkout}
                       amount={pricing.total}
-                      orderId={orderId}
                       serviceName={event?.name || 'Event'}
-                      onPaymentInitiated={handlePaymentInitiated}
-                      onPaymentError={handlePaymentError}
-                      triggerPayment={triggerPayment}
-                      onMethodSelected={setSelectedPaymentMethod}
-                />
+                    />
                   </div>
 
                   <Button 
