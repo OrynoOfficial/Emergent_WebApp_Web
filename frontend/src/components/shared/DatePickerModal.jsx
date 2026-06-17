@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -111,9 +112,14 @@ export default function DatePickerModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div 
+  /* Render the modal in a Portal attached to <body> so it always centres
+     to the VIEWPORT — never to a transformed ancestor (Radix Dialog, parents
+     with `transform`/`filter` etc. would otherwise hijack the fixed
+     positioning and clip the bottom of the calendar off-screen when the
+     user opens the picker without scrolling first). */
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+      <div
         ref={modalRef}
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto my-auto max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-95 duration-200"
       >
@@ -180,6 +186,7 @@ export default function DatePickerModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

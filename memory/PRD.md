@@ -1,5 +1,23 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 257: Laundry → useCheckout + DatePicker portal)
+
+### Laundry migration (smallest-first)
+- `LaundryBooking.jsx` now consumes the shared `useCheckout('laundry', { … })` hook. Removed:
+  - `useState` blocks for `paymentInProgress`, `triggerPayment`, `selectedPaymentMethod`, `orderId`.
+  - `useOrderAbandonment` wiring + `handleCheckoutAbandoned` glue.
+  - `validatePromoCode` / `appliedPromo` / `promoError` state — now `checkout.promo.{apply, clear, code, applied, applying}`.
+  - `handlePaymentInitiated` / `ensureOrderId` / 120-line `handleSubmit` collapsed into the hook's `submit()` + `buildPayload` + `validate` callbacks.
+- `onSuccess` callback records promo redemption post-payment so abandoned attempts don't burn the code.
+- `onAbandon` callback resets `currentStep` to 2 (back to booking details) when the order is rolled back.
+- JSX call sites refactored to `checkout.state.*` and `checkout.promo.*`.
+- Net: ~120 lines deleted, behaviour preserved (verified ✅ — promo input renders, totals compute via `checkout.promo.discount`, Confirm Booking shows spinner).
+
+### DatePicker centring (truly fixed this time)
+- `DatePickerModal.jsx` now renders via `createPortal(…, document.body)` so the `fixed inset-0` wrapper is always relative to the viewport. Previously the modal was a child of an ancestor with `transform` (animation containers), which silently hijacked the fixed positioning and clipped the bottom of the calendar.
+- `z-50` → `z-[100]` to stay above any other portal-mounted overlays.
+- Verified ✅: clicking "Select date" on Laundry Booking opens a perfectly centred modal in the viewport regardless of page scroll position. Portal element present at `body > div.fixed.inset-0`.
+
 ## Latest Changes (Feb 2026 — iter 256: Payment modal polish + cart pause)
 
 ### MoMo confirmation modal (`PaymentMethodsSelection.jsx`)

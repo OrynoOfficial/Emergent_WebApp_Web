@@ -23,8 +23,7 @@ import OperatorBookingBlock from '@/components/shared/OperatorBookingBlock';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import PaymentMethodsSelection from '@/components/common/PaymentMethodsSelection';
-import { useOrderAbandonment } from '@/hooks/useOrderAbandonment';
-import { rePayExisting } from '@/utils/paymentRetry';
+import { useCheckout } from '@/hooks/useCheckout';
 
 // Fallback catalog for laundry-only shops (per kg shops don't have items)
 const ITEM_TYPES = [
@@ -156,23 +155,91 @@ export default function LaundryBooking() {
   });
   const [pickupMethod, setPickupMethod] = useState('pickup'); // 'pickup' = operator picks up, 'self' = customer drops off
   const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
-  const [paymentInProgress, setPaymentInProgress] = useState(false);
-  const [triggerPayment, setTriggerPayment] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [orderId, setOrderId] = useState(null);
 
-  // Abandon any pending unpaid order on modal close / unmount / tab close
-  const { abandon: abandonOrder } = useOrderAbandonment(orderId, () => {
-    setOrderId(null);
-    setTriggerPayment(false);
-    setPaymentInProgress(false);
+  // ── Shared checkout flow ────────────────────────────────────────────────
+  // Owns: orderId, paymentInProgress, triggerPayment, selectedPaymentMethod,
+  // /orders/create + rePayExisting, onAbandon clean-up, promo-code apply/clear.
+  // Each booking page only describes its service-specific bits via
+  // buildPayload + validate + onSuccess.
+  const checkout = useCheckout('laundry', {
+    operatorId: service?.operator_id,
+    successMessage: 'Booking confirmed!',
+    createErrorMessage: 'Failed to create order. Please try again.',
+    validate: () => {
+      if (totalItems === 0) { toast.error('Please add at least one item'); return false; }
+      if (!booking.pickup_date) { toast.error('Please select a date'); return false; }
+      if (!booking.firstName || !booking.lastName || !booking.phone) {
+        toast.error('Please fill in your information (name + phone)');
+        return false;
+      }
+      if (pickupMethod === 'pickup' && !booking.address) {
+        toast.error('Please enter a pickup address');
+        return false;
+      }
+      if (!checkout.state.selectedPaymentMethod) {
+        toast.error('Please choose a payment method');
+        return false;
+      }
+      // Validation passed → flip to step 3 so the user sees the spinner stage.
+      setCurrentStep(3);
+      return true;
+    },
+    buildPayload: async () => {
+      const itemsBreakdown = Object.entries(items)
+        .map(([itemId, count]) => {
+          const item = itemCatalog.find((i) => i.id === itemId);
+          if (!item) return null;
+          return { id: itemId, name: item.name, quantity: count, unit_price: getItemPrice(item) };
+        })
+        .filter(Boolean);
+
+      return {
+        service_id: service.id || service._id || id,
+        service_name: service.name,
+        total_amount: total,
+        booking_details: {
+          firstName: booking.firstName,
+          lastName: booking.lastName,
+          email: booking.email,
+          phone: booking.phone,
+          address: pickupMethod === 'pickup' ? booking.address : '',
+          notes: booking.notes,
+          pickup_method: pickupMethod,
+          pickup_surcharge: pickupFee,
+          shop_id: service.id || service._id || id,
+          shop_name: service.name,
+          shop_type: service.shop_type || 'laundry',
+          service_type_selected: serviceType,
+          pickup_date: booking.pickup_date ? format(booking.pickup_date, 'yyyy-MM-dd') : null,
+          pickup_time: booking.pickup_time,
+          delivery_date: booking.delivery_date ? format(booking.delivery_date, 'yyyy-MM-dd') : null,
+          express: booking.express,
+          express_surcharge: expressSurcharge,
+          items: itemsBreakdown,
+          items_subtotal: itemsSubtotal,
+          service_fee: serviceFee,
+          promo_code: checkout.promo.applied?.code,
+          promo_discount: discount,
+        },
+      };
+    },
+    onSuccess: async ({ orderId: oid }) => {
+      // Record promo usage post-payment so abandoned attempts don't burn the
+      // code's redemption count. Non-blocking — failure here doesn't roll
+      // back the confirmed payment.
+      if (checkout.promo.applied?.code && oid && discount > 0) {
+        try {
+          await api.post(
+            `/promo-codes/use?code=${encodeURIComponent(checkout.promo.applied.code)}&order_id=${oid}&discount_amount=${discount}`,
+          );
+        } catch { /* non-blocking */ }
+      }
+    },
+    onAbandon: () => {
+      // Order rolled back → drop the user back to the booking details step.
+      setCurrentStep(2);
+    },
   });
-  const handleCheckoutAbandoned = ({ orderId: id } = {}) => abandonOrder(id);
-
-  // Promo code state (mirrors TravelBooking pattern)
-  const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState(null);
-  const [promoError, setPromoError] = useState('');
 
   useEffect(() => { loadService(); }, [id]);
 
@@ -269,175 +336,29 @@ export default function LaundryBooking() {
   const subtotalBeforeDiscount = itemsSubtotal + expressSurcharge + pickupFee;
   const serviceFee = Math.round(subtotalBeforeDiscount * 0.05);
 
-  const discount = useMemo(() => {
-    if (!appliedPromo) return 0;
-    const base = subtotalBeforeDiscount + serviceFee;
-    if (appliedPromo.discount_percent) return Math.round(base * (appliedPromo.discount_percent / 100));
-    if (appliedPromo.fixed_discount) return Math.min(appliedPromo.fixed_discount, base);
-    if (appliedPromo.discount_amount) return Math.min(appliedPromo.discount_amount, base);
-    return 0;
-  }, [appliedPromo, subtotalBeforeDiscount, serviceFee]);
+  // Promo discount comes from the shared checkout hook (centralised
+  // /api/promo-codes/validate flow + normalized discount shape).
+  const discount = checkout.promo.discount(subtotalBeforeDiscount + serviceFee);
 
   const total = Math.max(0, subtotalBeforeDiscount + serviceFee - discount);
   const totalItems = Object.values(items).reduce((sum, c) => sum + c, 0);
 
-  // Promo handlers
-  const validatePromoCode = async () => {
-    if (!promoCode.trim()) return;
-    try {
-      const response = await api.post('/promo-codes/validate', {
-        code: promoCode.toUpperCase(),
-        service_type: 'laundry',
-        order_amount: subtotalBeforeDiscount + serviceFee,
-        operator_id: service?.operator_id,
-      });
-      const promo = response.data;
-      setAppliedPromo({
-        ...promo,
-        discount_percent: promo.discount_type === 'percentage' ? promo.discount_value : null,
-        fixed_discount: promo.discount_type === 'fixed' ? promo.discount_value : null,
-      });
-      setPromoError('');
-      toast.success(`Promo applied: ${promo.discount_type === 'percentage' ? promo.discount_value + '%' : formatFCFA(promo.discount_value)} off`);
-    } catch (err) {
-      setPromoError(err.response?.data?.detail || 'Invalid promo code');
-      setAppliedPromo(null);
-    }
-  };
+  // Promo handlers — thin wrappers over checkout.promo to keep existing JSX
+  // call sites (`validatePromoCode`, `appliedPromo`, `promoError`) working
+  // verbatim until we refactor the JSX. promoError is no longer needed since
+  // the shared hook toasts on failure.
+  const validatePromoCode = () => checkout.promo.apply(subtotalBeforeDiscount + serviceFee);
 
-  // Payment outcome handler
-  const handlePaymentInitiated = async (response) => {
-    setPaymentInProgress(false);
-    setTriggerPayment(false);
-    if (response.opening_modal) return;
-    if (response.success || response.transactionRef) {
-      // Record promo code usage (non-blocking)
-      if (appliedPromo?.code && orderId && discount > 0) {
-        try {
-          await api.post(`/promo-codes/use?code=${encodeURIComponent(appliedPromo.code)}&order_id=${orderId}&discount_amount=${discount}`);
-        } catch { /* non-blocking */ }
-      }
-      toast.success('Booking confirmed!');
-      navigate('/orders');
-    } else {
-      toast.error(`Payment Failed: ${response.message || 'Unknown error'}`);
-    }
-  };
+  const handleSubmit = (e) => checkout.submit(e);
 
-  // Extract reusable order-creation logic. Used by both Confirm Booking
-  // and (defensively) by PaymentMethodsSelection's lazy-create fallback.
-  const ensureOrderId = async () => {
-    if (orderId) return orderId;
-    if (totalItems === 0) throw new Error('Please add at least one item');
-    if (!booking.pickup_date) throw new Error('Please select a date');
-    if (!booking.firstName || !booking.lastName || !booking.phone) {
-      throw new Error('Please fill in your information (name + phone)');
-    }
-    if (pickupMethod === 'pickup' && !booking.address) {
-      throw new Error('Please enter a pickup address');
-    }
-
-    const itemsBreakdown = Object.entries(items)
-      .map(([itemId, count]) => {
-        const item = itemCatalog.find((i) => i.id === itemId);
-        if (!item) return null;
-        return { id: itemId, name: item.name, quantity: count, unit_price: getItemPrice(item) };
-      })
-      .filter(Boolean);
-
-    const orderPayload = {
-      service_type: 'laundry',
-      service_id: service.id || service._id || id,
-      service_name: service.name,
-      total_amount: total,
-      currency: 'XAF',
-      status: 'pending',
-      payment_status: 'pending',
-      booking_details: {
-        firstName: booking.firstName,
-        lastName: booking.lastName,
-        email: booking.email,
-        phone: booking.phone,
-        address: pickupMethod === 'pickup' ? booking.address : '',
-        notes: booking.notes,
-        pickup_method: pickupMethod,
-        pickup_surcharge: pickupFee,
-        shop_id: service.id || service._id || id,
-        shop_name: service.name,
-        shop_type: service.shop_type || 'laundry',
-        service_type_selected: serviceType,
-        pickup_date: booking.pickup_date ? format(booking.pickup_date, 'yyyy-MM-dd') : null,
-        pickup_time: booking.pickup_time,
-        delivery_date: booking.delivery_date ? format(booking.delivery_date, 'yyyy-MM-dd') : null,
-        express: booking.express,
-        express_surcharge: expressSurcharge,
-        items: itemsBreakdown,
-        items_subtotal: itemsSubtotal,
-        service_fee: serviceFee,
-        promo_code: appliedPromo?.code,
-        promo_discount: discount,
-      },
-    };
-
-    const response = await api.post('/orders/create', orderPayload);
-    const newId = response.data?.order_id || response.data?._id || response.data?.id;
-    if (!newId) throw new Error('Failed to create order');
-    setOrderId(newId);
-    return newId;
-  };
-
-  const handleSubmit = async (e) => {
-    e?.preventDefault?.();
-    if (totalItems === 0) {
-      toast.error('Please add at least one item');
-      return;
-    }
-    if (!booking.pickup_date) {
-      toast.error('Please select a date');
-      return;
-    }
-    if (!booking.firstName || !booking.lastName || !booking.phone) {
-      toast.error('Please fill in your information (name + phone)');
-      return;
-    }
-    if (pickupMethod === 'pickup' && !booking.address) {
-      toast.error('Please enter a pickup address');
-      return;
-    }
-    if (!selectedPaymentMethod) {
-      toast.error('Please choose a payment method');
-      return;
-    }
-
-    // If we already have a pending order for this checkout, just re-trigger payment.
-    if (orderId) {
-      rePayExisting(setTriggerPayment);
-      return;
-    }
-
-    setPaymentInProgress(true);
-    setCurrentStep(3);
-
-    try {
-      await ensureOrderId();
-      setTriggerPayment(true);
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      toast.error(error.response?.data?.detail || error.message || 'Failed to create order. Please try again.');
-      setPaymentInProgress(false);
-      setCurrentStep(2);
-    }
-  };
-
-  // Lazy-create fallback for PaymentMethodsSelection — if user somehow
-  // triggers MoMo/Stripe without orderId, create the order on demand.
+  // Lazy-create fallback for PaymentMethodsSelection — when MoMo/Stripe
+  // triggers without an orderId. The shared hook's submit() already does
+  // create-then-pay, so this fallback just calls into it.
   const handleRequestCreateOrder = async () => {
-    try {
-      return await ensureOrderId();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || error.message || 'Failed to create order');
-      throw error;
-    }
+    // Run the same validate + create path; on success the hook will already
+    // have set orderId and started triggerPayment.
+    await checkout.submit();
+    return checkout.state.orderId;
   };
 
   if (loading) {
@@ -917,48 +838,48 @@ export default function LaundryBooking() {
                       <span className="font-medium">+{formatFCFA(serviceFee)}</span>
                     </div>
 
-                    {/* Promo code input */}
+                    {/* Promo code input — backed by the shared checkout hook */}
                     <div className="pt-2">
-                      {!appliedPromo ? (
+                      {!checkout.promo.applied ? (
                         <div className="flex gap-2">
                           <div className="relative flex-1">
                             <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-500" />
                             <Input
                               placeholder="Promo code"
-                              value={promoCode}
-                              onChange={(e) => setPromoCode(e.target.value)}
+                              value={checkout.promo.code}
+                              onChange={(e) => checkout.promo.setCode(e.target.value)}
                               className="pl-10 bg-purple-50/40 border-purple-200 text-sm"
                               data-testid="promo-code-input"
                             />
                           </div>
                           <Button
                             onClick={validatePromoCode}
+                            disabled={checkout.promo.applying}
                             variant="outline"
                             size="sm"
                             className="shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
                             data-testid="promo-apply-btn"
-                          >Apply</Button>
+                          >{checkout.promo.applying ? '…' : 'Apply'}</Button>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg" data-testid="promo-applied">
                           <div className="flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                            <span className="text-sm text-emerald-700 font-medium">{appliedPromo.code}</span>
+                            <span className="text-sm text-emerald-700 font-medium">{checkout.promo.applied.code}</span>
                           </div>
                           <Button
                             variant="ghost" size="sm"
-                            onClick={() => { setAppliedPromo(null); setPromoCode(''); }}
+                            onClick={() => checkout.promo.clear()}
                             className="text-red-500 hover:text-red-600 h-7 px-2"
                             data-testid="promo-remove-btn"
                           ><X className="w-3.5 h-3.5" /></Button>
                         </div>
                       )}
-                      {promoError && <p className="text-red-500 text-xs mt-1">{promoError}</p>}
                     </div>
 
-                    {discount > 0 && appliedPromo && (
+                    {discount > 0 && checkout.promo.applied && (
                       <div className="flex justify-between text-emerald-600">
-                        <span>Discount ({appliedPromo.code})</span>
+                        <span>Discount ({checkout.promo.applied.code})</span>
                         <span className="font-medium">-{formatFCFA(discount)}</span>
                       </div>
                     )}
@@ -987,7 +908,7 @@ export default function LaundryBooking() {
                   <div className={(!booking.firstName || !booking.lastName || !booking.phone) ? 'opacity-50 pointer-events-none' : ''} aria-disabled={!booking.firstName || !booking.lastName || !booking.phone}>
                   <PaymentMethodsSelection
                     amount={total}
-                    orderId={orderId}
+                    orderId={checkout.state.orderId}
                     customerPhone={booking.phone}
                     customerEmail={booking.email}
                     serviceDetails={{
@@ -996,21 +917,21 @@ export default function LaundryBooking() {
                       operator_id: service?.operator_id,
                     }}
                     serviceName={service?.name || 'Laundry'}
-                    onPaymentInitiated={handlePaymentInitiated}
-                    onPaymentError={(error) => toast.error(error.message)}
-                    onCheckoutAbandoned={handleCheckoutAbandoned}
+                    onPaymentInitiated={checkout.handlePaymentInitiated}
+                    onPaymentError={checkout.handlePaymentError}
+                    onCheckoutAbandoned={checkout.handleCheckoutAbandoned}
                     onRequestCreateOrder={handleRequestCreateOrder}
-                    triggerPayment={triggerPayment}
-                    onMethodSelected={setSelectedPaymentMethod}
+                    triggerPayment={checkout.state.triggerPayment}
+                    onMethodSelected={checkout.setSelectedPaymentMethod}
                   />
                   </div>
                   <Button
                     onClick={handleSubmit}
-                    disabled={paymentInProgress}
+                    disabled={checkout.state.paymentInProgress}
                     className="w-full mt-4 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-800 hover:to-purple-700 text-white h-12 font-semibold rounded-xl shadow-md shadow-purple-300/40 disabled:opacity-60"
                     data-testid="confirm-booking-btn"
                   >
-                    {paymentInProgress ? (
+                    {checkout.state.paymentInProgress ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Processing...</>
                     ) : (
                       <><Shirt className="w-4 h-4 mr-2" />Confirm Booking</>
