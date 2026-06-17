@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Sparkles, PlayCircle,
@@ -289,6 +290,7 @@ export default function CinemaResults() {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [ratingFilter, setRatingFilter] = useState('all');
@@ -381,9 +383,9 @@ export default function CinemaResults() {
         );
       }
     }
-  }, [films, sortBy, searchQuery, statusFilter, selectedGenres, ratingFilter, durationFilter]);
+  }, [films, sortBy, searchQuery, smartFilters, statusFilter, selectedGenres, ratingFilter, durationFilter]);
 
-  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, sortBy, selectedGenres, ratingFilter, durationFilter]);
+  useEffect(() => { setPage(1); }, [searchQuery, smartFilters, statusFilter, sortBy, selectedGenres, ratingFilter, durationFilter]);
   const totalPages = Math.max(1, Math.ceil(filteredFilms.length / PAGE_SIZE));
   const pagedFilms = useMemo(
     () => filteredFilms.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
@@ -447,13 +449,26 @@ export default function CinemaResults() {
             </CardContent>
           </Card>
 
+          {/* iter 247: chip-style omnibar above the legacy filter strip.
+              The free-text input still lives below as a genre-keyword shortcut. */}
+          <SmartSearchBar
+            items={films}
+            listingIcon={Film}
+            listingLabel="Film"
+            placeholder="Filter by city, cinema, or film title…"
+            getName={(f) => f.title}
+            getCity={(f) => f.city}
+            getOperator={(f) => f.operator_name || f.cinema_name}
+            onFiltersChange={setSmartFilters}
+          />
+
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cyan-600" />
               <Input
                 type="text"
-                placeholder="Search movies, genres…"
+                placeholder="Quick genre keyword…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-cyan-50/60 border-cyan-200 text-slate-900 placeholder:text-slate-500 focus-visible:ring-cyan-500/40 focus-visible:border-cyan-400"

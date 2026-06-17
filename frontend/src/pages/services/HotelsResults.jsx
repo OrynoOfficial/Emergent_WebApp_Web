@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
@@ -472,7 +473,8 @@ export default function HotelsResults() {
   
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  // iter 247: omnibar chips replace the misleading free-text + location combo.
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [sortBy, setSortBy] = useState('rating');
   const [priceRange, setPriceRange] = useState([0, 500000]);
   const [selectedStars, setSelectedStars] = useState([]);
@@ -621,12 +623,11 @@ export default function HotelsResults() {
   const filteredAndSortedHotels = useMemo(() => {
     let result = [...hotels];
 
-    if (searchTerm) {
-      result = result.filter(h => 
-        h.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        h.city?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    // Apply chip filters from the SmartSearchBar (place / operator / listing).
+    const { places, operators, listings } = smartFilters;
+    if (places.size) result = result.filter(h => places.has((h.city || '').trim()));
+    if (operators.size) result = result.filter(h => operators.has((h.operator_name || '').trim()));
+    if (listings.size) result = result.filter(h => listings.has((h.name || '').trim()));
 
     result = result.filter(h => 
       h.price_per_night >= priceRange[0] && h.price_per_night <= priceRange[1]
@@ -672,7 +673,7 @@ export default function HotelsResults() {
     }
 
     return result;
-  }, [hotels, searchTerm, priceRange, selectedStars, selectedAmenities, sortBy, freeCancellation, breakfastIncluded, minGuestRating]);
+  }, [hotels, smartFilters, priceRange, selectedStars, selectedAmenities, sortBy, freeCancellation, breakfastIncluded, minGuestRating]);
 
   const handleViewDetails = (hotel) => {
     const hotelId = hotel._id || hotel.id;
@@ -839,19 +840,16 @@ export default function HotelsResults() {
 
       <div className="px-4 py-6">
         {/* Search & Filters Bar */}
-        <div className="bg-white rounded-xl shadow-sm p-3 mb-5">
-          <div className="flex flex-col lg:flex-row gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search hotels by name or location..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 text-sm rounded-lg border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
-              />
-            </div>
-            
+        <SmartSearchBar
+          items={hotels}
+          listingIcon={Hotel}
+          listingLabel="Hotel"
+          placeholder="Filter by city, operator, or hotel name…"
+          getName={(h) => h.name}
+          getCity={(h) => h.city}
+          getOperator={(h) => h.operator_name}
+          onFiltersChange={setSmartFilters}
+        >
             {/* Controls */}
             <div className="flex gap-2 flex-wrap">
               {/* Sort Dropdown */}
@@ -1017,8 +1015,7 @@ export default function HotelsResults() {
                 </SheetContent>
               </Sheet>
             </div>
-          </div>
-        </div>
+        </SmartSearchBar>
 
         {/* Results */}
         {filteredAndSortedHotels.length === 0 ? (

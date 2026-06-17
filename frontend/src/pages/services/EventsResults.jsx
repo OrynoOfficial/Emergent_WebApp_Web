@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle, Building2, Eye } from 'lucide-react';
@@ -320,7 +321,7 @@ export default function EventsResults() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('date');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [typeFilter, setTypeFilter] = useState('all');
   const [previewEvent, setPreviewEvent] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -383,15 +384,13 @@ export default function EventsResults() {
 
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.name?.toLowerCase().includes(query) ||
-        e.venue?.toLowerCase().includes(query)
-      );
-    }
-    
+
+    // iter 247: chip-style filters (place / operator / listing).
+    const { places, operators, listings } = smartFilters;
+    if (places.size) filtered = filtered.filter(e => places.has((e.city || '').trim()));
+    if (operators.size) filtered = filtered.filter(e => operators.has((e.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(e => listings.has((e.name || '').trim()));
+
     if (typeFilter !== 'all') {
       filtered = filtered.filter(e => e.type?.toLowerCase() === typeFilter.toLowerCase());
     }
@@ -407,7 +406,7 @@ export default function EventsResults() {
       default:
         return filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
-  }, [events, sortBy, searchQuery, typeFilter]);
+  }, [events, sortBy, smartFilters, typeFilter]);
 
   const handleBook = (event) => {
     // ALL clicks open the rich preview modal first; the modal's "Book Now"
@@ -477,19 +476,17 @@ export default function EventsResults() {
             </CardContent>
           </Card>
 
-          {/* Filters strip — separate card under the hero */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-pink-400" />
-              <Input
-                type="text"
-                placeholder="Search events…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white border-pink-200 focus-visible:ring-pink-500"
-                data-testid="events-search-input"
-              />
-            </div>
+          {/* Filters strip — chip omnibar replaces the misleading free-text + city dropdown */}
+          <SmartSearchBar
+            items={events}
+            listingIcon={Ticket}
+            listingLabel="Event"
+            placeholder="Filter by city, operator, or event name…"
+            getName={(e) => e.name}
+            getCity={(e) => e.city}
+            getOperator={(e) => e.operator_name}
+            onFiltersChange={setSmartFilters}
+          >
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-40 bg-white border-pink-200" data-testid="events-type-filter">
                 <Ticket className="w-4 h-4 mr-2 text-pink-600" />
@@ -516,7 +513,7 @@ export default function EventsResults() {
                 <SelectItem value="price_high">Price: High to Low</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </SmartSearchBar>
         </div>
       </div>
 
