@@ -67,7 +67,7 @@ function AdminTicketCard({ ticket, isSelected, onSelect, onView, onAssign }) {
   const priorityConfig = getPriorityConfig(ticket.priority);
   return (
     <div data-testid={`ticket-card-${ticket.id}`}
-      className={`p-4 rounded-xl transition-all cursor-pointer hover:shadow-lg bg-gradient-to-r from-[#082c59]/[0.03] via-slate-50/50 to-slate-100/40 border border-slate-200/50 shadow-sm ${isSelected ? 'ring-2 ring-[#082c59]' : 'hover:border-[#082c59]/20'}`}
+      className={`p-3 rounded-lg transition-all cursor-pointer hover:shadow-md bg-white border border-slate-200 shadow-sm ${isSelected ? 'ring-2 ring-[#082c59]' : 'hover:border-[#082c59]/30'}`}
       onClick={onView}>
       <div className="flex items-start gap-3">
         <Checkbox checked={isSelected} onCheckedChange={(c) => onSelect(ticket.id, c)} onClick={(e) => e.stopPropagation()} className="mt-1" />
@@ -125,7 +125,7 @@ function AdminTicketCardGrid({ ticket, onView }) {
     low: '#cbd5e1',
   }[ticket.priority] || '#cbd5e1';
   return (
-    <div className="bg-gradient-to-br from-white via-[#082c59]/[0.02] to-slate-50 rounded-xl border border-slate-200/60 p-4 hover:shadow-lg hover:border-[#082c59]/25 transition-all cursor-pointer group shadow-sm overflow-hidden"
+    <div className="bg-white rounded-lg border border-slate-200 p-3 hover:shadow-md hover:border-[#082c59]/30 transition-all cursor-pointer group shadow-sm overflow-hidden"
       style={{ borderLeftWidth: '4px', borderLeftStyle: 'solid', borderLeftColor: priorityBorderColor }}
       onClick={onView} data-testid={`ticket-card-grid-${ticket.id}`}>
       {/* Header: Priority + Status */}

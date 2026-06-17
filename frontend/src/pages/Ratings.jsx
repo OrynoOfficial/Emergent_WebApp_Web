@@ -508,9 +508,8 @@ function OperatorRatingsView() {
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
   const [page, setPage] = useState(1);
+  const [previewRating, setPreviewRating] = useState(null);
   const ITEMS_PER_PAGE = 10;
-
-  // Determine operator's assigned service types
   const assignedServices = useMemo(() => {
     if (operatorServiceTypes?.length > 0) return operatorServiceTypes;
     if (operatorType) return [operatorType];
@@ -669,26 +668,10 @@ function OperatorRatingsView() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Overview — slim chip strip */}
-      <div className="flex flex-wrap items-center gap-2" data-testid="operator-ratings-stats">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
-          <BarChart3 className="h-3.5 w-3.5" /> Total <span className="font-bold">{stats.total}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-          <CheckCircle className="h-3.5 w-3.5" /> Responded <span className="font-bold">{stats.responded}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
-          <MessageCircle className="h-3.5 w-3.5" /> Needs Response <span className="font-bold">{stats.pending}</span>
-        </div>
-      </div>
-
-      {/* Filters */}
+    <div className="space-y-4">
+      {/* Filters + stats (stats sit just below the search bar) */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -726,6 +709,22 @@ function OperatorRatingsView() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Stats chip strip — at-a-glance metrics below the search bar */}
+          <div className="flex flex-wrap items-center gap-2 pt-1" data-testid="operator-ratings-stats">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+              <BarChart3 className="h-3 w-3" /> Total <span className="font-bold">{stats.total}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+              <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
+              <CheckCircle className="h-3 w-3" /> Responded <span className="font-bold">{stats.responded}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-medium">
+              <MessageCircle className="h-3 w-3" /> Needs Response <span className="font-bold">{stats.pending}</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -744,134 +743,39 @@ function OperatorRatingsView() {
         </Card>
       ) : (
         <>
-        <div className="space-y-4">
+        <div className="space-y-1.5">
           {filteredRatings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             const needsResponse = !review.operator_response;
-            
             return (
-              <Card 
-                key={review.id} 
-                className={`overflow-hidden transition-all duration-300 ${needsResponse ? 'ring-2 ring-amber-200' : ''}`}
+              <div
+                key={review.id}
+                onClick={() => setPreviewRating(review)}
+                data-testid={`operator-rating-row-${review.id}`}
+                className={`group flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2 cursor-pointer hover:shadow-sm hover:border-[#082c59]/30 transition-all ${needsResponse ? 'ring-1 ring-amber-200' : ''}`}
               >
-                <CardContent className="p-0">
-                  <div className="flex">
-                    {/* Status bar */}
-                    <div 
-                      className="w-1.5"
-                      style={{ backgroundColor: needsResponse ? '#F59E0B' : '#10B981' }}
-                    ></div>
-                    
-                    <div className="flex-1 p-6">
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                            <User className="h-5 w-5 text-slate-500" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-slate-900">{review.customer_name}</p>
-                            <div className="flex items-center gap-2 text-sm text-slate-500">
-                              <Clock className="h-3.5 w-3.5" />
-                              {formatDate(review.created_at)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            className="capitalize text-xs"
-                            style={{ backgroundColor: `${color}20`, color }}
-                          >
-                            <IconComponent className="h-3 w-3 mr-1" />
-                            {review.service_name}
-                          </Badge>
-                          {needsResponse && (
-                            <Badge className="bg-amber-100 text-amber-700 text-xs">
-                              Needs Response
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Rating & Comment */}
-                      <div className="mb-4">
-                        <StarRating rating={review.rating} />
-                        <p className="text-slate-700 mt-3 leading-relaxed">{review.comment}</p>
-                      </div>
-
-                      {/* Existing Response */}
-                      {review.operator_response && (
-                        <div className="mt-4 p-4 bg-emerald-50 rounded-lg border-l-4 border-emerald-500">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle className="h-4 w-4 text-emerald-600" />
-                            <span className="font-medium text-emerald-700 text-sm">
-                              Your Response
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              • {formatDate(review.operator_response.responded_at)}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 text-sm">{review.operator_response.message}</p>
-                        </div>
-                      )}
-
-                      {/* Reply Section */}
-                      {replyingTo?.id === review.id ? (
-                        <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-                          <Textarea
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Write your response to this review..."
-                            className="mb-3"
-                            rows={3}
-                          />
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => { setReplyingTo(null); setReplyText(''); }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              size="sm"
-                              onClick={handleSubmitReply}
-                              disabled={!replyText.trim() || submittingReply}
-                              className="bg-[#082c59] hover:bg-[#0a3a75]"
-                            >
-                              {submittingReply ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <Send className="h-4 w-4 mr-2" />
-                              )}
-                              Submit Response
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                            <ThumbsUp className="h-4 w-4" />
-                            {review.helpful_count || 0} helpful votes
-                          </span>
-                          {!review.operator_response && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setReplyingTo(review)}
-                              className="gap-2"
-                            >
-                              <Reply className="h-4 w-4" />
-                              Respond
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                <div className="w-1 self-stretch rounded-full" style={{ backgroundColor: needsResponse ? '#F59E0B' : '#10B981' }} />
+                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                  <User className="h-3.5 w-3.5 text-slate-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold text-slate-900 truncate">{review.customer_name}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">·</span>
+                    <span className="text-[10px] text-slate-400 truncate">{formatDate(review.created_at)}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <p className="text-[11px] text-slate-600 truncate leading-tight">{review.comment}</p>
+                </div>
+                <StarRating rating={review.rating} size="sm" />
+                <Badge className="capitalize text-[9px] h-5 shrink-0 hidden md:inline-flex" style={{ backgroundColor: `${color}20`, color }}>
+                  <IconComponent className="h-2.5 w-2.5 mr-0.5" />
+                  {review.service_name}
+                </Badge>
+                {needsResponse && (
+                  <Badge className="bg-amber-100 text-amber-700 text-[9px] h-5 shrink-0">Needs Response</Badge>
+                )}
+              </div>
             );
           })}
         </div>
@@ -892,6 +796,93 @@ function OperatorRatingsView() {
         )}
         </>
       )}
+
+      {/* Operator Rating Preview Modal — full review + reply CTA */}
+      <Dialog open={!!previewRating} onOpenChange={(o) => { if (!o) { setPreviewRating(null); setReplyingTo(null); setReplyText(''); } }}>
+        <DialogContent className="bg-white max-w-xl" data-testid="operator-rating-preview-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" fill="currentColor" />
+              Review details
+            </DialogTitle>
+          </DialogHeader>
+          {previewRating && (() => {
+            const Icon = SERVICE_ICONS[previewRating.service_category] || Package;
+            const color = SERVICE_COLORS[previewRating.service_category] || '#64748B';
+            const needsResponse = !previewRating.operator_response;
+            return (
+              <div className="space-y-4 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{previewRating.customer_name}</p>
+                      <p className="text-xs text-slate-500">{formatDate(previewRating.created_at)}</p>
+                    </div>
+                  </div>
+                  <Badge className="capitalize text-[10px]" style={{ backgroundColor: `${color}20`, color }}>
+                    <Icon className="h-3 w-3 mr-1" />
+                    {previewRating.service_name}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={previewRating.rating} />
+                  <span className="text-sm font-semibold text-slate-700">{previewRating.rating}/5</span>
+                  {needsResponse && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Needs Response</Badge>}
+                </div>
+                <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{previewRating.comment}</p>
+                </div>
+                {previewRating.operator_response && (
+                  <div className="rounded-lg bg-emerald-50 border-l-4 border-emerald-500 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                      <span className="text-xs font-medium text-emerald-700">Your response</span>
+                      <span className="text-[10px] text-slate-500">· {formatDate(previewRating.operator_response.responded_at)}</span>
+                    </div>
+                    <p className="text-sm text-slate-700">{previewRating.operator_response.message}</p>
+                  </div>
+                )}
+                {needsResponse && (
+                  replyingTo?.id === previewRating.id ? (
+                    <div className="p-3 bg-slate-50 rounded-lg space-y-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Write your response to this review…"
+                        rows={3}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => { setReplyingTo(null); setReplyText(''); }}>Cancel</Button>
+                        <Button
+                          size="sm"
+                          onClick={async () => { await handleSubmitReply(); setPreviewRating(null); }}
+                          disabled={!replyText.trim() || submittingReply}
+                          className="bg-[#082c59] hover:bg-[#0a3a75]"
+                        >
+                          {submittingReply ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                          Submit Response
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                        <ThumbsUp className="h-3.5 w-3.5" /> {previewRating.helpful_count || 0} helpful votes
+                      </span>
+                      <Button variant="outline" size="sm" onClick={() => setReplyingTo(previewRating)} className="gap-2">
+                        <Reply className="h-4 w-4" /> Respond
+                      </Button>
+                    </div>
+                  )
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -918,6 +909,7 @@ function AdminRatingsView() {
   const [submittingBulk, setSubmittingBulk] = useState(false);
   const [viewMode, setViewMode] = useState('list');
   const [page, setPage] = useState(1);
+  const [previewRating, setPreviewRating] = useState(null);
   const ITEMS_PER_PAGE = 8;
 
   useEffect(() => {
@@ -1167,47 +1159,10 @@ function AdminRatingsView() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats Overview — slim chip strip (compact, 1-row at lg) */}
-      <div className="flex flex-wrap items-center gap-2" data-testid="admin-ratings-stats">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium" data-testid="stat-total">
-          <BarChart3 className="h-3.5 w-3.5" /> Total <span className="font-bold">{stats.total}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium" data-testid="stat-avg">
-          <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium" data-testid="stat-responded">
-          <CheckCircle className="h-3.5 w-3.5" /> Responded <span className="font-bold">{stats.responded}</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium" data-testid="stat-pending">
-          <MessageCircle className="h-3.5 w-3.5" /> Needs Response <span className="font-bold">{stats.pending}</span>
-        </div>
-        <button
-          onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-            showFlaggedOnly
-              ? 'bg-orange-500 text-white border-orange-500'
-              : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
-          }`}
-          data-testid="stat-flagged"
-        >
-          <Flag className="h-3.5 w-3.5" /> {showFlaggedOnly ? 'Showing Flagged' : 'Flagged'} <span className="font-bold">{stats.flagged}</span>
-        </button>
-        {/* Rating distribution — compact inline bars */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[10px] text-purple-700 font-medium" data-testid="stat-distribution">
-          {[5, 4, 3, 2, 1].map(star => (
-            <div key={star} className="flex items-center gap-0.5" title={`${star}★ — ${stats.byRating?.[star] || 0} reviews`}>
-              <span>{star}★</span>
-              <span className="font-bold">{stats.byRating?.[star] || 0}</span>
-              {star !== 1 && <span className="text-purple-300">·</span>}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
+    <div className="space-y-4">
+      {/* Filters + stats (stats sit just below the search bar — at-a-glance with the controls) */}
       <Card className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 border-slate-200">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -1267,6 +1222,42 @@ function AdminRatingsView() {
               <button onClick={() => setViewMode('grid')} className={`px-2.5 py-1.5 ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="grid-view-btn">
                 <LayoutGrid className="h-4 w-4" />
               </button>
+            </div>
+          </div>
+
+          {/* Stats chip strip — sits just below the search bar so at-a-glance numbers don't take their own row */}
+          <div className="flex flex-wrap items-center gap-2 pt-1" data-testid="admin-ratings-stats">
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium" data-testid="stat-total">
+              <BarChart3 className="h-3 w-3" /> Total <span className="font-bold">{stats.total}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium" data-testid="stat-avg">
+              <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> Avg <span className="font-bold">{stats.average}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium" data-testid="stat-responded">
+              <CheckCircle className="h-3 w-3" /> Responded <span className="font-bold">{stats.responded}</span>
+            </div>
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-medium" data-testid="stat-pending">
+              <MessageCircle className="h-3 w-3" /> Needs Response <span className="font-bold">{stats.pending}</span>
+            </div>
+            <button
+              onClick={() => setShowFlaggedOnly(!showFlaggedOnly)}
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                showFlaggedOnly
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100'
+              }`}
+              data-testid="stat-flagged"
+            >
+              <Flag className="h-3 w-3" /> {showFlaggedOnly ? 'Showing Flagged' : 'Flagged'} <span className="font-bold">{stats.flagged}</span>
+            </button>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-[10px] text-purple-700 font-medium" data-testid="stat-distribution">
+              {[5, 4, 3, 2, 1].map(star => (
+                <div key={star} className="flex items-center gap-0.5" title={`${star}★ — ${stats.byRating?.[star] || 0} reviews`}>
+                  <span>{star}★</span>
+                  <span className="font-bold">{stats.byRating?.[star] || 0}</span>
+                  {star !== 1 && <span className="text-purple-300">·</span>}
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
@@ -1358,81 +1349,47 @@ function AdminRatingsView() {
         </Card>
       ) : (
         <>
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-3'}>
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-1.5'}>
           {filteredRatings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             const needsResponse = !review.operator_response;
-            
+            const stripColor = review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981';
             return (
-              <Card key={review.id} className={`overflow-hidden transition-all duration-300 hover:shadow-md bg-gradient-to-r from-[#082c59]/[0.03] to-slate-50 ${review.is_flagged ? 'ring-2 ring-orange-300' : ''} ${review.is_hidden ? 'opacity-60' : ''}`}>
-                <CardContent className="p-0">
-                  <div className="flex">
-                    <div className="w-1.5 flex-shrink-0" style={{ backgroundColor: review.is_flagged ? '#F97316' : needsResponse ? '#F59E0B' : '#10B981' }}></div>
-                    
-                    <div className="flex items-start p-3">
-                      <Checkbox 
-                        checked={selectedRatings.has(review.id)}
-                        onCheckedChange={(checked) => handleSelectRating(review.id, checked)}
-                        className="mt-1"
-                      />
-                    </div>
-                    
-                    <div className={`flex-1 ${viewMode === 'grid' ? 'p-4 pl-0' : 'p-5 pl-0'}`}>
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
-                            <User className="h-4 w-4 text-slate-500" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm text-slate-900">{review.customer_name}</p>
-                            <span className="text-[10px] text-slate-400">{formatDate(review.created_at)}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                          <Badge className="capitalize text-[10px]" style={{ backgroundColor: `${color}20`, color }}>
-                            <IconComponent className="h-2.5 w-2.5 mr-0.5" />
-                            {review.service_name}
-                          </Badge>
-                          {review.is_flagged && <Badge className="bg-orange-100 text-orange-700 text-[10px]"><Flag className="h-2.5 w-2.5 mr-0.5" />Flagged</Badge>}
-                          {review.is_hidden && <Badge className="bg-slate-100 text-slate-700 text-[10px]"><EyeOff className="h-2.5 w-2.5 mr-0.5" />Hidden</Badge>}
-                        </div>
-                      </div>
-
-                      <StarRating rating={review.rating} />
-                      <p className={`text-slate-700 mt-2 leading-relaxed ${viewMode === 'grid' ? 'text-xs line-clamp-3' : 'text-sm line-clamp-2'}`}>{review.comment}</p>
-
-                      {review.operator_response && (
-                        <div className="mt-2 p-2.5 bg-emerald-50 rounded-lg border-l-3 border-emerald-500 text-xs">
-                          <span className="text-emerald-700 font-medium">{review.operator_response.responder_name}:</span>
-                          <span className="text-slate-600 ml-1">{review.operator_response.message}</span>
-                        </div>
-                      )}
-
-                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-xs text-slate-400">
-                          <ThumbsUp className="h-3 w-3" /> {review.helpful_count || 0}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          {review.is_flagged ? (
-                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'unflag')} className="h-7 text-[10px] text-green-600 hover:bg-green-50 px-2">Unflag</Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'flag')} className="h-7 text-[10px] text-orange-600 hover:bg-orange-50 px-2">Flag</Button>
-                          )}
-                          {review.is_hidden ? (
-                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'unhide')} className="h-7 text-[10px] text-blue-600 hover:bg-blue-50 px-2">Show</Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'hide')} className="h-7 text-[10px] text-slate-600 hover:bg-slate-50 px-2">Hide</Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => handleModerate(review, 'delete')} className="h-7 text-[10px] text-red-600 hover:bg-red-50 px-2">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+              <div
+                key={review.id}
+                onClick={() => setPreviewRating(review)}
+                data-testid={`admin-rating-row-${review.id}`}
+                className={`group flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2 cursor-pointer hover:shadow-sm hover:border-[#082c59]/30 transition-all ${review.is_flagged ? 'ring-1 ring-orange-200' : ''} ${review.is_hidden ? 'opacity-60' : ''}`}
+              >
+                <div className="w-1 self-stretch rounded-full" style={{ backgroundColor: stripColor }} />
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedRatings.has(review.id)}
+                    onCheckedChange={(checked) => handleSelectRating(review.id, checked)}
+                  />
+                </div>
+                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                  <User className="h-3.5 w-3.5 text-slate-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold text-slate-900 truncate">{review.customer_name}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">·</span>
+                    <span className="text-[10px] text-slate-400 truncate">{formatDate(review.created_at)}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <p className="text-[11px] text-slate-600 truncate leading-tight">{review.comment}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <StarRating rating={review.rating} size="sm" />
+                </div>
+                <Badge className="capitalize text-[9px] h-5 shrink-0 hidden md:inline-flex" style={{ backgroundColor: `${color}20`, color }}>
+                  <IconComponent className="h-2.5 w-2.5 mr-0.5" />
+                  {review.service_name}
+                </Badge>
+                {review.is_flagged && <Badge className="bg-orange-100 text-orange-700 text-[9px] h-5 shrink-0"><Flag className="h-2.5 w-2.5 mr-0.5" />Flagged</Badge>}
+                {review.is_hidden && <Badge className="bg-slate-100 text-slate-700 text-[9px] h-5 shrink-0"><EyeOff className="h-2.5 w-2.5 mr-0.5" />Hidden</Badge>}
+              </div>
             );
           })}
         </div>
@@ -1453,6 +1410,80 @@ function AdminRatingsView() {
         )}
         </>
       )}
+
+      {/* Rating Preview Modal */}
+      <Dialog open={!!previewRating} onOpenChange={(o) => !o && setPreviewRating(null)}>
+        <DialogContent className="bg-white max-w-xl" data-testid="rating-preview-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" fill="currentColor" />
+              Review details
+            </DialogTitle>
+          </DialogHeader>
+          {previewRating && (() => {
+            const Icon = SERVICE_ICONS[previewRating.service_category] || Package;
+            const color = SERVICE_COLORS[previewRating.service_category] || '#64748B';
+            return (
+              <div className="space-y-4 py-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-slate-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{previewRating.customer_name}</p>
+                      <p className="text-xs text-slate-500">{formatDate(previewRating.created_at)}</p>
+                    </div>
+                  </div>
+                  <Badge className="capitalize text-[10px]" style={{ backgroundColor: `${color}20`, color }}>
+                    <Icon className="h-3 w-3 mr-1" />
+                    {previewRating.service_name}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={previewRating.rating} />
+                  <span className="text-sm font-semibold text-slate-700">{previewRating.rating}/5</span>
+                  {previewRating.is_flagged && <Badge className="bg-orange-100 text-orange-700 text-[10px]"><Flag className="h-2.5 w-2.5 mr-0.5" />Flagged</Badge>}
+                  {previewRating.is_hidden && <Badge className="bg-slate-100 text-slate-700 text-[10px]"><EyeOff className="h-2.5 w-2.5 mr-0.5" />Hidden</Badge>}
+                </div>
+                <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{previewRating.comment}</p>
+                </div>
+                {previewRating.operator_response && (
+                  <div className="rounded-lg bg-emerald-50 border-l-4 border-emerald-500 p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Reply className="h-4 w-4 text-emerald-600" />
+                      <span className="text-xs font-medium text-emerald-700">{previewRating.operator_response.responder_name}</span>
+                      <span className="text-[10px] text-slate-500">· {formatDate(previewRating.operator_response.responded_at)}</span>
+                    </div>
+                    <p className="text-sm text-slate-700">{previewRating.operator_response.message}</p>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <ThumbsUp className="h-3.5 w-3.5" /> {previewRating.helpful_count || 0} found helpful
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {previewRating.is_flagged ? (
+                      <Button variant="ghost" size="sm" onClick={() => { handleModerate(previewRating, 'unflag'); setPreviewRating(null); }} className="h-7 text-[11px] text-green-600 hover:bg-green-50 px-2">Unflag</Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => { handleModerate(previewRating, 'flag'); setPreviewRating(null); }} className="h-7 text-[11px] text-orange-600 hover:bg-orange-50 px-2">Flag</Button>
+                    )}
+                    {previewRating.is_hidden ? (
+                      <Button variant="ghost" size="sm" onClick={() => { handleModerate(previewRating, 'unhide'); setPreviewRating(null); }} className="h-7 text-[11px] text-blue-600 hover:bg-blue-50 px-2">Show</Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => { handleModerate(previewRating, 'hide'); setPreviewRating(null); }} className="h-7 text-[11px] text-slate-600 hover:bg-slate-50 px-2">Hide</Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => { handleModerate(previewRating, 'delete'); setPreviewRating(null); }} className="h-7 text-[11px] text-red-600 hover:bg-red-50 px-2">
+                      <Trash2 className="h-3 w-3 mr-1" /> Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Moderation Dialog */}
       <Dialog open={showModerateDialog} onOpenChange={setShowModerateDialog}>

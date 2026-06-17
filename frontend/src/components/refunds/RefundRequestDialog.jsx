@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import {
   Loader2, RefreshCcw, AlertTriangle, CheckCircle2, Clock, Receipt,
   Calendar, ShieldCheck, Info,
@@ -61,7 +60,6 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
   const [submitting, setSubmitting] = useState(false);
   const [reason, setReason] = useState('change_of_plans');
   const [customerNotes, setCustomerNotes] = useState('');
-  const [requestedAmount, setRequestedAmount] = useState('');
 
   useEffect(() => {
     if (!open || !order) return;
@@ -70,7 +68,6 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
     api.get(`/refunds/orders/${order._id || order.id}/eligibility`)
       .then(r => {
         setEligibility(r.data);
-        setRequestedAmount(String(r.data.eligible_amount || 0));
       })
       .catch(err => toast.error(err.response?.data?.detail || 'Could not check eligibility'))
       .finally(() => setLoading(false));
@@ -83,7 +80,8 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
       const res = await api.post(`/refunds/orders/${order._id || order.id}/request`, {
         reason,
         customer_notes: customerNotes || null,
-        requested_amount: requestedAmount ? Number(requestedAmount) : null,
+        // Amount is policy-determined — server recomputes from eligibility.
+        requested_amount: eligibility?.eligible_amount ?? null,
       });
       toast.success(res.data.message || 'Refund request submitted — admin will review');
       onSubmitted?.(res.data);
@@ -291,16 +289,31 @@ export default function RefundRequestDialog({ open, onOpenChange, order, onSubmi
                   data-testid="refund-notes-input" />
               </div>
               {eligibility?.eligible && (
-                <div>
+                <div data-testid="refund-amount-readout">
                   <Label className="text-xs text-slate-700 font-medium">
-                    Amount to request (FCFA)
-                    <span className="text-slate-400 font-normal"> · max {formatFCFA(eligibility.eligible_amount)}</span>
+                    Amount to be refunded <span className="text-slate-400 font-normal">· determined by the active policy tier</span>
                   </Label>
-                  <Input type="number" min="0" max={eligibility.eligible_amount}
-                    value={requestedAmount}
-                    onChange={e => setRequestedAmount(e.target.value)}
-                    className="mt-1.5"
-                    data-testid="refund-amount-input" />
+                  <div
+                    className={cn(
+                      'mt-1.5 flex items-center justify-between rounded-md border px-3 py-2.5',
+                      status?.tone === 'rose'
+                        ? 'bg-rose-50 border-rose-200'
+                        : 'bg-emerald-50 border-emerald-200'
+                    )}
+                  >
+                    <span className="text-xs text-slate-600">
+                      {eligibility.refundable_pct ?? 0}% of {formatFCFA(eligibility.total_paid || totalPaid)}
+                    </span>
+                    <span
+                      className={cn(
+                        'text-base font-bold tabular-nums',
+                        status?.tone === 'rose' ? 'text-rose-700' : 'text-emerald-700'
+                      )}
+                      data-testid="refund-amount-value"
+                    >
+                      {formatFCFA(eligibility.eligible_amount || 0)}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
