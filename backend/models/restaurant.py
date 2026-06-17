@@ -50,6 +50,8 @@ class Restaurant(BaseModel):
     
     # Status
     is_active: bool = True
+    # Refund policy override (listing-level — overrides operator default).
+    refund_policy: Optional[dict] = None
     
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)

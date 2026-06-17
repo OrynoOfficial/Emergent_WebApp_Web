@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 242 — Verified the CancellationPolicyPicker wiring across the 5 new service editors (Cinema Showtime, Event Showtime, Car Rental, Banquet, Pressing/Laundry). 9/10 backend pytest assertions pass: presets endpoint returns 3 presets for all 5 service_types, and refund_policy persists end-to-end on Create + Update for banquet, pressing, car_rental and cinema_showtime (incl. the POST query-param `refund_policy_preset` and the PUT JSON body). Event-showtime persistence is structurally verified via models/route inspection but skipped at runtime (no seeded events; minimal event-create payload schema not satisfied). All 5 data-testid hooks (cinema-showtime-refund-policy, banquet-form-refund-policy, pressing-form-refund-policy, car-form-refund-policy, event-showtime-refund-policy) confirmed present in the corresponding form source files via grep. Found ONE backend bug: GET /api/cinema/showtimes/{id}/details strips refund_policy from the showtime payload (the field IS in MongoDB and IS returned by /api/cinema/{cinema_id}/showtimes and /api/cinema/showtimes/operator). The cinema admin UI uses /showtimes/operator so the re-open flow still works, but the public booking page (which consumes /details) cannot show the listing's refund schedule.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/cinema/showtimes/{id}/details", "issue": "Hand-curated showtime_out dict omits refund_policy even though the document has it. The public booking page (cinema) cannot show the operator-set refund schedule. Fix: add `\"refund_policy\": st.get(\"refund_policy\")` to showtime_out (routes/cinema.py around line 869)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter242_refund_policy_pickers.py",
+    "/app/test_reports/pytest/iter242_results.xml"
+  ],
+  "action_items": [
+    "Optional/minor: patch /api/cinema/showtimes/{id}/details to echo refund_policy in showtime_out so the public booking page can render the strict/standard/flexible badge (parity with hotel/travel/restaurant booking pages).",
+    "Optional: seed a sample Event so test_event_showtime_refund_policy can run live in CI; current skip path is benign.",
+    "No UI changes needed — all 5 new data-testids are wired and the picker component (refunds/CancellationPolicyPicker.jsx) is unchanged and was already verified for the 3 earlier services."
+  ],
+  "critical_code_review_comments": [
+    "Cinema showtime POST goes via the legacy query-param endpoint and uses `refund_policy_preset=strict` (verified — value is stored as {preset: 'strict'} in DB; see routes/cinema.py:583-584).",
+    "Cinema showtime PUT body accepts refund_policy as JSON; persisted correctly (verified via /api/cinema/{cinema_id}/showtimes listing).",
+    "Banquet /api/banquets/ (note plural — matches frontend) Create+Update accept refund_policy and round-trip via GET cleanly.",
+    "Pressing /api/pressing/ Create+Update accept refund_policy and round-trip via GET cleanly.",
+    "Car Rental /api/car-rental/ Create+Update accept refund_policy and round-trip via GET cleanly.",
+    "Frontend test-ids present at: ShowtimeFormDialog.jsx:336 (cinema), BanquetManagement.jsx:485, CarRentalManagement.jsx:874, PressingFormBody.jsx:473, ShowtimeEditor.jsx:260 (events). The picker child renders 3 cards with testids policy-preset-strict/standard/flexible and a policy-reset-btn."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter242_refund_policy_pickers.py (new)"
+  ],
+  "success_rate": {"backend": "9/10 (90%) — event-showtime live test skipped due to missing event seed; remaining 9 pass", "frontend": "not exercised via Playwright in this iteration — source-level verification only"},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (note: PRD-stated `superadmin@test.com` does not exist — use `superadmin@oryno.com` per /app/memory/test_credentials.md)",
+  "seed_data_creation": "Test creates ephemeral TEST_ banquet, TEST_ pressing, TEST_ car, TEST_ cinema showtime — all cleaned up via DELETE at end of each test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend persistence for all 5 new services is verified. Only outstanding nit is the /api/cinema/showtimes/{id}/details endpoint omitting refund_policy from its hand-rolled response dict (one-line fix, see action items). The frontend admin UI uses the operator-scoped showtime list which DOES carry refund_policy, so the re-open flow inside Cinema Management Center is unaffected. For a full live UI smoke, navigate Manage → Cinema → Showtimes subpage card → Add Showtime, and look for [data-testid='cinema-showtime-refund-policy'] — same pattern for the other 4 (banquet/pressing/car/event).",
+  "rca of the issue": "Cinema /details endpoint manually projects fields into a fresh dict (showtime_out) — author missed refund_policy when adding the column. Not a model/persistence bug. All other services use direct find_one()/find() that returns the full Mongo doc, hence they round-trip refund_policy correctly."
+}

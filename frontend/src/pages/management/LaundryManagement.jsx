@@ -80,7 +80,9 @@ const DEFAULT_PRESSING_FORM = {
   accepts_cash: true,
   // Operator scope
   operator_id: '',
-  operator_name: ''
+  operator_name: '',
+  // Listing-level refund policy override
+  refund_policy: null,
 };
 
 // Laundry specific dashboard data generator
@@ -273,6 +275,7 @@ export default function LaundryManagement() {
         min_order_amount: Number(pressingForm.min_order_amount) || 0,
         operator_id: pressingForm.operator_id || undefined,
         operator_name: operator?.name || pressingForm.operator_name || '',
+        refund_policy: pressingForm.refund_policy || null,
       };
       if (editingPressing) {
         await api.put(`/pressing/${editingPressing.id}`, payload);

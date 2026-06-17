@@ -11,7 +11,7 @@ import {
   Calendar, Sparkles, Bell, Award, TrendingUp, ShieldCheck, History,
   Percent, HeadphonesIcon, Film, Briefcase, FileText,
   QrCode, MapPin, Globe, Building2, PartyPopper, CreditCard, UserPlus,
-  Monitor, BarChart3, Megaphone, RotateCcw, Trash2
+  Monitor, BarChart3, Megaphone, RotateCcw, Trash2, Shield
 } from 'lucide-react';
 
 const USER_ROLES = {
@@ -174,6 +174,15 @@ export default function useSidebarMenu() {
         managementSubmenu = managementSubmenu.filter(item => !item.serviceType || canOperatorAccessService(item.serviceType));
       }
       if (managementSubmenu.length > 0) {
+        // Append the Refund Policies link as the last item — it spans every
+        // service the operator offers, so it belongs in the same submenu.
+        managementSubmenu.push({
+          key: 'refund-policies-mgmt',
+          label: 'Refund Policies',
+          path: '/management/refund-policies',
+          icon: Shield,
+          canManage: true,
+        });
         items.push({ key: 'management', label: 'Service Management', icon: Briefcase, isDropdown: true, submenu: managementSubmenu });
       }
     }

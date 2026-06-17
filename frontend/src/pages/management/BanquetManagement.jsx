@@ -43,6 +43,7 @@ import RentalInventoryTab from '@/components/management/banquet/RentalInventoryT
 import BulkActionsBar from '@/components/shared/BulkActionsBar';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 const PAGE_SIZE = 12;
 
@@ -116,6 +117,7 @@ const DEFAULT_FORM = {
   operator_id: '',
   operator_name: '',
   linked_inventory_id: '',
+  refund_policy: null,
 };
 
 // ────────────────────────────────────────────────────────────────────
@@ -478,6 +480,21 @@ function CategoryAwareFields({ form, setForm, categoryOperators, inventoryItems,
         details={form.category_details || {}}
         onChange={(next) => setForm(p => ({ ...p, category_details: next }))}
       />
+
+      {/* Listing-level refund policy override */}
+      <div className="col-span-2 pt-3 border-t border-slate-200" data-testid="banquet-form-refund-policy">
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+          Refund Policy <span className="text-slate-400 font-normal normal-case">(overrides operator default)</span>
+        </Label>
+        <div className="mt-2">
+          <CancellationPolicyPicker
+            serviceType="banquet"
+            scope="listing"
+            value={form.refund_policy}
+            onChange={(v) => setForm(p => ({ ...p, refund_policy: v }))}
+          />
+        </div>
+      </div>
         </div>
       </fieldset>
     </div>
@@ -1367,6 +1384,7 @@ export default function BanquetManagement() {
         linked_inventory_id: svc.linked_inventory_id || '',
         latitude: typeof svc.latitude === 'number' ? svc.latitude : (svc.location?.lat ?? null),
         longitude: typeof svc.longitude === 'number' ? svc.longitude : (svc.location?.lon ?? null),
+        refund_policy: svc.refund_policy || null,
       });
     } else {
       setForm(DEFAULT_FORM);
@@ -1423,6 +1441,7 @@ export default function BanquetManagement() {
         operator_id: form.operator_id || null,
         operator_name: op?.name || form.operator_name || '',
         linked_inventory_id: form.linked_inventory_id || null,
+        refund_policy: form.refund_policy || null,
       };
       if (editing) {
         await api.put(`/banquets/${editing.id}`, payload);

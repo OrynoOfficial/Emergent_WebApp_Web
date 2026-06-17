@@ -83,6 +83,7 @@ export const DEFAULT_SHOWTIME_FORM = {
   repeat_mode: 'single', // 'single' | 'recurring'
   repeat_end_date: '',
   repeat_days: [], // array of 0-6 (Sun..Sat)
+  refund_policy: null, // {preset: 'strict'|'standard'|'flexible'} | null
 };
 
 // Expand recurrence to a list of concrete dates between [start, end] inclusive,

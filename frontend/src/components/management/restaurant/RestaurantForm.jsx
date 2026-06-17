@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Upload, X, Loader2 } from 'lucide-react';
 import api from '@/api/client';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 import GeocodePinRow from '@/components/shared/GeocodePinRow';
 
 // Reusable Image Uploader component
@@ -380,6 +381,17 @@ export function RestaurantForm({ form, onChange, operators = [], isEditing = fal
             images={form.images || []}
             onChange={(imgs) => updateForm('images', imgs)}
             maxImages={6}
+          />
+        </div>
+
+        {/* Refund policy override (listing-level) */}
+        <div data-testid="restaurant-form-refund-policy" className="space-y-3 pt-3 border-t border-slate-200">
+          <h4 className="font-medium text-slate-900">Refund Policy <span className="text-slate-400 text-xs font-normal">(overrides operator default)</span></h4>
+          <CancellationPolicyPicker
+            serviceType="restaurant"
+            scope="listing"
+            value={form.refund_policy}
+            onChange={(v) => updateForm('refund_policy', v)}
           />
         </div>
       </div>

@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 /**
  * RouteForm - Form component for creating/editing routes
@@ -197,6 +198,17 @@ export function RouteForm({
           })}
           placeholder={'Arrive 30 minutes before departure\nValid government-issued ID required\nFree cancellation up to 24 hours before departure'}
           data-testid="route-form-policies"
+        />
+      </div>
+
+      {/* Refund policy — listing-level override of the operator default */}
+      <div data-testid="route-form-refund-policy" className="pt-3 border-t border-slate-200">
+        <Label className="mb-2 block">Refund Policy <span className="text-slate-400 text-xs font-normal">(overrides operator default for this route)</span></Label>
+        <CancellationPolicyPicker
+          serviceType="travel"
+          scope="listing"
+          value={form.refund_policy}
+          onChange={(v) => updateForm({ refund_policy: v })}
         />
       </div>
     </div>

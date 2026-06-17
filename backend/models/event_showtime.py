@@ -58,6 +58,9 @@ class EventShowtime(BaseModel):
     featured: bool = False
     tags: List[str] = []
     age_restriction: Optional[int] = None
+    # Refund policy override (listing-level cancellation rules — overrides
+    # the operator-level default which itself overrides the platform default).
+    refund_policy: Optional[dict] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -96,6 +99,7 @@ class EventShowtimeCreate(BaseModel):
     tags: List[str] = []
     age_restriction: Optional[int] = None
     status: ShowtimeStatus = ShowtimeStatus.DRAFT
+    refund_policy: Optional[dict] = None
 
 
 class EventShowtimeUpdate(BaseModel):
@@ -112,3 +116,4 @@ class EventShowtimeUpdate(BaseModel):
     tags: Optional[List[str]] = None
     age_restriction: Optional[int] = None
     status: Optional[ShowtimeStatus] = None
+    refund_policy: Optional[dict] = None

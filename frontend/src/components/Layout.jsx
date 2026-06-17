@@ -246,6 +246,7 @@ export default function Layout({ children }) {
       { type: 'management', label: 'Car Rental Management', description: 'Manage car rentals', path: '/management/car-rental', icon: 'Car', color: '#10B981', keywords: ['manage vehicles'] },
       { type: 'management', label: 'Restaurant Management', description: 'Manage restaurants', path: '/management/restaurants', icon: 'Utensils', color: '#F59E0B', keywords: ['manage dining'] },
       { type: 'management', label: 'Events Management', description: 'Manage events', path: '/management/events', icon: 'Calendar', color: '#F97316', keywords: ['manage shows'] },
+      { type: 'management', label: 'Refund Policies', description: 'Configure default cancellation policies', path: '/management/refund-policies', icon: 'Shield', color: '#8B5CF6', keywords: ['refund', 'cancellation', 'policy', 'refunds'] },
     ] : []),
   ], [canManage, isAdmin]);
 

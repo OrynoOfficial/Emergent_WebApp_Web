@@ -84,6 +84,8 @@ class Pressing(BaseModel):
     status: LaundryStatus = LaundryStatus.ACTIVE
     rating: float = 0
     total_reviews: int = 0
+    # Refund policy override (listing-level).
+    refund_policy: Optional[dict] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -125,6 +127,8 @@ class PressingCreate(BaseModel):
     accepts_card: bool = False
     accepts_momo: bool = True
     accepts_cash: bool = True
+
+    refund_policy: Optional[dict] = None
 
     @field_validator("services", mode="before")
     @classmethod
@@ -177,6 +181,7 @@ class PressingUpdate(BaseModel):
     accepts_cash: Optional[bool] = None
 
     status: Optional[LaundryStatus] = None
+    refund_policy: Optional[dict] = None
 
     @field_validator("services", mode="before")
     @classmethod

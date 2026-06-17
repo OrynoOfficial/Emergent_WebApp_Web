@@ -477,6 +477,7 @@ export default function CinemaManagement() {
         repeat_mode: 'single',
         repeat_end_date: '',
         repeat_days: [],
+        refund_policy: showtime.refund_policy || null,
       });
     } else {
       setShowtimeForm(DEFAULT_SHOWTIME_FORM);
@@ -536,6 +537,9 @@ export default function CinemaManagement() {
         if (showtimeForm.senior_price !== '' && showtimeForm.senior_price != null) {
           payload.senior_price = parseFloat(showtimeForm.senior_price);
         }
+        if (showtimeForm.refund_policy) {
+          payload.refund_policy = showtimeForm.refund_policy;
+        }
         await api.put(`/cinema/showtimes/${editingShowtime.id}`, payload);
         toast.success('Showtime updated');
       } else {
@@ -561,6 +565,9 @@ export default function CinemaManagement() {
           }
           if (showtimeForm.senior_price !== '' && showtimeForm.senior_price != null) {
             params.append('senior_price', String(parseFloat(showtimeForm.senior_price)));
+          }
+          if (showtimeForm.refund_policy?.preset) {
+            params.append('refund_policy_preset', showtimeForm.refund_policy.preset);
           }
           try {
             await api.post(`/cinema/${showtimeForm.cinema_id}/showtimes?${params.toString()}`);

@@ -79,6 +79,7 @@ import LaundryManagement from './pages/management/LaundryManagement';
 import BanquetManagement from './pages/management/BanquetManagement';
 import CinemaManagement from './pages/management/CinemaManagement';
 import PackageManagement from './pages/management/PackageManagement';
+import OperatorRefundPolicies from './pages/management/OperatorRefundPolicies';
 import PackageShipments from './pages/management/PackageShipments';
 import CustomerServiceManagement from './pages/management/CustomerServiceManagement';
 import AccessGroupManagement from './pages/management/AccessGroupManagement';
@@ -977,6 +978,15 @@ function App() {
             element={
               <ProtectedRoute requiredRoles={['admin', 'operator']}>
                 <PackageShipments />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/management/refund-policies"
+            element={
+              <ProtectedRoute requiredRoles={['admin', 'operator']}>
+                <OperatorRefundPolicies />
               </ProtectedRoute>
             }
           />

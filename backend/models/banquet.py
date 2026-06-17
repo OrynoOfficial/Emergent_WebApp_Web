@@ -82,6 +82,9 @@ class Banquet(BaseModel):
     operating_hours: Dict[str, Any] = {}
     advance_booking_days: int = 7
     cancellation_policy: Optional[str] = None
+    # Refund policy override (listing-level — structured tier config).
+    # Distinct from `cancellation_policy` which is the public-facing summary.
+    refund_policy: Optional[dict] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     status: BanquetStatus = BanquetStatus.ACTIVE
@@ -124,6 +127,7 @@ class BanquetCreate(BaseModel):
     cancellation_policy: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
+    refund_policy: Optional[dict] = None
 
 class BanquetUpdate(BaseModel):
     name: Optional[str] = None
@@ -154,6 +158,7 @@ class BanquetUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     status: Optional[BanquetStatus] = None
+    refund_policy: Optional[dict] = None
 
 
 # ──────────────────────────────────────────────────────────────────────

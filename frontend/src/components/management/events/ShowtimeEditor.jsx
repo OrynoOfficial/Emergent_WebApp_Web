@@ -10,6 +10,7 @@ import MiniImageUploader from '@/components/shared/MiniImageUploader';
 import { Ticket, Plus, Trash2, ImagePlus, Loader2, X } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 const DEFAULT_CLASS = { name: '', price: 5000, total_units: 100, color: '#3b82f6', perks: [] };
 const EVENT_TYPES = ['concert', 'conference', 'workshop', 'festival', 'sports', 'exhibition', 'party', 'other'];
@@ -20,6 +21,7 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
     start_datetime: '', end_datetime: '', poster_url: '', images: [],
     status: 'published',
     classes: [{ ...DEFAULT_CLASS, name: 'Standard' }],
+    refund_policy: null,
   });
   const [posterUploading, setPosterUploading] = useState(false);
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
         poster_url: editing.poster_url || '',
         status: editing.status || 'published',
         classes: editing.classes?.length ? editing.classes : [{ ...DEFAULT_CLASS, name: 'Standard' }],
+        refund_policy: editing.refund_policy || null,
       });
     } else {
       setForm({
@@ -36,6 +39,7 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
         start_datetime: '', end_datetime: '', poster_url: '', images: [],
         status: 'published',
         classes: [{ ...DEFAULT_CLASS, name: 'Standard' }],
+        refund_policy: null,
       });
     }
   }, [editing, open]);
@@ -250,6 +254,19 @@ export default function ShowtimeEditor({ open, onOpenChange, editing, locations,
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Listing-level refund policy override */}
+          <div className="rounded-xl border-2 border-slate-100 bg-slate-50/50 p-3 space-y-2" data-testid="event-showtime-refund-policy">
+            <Label className="text-xs uppercase text-slate-500 font-semibold">
+              Refund Policy <span className="text-[10px] font-normal normal-case text-slate-400 ml-1">— overrides operator default for this event</span>
+            </Label>
+            <CancellationPolicyPicker
+              serviceType="event"
+              scope="listing"
+              value={form.refund_policy}
+              onChange={(v) => setForm(p => ({ ...p, refund_policy: v }))}
+            />
           </div>
         </div>
         <DialogFooter>

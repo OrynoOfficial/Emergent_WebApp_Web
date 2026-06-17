@@ -85,6 +85,9 @@ class CarRental(BaseModel):
     # Rating
     average_rating: float = 0.0
     total_ratings: int = 0
+
+    # Refund policy override (operator/listing-level cancellation rules).
+    refund_policy: Optional[dict] = None
     
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)

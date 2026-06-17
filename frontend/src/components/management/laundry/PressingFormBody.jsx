@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 const SHOP_TYPES = [
   { value: 'laundry',  label: 'Laundry',  hint: 'Bulk wash priced per kilo',          icon: Droplets },
@@ -467,6 +468,21 @@ export default function PressingFormBody({ form, setForm, operatorSelector }) {
           <div className="mt-2">{operatorSelector}</div>
         </section>
       )}
+
+      {/* ── SECTION 8: Refund policy (listing-level override) ─────────── */}
+      <section data-testid="pressing-form-refund-policy">
+        <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+          Refund Policy <span className="text-slate-400 font-normal normal-case">(overrides operator default)</span>
+        </Label>
+        <div className="mt-2">
+          <CancellationPolicyPicker
+            serviceType="laundry"
+            scope="listing"
+            value={form.refund_policy}
+            onChange={(v) => setForm((p) => ({ ...p, refund_policy: v }))}
+          />
+        </div>
+      </section>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Ticket, Monitor, Clock, Banknote, Loader2 } from 'lucide-react';
 import { WEEKDAY_OPTIONS, computeRecurringDates } from '@/components/cinema/cinemaConstants';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 
 /**
  * Modal for creating or editing a Showtime. The form is fully driven by props
@@ -329,6 +330,17 @@ export default function ShowtimeFormDialog({
               </div>
               <p className="text-[11px] text-emerald-700/70 mt-1.5">When left empty, the Child / Senior ticket type will not appear on the booking page — only Adult.</p>
             </div>
+          </div>
+
+          {/* Section: REFUND POLICY (listing-level override) */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4" data-testid="cinema-showtime-refund-policy">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">5 · Refund policy <span className="text-slate-400 normal-case">— overrides operator default</span></p>
+            <CancellationPolicyPicker
+              serviceType="cinema"
+              scope="listing"
+              value={showtimeForm.refund_policy}
+              onChange={(v) => setShowtimeForm(p => ({ ...p, refund_policy: v }))}
+            />
           </div>
         </div>
 

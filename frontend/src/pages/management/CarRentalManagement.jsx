@@ -39,6 +39,7 @@ import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import CarRentalsLifecycleTab from '@/components/management/car-rental/CarRentalsLifecycleTab';
 import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
+import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -67,6 +68,7 @@ const DEFAULT_CAR_FORM = {
   fuel_consumption: '',
   policies: [],
   total_units: 1,
+  refund_policy: null,
 };
 
 // Car Rental specific dashboard data generator
@@ -866,6 +868,21 @@ export default function CarRentalManagement() {
                   checked={!!carForm.is_available}
                   onCheckedChange={(v) => setCarForm(p => ({ ...p, is_available: v }))}
                 />
+              </div>
+
+              {/* Listing-level refund policy override */}
+              <div className="col-span-2 pt-3 border-t border-slate-200" data-testid="car-form-refund-policy">
+                <Label className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                  Refund Policy <span className="text-slate-400 font-normal normal-case">(overrides operator default for this vehicle)</span>
+                </Label>
+                <div className="mt-2">
+                  <CancellationPolicyPicker
+                    serviceType="car_rental"
+                    scope="listing"
+                    value={carForm.refund_policy}
+                    onChange={(v) => setCarForm(p => ({ ...p, refund_policy: v }))}
+                  />
+                </div>
               </div>
             </div>
           </div>

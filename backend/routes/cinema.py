@@ -527,6 +527,7 @@ async def create_showtime(
     child_price: Optional[float] = None,
     senior_price: Optional[float] = None,
     total_seats: int = 100,
+    refund_policy_preset: Optional[str] = None,
     current_user: dict = Depends(require_any_permission(["cinema.manage_screenings", "operator.services.edit"]))
 ):
     """Create a showtime - requires cinema.manage_screenings permission"""
@@ -579,6 +580,8 @@ async def create_showtime(
         "is_active": True,
         "created_at": datetime.utcnow()
     }
+    if refund_policy_preset:
+        showtime["refund_policy"] = {"preset": refund_policy_preset}
     # Copy seat_layout from the cinema's screen (if defined) so the booking
     # page can render the exact visual layout the operator configured.
     for s in (cinema.get("screens") or []):
@@ -677,6 +680,7 @@ async def update_showtime(
         "show_date", "show_time", "end_time",
         "price", "vip_price", "child_price", "senior_price",
         "total_seats", "is_active",
+        "refund_policy",
     }
     updates = {k: v for k, v in body.items() if k in allowed and v is not None}
     if "film_id" in updates and "film_title" not in updates:
@@ -782,6 +786,8 @@ async def create_showtime_body(
         "is_active": True,
         "created_at": datetime.utcnow(),
     }
+    if body.get("refund_policy"):
+        st["refund_policy"] = body.get("refund_policy")
     # Copy seat_layout from the cinema's matching screen (if any) so
     # CinemaBooking.jsx can render the same visual layout the operator built.
     for s in (cinema.get("screens") or []):

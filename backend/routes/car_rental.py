@@ -42,6 +42,8 @@ class CarRentalCreate(BaseModel):
     policies: Optional[list] = []
     # Inventory total units (iter 230) — drives "almost sold out" logic
     total_units: Optional[int] = 1
+    # Listing-level refund policy override (overrides operator default)
+    refund_policy: Optional[dict] = None
 
 @router.post("/")
 async def create_car(
@@ -222,6 +224,7 @@ class CarRentalUpdate(BaseModel):
     fuel_consumption: Optional[str] = None
     policies: Optional[list] = None
     total_units: Optional[int] = None
+    refund_policy: Optional[dict] = None
 
 
 @router.put("/{car_id}")

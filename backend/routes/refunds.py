@@ -82,7 +82,7 @@ PAID_STATUSES = ("completed", "paid", "verified")
 # Service-type → (collection, key field on order pointing to the listing)
 _SERVICE_COLLECTIONS = {
     "hotel": ("hotels", "service_id"),
-    "cinema": ("event_showtimes", "showtime_id"),
+    "cinema": ("showtimes", "showtime_id"),
     "event": ("event_showtimes", "showtime_id"),
     "events": ("event_showtimes", "showtime_id"),
     "travel": ("travel_routes", "service_id"),
