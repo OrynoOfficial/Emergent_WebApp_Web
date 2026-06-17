@@ -38,6 +38,8 @@ import ServicesGrid from '@/components/management/banquet/ServicesGrid';
 import ServiceDialog from '@/components/management/banquet/ServiceDialog';
 import ServiceViewModal from '@/components/management/banquet/ServiceViewModal';
 import RentalInventoryTab from '@/components/management/banquet/RentalInventoryTab';
+import BulkActionsBar from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 
 const PAGE_SIZE = 12;
@@ -1092,6 +1094,17 @@ export default function BanquetManagement() {
     [filtered, safePage]
   );
 
+  // Bulk selection on the visible page (card grid wires checkboxes via
+  // BulkSelectCardWrapper inside <ServicesGrid bulk={…} />).
+  const banquetBulk = useBulkSelection(paged, { idKey: 'id' });
+  const _banquetBulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'banquets', action, ids });
+    if (typeof loadServices === 'function') await loadServices();
+  };
+  const bulkBanquetDelete     = (ids) => _banquetBulkRun('delete', ids);
+  const bulkBanquetActivate   = (ids) => _banquetBulkRun('activate', ids);
+  const bulkBanquetDeactivate = (ids) => _banquetBulkRun('deactivate', ids);
+
   const loadServices = useCallback(async () => {
     try {
       setLoading(true);
@@ -1325,6 +1338,7 @@ export default function BanquetManagement() {
             onView={handleView}
             onEdit={openDialog}
             onDelete={handleDelete}
+            bulk={banquetBulk}
           />
 
           <Pagination
@@ -1388,6 +1402,22 @@ export default function BanquetManagement() {
         categoryByValue={CATEGORY_BY_VALUE}
         pricingLabel={PRICING_LABEL}
         onEdit={openDialog}
+      />
+
+      <BulkActionsBar
+        count={banquetBulk.count}
+        entityLabel="service"
+        selectedIds={banquetBulk.selectedIds}
+        selectedRows={banquetBulk.selectedRows}
+        onClear={banquetBulk.clear}
+        onDelete={bulkBanquetDelete}
+        onActivate={bulkBanquetActivate}
+        onDeactivate={bulkBanquetDeactivate}
+        onExport={(rows) => rows.map(s => ({
+          id: s.id, name: s.name, category: s.category, city: s.city,
+          capacity_min: s.capacity_min, capacity_max: s.capacity_max,
+          base_price: s.base_price, operator: s.operator_name || '',
+        }))}
       />
     </>
   );

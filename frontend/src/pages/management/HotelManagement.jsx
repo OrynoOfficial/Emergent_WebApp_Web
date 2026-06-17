@@ -35,6 +35,8 @@ import { HotelCard, RoomCard, HotelForm, RoomForm } from '@/components/managemen
 // Service components
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
+import BulkActionsBar, { BulkSelectCardWrapper } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 const ITEMS_PER_PAGE = 9;
 const CITIES = ['Douala', 'Yaoundé', 'Bafoussam', 'Kribi', 'Limbe', 'Buea', 'Bamenda'];
@@ -125,6 +127,16 @@ export default function HotelManagement() {
     [filteredHotels, hotelPage]
   );
   const totalHotelPages = Math.ceil(filteredHotels.length / ITEMS_PER_PAGE);
+
+  // Bulk selection on the visible page (works across grid/details/list view modes).
+  const hotelBulk = useBulkSelection(paginatedHotels, { idKey: 'id' });
+  const _hotelBulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'hotels', action, ids });
+    if (typeof loadHotels === 'function') await loadHotels();
+  };
+  const bulkHotelDelete     = (ids) => _hotelBulkRun('delete', ids);
+  const bulkHotelActivate   = (ids) => _hotelBulkRun('activate', ids);
+  const bulkHotelDeactivate = (ids) => _hotelBulkRun('deactivate', ids);
 
   // Filtered rooms
   const filteredRooms = useMemo(() => {
@@ -471,8 +483,8 @@ export default function HotelManagement() {
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedHotels.map(hotel => (
+                  <BulkSelectCardWrapper key={hotel._id || hotel.id} bulk={hotelBulk} id={hotel._id || hotel.id}>
                   <HotelCard
-                    key={hotel._id || hotel.id}
                     hotel={hotel}
                     viewMode="grid"
                     isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)}
@@ -480,13 +492,14 @@ export default function HotelManagement() {
                     onDelete={() => confirmDeleteHotel(hotel)}
                     onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }}
                   />
+                  </BulkSelectCardWrapper>
                 ))}
               </div>
             ) : viewMode === 'details' ? (
               <div className="space-y-6">
                 {paginatedHotels.map(hotel => (
+                  <BulkSelectCardWrapper key={hotel._id || hotel.id} bulk={hotelBulk} id={hotel._id || hotel.id}>
                   <HotelCard
-                    key={hotel._id || hotel.id}
                     hotel={hotel}
                     viewMode="grid"
                     isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)}
@@ -494,13 +507,14 @@ export default function HotelManagement() {
                     onDelete={() => confirmDeleteHotel(hotel)}
                     onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }}
                   />
+                  </BulkSelectCardWrapper>
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
                 {paginatedHotels.map(hotel => (
+                  <BulkSelectCardWrapper key={hotel._id || hotel.id} bulk={hotelBulk} id={hotel._id || hotel.id}>
                   <HotelCard
-                    key={hotel._id || hotel.id}
                     hotel={hotel}
                     viewMode="list"
                     isSelected={(selectedHotel?._id || selectedHotel?.id) === (hotel._id || hotel.id)}
@@ -508,6 +522,7 @@ export default function HotelManagement() {
                     onDelete={() => confirmDeleteHotel(hotel)}
                     onViewRooms={() => { setSelectedHotel(hotel); setActiveTab('rooms'); }}
                   />
+                  </BulkSelectCardWrapper>
                 ))}
               </div>
             )}
@@ -815,6 +830,21 @@ export default function HotelManagement() {
             loadRooms(selectedHotel._id || selectedHotel.id);
           }
         }}
+      />
+
+      <BulkActionsBar
+        count={hotelBulk.count}
+        entityLabel="hotel"
+        selectedIds={hotelBulk.selectedIds}
+        selectedRows={hotelBulk.selectedRows}
+        onClear={hotelBulk.clear}
+        onDelete={bulkHotelDelete}
+        onActivate={bulkHotelActivate}
+        onDeactivate={bulkHotelDeactivate}
+        onExport={(rows) => rows.map(h => ({
+          id: h._id || h.id, name: h.name, city: h.city, stars: h.star_rating,
+          operator: h.operator_name || '', phone: h.phone, email: h.email,
+        }))}
       />
     </div>
   );

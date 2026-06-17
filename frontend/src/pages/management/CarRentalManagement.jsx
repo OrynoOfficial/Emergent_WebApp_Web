@@ -37,6 +37,8 @@ import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import OperatorSelector from '@/components/management/shared/OperatorSelector';
 import CarRentalsLifecycleTab from '@/components/management/car-rental/CarRentalsLifecycleTab';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend
@@ -355,6 +357,16 @@ export default function CarRentalManagement() {
     [filteredCars, carPage]
   );
 
+  // Bulk selection on the visible page.
+  const carBulk = useBulkSelection(pagedCars, { idKey: 'id' });
+  const _carBulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'vehicles', action, ids });
+    if (typeof loadCars === 'function') await loadCars();
+  };
+  const bulkCarDelete     = (ids) => _carBulkRun('delete', ids);
+  const bulkCarActivate   = (ids) => _carBulkRun('activate', ids);
+  const bulkCarDeactivate = (ids) => _carBulkRun('deactivate', ids);
+
   const handleViewCar = (car) => {
     setViewingCar(car);
     setIsViewDialogOpen(true);
@@ -523,6 +535,14 @@ export default function CarRentalManagement() {
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                       <tr>
+                        <th className="px-3 py-3 w-8">
+                          <BulkSelectHeader
+                            allSelected={carBulk.allSelected}
+                            partiallySelected={carBulk.partiallySelected}
+                            onToggleAll={carBulk.toggleAll}
+                            testid="cars-bulk-select-all"
+                          />
+                        </th>
                         <th className="px-4 py-3">Vehicle</th>
                         <th className="px-4 py-3">Type</th>
                         <th className="px-4 py-3">Plate</th>
@@ -536,6 +556,13 @@ export default function CarRentalManagement() {
                     <tbody>
                       {pagedCars.map(car => (
                         <tr key={car._id || car.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="px-3 py-3 w-8">
+                            <BulkSelectCell
+                              selected={carBulk.isSelected(car._id || car.id)}
+                              onToggle={carBulk.toggle}
+                              id={car._id || car.id}
+                            />
+                          </td>
                           <td className="px-4 py-3 font-medium text-slate-900">{car.brand} {car.model} <span className="text-slate-400 text-xs">({car.year})</span></td>
                           <td className="px-4 py-3 capitalize text-slate-700">{car.car_type}</td>
                           <td className="px-4 py-3 font-mono text-xs">{car.plate_number || '—'}</td>
@@ -995,6 +1022,22 @@ export default function CarRentalManagement() {
           setBookingsRefreshKey((k) => k + 1);
           loadCars?.();
         }}
+      />
+
+      <BulkActionsBar
+        count={carBulk.count}
+        entityLabel="vehicle"
+        selectedIds={carBulk.selectedIds}
+        selectedRows={carBulk.selectedRows}
+        onClear={carBulk.clear}
+        onDelete={bulkCarDelete}
+        onActivate={bulkCarActivate}
+        onDeactivate={bulkCarDeactivate}
+        onExport={(rows) => rows.map(c => ({
+          id: c._id || c.id, brand: c.brand, model: c.model, year: c.year,
+          plate: c.plate_number, city: c.city, seats: c.seats,
+          price_per_day: c.price_per_day, available: c.is_available,
+        }))}
       />
     </div>
   );

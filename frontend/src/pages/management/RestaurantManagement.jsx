@@ -28,6 +28,8 @@ import { toast } from 'sonner';
 // Shared components
 import { SearchFilter, Pagination, EmptyState, ConfirmDialog } from '@/components/management/shared';
 import { ImageCarousel } from '@/components/management/shared';
+import BulkActionsBar, { BulkSelectCardWrapper } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 // Restaurant-specific components
 import { RestaurantForm, MenuItemForm } from '@/components/management/restaurant';
@@ -342,6 +344,16 @@ export default function RestaurantManagement() {
     return filteredRestaurants.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredRestaurants, currentPage]);
 
+  // Bulk selection on visible page (card grid via BulkSelectCardWrapper).
+  const restaurantBulk = useBulkSelection(paginatedRestaurants, { idKey: 'id' });
+  const _restBulkRun = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'restaurants', action, ids });
+    if (typeof loadRestaurants === 'function') await loadRestaurants();
+  };
+  const bulkRestaurantDelete     = (ids) => _restBulkRun('delete', ids);
+  const bulkRestaurantActivate   = (ids) => _restBulkRun('activate', ids);
+  const bulkRestaurantDeactivate = (ids) => _restBulkRun('deactivate', ids);
+
   const totalPages = Math.ceil(filteredRestaurants.length / ITEMS_PER_PAGE);
 
   // Handle View Menu - opens menu panel on right
@@ -582,8 +594,8 @@ export default function RestaurantManagement() {
                           : 'space-y-3'
                         }>
                           {paginatedRestaurants.map(restaurant => (
+                            <BulkSelectCardWrapper key={restaurant.id} bulk={restaurantBulk} id={restaurant.id}>
                             <RestaurantCard
-                              key={restaurant.id}
                               restaurant={restaurant}
                               onViewMenu={handleViewMenu}
                               onEdit={openRestaurantDialog}
@@ -594,6 +606,7 @@ export default function RestaurantManagement() {
                               isSelected={showMenuPanel && selectedRestaurant?.id === restaurant.id}
                               isOtherSelected={showMenuPanel && selectedRestaurant?.id !== restaurant.id}
                             />
+                            </BulkSelectCardWrapper>
                           ))}
                         </div>
                         {totalPages > 1 && (
@@ -898,6 +911,21 @@ export default function RestaurantManagement() {
           setBookingsRefreshKey((k) => k + 1);
           loadRestaurants?.();
         }}
+      />
+
+      <BulkActionsBar
+        count={restaurantBulk.count}
+        entityLabel="restaurant"
+        selectedIds={restaurantBulk.selectedIds}
+        selectedRows={restaurantBulk.selectedRows}
+        onClear={restaurantBulk.clear}
+        onDelete={bulkRestaurantDelete}
+        onActivate={bulkRestaurantActivate}
+        onDeactivate={bulkRestaurantDeactivate}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, name: r.name, cuisine: r.cuisine, city: r.city,
+          rating: r.rating, operator: r.operator_name || '',
+        }))}
       />
     </>
   );

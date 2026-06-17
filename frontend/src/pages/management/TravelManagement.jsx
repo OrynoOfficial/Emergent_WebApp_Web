@@ -23,6 +23,8 @@ import { activityLogger } from '@/utils/activityLogger';
 import { formatFCFA } from '@/utils/currency';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 
 // Service components
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
@@ -482,6 +484,20 @@ export default function TravelManagement() {
   const pagedRoutes = useMemo(() => filteredRoutes.slice((routePage - 1) * PAGE_SIZE, routePage * PAGE_SIZE), [filteredRoutes, routePage]);
   const pagedVehicles = useMemo(() => filteredVehicles.slice((vehiclePage - 1) * PAGE_SIZE, vehiclePage * PAGE_SIZE), [filteredVehicles, vehiclePage]);
 
+  // Bulk selection (routes + vehicles each have their own selection state).
+  const routeBulk = useBulkSelection(pagedRoutes, { idKey: 'id' });
+  const vehicleBulk = useBulkSelection(pagedVehicles, { idKey: 'id' });
+  const _travelBulkRun = async (collection, action, ids, refresh) => {
+    await api.post('/admin/bulk', { collection, action, ids });
+    if (typeof refresh === 'function') await refresh();
+  };
+  const bulkRouteDelete     = (ids) => _travelBulkRun('travel_routes', 'delete', ids, loadData);
+  const bulkRouteActivate   = (ids) => _travelBulkRun('travel_routes', 'activate', ids, loadData);
+  const bulkRouteDeactivate = (ids) => _travelBulkRun('travel_routes', 'deactivate', ids, loadData);
+  const bulkVehicleDelete     = (ids) => _travelBulkRun('vehicles', 'delete', ids, loadData);
+  const bulkVehicleActivate   = (ids) => _travelBulkRun('vehicles', 'activate', ids, loadData);
+  const bulkVehicleDeactivate = (ids) => _travelBulkRun('vehicles', 'deactivate', ids, loadData);
+
   // Load data
   const loadData = useCallback(async () => {
     try {
@@ -744,6 +760,14 @@ export default function TravelManagement() {
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                           <tr>
+                            <th className="px-3 py-3 w-8">
+                              <BulkSelectHeader
+                                allSelected={routeBulk.allSelected}
+                                partiallySelected={routeBulk.partiallySelected}
+                                onToggleAll={routeBulk.toggleAll}
+                                testid="routes-bulk-select-all"
+                              />
+                            </th>
                             <th className="px-4 py-3">Route</th>
                             <th className="px-4 py-3">Departure</th>
                             <th className="px-4 py-3">Arrival</th>
@@ -756,6 +780,13 @@ export default function TravelManagement() {
                         <tbody>
                           {pagedRoutes.map((route) => (
                             <tr key={route.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-3 py-3 w-8">
+                                <BulkSelectCell
+                                  selected={routeBulk.isSelected(route.id)}
+                                  onToggle={routeBulk.toggle}
+                                  id={route.id}
+                                />
+                              </td>
                               <td className="px-4 py-3 font-medium text-slate-900">{route.from_city} → {route.to_city}</td>
                               <td className="px-4 py-3 text-slate-700">{route.departure_time || '—'}</td>
                               <td className="px-4 py-3 text-slate-700">{route.arrival_time || '—'}</td>
@@ -872,6 +903,14 @@ export default function TravelManagement() {
                       <table className="w-full text-sm">
                         <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                           <tr>
+                            <th className="px-3 py-3 w-8">
+                              <BulkSelectHeader
+                                allSelected={vehicleBulk.allSelected}
+                                partiallySelected={vehicleBulk.partiallySelected}
+                                onToggleAll={vehicleBulk.toggleAll}
+                                testid="travel-vehicles-bulk-select-all"
+                              />
+                            </th>
                             <th className="px-4 py-3">Vehicle</th>
                             <th className="px-4 py-3">Plate</th>
                             <th className="px-4 py-3">Type</th>
@@ -883,6 +922,13 @@ export default function TravelManagement() {
                         <tbody>
                           {pagedVehicles.map((vehicle) => (
                             <tr key={vehicle.id} className="border-b border-slate-100 hover:bg-slate-50">
+                              <td className="px-3 py-3 w-8">
+                                <BulkSelectCell
+                                  selected={vehicleBulk.isSelected(vehicle.id)}
+                                  onToggle={vehicleBulk.toggle}
+                                  id={vehicle.id}
+                                />
+                              </td>
                               <td className="px-4 py-3 font-medium text-slate-900">{vehicle.vehicle_name || '—'}</td>
                               <td className="px-4 py-3 text-slate-700">{vehicle.plate_number || '—'}</td>
                               <td className="px-4 py-3 text-slate-700 capitalize">{vehicle.vehicle_type || '—'}</td>
@@ -1065,6 +1111,36 @@ export default function TravelManagement() {
           setBookingsRefreshKey((k) => k + 1);
           loadData?.();
         }}
+      />
+
+      <BulkActionsBar
+        count={routeBulk.count}
+        entityLabel="route"
+        selectedIds={routeBulk.selectedIds}
+        selectedRows={routeBulk.selectedRows}
+        onClear={routeBulk.clear}
+        onDelete={bulkRouteDelete}
+        onActivate={bulkRouteActivate}
+        onDeactivate={bulkRouteDeactivate}
+        onExport={(rows) => rows.map(r => ({
+          id: r.id, from: r.from_city, to: r.to_city,
+          departure: r.departure_time, arrival: r.arrival_time, price: r.price,
+          vehicle: r.vehicle_name || '', active: r.is_active !== false,
+        }))}
+      />
+      <BulkActionsBar
+        count={vehicleBulk.count}
+        entityLabel="vehicle"
+        selectedIds={vehicleBulk.selectedIds}
+        selectedRows={vehicleBulk.selectedRows}
+        onClear={vehicleBulk.clear}
+        onDelete={bulkVehicleDelete}
+        onActivate={bulkVehicleActivate}
+        onDeactivate={bulkVehicleDeactivate}
+        onExport={(rows) => rows.map(v => ({
+          id: v.id, name: v.vehicle_name, plate: v.plate_number, type: v.vehicle_type,
+          capacity: v.capacity, status: v.status,
+        }))}
       />
     </div>
   );

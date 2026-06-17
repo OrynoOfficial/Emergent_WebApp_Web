@@ -11,6 +11,7 @@ import {
   MapPin, Users, Box, Layers, Building2, PartyPopper, Eye, Edit, Trash2,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { BulkSelectCardWrapper } from '@/components/shared/BulkActionsBar';
 
 export default function ServicesGrid({
   services,            // visible (paged) services
@@ -22,6 +23,7 @@ export default function ServicesGrid({
   onView,
   onEdit,
   onDelete,
+  bulk,                // optional: useBulkSelection result for the visible page
 }) {
   if (loading) return <div className="text-center py-8">Loading…</div>;
   if (services.length === 0) {
@@ -52,7 +54,8 @@ export default function ServicesGrid({
           .filter(([, v]) => v !== '' && v !== null && v !== undefined && !(Array.isArray(v) && v.length === 0))
           .slice(0, 4);
         return (
-          <Card key={svc.id} className="overflow-hidden hover:shadow-xl transition-shadow group" data-testid={`service-card-${svc.id}`}>
+          <BulkSelectCardWrapper key={svc.id} bulk={bulk} id={svc.id}>
+          <Card className="overflow-hidden hover:shadow-xl transition-shadow group" data-testid={`service-card-${svc.id}`}>
             {/* Cover image — full-bleed; falls back to a tinted icon hero */}
             <div className="relative h-40 w-full bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
               {cover ? (
@@ -158,6 +161,7 @@ export default function ServicesGrid({
               </div>
             </CardContent>
           </Card>
+          </BulkSelectCardWrapper>
         );
       })}
     </div>

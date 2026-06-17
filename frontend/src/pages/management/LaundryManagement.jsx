@@ -28,6 +28,8 @@ import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
 import { activityLogger } from '@/utils/activityLogger';
 import ServiceExecutiveDashboard from '@/components/management/ServiceExecutiveDashboard';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import ServiceCommunicationsHub from '@/components/management/ServiceCommunicationsHub';
 import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -162,6 +164,16 @@ export default function LaundryManagement() {
     () => filteredPressings.slice((pressingPage - 1) * PAGE_SIZE, pressingPage * PAGE_SIZE),
     [filteredPressings, pressingPage]
   );
+
+  // Bulk selection on the visible page.
+  const pressingBulk = useBulkSelection(pagedPressings, { idKey: 'id' });
+  const runBulk = async (action, ids) => {
+    await api.post('/admin/bulk', { collection: 'pressings', action, ids });
+    if (typeof loadPressings === 'function') await loadPressings();
+  };
+  const bulkPressingDelete     = (ids) => runBulk('delete', ids);
+  const bulkPressingActivate   = (ids) => runBulk('activate', ids);
+  const bulkPressingDeactivate = (ids) => runBulk('deactivate', ids);
 
   const handleViewPressing = (pressing) => {
     setViewingPressing(pressing);
@@ -364,6 +376,14 @@ export default function LaundryManagement() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
+                      <th className="px-3 py-3 w-8">
+                        <BulkSelectHeader
+                          allSelected={pressingBulk.allSelected}
+                          partiallySelected={pressingBulk.partiallySelected}
+                          onToggleAll={pressingBulk.toggleAll}
+                          testid="pressings-bulk-select-all"
+                        />
+                      </th>
                       <th className="px-4 py-3">Shop</th>
                       <th className="px-4 py-3">Type</th>
                       <th className="px-4 py-3">City</th>
@@ -384,6 +404,13 @@ export default function LaundryManagement() {
                           : `${formatFCFA(p.price_per_kg || 0)} / kg`;
                       return (
                       <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-3 py-3 w-8">
+                          <BulkSelectCell
+                            selected={pressingBulk.isSelected(p.id)}
+                            onToggle={pressingBulk.toggle}
+                            id={p.id}
+                          />
+                        </td>
                         <td className="px-4 py-3 font-medium text-slate-900">{p.name}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className={`capitalize ${
@@ -829,6 +856,21 @@ export default function LaundryManagement() {
           setBookingsRefreshKey((k) => k + 1);
           loadPressings?.();
         }}
+      />
+
+      <BulkActionsBar
+        count={pressingBulk.count}
+        entityLabel="shop"
+        selectedIds={pressingBulk.selectedIds}
+        selectedRows={pressingBulk.selectedRows}
+        onClear={pressingBulk.clear}
+        onDelete={bulkPressingDelete}
+        onActivate={bulkPressingActivate}
+        onDeactivate={bulkPressingDeactivate}
+        onExport={(rows) => rows.map(s => ({
+          id: s.id, name: s.name, shop_type: s.shop_type, city: s.city, phone: s.phone,
+          price_per_kg: s.price_per_kg,
+        }))}
       />
     </>
   );

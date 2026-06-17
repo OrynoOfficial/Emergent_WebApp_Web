@@ -31,6 +31,8 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import PackageServicesTab from '@/components/management/package/PackageServicesTab';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
+import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '@/components/shared/BulkActionsBar';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend,
@@ -370,6 +372,14 @@ export default function PackageManagement() {
     [filteredPackages, page]
   );
 
+  // Bulk selection on the visible page (packages are shipments — delete only,
+  // packages don't have an `is_active` field that drives visibility).
+  const packageBulk = useBulkSelection(pagedPackages, { idKey: 'id' });
+  const bulkPackagesDelete = async (ids) => {
+    await api.post('/admin/bulk', { collection: 'packages', action: 'delete', ids });
+    await loadPackages();
+  };
+
   const openForm = (pkg = null) => {
     setEditingPkg(pkg);
     if (pkg) {
@@ -586,6 +596,14 @@ export default function PackageManagement() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
+                      <th className="px-3 py-3 w-8">
+                        <BulkSelectHeader
+                          allSelected={packageBulk.allSelected}
+                          partiallySelected={packageBulk.partiallySelected}
+                          onToggleAll={packageBulk.toggleAll}
+                          testid="packages-bulk-select-all"
+                        />
+                      </th>
                       <th className="px-4 py-3">Tracking #</th>
                       <th className="px-4 py-3">Route</th>
                       <th className="px-4 py-3">Sender</th>
@@ -600,6 +618,13 @@ export default function PackageManagement() {
                   <tbody>
                     {pagedPackages.map((pkg) => (
                       <tr key={pkg.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="px-3 py-3 w-8">
+                          <BulkSelectCell
+                            selected={packageBulk.isSelected(pkg.id)}
+                            onToggle={packageBulk.toggle}
+                            id={pkg.id}
+                          />
+                        </td>
                         <td className="px-4 py-3 font-mono text-xs">{pkg.tracking_number}</td>
                         <td className="px-4 py-3 text-slate-700">{pkg.origin_city} → {pkg.destination_city}</td>
                         <td className="px-4 py-3 text-slate-700">{pkg.sender?.name || '—'}</td>
@@ -1054,6 +1079,21 @@ export default function PackageManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      <BulkActionsBar
+        count={packageBulk.count}
+        entityLabel="package"
+        selectedIds={packageBulk.selectedIds}
+        selectedRows={packageBulk.selectedRows}
+        onClear={packageBulk.clear}
+        onDelete={bulkPackagesDelete}
+        onExport={(rows) => rows.map(p => ({
+          tracking: p.tracking_number, origin: p.origin_city, destination: p.destination_city,
+          sender: p.sender?.name || '', receiver: p.receiver?.name || '',
+          weight_kg: p.weight_kg || 0, status: p.status, payment: p.payment_status,
+          price: p.price || 0,
+        }))}
+      />
     </>
   );
 }
