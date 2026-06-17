@@ -1,5 +1,34 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 260: ShowtimeDetails + BanquetCheckout → useCheckout. Order-abandonment leak fixed.)
+
+### Bug fix — pending orders no longer leak on payment cancel/timeout
+
+**Before**: When a customer hit Confirm on the Events booking page (`/services/showtimes/:id`) or the Banquet checkout (`/services/banquet/checkout`), the page would post to its domain-specific endpoint (`/event-showtimes/book` or `/banquets/cart/checkout`), creating a `pending` order in MongoDB. If the customer then **closed the Stripe modal via X / "Choose a different payment method"** OR **cancelled MoMo via X / "Cancel & change method"** OR **the MoMo wall-clock timeout (90s) fired**, the order remained in the DB as `pending` indefinitely.
+
+The other 7 booking pages (Cinema, Hotel, Travel, CarRental, Restaurant, Event-legacy, Package, Laundry) were already on `useCheckout` + `CheckoutPaymentPanel` which auto-wires `onCheckoutAbandoned` → `DELETE /api/orders/{id}/abandon`. Only these 2 were leaking.
+
+### Fix
+Migrated both pages to the shared `useCheckout` hook + `CheckoutPaymentPanel`:
+
+- **`ShowtimeDetails.jsx`** → `useCheckout('events', { customOrderEndpoint: '/event-showtimes/book', ... })`. Removed local `orderId` / `triggerPayment` / `selectedPaymentMethod` / `reserving` state + local `handlePay` / `handlePaymentInitiated`. CTA `book-now-btn` now calls `checkout.submit`. Payment panel swapped from inline `<PaymentMethodsSelection>` to `<CheckoutPaymentPanel checkout={checkout} ...>`.
+- **`BanquetCheckout.jsx`** → `useCheckout('banquet', { customOrderEndpoint: '/banquets/cart/checkout', extractOrderId: data => data?.order_id || data?._id || data?.id || data?.order_number, onSuccess: record promo-usage, ... })`. Removed local `submitting` / `orderId` / `triggerPayment` / `selectedPaymentMethod` state + `ensureOrder` / `handleConfirm` / `handlePaymentInitiated`. CTA `co-confirm-btn` now calls `checkout.submit`. Promo usage now recorded post-success so abandoned attempts don't burn the code.
+
+The migration auto-wires `handleCheckoutAbandoned` → `abandonPendingOrder(orderId)` → `DELETE /api/orders/{id}/abandon` on:
+- Stripe modal close (X / overlay click / "Choose a different payment method")
+- MoMo modal X button + "Cancel & change method" CTA
+- Tab close / refresh (`beforeunload`)
+- React unmount (router navigation)
+
+### Verified ✅
+- ESLint clean on both files.
+- Backend `DELETE /api/orders/{id}/abandon` confirmed via curl: creates a pending order via `/event-showtimes/book`, immediately abandons it, then GET /orders/{id} returns 404.
+- Testing agent (iter 241) code-review verification confirms structural wiring is end-to-end correct.
+- All other 8 booking pages unchanged (regression-safe).
+
+### Carry-over note: P0 Cinema Showtime Actions
+The handoff summary flagged a P0 ("Operators can't manage their own showtimes due to PermissionGate mismatch"). Investigation showed this was **already resolved in iter 238** — the `mani-monroe@netflix.com` operator has `cinema.manage_screenings` via the role-based system (assigned role: "Cinema Operator - Operator"). The PermissionGate uses `hasAnyPermission(["cinema.manage_screenings", "operator.services.edit"])` which correctly returns true. Stale backlog entry; no action needed.
+
 ## Latest Changes (Feb 2026 — iter 259: Failed payments stay on booking page)
 
 ### Bug fix — `PaymentMethodsSelection.jsx`
