@@ -53,12 +53,19 @@ export function useEventCart() {
     return isStale(initial) ? empty() : initial;
   });
 
+  // Paused mode — when true, the sliding 10-minute expiry is FROZEN so the
+  // visible countdown stops moving and the cart can't auto-clear. Used by
+  // BanquetCheckout while the user is filling out details / paying so a
+  // long MoMo authorisation doesn't wipe their cart mid-flow.
+  const [expiryPaused, setExpiryPaused] = useState(false);
+
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cart)); } catch { /* quota */ }
   }, [cart]);
 
   // Auto-clear once the sliding 10-min window elapses
   useEffect(() => {
+    if (expiryPaused) return undefined;
     if (!cart.last_active_at) return undefined;
     if (cart.items.length === 0 && cart.packages.length === 0) return undefined;
     const elapsed = Date.now() - cart.last_active_at;
@@ -70,7 +77,7 @@ export function useEventCart() {
       try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
     }, Math.max(0, remaining));
     return () => clearTimeout(t);
-  }, [cart.last_active_at, cart.items.length, cart.packages.length]);
+  }, [cart.last_active_at, cart.items.length, cart.packages.length, expiryPaused]);
 
   // Helper — every mutation also stamps last_active_at so the window slides
   const touch = (next) => ({ ...next, last_active_at: Date.now() });
@@ -174,9 +181,10 @@ export function useEventCart() {
   const count = (cart.items?.length || 0) + (cart.packages?.length || 0);
 
   // Live countdown — sliding 10-minute timer for the cart. Updates every second
-  // so the UI can show "Cart expires in 4:32".
+  // so the UI can show "Cart expires in 4:32". Frozen when expiryPaused=true.
   const [expiresInSeconds, setExpiresInSeconds] = useState(null);
   useEffect(() => {
+    if (expiryPaused) return undefined;
     if (!cart.last_active_at || count === 0) {
       return undefined;
     }
@@ -187,7 +195,7 @@ export function useEventCart() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [cart.last_active_at, count]);
+  }, [cart.last_active_at, count, expiryPaused]);
   // Reset countdown when cart empties — derived during render keeps the rule happy
   const [prevCount, setPrevCount] = useState(count);
   if (prevCount !== count) {
@@ -203,6 +211,24 @@ export function useEventCart() {
     setExpiresInSeconds(Math.ceil(CART_TTL_MS / 1000));
   }, []);
 
+  // Public action — freeze / unfreeze the sliding TTL. BanquetCheckout uses
+  // this so a long MoMo authorisation can't wipe the cart while the user is
+  // still mid-payment. Resumes the countdown right where it left off when
+  // unpaused (last_active_at is bumped to "now" so the user gets a full
+  // 10-minute fresh window after returning from payment).
+  const pauseExpiry = useCallback((shouldPause) => {
+    setExpiryPaused(prev => {
+      if (prev === !!shouldPause) return prev;
+      if (!shouldPause) {
+        // Unpause → reset the activity stamp so the countdown restarts from
+        // a full 10 minutes instead of resuming from a stale value.
+        setCart(c => ({ ...c, last_active_at: Date.now() }));
+        setExpiresInSeconds(Math.ceil(CART_TTL_MS / 1000));
+      }
+      return !!shouldPause;
+    });
+  }, []);
+
   return {
     cart, setMeta,
     addItem, updateQty, removeItem,
@@ -211,5 +237,7 @@ export function useEventCart() {
     expiresInSeconds,
     cartTtlMs: CART_TTL_MS,
     extendHold,
+    pauseExpiry,
+    expiryPaused,
   };
 }

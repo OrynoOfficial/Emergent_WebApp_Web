@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw, Info } from 'lucide-react';
+import { CreditCard, Loader2, Wallet, ExternalLink, Smartphone, Clock, CheckCircle, XCircle, RefreshCw, Info, X, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -37,7 +37,10 @@ const PaymentMethodsSelection = ({
   const [momoTransactionId, setMomoTransactionId] = useState(null);
   const [momoStatus, setMomoStatus] = useState(null);
   const [momoPollCount, setMomoPollCount] = useState(0);
-  const maxPolls = 24; // 2 minutes with 5-second intervals
+  const maxPolls = 18; // 90 seconds with 5-second intervals
+  // Wall-clock fail-safe so the modal never gets stuck on "pending" if the
+  // polling loop swallows errors. 90s mirrors the maxPolls budget above.
+  const MOMO_WALL_CLOCK_TIMEOUT_MS = 90_000;
 
   // Stripe checkout modal — opens in the foreground instead of navigating away
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
@@ -170,6 +173,17 @@ const PaymentMethodsSelection = ({
     }
 
     const checkStatus = async () => {
+      // ALWAYS increment pollCount, even on transient errors, so we eventually
+      // hit the wall-clock timeout instead of polling forever. Without this,
+      // a flaky network or backend hiccup would keep the modal stuck on
+      // "Waiting for authorization…" indefinitely.
+      let bumpedPoll = false;
+      const bumpPoll = () => {
+        if (!bumpedPoll) {
+          bumpedPoll = true;
+          setMomoPollCount(prev => prev + 1);
+        }
+      };
       try {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/momo/status/${momoTransactionId}`,
@@ -185,7 +199,7 @@ const PaymentMethodsSelection = ({
         if (data.success) {
           const status = data.status;
           setMomoStatus(status);
-          setMomoPollCount(prev => prev + 1);
+          bumpPoll();
 
           if (status === 'completed') {
             setIsProcessingInternal(false);
@@ -215,15 +229,36 @@ const PaymentMethodsSelection = ({
               onPaymentInitiated({ success: false, message: errorMessage });
             }
           }
+        } else {
+          // Backend returned success:false (e.g. transaction missing) — still
+          // count this as a poll so we don't loop forever.
+          bumpPoll();
         }
       } catch (err) {
         console.error('Status check failed:', err);
+        bumpPoll();
       }
     };
 
     const timer = setTimeout(checkStatus, 5000);
     return () => clearTimeout(timer);
   }, [momoTransactionId, momoStatus, momoPollCount, onPaymentInitiated, onProcessingChange]);
+
+  // Hard wall-clock fail-safe — if the modal sits in "pending" for longer
+  // than the configured timeout, force a terminal `timed_out` state so the
+  // user sees an actionable error and the modal can be closed/retried even
+  // if the polling loop above never gets a definitive answer from the server.
+  useEffect(() => {
+    if (!momoTransactionId || momoStatus !== 'pending') return undefined;
+    const id = setTimeout(() => {
+      setMomoStatus(prev => (prev === 'pending' ? 'timed_out' : prev));
+      setError('Payment confirmation timed out. Please try again or pick another method.');
+      setIsProcessingInternal(false);
+      onProcessingChange?.(false);
+      onPaymentInitiated?.({ success: false, message: 'Payment confirmation timed out' });
+    }, MOMO_WALL_CLOCK_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [momoTransactionId, momoStatus, onProcessingChange, onPaymentInitiated]);
 
   const initiateMoMoPayment = async () => {
     let effectiveOrderId = orderId;
@@ -318,18 +353,25 @@ const PaymentMethodsSelection = ({
     }
   };
 
-  const closeMoMoDialog = () => {
-    if (momoStatus !== 'pending') {
-      setMomoDialogOpen(false);
-      const wasUnpaid = momoStatus !== 'completed';
-      resetMoMoPayment();
-      // If the user closed the dialog WITHOUT a successful payment, ask the
-      // parent to abandon the pending order so it doesn't pile up in the DB.
-      if (wasUnpaid && typeof onCheckoutAbandoned === 'function') {
-        onCheckoutAbandoned({ orderId, method: 'momo' });
-      }
+  const closeMoMoDialog = (force = false) => {
+    // Allow closing during pending only when explicitly requested (e.g. user
+    // hits the X / Cancel & change method while waiting for authorisation).
+    // We treat that as an implicit cancellation so the dialog actually closes
+    // and the parent can abandon the unpaid order.
+    if (momoStatus === 'pending' && !force) {
+      // Default behavior: outside-click while pending — keep modal open.
+      return;
+    }
+    setMomoDialogOpen(false);
+    const wasUnpaid = momoStatus !== 'completed';
+    resetMoMoPayment();
+    if (wasUnpaid && typeof onCheckoutAbandoned === 'function') {
+      onCheckoutAbandoned({ orderId, method: 'momo' });
     }
   };
+
+  // Explicit cancel during pending — wired to the X button + Cancel CTA.
+  const cancelPendingPayment = () => closeMoMoDialog(true);
 
   const getMoMoStatusIcon = () => {
     switch (momoStatus) {
@@ -593,11 +635,36 @@ const PaymentMethodsSelection = ({
         (#071d3c → #051530), champagne-gold #c9a74a accents, glass-morphism
         cards, compact typography. All state logic below is unchanged.
       */}
-      <Dialog open={momoDialogOpen} onOpenChange={closeMoMoDialog}>
+      <Dialog open={momoDialogOpen} onOpenChange={(v) => { if (!v) closeMoMoDialog(true); }}>
         <DialogContent
           data-testid="momo-payment-modal"
-          className="!max-w-none w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md p-0 border-0 sm:rounded-t-none sm:rounded-b-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+          showCloseButton={false}
+          /* Square-ish layout: capped at ~440px square so the card doesn't
+             stretch across wide desktop screens. Mobile still goes full
+             width (no h-screen — that's what made it feel stretched). */
+          className="!max-w-none w-[92vw] max-w-[440px] sm:max-w-[440px] p-0 border-0 rounded-2xl overflow-hidden bg-gradient-to-br from-[#071d3c] via-[#0a2e5c] to-[#051530]"
+          onPointerDownOutside={(e) => {
+            // Block outside-click close while still pending so the user
+            // doesn't accidentally cancel an in-flight authorisation.
+            if (momoStatus === 'pending') e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (momoStatus === 'pending') e.preventDefault();
+          }}
         >
+          {/* Custom close button — visible on dark navy gradient (the default
+              shadcn X is dark-on-dark and was invisible). Wired through
+              cancelPendingPayment so closing during pending also abandons
+              the in-flight order. */}
+          <button
+            type="button"
+            onClick={cancelPendingPayment}
+            data-testid="momo-close-btn"
+            aria-label="Close"
+            className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-white/80 hover:text-white hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-[#c9a74a]"
+          >
+            <X className="h-4 w-4" />
+          </button>
           {/* Decorative overlays (match Stripe checkout) */}
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.04]"
@@ -699,6 +766,32 @@ const PaymentMethodsSelection = ({
                         <li>Enter your PIN to confirm</li>
                       </ol>
                     </div>
+
+                    {/* Sticky-warning the user before they reload — payments
+                        already in-flight can't be re-attached if the tab
+                        refreshes mid-poll. */}
+                    <div
+                      className="rounded-xl border border-amber-300/30 bg-amber-400/10 p-2.5 text-left flex items-start gap-2"
+                      data-testid="momo-do-not-close-warning"
+                    >
+                      <ShieldAlert className="h-4 w-4 text-amber-300 flex-shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-amber-100 leading-snug">
+                        <span className="font-semibold">Do not close or refresh this window.</span> Your payment is being processed — if you leave, you&rsquo;ll have to start the authorisation over.
+                      </p>
+                    </div>
+
+                    {/* Allow the user to abort without waiting for the
+                        90-second wall-clock timeout — eg. they typed the
+                        wrong sandbox number. */}
+                    <Button
+                      variant="outline"
+                      onClick={cancelPendingPayment}
+                      data-testid="momo-cancel-pending-btn"
+                      className="w-full h-9 text-xs bg-white/5 hover:bg-white/15 text-white border-white/30 hover:border-[#c9a74a] hover:text-white"
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-2" />
+                      Cancel & change method
+                    </Button>
                   </div>
                 )}
 
@@ -715,7 +808,7 @@ const PaymentMethodsSelection = ({
                     variant="outline"
                     onClick={resetMoMoPayment}
                     data-testid="momo-try-again-btn"
-                    className="w-full h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-[#c9a74a]"
+                    className="w-full h-9 text-xs bg-white/5 hover:bg-white/15 text-white border-white/30 hover:border-[#c9a74a] hover:text-white"
                   >
                     <RefreshCw className="h-3.5 w-3.5 mr-2" />
                     Try Again
@@ -732,7 +825,7 @@ const PaymentMethodsSelection = ({
                     <Button
                       variant="outline"
                       onClick={resetMoMoPayment}
-                      className="w-full h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white"
+                      className="w-full h-9 text-xs bg-white/5 hover:bg-white/15 text-white border-white/30 hover:text-white"
                     >
                       Start Over
                     </Button>
@@ -756,7 +849,12 @@ const PaymentMethodsSelection = ({
                     onClick={() => setMomoDialogOpen(false)}
                     disabled={isProcessingInternal}
                     data-testid="momo-change-method-btn"
-                    className="w-full sm:w-auto h-9 text-xs border-white/20 text-white hover:bg-white/10 hover:text-white hover:border-[#c9a74a]"
+                    /* Explicit bg-white/5 so the button is visible on the
+                       dark navy gradient BEFORE hover (the default shadcn
+                       outline button uses bg-background which is white,
+                       washing out white text & making the CTA invisible
+                       until hover). */
+                    className="w-full sm:w-auto h-9 text-xs bg-white/5 hover:bg-white/15 text-white border-white/30 hover:border-[#c9a74a] hover:text-white"
                   >
                     <RefreshCw className="h-3.5 w-3.5 mr-2" />
                     Choose a different payment method

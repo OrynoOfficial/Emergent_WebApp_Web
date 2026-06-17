@@ -1,5 +1,28 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 256: Payment modal polish + cart pause)
+
+### MoMo confirmation modal (`PaymentMethodsSelection.jsx`)
+- **Square card** — switched from `w-screen h-screen sm:h-auto sm:max-h-[80vh] sm:w-[64vw] sm:max-w-md` to `w-[92vw] max-w-[440px] sm:max-w-[440px] rounded-2xl`. No more full-height mobile stretch or wide-rectangle desktop look.
+- **Visible "Choose a different payment method" CTA** — added explicit `bg-white/5` (was using shadcn outline default `bg-background` = white, washing out the white text). Same fix applied to Try Again / Start Over buttons.
+- **"Do not close or refresh this window" warning** — amber `ShieldAlert` card shown only while `momoStatus === 'pending'` (testid `momo-do-not-close-warning`).
+- **Cancel & change method button** during pending — testid `momo-cancel-pending-btn`. Lets the user abort an in-flight authorisation without waiting for the 90s timeout.
+- **X close works** — disabled the default shadcn close, added a custom `<X>` button with `text-white/80 hover:text-white` (testid `momo-close-btn`). Wired through `cancelPendingPayment` so closing during pending abandons the order and falls back to the parent.
+- **No more "waiting for authorization" loop**:
+  - `maxPolls` 24 → 18 (90s budget instead of 2 min).
+  - Polling effect now **always** increments `momoPollCount` — even when `response.json().success === false` or the fetch throws — so the wall-clock timeout actually fires.
+  - Added a dedicated wall-clock `useEffect` that forces `timed_out` after `MOMO_WALL_CLOCK_TIMEOUT_MS = 90_000` regardless of polling outcomes. Calls `onPaymentInitiated({ success: false, ... })` and `onProcessingChange(false)`.
+  - `onPointerDownOutside` / `onEscapeKeyDown` block accidental dismissal while pending; the X / Cancel CTA remain the only escape hatches.
+
+### Banquet cart auto-clear pause (`useEventCart.js` + `BanquetCheckout.jsx`)
+- `useEventCart()` now exposes `pauseExpiry(boolean)` and `expiryPaused`. While paused:
+  - The sliding 10-min TTL timer is disarmed (cart cannot auto-clear → "amount turns to FCFA 0" bug fixed).
+  - The visible countdown freezes.
+  - Re-enabling resets `last_active_at` to `now` so the user gets a full fresh 10-min window after leaving the page.
+- `BanquetCheckout` calls `pauseExpiry(true)` on mount and `pauseExpiry(false)` on unmount.
+- Header pill swaps to an emerald "Hold paused while you check out" badge (testid `co-cart-countdown-paused`). The amber "Hold expiring soon" toast is suppressed while paused.
+- Verified ✅: customer landing on `/services/banquet/checkout` sees the emerald paused pill instead of the countdown.
+
 ## Latest Changes (Feb 2026 — iter 255: Package-level venue + Hotel/Restaurant geocoders)
 
 ### New: Banquet Package own location

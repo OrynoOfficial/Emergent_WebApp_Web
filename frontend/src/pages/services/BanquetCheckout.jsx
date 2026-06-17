@@ -9,7 +9,7 @@
 //
 // The order is created lazily when the customer hits Confirm so abandoning
 // the page doesn't pollute the orders collection.
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,7 +176,16 @@ const PackageLineCard = ({ pkg, onRemove }) => {
 export default function BanquetCheckout() {
   const navigate = useNavigate();
   const { user, isOperatorUser } = useAuth();
-  const { cart, setMeta, updateQty, removeItem, removePackage, totals, count, clear, expiresInSeconds, extendHold } = useEventCart();
+  const { cart, setMeta, updateQty, removeItem, removePackage, totals, count, clear, expiresInSeconds, extendHold, pauseExpiry, expiryPaused } = useEventCart();
+
+  // Freeze the cart's 10-min sliding TTL the entire time the user is on the
+  // checkout page. Otherwise a long MoMo authorisation (up to ~90s) can wipe
+  // the cart mid-flow and turn the visible amount to FCFA 0. We unpause on
+  // unmount so navigating away resumes a fresh 10-minute window.
+  useEffect(() => {
+    pauseExpiry(true);
+    return () => pauseExpiry(false);
+  }, [pauseExpiry]);
 
   const [contact, setContact] = useState({
     contact_name: user?.full_name || '',
@@ -373,7 +382,17 @@ export default function BanquetCheckout() {
                 {cart.city && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" /> {cart.city}</span>}
                 {cart.event_date && <span className="inline-flex items-center gap-1"><CalendarIcon className="w-3 h-3" /> {format(eventDateObj, 'MMM d, yyyy')}</span>}
                 {cart.expected_guests > 0 && <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {cart.expected_guests} guests</span>}
-                {expiresInSeconds != null && expiresInSeconds > 0 && count > 0 && (
+                {expiryPaused && count > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    data-testid="co-cart-countdown-paused"
+                    title="Your cart hold is paused while you're checking out — it won't auto-clear here."
+                  >
+                    <Clock className="w-3 h-3" />
+                    Hold paused while you check out
+                  </span>
+                )}
+                {!expiryPaused && expiresInSeconds != null && expiresInSeconds > 0 && count > 0 && (
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${expiresInSeconds <= 120 ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse' : 'bg-teal-100 text-teal-800 border border-teal-200'}`}
                     data-testid="co-cart-countdown"
@@ -392,8 +411,10 @@ export default function BanquetCheckout() {
       <div className="max-w-[1472px] mx-auto px-4 py-8">
         <StepIndicator currentStep={currentStep} />
 
-        {/* Soft warning when cart hold is about to expire (≤2 min) */}
-        {expiresInSeconds != null && expiresInSeconds <= 120 && expiresInSeconds > 0 && count > 0 && (
+        {/* Soft warning when cart hold is about to expire (≤2 min). Hidden
+            while the page-level pauseExpiry is active so the user isn't
+            nudged to "Extend hold" mid-checkout. */}
+        {!expiryPaused && expiresInSeconds != null && expiresInSeconds <= 120 && expiresInSeconds > 0 && count > 0 && (
           <div
             className="mb-6 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3"
             data-testid="co-expiry-warning"
