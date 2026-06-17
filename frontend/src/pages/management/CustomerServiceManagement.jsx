@@ -875,7 +875,7 @@ export default function CustomerServiceManagement() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [chatBotOpen, setChatBotOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
   const [operatorFilter, setOperatorFilter] = useState('');
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 

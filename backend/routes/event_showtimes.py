@@ -304,8 +304,15 @@ async def book_tickets(
     # / map link without an extra round-trip on the customer side.
     location = await db.event_locations.find_one({"_id": showtime["location_id"]}) or {}
 
+    # Generate an order number so customers can reference this booking.
+    # iter 245: previously missing for event tickets, which is why users like
+    # the Cysoul concert customer saw no #ORDER number on the e-ticket.
+    order_count = await db.orders.count_documents({"service_type": "event"})
+    order_number = f"EVT-{datetime.utcnow().strftime('%Y%m%d')}-{(order_count + 1):05d}"
+
     order = {
         "_id": str(uuid.uuid4()),
+        "order_number": order_number,
         "user_id": current_user["_id"],
         "service_type": "event",
         "service_id": payload.showtime_id,

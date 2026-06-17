@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 245 — all five iter245 changes verified end-to-end. Backend: 5/5 pytest pass (EVT- order_number prefix; refund-request flips status→'refund_requested' + sets pre_refund_status + ticket_invalidated=true + fires 'refund_submitted' notif; scanned/checked-in tickets blocked with HTTP 400; admin reject reverts to pre_refund_status with 'refund_rejected' notif; admin reject on past-service-date keeps order 'expired'+invalidated; admin approve full → status='refunded'/payment_status='refunded'/ticket_invalidated stays true + 'refund_approved' notif). Frontend: OrderDetailModal verified at runtime — order-status-badge sits on SAME line as 'Order Details' h2 (titleY=1371.8, badgeY=1381.6, Δ≈10px), order-booked-on appears immediately below the DialogHeader (bookedY=1440.2) and above where the operator strip would render; right-rail Booked-on panel removed. Customer Service /management/customer-service default = grid (Grid toggle is selected on first render; lists are empty for the Open tab so no cards rendered, but the grid mode is active). Orders grid cards confirmed white (rgb(255,255,255)) with 1px slate-200 border (rgb(226,232,240)) and className contains 'bg-white border border-slate-200'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter245_refund_lifecycle.py",
+    "/app/test_reports/pytest/iter245.xml"
+  ],
+  "action_items": [
+    "OPTIONAL CLEANUP: One leftover test order with order_number 'EVT-20260617-99999' (status=confirmed, payment_status=paid, service='Event') is visible in customer@test.com's Orders. It was created by the iter245 backend tests; the unique-index on order_number prevented re-insertion which means it persisted from a previous run. Safe to delete via `db.orders.delete_one({_id: 'TEST-ORD-...'})` or via the cancel button. Test now uses uuid-based 'TEST-EVT-' prefixes so future runs won't collide."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/routes/refunds.py — implementation is clean: scanned-ticket guard at lines 206-210, pre_refund_status snapshot + ticket_invalidated flip at 255-264, reject revert logic at 553-559 correctly checks _service_date_expired, approve path at 504-510 keeps ticket_invalidated=True for both full and partial. Notification dedupe_keys are scoped per-refund_id (good).",
+    "/app/backend/routes/event_showtimes.py:311 — EVT-YYYYMMDD-NNNNN format is correct; uses `order_count + 1` from db.orders.count_documents which is fine for the seed cadence here but could race under concurrent bookings (low risk).",
+    "/app/frontend/src/components/modals/OrderDetailModal.jsx — DialogTitle is now a flex row with the badge using justify-between (line 172-189); order-booked-on sits between DialogHeader and the operator strip (lines 196-200); ticket_invalidated banner exists at line 237. All required data-testids present."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter245_refund_lifecycle.py"],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "5/5 iter245 changes verified"},
+  "test_credentials": "customer@test.com / testpassword123, admin@test.com / testpassword123 (per /app/memory/test_credentials.md).",
+  "seed_data_creation": "Backend tests seed paid event orders directly in Mongo (TEST-ORD-<uuid> with TEST-EVT-<uuid> order_number) and clean them up in finally{} blocks. Each test is self-contained; no permanent test data should remain after a pass.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite for iter245 lives at /app/backend/tests/test_iter245_refund_lifecycle.py. Run: `python -m pytest backend/tests/test_iter245_refund_lifecycle.py -v`. RefundCreate.reason is a strict enum (change_of_plans/event_cancelled/service_issue/duplicate_booking/other). Customer orders endpoint is GET /api/orders/ (not /api/orders/me). MONGO_URL/DB env reads MONGO_DB_NAME (oryno_webapp).",
+  "rca of the issue": "N/A — no bugs encountered. Two test-rig fixes were made during this run: (1) MongoDB DB name comes from MONGO_DB_NAME env var (not DB_NAME); (2) RefundCreate.reason must be one of the strict enum values, not free text. Both were test-side adjustments only."
+}

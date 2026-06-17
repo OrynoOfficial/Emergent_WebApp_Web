@@ -82,6 +82,21 @@ const getStatusConfig = (status) => {
       icon: Clock,
       label: 'Reserved'
     },
+    refund_requested: {
+      color: 'bg-rose-100 text-rose-700 border-rose-200',
+      icon: RefreshCw,
+      label: 'Refund Request Submitted'
+    },
+    refunded: {
+      color: 'bg-slate-200 text-slate-700 border-slate-300',
+      icon: CheckCircle2,
+      label: 'Refunded'
+    },
+    expired: {
+      color: 'bg-slate-100 text-slate-600 border-slate-200',
+      icon: XCircle,
+      label: 'Expired'
+    },
   };
   return configs[status] || configs.pending;
 };
@@ -154,23 +169,42 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <span className="text-3xl">{getCategoryIcon(order.service_category || order.service_type)}</span>
-            <div>
-              <h2 className="text-xl font-bold">Order Details</h2>
-              <p className="text-sm text-slate-500 font-normal">#{order.order_number}</p>
+          <DialogTitle className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-3xl">{getCategoryIcon(order.service_category || order.service_type)}</span>
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold">Order Details</h2>
+                <p className="text-sm text-slate-500 font-normal truncate">#{order.order_number || (order.id || order._id || '').slice(0, 8).toUpperCase()}</p>
+              </div>
             </div>
+            {/* iter 245: status tag now sits on the same line as the title
+                to compress vertical whitespace between the heading and the
+                operator strip below. */}
+            <Badge
+              className={`${statusConfig.color} flex items-center gap-1 px-2.5 py-1 text-xs shrink-0`}
+              data-testid="order-status-badge"
+            >
+              <StatusIcon className="h-3.5 w-3.5" />
+              {statusConfig.label}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
+        {/* iter 245: "Booked on" timestamp moved out of the right-rail and
+            placed right above the operator hero strip, so the section under
+            the operator block reaches Service Information with no wasted gap. */}
+        <p className="mt-3 text-[11px] text-slate-500 flex items-center gap-1.5" data-testid="order-booked-on">
+          <Clock className="h-3 w-3" />
+          Booked on <span className="font-medium text-slate-700">{formatDate(order.created_at, true)}</span>
+          <span className="text-slate-400">· {getTimezone()}</span>
+        </p>
+
         {/* ── Operator hero strip ─────────────────────────────────────────
             Surfaces the operator name + logo right after the modal heading
-            so customers immediately know WHO they're booked with. Previously
-            this was buried inside the Service Info grid and customers
-            scrolled past it. */}
+            so customers immediately know WHO they're booked with. */}
         {(order.operator_name || order.operator_logo_url || order.booking_details?.operator_logo_url) && (
           <div
-            className="mt-2 mb-1 flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5 shadow-sm"
+            className="mt-1 mb-1 flex items-center gap-3 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-2.5 shadow-sm"
             data-testid="order-detail-operator-strip"
           >
             {(order.operator_logo_url || order.booking_details?.operator_logo_url) ? (
@@ -196,21 +230,19 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           </div>
         )}
 
-        <div className="space-y-6 py-4">
-          {/* Status Badge */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge className={`${statusConfig.color} flex items-center gap-1 px-3 py-1`}>
-                <StatusIcon className="h-4 w-4" />
-                {statusConfig.label}
-              </Badge>
+        <div className="space-y-4 py-3">
+          {/* Ticket invalidated banner — appears when a refund request has stripped the QR/barcode. */}
+          {order.ticket_invalidated && (
+            <div
+              data-testid="ticket-invalidated-banner"
+              className="rounded-xl border-2 border-rose-200 bg-rose-50 p-3 flex items-center gap-2"
+            >
+              <XCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <p className="text-xs text-rose-800">
+                <span className="font-semibold">Ticket invalidated.</span> A refund request is in progress for this booking, so the QR / bar code has been removed and the ticket cannot be scanned.
+              </p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-500">Booked on</p>
-              <p className="text-sm font-medium" data-testid="order-booked-on">{formatDate(order.created_at, true)}</p>
-              <p className="text-[10px] text-slate-400">{getTimezone()}</p>
-            </div>
-          </div>
+          )}
 
           {/* Reassignment banner — shows when the resource attached to this booking has been swapped */}
           {Array.isArray(order.reassignment_history) && order.reassignment_history.length > 0 && (() => {
@@ -652,7 +684,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           )}
 
           {/* Event Showtime Ticket — new Location → Showtime architecture */}
-          {(order.service_type === 'event' || order.service_category === 'event') && (
+          {(order.service_type === 'event' || order.service_category === 'event') && !order.ticket_invalidated && (
             <EventTicket order={order} />
           )}
 
@@ -999,10 +1031,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             <MoneyTrail orderId={order.id || order._id || order.order_id} />
           </div>
 
-          {/* QR Code Section — only for confirmed orders that are actually paid.
-              Pending / unpaid orders MUST NOT show a QR because the ticket
-              hasn't been issued yet. */}
-          {['confirmed', 'reserved', 'completed'].includes(order.status)
+          {/* QR Code Section — only for confirmed + paid orders, and HIDDEN
+              if the ticket has been invalidated by a refund request (iter 245). */}
+          {!order.ticket_invalidated
+            && ['confirmed', 'reserved', 'completed'].includes(order.status)
             && ['paid', 'verified', 'captured', 'completed', 'succeeded'].includes((order.payment_status || '').toLowerCase()) && (
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Your Ticket</h3>
@@ -1034,9 +1066,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               Cancel Order
             </Button>
           )}
-          {/* Refund request — only on paid orders that aren't already refunded */}
+          {/* Refund request — only on paid orders that aren't already refunded,
+              scanned, or already in-flight (refund_requested). */}
           {['completed', 'paid', 'verified', 'captured', 'succeeded'].includes((order.payment_status || '').toLowerCase())
-            && !['refunded', 'cancelled'].includes((order.status || '').toLowerCase()) && (
+            && !['refunded', 'cancelled', 'refund_requested', 'expired'].includes((order.status || '').toLowerCase())
+            && !order.ticket_invalidated
+            && !order.checked_in
+            && !order.scanned_at && (
             <Button
               variant="outline"
               onClick={() => setRefundOpen(true)}

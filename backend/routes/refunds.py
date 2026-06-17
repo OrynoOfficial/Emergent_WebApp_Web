@@ -30,8 +30,35 @@ from models.refund import (
     compute_eligibility, list_presets_for, PRESET_DEFINITIONS,
 )
 from services.stripe_service import StripeService
+from utils.notifications import create_notification
 
 router = APIRouter(prefix="/api/refunds", tags=["refunds"])
+
+
+def _service_date_expired(order: dict) -> bool:
+    """True when the booking's service date/time has already passed.
+    Used on refund REJECTION to decide whether to revert the ticket to
+    'valid' or leave it invalidated (because the show/flight/etc. is over).
+    """
+    bd = order.get("booking_details") or {}
+    candidates = [
+        bd.get("start_datetime"), bd.get("end_datetime"),
+        bd.get("show_datetime"), bd.get("departure_datetime"),
+        bd.get("show_date"), bd.get("date"), bd.get("check_out"),
+        order.get("service_date"), order.get("scheduled_at"),
+    ]
+    now = datetime.now(timezone.utc)
+    for c in candidates:
+        if not c:
+            continue
+        try:
+            dt = c if isinstance(c, datetime) else datetime.fromisoformat(str(c).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt < now
+        except Exception:
+            continue
+    return False
 
 
 # ── Public reference data ────────────────────────────────────────────────────
@@ -175,6 +202,12 @@ async def request_refund(order_id: str, payload: RefundCreate,
         raise HTTPException(status_code=400, detail="Order is not paid")
     if order.get("status") in ("refunded", "cancelled"):
         raise HTTPException(status_code=400, detail="Order already refunded or cancelled")
+    # iter 245: scanned/checked-in tickets cannot be refunded.
+    if order.get("checked_in") or order.get("scanned_at"):
+        raise HTTPException(
+            status_code=400,
+            detail="This ticket has already been scanned and cannot be refunded.",
+        )
 
     # Idempotency — one open refund per order.
     open_refund = await db.refunds.find_one({
@@ -215,6 +248,37 @@ async def request_refund(order_id: str, payload: RefundCreate,
         "updated_at": datetime.now(timezone.utc),
         "completed_at": None,
     })
+
+    # iter 245: invalidate the ticket and flip the order status.
+    # We snapshot the previous status into `pre_refund_status` so rejection
+    # can revert it (unless the service date has since elapsed).
+    await db.orders.update_one(
+        {"_id": order_id},
+        {"$set": {
+            "pre_refund_status": order.get("status"),
+            "status": "refund_requested",
+            "ticket_invalidated": True,
+            "ticket_invalidated_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+
+    # Confirmation to the customer.
+    await create_notification(
+        db,
+        user_id=current_user["_id"],
+        title="Refund request received",
+        message=(
+            f"We received your refund request for order #{order.get('order_number') or order_id[:8]}. "
+            f"Your ticket has been invalidated while our team reviews it."
+        ),
+        notification_type="refund_submitted",
+        dedupe_key=f"refund_submitted:{refund_id}",
+        data={"refund_id": refund_id, "order_id": order_id, "status": RefundStatus.PENDING},
+        action_url=f"/orders",
+        source="refunds",
+    )
+
     return {"refund_id": refund_id, "status": RefundStatus.PENDING, "eligible_amount": elig.eligible_amount, "requested_amount": requested}
 
 
@@ -438,11 +502,29 @@ async def approve_refund(refund_id: str, payload: RefundDecision,
     # Update the order itself.
     is_full = abs(approved - float(order.get("total_amount") or 0)) < 0.01
     await db.orders.update_one({"_id": order["_id"]}, {"$set": {
-        "status": "refunded" if is_full else order.get("status"),
+        "status": "refunded" if is_full else order.get("pre_refund_status") or order.get("status"),
         "payment_status": "refunded" if is_full else "partially_refunded",
         "refunded_amount": approved,
+        "ticket_invalidated": True,
         "updated_at": now,
     }})
+
+    # iter 245: notify the customer that the refund was approved.
+    await create_notification(
+        db,
+        user_id=order["user_id"],
+        title="Refund approved",
+        message=(
+            f"Your refund of {approved:,.0f} {order.get('currency') or 'XAF'} for order "
+            f"#{order.get('order_number') or order['_id'][:8]} has been approved. "
+            f"{'Funds will arrive on your card shortly.' if order.get('payment_method') == 'stripe' else 'Our team will process the transfer manually.'}"
+        ),
+        notification_type="refund_approved",
+        dedupe_key=f"refund_approved:{refund_id}",
+        data={"refund_id": refund_id, "order_id": order["_id"], "approved_amount": approved, "status": final_status},
+        action_url="/orders",
+        source="refunds",
+    )
 
     return {"refund_id": refund_id, "status": final_status, "approved_amount": approved, "gateway_refund_id": gateway_id}
 
@@ -464,4 +546,31 @@ async def reject_refund(refund_id: str, payload: RefundDecision,
         "updated_at": datetime.now(timezone.utc),
         "rejected_by": current_user["_id"],
     }})
+
+    # iter 245: revert the ticket to valid IF the service date hasn't passed.
+    order = await db.orders.find_one({"_id": refund["order_id"]})
+    if order:
+        expired = _service_date_expired(order)
+        revert_status = order.get("pre_refund_status") or "confirmed"
+        await db.orders.update_one({"_id": order["_id"]}, {"$set": {
+            "status": revert_status if not expired else "expired",
+            "ticket_invalidated": expired,  # only stays invalid if the show is over
+            "updated_at": datetime.now(timezone.utc),
+        }})
+        await create_notification(
+            db,
+            user_id=order["user_id"],
+            title="Refund request declined",
+            message=(
+                f"Your refund request for order #{order.get('order_number') or order['_id'][:8]} was declined. "
+                + (payload.admin_notes or "")
+                + (" Your ticket is valid again." if not expired else " Note: the service date has already passed.")
+            ).strip(),
+            notification_type="refund_rejected",
+            dedupe_key=f"refund_rejected:{refund_id}",
+            data={"refund_id": refund_id, "order_id": order["_id"], "ticket_reverted": not expired},
+            action_url="/orders",
+            source="refunds",
+        )
+
     return {"refund_id": refund_id, "status": RefundStatus.REJECTED}
