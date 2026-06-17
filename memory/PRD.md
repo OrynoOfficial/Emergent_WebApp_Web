@@ -1,5 +1,18 @@
 # Oryno Platform - PRD
 
+## Latest Changes (Feb 2026 — iter 259: Failed payments stay on booking page)
+
+### Bug fix — `PaymentMethodsSelection.jsx`
+The "auto-redirect to /orders after a terminal MoMo state" effect blindly fired on **both** `completed` AND `failed/timed_out/cancelled`. Customers who hit Insufficient Balance / wrong PIN / cancelled were getting bounced to the Orders page (which is meant for confirmed bookings only), leaving them with no easy way to retry.
+
+Fix: removed the failure-branch navigate. Now:
+- `completed` → still routes to `/orders` after 2.5s ✅
+- `failed` / `timed_out` / `cancelled` → **stays on the booking page** with the MoMo modal still open, showing the inline error + Try Again button. The user can:
+  - Click "Try Again" to re-trigger payment with the same phone.
+  - Click "Cancel & change method" or the X to dismiss the modal (abandons the order via `useOrderAbandonment`) and pick a different payment method.
+
+Orders page is now reserved for successful bookings only.
+
 ## Latest Changes (Feb 2026 — iter 258: Order Detail revamp + MoMo modal portrait)
 
 ### Order Detail Modal (`/app/frontend/src/components/modals/OrderDetailModal.jsx`)

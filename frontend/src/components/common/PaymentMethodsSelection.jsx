@@ -140,10 +140,14 @@ const PaymentMethodsSelection = ({
     }
   }, [customerPhone]);
 
-  // After MoMo reaches a terminal state, auto-redirect to /orders so the user
-  // always ends up on the booking list with clear status. 2.5s on success gives
-  // the user a moment to see the green confirmation; 4s on failure is longer
-  // so they can read the error before we move them.
+  // After MoMo reaches a terminal state, route accordingly:
+  //   • completed → navigate to /orders after 2.5s so the user sees the
+  //     green confirmation before we redirect.
+  //   • failed / timed_out / cancelled → STAY on the booking page so the
+  //     user can retry, switch method, or fix their phone number. The
+  //     parent's onPaymentInitiated already received the failure outcome
+  //     and surfaced an inline error. Sending them to /orders would
+  //     bury the booking they were 1 step away from completing.
   useEffect(() => {
     if (!momoTransactionId) return;
     if (momoStatus === 'completed') {
@@ -154,14 +158,9 @@ const PaymentMethodsSelection = ({
       }, 2500);
       return () => clearTimeout(t);
     }
-    if (momoStatus === 'failed' || momoStatus === 'timed_out' || momoStatus === 'cancelled') {
-      const t = setTimeout(() => {
-        setMomoDialogOpen(false);
-        resetMoMoPayment();
-        navigate('/orders');
-      }, 4000);
-      return () => clearTimeout(t);
-    }
+    // Intentionally no navigate on failed / timed_out / cancelled — the
+    // user remains on the booking page with the gateway modal still open
+    // (showing the error + Try Again / Cancel CTAs).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [momoStatus, momoTransactionId]);
 
