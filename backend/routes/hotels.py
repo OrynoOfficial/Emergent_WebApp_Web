@@ -81,7 +81,8 @@ async def get_hotels(
     if operator_id:
         query["operator_id"] = operator_id
     if city:
-        query["city"] = {"$regex": city, "$options": "i"}
+        from utils.text_match import ci_regex_query
+        query["city"] = ci_regex_query(city)
     if country:
         from utils.location_filter import get_country_filter, get_operator_ids_for_country
         from utils.geolocation import is_african_country
@@ -170,12 +171,15 @@ async def get_my_hotels(
     
     # Add optional filters
     if search:
+        from utils.text_match import accent_insensitive_pattern
+        pat = accent_insensitive_pattern(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"city": {"$regex": search, "$options": "i"}}
+            {"name": {"$regex": pat, "$options": "i"}},
+            {"city": {"$regex": pat, "$options": "i"}}
         ]
     if city:
-        query["city"] = {"$regex": city, "$options": "i"}
+        from utils.text_match import ci_regex_query
+        query["city"] = ci_regex_query(city)
     if star_rating:
         query["star_rating"] = star_rating
     

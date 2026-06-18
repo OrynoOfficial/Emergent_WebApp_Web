@@ -85,7 +85,8 @@ async def get_pressings(
     if operator_id:
         query["operator_id"] = operator_id
     if city:
-        query["city"] = {"$regex": city, "$options": "i"}
+        from utils.text_match import ci_regex_query
+        query["city"] = ci_regex_query(city)
     if delivery_available is not None:
         query["delivery_available"] = delivery_available
     if express_available is not None:

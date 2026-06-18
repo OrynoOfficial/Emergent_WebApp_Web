@@ -82,14 +82,22 @@ async def create_car(
 async def get_cars(
     vehicle_type: Optional[str] = None,
     transmission: Optional[str] = None,
+    city: Optional[str] = None,
     country: Optional[str] = None,
     operator_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 20
 ):
-    """Get available cars - optionally filtered by country via operator"""
+    """Get available cars - optionally filtered by city/country/operator.
+
+    iter 251: ``city`` is now honoured. Previously the frontend passed
+    ``city=pickupLocation`` but the endpoint silently dropped the param,
+    returning every car regardless of location. Uses accent + case
+    insensitive matching so "Yaounde" matches "Yaoundé".
+    """
+    from utils.text_match import ci_regex_query
     db = get_database()
-    
+
     query = {"is_available": True}
     if operator_id:
         query["operator_id"] = operator_id
@@ -97,6 +105,8 @@ async def get_cars(
         query["vehicle_type"] = vehicle_type
     if transmission:
         query["transmission"] = transmission
+    if city:
+        query["city"] = ci_regex_query(city)
     
     # Apply country filter via operator lookup (car_rentals has no country field)
     if country:
