@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, MapPin, Star, Clock, Shirt, Sparkles, Loader2, Search,
@@ -411,6 +412,7 @@ export default function LaundryResults() {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   // Pre-booking modal — clicking "Book" opens the info modal first; the
   // explicit "Continue to booking" CTA inside is what navigates to the
   // booking page (mirrors the Packages flow).
@@ -455,14 +457,12 @@ export default function LaundryResults() {
 
   const filteredServices = useMemo(() => {
     let filtered = [...services];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((s) =>
-        s.name?.toLowerCase().includes(q) || s.address?.toLowerCase().includes(q) || s.city?.toLowerCase().includes(q)
-      );
-    }
+    // iter 249: chip omnibar (place / operator / shop name).
+    const { places, operators, listings } = smartFilters;
+    if (places.size) filtered = filtered.filter(s => places.has((s.city || '').trim()));
+    if (operators.size) filtered = filtered.filter(s => operators.has((s.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(s => listings.has((s.name || '').trim()));
     // Pre-filter by the URL's shop_type (set on the search page).
-    // 'laundry' shows laundry-only AND both-shops; 'pressing' shows pressing-only AND both.
     if (shopType === 'laundry') {
       filtered = filtered.filter((s) => (s.shop_type || 'laundry') === 'laundry' || s.shop_type === 'both');
     } else if (shopType === 'pressing') {
@@ -483,7 +483,7 @@ export default function LaundryResults() {
       case 'rating':
       default:           return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     }
-  }, [services, sortBy, searchQuery, shopType]);
+  }, [services, sortBy, smartFilters, shopType]);
 
   const handleBook = (service) => {
     // Open the pre-booking info modal first — only the explicit CTA inside
@@ -590,14 +590,23 @@ export default function LaundryResults() {
           </Card>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
+            <SmartSearchBar
+              items={services}
+              listingIcon={Shirt}
+              listingLabel="Shop"
+              placeholder="Filter by city, operator, or shop name…"
+              getName={(s) => s.name}
+              getCity={(s) => s.city}
+              getOperator={(s) => s.operator_name}
+              onFiltersChange={setSmartFilters}
+            />
+            <div className="hidden">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-600/60" />
               <Input
                 type="text"
-                placeholder="Search by name, area or city..."
+                placeholder="legacy"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-purple-50/40 border-purple-200 focus-visible:ring-purple-400"
               />
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>

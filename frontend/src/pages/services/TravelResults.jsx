@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Input } from '../../components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { 
@@ -46,6 +47,7 @@ export default function TravelResults() {
   const [startDateOffset, setStartDateOffset] = useState(0);
   const [endDateOffset, setEndDateOffset] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   
   // Trip date view tab: 'current', 'past', 'future'
   const [tripDateView, setTripDateView] = useState('current');
@@ -169,30 +171,28 @@ export default function TravelResults() {
 
   const filteredAndSortedTrips = useMemo(() => {
     let filtered = [...trips];
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(trip => 
-        trip.operator_name?.toLowerCase().includes(query) ||
-        trip.vehicle_type?.toLowerCase().includes(query) ||
-        trip.vehicle_name?.toLowerCase().includes(query)
-      );
-    }
-    
+
+    // iter 249: chip omnibar — operator + listing (vehicle name). City is
+    // typically pre-locked by the URL (from→to) so we don't expose place chips.
+    const { operators, listings } = smartFilters;
+    if (operators.size) filtered = filtered.filter(t => operators.has((t.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(t => listings.has((t.vehicle_name || t.vehicle_type || '').trim()));
+
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'price_asc': return (a.price || 0) - (b.price || 0);
         case 'price_desc': return (b.price || 0) - (a.price || 0);
         case 'departure':
-        default:
+        default: {
           const timeA = a.departure_time?.replace(':', '') || '0000';
           const timeB = b.departure_time?.replace(':', '') || '0000';
           return parseInt(timeA) - parseInt(timeB);
+        }
       }
     });
-    
+
     return filtered;
-  }, [trips, searchQuery, sortBy]);
+  }, [trips, smartFilters, sortBy]);
 
   const handleTripSelect = (trip) => {
     // Prevent booking past trips
@@ -454,18 +454,17 @@ export default function TravelResults() {
             </p>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search by operator or vehicle..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-              />
-            </div>
+          {/* Search and Filters — chip omnibar (operator + vehicle) */}
+          <SmartSearchBar
+            items={trips}
+            listingIcon={Bus}
+            listingLabel="Vehicle"
+            placeholder="Filter by operator or vehicle type/name…"
+            getName={(t) => t.vehicle_name || t.vehicle_type}
+            getCity={() => null}
+            getOperator={(t) => t.operator_name}
+            onFiltersChange={setSmartFilters}
+          >
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48 bg-white">
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
@@ -495,7 +494,7 @@ export default function TravelResults() {
                 <List className="w-4 h-4" />
               </Button>
             </div>
-          </div>
+          </SmartSearchBar>
         </div>
       </div>
 

@@ -1,5 +1,12 @@
 # Oryno Platform - PRD
 
+## Active Backlog (deferred, not blocking)
+
+- **Pre-fill the MoMo `proof_reference` field from a future webhook** when MTN provides one (currently ops enters manually via prompt).
+- **`GET /api/cinema/showtimes/{id}/details` missing `refund_policy`** — pure display nit from iter 242. Backend stores it correctly; only the read endpoint's response shape omits the field.
+- **Auto-create internal payout task** in the customer-service queue every time a refund lands at APPROVED + `requires_manual_processing=true` (improves ops experience over scanning the Refunds page).
+
+
 ## Latest Changes (Feb 2026 — iter 248: refund automation, money-trail clarity, banner swap)
 
 ### Money Trail clarity (`MoneyTrail.jsx`)

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -323,6 +324,7 @@ export default function RestaurantsResults() {
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [selectedCuisine, setSelectedCuisine] = useState('all');
 
   // Editable search state
@@ -387,15 +389,13 @@ export default function RestaurantsResults() {
 
   const filteredRestaurants = useMemo(() => {
     let filtered = [...restaurants];
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
-        r.name?.toLowerCase().includes(query) ||
-        r.cuisine?.toLowerCase().includes(query)
-      );
-    }
-    
+
+    // iter 249: chip omnibar replaces free-text search.
+    const { places, operators, listings } = smartFilters;
+    if (places.size) filtered = filtered.filter(r => places.has((r.city || '').trim()));
+    if (operators.size) filtered = filtered.filter(r => operators.has((r.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(r => listings.has((r.name || '').trim()));
+
     if (selectedCuisine !== 'all') {
       filtered = filtered.filter(r => r.cuisine?.toLowerCase() === selectedCuisine.toLowerCase());
     }
@@ -409,7 +409,7 @@ export default function RestaurantsResults() {
       default:
         return filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     }
-  }, [restaurants, sortBy, searchQuery, selectedCuisine]);
+  }, [restaurants, sortBy, smartFilters, selectedCuisine]);
 
   const handleViewDetails = (restaurant) => {
     sessionStorage.setItem('selectedRestaurant', JSON.stringify({
@@ -539,18 +539,17 @@ export default function RestaurantsResults() {
             </CardContent>
           </Card>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search restaurants..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-              />
-            </div>
+          {/* Filters — chip omnibar replaces the free-text + city dropdown combo. */}
+          <SmartSearchBar
+            items={restaurants}
+            listingIcon={Utensils}
+            listingLabel="Restaurant"
+            placeholder="Filter by city, operator, or restaurant name…"
+            getName={(r) => r.name}
+            getCity={(r) => r.city}
+            getOperator={(r) => r.operator_name}
+            onFiltersChange={setSmartFilters}
+          >
             <Select value={selectedCuisine} onValueChange={setSelectedCuisine}>
               <SelectTrigger className="w-40 bg-white">
                 <Utensils className="w-4 h-4 mr-2" />
@@ -592,7 +591,7 @@ export default function RestaurantsResults() {
                 <List className="w-4 h-4" />
               </Button>
             </div>
-          </div>
+          </SmartSearchBar>
         </div>
       </div>
 

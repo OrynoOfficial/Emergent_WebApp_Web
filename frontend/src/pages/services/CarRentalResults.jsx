@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { 
@@ -312,7 +313,7 @@ export default function CarRentalResults() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('price_low');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [selectedType, setSelectedType] = useState('all');
   const [selectedTransmission, setSelectedTransmission] = useState('all');
 
@@ -380,15 +381,13 @@ export default function CarRentalResults() {
 
   const filteredVehicles = useMemo(() => {
     let filtered = [...vehicles];
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(v => 
-        v.name?.toLowerCase().includes(query) ||
-        v.brand?.toLowerCase().includes(query)
-      );
-    }
-    
+
+    // iter 249: chip omnibar.
+    const { places, operators, listings } = smartFilters;
+    if (places.size) filtered = filtered.filter(v => places.has((v.city || '').trim()));
+    if (operators.size) filtered = filtered.filter(v => operators.has((v.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(v => listings.has(((v.vehicle_name || v.name) || '').trim()));
+
     if (selectedType !== 'all') {
       filtered = filtered.filter(v => v.type === selectedType);
     }
@@ -406,7 +405,7 @@ export default function CarRentalResults() {
       default:
         return filtered.sort((a, b) => a.price_per_day - b.price_per_day);
     }
-  }, [vehicles, sortBy, searchQuery, selectedType, selectedTransmission]);
+  }, [vehicles, sortBy, smartFilters, selectedType, selectedTransmission]);
 
   const handleSelectVehicle = (vehicle) => {
     const vehicleId = vehicle._id || vehicle.id;
@@ -526,18 +525,17 @@ export default function CarRentalResults() {
             </CardContent>
           </Card>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search vehicles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-              />
-            </div>
+          {/* Filters — chip omnibar */}
+          <SmartSearchBar
+            items={vehicles}
+            listingIcon={Car}
+            listingLabel="Vehicle"
+            placeholder="Filter by city, operator, or vehicle name…"
+            getName={(v) => v.vehicle_name || v.name}
+            getCity={(v) => v.city}
+            getOperator={(v) => v.operator_name}
+            onFiltersChange={setSmartFilters}
+          >
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger className="w-36 bg-white">
                 <Car className="w-4 h-4 mr-2" />
@@ -576,7 +574,7 @@ export default function CarRentalResults() {
               </SelectContent>
             </Select>
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          </div>
+          </SmartSearchBar>
         </div>
       </div>
 

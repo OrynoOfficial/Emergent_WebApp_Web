@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -517,6 +518,7 @@ export default function PackagesResults() {
   const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [detailsService, setDetailsService] = useState(null);
 
   // Filter state
@@ -594,13 +596,11 @@ export default function PackagesResults() {
 
   const filteredServices = useMemo(() => {
     let filtered = [...services];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(s =>
-        s.name?.toLowerCase().includes(q) ||
-        s.operator_name?.toLowerCase().includes(q)
-      );
-    }
+    // iter 249: chip filters (place / operator / service-name).
+    const { places, operators, listings } = smartFilters;
+    if (places.size) filtered = filtered.filter(s => places.has((s.city || s.origin || '').trim()));
+    if (operators.size) filtered = filtered.filter(s => operators.has((s.operator_name || '').trim()));
+    if (listings.size) filtered = filtered.filter(s => listings.has((s.name || '').trim()));
     filtered = filtered.filter(s => {
       const p = s.calculated_price || 0;
       if (p < priceRange[0] || p > priceRange[1]) return false;
@@ -621,7 +621,7 @@ export default function PackagesResults() {
       default:
         return filtered.sort((a, b) => (a.calculated_price || 0) - (b.calculated_price || 0));
     }
-  }, [services, sortBy, searchQuery, priceRange, maxDeliveryHours, selectedFeatures, pricingModelFilter, minMaxWeight]);
+  }, [services, sortBy, smartFilters, priceRange, maxDeliveryHours, selectedFeatures, pricingModelFilter, minMaxWeight]);
 
   const handleBook = (service) => {
     sessionStorage.setItem('selectedPackageService', JSON.stringify(service));
@@ -782,19 +782,17 @@ export default function PackagesResults() {
             </CardContent>
           </Card>
 
-          {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Search operator or service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-50 border-slate-200"
-                data-testid="results-search-input"
-              />
-            </div>
+          {/* Toolbar — chip omnibar replaces the free-text input */}
+          <SmartSearchBar
+            items={services}
+            listingIcon={Package}
+            listingLabel="Service"
+            placeholder="Filter by city, operator, or service name…"
+            getName={(s) => s.name}
+            getCity={(s) => s.city || s.origin}
+            getOperator={(s) => s.operator_name}
+            onFiltersChange={setSmartFilters}
+          >
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-44 bg-white"><SlidersHorizontal className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
               <SelectContent className="bg-white">
@@ -934,7 +932,7 @@ export default function PackagesResults() {
               <Button variant={viewMode === 'grid' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('grid')} className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''} data-testid="view-grid"><LayoutGrid className="w-4 h-4" /></Button>
               <Button variant={viewMode === 'list' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className={viewMode === 'list' ? 'bg-white shadow-sm' : ''} data-testid="view-list"><List className="w-4 h-4" /></Button>
             </div>
-          </div>
+          </SmartSearchBar>
         </div>
       </div>
 

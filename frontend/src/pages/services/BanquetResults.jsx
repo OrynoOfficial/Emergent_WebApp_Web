@@ -9,6 +9,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -356,6 +357,7 @@ export default function BanquetResults() {
   const [loading, setLoading] = useState(true);
   const [categoryTab, setCategoryTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
   const [sortBy, setSortBy] = useState('relevance');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -416,14 +418,11 @@ export default function BanquetResults() {
   const filteredServices = useMemo(() => {
     let list = services;
     if (categoryTab !== 'all') list = list.filter(s => (s.category || 'hall') === categoryTab);
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(s =>
-        (s.name || '').toLowerCase().includes(q) ||
-        (s.city || '').toLowerCase().includes(q) ||
-        (s.address || '').toLowerCase().includes(q)
-      );
-    }
+    // iter 249: chip omnibar (place / operator / venue name).
+    const { places, operators, listings } = smartFilters;
+    if (places.size) list = list.filter(s => places.has((s.city || '').trim()));
+    if (operators.size) list = list.filter(s => operators.has((s.operator_name || '').trim()));
+    if (listings.size) list = list.filter(s => listings.has((s.name || '').trim()));
     if (minPrice) list = list.filter(s => Number(s.base_price || 0) >= Number(minPrice));
     if (maxPrice) list = list.filter(s => Number(s.base_price || 0) <= Number(maxPrice));
     const sorted = [...list];
@@ -433,7 +432,7 @@ export default function BanquetResults() {
       case 'name':       return sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       default:           return sorted;
     }
-  }, [services, categoryTab, searchQuery, sortBy, minPrice, maxPrice]);
+  }, [services, categoryTab, smartFilters, sortBy, minPrice, maxPrice]);
 
   const qtyOf = (svcId) => cart.items.find(i => i.service_id === svcId)?.quantity || 0;
   const qtyOfItem = (itemId) => cart.items.find(i => i.service_id === itemId && i.snapshot?.kind === 'item')?.quantity || 0;
@@ -572,18 +571,20 @@ export default function BanquetResults() {
             </CardContent>
           </Card>
 
-          {/* Search bar + single Filter button (mirror Laundry results) */}
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
-              <Input
-                placeholder="Search services by name, city or address…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white border-teal-200 focus-visible:ring-teal-400"
-                data-testid="services-search-input"
-              />
-            </div>
+          {/* iter 249: chip omnibar replaces the misleading free-text search. */}
+          <SmartSearchBar
+            items={services}
+            listingIcon={PartyPopper}
+            listingLabel="Venue"
+            placeholder="Filter by city, operator, or venue name…"
+            getName={(s) => s.name}
+            getCity={(s) => s.city}
+            getOperator={(s) => s.operator_name}
+            onFiltersChange={setSmartFilters}
+          />
+
+          {/* Filter Popover */}
+          <div className="flex gap-2 items-center justify-end">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="border-teal-300 text-teal-700 hover:bg-teal-50 relative" data-testid="filter-button">

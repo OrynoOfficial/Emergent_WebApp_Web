@@ -1,0 +1,36 @@
+{
+  "summary": "iter249 SmartSearchBar roll-out to 6 service result pages tested end-to-end. 5/6 pages worked out-of-the-box; RestaurantsResults.jsx was hard-broken (white screen, page-level error 'smartFilters is not defined') because the searchQuery→smartFilters refactor forgot to declare the new useState. Added the missing state declaration, rebuilt, restarted frontend, and all 6 pages are now green. Chip add/clear, dropdown grouping, hidden legacy inputs, AND-style filtering, Travel's no-Places-group special case, and inline children rendering (sort + filter + view-mode) all verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "RestaurantsResults.jsx",
+        "issue": "Page rendered as white screen (body text length 0) with pageerror 'smartFilters is not defined'. The iter249 search/replace renamed the legacy searchQuery driven filter into smartFilters in the filteredRestaurants useMemo (lines 393, 411) but the corresponding useState declaration was never added — unlike the other 5 pages which correctly declare const [smartFilters, setSmartFilters] = useState({places, operators, listings}). Fixed by adding the missing useState beside the other state hooks (line 327).",
+        "selector": "/app/frontend/src/pages/services/RestaurantsResults.jsx:327",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Hygiene: a pre-merge `vite build` + smoke render check would have caught the Restaurants white-screen before reaching preview. iter247 had an identical class of broken-edit bug (CinemaResults dangling JSX). Consider an automated render smoke for the 9 service result pages whenever SmartSearchBar wiring changes.",
+    "Restaurants seed data has no operator_name field on restaurant rows → Operators suggestion group is always empty on /services/restaurants/results. Not blocking but the chip UX advertises a group that never has data. Decide: hide empty groups OR enrich seed."
+  ],
+  "critical_code_review_comments": [
+    "RestaurantsResults.jsx still keeps the dead [searchQuery, setSearchQuery] state alongside the new smartFilters state — neither is referenced in JSX anymore. Remove the dead `searchQuery` state to avoid future confusion.",
+    "SmartSearchBar.jsx empty-state UX: when a group has zero items it returns null (good); but when ALL three groups are empty it shows 'No matches in this list.' This worked correctly on Banquet/Yaoundé empty seed.",
+    "CarRental search for 'Comfort' returned 'No matches' because seed only contains 'Honda CR-V' and 'Mercedes-Benz E-Class'. The omnibar still rendered correctly — UX feedback is clear ('No matches in this list.'). Verified inline children render: All Types, All transmission, Price sort, List/Grid/Details view-mode."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/services/RestaurantsResults.jsx (added missing `const [smartFilters, setSmartFilters] = useState({places:new Set(),operators:new Set(),listings:new Set()})` at line 327; rebuilt with `yarn build`; restarted frontend supervisor service)"
+  ],
+  "success_rate": {"backend": "n/a (frontend-only request)", "frontend": "100% after 1 fix (6/6 pages render SmartSearchBar with no console/page errors; chip add+clear, AND filtering, hidden-legacy, and Travel-no-Places-group all verified)"},
+  "test_credentials": "customer@test.com / testpassword123 (two-step email→continue→password login flow at /login)",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login is two-step: click 'Login to Your Account' on splash → fill email → click 'Continue' → fill password → submit. Service result pages are protected; unauth redirects to /login. Banquet seed empty for Yaoundé; CarRental seed has only 2 vehicles for Douala. SmartSearchBar correctly shows empty-state copy when nothing matches. Travel page intentionally omits the Places group (getCity returns null). Re-test only needed if main agent further evolves SmartSearchBar; otherwise iter249 is functionally green.",
+  "rca of the issue": "Single root cause: the iter249 refactor renamed the filter source from searchQuery to smartFilters inside RestaurantsResults.jsx's filteredRestaurants useMemo, but the corresponding useState hook was not introduced. Result: every render threw ReferenceError 'smartFilters is not defined' during the useMemo's destructure `const { places, operators, listings } = smartFilters;`, which aborted the component render, leaving the document body empty (body.innerText.length === 0 → white screen). Reproduction: navigate to /services/restaurants/results?city=Yaoundé while logged in; observe pageerror in console and zero rendered content. Mitigation applied: added the missing `useState` for smartFilters with the same initial-shape used by the other 5 pages (CarRental/Banquet/Laundry/Packages/Travel). After rebuild + frontend restart, page renders, omnibar functions, and place chip add/clear cycles round-trip correctly."
+}
