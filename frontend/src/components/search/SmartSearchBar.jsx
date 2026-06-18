@@ -263,9 +263,9 @@ function SuggestionGroup({ title, icon: Icon, color, items, active, onPick }) {
             className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-left transition-colors ${isActive ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'hover:bg-slate-50'}`}
           >
             <span className="truncate">{value}</span>
-            <span className="text-[10px] text-slate-400 tabular-nums shrink-0">
-              {isActive ? 'added' : `${count} match${count === 1 ? '' : 'es'}`}
-            </span>
+            {isActive && (
+              <span className="text-[10px] text-slate-400 tabular-nums shrink-0">added</span>
+            )}
           </button>
         );
       })}

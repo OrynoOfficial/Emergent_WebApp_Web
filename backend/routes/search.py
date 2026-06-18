@@ -83,6 +83,13 @@ async def global_search(
         return {"query": q, "results": [], "total": 0, "by_type": {}}
 
     rx = {"$regex": _ai_pattern(query), "$options": "i"}
+    # Exclusion guard — soft-deleted / suspended / archived rows must never
+    # surface in global search. `$ne` and `$nin` both match docs that don't
+    # have the field, so this is safe to apply to every collection.
+    _ALIVE = {
+        "is_active": {"$ne": False},
+        "status": {"$nin": ["suspended", "deleted", "archived", "inactive", "cancelled"]},
+    }
     results = []
 
     # ── 1. Locations ────────────────────────────────────────────────────────
@@ -102,11 +109,11 @@ async def global_search(
 
     # ── 2. Operators ────────────────────────────────────────────────────────
     ops_cursor = db.operators.find(
-        {"$or": [
+        {"$and": [_ALIVE, {"$or": [
             {"name": rx},
             {"contact_email": rx},
             {"description": rx},
-        ]},
+        ]}]},
         {"_id": 1, "name": 1, "logo_url": 1, "service_types": 1, "city": 1},
     ).limit(6)
     async for op in ops_cursor:
@@ -123,7 +130,7 @@ async def global_search(
 
     # ── 3. Hotels ──────────────────────────────────────────────────────────
     hotels_cursor = db.hotels.find(
-        {"$or": [{"name": rx}, {"city": rx}, {"address": rx}, {"amenities": rx}]},
+        {"$and": [_ALIVE, {"$or": [{"name": rx}, {"city": rx}, {"address": rx}, {"amenities": rx}]}]},
         {"_id": 1, "name": 1, "city": 1, "star_rating": 1, "price_per_night": 1,
          "image_url": 1, "images": 1, "operator_name": 1},
     ).limit(6)
@@ -180,7 +187,7 @@ async def global_search(
 
     # ── 5. Cinema films + showtimes ────────────────────────────────────────
     films_cursor = db.films.find(
-        {"$or": [{"title": rx}, {"genre": rx}, {"genres": rx}, {"director": rx}, {"cast": rx}]},
+        {"$and": [_ALIVE, {"$or": [{"title": rx}, {"genre": rx}, {"genres": rx}, {"director": rx}, {"cast": rx}]}]},
         {"_id": 1, "title": 1, "genre": 1, "genres": 1, "poster_url": 1, "image_url": 1, "duration": 1},
     ).limit(5)
     async for f in films_cursor:
@@ -198,8 +205,8 @@ async def global_search(
 
     # ── 6. Restaurants ─────────────────────────────────────────────────────
     rest_cursor = db.restaurants.find(
-        {"$or": [{"name": rx}, {"city": rx}, {"cuisine_type": rx},
-                 {"cuisine_types": rx}, {"address": rx}]},
+        {"$and": [_ALIVE, {"$or": [{"name": rx}, {"city": rx}, {"cuisine_type": rx},
+                 {"cuisine_types": rx}, {"address": rx}]}]},
         {"_id": 1, "name": 1, "city": 1, "cuisine_type": 1, "cuisine_types": 1,
          "rating": 1, "image_url": 1, "images": 1},
     ).limit(5)
@@ -243,11 +250,11 @@ async def global_search(
 
     # ── 8. Car rentals ─────────────────────────────────────────────────────
     cars_cursor = db.car_rentals.find(
-        {"$or": [
+        {"$and": [_ALIVE, {"$or": [
             {"vehicle_name": rx}, {"name": rx}, {"model": rx},
             {"make": rx}, {"city": rx}, {"vehicle_type": rx},
             {"category": rx}, {"operator_name": rx},
-        ]},
+        ]}]},
         {"_id": 1, "vehicle_name": 1, "name": 1, "make": 1, "model": 1, "city": 1,
          "vehicle_type": 1, "category": 1, "daily_rate": 1, "price_per_day": 1,
          "image_url": 1, "images": 1, "operator_name": 1},
@@ -269,10 +276,10 @@ async def global_search(
 
     # ── 9. Banquet venues ──────────────────────────────────────────────────
     banquet_cursor = db.banquets.find(
-        {"$or": [
+        {"$and": [_ALIVE, {"$or": [
             {"name": rx}, {"city": rx}, {"venue_type": rx},
             {"category": rx}, {"operator_name": rx},
-        ]},
+        ]}]},
         {"_id": 1, "name": 1, "city": 1, "venue_type": 1, "category": 1,
          "capacity": 1, "max_capacity": 1, "base_price": 1, "image_url": 1, "images": 1},
     ).limit(5)
@@ -292,10 +299,10 @@ async def global_search(
 
     # ── 10. Laundry / Pressing ─────────────────────────────────────────────
     pressing_cursor = db.pressings.find(
-        {"$or": [
+        {"$and": [_ALIVE, {"$or": [
             {"name": rx}, {"city": rx}, {"shop_type": rx}, {"address": rx},
             {"operator_name": rx},
-        ]},
+        ]}]},
         {"_id": 1, "name": 1, "city": 1, "shop_type": 1,
          "price_per_kg": 1, "image_url": 1, "images": 1, "operator_name": 1},
     ).limit(5)
