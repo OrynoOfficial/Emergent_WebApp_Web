@@ -236,27 +236,27 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
         </div>
       </div>
       
-      <CardContent className="p-4 surface-1">
+      <CardContent className="p-4">
         <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="text-center p-2 surface-2 rounded-lg">
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
             <Users className="w-4 h-4 mx-auto text-slate-500 mb-1" />
             <p className="text-xs text-slate-500">Seats</p>
             <p className="font-semibold text-sm">{car.seats}</p>
           </div>
-          <div className="text-center p-2 surface-2 rounded-lg">
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
             <Fuel className="w-4 h-4 mx-auto text-slate-500 mb-1" />
             <p className="text-xs text-slate-500">Fuel</p>
             <p className="font-semibold text-sm capitalize">{car.fuel_type?.slice(0, 6)}</p>
           </div>
-          <div className="text-center p-2 surface-2 rounded-lg">
+          <div className="text-center p-2 bg-slate-50 rounded-lg">
             <Gauge className="w-4 h-4 mx-auto text-slate-500 mb-1" />
             <p className="text-xs text-slate-500">Trans.</p>
             <p className="font-semibold text-sm capitalize">{car.transmission?.slice(0, 4)}</p>
           </div>
-          <div className="text-center p-2 surface-2 rounded-lg ring-1 ring-emerald-200">
+          <div className="text-center p-2 bg-emerald-50 rounded-lg">
             <DollarSign className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
             <p className="text-xs text-slate-500">Day</p>
-            <p className="font-bold text-sm text-emerald-700">{(car.price_per_day/1000).toFixed(0)}k</p>
+            <p className="font-bold text-sm text-emerald-600">{(car.price_per_day/1000).toFixed(0)}k</p>
           </div>
         </div>
 
@@ -266,16 +266,16 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
           {car.plate_number && (
             <>
               <span className="text-slate-300">•</span>
-              <span className="font-mono text-xs surface-3 px-2 py-0.5 rounded">{car.plate_number}</span>
+              <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{car.plate_number}</span>
             </>
           )}
         </div>
         
         {/* Operator Assignment */}
         {car.operator_name && (
-          <div className="flex items-center gap-2 mb-3 p-2 surface-2 rounded-lg border surface-border">
-            <Building2 className="w-4 h-4 text-slate-600" />
-            <span className="text-sm font-medium text-slate-800 truncate">{car.operator_name}</span>
+          <div className="flex items-center gap-2 mb-3 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-800 truncate">{car.operator_name}</span>
           </div>
         )}
 
@@ -470,7 +470,7 @@ export default function CarRentalManagement() {
   };
 
   return (
-    <div className="min-h-screen surface-page">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50">
       <ManagementShell
         title="Car Rental Management Center"
         icon={Car}
@@ -872,7 +872,7 @@ export default function CarRentalManagement() {
                   data-testid="car-form-policies"
                 />
               </div>
-              <div className="col-span-2 flex items-center justify-between surface-2 rounded-lg border surface-border p-3">
+              <div className="col-span-2 flex items-center justify-between bg-emerald-50 rounded-lg border border-emerald-100 p-3">
                 <div>
                   <Label className="cursor-pointer">Vehicle Available for Booking</Label>
                   <p className="text-xs text-slate-500 mt-0.5">Renters can only book vehicles marked as available.</p>
@@ -959,41 +959,41 @@ export default function CarRentalManagement() {
                 </ScrollArea>
               )}
 
-              <div className="surface-2 rounded-lg p-4 border surface-border">
-                <h3 className="font-bold text-xl text-slate-900">{viewingCar.brand} {viewingCar.model}</h3>
-                <p className="text-slate-600">{viewingCar.year} • {viewingCar.transmission} • {viewingCar.car_type}</p>
+              <div className="bg-emerald-50 rounded-lg p-4">
+                <h3 className="font-bold text-xl text-emerald-900">{viewingCar.brand} {viewingCar.model}</h3>
+                <p className="text-emerald-700">{viewingCar.year} • {viewingCar.transmission} • {viewingCar.car_type}</p>
               </div>
               
               {/* Operator Assignment - Prominent Display */}
               {viewingCar.operator_name && (
-                <div className="surface-2 border surface-border rounded-lg p-3">
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 surface-3 rounded-full flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-slate-700" />
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-indigo-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 font-medium">Assigned Operator</p>
-                      <p className="font-bold text-slate-900 text-lg">{viewingCar.operator_name}</p>
+                      <p className="text-xs text-indigo-600 font-medium">Assigned Operator</p>
+                      <p className="font-bold text-indigo-900 text-lg">{viewingCar.operator_name}</p>
                     </div>
                   </div>
                 </div>
               )}
               
               <div className="grid grid-cols-3 gap-4">
-                <div className="p-3 surface-2 rounded-lg text-center">
+                <div className="p-3 bg-slate-50 rounded-lg text-center">
                   <Users className="h-5 w-5 mx-auto text-slate-500 mb-1" />
                   <p className="text-xs text-slate-500">Seats</p>
                   <p className="font-bold">{viewingCar.seats}</p>
                 </div>
-                <div className="p-3 surface-2 rounded-lg text-center">
+                <div className="p-3 bg-slate-50 rounded-lg text-center">
                   <Fuel className="h-5 w-5 mx-auto text-slate-500 mb-1" />
                   <p className="text-xs text-slate-500">Fuel</p>
                   <p className="font-bold capitalize">{viewingCar.fuel_type}</p>
                 </div>
-                <div className="p-3 surface-2 rounded-lg text-center ring-1 ring-emerald-200">
+                <div className="p-3 bg-emerald-50 rounded-lg text-center">
                   <DollarSign className="h-5 w-5 mx-auto text-emerald-600 mb-1" />
                   <p className="text-xs text-slate-500">Per Day</p>
-                  <p className="font-bold text-emerald-700">{formatFCFA(viewingCar.price_per_day)}</p>
+                  <p className="font-bold text-emerald-600">{formatFCFA(viewingCar.price_per_day)}</p>
                 </div>
               </div>
 

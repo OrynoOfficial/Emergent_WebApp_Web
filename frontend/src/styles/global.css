@@ -450,31 +450,3 @@ select:focus,
     opacity: 0;
   }
 }
-
-
-/* ============================================
-   DEPTH-BASED SURFACE PALETTE (neutral slate)
-   Pilot rollout on CarRentalManagement — uses
-   semantic tokens so we can swap palettes
-   globally by editing this single block.
-   ============================================ */
-
-:root {
-  /* Page wash — the canvas behind every panel */
-  --surface-page:     #F8FAFC;  /* slate-50 */
-  /* Depth 1 — primary panels / modals lifted off the page */
-  --surface-1:        #FFFFFF;
-  /* Depth 2 — sub-panels nested inside a depth-1 surface */
-  --surface-2:        #F1F5F9;  /* slate-100 */
-  /* Depth 3 — tertiary chips, inset rows inside a depth-2 surface */
-  --surface-3:        #E2E8F0;  /* slate-200 */
-  /* Hairline borders between depths */
-  --surface-border:   #E2E8F0;  /* slate-200 */
-  --surface-border-strong: #CBD5E1;  /* slate-300 */
-}
-
-.surface-page    { background-color: var(--surface-page); }
-.surface-1       { background-color: var(--surface-1); }
-.surface-2       { background-color: var(--surface-2); }
-.surface-3       { background-color: var(--surface-3); }
-.surface-border  { border-color: var(--surface-border); }
