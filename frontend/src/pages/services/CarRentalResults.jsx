@@ -491,7 +491,7 @@ export default function CarRentalResults() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-4 min-w-0">
+                  <div className="flex items-center gap-4 min-w-0 flex-wrap">
                     <div className="flex items-center gap-2.5">
                       <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center shrink-0">
                         <Car className="w-5 h-5" />
@@ -506,12 +506,34 @@ export default function CarRentalResults() {
                         </div>
                       </div>
                     </div>
-                    <div className="hidden md:flex items-center gap-3 pl-4 border-l border-white/20 text-xs">
+                    {/* Trip summary + active filter chips — always visible
+                        so the user can see what's actually applied. */}
+                    <div className="flex items-center gap-2 flex-wrap text-xs" data-testid="car-rental-summary-chips">
                       {pickupDate && returnDate && (
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="w-3.5 h-3.5 text-white/60" />
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/20">
+                          <CalendarDays className="w-3 h-3 text-white/70" />
                           {format(new Date(pickupDate), 'MMM d')} – {format(new Date(returnDate), 'MMM d')}
                           <span className="text-white/60">· {days} day{days !== 1 ? 's' : ''}</span>
+                        </span>
+                      )}
+                      {selectedType !== 'all' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-300/40 capitalize">
+                          Type: {selectedType}
+                        </span>
+                      )}
+                      {selectedTransmission !== 'all' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-300/40 capitalize">
+                          {selectedTransmission}
+                        </span>
+                      )}
+                      {sortBy !== 'price_low' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-300/40">
+                          Sort: {sortBy === 'price_high' ? 'Price high → low' : 'Rating'}
+                        </span>
+                      )}
+                      {(smartFilters?.cities?.length || 0) + (smartFilters?.operators?.length || 0) + (smartFilters?.listings?.length || 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-300/40">
+                          {(smartFilters?.cities?.length || 0) + (smartFilters?.operators?.length || 0) + (smartFilters?.listings?.length || 0)} filter chip(s)
                         </span>
                       )}
                     </div>
@@ -642,6 +664,8 @@ export default function CarRentalResults() {
         vehicleId={detailsVehicleId}
         open={!!detailsVehicleId}
         onClose={() => setDetailsVehicleId(null)}
+        pickupDate={pickupDate}
+        returnDate={returnDate}
       />
     </div>
   );

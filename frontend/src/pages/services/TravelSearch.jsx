@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { CalendarIcon, MapPin, Users, Search, Bus, Plus, Minus, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
@@ -94,23 +93,54 @@ export default function TravelSearch() {
           <Bus className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
           <h1 className="text-3xl font-bold mb-2">Search Intercity Travel</h1>
           <p className="text-sm text-slate-200 mb-5">Book bus tickets across all major cities in Cameroon</p>
-          {/* Smart hero search owns the "from" city — the destination stays
-              as a regular input below since one rich smart input is enough. */}
-          <div className="max-w-2xl mx-auto text-left">
-            <LandingSmartSearch
-              serviceType="travel"
-              resultsPath="/services/travel/results"
-              cityParam="from"
-              selectedCity={searchParams.from_city}
-              onSelectCity={(city) => {
-                setSearchParams(p => ({ ...p, from_city: city }));
-                setErrors(e => ({ ...e, from_city: undefined }));
-              }}
-              onClearCity={() =>
-                setSearchParams(p => ({ ...p, from_city: '' }))
-              }
-              error={errors.from_city}
-            />
+          {/* Dual smart-search bars — From + To — with a swap arrow between
+              them. Replaces the legacy single hero bar + secondary "To"
+              LocationInput in the form below (iter 252). */}
+          <div className="max-w-3xl mx-auto text-left">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-start">
+              <LandingSmartSearch
+                serviceType="travel"
+                pageType="travel_from"
+                resultsPath="/services/travel/results"
+                cityParam="from"
+                cityLabel="From"
+                selectedCity={searchParams.from_city}
+                onSelectCity={(city) => {
+                  setSearchParams(p => ({ ...p, from_city: city }));
+                  setErrors(e => ({ ...e, from_city: undefined }));
+                }}
+                onClearCity={() =>
+                  setSearchParams(p => ({ ...p, from_city: '' }))
+                }
+                error={errors.from_city}
+              />
+              <button
+                type="button"
+                onClick={swapCities}
+                aria-label="Swap from and to cities"
+                title="Swap cities"
+                className="self-start mt-2 md:mt-2 h-14 w-12 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white shrink-0"
+                data-testid="travel-swap-cities"
+              >
+                <ArrowRightLeft className="w-5 h-5" />
+              </button>
+              <LandingSmartSearch
+                serviceType="travel"
+                pageType="travel_to"
+                resultsPath="/services/travel/results"
+                cityParam="to"
+                cityLabel="To"
+                selectedCity={searchParams.to_city}
+                onSelectCity={(city) => {
+                  setSearchParams(p => ({ ...p, to_city: city }));
+                  setErrors(e => ({ ...e, to_city: undefined }));
+                }}
+                onClearCity={() =>
+                  setSearchParams(p => ({ ...p, to_city: '' }))
+                }
+                error={errors.to_city}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -141,39 +171,9 @@ export default function TravelSearch() {
 
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* From city owned by hero smart search (iter 251). */}
-
-                {/* To City with Swap Button */}
-                <div className="relative md:col-span-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <LocationInput
-                        label="To"
-                        value={searchParams.to_city}
-                        onChange={(v) => {
-                          setSearchParams(p => ({ ...p, to_city: v }));
-                          setErrors(e => ({ ...e, to_city: undefined }));
-                        }}
-                        placeholder="Destination city"
-                        required
-                        error={errors.to_city}
-                        shake={shakeFields.to_city}
-                        iconColor="text-red-500"
-                        excludeValue={searchParams.from_city}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={swapCities}
-                      className="mt-7 h-12 w-12"
-                      title="Swap cities"
-                    >
-                      <ArrowRightLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                {/* From + To cities owned by the dual hero smart bars
+                    (iter 252). Legacy LocationInput rows + swap button
+                    removed from the form. */}
 
                 {/* Departure Date */}
                 <div>

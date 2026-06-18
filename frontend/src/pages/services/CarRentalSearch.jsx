@@ -120,19 +120,27 @@ export default function CarRentalSearch() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Drop-off Location (conditional) — appears when the user
                     toggles "different drop-off" below. Pickup is owned by the
-                    smart-search bar in the hero, so we no longer render a
-                    separate pickup field here. */}
+                    smart-search bar in the hero; this drop-off control mirrors
+                    the same UX (live autocomplete + chip) so the experience
+                    stays consistent. */}
                 {differentDropoff && (
                   <div className="md:col-span-2">
-                    <LocationInput
-                      label="Drop-off city"
-                      value={searchParams.dropoff_location}
-                      onChange={(v) => setSearchParams(p => ({ ...p, dropoff_location: v }))}
-                      placeholder="Search drop-off city..."
-                      required
+                    <Label className="mb-1.5 block">Drop-off city</Label>
+                    <LandingSmartSearch
+                      serviceType="car_rental"
+                      pageType="car_rental_dropoff"
+                      resultsPath="/services/car-rental/results"
+                      cityParam="dropoff"
+                      cityLabel="Drop-off"
+                      selectedCity={searchParams.dropoff_location}
+                      onSelectCity={(city) => {
+                        setSearchParams(p => ({ ...p, dropoff_location: city }));
+                        setErrors(e => ({ ...e, dropoff_location: undefined }));
+                      }}
+                      onClearCity={() =>
+                        setSearchParams(p => ({ ...p, dropoff_location: '' }))
+                      }
                       error={errors.dropoff_location}
-                      shake={shakeFields.dropoff_location}
-                      iconColor="text-red-500"
                     />
                   </div>
                 )}

@@ -46,7 +46,7 @@ const FEATURE_LABELS = {
   backup_camera: 'Backup Camera'
 };
 
-export default function CarRentalDetails({ vehicleId: idProp, open: openProp, onClose, embedded = false } = {}) {
+export default function CarRentalDetails({ vehicleId: idProp, open: openProp, onClose, embedded = false, pickupDate: pickupDateProp, returnDate: returnDateProp } = {}) {
   const params = useParams();
   const id = idProp || params.id;
   const navigate = useNavigate();
@@ -61,12 +61,37 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
   // Lightbox state for the image gallery — clicking any image expands it
   // full-screen with arrow navigation and ESC-to-close.
   const [lightboxIdx, setLightboxIdx] = useState(null);
+  // Description "Read more" toggle — clamps long copy to roughly 15 lines
+  // (320px @ leading-relaxed) before offering the expand control.
+  const [descExpanded, setDescExpanded] = useState(false);
+  // Pickup / return dates flow in from three places (in priority order):
+  //   1. explicit props (when embedded from CarRentalResults — best)
+  //   2. URL search params (deep-link via the dedicated route)
+  //   3. sane defaults (today / +3 days)
+  // Before iter 252 the modal only read the URL params, so when opened
+  // inline from the results page it always fell back to today/+3 and the
+  // right-rail price was computed for the wrong window.
+  const _parseDate = (v) => (v ? new Date(v) : null);
   const [selectedDates, setSelectedDates] = useState({
-    pickup: searchParams.get('pickupDate') ? new Date(searchParams.get('pickupDate')) : new Date(),
-    return: searchParams.get('returnDate') ? new Date(searchParams.get('returnDate')) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    pickup: _parseDate(pickupDateProp)
+      || _parseDate(searchParams.get('pickupDate'))
+      || new Date(),
+    return: _parseDate(returnDateProp)
+      || _parseDate(searchParams.get('returnDate'))
+      || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
   });
   const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
   const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
+
+  // Keep local dates in sync whenever the parent passes new ones (e.g. the
+  // user reopens the modal after editing search dates on the results page).
+  useEffect(() => {
+    if (!embedded) return;
+    setSelectedDates({
+      pickup: _parseDate(pickupDateProp) || new Date(),
+      return: _parseDate(returnDateProp) || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    });
+  }, [embedded, pickupDateProp, returnDateProp]);
 
   // When used as a route (deep link), the modal is always "open" until the
   // user dismisses it via the X / back button. When embedded inline from
@@ -328,15 +353,43 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
               </div>
               <div className="p-5">
                 {vehicle.description && (
-                  <div className="text-slate-700 text-sm mb-4 space-y-3 leading-relaxed">
-                    {/* Render the description as paragraphs split on blank lines.
-                        This turns a single long blob into something readable
-                        while still respecting the operator's formatting. */}
-                    {String(vehicle.description)
-                      .split(/\n{2,}/)
-                      .map((para, i) => (
-                        <p key={i} className="whitespace-pre-line">{para.trim()}</p>
-                      ))}
+                  <div className="mb-4" data-testid="car-rental-description">
+                    {/* Render the description as paragraphs split on blank
+                        lines. Long copy is clamped to ~15 lines until the
+                        user expands it, so the modal never becomes a wall
+                        of text on first view. */}
+                    <div
+                      className={cn(
+                        'text-slate-700 text-sm space-y-3 leading-relaxed overflow-hidden transition-[max-height] duration-300',
+                        descExpanded ? 'max-h-[2000px]' : 'max-h-[20rem]',
+                      )}
+                    >
+                      {String(vehicle.description)
+                        .split(/\n{2,}/)
+                        .map((para, i) => (
+                          <p key={i} className="whitespace-pre-line">{para.trim()}</p>
+                        ))}
+                    </div>
+                    {/* Only render the toggle when there is something to
+                        hide (rough heuristic: > 600 chars or 5+ paragraphs).
+                        Avoids a misleading "Read more" on tiny blurbs. */}
+                    {(vehicle.description.length > 600
+                      || vehicle.description.split(/\n{2,}/).length > 4) && (
+                      <button
+                        type="button"
+                        onClick={() => setDescExpanded((v) => !v)}
+                        className="mt-2 inline-flex items-center gap-1 text-[#082c59] font-semibold text-xs hover:underline"
+                        data-testid="car-rental-description-toggle"
+                      >
+                        {descExpanded ? 'Read less' : 'Read more'}
+                        <ChevronDown
+                          className={cn(
+                            'w-3.5 h-3.5 transition-transform',
+                            descExpanded && 'rotate-180',
+                          )}
+                        />
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

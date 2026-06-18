@@ -47,8 +47,10 @@ const TYPE_META = {
 
 export default function LandingSmartSearch({
   serviceType,
+  pageType,
   resultsPath,
   cityParam = 'city',
+  cityLabel = 'Pickup',
   onSelectCity,
   selectedCity,
   onClearCity,
