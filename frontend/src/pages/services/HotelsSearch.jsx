@@ -8,6 +8,7 @@ import { CalendarIcon, MapPin, Users, Search, Hotel, Plus, Minus, Star, Wifi, Ca
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function HotelsSearch() {
   const navigate = useNavigate();
@@ -80,36 +81,39 @@ export default function HotelsSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Hotel className="w-16 h-16 mx-auto mb-4 text-amber-400" />
-          <h1 className="text-4xl font-bold mb-4">Find Your Perfect Stay</h1>
-          <p className="text-lg text-slate-200">Book hotels, guesthouses, and apartments across Cameroon</p>
+          <Hotel className="w-12 h-12 mx-auto mb-3 text-amber-400" />
+          <h1 className="text-3xl font-bold mb-2">Find Your Perfect Stay</h1>
+          <p className="text-sm text-slate-200 mb-5">Book hotels, guesthouses, and apartments across Cameroon</p>
+          {/* Smart hero search — owns destination selection (iter 251). */}
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="hotel"
+              resultsPath="/services/hotels/results"
+              cityParam="destination"
+              selectedCity={searchParams.destination}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, destination: city }));
+                setErrors(e => ({ ...e, destination: undefined }));
+              }}
+              onClearCity={() =>
+                setSearchParams(p => ({ ...p, destination: '' }))
+              }
+              error={errors.destination}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Destination */}
-                <div className="md:col-span-2">
-                  <LocationInput
-                    label="Destination"
-                    value={searchParams.destination}
-                    onChange={(v) => {
-                      setSearchParams(p => ({ ...p, destination: v }));
-                      setErrors(e => ({ ...e, destination: undefined }));
-                    }}
-                    placeholder="Where do you want to stay?"
-                    required
-                    error={errors.destination}
-                    shake={shakeFields.destination}
-                    iconColor="text-amber-500"
-                  />
-                </div>
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Destination owned by the hero smart search — legacy
+                    LocationInput row removed in iter 251. */}
 
                 {/* Check-in Date */}
                 <div>

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Film, Play, Calendar, Clock, Star, Ticket } from 'lucide-react';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 const GENRES = ['All Genres', 'Action', 'Comedy', 'Drama', 'Horror', 'Sci-Fi', 'Romance', 'Animation'];
 
@@ -52,36 +53,35 @@ export default function CinemaSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Film className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-          <h1 className="text-4xl font-bold mb-4">Cinema & Movies</h1>
-          <p className="text-lg text-slate-200">Find movies and book tickets at cinemas near you</p>
+          <Film className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
+          <h1 className="text-3xl font-bold mb-2">Cinema & Movies</h1>
+          <p className="text-sm text-slate-200 mb-5">Find movies and book tickets at cinemas near you</p>
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="cinema"
+              resultsPath="/services/cinema/results"
+              cityParam="city"
+              selectedCity={searchParams.city}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, city }));
+                setErrors(e => ({ ...e, city: undefined }));
+              }}
+              onClearCity={() => setSearchParams(p => ({ ...p, city: '' }))}
+              error={errors.city}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* City */}
-                <div>
-                  <LocationInput
-                    label="City"
-                    value={searchParams.city}
-                    onChange={(v) => {
-                      setSearchParams(p => ({ ...p, city: v }));
-                      setErrors(e => ({ ...e, city: undefined }));
-                    }}
-                    placeholder="Search city..."
-                    required
-                    error={errors.city}
-                    shake={shakeFields.city}
-                    iconColor="text-yellow-500"
-                  />
-                </div>
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* City owned by hero smart search (iter 251). */}
 
                 {/* Genre */}
                 <div>

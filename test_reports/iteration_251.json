@@ -1,0 +1,49 @@
+{
+  "summary": "iter251 end-to-end test of car-rental city filter fix + accent-insensitive matching across 5 services + global search service_type scope + LandingSmartSearch rollout to 9 landing pages. Backend 19/19 pytest cases PASSED. Frontend 8/9 landing pages fully green; 1 minor testid mismatch on /services/packages (uses `landing-smart-search-travel` instead of `landing-smart-search-packages` because PackagesSearch passes serviceType='travel' to drive the dropdown from travel_routes — bar still works end-to-end). E2E confirmed: from /services/car-rental → smart-pick 'Douala' → results page shows ONLY the 1 Douala vehicle (Mercedes Benz Ultra V8 Turbo); no Yaoundé leakage. Hero-to-form spacing verified as -mt-6 (margin-top: -21.6px), legacy primary LocationInput removed on every service, Travel + Packages correctly retain their secondary destination/delivery field.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "PackagesSearch hero smart-bar wrapper",
+        "issue": "Wrapper data-testid is `landing-smart-search-travel` (PackagesSearch passes serviceType='travel'). The spec/task explicitly mentioned `landing-smart-search-packages` for /services/packages. The bar itself renders, the input/dropdown/chip/clear all work — but any selector that hard-codes `landing-smart-search-packages` will miss it. Confirm with main agent: keep current impl (testid follows the serviceType used to query the API → travel) or expose a separate `pageType` prop that controls the wrapper testid independent of the data source.",
+        "selector": "[data-testid=\"landing-smart-search-packages\"]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "LandingSmartSearch chip text",
+        "issues": [
+          "Chip is hardcoded to 'Pickup: <city>' (LandingSmartSearch.jsx line 185) for ALL 9 service pages. For hotels/restaurants/cinema/events/laundry/banquet this reads oddly — those services have no 'pickup', they are destinations. Spec described it as 'Pickup/Destination: City ×'. Recommend taking a `cityLabel` prop (default 'Pickup') and pass `cityLabel='Destination'` for hotel/restaurant/cinema/event/laundry/banquet pages and keep 'Pickup' for car-rental/travel/packages. The clear-button aria-label ('Clear pickup city') has the same issue. Non-blocking but a polish item."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter251_city_filter_and_search_scope.py",
+    "/app/test_reports/pytest/iter251.xml"
+  ],
+  "action_items": [
+    "(LOW) /services/packages wrapper testid: pass a `pageType='packages'` prop or split serviceType from the wrapper testid so `landing-smart-search-packages` exists as advertised. As of now, automated selectors that follow the spec literally will fail on /services/packages only.",
+    "(LOW polish) Make the chip label dynamic: 'Pickup' for car_rental/travel/packages, 'Destination' for hotel/restaurant/cinema/event/laundry/banquet. Today every page says 'Pickup: Douala' which reads oddly on /services/hotels."
+  ],
+  "critical_code_review_comments": [
+    "utils/text_match.py is a clean, well-documented helper — good DRY refactor. Reused correctly across car_rental, hotels, restaurants, banquets, pressing routes.",
+    "routes/search.py uses an inline copy of the same accent-pattern logic (`_ai_pattern`) instead of importing from utils.text_match.accent_insensitive_pattern. Two sources of truth for the same algorithm — extract into a shared helper to prevent drift.",
+    "LandingSmartSearch hardcodes 'Pickup' in chip text and aria-label — see design_issues."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter251_city_filter_and_search_scope.py (new pytest module — 19 tests covering car-rental city filter regression, accent-insensitive matching on hotels/restaurants/banquets/pressing, /api/search/ service_type scope across 8 service types, auth requirement)"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 — car-rental city filter ✅, accent-insensitive matching on hotels/restaurants/banquets/pressing ✅, /api/search/?service_type scope for all 8 service types ✅, /api/search/ auth requirement ✅)",
+    "frontend": "95% (smart bar + chip + clear work on 9/9 pages; packages wrapper testid uses 'travel' not 'packages' — minor; chip always reads 'Pickup' which is misleading on destination-only services)"
+  },
+  "test_credentials": "customer@test.com / testpassword123. Two-step login flow (welcome → 'Login to Your Account' → email + Continue → password + Sign In) was unreliable in headless Playwright (Sign In button selector resolution timed out). WORKAROUND that ALWAYS works: hit /api/auth/login via fetch() from a logged-out page and stash j.access_token in localStorage['access_token'] and localStorage['token'] — frontend picks it up on next route.",
+  "seed_data_creation": "No seed data created — relied on the existing Mercedes Benz Ultra V8 Turbo (Douala) and Yaoundé vehicle that the dev seed leaves behind.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend ALL passes — re-run anytime via `pytest backend/tests/test_iter251_city_filter_and_search_scope.py -v`. The login UI flow does NOT play well with Playwright (Sign In step button consistently times out) — use the localStorage fetch shortcut documented above. The LandingSmartSearch chip always says 'Pickup:' regardless of service — this is a known polish item, not a regression. For /services/packages, the wrapper testid is `landing-smart-search-travel` not `landing-smart-search-packages` because PackagesSearch passes serviceType='travel' to the smart bar (the dropdown queries travel routes). 8/9 landing pages have the spec-conformant testid. The accent-insensitive logic lives in TWO places (utils/text_match.py for service routes, routes/search.py inline) — flagged for DRY cleanup.",
+  "rca of the issue": "Original bug — `/api/car-rental/` ignored the `city` query param because the function signature simply didn't declare it. Fix in /app/backend/routes/car_rental.py line 85 added `city: Optional[str] = None` and applied `ci_regex_query` against `query['city']`. Verified live: ?city=Douala → 1 car (Douala only), ?city=Yaounde → 1 car (Yaoundé, accent-insensitive). The frontend smart bar passes `city` so the results page now correctly filters. No remaining backend issues."
+}

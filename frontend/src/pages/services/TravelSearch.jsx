@@ -8,6 +8,7 @@ import { CalendarIcon, MapPin, Users, Search, Bus, Plus, Minus, ArrowRightLeft }
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function TravelSearch() {
   const navigate = useNavigate();
@@ -88,20 +89,38 @@ export default function TravelSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Bus className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
-          <h1 className="text-4xl font-bold mb-4">Search Intercity Travel</h1>
-          <p className="text-lg text-slate-200">Book bus tickets across all major cities in Cameroon</p>
+          <Bus className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
+          <h1 className="text-3xl font-bold mb-2">Search Intercity Travel</h1>
+          <p className="text-sm text-slate-200 mb-5">Book bus tickets across all major cities in Cameroon</p>
+          {/* Smart hero search owns the "from" city — the destination stays
+              as a regular input below since one rich smart input is enough. */}
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="travel"
+              resultsPath="/services/travel/results"
+              cityParam="from"
+              selectedCity={searchParams.from_city}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, from_city: city }));
+                setErrors(e => ({ ...e, from_city: undefined }));
+              }}
+              onClearCity={() =>
+                setSearchParams(p => ({ ...p, from_city: '' }))
+              }
+              error={errors.from_city}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
+          <CardContent className="p-5">
             {/* Trip Type Toggle */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <Button
                 type="button"
                 variant={!isRoundTrip ? "default" : "outline"}
@@ -120,28 +139,12 @@ export default function TravelSearch() {
               </Button>
             </div>
 
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* From City */}
-                <div className="relative">
-                  <LocationInput
-                    label="From"
-                    value={searchParams.from_city}
-                    onChange={(v) => {
-                      setSearchParams(p => ({ ...p, from_city: v }));
-                      setErrors(e => ({ ...e, from_city: undefined }));
-                    }}
-                    placeholder="Departure city"
-                    required
-                    error={errors.from_city}
-                    shake={shakeFields.from_city}
-                    iconColor="text-green-500"
-                    excludeValue={searchParams.to_city}
-                  />
-                </div>
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* From city owned by hero smart search (iter 251). */}
 
                 {/* To City with Swap Button */}
-                <div className="relative">
+                <div className="relative md:col-span-2">
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <LocationInput

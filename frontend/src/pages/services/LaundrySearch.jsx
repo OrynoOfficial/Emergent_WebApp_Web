@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Search, Shirt, Truck, Clock, Sparkles, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function LaundrySearch() {
   const navigate = useNavigate();
@@ -43,36 +44,35 @@ export default function LaundrySearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section — original Oryno blue */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Shirt className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
-          <h1 className="text-4xl font-bold mb-4">Laundry &amp; Pressing</h1>
-          <p className="text-lg text-cyan-100">Professional cleaning services at your doorstep</p>
+          <Shirt className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
+          <h1 className="text-3xl font-bold mb-2">Laundry &amp; Pressing</h1>
+          <p className="text-sm text-cyan-100 mb-5">Professional cleaning services at your doorstep</p>
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="laundry"
+              resultsPath="/services/laundry/results"
+              cityParam="city"
+              selectedCity={searchParams.city}
+              onSelectCity={(city) => {
+                setSearchParams((p) => ({ ...p, city }));
+                setErrors((e) => ({ ...e, city: undefined }));
+              }}
+              onClearCity={() => setSearchParams((p) => ({ ...p, city: '' }))}
+              error={errors.city}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* City */}
-                <div>
-                  <LocationInput
-                    label="City"
-                    value={searchParams.city}
-                    onChange={(v) => {
-                      setSearchParams((p) => ({ ...p, city: v }));
-                      setErrors((e) => ({ ...e, city: undefined }));
-                    }}
-                    placeholder="Search city..."
-                    required
-                    error={errors.city}
-                    shake={shakeFields.city}
-                    iconColor="text-cyan-500"
-                  />
-                </div>
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* City owned by hero smart search (iter 251). */}
 
                 {/* Service Type — binary toggle: Laundry vs Pressing */}
                 <div>

@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 // Package sizes with dimensions and weight limits
 const PACKAGE_SIZES = {
@@ -75,34 +76,39 @@ export default function PackagesSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Truck className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-          <h1 className="text-4xl font-bold mb-4">Package Delivery Services</h1>
-          <p className="text-lg text-slate-200">Fast and reliable package delivery across Cameroon</p>
+          <Truck className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
+          <h1 className="text-3xl font-bold mb-2">Package Delivery Services</h1>
+          <p className="text-sm text-slate-200 mb-5">Fast and reliable package delivery across Cameroon</p>
+          {/* Smart hero search owns pickup city; delivery city stays as a
+              regular field below (we want both visible at once). */}
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="travel"
+              resultsPath="/services/packages/results"
+              cityParam="origin"
+              selectedCity={searchParams.pickup_location}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, pickup_location: city }));
+                setErrors(p => ({ ...p, pickup_location: null }));
+              }}
+              onClearCity={() =>
+                setSearchParams(p => ({ ...p, pickup_location: '' }))
+              }
+              error={errors.pickup_location}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Pickup Location */}
-                <LocationInput
-                  value={searchParams.pickup_location}
-                  onChange={(v) => {
-                    setSearchParams(p => ({ ...p, pickup_location: v }));
-                    setErrors(p => ({ ...p, pickup_location: null }));
-                  }}
-                  placeholder="Search pickup city..."
-                  label="Pickup Location"
-                  serviceType="packages"
-                  iconColor="text-green-600"
-                  excludeValue={searchParams.delivery_location}
-                  error={errors.pickup_location}
-                />
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Pickup owned by hero smart search (iter 251). */}
 
                 {/* Delivery Location */}
                 <LocationInput

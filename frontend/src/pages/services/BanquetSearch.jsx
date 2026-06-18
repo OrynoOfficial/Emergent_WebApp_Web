@@ -10,6 +10,7 @@ import { CalendarIcon, MapPin, Users, Search, PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 const VENUE_TYPES = ['wedding', 'conference', 'birthday', 'corporate', 'graduation', 'other'];
 
@@ -60,36 +61,35 @@ export default function BanquetSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <PartyPopper className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-          <h1 className="text-4xl font-bold mb-4">Find Your Perfect Venue</h1>
-          <p className="text-lg text-slate-200">Book banquet halls, conference rooms, and event spaces across Cameroon</p>
+          <PartyPopper className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
+          <h1 className="text-3xl font-bold mb-2">Find Your Perfect Venue</h1>
+          <p className="text-sm text-slate-200 mb-5">Book banquet halls, conference rooms, and event spaces across Cameroon</p>
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="banquet"
+              resultsPath="/services/banquet/results"
+              cityParam="city"
+              selectedCity={searchParams.city}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, city }));
+                setErrors(e => ({ ...e, city: undefined }));
+              }}
+              onClearCity={() => setSearchParams(p => ({ ...p, city: '' }))}
+              error={errors.city}
+            />
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* City */}
-                <div>
-                  <LocationInput
-                    label="City"
-                    value={searchParams.city}
-                    onChange={(v) => {
-                      setSearchParams(p => ({ ...p, city: v }));
-                      setErrors(e => ({ ...e, city: undefined }));
-                    }}
-                    placeholder="Search city..."
-                    required
-                    error={errors.city}
-                    shake={shakeFields.city}
-                    iconColor="text-yellow-500"
-                  />
-                </div>
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* City owned by hero smart search (iter 251). */}
 
                 {/* Event Type */}
                 <div>
