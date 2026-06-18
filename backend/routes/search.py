@@ -13,7 +13,6 @@ iter 247 overhaul:
     finds shows hosted in "Yaoundé".
 """
 import re
-import unicodedata
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -33,23 +32,11 @@ LOCATIONS = [
 ]
 
 
-# Accent-insensitive regex helper. Expands each vowel into a Unicode char-class
-# so "Yaounde" still matches "Yaoundé". MongoDB's regex doesn't honour
-# diacritic-insensitive collation natively.
-_ACCENT_CLASSES = {
-    "a": "[aàáâãäå]", "e": "[eéèêë]", "i": "[iíìîï]",
-    "o": "[oóòôõö]", "u": "[uúùûü]", "c": "[cç]",
-    "n": "[nñ]", "y": "[yýÿ]",
-}
-
-
-def _ai_pattern(s: str) -> str:
-    """Accent + case insensitive regex pattern for ``s``."""
-    folded = "".join(
-        c for c in unicodedata.normalize("NFD", s)
-        if unicodedata.category(c) != "Mn"
-    )
-    return "".join(_ACCENT_CLASSES.get(c.lower(), re.escape(c)) for c in folded)
+# Accent + case insensitive regex helper — shared across service routes
+# (utils/text_match.py). MongoDB's regex doesn't honour diacritic-insensitive
+# collation natively, so the helper expands each vowel into a Unicode
+# character class. Kept as `_ai_pattern` for backwards-compat with this file.
+from utils.text_match import accent_insensitive_pattern as _ai_pattern  # noqa: E402
 
 
 def _row(*, type_, label, subtitle, deep_link, icon, color,

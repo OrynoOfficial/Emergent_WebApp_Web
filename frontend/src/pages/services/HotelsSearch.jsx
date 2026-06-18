@@ -92,6 +92,7 @@ export default function HotelsSearch() {
               serviceType="hotel"
               resultsPath="/services/hotels/results"
               cityParam="destination"
+              cityLabel="Destination"
               selectedCity={searchParams.destination}
               onSelectCity={(city) => {
                 setSearchParams(p => ({ ...p, destination: city }));

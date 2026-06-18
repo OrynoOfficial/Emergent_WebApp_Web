@@ -54,6 +54,7 @@ export default function LaundrySearch() {
               serviceType="laundry"
               resultsPath="/services/laundry/results"
               cityParam="city"
+              cityLabel="Destination"
               selectedCity={searchParams.city}
               onSelectCity={(city) => {
                 setSearchParams((p) => ({ ...p, city }));

@@ -79,6 +79,7 @@ export default function RestaurantsSearch() {
               serviceType="restaurant"
               resultsPath="/services/restaurants/results"
               cityParam="city"
+              cityLabel="Destination"
               selectedCity={searchParams.city}
               onSelectCity={(city) => {
                 setSearchParams(p => ({ ...p, city }));

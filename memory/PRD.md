@@ -7,6 +7,59 @@
 - **Workflow:** dist build can go stale relative to source. Consider adding a Vite watch-mode rebuild or supervisor hook so `yarn build` runs whenever `/app/frontend/src` changes. Surfaced by iter250.
 
 
+## Latest Changes (Feb 2026 — iter 251: smart landing search rollout + city filter fixes)
+
+### Backend bug: car rental city filter
+- `GET /api/car-rental/` did not declare a `city` query param, so the frontend's `?city=Douala` was silently dropped and every car was returned. Fixed by adding `city: Optional[str]` and applying `ci_regex_query(city)` against `query['city']`.
+
+### Accent-insensitive city matching (system-wide)
+- New shared util `/app/backend/utils/text_match.py` exposes `accent_insensitive_pattern()` + `ci_regex_query()` — expands every vowel into a Unicode character class so "Yaounde" matches "Yaoundé".
+- Applied to: `routes/car_rental.py`, `routes/hotels.py` (both customer + management lookups), `routes/restaurants.py`, `routes/banquets.py`, `routes/pressing.py`.
+- `routes/search.py` now reuses the same helper instead of carrying its own copy of the algorithm (DRY).
+
+### Global search service scope
+- `GET /api/search/` accepts optional `service_type` ∈ `{hotel, car_rental, restaurant, travel, event, cinema, banquet, laundry}` to restrict results to a single domain. Used by the new landing search bars below.
+
+### New component: `LandingSmartSearch.jsx`
+- Hero-sized search input with live autocomplete dropdown, grouped by **Destinations / Operators / Listings**, with thumbnails. Scoped to one service via `serviceType`.
+- Picking a result behaves contextually: city → pre-fills the parent's selected-city state; operator/listing → deep-links to the matching results / details page.
+- Persistent selected-city chip ("Pickup: …" or "Destination: …" — controlled by `cityLabel` prop) with × to clear.
+- `pageType` prop lets the wrapper testid diverge from `serviceType` (needed for Packages → uses travel data but `pageType="packages"`).
+
+### Landing pages rolled out (9/9)
+- `CarRentalSearch` (pilot, verified end-to-end), `HotelsSearch`, `RestaurantsSearch`, `EventsSearch`, `CinemaSearch`, `BanquetSearch`, `LaundrySearch`, `TravelSearch`, `PackagesSearch`.
+- For each: legacy primary `LocationInput` removed (smart bar owns that responsibility), hero spacing tightened (`pt-14 pb-10`), form margin pulled close (`-mt-6`), card padding `p-5`, grid gap `gap-4`.
+- Travel + Packages keep their secondary destination/delivery input.
+- CarRentalSearch additionally surfaces the Filters popover next to the Search button (relocated from the deleted pickup row).
+
+### Backend test coverage
+- New pytest module `/app/backend/tests/test_iter251_city_filter_and_search_scope.py` — 19 tests covering car-rental city filter regression, accent-insensitive matching on hotels/restaurants/banquets/pressing, /api/search/ service_type scope for all 8 service types, and auth requirement on the search endpoint. **19/19 green.**
+
+
+## Iter 250 (carry-over) — Car Rental UX overhaul + system-wide hard-delete migration
+
+### Car Rental Details = preview modal (`CarRentalDetails.jsx`)
+- File is now Dialog-wrapped and accepts `embedded`, `vehicleId`, `open`, `onClose` props. Route-based usage still works (deep links) via `closeModal → navigate(-1)`; `CarRentalResults` opens it inline so "View Details" no longer navigates away — matches `LaundryResults` pattern.
+- Description renders **paragraphs** by splitting on blank lines (`/\n{2,}/`) instead of one wall of text.
+- Image gallery tiles are buttons; clicking opens a full-screen **lightbox** with ESC + ←/→ navigation (`data-testid="car-rental-lightbox"`).
+- Removed the **"Insurance | Included"** row from the right-rail price summary (both layout paths).
+
+### Car Rental Booking (`CarRentalBooking.jsx`)
+- New extra **Car Damage Insurance** (`damage_insurance`, +5,000 FCFA/day).
+- Extras grid is denser: `grid-cols-2 md:grid-cols-3`, smaller padding/icon.
+- **"Driver's License Number"** — required only when the Professional Driver extra is not selected.
+
+### Car Rental Management (`CarRentalManagement.jsx`)
+- Description Textarea bumped to `rows=6` with placeholder + footnote hint.
+- Fleet `CarCard` enriched with secondary stats (Doors / Units / Rating / Refund preset) + policy summary.
+
+### Cinema details API (`cinema.py`)
+- `GET /api/cinema/showtimes/{id}/details` now includes `refund_policy`.
+
+### Hard-delete migration (system-wide)
+- `is_active: false` soft-delete pattern removed from: `hotels.py`, `geography.py` (countries/regions/segments), `event_locations.py`, `event_showtimes.py`, `inventory.py` (banquet_items), `access_control.py`, `employee_scopes.py`, `pods.py`. One-time cleanup script purged 104 stale rows.
+
+
 ## Latest Changes (Feb 2026 — iter 250: car rental UX overhaul + hard-delete migration)
 
 ### Car Rental Details = preview modal (`CarRentalDetails.jsx`)

@@ -63,6 +63,7 @@ export default function CinemaSearch() {
               serviceType="cinema"
               resultsPath="/services/cinema/results"
               cityParam="city"
+              cityLabel="Destination"
               selectedCity={searchParams.city}
               onSelectCity={(city) => {
                 setSearchParams(p => ({ ...p, city }));

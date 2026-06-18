@@ -86,6 +86,7 @@ export default function PackagesSearch() {
           <div className="max-w-2xl mx-auto text-left">
             <LandingSmartSearch
               serviceType="travel"
+              pageType="packages"
               resultsPath="/services/packages/results"
               cityParam="origin"
               selectedCity={searchParams.pickup_location}

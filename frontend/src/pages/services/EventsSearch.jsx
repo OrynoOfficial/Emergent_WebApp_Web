@@ -76,6 +76,7 @@ export default function EventsSearch() {
               serviceType="event"
               resultsPath="/services/events/results"
               cityParam="city"
+              cityLabel="Destination"
               selectedCity={searchParams.city}
               onSelectCity={(city) => {
                 setSearchParams(p => ({ ...p, city }));

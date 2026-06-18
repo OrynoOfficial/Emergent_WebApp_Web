@@ -147,7 +147,7 @@ export default function LandingSmartSearch({
   ].filter(([, , rows]) => rows && rows.length > 0);
 
   return (
-    <div ref={wrapRef} className={cn('relative w-full', className)} data-testid={`landing-smart-search-${serviceType}`}>
+    <div ref={wrapRef} className={cn('relative w-full', className)} data-testid={`landing-smart-search-${pageType || serviceType}`}>
       <form onSubmit={handleSubmit}>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
@@ -177,18 +177,20 @@ export default function LandingSmartSearch({
       </form>
 
       {/* Persistent "selected city" chip — keeps the user's choice visible
-          and editable without occupying a whole form row. */}
+          and editable without occupying a whole form row. The label text is
+          context-aware: "Pickup" reads right for car-rental / travel /
+          packages, "Destination" for stay-style services. */}
       {selectedCity && (
         <div className="mt-2 flex items-center justify-center gap-2" data-testid="landing-smart-search-selected-city">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
             <MapPin className="w-3 h-3" />
-            Pickup: {selectedCity}
+            {cityLabel}: {selectedCity}
             {onClearCity && (
               <button
                 type="button"
                 onClick={onClearCity}
                 className="ml-1 p-0.5 rounded-full hover:bg-emerald-100"
-                aria-label="Clear pickup city"
+                aria-label={`Clear ${cityLabel.toLowerCase()} city`}
                 data-testid="landing-smart-search-clear-city"
               >
                 <X className="w-3 h-3" />

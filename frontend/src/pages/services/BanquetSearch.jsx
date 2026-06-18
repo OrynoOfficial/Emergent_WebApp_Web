@@ -71,6 +71,7 @@ export default function BanquetSearch() {
               serviceType="banquet"
               resultsPath="/services/banquet/results"
               cityParam="city"
+              cityLabel="Destination"
               selectedCity={searchParams.city}
               onSelectCity={(city) => {
                 setSearchParams(p => ({ ...p, city }));
