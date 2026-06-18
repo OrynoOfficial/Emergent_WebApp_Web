@@ -10,6 +10,7 @@ import { CalendarIcon, MapPin, Search, Car, Fuel, Settings, Shield, SlidersHoriz
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const CAR_TYPES = ['All Types', 'Sedan', 'SUV', 'Luxury', 'Van', 'Pickup', 'Economy'];
@@ -82,16 +83,32 @@ export default function CarRentalSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16">
+      <div className="bg-[#082c59] text-white py-16 pb-24">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Car className="w-16 h-16 mx-auto mb-4 text-emerald-400" />
           <h1 className="text-4xl font-bold mb-4">Rent a Car</h1>
-          <p className="text-lg text-slate-200">Find the perfect vehicle for your journey across Cameroon</p>
+          <p className="text-lg text-slate-200 mb-6">Find the perfect vehicle for your journey across Cameroon</p>
+          {/* Smart hero search — autocompletes cities, operators and vehicles
+              from /api/search scoped to car_rental, deep-links straight to
+              results with the right filter applied. */}
+          <div className="max-w-2xl mx-auto text-left">
+            <LandingSmartSearch
+              serviceType="car_rental"
+              resultsPath="/services/car-rental/results"
+              cityParam="pickup"
+              onSelectCity={(city) =>
+                setSearchParams(p => ({ ...p, pickup_location: city }))
+              }
+            />
+            <p className="mt-2 text-xs text-slate-300 text-center">
+              Tip: pick a city to pre-fill the form, or pick a vehicle / operator to jump straight there.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-8">
+      <div className="max-w-4xl mx-auto px-4 -mt-12">
         <Card className="shadow-xl">
           <CardContent className="p-6">
             <form onSubmit={handleSearch} className="space-y-6">

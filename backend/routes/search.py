@@ -74,13 +74,41 @@ def _row(*, type_, label, subtitle, deep_link, icon, color,
 async def global_search(
     q: str = Query(..., min_length=1, description="Search query"),
     limit: int = Query(40, ge=1, le=100),
+    service_type: Optional[str] = Query(
+        None,
+        description=(
+            "Restrict results to a single service category. Used by the "
+            "landing-page smart search bars (one of: hotel, car_rental, "
+            "restaurant, travel, event, cinema, banquet, laundry)."
+        ),
+    ),
     current_user: dict = Depends(get_current_active_user),
 ):
-    """Rich global search with thumbnails and deep links."""
+    """Rich global search with thumbnails and deep links.
+
+    When ``service_type`` is provided the response is scoped to a single
+    domain — used by the per-service landing pages. Cities and operators
+    that own at least one listing of the requested service are still
+    surfaced so the dropdown can deep-link to a pre-filtered results page.
+    """
     db = get_database()
     query = q.strip()
     if not query:
         return {"query": q, "results": [], "total": 0, "by_type": {}}
+
+    # Map the public service_type to the type strings emitted by the result
+    # rows. ``None`` means "show every type" (the original behaviour).
+    _ALLOWED_TYPES = {
+        "hotel":       {"hotel", "operator", "location"},
+        "car_rental":  {"car_rental", "operator", "location"},
+        "restaurant":  {"restaurant", "operator", "location"},
+        "travel":      {"travel_route", "operator", "location"},
+        "event":       {"event", "operator", "location"},
+        "cinema":      {"film", "showtime", "operator", "location"},
+        "banquet":     {"banquet", "operator", "location"},
+        "laundry":     {"pressing", "operator", "location"},
+    }
+    type_filter = _ALLOWED_TYPES.get(service_type) if service_type else None
 
     rx = {"$regex": _ai_pattern(query), "$options": "i"}
     results = []
@@ -378,6 +406,12 @@ async def global_search(
     by_type: dict[str, list] = {}
     for r in results:
         by_type.setdefault(r["type"], []).append(r)
+
+    # Apply the optional service-type scope right before returning so the
+    # relevance sort above still benefits from the full result set.
+    if type_filter is not None:
+        results = [r for r in results if r["type"] in type_filter]
+        by_type = {k: v for k, v in by_type.items() if k in type_filter}
 
     return {
         "query": q,
