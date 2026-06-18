@@ -219,12 +219,9 @@ async def delete_pod(
     if active_members > 0:
         raise HTTPException(status_code=400, detail=f"Cannot delete pod with {active_members} active members")
     
-    await db.pods.update_one(
-        {"id": pod_id},
-        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
+    await db.pods.delete_one({"id": pod_id})
     
-    return {"message": "Pod deactivated"}
+    return {"message": "Pod deleted"}
 
 
 # ============== Pod Members ==============

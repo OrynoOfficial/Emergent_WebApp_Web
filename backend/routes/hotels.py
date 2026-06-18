@@ -271,15 +271,13 @@ async def update_hotel(
 @router.delete("/{hotel_id}")
 async def delete_hotel(
     hotel_id: str,
-    hard: bool = False,
     current_user: dict = Depends(require_permission("hotels.delete"))
 ):
-    """Delete hotel.
+    """Permanently delete a hotel and cascade-delete its rooms.
 
-    - Default: soft-delete (sets `is_active: False`). Hotel disappears from
-      listings but stays in the DB so historical bookings still resolve.
-    - `?hard=true` (super-admin only): permanently remove the hotel **and**
-      cascade-delete all its rooms. Use this to clean up test/junk records.
+    iter 254: soft-delete was removed system-wide because leftover
+    ``is_active: false`` rows were leaking into search and analytics.
+    Deletes are now real and cascade their owned children.
     """
     db = get_database()
     hotel = await db.hotels.find_one({"_id": hotel_id})
@@ -287,35 +285,19 @@ async def delete_hotel(
     if not hotel:
         raise HTTPException(status_code=404, detail="Hotel not found")
 
-    # Check if user owns this hotel (operators can only delete their own)
+    # Operators can only delete their own; admins/super-admins can delete any.
     user_role = current_user.get("role", "")
     if user_role not in ["admin", "super_admin"]:
         if hotel.get("operator_id") != current_user["_id"]:
             raise HTTPException(status_code=403, detail="You can only delete your own hotels")
 
-    # Hard delete is gated to super-admins to avoid accidental data loss.
-    if hard:
-        if user_role != "super_admin":
-            raise HTTPException(
-                status_code=403,
-                detail="Only super administrators may permanently delete a hotel.",
-            )
-        # Cascade rooms first so we don't leave orphaned inventory.
-        rooms_deleted = await db.rooms.delete_many({"hotel_id": hotel_id})
-        await db.hotels.delete_one({"_id": hotel_id})
-        return {
-            "message": "Hotel permanently deleted",
-            "hard_delete": True,
-            "rooms_deleted": rooms_deleted.deleted_count,
-        }
-
-    # Soft delete - just mark as inactive
-    await db.hotels.update_one(
-        {"_id": hotel_id},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
-    )
-
-    return {"message": "Hotel deleted", "hard_delete": False}
+    # Cascade rooms first so we don't leave orphaned inventory.
+    rooms_deleted = await db.rooms.delete_many({"hotel_id": hotel_id})
+    await db.hotels.delete_one({"_id": hotel_id})
+    return {
+        "message": "Hotel deleted",
+        "rooms_deleted": rooms_deleted.deleted_count,
+    }
 
 # ==================== ANALYTICS ENDPOINTS ====================
 

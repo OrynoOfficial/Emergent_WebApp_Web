@@ -133,13 +133,14 @@ async def delete_location(
     location_id: str,
     current_user: dict = Depends(require_any_permission(_DELETE_PERMS)),
 ):
+    """Permanently delete an event location.
+
+    iter 254: hard-delete migration. Showtimes that referenced this location
+    keep working from their own embedded ``location_name`` snapshot. New
+    showtimes can no longer be created against the deleted row.
+    """
     db = get_database()
-    # Soft-delete: simply mark inactive. Showtimes referring to this location
-    # keep working; new showtimes can't be created against it.
-    res = await db.event_locations.update_one(
-        {"_id": location_id},
-        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}},
-    )
-    if not res.matched_count:
+    res = await db.event_locations.delete_one({"_id": location_id})
+    if not res.deleted_count:
         raise HTTPException(status_code=404, detail="Location not found")
-    return {"id": location_id, "message": "Location deactivated"}
+    return {"id": location_id, "message": "Location deleted"}

@@ -518,5 +518,7 @@ async def update_banquet_item(
 @router.delete("/banquet-items/{item_id}")
 async def delete_banquet_item(item_id: str, current_user: dict = Depends(require_any_permission(_MANAGE_PERMS))):
     db = get_database()
-    await db.banquet_items.update_one({"_id": item_id}, {"$set": {"is_active": False, "updated_at": datetime.utcnow()}})
-    return {"id": item_id, "message": "Banquet item deactivated"}
+    res = await db.banquet_items.delete_one({"_id": item_id})
+    if not res.deleted_count:
+        raise HTTPException(status_code=404, detail="Banquet item not found")
+    return {"id": item_id, "message": "Banquet item deleted"}

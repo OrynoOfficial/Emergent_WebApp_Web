@@ -112,18 +112,17 @@ async def delete_country(
     country_id: str,
     current_user: dict = Depends(require_permission("geography.delete"))
 ):
-    """Soft delete a country (set inactive)"""
+    """Permanently delete a country."""
     db = get_database()
-    
-    result = await db.countries.update_one(
-        {"$or": [{"id": country_id}, {"code": country_id.upper()}]},
-        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+
+    result = await db.countries.delete_one(
+        {"$or": [{"id": country_id}, {"code": country_id.upper()}]}
     )
-    
-    if result.matched_count == 0:
+
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Country not found")
-    
-    return {"message": "Country deactivated"}
+
+    return {"message": "Country deleted"}
 
 
 # ============== Regions ==============
@@ -232,18 +231,17 @@ async def delete_region(
     region_id: str,
     current_user: dict = Depends(require_permission("geography.delete"))
 ):
-    """Soft delete a region"""
+    """Permanently delete a region."""
     db = get_database()
-    
-    result = await db.regions.update_one(
-        {"$or": [{"id": region_id}, {"code": region_id}]},
-        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+
+    result = await db.regions.delete_one(
+        {"$or": [{"id": region_id}, {"code": region_id}]}
     )
-    
-    if result.matched_count == 0:
+
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Region not found")
-    
-    return {"message": "Region deactivated"}
+
+    return {"message": "Region deleted"}
 
 
 # ============== Market Segments ==============
@@ -318,12 +316,12 @@ async def delete_market_segment(
     segment_id: str,
     current_user: dict = Depends(require_permission("geography.delete"))
 ):
-    """Soft-delete a market segment"""
+    """Permanently delete a market segment."""
     db = get_database()
-    result = await db.market_segments.update_one({"id": segment_id}, {"$set": {"is_active": False}})
-    if result.matched_count == 0:
+    result = await db.market_segments.delete_one({"id": segment_id})
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Market segment not found")
-    return {"message": "Market segment deactivated"}
+    return {"message": "Market segment deleted"}
 
 
 # ============== Initialization ==============

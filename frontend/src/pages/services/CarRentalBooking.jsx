@@ -12,7 +12,7 @@ import { Switch } from '../../components/ui/switch';
 import { Checkbox } from '../../components/ui/checkbox';
 import { 
   ArrowLeft, Car, MapPin, Calendar, Users, Fuel, Settings, CreditCard, Check, 
-  Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield, Edit2
+  Loader2, User, Phone, Mail, CheckCircle2, Clock, Star, Shield, Edit2, Info
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import PaymentProcessingOverlay from '../../components/common/PaymentProcessingOverlay';
@@ -29,7 +29,8 @@ const EXTRAS = [
   { id: 'driver', name: 'Professional Driver', price: 25000, icon: User, description: 'Experienced driver included' },
   { id: 'gps', name: 'GPS Navigation', price: 5000, icon: MapPin, description: 'Never get lost' },
   { id: 'child_seat', name: 'Child Seat', price: 3000, icon: Users, description: 'Safety for little ones' },
-  { id: 'insurance', name: 'Full Insurance', price: 15000, icon: Shield, description: 'Complete coverage' }
+  { id: 'insurance', name: 'Full Insurance', price: 15000, icon: Shield, description: 'Complete coverage' },
+  { id: 'damage_insurance', name: 'Car Damage Insurance', price: 5000, icon: Shield, description: 'Covers accidental damage to the vehicle' }
 ];
 
 // Step Indicator Component
@@ -97,8 +98,14 @@ export default function CarRentalBooking() {
     successMessage: 'Booking confirmed!',
     createErrorMessage: 'Failed to create booking',
     validate: () => {
-      if (!formData.firstName || !formData.email || !formData.phone || !formData.licenseNumber) {
-        toast.error('Please fill in all required fields');
+      // Driver's license is only required when the customer is driving
+      // themselves (no Professional Driver extra selected).
+      const proDriver = selectedExtras.includes('driver');
+      const licenseMissing = !proDriver && !formData.licenseNumber;
+      if (!formData.firstName || !formData.email || !formData.phone || licenseMissing) {
+        toast.error(licenseMissing
+          ? "Driver's license number is required (or pick the Professional Driver extra)."
+          : 'Please fill in all required fields');
         return false;
       }
       return true;
@@ -125,8 +132,11 @@ export default function CarRentalBooking() {
   });
   const { paymentInProgress, selectedPaymentMethod, showPaymentOverlay } = checkout.state;
 
-  // Check if driver info is complete
-  const isDriverInfoComplete = formData.firstName && formData.email && formData.phone && formData.licenseNumber;
+  // Check if driver info is complete.
+  // License number is only required when the customer is the driver — picking
+  // the Professional Driver extra makes it optional.
+  const proDriverSelected = selectedExtras.includes('driver');
+  const isDriverInfoComplete = formData.firstName && formData.email && formData.phone && (proDriverSelected || formData.licenseNumber);
   
   // Check if all mandatory sections are complete
   const canSelectPayment = extrasConfirmed && isDriverInfoComplete;
@@ -335,7 +345,7 @@ export default function CarRentalBooking() {
                     Please select at least one option or &quot;No Extras&quot; to continue
                   </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                   {EXTRAS.map((extra) => {
                     const isSelected = selectedExtras.includes(extra.id);
                     const ExtraIcon = extra.icon;
@@ -345,28 +355,28 @@ export default function CarRentalBooking() {
                         key={extra.id}
                         data-testid={`extra-${extra.id}`}
                         onClick={() => !extrasConfirmed && toggleExtra(extra.id)}
-                        className={`p-4 rounded-xl border-2 transition-all ${extrasConfirmed ? 'cursor-default opacity-80' : 'cursor-pointer'} ${
+                        className={`p-2.5 rounded-lg border-2 transition-all ${extrasConfirmed ? 'cursor-default opacity-80' : 'cursor-pointer'} ${
                           isSelected 
                             ? isNoExtras ? 'border-slate-500 bg-slate-50' : 'border-emerald-500 bg-emerald-50' 
                             : 'border-slate-200 hover:border-emerald-300'
                         }`}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${isSelected ? (isNoExtras ? 'bg-slate-500 text-white' : 'bg-emerald-500 text-white') : 'bg-slate-100 text-slate-600'}`}>
-                            <ExtraIcon className="w-5 h-5" />
+                        <div className="flex items-start gap-2">
+                          <div className={`p-1.5 rounded-md ${isSelected ? (isNoExtras ? 'bg-slate-500 text-white' : 'bg-emerald-500 text-white') : 'bg-slate-100 text-slate-600'}`}>
+                            <ExtraIcon className="w-3.5 h-3.5" />
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-slate-800">{extra.name}</h4>
-                              <Checkbox checked={isSelected} className="pointer-events-none" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className="font-semibold text-xs text-slate-800 truncate">{extra.name}</h4>
+                              <Checkbox checked={isSelected} className="pointer-events-none h-3.5 w-3.5" />
                             </div>
-                            <p className="text-sm text-slate-500 mt-1">{extra.description}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 leading-snug line-clamp-2">{extra.description}</p>
                             {extra.price > 0 ? (
-                              <p className="text-emerald-600 font-semibold mt-2">
+                              <p className="text-emerald-600 font-semibold text-[11px] mt-1">
                                 +{formatCurrency(extra.price)}/day
                               </p>
                             ) : (
-                              <p className="text-slate-500 font-medium mt-2">Free</p>
+                              <p className="text-slate-500 font-medium text-[11px] mt-1">Free</p>
                             )}
                           </div>
                         </div>
@@ -436,11 +446,37 @@ export default function CarRentalBooking() {
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-slate-700">License Number <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                      <Input value={formData.licenseNumber} onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))} placeholder="DL123456789" className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20" disabled={!extrasConfirmed} />
-                    </div>
+                    {(() => {
+                      // The driver's licence is only mandatory when the renter
+                      // is driving themselves. Selecting the "Professional
+                      // Driver" extra means the operator provides a licensed
+                      // driver, so we can relax the rule.
+                      const hasPro = selectedExtras.includes('driver');
+                      return (
+                        <>
+                          <Label className="text-sm font-medium text-slate-700">
+                            Driver&apos;s License Number {!hasPro && <span className="text-red-500">*</span>}
+                          </Label>
+                          <div className="relative">
+                            <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                              value={formData.licenseNumber}
+                              onChange={(e) => setFormData(prev => ({ ...prev, licenseNumber: e.target.value }))}
+                              placeholder={hasPro ? 'Optional — driver is provided' : 'DL123456789'}
+                              className="pl-10 h-12 rounded-xl border-slate-200 focus:ring-2 focus:ring-[#082c59]/20"
+                              disabled={!extrasConfirmed}
+                              data-testid="driver-license-input"
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-500 flex items-start gap-1">
+                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                            {hasPro
+                              ? 'Not required — a professional driver will be provided with the vehicle.'
+                              : 'Required because you will be driving the vehicle yourself.'}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

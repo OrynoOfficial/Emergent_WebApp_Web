@@ -260,6 +260,52 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
           </div>
         </div>
 
+        {/* Secondary stats row — doors, fleet stock, rating, refund preset.
+            Gives operators an at-a-glance view of inventory + reputation. */}
+        <div className="grid grid-cols-4 gap-2 mb-3 text-[11px]">
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <p className="text-slate-500">Doors</p>
+            <p className="font-semibold text-slate-700">{car.doors || '—'}</p>
+          </div>
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <p className="text-slate-500">Units</p>
+            <p className="font-semibold text-slate-700">{car.total_units ?? 1}</p>
+          </div>
+          <div className="text-center p-1.5 bg-amber-50 rounded-md">
+            <p className="text-slate-500">Rating</p>
+            <p className="font-semibold text-amber-700">
+              {car.average_rating > 0 ? `★ ${Number(car.average_rating).toFixed(1)}` : '—'}
+            </p>
+          </div>
+          <div className="text-center p-1.5 bg-indigo-50 rounded-md">
+            <p className="text-slate-500">Refund</p>
+            <p className="font-semibold text-indigo-700 capitalize">
+              {car.refund_policy?.preset || 'default'}
+            </p>
+          </div>
+        </div>
+
+        {/* Policies summary — surfaces mileage + fuel + driver age at a glance */}
+        {(car.mileage_policy || car.fuel_policy || car.minimum_driver_age) && (
+          <div className="mb-3 text-[11px] text-slate-600 space-y-0.5 px-1">
+            {car.mileage_policy && (
+              <div className="flex items-center gap-1.5">
+                <Gauge className="w-3 h-3 text-slate-400" /> {car.mileage_policy}
+              </div>
+            )}
+            {car.fuel_policy && (
+              <div className="flex items-center gap-1.5">
+                <Fuel className="w-3 h-3 text-slate-400" /> Fuel: {car.fuel_policy}
+              </div>
+            )}
+            {car.minimum_driver_age && (
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3 h-3 text-slate-400" /> Min age: {car.minimum_driver_age}+
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-3 text-sm text-slate-600">
           <MapPin className="w-4 h-4" />
           <span>{car.city || 'N/A'}</span>
@@ -780,11 +826,14 @@ export default function CarRentalManagement() {
               <div className="col-span-2">
                 <Label>Description</Label>
                 <Textarea
-                  rows={3}
+                  rows={6}
                   value={carForm.description}
                   onChange={(e) => setCarForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Describe the vehicle — comfort, target use, recent service, etc."
+                  placeholder={'Describe the vehicle — comfort, target use, recent service, etc.\n\nLeave a blank line between paragraphs to break them up on the details page (e.g. one paragraph for comfort, one for performance, one for what makes it stand out).'}
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Tip: use blank lines to split your description into paragraphs. Renters see the formatting you write here.
+                </p>
               </div>
               <div>
                 <Label>Doors</Label>

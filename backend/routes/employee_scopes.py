@@ -174,12 +174,9 @@ async def delete_access_scope(
             detail=f"Cannot delete scope with {active_assignments} active assignments. Remove users first."
         )
     
-    await db.employee_access_scopes.update_one(
-        {"id": scope_id},
-        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
+    await db.employee_access_scopes.delete_one({"id": scope_id})
     
-    return {"message": "Access scope deactivated"}
+    return {"message": "Access scope deleted"}
 
 
 # ============== Scope Assignments ==============
@@ -246,12 +243,11 @@ async def remove_scope_from_user(
     """Remove an access scope from a user"""
     db = get_database()
     
-    result = await db.employee_scope_assignments.update_one(
-        {"scope_id": scope_id, "user_id": user_id, "is_active": True},
-        {"$set": {"is_active": False}}
+    result = await db.employee_scope_assignments.delete_one(
+        {"scope_id": scope_id, "user_id": user_id}
     )
     
-    if result.matched_count == 0:
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Assignment not found")
     
     return {"message": "Scope removed from user"}

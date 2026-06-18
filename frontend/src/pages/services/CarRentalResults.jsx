@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import CarRentalDetails from '@/pages/services/CarRentalDetails';
 import { 
   ArrowLeft, Car, MapPin, Users, Fuel, Settings, Star, SlidersHorizontal,
   Snowflake, Radio, Navigation, Shield, LayoutGrid, List, Search,
@@ -407,6 +408,8 @@ export default function CarRentalResults() {
     }
   }, [vehicles, sortBy, smartFilters, selectedType, selectedTransmission]);
 
+  const [detailsVehicleId, setDetailsVehicleId] = useState(null);
+
   const handleSelectVehicle = (vehicle) => {
     const vehicleId = vehicle._id || vehicle.id;
     sessionStorage.setItem('selectedVehicle', JSON.stringify({
@@ -416,7 +419,9 @@ export default function CarRentalResults() {
       returnDate,
       days
     }));
-    navigate(`/services/car-rental/details/${vehicleId}?pickupDate=${pickupDate}&returnDate=${returnDate}`);
+    // Open details as an inline modal preview — same pattern as the laundry
+    // results page. The deep-link route still works for shared URLs.
+    setDetailsVehicleId(vehicleId);
   };
 
   if (loading) {
@@ -630,6 +635,14 @@ export default function CarRentalResults() {
           </div>
         )}
       </div>
+
+      {/* Inline details preview modal — same pattern as LaundryResults */}
+      <CarRentalDetails
+        embedded
+        vehicleId={detailsVehicleId}
+        open={!!detailsVehicleId}
+        onClose={() => setDetailsVehicleId(null)}
+      />
     </div>
   );
 }

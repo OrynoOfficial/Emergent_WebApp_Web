@@ -237,14 +237,17 @@ async def delete_showtime(
     showtime_id: str,
     current_user: dict = Depends(require_any_permission(_DELETE_PERMS)),
 ):
+    """Permanently delete an event showtime.
+
+    iter 254: hard-delete migration. Historical orders keep their embedded
+    showtime snapshot, so refund + receipt flows still resolve even after
+    the source row is gone.
+    """
     db = get_database()
-    res = await db.event_showtimes.update_one(
-        {"_id": showtime_id},
-        {"$set": {"status": ShowtimeStatus.CANCELLED.value, "updated_at": datetime.utcnow()}},
-    )
-    if not res.matched_count:
+    res = await db.event_showtimes.delete_one({"_id": showtime_id})
+    if not res.deleted_count:
         raise HTTPException(status_code=404, detail="Showtime not found")
-    return {"id": showtime_id, "message": "Showtime cancelled"}
+    return {"id": showtime_id, "message": "Showtime deleted"}
 
 
 # ── Booking ─────────────────────────────────────────────────────────────────

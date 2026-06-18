@@ -451,12 +451,11 @@ async def remove_user_from_group(
     if current_user["role"] not in ["admin", "super_admin", "operator"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    result = await db.user_access.update_one(
-        {"user_id": user_id, "access_group_id": group_id, "is_active": True},
-        {"$set": {"is_active": False}}
+    result = await db.user_access.delete_one(
+        {"user_id": user_id, "access_group_id": group_id}
     )
     
-    if result.matched_count == 0:
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Assignment not found")
     
     return {"message": "User removed from group"}

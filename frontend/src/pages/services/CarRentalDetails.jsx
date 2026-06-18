@@ -5,14 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LocationMap from '@/components/shared/LocationMap';
 import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
-import {
+import { 
   ArrowLeft, Car, MapPin, Users, Fuel, Settings,
   Star, CalendarIcon, Shield, CheckCircle, Phone,
-  Snowflake, Radio, Navigation, Info, AlertTriangle, MessageSquare, ChevronDown
+  Snowflake, Radio, Navigation, Info, AlertTriangle, MessageSquare, ChevronDown,
+  X as XIcon, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
+// Hoisted out of the render tree to avoid React remounting on every parent
+// re-render (react/no-unstable-nested-components).
+const GalleryThumb = ({ src, alt, idx, hasImages, onOpen, extraClass = '' }) => (
+  <button
+    type="button"
+    onClick={() => hasImages && onOpen(idx)}
+    className={`group relative w-full h-full overflow-hidden ${extraClass}`}
+    data-testid={`car-rental-image-${idx}`}
+  >
+    <img src={src} alt={alt} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+    {hasImages && (
+      <span className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
+    )}
+  </button>
+);
 import { cn } from '@/lib/utils';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
@@ -28,8 +46,9 @@ const FEATURE_LABELS = {
   backup_camera: 'Backup Camera'
 };
 
-export default function CarRentalDetails() {
-  const { id } = useParams();
+export default function CarRentalDetails({ vehicleId: idProp, open: openProp, onClose, embedded = false } = {}) {
+  const params = useParams();
+  const id = idProp || params.id;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [vehicle, setVehicle] = useState(null);
@@ -39,6 +58,9 @@ export default function CarRentalDetails() {
   const [activeTab, setActiveTab] = useState('features');
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const [operator, setOperator] = useState(null);
+  // Lightbox state for the image gallery — clicking any image expands it
+  // full-screen with arrow navigation and ESC-to-close.
+  const [lightboxIdx, setLightboxIdx] = useState(null);
   const [selectedDates, setSelectedDates] = useState({
     pickup: searchParams.get('pickupDate') ? new Date(searchParams.get('pickupDate')) : new Date(),
     return: searchParams.get('returnDate') ? new Date(searchParams.get('returnDate')) : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
@@ -46,11 +68,34 @@ export default function CarRentalDetails() {
   const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
   const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
 
+  // When used as a route (deep link), the modal is always "open" until the
+  // user dismisses it via the X / back button. When embedded inline from
+  // CarRentalResults, the parent controls open/close via props.
+  const isOpen = embedded ? !!openProp : true;
+  const closeModal = () => {
+    if (embedded) onClose?.();
+    else navigate(-1);
+  };
+
   useEffect(() => {
+    if (!id) return;
     loadVehicle();
     loadReviews();
     loadOperator();
   }, [id]);
+
+  // Lightbox keyboard handling — ESC closes, arrows navigate.
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const imgs = vehicle?.images || [];
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightboxIdx(null);
+      if (e.key === 'ArrowLeft') setLightboxIdx((i) => (i - 1 + imgs.length) % imgs.length);
+      if (e.key === 'ArrowRight') setLightboxIdx((i) => (i + 1) % imgs.length);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightboxIdx, vehicle]);
 
   const loadOperator = async () => {
     try {
@@ -192,55 +237,63 @@ export default function CarRentalDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#082c59]"></div>
-      </div>
+      <Dialog open={isOpen} onOpenChange={(v) => !v && closeModal()}>
+        <DialogContent className="max-w-5xl bg-white p-10">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#082c59]"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   if (!vehicle) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <Dialog open={isOpen} onOpenChange={(v) => !v && closeModal()}>
+        <DialogContent className="max-w-md bg-white p-8 text-center">
           <h2 className="text-xl font-semibold mb-2">Vehicle not found</h2>
-          <Button onClick={() => navigate('/services/car-rental')}>Back to Car Rental</Button>
-        </div>
-      </div>
+          <Button onClick={closeModal}>Close</Button>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <Dialog open={isOpen} onOpenChange={(v) => !v && closeModal()}>
+      <DialogContent className="max-w-6xl bg-white p-0 max-h-[94vh] overflow-y-auto" data-testid="car-rental-details-modal">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Results
+      <div className="sticky top-0 z-20 bg-white border-b border-slate-200">
+        <div className="px-4 py-3 flex items-center">
+          <Button variant="ghost" onClick={closeModal} data-testid="car-rental-details-close">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
         </div>
       </div>
 
       <div className="px-4 py-6">
-        {/* Image Gallery (uses real vehicle photos with fallbacks) */}
+        {/* Image Gallery — every tile is clickable; opens a full-screen
+            lightbox with arrow navigation. */}
         {(() => {
           const imgs = (vehicle.images && vehicle.images.length > 0)
             ? vehicle.images
             : [];
           const fallback = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600';
-          const main = imgs[0] || fallback;
-          const a = imgs[1] || imgs[0] || fallback;
-          const b = imgs[2] || imgs[1] || imgs[0] || fallback;
+          const display = imgs.length ? imgs : [fallback];
+          const main = display[0];
+          const a = display[1] || display[0];
+          const b = display[2] || display[1] || display[0];
+          const hasImages = imgs.length > 0;
           return (
             <div className="grid grid-cols-3 gap-2 mb-6 h-64 rounded-xl overflow-hidden" data-testid="car-rental-images">
               <div className="col-span-2 bg-slate-100 relative">
-                <img src={main} alt={vehicle.name} className="w-full h-full object-cover" />
+                <GalleryThumb src={main} idx={0} alt={vehicle.name} hasImages={hasImages} onOpen={setLightboxIdx} />
               </div>
-              <div className="space-y-2">
-                <div className="h-[calc(50%-4px)] bg-slate-100 rounded-tr-xl overflow-hidden">
-                  <img src={a} alt={`${vehicle.name} 2`} className="w-full h-full object-cover" />
+              <div className="grid grid-rows-2 gap-2">
+                <div className="bg-slate-100 rounded-tr-xl overflow-hidden">
+                  <GalleryThumb src={a} idx={Math.min(1, imgs.length - 1)} alt={`${vehicle.name} 2`} hasImages={hasImages} onOpen={setLightboxIdx} />
                 </div>
-                <div className="h-[calc(50%-4px)] bg-slate-100 rounded-br-xl overflow-hidden">
-                  <img src={b} alt={`${vehicle.name} 3`} className="w-full h-full object-cover" />
+                <div className="bg-slate-100 rounded-br-xl overflow-hidden">
+                  <GalleryThumb src={b} idx={Math.min(2, imgs.length - 1)} alt={`${vehicle.name} 3`} hasImages={hasImages} onOpen={setLightboxIdx} />
                 </div>
               </div>
             </div>
@@ -271,7 +324,18 @@ export default function CarRentalDetails() {
                 </div>
               </div>
               <div className="p-5">
-                <p className="text-slate-600 text-sm mb-4">{vehicle.description}</p>
+                {vehicle.description && (
+                  <div className="text-slate-700 text-sm mb-4 space-y-3 leading-relaxed">
+                    {/* Render the description as paragraphs split on blank lines.
+                        This turns a single long blob into something readable
+                        while still respecting the operator's formatting. */}
+                    {String(vehicle.description)
+                      .split(/\n{2,}/)
+                      .map((para, i) => (
+                        <p key={i} className="whitespace-pre-line">{para.trim()}</p>
+                      ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div className="text-center p-3 bg-slate-50 rounded-xl border border-slate-200">
                     <Users className="w-5 h-5 mx-auto text-[#082c59] mb-1" />
@@ -579,10 +643,6 @@ export default function CarRentalDetails() {
                     <span className="text-slate-600">{formatFCFA(vehicle.price_per_day)} x {days} day{days > 1 ? 's' : ''}</span>
                     <span className="font-medium">{formatFCFA(totalPrice)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-500">
-                    <span>Insurance</span>
-                    <span className="text-emerald-600 font-medium">Included</span>
-                  </div>
                   <div className="flex justify-between font-bold text-base pt-2 border-t border-slate-200">
                     <span>Total</span>
                     <span className="text-[#082c59]">{formatFCFA(totalPrice)}</span>
@@ -600,6 +660,57 @@ export default function CarRentalDetails() {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Image Lightbox — opens when any gallery tile is clicked */}
+      {lightboxIdx !== null && vehicle.images?.length > 0 && (
+        <div
+          className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxIdx(null)}
+          data-testid="car-rental-lightbox"
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightboxIdx(null); }}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            aria-label="Close"
+          >
+            <XIcon className="w-6 h-6" />
+          </button>
+          {vehicle.images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIdx((i) => (i - 1 + vehicle.images.length) % vehicle.images.length);
+                }}
+                className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIdx((i) => (i + 1) % vehicle.images.length);
+                }}
+                className="absolute right-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+          <img
+            src={vehicle.images[lightboxIdx]}
+            alt={`${vehicle.name} ${lightboxIdx + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[92vw] max-h-[88vh] object-contain rounded-lg shadow-2xl"
+          />
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/80 text-sm bg-black/40 px-3 py-1 rounded-full">
+            {lightboxIdx + 1} / {vehicle.images.length}
+          </div>
+        </div>
+      )}
+      </DialogContent>
+    </Dialog>
   );
 }
