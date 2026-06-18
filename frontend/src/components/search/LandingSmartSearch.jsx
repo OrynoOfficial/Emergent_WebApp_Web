@@ -50,6 +50,9 @@ export default function LandingSmartSearch({
   resultsPath,
   cityParam = 'city',
   onSelectCity,
+  selectedCity,
+  onClearCity,
+  error,
   className,
 }) {
   const navigate = useNavigate();
@@ -153,7 +156,10 @@ export default function LandingSmartSearch({
             onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             placeholder={PLACEHOLDER_BY_SERVICE[serviceType] || 'Search…'}
-            className="h-14 pl-12 pr-12 rounded-2xl bg-white border-slate-200 shadow-sm focus-visible:ring-2 focus-visible:ring-[#082c59]/30 text-base"
+            className={cn(
+              'h-14 pl-12 pr-12 rounded-2xl bg-white border-slate-200 shadow-sm focus-visible:ring-2 focus-visible:ring-[#082c59]/30 text-base',
+              error && 'border-red-500 focus-visible:ring-red-500/30',
+            )}
             data-testid="landing-smart-search-input"
             aria-label="Service search"
           />
@@ -169,6 +175,32 @@ export default function LandingSmartSearch({
           )}
         </div>
       </form>
+
+      {/* Persistent "selected city" chip — keeps the user's choice visible
+          and editable without occupying a whole form row. */}
+      {selectedCity && (
+        <div className="mt-2 flex items-center justify-center gap-2" data-testid="landing-smart-search-selected-city">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
+            <MapPin className="w-3 h-3" />
+            Pickup: {selectedCity}
+            {onClearCity && (
+              <button
+                type="button"
+                onClick={onClearCity}
+                className="ml-1 p-0.5 rounded-full hover:bg-emerald-100"
+                aria-label="Clear pickup city"
+                data-testid="landing-smart-search-clear-city"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-2 text-center text-xs text-red-300" data-testid="landing-smart-search-error">{error}</p>
+      )}
 
       {open && query.trim() && (
         <div className="absolute z-40 mt-2 left-0 right-0 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-[420px] overflow-y-auto" data-testid="landing-smart-search-dropdown">

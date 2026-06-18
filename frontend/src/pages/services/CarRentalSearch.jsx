@@ -83,149 +83,49 @@ export default function CarRentalSearch() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       {/* Hero Section */}
-      <div className="bg-[#082c59] text-white py-16 pb-24">
+      <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <Car className="w-16 h-16 mx-auto mb-4 text-emerald-400" />
-          <h1 className="text-4xl font-bold mb-4">Rent a Car</h1>
-          <p className="text-lg text-slate-200 mb-6">Find the perfect vehicle for your journey across Cameroon</p>
+          <Car className="w-12 h-12 mx-auto mb-3 text-emerald-400" />
+          <h1 className="text-3xl font-bold mb-2">Rent a Car</h1>
+          <p className="text-sm text-slate-200 mb-5">Find the perfect vehicle for your journey across Cameroon</p>
           {/* Smart hero search — autocompletes cities, operators and vehicles
-              from /api/search scoped to car_rental, deep-links straight to
-              results with the right filter applied. */}
+              from /api/search scoped to car_rental. The chosen city becomes
+              the pickup; the legacy Pickup Location input was removed since
+              this bar now owns that responsibility. */}
           <div className="max-w-2xl mx-auto text-left">
             <LandingSmartSearch
               serviceType="car_rental"
               resultsPath="/services/car-rental/results"
               cityParam="pickup"
-              onSelectCity={(city) =>
-                setSearchParams(p => ({ ...p, pickup_location: city }))
+              selectedCity={searchParams.pickup_location}
+              onSelectCity={(city) => {
+                setSearchParams(p => ({ ...p, pickup_location: city }));
+                setErrors(e => ({ ...e, pickup_location: undefined }));
+              }}
+              onClearCity={() =>
+                setSearchParams(p => ({ ...p, pickup_location: '' }))
               }
+              error={errors.pickup_location}
             />
-            <p className="mt-2 text-xs text-slate-300 text-center">
-              Tip: pick a city to pre-fill the form, or pick a vehicle / operator to jump straight there.
-            </p>
           </div>
         </div>
       </div>
 
-      {/* Search Form */}
-      <div className="max-w-4xl mx-auto px-4 -mt-12">
+      {/* Search Form — pulled close to the search bar for a single,
+          continuous booking flow (iter 251). */}
+      <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
-          <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Pickup Location with trailing Filters popover */}
-                <div className={cn(differentDropoff ? "" : "md:col-span-2")}>
-                  <div className="flex items-end gap-2">
-                    <div className="flex-1 min-w-0">
-                      <LocationInput
-                        label="Pickup Location"
-                        value={searchParams.pickup_location}
-                        onChange={(v) => setSearchParams(p => ({ ...p, pickup_location: v }))}
-                        placeholder="Search pickup city..."
-                        required
-                        error={errors.pickup_location}
-                        shake={shakeFields.pickup_location}
-                        iconColor="text-emerald-500"
-                      />
-                    </div>
-                    {/* Compact filter trigger sitting at the tail of the input.
-                        Opens a small popover so the search form stays short. */}
-                    <Popover open={showFilters} onOpenChange={setShowFilters}>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="h-10 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 text-slate-700 text-xs font-semibold whitespace-nowrap"
-                          data-testid="car-rental-search-filters-toggle"
-                          aria-label="Open filters"
-                        >
-                          <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
-                          Filters
-                          {((searchParams.car_type && searchParams.car_type !== 'All Types') || searchParams.with_driver) && (
-                            <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-[#082c59] text-white text-[9px]">
-                              {(searchParams.car_type && searchParams.car_type !== 'All Types' ? 1 : 0) + (searchParams.with_driver ? 1 : 0)}
-                            </span>
-                          )}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="end"
-                        className="w-72 p-3 bg-white border-slate-200 shadow-xl"
-                        data-testid="car-rental-search-filters-panel"
-                      >
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Vehicle Type</Label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {CAR_TYPES.map(type => {
-                                const active = (searchParams.car_type || 'All Types') === type;
-                                return (
-                                  <button
-                                    key={type}
-                                    type="button"
-                                    onClick={() => setSearchParams(p => ({ ...p, car_type: type }))}
-                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                                      active ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                    }`}
-                                    data-testid={`car-type-chip-${type.toLowerCase().replace(/ /g, '-')}`}
-                                  >
-                                    {type}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <div>
-                            <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Driver</Label>
-                            <div className="flex gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setSearchParams(p => ({ ...p, with_driver: false }))}
-                                className={`flex-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
-                                  !searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                }`}
-                                data-testid="driver-option-self"
-                              >
-                                Self Drive
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSearchParams(p => ({ ...p, with_driver: true }))}
-                                className={`flex-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
-                                  searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                }`}
-                                data-testid="driver-option-with"
-                              >
-                                With Driver
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex justify-between pt-1.5 border-t border-slate-100">
-                            <button
-                              type="button"
-                              onClick={() => setSearchParams(p => ({ ...p, car_type: '', with_driver: false }))}
-                              className="text-[11px] text-slate-500 hover:text-slate-700"
-                            >
-                              Clear all
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowFilters(false)}
-                              className="text-[11px] font-semibold text-[#082c59] hover:underline"
-                            >
-                              Done
-                            </button>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-
-                {/* Drop-off Location (conditional) */}
+          <CardContent className="p-5">
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Drop-off Location (conditional) — appears when the user
+                    toggles "different drop-off" below. Pickup is owned by the
+                    smart-search bar in the hero, so we no longer render a
+                    separate pickup field here. */}
                 {differentDropoff && (
-                  <div>
+                  <div className="md:col-span-2">
                     <LocationInput
-                      label="Drop-off Location"
+                      label="Drop-off city"
                       value={searchParams.dropoff_location}
                       onChange={(v) => setSearchParams(p => ({ ...p, dropoff_location: v }))}
                       placeholder="Search drop-off city..."
@@ -255,9 +155,8 @@ export default function CarRentalSearch() {
                   </Label>
                 </div>
 
-                {/* Filters were moved to the trailing button on the Pickup
-                    Location row (see Popover above). The inline expanding
-                    filters panel here was removed in iter 234. */}
+                {/* Filters popover lives next to dates now that the legacy
+                    pickup-location row was retired (iter 251). */}
 
                 {/* Pickup Date */}
                 <div>
@@ -326,9 +225,101 @@ export default function CarRentalSearch() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 text-lg">
-                <Search className="w-5 h-5 mr-2" /> Search Cars
-              </Button>
+              <div className="flex items-center justify-between gap-3">
+                {/* Filters popover — vehicle type + driver toggles */}
+                <Popover open={showFilters} onOpenChange={setShowFilters}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-12 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors flex items-center gap-2 text-slate-700 text-sm font-semibold whitespace-nowrap"
+                      data-testid="car-rental-search-filters-toggle"
+                      aria-label="Open filters"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
+                      Filters
+                      {((searchParams.car_type && searchParams.car_type !== 'All Types') || searchParams.with_driver) && (
+                        <span className="ml-0.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[#082c59] text-white text-[10px]">
+                          {(searchParams.car_type && searchParams.car_type !== 'All Types' ? 1 : 0) + (searchParams.with_driver ? 1 : 0)}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-72 p-3 bg-white border-slate-200 shadow-xl"
+                    data-testid="car-rental-search-filters-panel"
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Vehicle Type</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {CAR_TYPES.map(type => {
+                            const active = (searchParams.car_type || 'All Types') === type;
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setSearchParams(p => ({ ...p, car_type: type }))}
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                                  active ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                }`}
+                                data-testid={`car-type-chip-${type.toLowerCase().replace(/ /g, '-')}`}
+                              >
+                                {type}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Driver</Label>
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSearchParams(p => ({ ...p, with_driver: false }))}
+                            className={`flex-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
+                              !searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                            data-testid="driver-option-self"
+                          >
+                            Self Drive
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSearchParams(p => ({ ...p, with_driver: true }))}
+                            className={`flex-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
+                              searchParams.with_driver ? 'bg-[#082c59] text-white border-[#082c59]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                            }`}
+                            data-testid="driver-option-with"
+                          >
+                            With Driver
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between pt-1.5 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setSearchParams(p => ({ ...p, car_type: '', with_driver: false }))}
+                          className="text-[11px] text-slate-500 hover:text-slate-700"
+                        >
+                          Clear all
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowFilters(false)}
+                          className="text-[11px] font-semibold text-[#082c59] hover:underline"
+                        >
+                          Done
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button type="submit" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75] h-12 text-base">
+                  <Search className="w-5 h-5 mr-2" /> Search Cars
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
