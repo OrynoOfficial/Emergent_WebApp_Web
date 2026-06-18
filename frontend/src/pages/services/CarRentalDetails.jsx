@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LocationMap from '@/components/shared/LocationMap';
 import { format, differenceInDays, formatDistanceToNow } from 'date-fns';
@@ -261,6 +261,9 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && closeModal()}>
       <DialogContent className="max-w-6xl bg-white p-0 max-h-[94vh] overflow-y-auto" data-testid="car-rental-details-modal">
+      {/* Visually-hidden title — Radix requires a DialogTitle for screen readers
+          even though our visual header carries the brand + close button. */}
+      <DialogTitle className="sr-only">{vehicle.name} — Vehicle Details</DialogTitle>
       {/* Header */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200">
         <div className="px-4 py-3 flex items-center">

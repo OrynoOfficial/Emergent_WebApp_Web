@@ -3,8 +3,44 @@
 ## Active Backlog (deferred, not blocking)
 
 - **Pre-fill the MoMo `proof_reference` field from a future webhook** when MTN provides one (currently ops enters manually via prompt).
-- **`GET /api/cinema/showtimes/{id}/details` missing `refund_policy`** — pure display nit from iter 242. Backend stores it correctly; only the read endpoint's response shape omits the field.
 - **Auto-create internal payout task** in the customer-service queue every time a refund lands at APPROVED + `requires_manual_processing=true` (improves ops experience over scanning the Refunds page).
+- **Workflow:** dist build can go stale relative to source. Consider adding a Vite watch-mode rebuild or supervisor hook so `yarn build` runs whenever `/app/frontend/src` changes. Surfaced by iter250.
+
+
+## Latest Changes (Feb 2026 — iter 250: car rental UX overhaul + hard-delete migration)
+
+### Car Rental Details = preview modal (`CarRentalDetails.jsx`)
+- File is now Dialog-wrapped and accepts `embedded`, `vehicleId`, `open`, `onClose` props. Route-based usage still works (deep links) via `closeModal → navigate(-1)`; `CarRentalResults` opens it inline so "View Details" no longer navigates away — matches `LaundryResults` pattern.
+- Description renders **paragraphs** by splitting on blank lines (`/\n{2,}/`) instead of one wall of text.
+- Image gallery tiles are buttons; clicking opens a full-screen **lightbox** with ESC + ←/→ navigation (`data-testid="car-rental-lightbox"`).
+- Removed the **"Insurance | Included"** row from the right-rail price summary (both layout paths). Bonus: hidden `DialogTitle` added for Radix a11y.
+
+### Car Rental Booking (`CarRentalBooking.jsx`)
+- New extra **Car Damage Insurance** (`damage_insurance`, +5,000 FCFA/day).
+- Extras grid is denser: `grid-cols-2 md:grid-cols-3`, smaller padding/icon (`p-2.5`, `w-3.5 h-3.5`).
+- Field rename: **"Driver's License Number"** (testid `driver-license-input`). The field is **only required when the Professional Driver extra is not selected** — `validate()` and `isDriverInfoComplete` both honour the rule. Inline hint explains the rule.
+
+### Car Rental Management (`CarRentalManagement.jsx`)
+- Description Textarea bumped to `rows=6` with placeholder + footnote hint explaining the blank-line→paragraph convention.
+- Fleet `CarCard` enriched with a secondary stats row (Doors / Units / Rating / Refund preset) and a policies summary (mileage / fuel / minimum-age) where data exists.
+
+### Cinema details API (`cinema.py`)
+- `GET /api/cinema/showtimes/{id}/details` response now includes `refund_policy` so the booking page can render the cancellation schedule without a second roundtrip.
+
+### Hard-delete migration (system-wide)
+- `is_active: false` soft-delete pattern removed from: `hotels.py`, `geography.py` (countries/regions/segments), `event_locations.py`, `event_showtimes.py`, `inventory.py` (banquet_items), `access_control.py`, `employee_scopes.py`, `pods.py`. Each DELETE endpoint now uses `delete_one`. Hotels also cascade-delete their rooms.
+- One-time cleanup script purged 104 stale soft-deleted rows.
+- `search.py` `_ALIVE` defensive filter removed (DB is now clean). Operators query still excludes `status: suspended/inactive` because suspend is a deliberate ops state, not a delete.
+- **`event_showtimes` DELETE** is now a true hard delete (was previously `status: cancelled`). Historical orders keep their embedded showtime snapshot, so refund + receipt flows still resolve.
+
+### Search lifecycle fixes (iter 249 → 250)
+- Soft-deleted hotels and other deactivated rows no longer leak into global search (root-cause-fixed by the hard-delete migration above; defensive filter then removed).
+- `SmartSearchBar` no longer prints "N matches" beside city/operator suggestions — labels are clean.
+
+### Car Rental form/data fixes (iter 249 carry-over)
+- `handleSaveCar` sends both `brand`+`make` and `car_type`+`vehicle_type` (Pydantic 422 → blank screen was the symptom).
+- `loadCars` normalises `make→brand` and `vehicle_type→car_type` for the UI.
+- `/app/frontend/src/utils/apiError.js → extractErrorMessage(err)` safely renders FastAPI 422 detail arrays so toasts never crash React.
 
 
 ## Latest Changes (Feb 2026 — iter 248: refund automation, money-trail clarity, banner swap)
