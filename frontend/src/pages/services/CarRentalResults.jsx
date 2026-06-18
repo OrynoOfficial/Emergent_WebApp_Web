@@ -319,8 +319,13 @@ export default function CarRentalResults() {
   const [selectedTransmission, setSelectedTransmission] = useState('all');
 
   const pickupLocation = searchParams.get('pickup') || '';
-  const pickupDate = searchParams.get('pickupDate') || '';
-  const returnDate = searchParams.get('returnDate') || '';
+  // URL params — accept both the canonical snake_case (set by
+  // CarRentalSearch in iter 251+) and the legacy camelCase that older deep
+  // links may still carry. Either side returning an empty string means the
+  // dates weren't selected, in which case the rest of the page falls back
+  // to "1 day" pricing and the trip-summary chip is hidden.
+  const pickupDate = searchParams.get('pickup_date') || searchParams.get('pickupDate') || '';
+  const returnDate = searchParams.get('return_date') || searchParams.get('returnDate') || '';
 
   // Editable search state
   const [isEditingSearch, setIsEditingSearch] = useState(false);
@@ -337,8 +342,9 @@ export default function CarRentalResults() {
   const handleUpdateSearch = () => {
     const newParams = new URLSearchParams();
     if (editPickup) newParams.set('pickup', editPickup);
-    if (editPickupDate) newParams.set('pickupDate', editPickupDate);
-    if (editReturnDate) newParams.set('returnDate', editReturnDate);
+    // Match the canonical snake_case keys the rest of the app uses.
+    if (editPickupDate) newParams.set('pickup_date', editPickupDate);
+    if (editReturnDate) newParams.set('return_date', editReturnDate);
     setSearchParams(newParams);
     setIsEditingSearch(false);
   };

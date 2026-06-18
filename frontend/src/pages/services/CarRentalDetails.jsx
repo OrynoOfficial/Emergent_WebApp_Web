@@ -67,19 +67,25 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
   // Pickup / return dates flow in from three places (in priority order):
   //   1. explicit props (when embedded from CarRentalResults — best)
   //   2. URL search params (deep-link via the dedicated route)
-  //   3. sane defaults (today / +3 days)
-  // Before iter 252 the modal only read the URL params, so when opened
-  // inline from the results page it always fell back to today/+3 and the
-  // right-rail price was computed for the wrong window.
+  //   3. **null** — when nothing was provided we now force the user to pick.
+  //
+  // iter 252: dropped the silent today/+3 fallback. If a user deep-lands on
+  // /services/car-rental/details/:id without dates, both fields become
+  // required and the "Final Step" button is disabled until they're set.
+  // Accepts both `pickup_date`/`return_date` (canonical) and the legacy
+  // `pickupDate`/`returnDate` query keys.
   const _parseDate = (v) => (v ? new Date(v) : null);
+  const _initialPickup = _parseDate(pickupDateProp)
+    || _parseDate(searchParams.get('pickup_date'))
+    || _parseDate(searchParams.get('pickupDate'));
+  const _initialReturn = _parseDate(returnDateProp)
+    || _parseDate(searchParams.get('return_date'))
+    || _parseDate(searchParams.get('returnDate'));
   const [selectedDates, setSelectedDates] = useState({
-    pickup: _parseDate(pickupDateProp)
-      || _parseDate(searchParams.get('pickupDate'))
-      || new Date(),
-    return: _parseDate(returnDateProp)
-      || _parseDate(searchParams.get('returnDate'))
-      || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    pickup: _initialPickup,
+    return: _initialReturn,
   });
+  const [datesError, setDatesError] = useState(false);
   const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
   const [isReturnDateOpen, setIsReturnDateOpen] = useState(false);
 
@@ -88,8 +94,8 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
   useEffect(() => {
     if (!embedded) return;
     setSelectedDates({
-      pickup: _parseDate(pickupDateProp) || new Date(),
-      return: _parseDate(returnDateProp) || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      pickup: _parseDate(pickupDateProp),
+      return: _parseDate(returnDateProp),
     });
   }, [embedded, pickupDateProp, returnDateProp]);
 
@@ -245,10 +251,29 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
     }
   };
 
-  const days = differenceInDays(selectedDates.return, selectedDates.pickup) || 1;
+  // Both dates must be picked before days/price are meaningful. We still
+  // expose `days` (defaulting to 1) so the per-day price line keeps showing
+  // sensible numbers in the right rail until the user picks dates.
+  const datesReady = !!(selectedDates.pickup && selectedDates.return);
+  const days = datesReady
+    ? Math.max(1, differenceInDays(selectedDates.return, selectedDates.pickup) || 1)
+    : 1;
   const totalPrice = (vehicle?.price_per_day || 0) * days;
 
   const handleBook = () => {
+    // iter 252: dates are required. Block submission and surface a clear
+    // inline error rather than silently sending today / +3 to the booking
+    // page (which is what used to happen).
+    if (!datesReady) {
+      setDatesError(true);
+      // Scroll the right rail into view so the error is visible.
+      try {
+        document.querySelector('[data-testid="car-rental-details-modal"]')
+          ?.scrollTo({ top: 9999, behavior: 'smooth' });
+      } catch { /* no-op */ }
+      return;
+    }
+    setDatesError(false);
     const bookingData = {
       vehicle,
       pickupDate: selectedDates.pickup.toISOString(),
@@ -623,19 +648,35 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
               <div className="p-5 space-y-4 bg-gradient-to-b from-slate-50 to-white">
                 {/* Pickup Date */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Pickup Date</label>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start mt-1.5 bg-white border-slate-200 rounded-xl hover:bg-[#082c59]/5"
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Pickup Date <span className="text-red-500">*</span>
+                  </label>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start mt-1.5 bg-white border-slate-200 rounded-xl hover:bg-[#082c59]/5',
+                      !selectedDates.pickup && 'text-slate-400',
+                      datesError && !selectedDates.pickup && 'border-red-500 ring-1 ring-red-500/30',
+                    )}
                     onClick={() => setIsPickupDateOpen(true)}
+                    data-testid="car-rental-pickup-date"
                   >
                     <CalendarIcon className="w-4 h-4 mr-2 text-[#082c59]" />
-                    {format(selectedDates.pickup, 'PPP')}
+                    {selectedDates.pickup ? format(selectedDates.pickup, 'PPP') : 'Select pickup date'}
                   </Button>
                   <DatePickerModal
                     isOpen={isPickupDateOpen}
                     onClose={() => setIsPickupDateOpen(false)}
-                    onSelect={(d) => setSelectedDates(p => ({ ...p, pickup: d }))}
+                    onSelect={(d) => {
+                      setSelectedDates(p => ({
+                        ...p,
+                        pickup: d,
+                        // If the existing return is earlier than the new pickup, clear it
+                        // so the user can't end up with an inverted window.
+                        return: p.return && p.return < d ? null : p.return,
+                      }));
+                      setDatesError(false);
+                    }}
                     selectedDate={selectedDates.pickup}
                     title="Select Pickup Date"
                     minDate={new Date()}
@@ -644,22 +685,32 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
 
                 {/* Return Date */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Return Date</label>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start mt-1.5 bg-white border-slate-200 rounded-xl hover:bg-[#082c59]/5"
+                  <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Return Date <span className="text-red-500">*</span>
+                  </label>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start mt-1.5 bg-white border-slate-200 rounded-xl hover:bg-[#082c59]/5',
+                      !selectedDates.return && 'text-slate-400',
+                      datesError && !selectedDates.return && 'border-red-500 ring-1 ring-red-500/30',
+                    )}
                     onClick={() => setIsReturnDateOpen(true)}
+                    data-testid="car-rental-return-date"
                   >
                     <CalendarIcon className="w-4 h-4 mr-2 text-[#082c59]" />
-                    {format(selectedDates.return, 'PPP')}
+                    {selectedDates.return ? format(selectedDates.return, 'PPP') : 'Select return date'}
                   </Button>
                   <DatePickerModal
                     isOpen={isReturnDateOpen}
                     onClose={() => setIsReturnDateOpen(false)}
-                    onSelect={(d) => setSelectedDates(p => ({ ...p, return: d }))}
+                    onSelect={(d) => {
+                      setSelectedDates(p => ({ ...p, return: d }));
+                      setDatesError(false);
+                    }}
                     selectedDate={selectedDates.return}
                     title="Select Return Date"
-                    minDate={selectedDates.pickup}
+                    minDate={selectedDates.pickup || new Date()}
                   />
                 </div>
 
@@ -706,10 +757,26 @@ export default function CarRentalDetails({ vehicleId: idProp, open: openProp, on
                 </div>
 
                 <div className="space-y-2">
-                  <Button className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 rounded-xl font-bold text-base" onClick={handleBook}>
+                  {datesError && (
+                    <p
+                      className="text-center text-xs text-red-600 font-medium flex items-center justify-center gap-1"
+                      data-testid="car-rental-dates-error"
+                    >
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Please select pickup and return dates to continue.
+                    </p>
+                  )}
+                  <Button
+                    className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 rounded-xl font-bold text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={handleBook}
+                    disabled={!datesReady}
+                    data-testid="car-rental-final-step"
+                  >
                     Final Step
                   </Button>
-                  <p className="text-center text-xs text-slate-500">You will not be charged yet</p>
+                  <p className="text-center text-xs text-slate-500">
+                    {datesReady ? 'You will not be charged yet' : 'Pick your dates to continue'}
+                  </p>
                 </div>
               </div>
             </div>
