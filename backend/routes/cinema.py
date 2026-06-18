@@ -868,6 +868,10 @@ async def get_showtime_details(showtime_id: str):
         "total_seats": total_seats_val,
         # Live availability — drift-free, derived from the live booking tally.
         "available_seats": max(0, total_seats_val - len(booked_seats)),
+        # Refund policy (listing-level override or operator default). Exposed so
+        # the booking page can render the cancellation schedule alongside the
+        # seat map without a second API roundtrip.
+        "refund_policy": st.get("refund_policy"),
     }
 
     return {
