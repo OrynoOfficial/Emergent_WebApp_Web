@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api/client';
-import { Search, Users, Shield, User, Mail, Edit, Ban, Eye, Crown, Plus, ShieldCheck, UserCog, Trash2, UserPlus, ChevronDown, Send, LayoutGrid, List, FileText, Building2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Users, Shield, User, Mail, Edit, Ban, Eye, Crown, Plus, ShieldCheck, UserCog, Trash2, UserPlus, ChevronDown, Send, LayoutGrid, List, FileText, Building2, Calendar, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -20,6 +20,8 @@ import { formatDate } from '../../utils/dateUtils';
 import ManagementShell from '../../components/management/shared/ManagementShell';
 import SubpageCard from '../../components/management/shared/SubpageCard';
 import ViewModeToggle from '../../components/common/ViewModeToggle';
+import FilterChipSelect from '../../components/shared/FilterChipSelect';
+import IconButton from '../../components/shared/IconButton';
 import BulkActionsBar, { BulkSelectHeader, BulkSelectCell } from '../../components/shared/BulkActionsBar';
 import { useBulkSelection } from '../../hooks/useBulkSelection';
 
@@ -88,7 +90,9 @@ export default function UserManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [activeView, setActiveView] = useState('users'); // 'users' or 'invitations'
+  const [activeView, setActiveView] = useState(
+    location.pathname.includes('/invitations') ? 'invitations' : 'users'
+  );
   const [createForm, setCreateForm] = useState({
     email: '',
     full_name: '',
@@ -105,6 +109,11 @@ export default function UserManagement() {
     fetchRoles();
     activityLogger.pageView('User Management', '/admin/users');
   }, []);
+
+  // Sync activeView with URL on browser back/forward
+  useEffect(() => {
+    setActiveView(location.pathname.includes('/invitations') ? 'invitations' : 'users');
+  }, [location.pathname]);
 
   const fetchRoles = async () => {
     try {
@@ -392,26 +401,24 @@ export default function UserManagement() {
         iconColorClass="text-[#082c59]"
         subtitle="Manage system users, roles, and permissions"
         scopeFilter={
-          <Button
-            className="bg-[#082c59] hover:bg-[#0a3a75] h-8"
-            size="sm"
+          <IconButton
+            icon={Plus}
+            label="Add user"
+            variant="solid"
             onClick={() => setIsCreateModalOpen(true)}
             data-testid="add-user-btn"
-          >
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add User
-          </Button>
+          />
         }
         tabs={[
           { value: 'users', label: 'Users', icon: Users, testId: 'tab-users' },
           { value: 'permissions', label: 'Permissions', icon: ShieldCheck, testId: 'tab-permissions' },
           { value: 'invitations', label: 'Invitations', icon: Send, testId: 'tab-invitations' },
         ]}
-        activeTab={location.pathname.includes('/permissions') ? 'permissions' : activeView === 'invitations' ? 'invitations' : 'users'}
+        activeTab={location.pathname.includes('/permissions') ? 'permissions' : location.pathname.includes('/invitations') ? 'invitations' : activeView}
         onTabChange={(v) => {
           if (v === 'users') { navigate('/admin/users'); setActiveView('users'); }
           else if (v === 'permissions') navigate('/admin/users/permissions');
-          else if (v === 'invitations') setActiveView('invitations');
+          else if (v === 'invitations') { navigate('/admin/users/invitations'); setActiveView('invitations'); }
         }}
         testIdPrefix="user-mgmt"
       >
@@ -434,34 +441,44 @@ export default function UserManagement() {
               data-testid="user-search-input"
             />
           </div>
-          <Select value={filters.role} onValueChange={(v) => setFilters(f => ({ ...f, role: v }))}>
-            <SelectTrigger className="w-36 bg-white" data-testid="user-role-filter"><SelectValue placeholder="All Roles" /></SelectTrigger>
-            <SelectContent className="bg-white">
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="super_admin">Super Admin</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="operator">Operator</SelectItem>
-              <SelectItem value="employee">Employee</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filters.status} onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}>
-            <SelectTrigger className="w-36 bg-white" data-testid="user-status-filter"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent className="bg-white">
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filters.operator_id} onValueChange={(v) => setFilters(f => ({ ...f, operator_id: v }))}>
-            <SelectTrigger className="w-48 bg-white" data-testid="user-operator-filter"><SelectValue placeholder="Operator" /></SelectTrigger>
-            <SelectContent className="bg-white max-h-64">
-              <SelectItem value="all">All operators</SelectItem>
-              {operatorOptions.map(([id, name]) => (
-                <SelectItem key={id} value={id}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterChipSelect
+            icon={Shield}
+            label="Role"
+            value={filters.role}
+            onChange={(v) => setFilters(f => ({ ...f, role: v }))}
+            options={[
+              { value: 'all', label: 'All Roles' },
+              { value: 'super_admin', label: 'Super Admin' },
+              { value: 'admin', label: 'Admin' },
+              { value: 'operator', label: 'Operator' },
+              { value: 'employee', label: 'Employee' },
+              { value: 'customer', label: 'Customer' },
+            ]}
+            data-testid="user-role-filter"
+          />
+          <FilterChipSelect
+            icon={Filter}
+            label="Status"
+            value={filters.status}
+            onChange={(v) => setFilters(f => ({ ...f, status: v }))}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'active', label: 'Active' },
+              { value: 'suspended', label: 'Suspended' },
+            ]}
+            data-testid="user-status-filter"
+          />
+          <FilterChipSelect
+            icon={Building2}
+            label="Operator"
+            value={filters.operator_id}
+            onChange={(v) => setFilters(f => ({ ...f, operator_id: v }))}
+            options={[
+              { value: 'all', label: 'All operators' },
+              ...operatorOptions.map(([id, name]) => ({ value: id, label: name })),
+            ]}
+            data-testid="user-operator-filter"
+          />
           {/* View mode toggle */}
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
         {/* Date-joined range */}
@@ -493,21 +510,23 @@ export default function UserManagement() {
         </div>
       </SubpageCard>
 
-      {/* Stats (dynamic — updates with active filters) */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4" data-testid="users-stats-grid">
+      {/* Stats — slim chip strip (matches Ratings page aesthetic) */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="users-stats-grid">
         {[
-          { label: 'Total', count: filteredUsers.length, color: 'bg-slate-100 text-slate-700' },
-          { label: 'Super Admins', count: filteredUsers.filter(u => u.role === 'super_admin').length, color: 'bg-purple-100 text-purple-700' },
-          { label: 'Admins', count: filteredUsers.filter(u => u.role === 'admin').length, color: 'bg-blue-100 text-blue-700' },
-          { label: 'Operators', count: filteredUsers.filter(u => u.role === 'operator').length, color: 'bg-green-100 text-green-700' },
-          { label: 'Customers', count: filteredUsers.filter(u => u.role === 'customer').length, color: 'bg-amber-100 text-amber-700' },
-          { label: 'Suspended', count: filteredUsers.filter(u => u.status === 'suspended').length, color: 'bg-red-100 text-red-700' }
-        ].map((stat) => (
-          <div key={stat.label} className={`p-3 rounded-lg ${stat.color}`}>
-            <p className="text-2xl font-bold">{stat.count}</p>
-            <p className="text-sm">{stat.label}</p>
-          </div>
-        ))}
+          { label: 'Total', count: filteredUsers.length, color: 'bg-slate-50 border-slate-200 text-slate-700', icon: Users },
+          { label: 'Super Admins', count: filteredUsers.filter(u => u.role === 'super_admin').length, color: 'bg-purple-50 border-purple-200 text-purple-700', icon: Crown },
+          { label: 'Admins', count: filteredUsers.filter(u => u.role === 'admin').length, color: 'bg-blue-50 border-blue-200 text-blue-700', icon: ShieldCheck },
+          { label: 'Operators', count: filteredUsers.filter(u => u.role === 'operator').length, color: 'bg-green-50 border-green-200 text-green-700', icon: UserCog },
+          { label: 'Customers', count: filteredUsers.filter(u => u.role === 'customer').length, color: 'bg-amber-50 border-amber-200 text-amber-700', icon: User },
+          { label: 'Suspended', count: filteredUsers.filter(u => u.status === 'suspended').length, color: 'bg-red-50 border-red-200 text-red-700', icon: Ban },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} className={`flex items-center gap-2 px-2.5 py-1 rounded-full border ${stat.color} text-[11px] font-medium`}>
+              <Icon className="h-3 w-3" /> {stat.label} <span className="font-bold">{stat.count}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Users Table / Grid / Details */}

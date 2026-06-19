@@ -18,8 +18,9 @@ import {
   Database, FileText, CreditCard, Bell, Globe, Sparkles, Gift, Film,
   Ticket, Receipt, TrendingUp, History, MessageSquare, HelpCircle,
   LayoutDashboard, ShoppingBag, Award, Briefcase, Percent, QrCode, 
-  ChevronRight, ChevronDown, UserCheck, ShieldAlert, Clock, Filter
+  ChevronRight, ChevronDown, UserCheck, ShieldAlert, Clock, Filter, Mail, User
 } from 'lucide-react';
+import IconButton from '@/components/shared/IconButton';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -874,85 +875,42 @@ export default function Permissions() {
           <h1 className="text-2xl font-bold text-[#082c59] mb-1">User Management</h1>
           <p className="text-slate-500">Manage system users, roles, and permissions</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="gap-2 bg-[#082c59] hover:bg-[#0a3a75]">
-          <Plus className="h-4 w-4" />
-          Create Role
-        </Button>
+        <IconButton icon={Plus} label="Create role" variant="solid" onClick={() => handleOpenDialog()} data-testid="create-role-btn" />
       </div>
       <div>
-        <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : 'users'} onValueChange={(v) => {
+        <Tabs value={location.pathname.includes('/permissions') ? 'permissions' : location.pathname.includes('/invitations') ? 'invitations' : 'users'} onValueChange={(v) => {
           if (v === 'users') navigate('/admin/users');
           else if (v === 'permissions') navigate('/admin/users/permissions');
+          else if (v === 'invitations') navigate('/admin/users/invitations');
         }}>
-          <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
+          <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
             <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-users">
               <Users className="w-4 h-4" />Users
             </TabsTrigger>
             <TabsTrigger value="permissions" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-permissions">
               <ShieldCheck className="w-4 h-4" />Permissions
             </TabsTrigger>
+            <TabsTrigger value="invitations" className="flex items-center gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="tab-invitations">
+              <Mail className="w-4 h-4" />Invitations
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-900">{roles.length}</p>
-                <p className="text-sm text-blue-700">Total Roles</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500 rounded-lg">
-                <Key className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-900">
-                  {PERMISSION_MODULES.reduce((sum, m) => sum + m.permissions.length, 0)}
-                </p>
-                <p className="text-sm text-green-700">Total Permissions</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-500 rounded-lg">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-purple-900">
-                  {roles.reduce((sum, r) => sum + (r.userCount || r.user_count || 0), 0)}
-                </p>
-                <p className="text-sm text-purple-700">Users Assigned</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-500 rounded-lg">
-                <Database className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-900">{PERMISSION_MODULES.length}</p>
-                <p className="text-sm text-amber-700">Modules</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats — compact chip strip */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+          <Shield className="h-3 w-3" /> Roles <span className="font-bold">{roles.length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
+          <Key className="h-3 w-3" /> Permissions <span className="font-bold">{PERMISSION_MODULES.reduce((sum, m) => sum + m.permissions.length, 0)}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[11px] font-medium">
+          <Users className="h-3 w-3" /> Users assigned <span className="font-bold">{roles.reduce((sum, r) => sum + (r.userCount || r.user_count || 0), 0)}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+          <Database className="h-3 w-3" /> Modules <span className="font-bold">{PERMISSION_MODULES.length}</span>
+        </div>
       </div>
 
       {/* Main Content Tabs */}
@@ -1335,52 +1293,26 @@ export default function Permissions() {
         {/* Audit Trail Tab */}
         {isSuperAdmin && (
         <TabsContent value="audit-trail" className="mt-6 space-y-6">
-          {/* Stats Cards */}
+          {/* Stats — compact chip strip */}
           {auditStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-br from-red-50 to-red-100/50 border-red-200">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-red-100 rounded-xl"><ShieldAlert className="h-5 w-5 text-red-600" /></div>
-                    <div>
-                      <p className="text-2xl font-bold text-red-700">{auditStats.total_denials?.toLocaleString()}</p>
-                      <p className="text-xs text-red-600 font-medium">Total Denials</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardContent className="p-5">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Top Blocked Users</p>
-                  <div className="space-y-2">
-                    {(auditStats.top_denied_users || []).slice(0, 3).map((u, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm text-slate-700 truncate max-w-[180px]">{u.email}</span>
-                        <Badge variant="outline" className="text-xs text-red-600 border-red-200">{u.count}</Badge>
-                      </div>
-                    ))}
-                    {(!auditStats.top_denied_users || auditStats.top_denied_users.length === 0) && (
-                      <p className="text-xs text-slate-400">No data yet</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-slate-200">
-                <CardContent className="p-5">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Most Blocked Permissions</p>
-                  <div className="space-y-2">
-                    {(auditStats.top_denied_permissions || []).slice(0, 3).map((p, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <code className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[180px]">{p.permission}</code>
-                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">{p.count}</Badge>
-                      </div>
-                    ))}
-                    {(!auditStats.top_denied_permissions || auditStats.top_denied_permissions.length === 0) && (
-                      <p className="text-xs text-slate-400">No data yet</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[11px] font-medium">
+                <ShieldAlert className="h-3 w-3" /> Total Denials <span className="font-bold">{auditStats.total_denials?.toLocaleString() || 0}</span>
+              </div>
+              {(auditStats.top_denied_users || []).slice(0, 3).map((u, i) => (
+                <div key={`u-${i}`} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-medium">
+                  <User className="h-3 w-3" />
+                  <span className="truncate max-w-[140px]">{u.email}</span>
+                  <span className="font-bold text-red-600">{u.count}</span>
+                </div>
+              ))}
+              {(auditStats.top_denied_permissions || []).slice(0, 3).map((p, i) => (
+                <div key={`p-${i}`} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+                  <Key className="h-3 w-3" />
+                  <code className="truncate max-w-[140px]">{p.permission}</code>
+                  <span className="font-bold">{p.count}</span>
+                </div>
+              ))}
             </div>
           )}
 
@@ -1396,13 +1328,11 @@ export default function Permissions() {
                       placeholder="Filter by permission..."
                       value={auditFilter}
                       onChange={(e) => setAuditFilter(e.target.value)}
-                      className="pl-10 bg-white text-sm"
+                      className="pl-10 bg-white text-sm h-8"
                       data-testid="audit-filter-input"
                     />
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => loadAuditTrail(1)} data-testid="audit-refresh-btn">
-                    <Search className="h-4 w-4 mr-1" /> Search
-                  </Button>
+                  <IconButton icon={Search} label="Search" variant="outline" onClick={() => loadAuditTrail(1)} data-testid="audit-refresh-btn" />
                 </div>
               </div>
             </CardHeader>

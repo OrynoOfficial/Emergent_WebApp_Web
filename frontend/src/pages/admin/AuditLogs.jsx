@@ -9,8 +9,11 @@ import {
   History, Search, User, Settings, ShieldCheck, AlertTriangle,
   ChevronLeft, ChevronRight,
   Truck, RefreshCw, Calendar, Clock,
-  CheckCircle, Package, CreditCard, AlertCircle, List, LayoutGrid, Rows3
+  CheckCircle, Package, CreditCard, AlertCircle, List, LayoutGrid, Rows3,
+  Filter
 } from 'lucide-react';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -257,53 +260,21 @@ export default function AuditLogs() {
       <div className="mt-4 space-y-6">
       {!isAdmin && <PermissionNotice />}
 
-      {/* Stats Cards (Admin Only) */}
+      {/* Stats — compact chip strip (Admin Only) */}
       {isAdmin && stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600">Total Logs</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total_logs?.toLocaleString() || 0}</p>
-                </div>
-                <History className="h-8 w-8 text-blue-300" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600">Last 24 Hours</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.recent_24h || 0}</p>
-                </div>
-                <Clock className="h-8 w-8 text-green-300" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-amber-600">Warnings</p>
-                  <p className="text-2xl font-bold text-amber-900">{stats.severity_breakdown?.warning || 0}</p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-amber-300" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-red-600">Errors</p>
-                  <p className="text-2xl font-bold text-red-900">{stats.severity_breakdown?.error || 0}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-red-300" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex flex-wrap items-center gap-2" data-testid="audit-logs-stats">
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+            <History className="h-3 w-3" /> Total <span className="font-bold">{stats.total_logs?.toLocaleString() || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
+            <Clock className="h-3 w-3" /> Last 24h <span className="font-bold">{stats.recent_24h || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+            <AlertTriangle className="h-3 w-3" /> Warnings <span className="font-bold">{stats.severity_breakdown?.warning || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-[11px] font-medium">
+            <AlertCircle className="h-3 w-3" /> Errors <span className="font-bold">{stats.severity_breakdown?.error || 0}</span>
+          </div>
         </div>
       )}
 
@@ -322,60 +293,53 @@ export default function AuditLogs() {
                   data-testid="log-search-input"
                 />
               </div>
-              <Select value={logActionFilter} onValueChange={(v) => { setLogActionFilter(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-40 bg-white h-9 text-sm" data-testid="log-action-filter">
-                  <SelectValue placeholder="Action Type" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="user">User Actions</SelectItem>
-                  <SelectItem value="order">Orders</SelectItem>
-                  <SelectItem value="service">Services</SelectItem>
-                  <SelectItem value="payment">Payments</SelectItem>
-                  <SelectItem value="validation">Validation</SelectItem>
-                  <SelectItem value="settings">Settings</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={logSeverityFilter} onValueChange={(v) => { setLogSeverityFilter(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-36 bg-white h-9 text-sm" data-testid="log-severity-filter">
-                  <SelectValue placeholder="Severity" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Severities</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
+              <FilterChipSelect
+                icon={Filter}
+                label="Action"
+                value={logActionFilter}
+                onChange={(v) => { setLogActionFilter(v); setCurrentPage(1); }}
+                options={[
+                  { value: 'all', label: 'All Actions' },
+                  { value: 'user', label: 'User Actions' },
+                  { value: 'order', label: 'Orders' },
+                  { value: 'service', label: 'Services' },
+                  { value: 'payment', label: 'Payments' },
+                  { value: 'validation', label: 'Validation' },
+                  { value: 'settings', label: 'Settings' },
+                  { value: 'security', label: 'Security' },
+                ]}
+                data-testid="log-action-filter"
+              />
+              <FilterChipSelect
+                icon={AlertTriangle}
+                label="Severity"
+                value={logSeverityFilter}
+                onChange={(v) => { setLogSeverityFilter(v); setCurrentPage(1); }}
+                options={[
+                  { value: 'all', label: 'All Severities' },
+                  { value: 'info', label: 'Info' },
+                  { value: 'warning', label: 'Warning' },
+                  { value: 'error', label: 'Error' },
+                ]}
+                data-testid="log-severity-filter"
+              />
             </div>
             {/* Role exclusion filters + View mode toggle */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                {[
-                  { k: 'none', l: 'All Users' },
-                  { k: 'super_admin', l: 'Without Superadmin' },
-                  { k: 'admin', l: 'Without Admin' },
-                ].map(f => (
-                  <Button key={f.k} variant={logExcludeRole === f.k ? 'default' : 'outline'} size="sm"
-                    className={`h-7 text-xs px-2.5 ${logExcludeRole === f.k ? 'bg-[#082c59]' : ''}`}
-                    onClick={() => { setLogExcludeRole(f.k); setCurrentPage(1); }}
-                    data-testid={`exclude-role-${f.k}`}
-                  >{f.l}</Button>
-                ))}
-              </div>
-              <div className="flex border rounded-lg overflow-hidden">
-                {[
-                  { k: 'details', icon: Rows3, label: 'Details' },
-                  { k: 'list', icon: List, label: 'List' },
-                  { k: 'grid', icon: LayoutGrid, label: 'Grid' },
-                ].map(v => (
-                  <button key={v.k} onClick={() => setLogViewMode(v.k)} title={v.label}
-                    className={`px-2 py-1.5 ${logViewMode === v.k ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
-                    data-testid={`view-mode-${v.k}`}
-                  ><v.icon className="h-4 w-4" /></button>
-                ))}
-              </div>
+              <FilterChipSelect
+                icon={User}
+                label="User scope"
+                value={logExcludeRole}
+                onChange={(v) => { setLogExcludeRole(v); setCurrentPage(1); }}
+                options={[
+                  { value: 'none', label: 'All Users' },
+                  { value: 'super_admin', label: 'Exclude Superadmin' },
+                  { value: 'admin', label: 'Exclude Admin' },
+                ]}
+                allValue="none"
+                data-testid="log-exclude-role"
+              />
+              <ViewModeToggle value={logViewMode} onChange={setLogViewMode} />
             </div>
           </div>
         </CardContent>

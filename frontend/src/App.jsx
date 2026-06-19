@@ -631,6 +631,15 @@ function App() {
           />
           
           <Route
+            path="/admin/users/invitations"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <UserManagement />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
             path="/admin/commission"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
