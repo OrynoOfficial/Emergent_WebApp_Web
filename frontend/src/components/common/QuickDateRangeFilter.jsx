@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar as CalendarIcon, ChevronDown, X } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfYear, subMonths } from 'date-fns';
 
@@ -100,23 +101,32 @@ export default function QuickDateRangeFilter({ value, onChange, className = '' }
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={`h-9 gap-2 bg-white border-slate-200 ${className}`}
-          data-testid="quick-date-range-trigger"
-        >
-          <CalendarIcon className="h-4 w-4 text-[#082c59]" />
-          <span className="text-sm font-medium">{label}</span>
-          {preset !== 'all' && (
-            <Badge className="ml-1 bg-[#082c59] hover:bg-[#082c59] text-white text-[10px] px-1.5 py-0 h-4">
-              ON
-            </Badge>
-          )}
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-        </Button>
-      </PopoverTrigger>
+    <TooltipProvider delayDuration={200}>
+      <Popover>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={preset === 'all' ? 'Date range' : `Date range: ${label}`}
+                className={`inline-flex items-center gap-1.5 rounded-lg border transition-colors text-xs font-medium shrink-0 ${
+                  preset !== 'all'
+                    ? 'bg-[#082c59] border-[#082c59] text-white h-8 px-2.5 hover:bg-[#0a3a75]'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 h-8 w-8 px-0 justify-center'
+                } ${className}`}
+                data-testid="quick-date-range-trigger"
+              >
+                <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+                {preset !== 'all' && (
+                  <span className="capitalize whitespace-nowrap max-w-[160px] truncate">{label}</span>
+                )}
+              </button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={6} className="text-xs">
+            {preset === 'all' ? 'Date range' : `Date range: ${label}`}
+          </TooltipContent>
+        </Tooltip>
       <PopoverContent className="w-auto p-0 bg-white" align="start">
         <div className="flex">
           {/* Preset list */}
@@ -176,5 +186,6 @@ export default function QuickDateRangeFilter({ value, onChange, className = '' }
         </div>
       </PopoverContent>
     </Popover>
+    </TooltipProvider>
   );
 }

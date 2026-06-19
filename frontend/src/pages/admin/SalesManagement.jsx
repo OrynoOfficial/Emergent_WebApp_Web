@@ -27,6 +27,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { toast } from 'sonner';
+import IconButton from '@/components/shared/IconButton';
 
 const TIME_RANGES = [
   { value: 'today', label: 'Today' },
@@ -478,9 +479,7 @@ export default function SalesManagement() {
           </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" data-testid="revenue-export-btn">
-                <Download className="w-3.5 h-3.5 mr-1.5" /> Export
-              </Button>
+              <IconButton icon={Download} label="Export" variant="outline" size="sm" data-testid="revenue-export-btn" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white" align="end">
               <DropdownMenuItem onClick={handleExportCSV} data-testid="export-csv-item">

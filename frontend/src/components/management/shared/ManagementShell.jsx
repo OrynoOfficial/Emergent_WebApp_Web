@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronUp, ChevronDown, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import IconButton from '@/components/shared/IconButton';
 
 export default function ManagementShell({
   title,                  // e.g. "Cinema Management Center"
@@ -96,10 +97,16 @@ export default function ManagementShell({
                 <div className="flex items-center gap-2 flex-wrap ml-auto">
                   {scopeFilter}
                   {onRefresh && (
-                    <Button onClick={onRefresh} variant="outline" size="sm" disabled={refreshing} data-testid={`${testIdPrefix}-refresh-btn`}>
-                      <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                      Refresh
-                    </Button>
+                    <IconButton
+                      icon={RefreshCw}
+                      label={refreshing ? 'Refreshing…' : 'Refresh'}
+                      variant="outline"
+                      size="sm"
+                      onClick={onRefresh}
+                      disabled={refreshing}
+                      data-testid={`${testIdPrefix}-refresh-btn`}
+                      className={refreshing ? '[&_svg]:animate-spin' : ''}
+                    />
                   )}
                 </div>
               </div>

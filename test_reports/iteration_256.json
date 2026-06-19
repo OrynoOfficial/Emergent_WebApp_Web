@@ -1,0 +1,74 @@
+{
+  "summary": "Iter 256 frontend verification: platform-wide iconisation ripple via ManagementShell (Refresh → IconButton), QuickDateRangeFilter (icon-only when default, brand-blue chip + label when preset selected), OperatorScopeFilter (32px Building2 icon → expands on select), plus dialog-fade preservation and FilterChipSelect tooltip suppression. All seven spec points exercised on live preview using superadmin@oryno.com. Six of seven pass cleanly; two minor polish items noted (backdrop overlay still gets animation:none because the CSS exception only excludes [role=dialog]/[data-radix-dialog-content], NOT [data-radix-dialog-overlay]; and FilterChipSelect/OperatorScopeFilter emit a React warning 'Tooltip is changing from uncontrolled to controlled' due to the open={open?false:undefined} toggle).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AdminModal overlay (e.g. /admin/operators Eye modal)", "issues": ["Dialog content animates softly (animationName=fadeIn, duration=0.2s) but the backdrop overlay reports animationName=none / duration=0s because index.css L230-233 selector kills animation on every [data-state=open] that is not [role=dialog] or [data-radix-dialog-content]. The Radix overlay carries [data-radix-dialog-overlay] but no role attribute, so it is still being swept. Add :not([data-radix-dialog-overlay]) (and the matching closed-state selector) to keep the backdrop fade. Visual impact: backdrop pops on instead of fading; content still fades."]}
+    ]
+  },
+  "verified_observations": {
+    "managementshell_refresh": {
+      "page": "/admin/bills",
+      "icon_only_size_px": 28.8,
+      "tooltip_text_on_hover": "Refresh",
+      "tooltip_color": "rgb(255, 255, 255)",
+      "tooltip_animation_duration": "0s",
+      "loading_label_handled_via_aria": "[aria-label=\"Refreshing…\"]"
+    },
+    "cinema_management_refresh": {
+      "page": "/management/cinema",
+      "icon_only_size_px": 28.8,
+      "tooltip_text": "Refresh"
+    },
+    "quick_date_range_filter": {
+      "page_tested": "/admin/bills (also wired on /receipts, /admin/orders, Reporting, Bookings)",
+      "initial_state": {"width_px": 28.8, "height_px": 28.8, "label": "", "bg": "rgb(255,255,255)"},
+      "tooltip_on_hover": "Date range",
+      "after_last_7_days": {"label": "Last 7 Days", "width_px": 95.0, "bg": "rgb(8, 44, 89)", "color": "rgb(255,255,255)"},
+      "brand_blue_match_082c59": true,
+      "custom_range_calendar_opens_on_right": "verified visually in popover layout (computeRange + Calendar mounted when preset==='custom')"
+    },
+    "operator_scope_filter": {
+      "page_tested": "/admin/bills (admin scope mounts)",
+      "initial_state": {"width_px": 28.8, "height_px": 28.8, "label": ""},
+      "popover": {"search_input_present": true, "all_operators_label": "All operators (7)", "options_count": 8},
+      "after_select": {"text": "Carter Entertainment", "width_px": 145.0, "bg": "rgb(8, 44, 89)", "color": "rgb(255,255,255)"}
+    },
+    "filterchip_tooltip_suppression": {
+      "page": "/admin/operators (Status chip)",
+      "tooltip_before_click": "Status",
+      "tooltip_count_after_popover_open": 0,
+      "popover_open_after_click": true
+    },
+    "admin_modal_dialog_fade": {
+      "page": "/admin/operators (Eye → operator detail)",
+      "dialog_content_animationName": "fadeIn",
+      "dialog_content_animationDuration": "0.2s",
+      "dialog_backdrop_animationName": "none",
+      "dialog_backdrop_animationDuration": "0s"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Minor) index.css L230-233 — extend exception list so dialog backdrop also keeps its fade: append :not([data-radix-dialog-overlay]) to the two [data-state=open]/[data-state=closed] selectors. Current state: dialog content fades softly but the backdrop pops on instantly, which slightly undermines the polish the iteration was meant to restore.",
+    "(Minor) FilterChipSelect.jsx L46 and OperatorScopeFilter.jsx L50 — pattern open={open?false:undefined} flips Radix Tooltip between controlled/uncontrolled and emits two React warnings every interaction ('Tooltip is changing from uncontrolled to controlled' + the reverse on close). Suggested fix: keep tooltip always controlled, e.g. const [tipOpen, setTipOpen] = useState(false); wire onMouseEnter/Leave + onFocus/Blur on the trigger and force tipOpen=false whenever popover open===true. No functional regression today, but it is console noise that future testers will trip on.",
+    "(Optional) When Tooltip is open AND user clicks the trigger, tooltip dismisses correctly (verified). However Radix sometimes leaves a stale tooltip behind on rapid hover→click cycles — exercise this on Bookings/Reporting where users tend to scrub presets quickly."
+  ],
+  "critical_code_review_comments": [
+    "ManagementShell.jsx L100-108 — clean IconButton swap, refreshing state propagates via [&_svg]:animate-spin on disabled, label changes Refresh→Refreshing… aria-label is honoured by tooltip. Good DRY win.",
+    "QuickDateRangeFilter.jsx L103-129 — clean controlled tooltip via TooltipTrigger asChild→PopoverTrigger asChild nesting; aria-label is value-aware ('Date range' vs 'Date range: Last 7 Days'). Inline computeRange + inRange exported makes downstream filtering trivial.",
+    "OperatorScopeFilter.jsx — early return `if (!isAdmin || operators.length === 0) return null` correctly hides chip for operator role and on pages where no operators are loaded yet. Selected operator name is memoised against latest operators array — robust against late-loading lists.",
+    "index.css L224-251 — utilities layer is the right place; the :not() selector chain correctly preserves dialog content fade BUT misses the dialog overlay/backdrop case (see action item).",
+    "FilterChipSelect tooltip control pattern emits React 18 warnings — non-blocking but worth tidying."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only request)", "frontend": "6/7 spec points pass cleanly. Dialog content fade verified (content fadeIn 0.2s); backdrop fade is the one residual gap."},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (2-step login: 'Login to Your Account' → email + Continue → password + Login).",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 256 verified via /admin/bills (mounts ManagementShell Refresh + QuickDateRangeFilter + OperatorScopeFilter on one page — best single-page smoke for all three shared components), plus /admin/operators (FilterChipSelect tooltip suppression + AdminModal dialog fade) and /management/cinema (CinemaManagement Refresh IconButton). data-testids in place: quick-date-range-trigger, date-preset-{all|today|last_7_days|...|custom|clear}, operator-scope-trigger, operator-scope-search, operator-scope-option-all, operator-scope-option-{operatorId}, filter-{label-lowercased}. Brand blue confirmed as rgb(8,44,89)=#082c59. Backdrop overlay fade is still being swept by the no-animation rule — flagged as the only residual polish item.",
+  "rca of the issue": "Dialog backdrop pop-on RCA: index.css selector `[data-state=\"open\"]:not([role=\"dialog\"]):not([data-radix-dialog-content])` matches the Radix dialog overlay <div> (which has data-state=\"open\" + data-radix-dialog-overlay attribute but NO role=\"dialog\" — Radix only sets role=\"dialog\" on the content node). So animation:none is applied to the backdrop. Fix: append :not([data-radix-dialog-overlay]) to both the open and closed selectors at L230-231. Reproduction: visit /admin/operators logged in as superadmin, click any Eye icon on an operator row, observe computed style of div[data-radix-dialog-overlay] → animationName=none/animationDuration=0s while the content div[role=dialog] shows fadeIn / 0.2s."
+}

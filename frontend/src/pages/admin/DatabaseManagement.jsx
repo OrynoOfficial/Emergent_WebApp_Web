@@ -16,6 +16,7 @@ import {
 import api from '@/api/client';
 import { toast } from 'sonner';
 import { formatDateTime } from '@/utils/dateUtils';
+import IconButton from '@/components/shared/IconButton';
 
 export default function DatabaseManagement() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,10 +169,7 @@ export default function DatabaseManagement() {
           <h1 className="text-2xl font-bold text-[#082c59]">Database Management</h1>
           <p className="text-gray-600">View and manage database collections</p>
         </div>
-        <Button onClick={loadStats} variant="outline" className="gap-2">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
+        <IconButton icon={RefreshCw} label="Refresh" variant="outline" onClick={loadStats} />
       </div>
 
       {/* Stats Cards */}

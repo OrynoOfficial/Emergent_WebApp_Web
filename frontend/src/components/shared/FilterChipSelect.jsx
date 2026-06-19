@@ -36,11 +36,14 @@ export default function FilterChipSelect({
 }) {
   const isActive = value && value !== allValue;
   const activeOption = options.find(o => o.value === value);
+  const [open, setOpen] = React.useState(false);
 
   return (
     <TooltipProvider delayDuration={200}>
-      <Popover>
-        <Tooltip>
+      <Popover open={open} onOpenChange={setOpen}>
+        {/* Tooltip is suppressed while the popover is open to avoid the
+            "two layers on the same trigger" feel flagged by iter 255 polish. */}
+        <Tooltip open={open ? false : undefined}>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <button

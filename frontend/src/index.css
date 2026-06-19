@@ -222,10 +222,15 @@
  * NOT affect the still-required CSS transitions on hover/focus.
  */
 @layer utilities {
-  [data-state="open"],
-  [data-state="closed"],
-  [data-radix-popper-content-wrapper],
-  [data-radix-popper-content-wrapper] > * {
+  /*
+   * Kill the Radix "fly-in" but PRESERVE soft fades on actual modal
+   * dialogs (`[role=dialog]`) and their backdrops. Iter 256 user request
+   * — keep dialogs feeling polished, kill everything else.
+   */
+  [data-state="open"]:not([role="dialog"]):not([data-radix-dialog-content]),
+  [data-state="closed"]:not([role="dialog"]):not([data-radix-dialog-content]),
+  [data-radix-popper-content-wrapper]:not(:has([role="dialog"])),
+  [data-radix-popper-content-wrapper]:not(:has([role="dialog"])) > *:not([role="dialog"]) {
     animation: none !important;
   }
 

@@ -10,6 +10,7 @@ import { formatFCFA } from '../../utils/currency';
 import api from '../../api/client';
 import ManagementShell from '../../components/management/shared/ManagementShell';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import IconButton from '@/components/shared/IconButton';
 
 const OP_COLORS = ['#082c59', '#0ea5e9', '#f97316']; // 1st/2nd/3rd column
 const PERIODS = [
@@ -173,12 +174,9 @@ export default function OperatorComparison() {
             })}
           </div>
           {selectedIds.length < 3 && (
-            <Button
-              variant="outline" size="sm" className="mt-3" onClick={addSlot}
+            <IconButton icon={Plus} label="Add a third operator" variant="outline" size="sm" className="mt-3" onClick={addSlot}
               data-testid="comparison-add-operator"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add a third operator
-            </Button>
+             />
           )}
         </CardContent>
       </Card>

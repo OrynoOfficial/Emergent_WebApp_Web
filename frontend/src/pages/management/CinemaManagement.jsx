@@ -39,6 +39,7 @@ import { useRealDashboardData } from '@/hooks/useRealDashboardData';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import Pagination from '@/components/common/Pagination';
 import { Search } from 'lucide-react';
+import IconButton from '@/components/shared/IconButton';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend
@@ -1097,9 +1098,7 @@ export default function CinemaManagement() {
                     Clear filters
                   </Button>
                 )}
-                <Button onClick={loadShowtimes} variant="outline" size="sm" className="h-8">
-                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
-                </Button>
+                <IconButton icon={RefreshCw} label="Refresh" variant="outline" onClick={loadShowtimes} size="sm" />
                 <PermissionGate permissions={["cinema.manage_screenings", "operator.services.edit"]}>
                   <Button onClick={() => openShowtimeDialog()} className="bg-[#082c59] h-8" size="sm" data-testid="add-showtime-btn">
                     <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Showtime
