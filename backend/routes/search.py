@@ -94,6 +94,7 @@ async def global_search(
         "cinema":      {"film", "showtime", "operator", "location"},
         "banquet":     {"banquet", "operator", "location"},
         "laundry":     {"laundry", "operator", "location"},
+        "package":     {"package_service", "operator", "location"},
     }
     type_filter = _ALLOWED_TYPES.get(service_type) if service_type else None
 
@@ -110,6 +111,7 @@ async def global_search(
         "cinema":      ["cinema", "cinemas"],
         "banquet":     ["banquet", "banquets"],
         "laundry":     ["laundry", "pressing", "pressings"],
+        "package":     ["package", "packages", "logistics"],
     }
     operator_tag_filter = _OPERATOR_SERVICE_TAGS.get(service_type) if service_type else None
 
@@ -355,6 +357,37 @@ async def global_search(
             thumbnail=(p.get("image_url") or (p.get("images") or [None])[0]),
             meta={"pressing_id": p["_id"], "city": p.get("city"),
                   "operator_name": p.get("operator_name")},
+        ))
+
+    # ── 10b. Package service offerings ─────────────────────────────────────
+    # Match by service name, origin/destination cities, or operator. Only
+    # active (approved) offerings show up in the public-facing dropdown.
+    pkg_cursor = db.package_services.find(
+        {"status": "active", "$or": [
+            {"name": rx}, {"origin_city": rx}, {"destination_city": rx},
+            {"operator_name": rx},
+        ]},
+        {"_id": 1, "name": 1, "origin_city": 1, "destination_city": 1,
+         "operator_name": 1, "delivery_time_hours": 1, "base_price": 1,
+         "images": 1, "operator_logo_url": 1},
+    ).limit(5)
+    async for pk in pkg_cursor:
+        from_c = pk.get("origin_city") or "—"
+        to_c = pk.get("destination_city") or "—"
+        eta = pk.get("delivery_time_hours")
+        eta_label = ""
+        if isinstance(eta, (int, float)) and eta > 0:
+            eta_label = f" · {int(eta)}h" if eta < 24 else f" · {int(eta // 24)}d"
+        results.append(_row(
+            type_="package_service",
+            label=pk.get("name", "Package service"),
+            subtitle=f"Logistics · {from_c} → {to_c} · {pk.get('operator_name', 'Operator')}{eta_label}",
+            deep_link=f"/services/packages/results?origin={from_c}&destination={to_c}",
+            icon="Truck", color="#DC2626",
+            thumbnail=(pk.get("operator_logo_url") or (pk.get("images") or [None])[0]),
+            meta={"package_service_id": pk["_id"],
+                  "origin_city": from_c, "destination_city": to_c,
+                  "operator_name": pk.get("operator_name")},
         ))
 
     # ── 11. Admin-only: users + orders ─────────────────────────────────────

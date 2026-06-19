@@ -86,7 +86,7 @@ export default function PackagesSearch() {
           <div className="max-w-3xl mx-auto text-left">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-start">
               <LandingSmartSearch
-                serviceType="travel"
+                serviceType="package"
                 pageType="packages_from"
                 resultsPath="/services/packages/results"
                 cityParam="origin"
@@ -119,7 +119,7 @@ export default function PackagesSearch() {
                 <ArrowRightLeft className="w-5 h-5" />
               </button>
               <LandingSmartSearch
-                serviceType="travel"
+                serviceType="package"
                 pageType="packages_to"
                 resultsPath="/services/packages/results"
                 cityParam="destination"

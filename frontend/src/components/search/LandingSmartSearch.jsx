@@ -29,20 +29,23 @@ const PLACEHOLDER_BY_SERVICE = {
   cinema: 'Search a film or city',
   banquet: 'Find a venue — try "wedding hall Yaoundé"',
   laundry: 'Find a laundry near you',
+  package: 'Pickup / delivery city — try "Douala"',
 };
 
 const TYPE_META = {
-  location:    { label: 'City',     icon: MapPin,    accent: 'text-emerald-600' },
-  operator:    { label: 'Operator', icon: Building2, accent: 'text-indigo-600' },
-  hotel:       { label: 'Hotel',    icon: Star,      accent: 'text-amber-600' },
-  car_rental:  { label: 'Vehicle',  icon: Star,      accent: 'text-amber-600' },
-  restaurant:  { label: 'Place',    icon: Star,      accent: 'text-amber-600' },
-  travel_route:{ label: 'Route',    icon: Star,      accent: 'text-amber-600' },
-  event:       { label: 'Event',    icon: Star,      accent: 'text-amber-600' },
-  film:        { label: 'Film',     icon: Star,      accent: 'text-amber-600' },
-  showtime:    { label: 'Showtime', icon: Star,      accent: 'text-amber-600' },
-  banquet:     { label: 'Venue',    icon: Star,      accent: 'text-amber-600' },
-  pressing:    { label: 'Laundry',  icon: Star,      accent: 'text-amber-600' },
+  location:        { label: 'City',     icon: MapPin,    accent: 'text-emerald-600' },
+  operator:        { label: 'Operator', icon: Building2, accent: 'text-indigo-600' },
+  hotel:           { label: 'Hotel',    icon: Star,      accent: 'text-amber-600' },
+  car_rental:      { label: 'Vehicle',  icon: Star,      accent: 'text-amber-600' },
+  restaurant:      { label: 'Place',    icon: Star,      accent: 'text-amber-600' },
+  travel_route:    { label: 'Route',    icon: Star,      accent: 'text-amber-600' },
+  event:           { label: 'Event',    icon: Star,      accent: 'text-amber-600' },
+  film:            { label: 'Film',     icon: Star,      accent: 'text-amber-600' },
+  showtime:        { label: 'Showtime', icon: Star,      accent: 'text-amber-600' },
+  banquet:         { label: 'Venue',    icon: Star,      accent: 'text-amber-600' },
+  pressing:        { label: 'Laundry',  icon: Star,      accent: 'text-amber-600' },
+  laundry:         { label: 'Laundry',  icon: Star,      accent: 'text-amber-600' },
+  package_service: { label: 'Delivery', icon: Star,      accent: 'text-amber-600' },
 };
 
 export default function LandingSmartSearch({

@@ -774,7 +774,7 @@ export default function PackagesResults() {
                     <div>
                       <Label className="text-[10px] text-white/70 mb-1 block uppercase tracking-wide">Origin</Label>
                       <LandingSmartSearch
-                        serviceType="travel"
+                        serviceType="package"
                         pageType="packages_edit_from"
                         resultsPath="/services/packages/results"
                         cityParam="origin"
@@ -787,7 +787,7 @@ export default function PackagesResults() {
                     <div>
                       <Label className="text-[10px] text-white/70 mb-1 block uppercase tracking-wide">Destination</Label>
                       <LandingSmartSearch
-                        serviceType="travel"
+                        serviceType="package"
                         pageType="packages_edit_to"
                         resultsPath="/services/packages/results"
                         cityParam="destination"
