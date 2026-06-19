@@ -1,3 +1,14 @@
+### 2026-02-19 — Iconization Sweep #3: User Management family + tab-disappearance bug fix (iter260)
+- **Critical bug fixed**: Clicking the "Permissions" tab used to make the "Invitations" tab disappear because `Permissions.jsx` only rendered 2 parent tabs. Now Permissions.jsx renders all 3 (Users / Permissions / Invitations) unconditionally, so the nav stays consistent across all sub-pages.
+- **New route**: `/admin/users/invitations` — Invitations is now a real route (was previously only an internal state of `Users.jsx`). Both Users.jsx and Permissions.jsx parent navs route correctly to it.
+- **Iconization extended** to: `Users.jsx`, `Permissions.jsx`, `InvitationsManagement.jsx`, `AuditLogs.jsx`.
+  - "Add User", "Create Role", "Refresh Invitations", "Audit Search" — all converted to icon-only `IconButton`.
+  - 3 Selects on Users (Role / Status / Operator), 2 Selects on AuditLogs (Action / Severity), the 3 role-exclusion pills on AuditLogs, and the legacy filter-bar on Invitations — all converted to compact `FilterChipSelect` chips.
+  - 6 big stat cards on Users, 4 big stat cards on Permissions, 3 big stat cards on Audit Trail, 4 big stat cards on AuditLogs, 4 stat tiles on Invitations — all replaced with the compact pill chip strip pattern from the Ratings page.
+  - AuditLogs custom view-toggle replaced with shared `ViewModeToggle`.
+- **Tested**: iter-260 — 7/7 spec checks pass for both `super_admin` and `admin` accounts. 0 console errors.
+
+
 ### 2026-02-19 — Iconization Sweep #2: Ratings/Validation/Orders/Receipts/Bills + Results pages + Shrunk modal cards (iter258-259)
 - **Iconization extended** to: `Orders.jsx`, `Ratings.jsx` (Operator + Admin views), `Receipts.jsx`, `BillsManagement.jsx`, `ValidationManagement.jsx`, and all 9 service results pages (Hotels, Restaurants, Travel, CarRental, Cinema, Laundry, Events, Packages, Banquet was already in a popover).
   - Replaced `<Select>` filter dropdowns with `<FilterChipSelect>` (icon-only chip that expands when a non-default value is selected).
