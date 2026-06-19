@@ -1,3 +1,16 @@
+### 2026-02-19 — Iconization Sweep #2: Ratings/Validation/Orders/Receipts/Bills + Results pages + Shrunk modal cards (iter258-259)
+- **Iconization extended** to: `Orders.jsx`, `Ratings.jsx` (Operator + Admin views), `Receipts.jsx`, `BillsManagement.jsx`, `ValidationManagement.jsx`, and all 9 service results pages (Hotels, Restaurants, Travel, CarRental, Cinema, Laundry, Events, Packages, Banquet was already in a popover).
+  - Replaced `<Select>` filter dropdowns with `<FilterChipSelect>` (icon-only chip that expands when a non-default value is selected).
+  - Replaced legacy custom grid/list view-toggle blocks with the shared `<ViewModeToggle>` (list/grid/details tri-state).
+  - Converted "Export All" (Bills), "Export ratings" (Ratings), and "Refresh" (Validation) text buttons to icon-only `<IconButton>` with tooltips.
+- **Modal/inline cards shrunk** for denser layouts:
+  - `TravelManagement.jsx` RouteCard 4-tile stat row (Departure/Arrival/Seats/Price) — padding `p-2 → p-1.5`, icons `w-4 → w-3`, text `text-xs → text-[10px]`.
+  - `TravelManagement.jsx` VehicleCard Manufacturer/Model grid — `p-2 → p-1.5`, `text-sm → text-xs`.
+  - `CarRentalManagement.jsx` CarCard 4-tile primary stat row — same compression.
+  - `LaundryBooking.jsx` ItemCard — `p-3 → p-2`, thumb `w-12 → w-9`, +/- buttons `h-7 → h-6`, badge `w-6 → w-5`. Items grid bumped to 4 cols on md (`grid-cols-2 sm:grid-cols-3 md:grid-cols-4`).
+- **Tested**: testing_agent_v3_fork iter258 (initial sweep, found 1 missed JSX swap in HotelsResults) and iter259 (HotelsResults re-verified) — all 12/12 spec points pass. 0 console errors. Filter chips render at ~28px collapsed / ~70px active.
+
+
 ### 2026-02-17 — Retired legacy Events, fixed showtime UX bugs, public events search (iter239)
 - **Legacy `events` collection retired.**
   - Removed the 'Legacy Events' TabsTrigger + the entire TabsContent block + dialog + trailing BulkActionsBar from `EventsManagement.jsx`. Sub-tabs are now just **Locations** + **Showtimes**.
