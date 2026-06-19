@@ -8,6 +8,16 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 254: search scoping bug fix)
+
+### Bug: irrelevant operators leaked into service-scoped landing-page search
+- **Symptom**: typing into the search bar on the Hotels (or Cars, Restaurants, etc.) landing page surfaced operators that don't actually offer that service — e.g. a cinema-only operator like "Netflix" appeared on the Hotels search dropdown if the query matched its name.
+- **Root cause**: `routes/search.py` filtered final rows by `type` (so non-hotel listings like `restaurant` rows were correctly excluded) but the **operator** rows were never narrowed to the requested category. Every operator with a name/email/description match leaked through regardless of their `service_types`.
+- **Fix**: when `service_type` is set on `GET /api/search/`, the operator query now adds `{"service_types": {"$in": [...mapped_tags]}}`. Mapping table covers all 8 categories (hotel, car_rental, restaurant, travel, event, cinema, banquet, laundry) and accepts the common singular/plural and hyphen variants stored in the DB.
+- **Verified**: Netflix (cinema-only) → only surfaces on Cinema; Musango (travel/events) → only on Travel and Event; Carter Entertainment (cinema/events/banquet) → only on those three; SpandeX (hotel/travel) → on Hotel and Travel.
+
+
+
 ## Latest Changes (Feb 2026 — iter 253: PackagesResults rich modal + Edit-mode LandingSmartSearch sweep)
 
 ### PackagesSearch — clean dual-bar layout

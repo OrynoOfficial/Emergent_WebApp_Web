@@ -97,6 +97,22 @@ async def global_search(
     }
     type_filter = _ALLOWED_TYPES.get(service_type) if service_type else None
 
+    # Mapping from the public service_type to the operator.service_types tag(s)
+    # used in the DB. Operators store multiple categories on a single record,
+    # so we must intersect on this list to avoid showing — for example — a
+    # restaurant-only operator under a Car-Rental search. Iter 253.
+    _OPERATOR_SERVICE_TAGS = {
+        "hotel":       ["hotel", "hotels"],
+        "car_rental":  ["car_rental", "car-rental", "car_rentals", "carrental"],
+        "restaurant":  ["restaurant", "restaurants"],
+        "travel":      ["travel"],
+        "event":       ["event", "events"],
+        "cinema":      ["cinema", "cinemas"],
+        "banquet":     ["banquet", "banquets"],
+        "laundry":     ["laundry", "pressing", "pressings"],
+    }
+    operator_tag_filter = _OPERATOR_SERVICE_TAGS.get(service_type) if service_type else None
+
     rx = {"$regex": _ai_pattern(query), "$options": "i"}
     results = []
 
@@ -118,15 +134,22 @@ async def global_search(
     # ── 2. Operators ────────────────────────────────────────────────────────
     # Suspended operators are intentionally excluded — suspend is an ops state
     # an admin uses to hide an operator without deleting them.
-    ops_cursor = db.operators.find(
-        {"$and": [
-            {"status": {"$nin": ["suspended", "inactive"]}},
-            {"$or": [
-                {"name": rx},
-                {"contact_email": rx},
-                {"description": rx},
-            ]},
+    # When the request is scoped to a single service_type we also restrict
+    # operators to those who actually serve that category — otherwise a
+    # restaurant-only operator named "Douala" would surface on the Hotels
+    # landing page.
+    op_query: dict = {"$and": [
+        {"status": {"$nin": ["suspended", "inactive"]}},
+        {"$or": [
+            {"name": rx},
+            {"contact_email": rx},
+            {"description": rx},
         ]},
+    ]}
+    if operator_tag_filter:
+        op_query["$and"].append({"service_types": {"$in": operator_tag_filter}})
+    ops_cursor = db.operators.find(
+        op_query,
         {"_id": 1, "name": 1, "logo_url": 1, "service_types": 1, "city": 1},
     ).limit(6)
     async for op in ops_cursor:
