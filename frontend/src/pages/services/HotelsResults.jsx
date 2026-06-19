@@ -859,39 +859,22 @@ export default function HotelsResults() {
             {/* Controls */}
             <div className="flex gap-2 flex-wrap">
               {/* Sort Dropdown */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-36 h-9 text-xs rounded-lg border-slate-200">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-lg">
-                  <SelectItem value="rating" className="text-xs">Top Rated</SelectItem>
-                  <SelectItem value="price" className="text-xs">Price: Low to High</SelectItem>
-                  <SelectItem value="price-desc" className="text-xs">Price: High to Low</SelectItem>
-                  <SelectItem value="stars" className="text-xs">Star Rating</SelectItem>
-                </SelectContent>
-              </Select>
+              <FilterChipSelect
+                icon={SlidersHorizontal}
+                label="Sort"
+                value={sortBy}
+                onChange={setSortBy}
+                options={[
+                  { value: 'rating', label: 'Top Rated' },
+                  { value: 'price', label: 'Price: Low to High' },
+                  { value: 'price-desc', label: 'Price: High to Low' },
+                  { value: 'stars', label: 'Star Rating' },
+                ]}
+                allValue="rating"
+              />
               
               {/* View Toggle */}
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-3 h-9 flex items-center gap-1.5 text-xs transition-colors ${
-                    viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Grid</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-3 h-9 flex items-center gap-1.5 text-xs transition-colors ${
-                    viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">List</span>
-                </button>
-              </div>
+              <ViewModeToggle value={viewMode} onChange={setViewMode} />
               
               {/* Filter Button */}
               <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
