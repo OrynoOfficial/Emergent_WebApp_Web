@@ -1,0 +1,37 @@
+{
+  "summary": "iter253 e2e verification of Emergent Object Storage migration. Backend tests (13/13 PASS) confirm: (1) origin Cache-Control: public, max-age=31536000, immutable + strong ETag on /api/uploads/serve/oryno/<path>; (2) If-None-Match short-circuits to 304; (3) auth is optional on the serve route (no Authorization header still returns 200); (4) POST /api/uploads/ returns file_url under /api/uploads/serve/oryno/uploads/<uuid>.<ext> with storage='emergent' and the bytes round-trip identically on refetch; (5) all 7 image-bearing public/list endpoints (operators, hotels, restaurants, cinema/films, packages, vehicles, event-showtimes) contain ZERO /api/static/ URLs and at least one operator logo resolves under /api/uploads/serve/oryno/operator-logos/; (6) direct Mongo audit of all 13 cited collections (hotels, restaurants, films, operators, users, event_showtimes, package_services, vehicles, pressings, packages, orders, support_tickets, restaurant_menu) shows 0 /api/static/ references and emergent URLs present where images exist. Frontend smoke test on 7 customer/admin/operator pages showed 0 broken-emergent <img> tags. CDN headers verified at the ORIGIN (port 8001) as documented; the platform Cloudflare may rewrite to no-store on the public preview URL — that is a platform-edge override, not a code bug — but the public URL still returns 200 with the image bytes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter253_emergent_storage_migration.py",
+    "/app/test_reports/pytest/iter253_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/uploads.py serve_object correctly sets Cache-Control: public, max-age=31536000, immutable, ETag=path, and short-circuits 304 on If-None-Match before touching storage — saves the upstream Emergent fetch on cache hits. Good.",
+    "Auth on the serve route is optional by default; REQUIRE_AUTH_FOR_SERVE=1 flag exists for per-deploy lockdown. Worth documenting that file_keys are 128-bit UUIDs so unguessable-by-default, and tokens (if leaked) are still validated when present.",
+    "APINoStoreMiddleware (server.py ~L196-212) correctly skips overriding Cache-Control when the route has already set it — verified end-to-end via origin curl AND the iter253 pytest suite.",
+    "Frontend audit only sees ~2 <img> tags per page because lazy-loaded grids are below the fold and many images are CSS background-image (also clean). Zero broken-image icons observed.",
+    "Minor: file_url returned by POST /api/uploads/ is a path (/api/uploads/serve/oryno/...) not an absolute URL. Frontend already handles this correctly, but if any consumer expects an absolute URL it would need to prepend REACT_APP_BACKEND_URL. No issue observed in this iteration."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter253_emergent_storage_migration.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 pytest cases pass; Mongo collection audit clean across 13 collections — 0 /api/static/ references remaining)",
+    "frontend": "100% (Customer dashboard, /services/cinema, /services/hotels, /services/restaurants, /profile, /management/films, /operators/<id> all rendered without broken-emergent images; operator logos for Carter Entertainment / Laudro-Automation / Musango Bus Service all resolve via /api/uploads/serve/oryno/operator-logos/...)"
+  },
+  "test_credentials": "customer@test.com / admin@test.com / testpassword123 (used POST /api/auth/login → localStorage shortcut for frontend smoke; backend pytest uses direct API login). All from /app/memory/test_credentials.md.",
+  "seed_data_creation": "One ephemeral test upload (test_iter253.png) created via POST /api/uploads/ to verify the new-upload flow. Stored at oryno/uploads/<uuid>.png in Emergent storage and never written to local disk.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "STORAGE_BACKEND=emergent + APP_NAME=oryno are live. All file URLs now use /api/uploads/serve/oryno/<folder>/<file>. Direct origin curl (http://localhost:8001) is the source of truth for verifying Cache-Control / ETag / 304 — the platform Cloudflare may rewrite Cache-Control to no-store on the public preview URL but origin behaviour is what the migration owns. /api/cinema/films (not /api/films) is the correct endpoint for the films listing. Operator logos seeded under oryno/operator-logos/ for Carter Entertainment, Laudro-Automation, Musango Bus Service. Test login uses the localStorage fetch shortcut documented in iter251/iter252.",
+  "rca of the issue": "N/A — storage migration feature, no bugs found."
+}

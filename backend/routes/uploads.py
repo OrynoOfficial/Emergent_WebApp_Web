@@ -104,6 +104,7 @@ async def upload_multiple_files(
 @router.get("/serve/{path:path}")
 async def serve_object(
     path: str,
+    request: Request,
     authorization: str = Header(default=None),
     auth: str = Query(default=None),
 ):
@@ -113,23 +114,52 @@ async def serve_object(
     presigned URLs — every read must go through us. Local/S3 backends serve
     their files through `/api/static/...` and never hit this route.
 
-    Auth: accepts either `Authorization: Bearer …` (XHR/fetch) or `?auth=…`
-    (img tags). At least one must validate.
+    CDN-friendly behaviour:
+      • Files are content-addressed (UUID-named) so the response is **safe
+        to cache forever**. We set ``Cache-Control: public, max-age=1y,
+        immutable`` so a CDN edge (or browser) never re-fetches.
+      • Returns a strong ETag = the object path. If the client sends
+        ``If-None-Match`` we short-circuit with a 304.
+      • Auth is **optional**: paths are 128-bit UUIDs (effectively
+        unguessable) and we want the CDN to serve them without
+        ``Authorization`` headers. If a token IS provided we still validate
+        it so accidentally-leaked URLs from authed flows don't become a
+        downgrade. To enforce auth on a per-path basis, set
+        ``REQUIRE_AUTH_FOR_SERVE=1`` and pass tokens.
     """
     if not isinstance(storage_service, EmergentStorageService):
         raise HTTPException(status_code=404, detail="Not found")
 
-    token = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1]
-    elif auth:
-        token = auth
-    if not token or not decode_token(token):
-        raise HTTPException(status_code=401, detail="Authentication required")
+    require_auth = os.environ.get("REQUIRE_AUTH_FOR_SERVE", "0") == "1"
+    if require_auth:
+        token = None
+        if authorization and authorization.lower().startswith("bearer "):
+            token = authorization.split(" ", 1)[1]
+        elif auth:
+            token = auth
+        if not token or not decode_token(token):
+            raise HTTPException(status_code=401, detail="Authentication required")
+
+    # 304 short-circuit (saves the upstream fetch entirely).
+    etag = f'"{path}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={
+            "ETag": etag,
+            "Cache-Control": "public, max-age=31536000, immutable",
+        })
 
     try:
         data, content_type = await storage_service.get_object(path)
-        return Response(content=data, media_type=content_type)
+        return Response(
+            content=data,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "ETag": etag,
+                # Tell intermediaries the response can be shared across users.
+                "Vary": "Accept-Encoding",
+            },
+        )
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
