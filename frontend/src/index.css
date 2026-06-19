@@ -227,8 +227,8 @@
    * dialogs (`[role=dialog]`) and their backdrops. Iter 256 user request
    * — keep dialogs feeling polished, kill everything else.
    */
-  [data-state="open"]:not([role="dialog"]):not([data-radix-dialog-content]),
-  [data-state="closed"]:not([role="dialog"]):not([data-radix-dialog-content]),
+  [data-state="open"]:not([role="dialog"]):not([data-radix-dialog-content]):not([data-radix-dialog-overlay]),
+  [data-state="closed"]:not([role="dialog"]):not([data-radix-dialog-content]):not([data-radix-dialog-overlay]),
   [data-radix-popper-content-wrapper]:not(:has([role="dialog"])),
   [data-radix-popper-content-wrapper]:not(:has([role="dialog"])) > *:not([role="dialog"]) {
     animation: none !important;

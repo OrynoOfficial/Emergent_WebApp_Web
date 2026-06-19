@@ -37,13 +37,16 @@ export default function FilterChipSelect({
   const isActive = value && value !== allValue;
   const activeOption = options.find(o => o.value === value);
   const [open, setOpen] = React.useState(false);
+  // Always-controlled tooltip — avoids the Radix
+  // "Tooltip changing from uncontrolled to controlled" warning that fires
+  // when toggling between `open={false}` and `open={undefined}`.
+  const [tipOpen, setTipOpen] = React.useState(false);
+  const showTip = tipOpen && !open;
 
   return (
     <TooltipProvider delayDuration={200}>
       <Popover open={open} onOpenChange={setOpen}>
-        {/* Tooltip is suppressed while the popover is open to avoid the
-            "two layers on the same trigger" feel flagged by iter 255 polish. */}
-        <Tooltip open={open ? false : undefined}>
+        <Tooltip open={showTip} onOpenChange={setTipOpen}>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <button

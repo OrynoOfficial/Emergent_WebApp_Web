@@ -20,6 +20,7 @@ export default function OperatorScopeFilter({ serviceType, onChange, value = '' 
   const [operators, setOperators] = useState([]);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [tipOpen, setTipOpen] = useState(false);
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
   useEffect(() => {
@@ -43,11 +44,12 @@ export default function OperatorScopeFilter({ serviceType, onChange, value = '' 
 
   if (!isAdmin || operators.length === 0) return null;
   const isActive = !!value;
+  const showTip = tipOpen && !open;
 
   return (
     <TooltipProvider delayDuration={200}>
       <Popover open={open} onOpenChange={setOpen}>
-        <Tooltip open={open ? false : undefined}>
+        <Tooltip open={showTip} onOpenChange={setTipOpen}>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <button

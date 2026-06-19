@@ -8,6 +8,30 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 256: platform-wide iconisation ripple + dialog fade preservation)
+
+### Strategy: ripple via shared components (not per-page sweep)
+Instead of touching ~50 admin pages individually, this iter upgraded the **three most-reused shared components** so the iconisation reaches every page that mounts them.
+
+| Component | What changed | Pages affected |
+|---|---|---|
+| `components/management/shared/ManagementShell.jsx` | Refresh Button → `IconButton` with spinning state via `[&_svg]:animate-spin` | Every admin/management page using ManagementShell |
+| `components/common/QuickDateRangeFilter.jsx` | Full rewrite — 32 px calendar-icon chip when `preset='all'`, brand-blue chip + label when a preset selected, controlled tooltip | Receipts, Orders, Bills, Reports, Bookings |
+| `components/common/OperatorScopeFilter.jsx` | Full rewrite — 32 px Building2 chip; opens popover with search + "All operators (N)" + list; collapses to icon+name when selected | Every admin scope-aware screen (audit logs, refund admin, etc.) |
+
+Plus four explicit codemod swaps: `CinemaManagement.jsx`, `DatabaseManagement.jsx`, `SalesManagement.jsx`, `OperatorComparison.jsx` toolbar buttons → IconButton.
+
+### Polish items closed
+1. **Dialog backdrop fade preserved**: `index.css` no-animation rule now excludes `[role=dialog]`, `[data-radix-dialog-content]`, AND `[data-radix-dialog-overlay]`. Verified: `AdminModal` content `fadeIn 0.2s` + backdrop fade both work; everything else still `animation: 0s`.
+2. **FilterChipSelect tooltip suppression** without React warnings: both `FilterChipSelect` and `OperatorScopeFilter` now keep the tooltip **always controlled** via `tipOpen` state with `showTip = tipOpen && !open`. The previous `open={open?false:undefined}` pattern was flipping Radix between controlled/uncontrolled — flagged by testing agent — now fully controlled, no console warnings.
+
+### Tests (iter 256)
+- 6/7 spec points cleanly passed; the remaining 1 (backdrop fade) was fixed in the same iter after the testing-agent's review surfaced the root cause (Radix overlay carries `data-radix-dialog-overlay` but no `role=dialog`).
+- Verified live on `/admin/bills` (single page mounts all three shared components), `/admin/operators` (FilterChipSelect + AdminModal), `/management/cinema` (Refresh IconButton).
+- Brand blue confirmed as `rgb(8, 44, 89) = #082c59` across all icon states.
+
+
+
 ## Latest Changes (Feb 2026 — iter 255: fly-in animation killed + tooltip visibility fix + filter-chip iconisation)
 
 ### Bug 1: System-wide "fly-in" animation on submenu/dropdown reveal
