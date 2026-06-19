@@ -8,6 +8,35 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 253: Storage migration → Emergent Object Storage + CDN-friendly serve)
+
+### Why
+Local pod disk (`/app/backend/uploads/`, 137 MB / 248 files) was:
+- **Ephemeral** (lost on pod replacement)
+- **Not multi-pod safe** (writes on pod A 404'd on pod B)
+- **Origin-served** (every image read hit FastAPI; no edge cache; no `Cache-Control`)
+
+### What we did
+1. **Flipped storage backend** — `backend/.env`: `STORAGE_BACKEND=emergent`, `APP_NAME=oryno`, `USE_LOCAL_STORAGE=false`. Existing `EmergentStorageService` is durable and multi-pod safe.
+2. **One-time migration** (`backend/scripts/migrate_local_to_emergent_storage.py`):
+   - Uploaded all 248 files to Emergent storage at `oryno/<folder>/<uuid>.<ext>` (idempotent — re-runs hit 409→skip).
+   - Rewrote **209 URL strings** across **10 Mongo collections** (hotels, restaurants, films, operators, users, package_services, vehicles, pressings, packages, orders, support_tickets, restaurant_menu) from `/api/static/<folder>/<file>` → `/api/uploads/serve/oryno/<folder>/<file>`. Zero `/api/static/` references remain in the DB.
+3. **CDN-friendly serve endpoint** (`routes/uploads.py::serve_object`):
+   - `Cache-Control: public, max-age=31536000, immutable` (safe because filenames are UUIDs → content-addressed).
+   - Strong `ETag = path`; honours `If-None-Match` with a 304 short-circuit **before** the upstream Emergent fetch.
+   - Auth is **optional** by default (UUID paths are unguessable 128-bit entropy) so an edge CDN can cache without tokens. `REQUIRE_AUTH_FOR_SERVE=1` flag locks reads down per-deploy when sensitivity demands.
+   - `APINoStoreMiddleware` already respects pre-set `Cache-Control` so our header passes through cleanly.
+4. **Disk files preserved** as rollback insurance. The `/api/static` mount is still active but unused (zero live references).
+
+### Portability
+- **Storage swap**: replace Emergent with AWS S3, Cloudflare R2, MinIO, Backblaze B2 by setting `STORAGE_BACKEND=s3` + S3-compatible creds. The `S3Service` adapter already exists; URL prefix changes via one config + one bucket sync.
+- **CDN swap**: today's URL shape (`/api/uploads/serve/...`) is host-agnostic; pointing any CDN (CloudFront, CF, Bunny, Fastly) at the origin is a DNS-only change with no DB rewrite.
+
+### Tests (iter 253)
+13/13 backend pytest pass. Frontend smoke on 7 pages: zero broken images. Origin curl verifies `Cache-Control: public, max-age=31536000, immutable` + `ETag` + `304-on-If-None-Match`. (Preview-environment Cloudflare may strip cache headers — known platform-edge override; production CDN respects them.)
+
+
+
 ## Latest Changes (Feb 2026 — iter 255: Refund Policies — operator scoping + admin platform defaults)
 
 ### Bug 1: Operators couldn't save their refund policies (silent 403)
