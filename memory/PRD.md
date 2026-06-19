@@ -8,6 +8,40 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 254: Team & Roles revamp + icon-only buttons + single-owner invariant)
+
+### Team & Roles page — Ratings-style refresh
+- `/management/team-roles` rewritten to match the `/Ratings` page: title row, slim subtitle + role badge, compact stat **chip strip** (Team Members · Custom Roles · Owner), slim tabs (Team / Roles) with `#082c59` active state, slim footer help line.
+- The four big gradient metric tiles (Total Members / Owners / Local Admins / Active) inside `OperatorTeamManagement.jsx` were replaced with the same slim chip strip and are now **hidden when embedded** to avoid duplication with the parent header.
+
+### Single-owner-per-operator invariant
+- **Migration**: `backend/scripts/migrate_single_owner_per_operator.py` — keeps the user whose id matches `operators.owner_user_id` and demotes extra owners to `manager`. Idempotent. Audit-logged. **Run once — 2 users demoted** (SpandeX Hotels and Laudro-Automation).
+- **Write-time invariants** in `routes/operator_users.py`: `POST /operators/{id}/users`, `PUT /operators/{id}/users/{user_id}`, and **`POST /operators/{id}/users/assign`** (added this iter — iter 253 review flagged the gap) all return `409` with the existing-owner email when a second owner is attempted.
+- `TeamRolesManagement.jsx` renders a `manager` badge so demoted accounts display correctly.
+
+### Admin operator preview modal — two-tone redesign
+- `OperatorsManagement.jsx` Eye-icon AdminModal converted from rainbow gradients (blue/emerald/violet/amber accents) to **two-tone slate + #082c59**:
+  - Hero is slate-50 with a single `#082c59` icon block.
+  - All three tabs (Details / Team / Roles) share `#082c59` underline.
+  - Info grid uses neutral slate boxes with slate icons.
+  - Bottom stats migrated from three big rainbow tiles → three slim chips (one branded, two slate).
+  - Roles tab dynamically lists roles created by this operator via the existing `OperatorRolesManagement` component scoped by `operatorId`.
+- `AdminModal.jsx` shared wrapper now provides an `sr-only` `DialogDescription` fallback to silence the Radix a11y warning.
+
+### Icon-only buttons (platform-wide pattern launched)
+- **New shared component** `components/shared/IconButton.jsx` — icon-only button with a built-in Radix tooltip (delay 200 ms), `aria-label`, focus ring, and four variants (ghost / outline / solid / danger) + an `active` highlight state.
+- **`ViewModeToggle.jsx` rewritten** — the `List / Grid / Details` tri-mode toggle is now three icons in a connected group with tooltips and `aria-pressed`. Used everywhere `<ViewModeToggle>` was already imported, so the sweep applies across all results pages and admin lists automatically.
+- **`OperatorsManagement.jsx`**: Add operator, More filters, Clear filters → icon-only with tooltips.
+- Further sweep targets (Films, Hotels, Orders, Cars etc.) can adopt `IconButton` with one-line replacements.
+
+### Tests (iter 254)
+6/6 backend pytest pass (single-owner enforcement + migration audit). Frontend smoke 100% on all spec points. Three optional polish items from the testing-agent review were fixed in this same iter:
+1. `/assign` route now enforces the single-owner rule.
+2. `manager` role label added to `TeamRolesManagement.jsx`.
+3. `AdminModal` now ships a `DialogDescription` to silence Radix a11y warning.
+
+
+
 ## Latest Changes (Feb 2026 — iter 253: Storage migration → Emergent Object Storage + CDN-friendly serve)
 
 ### Why

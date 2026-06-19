@@ -127,6 +127,10 @@ export default function TeamRolesManagement() {
     owner:       { label: 'Owner', icon: Crown,    cls: 'bg-amber-100 text-amber-800 border-amber-200' },
     local_admin: { label: 'Admin', icon: Shield,   cls: 'bg-slate-100 text-slate-700 border-slate-200' },
     local_user:  { label: 'User',  icon: UserCog,  cls: 'bg-slate-50 text-slate-600 border-slate-200' },
+    // `manager` is the role assigned by the single-owner migration when extra
+    // owners are demoted. Render it so demoted-but-still-active users see a
+    // sensible badge instead of falling back to "User".
+    manager:     { label: 'Manager', icon: UserCog, cls: 'bg-slate-100 text-slate-700 border-slate-200' },
   };
   const myRole = roleConfig[user?.operator_role] || roleConfig.local_user;
   const MyRoleIcon = myRole.icon;

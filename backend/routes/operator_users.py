@@ -372,6 +372,23 @@ async def assign_existing_user(
     valid_roles = ["owner", "local_admin", "local_user"]
     if assignment.operator_role not in valid_roles:
         raise HTTPException(status_code=400, detail=f"Invalid operator role. Must be one of: {valid_roles}")
+
+    # Single-owner invariant — same protection as POST /users and PUT /users/{id}.
+    # Without this check a super_admin could assign a second user as owner of an
+    # operator via this route and silently bypass the rule (flagged by iter 254 review).
+    if assignment.operator_role == "owner":
+        existing_owner = await db.users.find_one(
+            {"operator_id": operator_id, "operator_role": "owner", "_id": {"$ne": assignment.user_id}},
+            {"_id": 1, "email": 1},
+        )
+        if existing_owner:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"This operator already has an owner ({existing_owner.get('email')}). "
+                    "Demote or transfer the existing owner before assigning a new one."
+                ),
+            )
     
     # Update the user
     update_data = {

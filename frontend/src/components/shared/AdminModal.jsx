@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -46,7 +46,12 @@ export function AdminModal({ open, onOpenChange, title, subtitle, icon, accentCo
             )}
             <div>
               <DialogTitle className="text-lg font-bold text-white">{title}</DialogTitle>
-              {subtitle && <p className="text-sm text-white/70 mt-0.5">{subtitle}</p>}
+              {subtitle ? (
+                <DialogDescription className="text-sm text-white/70 mt-0.5">{subtitle}</DialogDescription>
+              ) : (
+                /* Radix requires a Description for a11y; render sr-only when no subtitle. */
+                <DialogDescription className="sr-only">{title}</DialogDescription>
+              )}
             </div>
           </div>
         </div>
