@@ -8,6 +8,26 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 255: fly-in animation killed + tooltip visibility fix + filter-chip iconisation)
+
+### Bug 1: System-wide "fly-in" animation on submenu/dropdown reveal
+- **Root cause**: Radix popovers/dropdowns/tooltips bring an internal `animation` rule on their `data-state` transitions; the unused `tailwindcss-animate` classes (`animate-accordion-up/down`) were also leaking onto accordion content.
+- **Fix (`/app/frontend/src/index.css`)**: appended a `@layer utilities` block that nukes `animation` on `[data-state="open|closed"]`, `[data-radix-popper-content-wrapper]` (and descendants), and the accordion-down/up data attribute classes. Sidebar nav-item icons had `transition-transform duration-200 hover:scale-110` removed in `Layout.jsx` — that was the "icons pop" sensation.
+- **Side note**: this is a global rule. If we ever want a soft fade back on modal dialogs (`[role=dialog]`), scope the rule to exclude them.
+
+### Bug 2: IconButton tooltip text invisible
+- **Root cause**: `tooltip.jsx` used `bg-primary text-primary-foreground`. `--primary` is the navy brand `#082c59`, but `--primary-foreground` is **not defined** in `index.css`, so the text fell back to dark/inherited → invisible on dark.
+- **Fix**: tooltip now uses `bg-slate-900 text-white shadow-lg ring-1 ring-slate-800`. Verified by testing agent: `tooltip_text_color = rgb(255, 255, 255)`.
+
+### Feature: extend icon-only to filter dropdowns
+- **New shared component** `components/shared/FilterChipSelect.jsx`: icon-first compact filter pill, opens a popover with checkable rows, brand-blue (`#082c59`) when active. 29 px wide when no filter; expands to icon+label when a value is selected. Built-in Radix tooltip with category-aware label (e.g. `Status: active`).
+- **Applied on `/admin/operators`** — the wide "All Status" / "All Services" `<Select>` dropdowns were replaced with `<FilterChipSelect>`. Filter row reclaimed ~320 px of horizontal real estate.
+- **Ready to sweep** the rest of the platform's Select dropdowns ("All Time", "All Categories", sort dropdowns) with one-line replacements.
+
+### Tests (iter 255)
+7/7 verified: tooltip contrast + colour + no-animation, popover open in 0 s, status/services chip 29 px → 70 px + brand-blue + tooltip, sidebar hover scale gone, backend integration intact (7 operators load + filter applies).
+
+
 ## Latest Changes (Feb 2026 — iter 254: Team & Roles revamp + icon-only buttons + single-owner invariant)
 
 ### Team & Roles page — Ratings-style refresh
