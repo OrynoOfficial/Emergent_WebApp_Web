@@ -207,3 +207,40 @@
     padding-right:  var(--safe-area-right);
   }
 }
+
+
+/*
+ * Disable the "fly-in" reveal animation on popovers, dropdowns, tooltips
+ * and accordions (iter 255 — user request). The CSS classes
+ * `animate-in`, `animate-out`, `fade-in-*`, `slide-in-from-*`, `zoom-in-*`
+ * are emitted by Radix data-[state=*] selectors and by tailwindcss-animate.
+ * We override them to render instantly. The plain `transition-colors`
+ * effect on hover is preserved.
+ *
+ * Tailwind's `motion-reduce:` and Radix's `[data-state=*]` keep generic
+ * "appear" CSS animations alive — wiping them with `animation: none` does
+ * NOT affect the still-required CSS transitions on hover/focus.
+ */
+@layer utilities {
+  [data-state="open"],
+  [data-state="closed"],
+  [data-radix-popper-content-wrapper],
+  [data-radix-popper-content-wrapper] > * {
+    animation: none !important;
+  }
+
+  /* Accordion content was using the unsupported `animate-accordion-*`
+     classes; force instant open/close so partially-hidden submenu items
+     stop appearing to "fly" into view. */
+  .data-\[state\=open\]\:animate-accordion-down[data-state="open"],
+  .data-\[state\=closed\]\:animate-accordion-up[data-state="closed"] {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Sidebar nav-item hover scaling — caused the "icons pop" sensation. */
+  .sidebar-no-fly :where(svg) {
+    transition: none !important;
+    transform: none !important;
+  }
+}

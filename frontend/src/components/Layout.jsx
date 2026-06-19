@@ -488,7 +488,7 @@ export default function Layout({ children }) {
             `}
           >
             <div className="flex items-center gap-3">
-              <item.icon className="h-5 w-5 transition-transform duration-200" style={{ color: iconColor }} />
+              <item.icon className="h-5 w-5" style={{ color: iconColor }} />
               <span className="font-medium text-slate-200">{item.label}</span>
             </div>
             <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'text-white' : ''}`} />
@@ -513,7 +513,7 @@ export default function Layout({ children }) {
         `}
       >
         <item.icon 
-          className="h-5 w-5 transition-transform duration-200 hover:scale-110" 
+          className="h-5 w-5" 
           style={{ color: iconColor }} 
         />
         <span className="font-medium">{item.label}</span>

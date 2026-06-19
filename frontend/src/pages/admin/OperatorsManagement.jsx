@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DatePickerField from '@/components/shared/DatePickerField';
 import IconButton from '@/components/shared/IconButton';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -435,26 +436,22 @@ export default function OperatorsManagement() {
               data-testid="operator-search"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 bg-white" data-testid="status-filter">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {OPERATOR_STATUS.map(s => (
-                <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={serviceFilter} onValueChange={setServiceFilter}>
-            <SelectTrigger className="w-40 bg-white" data-testid="service-filter">
-              <SelectValue placeholder="Service" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {SERVICE_TYPES.map(s => (
-                <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Services' : s.replace('_', ' ')}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterChipSelect
+            icon={CheckCircle}
+            label="Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={OPERATOR_STATUS.map(s => ({ value: s, label: s === 'all' ? 'All status' : s }))}
+            data-testid="status-filter"
+          />
+          <FilterChipSelect
+            icon={Building}
+            label="Services"
+            value={serviceFilter}
+            onChange={setServiceFilter}
+            options={SERVICE_TYPES.map(s => ({ value: s, label: s === 'all' ? 'All services' : s.replace(/_/g, ' ') }))}
+            data-testid="service-filter"
+          />
           <IconButton
             icon={Filter}
             label="More filters"
