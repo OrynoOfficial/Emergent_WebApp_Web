@@ -93,7 +93,7 @@ async def global_search(
         "event":       {"event", "operator", "location"},
         "cinema":      {"film", "showtime", "operator", "location"},
         "banquet":     {"banquet", "operator", "location"},
-        "laundry":     {"pressing", "operator", "location"},
+        "laundry":     {"laundry", "operator", "location"},
     }
     type_filter = _ALLOWED_TYPES.get(service_type) if service_type else None
 
