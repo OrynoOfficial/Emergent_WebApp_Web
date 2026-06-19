@@ -79,50 +79,50 @@ const ItemCard = ({ item, count, price, onInc, onDec }) => {
   const isActive = count > 0;
   return (
     <div
-      className={`relative rounded-xl border-2 transition-all p-3 bg-white ${
+      className={`relative rounded-lg border transition-all p-2 bg-white ${
         isActive
-          ? 'border-purple-500 shadow-md shadow-purple-200 ring-2 ring-purple-100'
+          ? 'border-purple-500 shadow-sm shadow-purple-200 ring-1 ring-purple-100'
           : 'border-slate-200 hover:border-purple-300'
       }`}
       data-testid={`item-card-${item.id}`}
     >
       {isActive && (
-        <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md">
+        <div className="absolute -top-1.5 -right-1.5 bg-purple-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow">
           {count}
         </div>
       )}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-100 to-fuchsia-100 border border-purple-200">
+      <div className="flex items-center gap-2">
+        <div className="w-9 h-9 rounded-md overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-100 to-fuchsia-100 border border-purple-200">
           {item.image_url ? (
             <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Shirt className="w-6 h-6 text-purple-400" />
+              <Shirt className="w-4 h-4 text-purple-400" />
             </div>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-800 truncate" title={item.name}>{item.name}</p>
-          <p className="text-xs text-purple-700 font-bold">{formatFCFA(price)}</p>
+          <p className="text-xs font-semibold text-slate-800 truncate leading-tight" title={item.name}>{item.name}</p>
+          <p className="text-[11px] text-purple-700 font-bold leading-tight">{formatFCFA(price)}</p>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 mt-3">
+      <div className="flex items-center justify-between gap-1.5 mt-2">
         <Button
           variant="outline"
           size="icon"
           onClick={onDec}
           disabled={count === 0}
-          className="h-7 w-7 rounded-full border-purple-300 hover:bg-purple-50 disabled:opacity-40"
+          className="h-6 w-6 rounded-full border-purple-300 hover:bg-purple-50 disabled:opacity-40"
           data-testid={`item-dec-${item.id}`}
         >
           <Minus className="w-3 h-3" />
         </Button>
-        <span className="text-sm font-bold text-purple-700 tabular-nums" data-testid={`item-count-${item.id}`}>{count}</span>
+        <span className="text-xs font-bold text-purple-700 tabular-nums" data-testid={`item-count-${item.id}`}>{count}</span>
         <Button
           variant="outline"
           size="icon"
           onClick={onInc}
-          className="h-7 w-7 rounded-full border-purple-300 hover:bg-purple-50"
+          className="h-6 w-6 rounded-full border-purple-300 hover:bg-purple-50"
           data-testid={`item-inc-${item.id}`}
         >
           <Plus className="w-3 h-3" />
@@ -523,7 +523,7 @@ export default function LaundryBooking() {
 
                 {/* Item grid — 2 columns mobile / 3 cols desktop, max-height with scroll */}
                 <div
-                  className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[420px] overflow-y-auto pr-1 -mr-1"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[420px] overflow-y-auto pr-1 -mr-1"
                   data-testid="items-grid"
                 >
                   {filteredCatalog.map((item) => {

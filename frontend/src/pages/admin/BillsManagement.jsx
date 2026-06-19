@@ -17,6 +17,7 @@ import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '@/components/common/QuickDateRangeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import FilterChipSelect from '@/components/shared/FilterChipSelect';
+import IconButton from '@/components/shared/IconButton';
 import Pagination from '@/components/common/Pagination';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
@@ -223,7 +224,7 @@ export default function BillsManagement() {
           <div className="flex items-center gap-2 flex-wrap">
             <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
-            <Button className="bg-[#082c59] h-8" size="sm" onClick={handleExportAll}><FileText className="w-3.5 h-3.5 mr-1.5" /> Export All</Button>
+            <IconButton icon={FileText} label="Export all bills" variant="solid" onClick={handleExportAll} data-testid="bills-export-all" />
           </div>
         }
         onRefresh={loadBills}

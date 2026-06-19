@@ -1,0 +1,64 @@
+{
+  "summary": "Iter 258 frontend verification of the Iconization-sweep + modal-shrink sweep. Initial run found the deployed dist/ was stale (built before the new edits), so the new chips/icons were not rendered (Vite preview serves dist/, not HMR). After running `sudo supervisorctl restart frontend` to trigger `vite build && vite preview`, 11/12 spec points pass. The single regression is HotelsResults.jsx: it imports FilterChipSelect and ViewModeToggle but never renders them — the old <Select role=combobox> sort dropdown is still on the page (1 combobox detected).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "HotelsResults.jsx", "issue": "FilterChipSelect + ViewModeToggle imports added but never used; old <Select> still renders for sort (button role=combobox present). No filter-* / view-mode-* testids appear on /services/hotels/results.", "selector": "/services/hotels/results", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_observations": {
+    "build_pipeline": "supervisor runs `vite build && vite preview --port 3000`. dist/index.html mtime (22:46) was earlier than Orders.jsx (23:11), so the served bundle was stale. After supervisorctl restart, dist/ rebuilt at 23:20 and all new code took effect. No code change needed in dev — just a redeploy trigger.",
+    "orders_page": {
+      "path": "/orders",
+      "filter-category": {"found": true, "w_px": 28},
+      "filter-status": {"found": true, "w_px": 28},
+      "filter-sort": {"found": true, "w_px": 28},
+      "popover_options_on_open": 7,
+      "chip_expansion_after_selection_w_px": 70.98,
+      "notes": "Icon-only at 28px when default, expands to ~70px with text when a non-default value is chosen. Popover shows filter-option-* items."
+    },
+    "ratings_admin": {"export-ratings-btn": {"found": true, "w_px": 28}},
+    "receipts": {"chips": ["filter-service", "filter-status", "filter-sort"], "all_present": true},
+    "bills_management": {"bills-export-all": {"found": true, "w_px": 28, "download_triggered": "bills-2026-06-19.csv"}},
+    "validation_management": {"validation-refresh": {"found": true, "w_px": 28, "click_reloads_data": true}},
+    "service_results": {
+      "hotels": {"status": "FAIL", "testids_found": [], "old_combobox_count": 1, "reason": "FilterChipSelect/ViewModeToggle imported but unused; old Select kept (line 862-872 of HotelsResults.jsx)"},
+      "restaurants": {"chips": ["filter-cuisine", "filter-sort"], "viewmode": ["view-mode-toggle", "view-mode-list", "view-mode-grid", "view-mode-details"]},
+      "travel": {"chips": ["filter-sort"], "viewmode": "present"},
+      "car-rental": {"chips": ["filter-vehicle-type", "filter-transmission", "filter-sort"], "viewmode": "present"},
+      "cinema": {"chips": ["filter-status", "filter-rating", "filter-duration", "filter-sort"], "viewmode": "present"},
+      "laundry": {"chips": ["filter-sort"], "viewmode": "present"},
+      "events": {"chips": ["events-type-filter", "events-sort-by"], "note": "spec compliant; uses page-specific testids instead of the default filter-* fallback"},
+      "packages": {"chips": ["filter-sort"], "viewmode": "not expected per spec"}
+    },
+    "modal_card_shrink_source_review": {
+      "TravelManagement_RouteCard": "grid grid-cols-4 gap-1.5 mb-3 with p-1.5 bg-slate-50 rounded-md tiles (was previously larger). Matches spec for compact 4-tile Departure/Arrival/Seats/Price row.",
+      "TravelManagement_VehicleCard": "grid grid-cols-2 gap-1.5 mb-2.5 with p-1.5 bg-slate-50 tiles. Matches spec for tighter Manufacturer/Model grid.",
+      "CarRentalManagement_CarCard": "grid grid-cols-4 gap-1.5 mb-2.5 with p-1.5 bg-slate-50 (Seats/Fuel/Trans./Day-price). Matches spec.",
+      "LaundryBooking_ItemCard": "Card p-2; outer grid 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[420px] overflow-y-auto'. Quantity badge w-5/h-5 text-[10px]. Matches spec for denser grid + smaller thumbnails/+/- buttons; default 2 cols on mobile, 4 cols on md/lg."
+    },
+    "console_health": {"errors": 0, "notes": "Tested across /orders, /ratings, /receipts, /admin/bills, /admin/validation, /services/*/results. No console errors."}
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Migrate HotelsResults.jsx sort dropdown to FilterChipSelect (the imports already exist at lines 7-8 but the JSX at line 862-872 still uses <Select>/<SelectValue>). Also add the shared ViewModeToggle in place of the existing view toggle on that page so it matches the other 8 service results pages. This is the only spec point that fails at runtime.",
+    "(Process) Consider adding a post-edit hook or document for main-agent E1: after large JSX edits, trigger `sudo supervisorctl restart frontend` once so the dist/ bundle reflects the source. Vite preview does NOT auto-rebuild; current iter wasted one test pass on a stale bundle."
+  ],
+  "critical_code_review_comments": [
+    "HotelsResults.jsx L7-9: import FilterChipSelect and ViewModeToggle are present but unreferenced; ESLint should flag this as no-unused-vars. The actual Sort UI at L862-872 still uses the legacy Radix Select. Functional regression vs spec.",
+    "FilterChipSelect chip width is 28-29px in the icon-only state and ~70px when active — visually consistent across Orders, Bills, Receipts, Employees, Cinema, etc.",
+    "EventsResults.jsx uses explicit data-testids 'events-type-filter' and 'events-sort-by' instead of the default 'filter-type'/'filter-sort'. Functional but inconsistent naming vs other results pages (which use 'filter-*'). Optional cleanup.",
+    "TravelManagement Routes/Vehicles cards, CarRentalManagement car cards, and LaundryBooking ItemCard all use p-1.5/p-2 with gap-1.5 — visually compact and matches spec.",
+    "validation-refresh and bills-export-all both render as 28px icon buttons with tooltips and trigger the correct action (reload / CSV download)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only request)", "frontend": "11/12 spec points pass — only HotelsResults sort/view-toggle migration is incomplete"},
+  "test_credentials": "admin@test.com / testpassword123 (2-step login).",
+  "seed_data_creation": "None.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Vite preview environment: edits to .jsx files are NOT live until `sudo supervisorctl restart frontend` triggers a fresh `vite build`. Watch dist/index.html mtime vs source mtime to spot staleness. FilterChipSelect chips on Orders/Bills/Receipts/Validation/Ratings all working at runtime — testids 'filter-category', 'filter-status', 'filter-sort', 'bills-export-all', 'validation-refresh', 'export-ratings-btn'. Service results testids: filter-cuisine (restaurants), filter-vehicle-type/transmission (car-rental), filter-status/rating/duration (cinema), events-type-filter/events-sort-by (events — custom names!). HotelsResults.jsx still ships old Select for sort — verify after main agent fixes.",
+  "rca of the issue": "HotelsResults.jsx received the FilterChipSelect/ViewModeToggle imports during the iconization sweep, but the actual JSX migration was missed — the old Radix <Select>/<SelectValue> block at lines ~862-872 was not replaced. The other 8 service-results pages were converted correctly. Fix is mechanical: swap the <Select> block for <FilterChipSelect icon={...} label='Sort' value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} /> and inline a <ViewModeToggle value={viewMode} onChange={setViewMode} /> next to it, matching TravelResults.jsx layout."
+}

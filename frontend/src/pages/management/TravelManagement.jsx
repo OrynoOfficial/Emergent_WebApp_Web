@@ -199,27 +199,27 @@ const RouteCard = ({ route, onView, onEdit, onDelete, onApprove, isAdmin }) => {
         </div>
       </div>
       
-      <CardContent className="p-4">
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Clock className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Departure</p>
-            <p className="font-semibold text-sm">{route.departure_time || '--:--'}</p>
+      <CardContent className="p-3">
+        <div className="grid grid-cols-4 gap-1.5 mb-3">
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Clock className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Departure</p>
+            <p className="font-semibold text-xs">{route.departure_time || '--:--'}</p>
           </div>
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Clock className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Arrival</p>
-            <p className="font-semibold text-sm">{route.arrival_time || '--:--'}</p>
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Clock className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Arrival</p>
+            <p className="font-semibold text-xs">{route.arrival_time || '--:--'}</p>
           </div>
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Users className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Seats</p>
-            <p className="font-semibold text-sm">{route.total_seats || 0}</p>
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Users className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Seats</p>
+            <p className="font-semibold text-xs">{route.total_seats || 0}</p>
           </div>
-          <div className="text-center p-2 bg-emerald-50 rounded-lg">
-            <DollarSign className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
-            <p className="text-xs text-slate-500">Price</p>
-            <p className="font-bold text-sm text-emerald-600">{formatFCFA(route.price)}</p>
+          <div className="text-center p-1.5 bg-emerald-50 rounded-md">
+            <DollarSign className="w-3 h-3 mx-auto text-emerald-600 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Price</p>
+            <p className="font-bold text-xs text-emerald-600">{formatFCFA(route.price)}</p>
           </div>
         </div>
 
@@ -353,14 +353,14 @@ const VehicleCard = ({ vehicle, onView, onEdit, onDelete, onReplace }) => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="p-2 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-500">Manufacturer</p>
-            <p className="font-medium text-sm truncate">{vehicle.manufacturer || 'N/A'}</p>
+        <div className="grid grid-cols-2 gap-1.5 mb-2.5">
+          <div className="p-1.5 bg-slate-50 rounded-md">
+            <p className="text-[10px] text-slate-500">Manufacturer</p>
+            <p className="font-medium text-xs truncate">{vehicle.manufacturer || 'N/A'}</p>
           </div>
-          <div className="p-2 bg-slate-50 rounded-lg">
-            <p className="text-xs text-slate-500">Model/Year</p>
-            <p className="font-medium text-sm truncate">{vehicle.model || 'N/A'} {vehicle.year}</p>
+          <div className="p-1.5 bg-slate-50 rounded-md">
+            <p className="text-[10px] text-slate-500">Model/Year</p>
+            <p className="font-medium text-xs truncate">{vehicle.model || 'N/A'} {vehicle.year}</p>
           </div>
         </div>
 

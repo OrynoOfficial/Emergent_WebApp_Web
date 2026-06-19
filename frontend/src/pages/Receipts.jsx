@@ -19,6 +19,7 @@ import QuickDateRangeFilter, { inRange } from '../components/common/QuickDateRan
 import ViewModeToggle from '../components/common/ViewModeToggle';
 import ManagementShell from '../components/management/shared/ManagementShell';
 import SubpageCard from '../components/management/shared/SubpageCard';
+import FilterChipSelect from '../components/shared/FilterChipSelect';
 import { TabsContent } from '../components/ui/tabs';
 
 const ITEMS_PER_PAGE = 10;
@@ -353,48 +354,29 @@ export default function Receipts() {
                         </Button>
 
                         {/* Desktop Filters */}
-                        <div className="hidden lg:flex items-center gap-3">
-                            <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                                <SelectTrigger className="w-[150px] bg-white border-slate-200">
-                                    <Tag className="h-4 w-4 mr-2 text-slate-400" />
-                                    <SelectValue placeholder="Service" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                    {SERVICE_TYPES.map(type => (
-                                        <SelectItem key={type.value} value={type.value}>
-                                            {type.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[140px] bg-white border-slate-200">
-                                    <Filter className="h-4 w-4 mr-2 text-slate-400" />
-                                    <SelectValue placeholder="Status" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                    {STATUS_OPTIONS.map(status => (
-                                        <SelectItem key={status.value} value={status.value}>
-                                            {status.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            <Select value={sortBy} onValueChange={setSortBy}>
-                                <SelectTrigger className="w-[170px] bg-white border-slate-200">
-                                    <ArrowUpDown className="h-4 w-4 mr-2 text-slate-400" />
-                                    <SelectValue placeholder="Sort" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white">
-                                    {SORT_OPTIONS.map(option => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        <div className="hidden lg:flex items-center gap-2">
+                            <FilterChipSelect
+                              icon={Tag}
+                              label="Service"
+                              value={serviceFilter}
+                              onChange={setServiceFilter}
+                              options={SERVICE_TYPES}
+                            />
+                            <FilterChipSelect
+                              icon={Filter}
+                              label="Status"
+                              value={statusFilter}
+                              onChange={setStatusFilter}
+                              options={STATUS_OPTIONS}
+                            />
+                            <FilterChipSelect
+                              icon={ArrowUpDown}
+                              label="Sort"
+                              value={sortBy}
+                              onChange={setSortBy}
+                              options={SORT_OPTIONS}
+                              allValue="date_desc"
+                            />
 
                             {hasActiveFilters && (
                                 <Button 

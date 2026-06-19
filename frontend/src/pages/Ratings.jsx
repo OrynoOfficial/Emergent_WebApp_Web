@@ -19,12 +19,15 @@ import {
   Send, Reply, ChevronDown, ChevronUp, User, Clock, TrendingUp,
   MessageCircle, Award, BarChart3, Edit2, Loader2, CheckCircle,
   Flag, EyeOff, Eye, Trash2, AlertTriangle, ShieldAlert, X,
-  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List, Bell
+  PieChart, Activity, Users, ArrowUpRight, ArrowDownRight, Timer, FileText, LayoutGrid, List, Bell,
+  Briefcase, SlidersHorizontal
 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { toast } from 'sonner';
 import MessagesTab from './loyalty/MessagesTab';
 import OperatorScopeFilter from '../components/common/OperatorScopeFilter';
+import FilterChipSelect from '../components/shared/FilterChipSelect';
+import IconButton from '../components/shared/IconButton';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend
@@ -682,32 +685,30 @@ function OperatorRatingsView() {
                 className="pl-10 bg-white"
               />
             </div>
-            <Select value={filterService} onValueChange={setFilterService}>
-              <SelectTrigger className="w-40 bg-white">
-                <SelectValue placeholder="Service" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Services</SelectItem>
-                {assignedServices.map(service => (
-                  <SelectItem key={service} value={service} className="capitalize">
-                    {service.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterRating} onValueChange={setFilterRating}>
-              <SelectTrigger className="w-36 bg-white">
-                <SelectValue placeholder="Rating" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Ratings</SelectItem>
-                <SelectItem value="5">5 Stars</SelectItem>
-                <SelectItem value="4">4 Stars</SelectItem>
-                <SelectItem value="3">3 Stars</SelectItem>
-                <SelectItem value="2">2 Stars</SelectItem>
-                <SelectItem value="1">1 Star</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={Briefcase}
+              label="Service"
+              value={filterService}
+              onChange={setFilterService}
+              options={[
+                { value: 'all', label: 'All Services' },
+                ...assignedServices.map(s => ({ value: s, label: s.replace('_', ' ') })),
+              ]}
+            />
+            <FilterChipSelect
+              icon={Star}
+              label="Rating"
+              value={filterRating}
+              onChange={setFilterRating}
+              options={[
+                { value: 'all', label: 'All Ratings' },
+                { value: '5', label: '5 Stars' },
+                { value: '4', label: '4 Stars' },
+                { value: '3', label: '3 Stars' },
+                { value: '2', label: '2 Stars' },
+                { value: '1', label: '1 Star' },
+              ]}
+            />
           </div>
 
           {/* Stats chip strip — at-a-glance metrics below the search bar */}
@@ -1173,35 +1174,42 @@ function AdminRatingsView() {
                 className="pl-10 bg-white"
               />
             </div>
-            <Select value={filterService} onValueChange={setFilterService}>
-              <SelectTrigger className="w-40 bg-white">
-                <SelectValue placeholder="Service" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Services</SelectItem>
-                <SelectItem value="hotel">Hotels</SelectItem>
-                <SelectItem value="restaurant">Restaurants</SelectItem>
-                <SelectItem value="travel">Travel</SelectItem>
-                <SelectItem value="car_rental">Car Rental</SelectItem>
-                <SelectItem value="cinema">Cinema</SelectItem>
-                <SelectItem value="laundry">Laundry</SelectItem>
-                <SelectItem value="events">Events</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterRating} onValueChange={setFilterRating}>
-              <SelectTrigger className="w-36 bg-white">
-                <SelectValue placeholder="Rating" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Ratings</SelectItem>
-                <SelectItem value="5">5 Stars</SelectItem>
-                <SelectItem value="4">4 Stars</SelectItem>
-                <SelectItem value="3">3 Stars</SelectItem>
-                <SelectItem value="2">2 Stars</SelectItem>
-                <SelectItem value="1">1 Star</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap" data-testid="export-ratings-btn" onClick={async () => {
+            <FilterChipSelect
+              icon={Briefcase}
+              label="Service"
+              value={filterService}
+              onChange={setFilterService}
+              options={[
+                { value: 'all', label: 'All Services' },
+                { value: 'hotel', label: 'Hotels' },
+                { value: 'restaurant', label: 'Restaurants' },
+                { value: 'travel', label: 'Travel' },
+                { value: 'car_rental', label: 'Car Rental' },
+                { value: 'cinema', label: 'Cinema' },
+                { value: 'laundry', label: 'Laundry' },
+                { value: 'events', label: 'Events' },
+              ]}
+            />
+            <FilterChipSelect
+              icon={Star}
+              label="Rating"
+              value={filterRating}
+              onChange={setFilterRating}
+              options={[
+                { value: 'all', label: 'All Ratings' },
+                { value: '5', label: '5 Stars' },
+                { value: '4', label: '4 Stars' },
+                { value: '3', label: '3 Stars' },
+                { value: '2', label: '2 Stars' },
+                { value: '1', label: '1 Star' },
+              ]}
+            />
+            <IconButton
+              icon={FileText}
+              label="Export ratings"
+              variant="outline"
+              data-testid="export-ratings-btn"
+              onClick={async () => {
               try {
                 const params = filterService !== 'all' ? `?service_type=${filterService}` : '';
                 const res = await api.get(`/ratings/export${params}`);
@@ -1212,9 +1220,7 @@ function AdminRatingsView() {
                 URL.revokeObjectURL(url);
                 toast.success(`Exported ${res.data.total} ratings`);
               } catch { toast.error('Export failed'); }
-            }}>
-              <FileText className="h-4 w-4" /> Export
-            </Button>
+            }} />
             <div className="flex border rounded-lg overflow-hidden">
               <button onClick={() => setViewMode('list')} className={`px-2.5 py-1.5 ${viewMode === 'list' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="list-view-btn">
                 <List className="h-4 w-4" />

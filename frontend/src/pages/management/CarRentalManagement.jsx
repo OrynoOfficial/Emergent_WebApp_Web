@@ -236,27 +236,27 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
         </div>
       </div>
       
-      <CardContent className="p-4">
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Users className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Seats</p>
-            <p className="font-semibold text-sm">{car.seats}</p>
+      <CardContent className="p-3">
+        <div className="grid grid-cols-4 gap-1.5 mb-2.5">
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Users className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Seats</p>
+            <p className="font-semibold text-xs">{car.seats}</p>
           </div>
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Fuel className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Fuel</p>
-            <p className="font-semibold text-sm capitalize">{car.fuel_type?.slice(0, 6)}</p>
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Fuel className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Fuel</p>
+            <p className="font-semibold text-xs capitalize">{car.fuel_type?.slice(0, 6)}</p>
           </div>
-          <div className="text-center p-2 bg-slate-50 rounded-lg">
-            <Gauge className="w-4 h-4 mx-auto text-slate-500 mb-1" />
-            <p className="text-xs text-slate-500">Trans.</p>
-            <p className="font-semibold text-sm capitalize">{car.transmission?.slice(0, 4)}</p>
+          <div className="text-center p-1.5 bg-slate-50 rounded-md">
+            <Gauge className="w-3 h-3 mx-auto text-slate-500 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Trans.</p>
+            <p className="font-semibold text-xs capitalize">{car.transmission?.slice(0, 4)}</p>
           </div>
-          <div className="text-center p-2 bg-emerald-50 rounded-lg">
-            <DollarSign className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
-            <p className="text-xs text-slate-500">Day</p>
-            <p className="font-bold text-sm text-emerald-600">{(car.price_per_day/1000).toFixed(0)}k</p>
+          <div className="text-center p-1.5 bg-emerald-50 rounded-md">
+            <DollarSign className="w-3 h-3 mx-auto text-emerald-600 mb-0.5" />
+            <p className="text-[10px] text-slate-500">Day</p>
+            <p className="font-bold text-xs text-emerald-600">{(car.price_per_day/1000).toFixed(0)}k</p>
           </div>
         </div>
 

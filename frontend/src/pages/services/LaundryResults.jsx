@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, MapPin, Star, Clock, Shirt, Sparkles, Loader2, Search,
@@ -613,38 +615,20 @@ export default function LaundryResults() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white border-purple-200">
-                <SlidersHorizontal className="w-4 h-4 mr-2 text-purple-700" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="rating">Top rated</SelectItem>
-                <SelectItem value="reviews">Most reviews</SelectItem>
-                <SelectItem value="price_low">Price: low to high</SelectItem>
-                <SelectItem value="price_high">Price: high to low</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center bg-purple-50 rounded-lg p-1 border border-purple-200">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm text-purple-700' : 'text-slate-500'}
-                data-testid="view-mode-grid"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm text-purple-700' : 'text-slate-500'}
-                data-testid="view-mode-list"
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'rating', label: 'Top rated' },
+                { value: 'reviews', label: 'Most reviews' },
+                { value: 'price_low', label: 'Price: low to high' },
+                { value: 'price_high', label: 'Price: high to low' },
+              ]}
+              allValue="rating"
+            />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </div>
         </div>
       </div>

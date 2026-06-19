@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, Ticket, Search, Star, Loader2, LayoutGrid, List, SlidersHorizontal, Music, Trophy, Laugh, Briefcase, PartyPopper, AlertCircle, Building2, Eye } from 'lucide-react';
@@ -527,32 +528,35 @@ export default function EventsResults() {
             getOperator={(e) => e.operator_name}
             onFiltersChange={setSmartFilters}
           >
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40 bg-white border-pink-200" data-testid="events-type-filter">
-                <Ticket className="w-4 h-4 mr-2 text-pink-600" />
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="concert">Concert</SelectItem>
-                <SelectItem value="sports">Sports</SelectItem>
-                <SelectItem value="comedy">Comedy</SelectItem>
-                <SelectItem value="conference">Conference</SelectItem>
-                <SelectItem value="party">Party</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white border-pink-200" data-testid="events-sort-by">
-                <SlidersHorizontal className="w-4 h-4 mr-2 text-pink-600" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-                <SelectItem value="price_low">Price: Low to High</SelectItem>
-                <SelectItem value="price_high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={Ticket}
+              label="Type"
+              value={typeFilter}
+              onChange={setTypeFilter}
+              options={[
+                { value: 'all', label: 'All Types' },
+                { value: 'concert', label: 'Concert' },
+                { value: 'sports', label: 'Sports' },
+                { value: 'comedy', label: 'Comedy' },
+                { value: 'conference', label: 'Conference' },
+                { value: 'party', label: 'Party' },
+              ]}
+              data-testid="events-type-filter"
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'date', label: 'Date' },
+                { value: 'rating', label: 'Top Rated' },
+                { value: 'price_low', label: 'Price: Low to High' },
+                { value: 'price_high', label: 'Price: High to Low' },
+              ]}
+              allValue="date"
+              data-testid="events-sort-by"
+            />
           </SmartSearchBar>
         </div>
       </div>

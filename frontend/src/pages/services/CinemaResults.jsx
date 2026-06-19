@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   ArrowLeft, Film, Clock, Star, Ticket, Loader2, Search, SlidersHorizontal, Sparkles, PlayCircle,
@@ -475,55 +476,52 @@ export default function CinemaResults() {
                 data-testid="cinema-results-search"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40">
-                <Film className="w-4 h-4 mr-2 text-cyan-600" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-300 text-slate-900">
-                <SelectItem value="all">All movies</SelectItem>
-                <SelectItem value="now_showing">Now Showing</SelectItem>
-                <SelectItem value="coming_soon">Coming Soon</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger className="w-32 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40" data-testid="filter-rating">
-                <Star className="w-4 h-4 mr-2 text-cyan-600" />
-                <SelectValue placeholder="Rating" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-300 text-slate-900">
-                <SelectItem value="all">Any rating</SelectItem>
-                {RATING_OPTIONS.map((r) => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={durationFilter} onValueChange={setDurationFilter}>
-              <SelectTrigger className="w-40 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40" data-testid="filter-duration">
-                <Clock className="w-4 h-4 mr-2 text-cyan-600" />
-                <SelectValue placeholder="Duration" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-300 text-slate-900">
-                <SelectItem value="all">Any length</SelectItem>
-                <SelectItem value="short">Under 90 min</SelectItem>
-                <SelectItem value="medium">90 – 120 min</SelectItem>
-                <SelectItem value="long">Over 120 min</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-cyan-50/60 border-cyan-200 text-slate-900 focus:ring-cyan-500/40">
-                <SlidersHorizontal className="w-4 h-4 mr-2 text-cyan-600" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white border-slate-300 text-slate-900">
-                <SelectItem value="rating">Top rated</SelectItem>
-                <SelectItem value="title">Title A-Z</SelectItem>
-                <SelectItem value="duration">Duration</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center bg-cyan-50/60 border border-cyan-200 rounded-lg p-1">
-              <ViewModeToggle value={viewMode} onChange={setViewMode} />
-            </div>
+            <FilterChipSelect
+              icon={Film}
+              label="Status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: 'All movies' },
+                { value: 'now_showing', label: 'Now Showing' },
+                { value: 'coming_soon', label: 'Coming Soon' },
+              ]}
+            />
+            <FilterChipSelect
+              icon={Star}
+              label="Rating"
+              value={ratingFilter}
+              onChange={setRatingFilter}
+              options={[
+                { value: 'all', label: 'Any rating' },
+                ...RATING_OPTIONS.map(r => ({ value: r, label: r })),
+              ]}
+            />
+            <FilterChipSelect
+              icon={Clock}
+              label="Duration"
+              value={durationFilter}
+              onChange={setDurationFilter}
+              options={[
+                { value: 'all', label: 'Any length' },
+                { value: 'short', label: 'Under 90 min' },
+                { value: 'medium', label: '90 – 120 min' },
+                { value: 'long', label: 'Over 120 min' },
+              ]}
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'rating', label: 'Top rated' },
+                { value: 'title', label: 'Title A-Z' },
+                { value: 'duration', label: 'Duration' },
+              ]}
+              allValue="rating"
+            />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
             {(searchQuery || statusFilter !== 'all' || selectedGenres.length > 0 || ratingFilter !== 'all' || durationFilter !== 'all') && (
               <Button
                 variant="ghost"

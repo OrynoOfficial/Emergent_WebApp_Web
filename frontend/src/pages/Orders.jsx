@@ -7,7 +7,6 @@ import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import {
   Search,
   Calendar,
@@ -25,12 +24,11 @@ import {
   ArrowUpDown,
   Filter,
   Tag,
-  Hash,
   User,
-  SlidersHorizontal,
   Plus,
   Building2
 } from 'lucide-react';
+import FilterChipSelect from '../components/shared/FilterChipSelect';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import { activityLogger } from '../utils/activityLogger';
 import ManagementShell from '../components/management/shared/ManagementShell';
@@ -327,39 +325,28 @@ export default function Orders() {
             </button>
           )}
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[140px] h-8 bg-white border-slate-200 text-sm">
-            <Tag className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {CATEGORY_OPTIONS.map(cat => (
-              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[130px] h-8 bg-white border-slate-200 text-sm">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {STATUS_OPTIONS.map(status => (
-              <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[160px] h-8 bg-white border-slate-200 text-sm">
-            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {SORT_OPTIONS.map(option => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterChipSelect
+          icon={Tag}
+          label="Category"
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={CATEGORY_OPTIONS}
+        />
+        <FilterChipSelect
+          icon={Filter}
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={STATUS_OPTIONS}
+        />
+        <FilterChipSelect
+          icon={ArrowUpDown}
+          label="Sort"
+          value={sortBy}
+          onChange={setSortBy}
+          options={SORT_OPTIONS}
+          allValue="newest"
+        />
         {hasActiveFilters && (
           <Button
             variant="ghost"

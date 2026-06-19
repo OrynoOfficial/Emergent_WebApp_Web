@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import CarRentalDetails from '@/pages/services/CarRentalDetails';
@@ -573,43 +574,32 @@ export default function CarRentalResults() {
             getOperator={(v) => v.operator_name}
             onFiltersChange={setSmartFilters}
           >
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="w-36 bg-white">
-                <Car className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {VEHICLE_TYPES.map(type => (
-                  <SelectItem key={type} value={type} className="capitalize">
-                    {type === 'all' ? 'All Types' : type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedTransmission} onValueChange={setSelectedTransmission}>
-              <SelectTrigger className="w-40 bg-white">
-                <Settings className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Transmission" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {TRANSMISSION_TYPES.map(type => (
-                  <SelectItem key={type} value={type} className="capitalize">
-                    {type === 'all' ? 'All' : type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="price_low">Price: Low to High</SelectItem>
-                <SelectItem value="price_high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={Car}
+              label="Vehicle Type"
+              value={selectedType}
+              onChange={setSelectedType}
+              options={VEHICLE_TYPES.map(t => ({ value: t, label: t === 'all' ? 'All Types' : t }))}
+            />
+            <FilterChipSelect
+              icon={Settings}
+              label="Transmission"
+              value={selectedTransmission}
+              onChange={setSelectedTransmission}
+              options={TRANSMISSION_TYPES.map(t => ({ value: t, label: t === 'all' ? 'All' : t }))}
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'price_low', label: 'Price: Low to High' },
+                { value: 'price_high', label: 'Price: High to Low' },
+                { value: 'rating', label: 'Top Rated' },
+              ]}
+              allValue="price_low"
+            />
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </SmartSearchBar>
         </div>

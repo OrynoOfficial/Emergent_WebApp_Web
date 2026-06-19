@@ -8,6 +8,7 @@ import SmartSearchBar from '@/components/search/SmartSearchBar';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -882,15 +883,19 @@ export default function PackagesResults() {
             getOperator={(s) => s.operator_name}
             onFiltersChange={setSmartFilters}
           >
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-44 bg-white"><SlidersHorizontal className="w-4 h-4 mr-2" /><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="price_low">Price: Low to High</SelectItem>
-                <SelectItem value="price_high">Price: High to Low</SelectItem>
-                <SelectItem value="fastest">Fastest Delivery</SelectItem>
-                <SelectItem value="capacity">Highest Capacity</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'price_low', label: 'Price: Low to High' },
+                { value: 'price_high', label: 'Price: High to Low' },
+                { value: 'fastest', label: 'Fastest Delivery' },
+                { value: 'capacity', label: 'Highest Capacity' },
+              ]}
+              allValue="price_low"
+            />
 
             {/* Filter Sheet */}
             <Sheet open={filterOpen} onOpenChange={setFilterOpen}>

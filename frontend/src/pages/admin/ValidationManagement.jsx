@@ -21,6 +21,7 @@ import { formatDate, formatDateTime } from '@/utils/dateUtils';
 import { StatusTag, StatusFlowIndicator } from './validation/StatusComponents';
 import { StatusHistory } from './validation/StatusHistory';
 import { ValidationSubPage } from './validation/ValidationSubPage';
+import IconButton from '@/components/shared/IconButton';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 
 export default function ValidationManagement() {
@@ -323,7 +324,7 @@ export default function ValidationManagement() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
-            <Button onClick={loadData} variant="outline" disabled={isLoading}><RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</Button>
+            <IconButton icon={RefreshCw} label={isLoading ? 'Refreshing…' : 'Refresh'} variant="outline" onClick={loadData} disabled={isLoading} data-testid="validation-refresh" />
           </div>
         </div>
       </div>

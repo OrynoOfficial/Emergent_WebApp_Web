@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
+import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -554,47 +556,29 @@ export default function RestaurantsResults() {
             getOperator={(r) => r.operator_name}
             onFiltersChange={setSmartFilters}
           >
-            <Select value={selectedCuisine} onValueChange={setSelectedCuisine}>
-              <SelectTrigger className="w-40 bg-white">
-                <Utensils className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Cuisine" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Cuisines</SelectItem>
-                {CUISINE_TYPES.map(cuisine => (
-                  <SelectItem key={cuisine} value={cuisine.toLowerCase()}>{cuisine}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48 bg-white">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="rating">Top Rated</SelectItem>
-                <SelectItem value="price_low">Price: Low to High</SelectItem>
-                <SelectItem value="price_high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex items-center bg-slate-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className={viewMode === 'grid' ? 'bg-white shadow-sm' : ''}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className={viewMode === 'list' ? 'bg-white shadow-sm' : ''}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
+            <FilterChipSelect
+              icon={Utensils}
+              label="Cuisine"
+              value={selectedCuisine}
+              onChange={setSelectedCuisine}
+              options={[
+                { value: 'all', label: 'All Cuisines' },
+                ...CUISINE_TYPES.map(c => ({ value: c.toLowerCase(), label: c })),
+              ]}
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={setSortBy}
+              options={[
+                { value: 'rating', label: 'Top Rated' },
+                { value: 'price_low', label: 'Price: Low to High' },
+                { value: 'price_high', label: 'Price: High to Low' },
+              ]}
+              allValue="rating"
+            />
+            <ViewModeToggle value={viewMode} onChange={setViewMode} />
           </SmartSearchBar>
         </div>
       </div>
