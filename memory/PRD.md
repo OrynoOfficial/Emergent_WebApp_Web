@@ -7,6 +7,41 @@
 - **Workflow:** Vite dist build can go stale relative to source. Add a watch-mode rebuild or supervisor hook so `yarn build` runs whenever `/app/frontend/src` changes.
 
 
+
+## Latest Changes (Feb 2026 — iter 253: PackagesResults rich modal + Edit-mode LandingSmartSearch sweep)
+
+### PackagesSearch — clean dual-bar layout
+- Fixed missing `ArrowRightLeft` import in `PackagesSearch.jsx` (was silently crashing the swap button on render).
+- Removed the now-redundant **Delivery Location** `LocationInput` from the form (it duplicated the second hero smart bar). The form is now purely operational: Shipping Date, Quick Size, Weight + Dimensions, Package Type.
+- Added context-specific placeholders to both bars ("Pickup city — e.g. Douala" / "Delivery city — e.g. Yaoundé") via a new optional `placeholder` prop on `LandingSmartSearch`.
+
+### PackagesResults — UX overhaul (P0 from user msg #533)
+- Default `viewMode` flipped from `list` → `grid`.
+- `ServiceCardGrid` enriched with: operator-avatar (logo) + rating pill in banner, pricing-model badge ("Weight tiers" / "Base + per-kg"), and accepted-types count badge.
+- `ServiceDetailsModal` enriched with:
+  - Banner now shows the operator avatar + rating star + review count when available.
+  - **Live route map** — Google Maps directions iframe (`maps.google.com/maps?saddr=…&daddr=…&output=embed`) rendered after the Route block, plus an "Open in Google Maps" deep link.
+  - Operator quick-contacts row: phone chip (`tel:` link) + website chip when present.
+  - Added `<DialogTitle>` and `<DialogDescription>` in `sr-only` mode to clear the Radix a11y console warning.
+
+### Backend — package_services search enrichment
+- `GET /api/package-services/search` now hydrates each result with `operator_logo_url`, `operator_rating`, `operator_reviews`, `operator_phone`, `operator_website` via a single `$in` lookup on `db.operators`.
+
+### Edit-mode parity — LandingSmartSearch rolled across all Results pages
+The user wanted the "Edit" search bar on every `*Results.jsx` to behave exactly like the new `LandingSmartSearch` from the landing pages. Replaced the legacy inline `LocationInput` with `LandingSmartSearch` in:
+- `HotelsResults.jsx` (destination)
+- `CarRentalResults.jsx` (pickup location)
+- `TravelResults.jsx` (from + to — two bars)
+- `RestaurantsResults.jsx` (city)
+- `LaundryResults.jsx` (city)
+- `PackagesResults.jsx` (origin + destination — two bars)
+
+`onSelectCity` writes back to the local edit-form state so the existing `handleUpdateSearch`/`applyEdit` plumbing still controls URL sync. Date pickers, guest counters, etc. remain untouched.
+
+### Tests
+- Iter 252 — 100% pass (14/14 sub-checks). Backend enrichment verified live; Edit-mode dropdown selection verified on all 6 results pages.
+
+
 ## Latest Changes (Feb 2026 — iter 252: car rental preview-modal date flow + dual-bar travel search)
 
 ### Bug: car rental dates never reached the preview modal

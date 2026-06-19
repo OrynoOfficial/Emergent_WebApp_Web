@@ -25,7 +25,7 @@ import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import LocationInput from '@/components/shared/LocationInput';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 
 const PACKAGE_TYPES = [
@@ -275,6 +275,10 @@ const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl bg-white p-0 overflow-hidden max-h-[92vh] overflow-y-auto" data-testid="service-details-modal">
+        <DialogTitle className="sr-only">{service.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Package delivery service from {service.origin_city} to {service.destination_city} by {service.operator_name || 'operator'}.
+        </DialogDescription>
         {/* Photo Carousel / banner */}
         <div className="relative">
           {photos.length > 0 ? (
