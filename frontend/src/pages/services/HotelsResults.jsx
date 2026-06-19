@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import SmartSearchBar from '@/components/search/SmartSearchBar';
 import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
@@ -741,15 +742,18 @@ export default function HotelsResults() {
           <Card className="shadow-sm bg-gradient-to-r from-[#082c59] to-[#0a4a8f] text-white mb-4">
             <CardContent className="p-3">
               {isEditingSearch ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <div className="md:col-span-1">
                     <label className="text-[10px] text-white/70 mb-0.5 block">Destination</label>
-                    <LocationInput
-                      value={editDestination}
-                      onChange={setEditDestination}
+                    <LandingSmartSearch
                       serviceType="hotel"
-                      placeholder="Enter city"
-                      iconColor="text-white/40"
+                      pageType="hotels_edit"
+                      resultsPath="/services/hotels/results"
+                      cityParam="destination"
+                      cityLabel="Destination"
+                      selectedCity={editDestination}
+                      onSelectCity={(c) => setEditDestination(c)}
+                      onClearCity={() => setEditDestination('')}
                     />
                   </div>
                   <div>

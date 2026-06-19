@@ -18,6 +18,7 @@ import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import LaundryShopDetailsModal from '@/components/services/LaundryShopDetailsModal';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import { formatFCFA } from '@/utils/currency';
 
 // ── Swipeable image gallery — used on cards ─────────────────────────────────
@@ -528,12 +529,15 @@ export default function LaundryResults() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">City</label>
-                    <LocationInput
-                      value={editCity}
-                      onChange={setEditCity}
-                      serviceType="pressing"
-                      placeholder="Enter city"
-                      iconColor="text-white/40"
+                    <LandingSmartSearch
+                      serviceType="laundry"
+                      pageType="laundry_edit"
+                      resultsPath="/services/laundry/results"
+                      cityParam="city"
+                      cityLabel="City"
+                      selectedCity={editCity}
+                      onSelectCity={(c) => setEditCity(c)}
+                      onClearCity={() => setEditCity('')}
                     />
                   </div>
                   <div>

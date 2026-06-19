@@ -20,6 +20,7 @@ import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import DatePickerField from '@/components/shared/DatePickerField';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
 import { getLocationParam } from '@/components/LocationSelectionModal';
@@ -459,12 +460,15 @@ export default function CarRentalResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div>
                     <label className="text-[10px] text-white/70 mb-0.5 block">Pickup Location</label>
-                    <LocationInput
-                      value={editPickup}
-                      onChange={setEditPickup}
-                      serviceType="car-rental"
-                      placeholder="Enter city"
-                      iconColor="text-white/40"
+                    <LandingSmartSearch
+                      serviceType="car_rental"
+                      pageType="car_rental_edit"
+                      resultsPath="/services/car-rental/results"
+                      cityParam="pickup_location"
+                      cityLabel="Pickup"
+                      selectedCity={editPickup}
+                      onSelectCity={(c) => setEditPickup(c)}
+                      onClearCity={() => setEditPickup('')}
                     />
                   </div>
                   <div>

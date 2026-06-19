@@ -14,7 +14,7 @@ import {
   ArrowLeft, Package, MapPin, Clock, Building, Truck,
   LayoutGrid, List, Search, SlidersHorizontal, Heart, Loader2, Shield,
   Edit2, Check, X, Weight, Ruler, ArrowRight,
-  Info, Tag, Percent,
+  Info, Tag, Percent, Star, Phone, Globe,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatFCFA } from '@/utils/currency';
@@ -24,6 +24,7 @@ import SubscribeButton from '@/components/shared/SubscribeButton';
 import FavouriteButton from '@/components/shared/FavouriteButton';
 import AlmostSoldOutBadge from '@/components/shared/AlmostSoldOutBadge';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from '@/components/ui/carousel';
 
@@ -98,9 +99,19 @@ const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => {
             <Package className="w-5 h-5" />
             <span className="font-bold text-lg line-clamp-1">{service.name}</span>
           </div>
-          <div className="flex items-center gap-1 text-white/80 text-sm mt-0.5">
-            <Building className="w-3 h-3" />
-            {service.operator_name || 'Operator'}
+          <div className="flex items-center gap-2 text-white/80 text-sm mt-0.5">
+            {service.operator_logo_url ? (
+              <img src={getImg(service.operator_logo_url)} alt="" className="w-5 h-5 rounded-full object-cover border border-white/60" />
+            ) : (
+              <Building className="w-3 h-3" />
+            )}
+            <span className="truncate">{service.operator_name || 'Operator'}</span>
+            {service.operator_rating ? (
+              <span className="flex items-center gap-0.5 ml-auto bg-white/15 px-1.5 py-0.5 rounded-full text-[10px]">
+                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                {Number(service.operator_rating).toFixed(1)}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -127,6 +138,22 @@ const ServiceCardGrid = ({ service, onSelect, isFav, toggleFav }) => {
             <Weight className="w-3.5 h-3.5" />
             <span className="text-xs">up to {service.max_weight_kg}kg</span>
           </div>
+        </div>
+
+        {/* Pricing model + accepted types preview */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {service.pricing_model && (
+            <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200 capitalize">
+              <Tag className="w-2.5 h-2.5 mr-1" />
+              {service.pricing_model === 'per_kg' ? 'Base + per-kg' : service.pricing_model === 'tiered' ? 'Weight tiers' : service.pricing_model.replace(/_/g, ' ')}
+            </Badge>
+          )}
+          {service.accepted_types?.length > 0 && (
+            <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-200">
+              <Package className="w-2.5 h-2.5 mr-1" />
+              {service.accepted_types.length} type{service.accepted_types.length > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
 
         {service.features?.length > 0 && (
@@ -305,8 +332,20 @@ const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav 
           {/* Title in banner */}
           <div className="absolute bottom-4 left-4 right-4 z-10 text-white pointer-events-none">
             <h2 className="text-2xl font-bold drop-shadow-md">{service.name}</h2>
-            <p className="text-sm text-white/90 flex items-center gap-1.5">
-              <Building className="w-3.5 h-3.5" /> {service.operator_name || 'Operator'}
+            <p className="text-sm text-white/90 flex items-center gap-2 mt-0.5">
+              {service.operator_logo_url ? (
+                <img src={getImg(service.operator_logo_url)} alt="" className="w-6 h-6 rounded-full object-cover border border-white/70" />
+              ) : (
+                <Building className="w-3.5 h-3.5" />
+              )}
+              <span>{service.operator_name || 'Operator'}</span>
+              {service.operator_rating ? (
+                <span className="inline-flex items-center gap-0.5 bg-white/15 px-2 py-0.5 rounded-full text-[11px]">
+                  <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                  {Number(service.operator_rating).toFixed(1)}
+                  {service.operator_reviews ? <span className="opacity-80"> ({service.operator_reviews})</span> : null}
+                </span>
+              ) : null}
             </p>
           </div>
 
@@ -341,6 +380,48 @@ const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav 
                 </div>
               </div>
             </div>
+
+            {/* Live route map — Google Maps directions embed (no key needed). */}
+            {service.origin_city && service.destination_city && (
+              <div className="rounded-xl overflow-hidden border border-slate-200" data-testid="package-route-map">
+                <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold flex items-center gap-1.5">
+                    <MapPin className="w-3 h-3" /> Delivery route
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(service.origin_city + ', Cameroon')}&destination=${encodeURIComponent(service.destination_city + ', Cameroon')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-red-600 hover:underline"
+                  >
+                    Open in Google Maps
+                  </a>
+                </div>
+                <iframe
+                  title={`Route from ${service.origin_city} to ${service.destination_city}`}
+                  loading="lazy"
+                  className="w-full h-56 border-0"
+                  src={`https://maps.google.com/maps?saddr=${encodeURIComponent(service.origin_city + ', Cameroon')}&daddr=${encodeURIComponent(service.destination_city + ', Cameroon')}&output=embed`}
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            )}
+
+            {/* Operator quick contacts */}
+            {(service.operator_phone || service.operator_website) && (
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                {service.operator_phone && (
+                  <a href={`tel:${service.operator_phone}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                    <Phone className="w-3 h-3" /> {service.operator_phone}
+                  </a>
+                )}
+                {service.operator_website && (
+                  <a href={service.operator_website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 text-slate-700 hover:bg-slate-100">
+                    <Globe className="w-3 h-3" /> Website
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* Description */}
             {service.description && (
@@ -515,7 +596,7 @@ export default function PackagesResults() {
   const [urlParams, setUrlParams] = useSearchParams();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('price_low');
   const [searchQuery, setSearchQuery] = useState('');
   const [smartFilters, setSmartFilters] = useState({ places: new Set(), operators: new Set(), listings: new Set() });
@@ -688,24 +769,28 @@ export default function PackagesResults() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-[10px] text-white/70 mb-1 block uppercase tracking-wide">Origin</Label>
-                      <LocationInput
-                        value={editForm.origin}
-                        onChange={(v) => setEditForm((p) => ({ ...p, origin: v }))}
-                        placeholder="Pickup city"
-                        serviceType="packages"
-                        iconColor="text-white/40"
-                        excludeValue={editForm.destination}
+                      <LandingSmartSearch
+                        serviceType="travel"
+                        pageType="packages_edit_from"
+                        resultsPath="/services/packages/results"
+                        cityParam="origin"
+                        cityLabel="Origin"
+                        selectedCity={editForm.origin}
+                        onSelectCity={(c) => setEditForm((p) => ({ ...p, origin: c }))}
+                        onClearCity={() => setEditForm((p) => ({ ...p, origin: '' }))}
                       />
                     </div>
                     <div>
                       <Label className="text-[10px] text-white/70 mb-1 block uppercase tracking-wide">Destination</Label>
-                      <LocationInput
-                        value={editForm.destination}
-                        onChange={(v) => setEditForm((p) => ({ ...p, destination: v }))}
-                        placeholder="Delivery city"
-                        serviceType="packages"
-                        iconColor="text-white/40"
-                        excludeValue={editForm.origin}
+                      <LandingSmartSearch
+                        serviceType="travel"
+                        pageType="packages_edit_to"
+                        resultsPath="/services/packages/results"
+                        cityParam="destination"
+                        cityLabel="Destination"
+                        selectedCity={editForm.destination}
+                        onSelectCity={(c) => setEditForm((p) => ({ ...p, destination: c }))}
+                        onClearCity={() => setEditForm((p) => ({ ...p, destination: '' }))}
                       />
                     </div>
                   </div>

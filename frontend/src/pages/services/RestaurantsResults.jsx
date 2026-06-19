@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import DatePickerField from '@/components/shared/DatePickerField';
 import api from '@/api/client';
 import { useFavourites } from '@/hooks/useFavourites';
@@ -451,12 +452,15 @@ export default function RestaurantsResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">City</label>
-                    <LocationInput
-                      value={editCity}
-                      onChange={setEditCity}
+                    <LandingSmartSearch
                       serviceType="restaurant"
-                      placeholder="Enter city"
-                      iconColor="text-white/40"
+                      pageType="restaurants_edit"
+                      resultsPath="/services/restaurants/results"
+                      cityParam="city"
+                      cityLabel="City"
+                      selectedCity={editCity}
+                      onSelectCity={(c) => setEditCity(c)}
+                      onClearCity={() => setEditCity('')}
                     />
                   </div>
                   <div>

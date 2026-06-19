@@ -213,6 +213,31 @@ async def search_services(
     # Sort by price (lowest first), then delivery time
     enriched.sort(key=lambda x: (x.get("calculated_price", 0) or 0, x.get("delivery_time_hours", 9999)))
 
+    # --- Operator enrichment (logo + rating) ------------------------------
+    # Hydrate the result rows with operator logo and average rating so the
+    # results page modal can render a richer card without an extra fetch.
+    if enriched:
+        operator_ids = list({s.get("operator_id") for s in enriched if s.get("operator_id")})
+        if operator_ids:
+            ops = await db.operators.find(
+                {"_id": {"$in": operator_ids}},
+                {"logo_url": 1, "average_rating": 1, "total_reviews": 1, "phone": 1, "website": 1},
+            ).to_list(None)
+            ops_by_id = {op["_id"]: op for op in ops}
+            for s in enriched:
+                op = ops_by_id.get(s.get("operator_id"))
+                if op:
+                    if op.get("logo_url"):
+                        s["operator_logo_url"] = op["logo_url"]
+                    if op.get("average_rating") is not None:
+                        s["operator_rating"] = op["average_rating"]
+                    if op.get("total_reviews") is not None:
+                        s["operator_reviews"] = op["total_reviews"]
+                    if op.get("phone"):
+                        s["operator_phone"] = op["phone"]
+                    if op.get("website"):
+                        s["operator_website"] = op["website"]
+
     # --- FOMO inventory enrichment ---------------------------------------
     # Courier offerings can configure `max_packages_per_day` to throttle daily
     # intake. If present, we expose `slots_available` = max(0, capacity -

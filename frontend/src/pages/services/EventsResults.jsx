@@ -325,6 +325,11 @@ export default function EventsResults() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [previewEvent, setPreviewEvent] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // iter 252: when the user supplies a date on the events landing page, the
+  // results page defaults to "±3 days around your date" but offers a toggle
+  // to widen the window to "all future dates". When no date is supplied
+  // (legacy deep link) we treat everything as `future`.
+  const [dateWindow, setDateWindow] = useState('around');
 
   const city = searchParams.get('city') || '';
   const date = searchParams.get('date') || '';
@@ -394,7 +399,24 @@ export default function EventsResults() {
     if (typeFilter !== 'all') {
       filtered = filtered.filter(e => e.type?.toLowerCase() === typeFilter.toLowerCase());
     }
-    
+
+    // iter 252: date window. `around` keeps only events that fall within
+    // ±3 days of the user-picked date; `future` widens to anything from the
+    // picked date onwards (so users can browse upcoming weeks even if their
+    // first-pick day has nothing on).
+    if (date) {
+      const picked = new Date(date);
+      picked.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(e => {
+        if (!e.date) return false;
+        const ed = new Date(e.date);
+        ed.setHours(0, 0, 0, 0);
+        if (dateWindow === 'future') return ed >= picked;
+        const diffDays = Math.abs((ed - picked) / 86400000);
+        return diffDays <= 3;
+      });
+    }
+
     switch (sortBy) {
       case 'price_low':
         return filtered.sort((a, b) => a.priceFrom - b.priceFrom);
@@ -406,7 +428,7 @@ export default function EventsResults() {
       default:
         return filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
-  }, [events, sortBy, smartFilters, typeFilter]);
+  }, [events, sortBy, smartFilters, typeFilter, date, dateWindow]);
 
   const handleBook = (event) => {
     // ALL clicks open the rich preview modal first; the modal's "Book Now"
@@ -457,6 +479,24 @@ export default function EventsResults() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Date window toggle — only meaningful when the user
+                      supplied a date on the landing search. */}
+                  {date && (
+                    <div className="flex items-center bg-white/15 rounded-lg p-0.5" data-testid="events-date-window-toggle">
+                      <Button
+                        variant="ghost" size="sm"
+                        onClick={() => setDateWindow('around')}
+                        className={`text-white hover:bg-white/20 h-8 px-2.5 text-[11px] font-semibold ${dateWindow === 'around' ? 'bg-white/25' : ''}`}
+                        data-testid="events-window-around"
+                      >± 3 days</Button>
+                      <Button
+                        variant="ghost" size="sm"
+                        onClick={() => setDateWindow('future')}
+                        className={`text-white hover:bg-white/20 h-8 px-2.5 text-[11px] font-semibold ${dateWindow === 'future' ? 'bg-white/25' : ''}`}
+                        data-testid="events-window-future"
+                      >Future</Button>
+                    </div>
+                  )}
                   <div className="flex items-center bg-white/15 rounded-lg p-0.5">
                     <Button
                       variant="ghost" size="sm"

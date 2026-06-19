@@ -1,0 +1,39 @@
+{
+  "summary": "iter252 e2e test of (1) PackagesSearch dual LandingSmartSearch + swap, (2) PackagesResults grid-default + enriched cards + rich modal with live Google Maps embed + contact chips, (3) LandingSmartSearch rollout in Edit mode across HotelsResults / CarRentalResults / TravelResults / RestaurantsResults / LaundryResults / PackagesResults, and (4) backend /api/package-services/search operator enrichment. ALL 14 sub-checks PASS. Backend returns operator_logo_url + operator_phone for the live data; operator_rating / operator_reviews / operator_website are null on the seeded operators (the code only fills them when present — confirmed by source). Test login uses the documented localStorage fetch shortcut for customer@test.com.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PackagesResults ServiceDetailsModal",
+        "issues": [
+          "Radix accessibility console warning: 'DialogContent requires a DialogTitle for the component to be accessible for screen reader users.' Also 'Missing Description or aria-describedby={undefined} for {DialogContent}.' Non-blocking but worth wrapping the package name in <DialogTitle> (or <VisuallyHidden><DialogTitle/></VisuallyHidden>) and adding <DialogDescription> or aria-describedby."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_252.json"
+  ],
+  "action_items": [
+    "(LOW) Add <DialogTitle>/<DialogDescription> (or VisuallyHidden wrappers) inside the PackagesResults ServiceDetailsModal to clear the Radix a11y console warning.",
+    "(INFO) operator_rating, operator_reviews, operator_website are null in the seed data for West Region Tours / Oryno Travel & Hospitality. Enrichment code is correct — once operators have these fields populated, the modal will render the rating star + website chip. Consider seeding at least one operator with these fields to visually QA the rating/website chip rendering path."
+  ],
+  "critical_code_review_comments": [
+    "LandingSmartSearch wrapper now correctly disambiguates with pageType prop — testid suffix mirrors page context (e.g. landing-smart-search-packages_from / packages_to / hotels_edit / car_rental_edit / travel_edit_from / travel_edit_to / restaurants_edit / laundry_edit / packages_edit_from / packages_edit_to). Clean and stable for automation.",
+    "Maps embed iframe uses the legacy https://maps.google.com/maps?...&output=embed endpoint with no API key. This works today but is undocumented/deprecated by Google; for resilience consider migrating to the official https://www.google.com/maps/embed/v1/directions endpoint behind a NEXT_PUBLIC_MAPS_KEY env var.",
+    "Backend enrichment loop (routes/package_services.py line 216-239) does 1 DB call per search regardless of result-count via $in — good. operator_id None-guard is in place. No N+1."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (operator enrichment fields verified via direct /api/package-services/search call — operator_logo_url + operator_phone populated for live seed operators; rating/reviews/website null when not seeded)",
+    "frontend": "100% (PackagesSearch dual smart bar + swap ✅, PackagesResults default-grid ✅, card enrichment ✅, modal route-map iframe + Open-in-Google-Maps link + phone chip + banner avatar ✅, Edit-mode LandingSmartSearch on 6/6 results pages ✅, Edit-mode dropdown selection updates chip ✅)"
+  },
+  "test_credentials": "customer@test.com / testpassword123. Used the localStorage fetch shortcut from iter251 (POST /api/auth/login, stash j.access_token under localStorage['access_token'] and ['token']) — the 2-step Login modal is still flaky in headless Playwright.",
+  "seed_data_creation": "None — relied on existing seeded West Region Tours (MVOG Packages & Delivery, Douala→Yaoundé route).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Wrapper data-testid contract for LandingSmartSearch: `landing-smart-search-${pageType || serviceType}`. Pages used: packages_from / packages_to / hotels_edit / car_rental_edit / travel_edit_from / travel_edit_to / restaurants_edit / laundry_edit / packages_edit_from / packages_edit_to. Inner input testid is always `landing-smart-search-input` (NOT unique per wrapper — when scoping, query INSIDE the wrapper element). Chip testid: `landing-smart-search-selected-city`. Dropdown items: `landing-search-item-${row.type}`. Modal route map testid: `package-route-map`. Auth shortcut from iter251 still works.",
+  "rca of the issue": "N/A — feature additions, no bug to RCA. The iter251 'landing-smart-search-packages' testid concern is RESOLVED: PackagesSearch now passes pageType='packages_from' / 'packages_to' so the wrapper testids are explicit and disambiguated from the underlying serviceType='travel' used to drive the route-aware dropdown."
+}

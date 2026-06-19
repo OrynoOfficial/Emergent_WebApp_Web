@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { CalendarIcon, MapPin, Search, Ticket, Users, Music, Award, Clock, Plus, Minus } from 'lucide-react';
+import { CalendarIcon, MapPin, Search, Ticket, Users, Music, Award, Clock, Plus, Minus, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { toast } from 'sonner';
 
 const EVENT_TYPES = ['All Events', 'Concert', 'Festival', 'Sports', 'Conference', 'Party', 'Exhibition', 'Theater'];
 
@@ -28,19 +30,26 @@ export default function EventsSearch() {
   const validateForm = () => {
     const newErrors = {};
     const fieldsToShake = {};
-    
+
     if (!searchParams.city) {
       newErrors.city = 'City is required';
       fieldsToShake.city = true;
     }
-    
+    // iter 252: Date is now mandatory. The results page uses the chosen date
+    // (± 3 days) to pull events, plus the option to extend into future weeks.
+    if (!searchParams.date) {
+      newErrors.date = 'Pick a date — events are filtered around it.';
+      fieldsToShake.date = true;
+      toast.error('Please pick a date to search events.');
+    }
+
     setErrors(newErrors);
     setShakeFields(fieldsToShake);
-    
+
     if (Object.keys(fieldsToShake).length > 0) {
       setTimeout(() => setShakeFields({}), 500);
     }
-    
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -97,38 +106,39 @@ export default function EventsSearch() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* City owned by hero smart search (iter 251). */}
 
-                {/* Event Type */}
-                <div>
-                  <Label>Event Type</Label>
-                  <Select value={searchParams.event_type} onValueChange={v => setSearchParams(p => ({ ...p, event_type: v }))}>
-                    <SelectTrigger className="bg-white mt-1 h-12">
-                      <SelectValue placeholder="Select event type" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {EVENT_TYPES.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Event Type moved into the Filters popover below
+                    (iter 252). */}
 
-                {/* Date */}
+                {/* Date — REQUIRED (iter 252). Used to filter events
+                    ± 3 days on the results page. */}
                 <div>
-                  <Label>Date</Label>
-                  <Button 
+                  <Label>Date <span className="text-red-500">*</span></Label>
+                  <Button
                     type="button"
-                    variant="outline" 
+                    variant="outline"
                     onClick={() => setShowDateModal(true)}
-                    className={cn("w-full mt-1 justify-start text-left font-normal bg-white h-12", !searchParams.date && "text-muted-foreground")}
+                    className={cn(
+                      "w-full mt-1 justify-start text-left font-normal bg-white h-12",
+                      !searchParams.date && "text-muted-foreground",
+                      shakeFields.date && "animate-shake",
+                      errors.date && "border-red-500 ring-1 ring-red-500/30",
+                    )}
+                    data-testid="events-search-date"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {searchParams.date ? format(searchParams.date, 'PPP') : 'Any date'}
+                    {searchParams.date ? format(searchParams.date, 'PPP') : 'Select date'}
                   </Button>
+                  {errors.date && (
+                    <p className="text-xs text-red-600 mt-1">{errors.date}</p>
+                  )}
                   <DatePickerModal
                     isOpen={showDateModal}
                     onClose={() => setShowDateModal(false)}
                     selectedDate={searchParams.date}
-                    onSelect={(d) => setSearchParams(p => ({ ...p, date: d }))}
+                    onSelect={(d) => {
+                      setSearchParams(p => ({ ...p, date: d }));
+                      setErrors(e => ({ ...e, date: undefined }));
+                    }}
                     minDate={new Date()}
                     title="Select Event Date"
                   />
@@ -150,9 +160,51 @@ export default function EventsSearch() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 text-lg">
-                <Search className="w-5 h-5 mr-2" /> Search Events
-              </Button>
+              <div className="flex items-center justify-between gap-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-12 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2 text-slate-700 text-sm font-semibold whitespace-nowrap"
+                      data-testid="events-search-filters-toggle"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
+                      Filters
+                      {(searchParams.event_type && searchParams.event_type !== 'All Events') && (
+                        <span className="ml-0.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[#082c59] text-white text-[10px]">1</span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 p-3 bg-white border-slate-200 shadow-xl">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Event Type</Label>
+                        <Select value={searchParams.event_type} onValueChange={v => setSearchParams(p => ({ ...p, event_type: v }))}>
+                          <SelectTrigger className="bg-white h-9">
+                            <SelectValue placeholder="Any type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {EVENT_TYPES.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSearchParams(p => ({ ...p, event_type: '' }))}
+                        className="text-[11px] text-slate-500 hover:text-slate-700"
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button type="submit" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75] h-12 text-base">
+                  <Search className="w-5 h-5 mr-2" /> Search Events
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { 
   MapPin, Search, Package, Calendar as CalendarIcon, 
-  Truck, Clock, Shield, CheckCircle, ChevronDown
+  Truck, Clock, Shield, CheckCircle, ChevronDown, ArrowRightLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePickerModal from '@/components/shared/DatePickerModal';
-import LocationInput from '@/components/shared/LocationInput';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 // Package sizes with dimensions and weight limits
@@ -81,24 +80,62 @@ export default function PackagesSearch() {
           <Truck className="w-12 h-12 mx-auto mb-3 text-yellow-400" />
           <h1 className="text-3xl font-bold mb-2">Package Delivery Services</h1>
           <p className="text-sm text-slate-200 mb-5">Fast and reliable package delivery across Cameroon</p>
-          {/* Smart hero search owns pickup city; delivery city stays as a
-              regular field below (we want both visible at once). */}
-          <div className="max-w-2xl mx-auto text-left">
-            <LandingSmartSearch
-              serviceType="travel"
-              pageType="packages"
-              resultsPath="/services/packages/results"
-              cityParam="origin"
-              selectedCity={searchParams.pickup_location}
-              onSelectCity={(city) => {
-                setSearchParams(p => ({ ...p, pickup_location: city }));
-                setErrors(p => ({ ...p, pickup_location: null }));
-              }}
-              onClearCity={() =>
-                setSearchParams(p => ({ ...p, pickup_location: '' }))
-              }
-              error={errors.pickup_location}
-            />
+          {/* Dual smart-search bars — pickup + delivery + swap arrow (iter 252).
+              Mirrors TravelSearch. Replaces the legacy single hero bar +
+              "Delivery Location" form field. */}
+          <div className="max-w-3xl mx-auto text-left">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-start">
+              <LandingSmartSearch
+                serviceType="travel"
+                pageType="packages_from"
+                resultsPath="/services/packages/results"
+                cityParam="origin"
+                cityLabel="Pickup"
+                placeholder="Pickup city — e.g. Douala"
+                selectedCity={searchParams.pickup_location}
+                onSelectCity={(city) => {
+                  setSearchParams(p => ({ ...p, pickup_location: city }));
+                  setErrors(p => ({ ...p, pickup_location: null }));
+                }}
+                onClearCity={() =>
+                  setSearchParams(p => ({ ...p, pickup_location: '' }))
+                }
+                error={errors.pickup_location}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchParams(p => ({
+                    ...p,
+                    pickup_location: p.delivery_location,
+                    delivery_location: p.pickup_location,
+                  }));
+                }}
+                aria-label="Swap pickup and delivery cities"
+                title="Swap pickup and delivery"
+                className="self-start mt-2 h-14 w-12 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center text-white shrink-0"
+                data-testid="packages-swap-cities"
+              >
+                <ArrowRightLeft className="w-5 h-5" />
+              </button>
+              <LandingSmartSearch
+                serviceType="travel"
+                pageType="packages_to"
+                resultsPath="/services/packages/results"
+                cityParam="destination"
+                cityLabel="Delivery"
+                placeholder="Delivery city — e.g. Yaoundé"
+                selectedCity={searchParams.delivery_location}
+                onSelectCity={(city) => {
+                  setSearchParams(p => ({ ...p, delivery_location: city }));
+                  setErrors(p => ({ ...p, delivery_location: null }));
+                }}
+                onClearCity={() =>
+                  setSearchParams(p => ({ ...p, delivery_location: '' }))
+                }
+                error={errors.delivery_location}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -109,22 +146,7 @@ export default function PackagesSearch() {
           <CardContent className="p-5">
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Pickup owned by hero smart search (iter 251). */}
-
-                {/* Delivery Location */}
-                <LocationInput
-                  value={searchParams.delivery_location}
-                  onChange={(v) => {
-                    setSearchParams(p => ({ ...p, delivery_location: v }));
-                    setErrors(p => ({ ...p, delivery_location: null }));
-                  }}
-                  placeholder="Search delivery city..."
-                  label="Delivery Location"
-                  serviceType="packages"
-                  iconColor="text-red-600"
-                  excludeValue={searchParams.pickup_location}
-                  error={errors.delivery_location}
-                />
+                {/* Pickup + Delivery owned by dual hero smart-search bars (iter 252). */}
 
                 {/* Shipping Date */}
                 <div>

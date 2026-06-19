@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { CalendarIcon, MapPin, Users, Search, Utensils, Clock, Plus, Minus, Star, Award, CreditCard } from 'lucide-react';
+import { CalendarIcon, MapPin, Users, Search, Utensils, Clock, Plus, Minus, Star, Award, CreditCard, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LocationInput from '@/components/shared/LocationInput';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const CUISINE_TYPES = ['All Cuisines', 'African', 'French', 'Italian', 'Chinese', 'Lebanese', 'Seafood', 'Fast Food'];
 const TIME_SLOTS = ['12:00', '12:30', '13:00', '13:30', '14:00', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'];
@@ -98,22 +99,8 @@ export default function RestaurantsSearch() {
           <CardContent className="p-5">
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* City owned by hero smart search (iter 251). */}
-
-                {/* Cuisine Type */}
-                <div>
-                  <Label>Cuisine Type</Label>
-                  <Select value={searchParams.cuisine} onValueChange={v => setSearchParams(p => ({ ...p, cuisine: v }))}>
-                    <SelectTrigger className="bg-white mt-1 h-12">
-                      <SelectValue placeholder="Select cuisine" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {CUISINE_TYPES.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* City owned by hero smart search (iter 251). Cuisine + Time
+                    were tucked into the Filters popover (iter 252). */}
 
                 {/* Date */}
                 <div>
@@ -137,26 +124,10 @@ export default function RestaurantsSearch() {
                   />
                 </div>
 
-                {/* Time */}
-                <div>
-                  <Label>Time</Label>
-                  <Select value={searchParams.time} onValueChange={v => setSearchParams(p => ({ ...p, time: v }))}>
-                    <SelectTrigger className="bg-white mt-1 h-12">
-                      <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                      <SelectValue placeholder="Select time" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {TIME_SLOTS.map(time => (
-                        <SelectItem key={time} value={time}>{time}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Guests */}
-                <div className="md:col-span-2">
+                <div>
                   <Label>Number of Guests</Label>
-                  <div className="flex items-center gap-4 mt-1 p-3 border rounded-md bg-white max-w-xs h-12">
+                  <div className="flex items-center gap-4 mt-1 p-3 border rounded-md bg-white h-12">
                     <Users className="w-4 h-4 text-gray-400" />
                     <span className="flex-1">{searchParams.guests} Guest{searchParams.guests > 1 ? 's' : ''}</span>
                     <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateGuests(-1)} disabled={searchParams.guests <= 1}>
@@ -169,9 +140,68 @@ export default function RestaurantsSearch() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-[#082c59] hover:bg-[#0a3a75] h-12 text-lg">
-                <Search className="w-5 h-5 mr-2" /> Search Restaurants
-              </Button>
+              <div className="flex items-center justify-between gap-3">
+                {/* Filters popover — cuisine + time */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-12 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2 text-slate-700 text-sm font-semibold whitespace-nowrap"
+                      data-testid="restaurants-search-filters-toggle"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
+                      Filters
+                      {((searchParams.cuisine && searchParams.cuisine !== 'All Cuisines') || searchParams.time) && (
+                        <span className="ml-0.5 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-[#082c59] text-white text-[10px]">
+                          {(searchParams.cuisine && searchParams.cuisine !== 'All Cuisines' ? 1 : 0) + (searchParams.time ? 1 : 0)}
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 p-3 bg-white border-slate-200 shadow-xl">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Cuisine Type</Label>
+                        <Select value={searchParams.cuisine} onValueChange={v => setSearchParams(p => ({ ...p, cuisine: v }))}>
+                          <SelectTrigger className="bg-white h-9">
+                            <SelectValue placeholder="Any cuisine" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {CUISINE_TYPES.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-[10px] uppercase tracking-wide text-slate-500">Time</Label>
+                        <Select value={searchParams.time} onValueChange={v => setSearchParams(p => ({ ...p, time: v }))}>
+                          <SelectTrigger className="bg-white h-9">
+                            <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+                            <SelectValue placeholder="Any time" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {TIME_SLOTS.map(time => (
+                              <SelectItem key={time} value={time}>{time}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSearchParams(p => ({ ...p, cuisine: '', time: '' }))}
+                        className="text-[11px] text-slate-500 hover:text-slate-700"
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button type="submit" className="flex-1 bg-[#082c59] hover:bg-[#0a3a75] h-12 text-base">
+                  <Search className="w-5 h-5 mr-2" /> Search Restaurants
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

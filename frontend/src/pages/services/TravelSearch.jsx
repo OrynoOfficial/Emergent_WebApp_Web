@@ -104,6 +104,7 @@ export default function TravelSearch() {
                 resultsPath="/services/travel/results"
                 cityParam="from"
                 cityLabel="From"
+                placeholder="Departure city — e.g. Douala"
                 selectedCity={searchParams.from_city}
                 onSelectCity={(city) => {
                   setSearchParams(p => ({ ...p, from_city: city }));
@@ -130,6 +131,7 @@ export default function TravelSearch() {
                 resultsPath="/services/travel/results"
                 cityParam="to"
                 cityLabel="To"
+                placeholder="Destination city — e.g. Yaoundé"
                 selectedCity={searchParams.to_city}
                 onSelectCity={(city) => {
                   setSearchParams(p => ({ ...p, to_city: city }));

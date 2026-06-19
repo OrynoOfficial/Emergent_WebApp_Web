@@ -56,6 +56,7 @@ export default function LandingSmartSearch({
   onClearCity,
   error,
   className,
+  placeholder,
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -157,7 +158,7 @@ export default function LandingSmartSearch({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
-            placeholder={PLACEHOLDER_BY_SERVICE[serviceType] || 'Search…'}
+            placeholder={placeholder || PLACEHOLDER_BY_SERVICE[serviceType] || 'Search…'}
             className={cn(
               'h-14 pl-12 pr-12 rounded-2xl bg-white border-slate-200 shadow-sm focus-visible:ring-2 focus-visible:ring-[#082c59]/30 text-base',
               error && 'border-red-500 focus-visible:ring-red-500/30',

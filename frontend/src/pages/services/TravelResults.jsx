@@ -17,6 +17,7 @@ import {
 import { format, addDays, subDays, isSameDay, parse, isAfter, isBefore, isValid, startOfDay } from 'date-fns';
 import { formatCurrency } from '../../utils/currency';
 import LocationInput from '@/components/shared/LocationInput';
+import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 import DatePickerField from '@/components/shared/DatePickerField';
 import { travelApi } from '../../api/services';
 import { isPast } from '../../utils/dateUtils';
@@ -288,23 +289,28 @@ export default function TravelResults() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">From</label>
-                    <LocationInput
-                      value={editFrom}
-                      onChange={setEditFrom}
+                    <LandingSmartSearch
                       serviceType="travel"
-                      placeholder="Departure city"
-                      iconColor="text-white/40"
+                      pageType="travel_edit_from"
+                      resultsPath="/services/travel/results"
+                      cityParam="from"
+                      cityLabel="From"
+                      selectedCity={editFrom}
+                      onSelectCity={(c) => setEditFrom(c)}
+                      onClearCity={() => setEditFrom('')}
                     />
                   </div>
                   <div>
                     <label className="text-xs text-white/70 mb-1 block">To</label>
-                    <LocationInput
-                      value={editTo}
-                      onChange={setEditTo}
+                    <LandingSmartSearch
                       serviceType="travel"
-                      excludeValue={editFrom}
-                      placeholder="Destination city"
-                      iconColor="text-white/40"
+                      pageType="travel_edit_to"
+                      resultsPath="/services/travel/results"
+                      cityParam="to"
+                      cityLabel="To"
+                      selectedCity={editTo}
+                      onSelectCity={(c) => setEditTo(c)}
+                      onClearCity={() => setEditTo('')}
                     />
                   </div>
                   <div>
