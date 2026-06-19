@@ -2,9 +2,42 @@
 
 ## Active Backlog (deferred, not blocking)
 
-- **Pre-fill the MoMo `proof_reference` field from a future webhook** when MTN provides one (currently ops enters manually via prompt).
-- **Auto-create internal payout task** in the customer-service queue every time a refund lands at APPROVED + `requires_manual_processing=true` (improves ops experience over scanning the Refunds page).
-- **Workflow:** dist build can go stale relative to source. Consider adding a Vite watch-mode rebuild or supervisor hook so `yarn build` runs whenever `/app/frontend/src` changes. Surfaced by iter250.
+- **Pre-fill the MoMo `proof_reference` field from a future webhook** when MTN provides one.
+- **Auto-create internal payout task** in the customer-service queue on every APPROVED + `requires_manual_processing=true` refund.
+- **Workflow:** Vite dist build can go stale relative to source. Add a watch-mode rebuild or supervisor hook so `yarn build` runs whenever `/app/frontend/src` changes.
+
+
+## Latest Changes (Feb 2026 — iter 252: car rental preview-modal date flow + dual-bar travel search)
+
+### Bug: car rental dates never reached the preview modal
+- **Root cause** was a URL key mismatch — `CarRentalSearch` set `pickup_date` / `return_date` (snake_case) but `CarRentalResults` was reading `pickupDate` / `returnDate` (camelCase). Both sides quietly defaulted to today/+3 days and the preview modal followed.
+- **Fix:** results page reads `pickup_date` first (canonical), accepts legacy camelCase for old deep links. `handleUpdateSearch` writes back the canonical keys.
+- `CarRentalDetails` now takes `pickupDate` / `returnDate` **as props** when embedded; the parent passes the live URL values. A `useEffect` keeps the modal's local state in sync whenever the parent updates them.
+
+### Required-dates validation in the preview modal
+- `selectedDates` can now hold `null` — silent today/+3 fallback removed. When a user deep-lands on `/services/car-rental/details/:id` with no dates, the pickup / return buttons show **"Select pickup date" / "Select return date"** placeholders, the **Final Step** CTA is disabled, and the subtitle reads "Pick your dates to continue".
+- If both dates are filled (either via props or after the user picks them) the CTA enables and validates that `return ≥ pickup` (the existing `minDate` constraint).
+- New testids: `car-rental-pickup-date`, `car-rental-return-date`, `car-rental-final-step`, `car-rental-dates-error`.
+
+### Travel landing — dual smart bars
+- `TravelSearch` now renders **two `LandingSmartSearch` instances** ("From" and "To") side-by-side with a swap arrow between them. The legacy `LocationInput` rows + form-level swap button were removed.
+- `pageType="travel_from"` / `pageType="travel_to"` keeps each wrapper's testid unique.
+
+### Car rental landing — drop-off as smart bar
+- When "Return car at a different location" is toggled, the drop-off field is now a `LandingSmartSearch` (was `LocationInput`). Matches the pickup UX exactly.
+
+### Results page header — trip + filter chips
+- `CarRentalResults` header now always shows: trip date pill (`Apr 10 – Apr 17 · 7 days`), vehicle-type chip, transmission chip, sort chip, smart-filter count chip. Reflows on mobile.
+
+### Description "Read more" toggle in the preview modal
+- Long descriptions are clamped to `max-h-[20rem]` (~15 lines) and a Read more / Read less toggle appears when copy exceeds 600 chars or 5 paragraphs.
+
+
+## Iter 251 (carry-over) — Smart landing search + city filter fix
+
+- New shared util `utils/text_match.py` + `ci_regex_query()` — accent-insensitive city matching for car_rental, hotels, restaurants, banquets, pressing, and `search.py`.
+- `/api/search/` accepts `service_type` to scope to one domain.
+- `LandingSmartSearch.jsx` rolled out to all 9 service landing pages (CarRental + Hotels + Restaurants + Events + Cinema + Banquet + Laundry + Travel + Packages).
 
 
 ## Latest Changes (Feb 2026 — iter 251: smart landing search rollout + city filter fixes)
