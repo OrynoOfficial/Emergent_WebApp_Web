@@ -8,11 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { 
   MapPin, Search, Package, Calendar as CalendarIcon, 
-  Truck, Clock, Shield, CheckCircle, ChevronDown, ArrowRightLeft
+  Truck, Clock, Shield, CheckCircle, ChevronDown, ArrowRightLeft, SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Package sizes with dimensions and weight limits
 const PACKAGE_SIZES = {
@@ -140,171 +141,210 @@ export default function PackagesSearch() {
         </div>
       </div>
 
-      {/* Search Form */}
+      {/* Search Form — compact: hero handles cities, popover holds the rest */}
       <div className="max-w-4xl mx-auto px-4 -mt-6">
         <Card className="shadow-xl">
           <CardContent className="p-5">
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Pickup + Delivery owned by dual hero smart-search bars (iter 252). */}
-
-                {/* Shipping Date */}
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Shipping Date</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowDateModal(true)}
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-12 mt-1 bg-white border-slate-200 hover:bg-slate-50 hover:border-[#082c59]",
-                      !searchParams.shipping_date && "text-muted-foreground",
-                      searchParams.shipping_date && "font-medium text-slate-900",
-                      errors.shipping_date && "border-red-500"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-slate-400" />
-                    {searchParams.shipping_date ? (
-                      format(searchParams.shipping_date, 'PPP')
-                    ) : (
-                      <span>Select shipping date</span>
-                    )}
-                  </Button>
-                  <DatePickerModal
-                    isOpen={showDateModal}
-                    onClose={() => setShowDateModal(false)}
-                    selectedDate={searchParams.shipping_date}
-                    onSelect={(date) => {
-                      setSearchParams(p => ({ ...p, shipping_date: date }));
-                      setErrors(p => ({ ...p, shipping_date: null }));
-                    }}
-                    minDate={new Date()}
-                    title="Select Shipping Date"
-                  />
-                  {errors.shipping_date && (
-                    <p className="text-xs text-red-500 mt-1">{errors.shipping_date}</p>
-                  )}
+            <form onSubmit={handleSearch} className="space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                {/* Compact summary chips — shows the user what's currently set */}
+                <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 min-w-0 flex-1">
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border",
+                    searchParams.shipping_date ? "bg-[#082c59]/5 border-[#082c59]/30 text-[#082c59] font-medium" : "bg-slate-50 border-slate-200 text-slate-500",
+                    errors.shipping_date && "border-red-500 text-red-600",
+                  )} data-testid="package-summary-date">
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    {searchParams.shipping_date ? format(searchParams.shipping_date, 'EEE, MMM d') : 'No date'}
+                  </span>
+                  <span className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border",
+                    searchParams.weight_kg ? "bg-[#082c59]/5 border-[#082c59]/30 text-[#082c59] font-medium" : "bg-slate-50 border-slate-200 text-slate-500",
+                    errors.weight_kg && "border-red-500 text-red-600",
+                  )} data-testid="package-summary-weight">
+                    <Package className="w-3.5 h-3.5" />
+                    {searchParams.weight_kg ? `${searchParams.weight_kg} kg` : 'No weight'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 capitalize">
+                    {searchParams.package_type.replace(/_/g, ' ')}
+                  </span>
+                  {(searchParams.length_cm || searchParams.width_cm || searchParams.height_cm) ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
+                      {searchParams.length_cm || '–'}×{searchParams.width_cm || '–'}×{searchParams.height_cm || '–'} cm
+                    </span>
+                  ) : null}
                 </div>
 
-                {/* Package Size shortcut */}
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Quick Size (optional)</Label>
-                  <Select
-                    value={searchParams.package_size}
-                    onValueChange={(v) => {
-                      const info = PACKAGE_SIZES[v];
-                      const dims = info?.dimensions?.match(/(\d+)×(\d+)×(\d+)/);
-                      const wt = info?.maxWeight?.match(/(\d+)/);
-                      setSearchParams(p => ({
-                        ...p,
-                        package_size: v,
-                        length_cm: dims?.[1] || p.length_cm,
-                        width_cm: dims?.[2] || p.width_cm,
-                        height_cm: dims?.[3] || p.height_cm,
-                        weight_kg: wt?.[1] || p.weight_kg,
-                      }));
-                    }}
-                  >
-                    <SelectTrigger className="h-12 mt-1 bg-white border-slate-200 hover:border-[#082c59]">
-                      <Package className="w-4 h-4 mr-2 text-blue-600" />
-                      <SelectValue placeholder="Pick a size to auto-fill" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white shadow-xl border-slate-200">
-                      {Object.entries(PACKAGE_SIZES).map(([size, info]) => (
-                        <SelectItem key={size} value={size} className="py-3 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-[#082c59]">{size}</span>
-                            <span className="text-slate-500 text-sm">{info.dimensions} • max {info.maxWeight}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Filters popover */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="h-12 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center gap-2 text-slate-700 text-sm font-semibold whitespace-nowrap"
+                      data-testid="packages-search-filters-toggle"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-[#082c59]" />
+                      Package details
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-[420px] p-4 bg-white border-slate-200 shadow-xl">
+                    <div className="space-y-4">
+                      {/* Shipping Date */}
+                      <div>
+                        <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5 block">Shipping Date *</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowDateModal(true)}
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-10 bg-white border-slate-200 hover:bg-slate-50",
+                            !searchParams.shipping_date && "text-muted-foreground",
+                            errors.shipping_date && "border-red-500"
+                          )}
+                          data-testid="package-date-trigger"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4 text-slate-400" />
+                          {searchParams.shipping_date ? format(searchParams.shipping_date, 'PPP') : 'Select shipping date'}
+                        </Button>
+                        {errors.shipping_date && <p className="text-xs text-red-500 mt-1">{errors.shipping_date}</p>}
+                      </div>
+
+                      {/* Quick Size */}
+                      <div>
+                        <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5 block">Quick Size (auto-fills weight & dimensions)</Label>
+                        <Select
+                          value={searchParams.package_size}
+                          onValueChange={(v) => {
+                            const info = PACKAGE_SIZES[v];
+                            const dims = info?.dimensions?.match(/(\d+)×(\d+)×(\d+)/);
+                            const wt = info?.maxWeight?.match(/(\d+)/);
+                            setSearchParams(p => ({
+                              ...p,
+                              package_size: v,
+                              length_cm: dims?.[1] || p.length_cm,
+                              width_cm: dims?.[2] || p.width_cm,
+                              height_cm: dims?.[3] || p.height_cm,
+                              weight_kg: wt?.[1] || p.weight_kg,
+                            }));
+                            setErrors(p => ({ ...p, weight_kg: null }));
+                          }}
+                        >
+                          <SelectTrigger className="h-10 bg-white border-slate-200">
+                            <Package className="w-4 h-4 mr-1.5 text-blue-600" />
+                            <SelectValue placeholder="Pick a size" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white shadow-xl border-slate-200">
+                            {Object.entries(PACKAGE_SIZES).map(([size, info]) => (
+                              <SelectItem key={size} value={size} className="py-2.5 cursor-pointer">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-[#082c59]">{size}</span>
+                                  <span className="text-slate-500 text-xs">{info.dimensions} • max {info.maxWeight}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Weight + Dimensions */}
+                      <div className="grid grid-cols-4 gap-2">
+                        <div>
+                          <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 block">Weight (kg) *</Label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            value={searchParams.weight_kg}
+                            onChange={(e) => { setSearchParams(p => ({ ...p, weight_kg: e.target.value })); setErrors(p => ({ ...p, weight_kg: null })); }}
+                            placeholder="2.5"
+                            data-testid="package-weight-input"
+                            className={cn("h-10 bg-white", errors.weight_kg && "border-red-500")}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 block">L (cm)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={searchParams.length_cm}
+                            onChange={(e) => setSearchParams(p => ({ ...p, length_cm: e.target.value }))}
+                            placeholder="40"
+                            className="h-10 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 block">W (cm)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={searchParams.width_cm}
+                            onChange={(e) => setSearchParams(p => ({ ...p, width_cm: e.target.value }))}
+                            placeholder="30"
+                            className="h-10 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1 block">H (cm)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={searchParams.height_cm}
+                            onChange={(e) => setSearchParams(p => ({ ...p, height_cm: e.target.value }))}
+                            placeholder="20"
+                            className="h-10 bg-white"
+                          />
+                        </div>
+                      </div>
+                      {errors.weight_kg && <p className="text-xs text-red-500 -mt-2">{errors.weight_kg}</p>}
+
+                      {/* Package Type */}
+                      <div>
+                        <Label className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5 block">Package Type</Label>
+                        <Select
+                          value={searchParams.package_type}
+                          onValueChange={(v) => setSearchParams(p => ({ ...p, package_type: v }))}
+                        >
+                          <SelectTrigger className="h-10 bg-white border-slate-200">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value="document">Document</SelectItem>
+                            <SelectItem value="parcel">Parcel</SelectItem>
+                            <SelectItem value="fragile">Fragile</SelectItem>
+                            <SelectItem value="perishable">Perishable</SelectItem>
+                            <SelectItem value="electronics">Electronics</SelectItem>
+                            <SelectItem value="heavy_goods">Heavy Goods</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {searchParams.package_size && (
+                        <div className="bg-[#082c59]/5 rounded-lg p-2.5 border border-[#082c59]/20 text-[11px] text-slate-600 flex items-center">
+                          <Package className="w-3.5 h-3.5 text-[#082c59] mr-1.5" />
+                          Auto-filled from <strong className="mx-1">{searchParams.package_size}</strong> — tweak as needed.
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Button type="submit" className="h-12 bg-[#082c59] hover:bg-[#0a3a75] text-base px-6" data-testid="package-search-submit">
+                  <Search className="w-5 h-5 mr-2" /> Find Delivery
+                </Button>
               </div>
 
-              {/* Weight + Dimensions */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Weight (kg) *</Label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    value={searchParams.weight_kg}
-                    onChange={(e) => { setSearchParams(p => ({ ...p, weight_kg: e.target.value })); setErrors(p => ({ ...p, weight_kg: null })); }}
-                    placeholder="e.g. 2.5"
-                    data-testid="package-weight-input"
-                    className={cn("h-12 mt-1 bg-white", errors.weight_kg && "border-red-500")}
-                  />
-                  {errors.weight_kg && <p className="text-xs text-red-500 mt-1">{errors.weight_kg}</p>}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Length (cm)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={searchParams.length_cm}
-                    onChange={(e) => setSearchParams(p => ({ ...p, length_cm: e.target.value }))}
-                    placeholder="40"
-                    className="h-12 mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Width (cm)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={searchParams.width_cm}
-                    onChange={(e) => setSearchParams(p => ({ ...p, width_cm: e.target.value }))}
-                    placeholder="30"
-                    className="h-12 mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Height (cm)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={searchParams.height_cm}
-                    onChange={(e) => setSearchParams(p => ({ ...p, height_cm: e.target.value }))}
-                    placeholder="20"
-                    className="h-12 mt-1 bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Package type */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Package Type</Label>
-                  <Select
-                    value={searchParams.package_type}
-                    onValueChange={(v) => setSearchParams(p => ({ ...p, package_type: v }))}
-                  >
-                    <SelectTrigger className="h-12 mt-1 bg-white border-slate-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="document">Document</SelectItem>
-                      <SelectItem value="parcel">Parcel</SelectItem>
-                      <SelectItem value="fragile">Fragile</SelectItem>
-                      <SelectItem value="perishable">Perishable</SelectItem>
-                      <SelectItem value="electronics">Electronics</SelectItem>
-                      <SelectItem value="heavy_goods">Heavy Goods</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {searchParams.package_size && (
-                  <div className="bg-[#082c59]/5 rounded-lg p-3 border border-[#082c59]/20 text-xs text-slate-600 flex items-center">
-                    <Package className="w-4 h-4 text-[#082c59] mr-2" />
-                    Auto-filled from <strong className="mx-1">{searchParams.package_size}</strong> — adjust above if needed.
-                  </div>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full h-12 bg-[#082c59] hover:bg-[#0a3a75] text-lg" data-testid="package-search-submit">
-                <Search className="w-5 h-5 mr-2" /> Find Delivery Services
-              </Button>
+              {/* Date picker modal stays mounted so it can open from popover */}
+              <DatePickerModal
+                isOpen={showDateModal}
+                onClose={() => setShowDateModal(false)}
+                selectedDate={searchParams.shipping_date}
+                onSelect={(date) => {
+                  setSearchParams(p => ({ ...p, shipping_date: date }));
+                  setErrors(p => ({ ...p, shipping_date: null }));
+                }}
+                minDate={new Date()}
+                title="Select Shipping Date"
+              />
             </form>
           </CardContent>
         </Card>
