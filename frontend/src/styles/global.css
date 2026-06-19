@@ -4,43 +4,39 @@
    ANIMATIONS & TRANSITIONS
    ============================================ */
 
-/* Smooth transitions for all interactive elements */
+/* Smooth transitions for all interactive elements.
+ * Iter 257: dropped `transform` from the universal transition list — it
+ * was the system-wide "fly-in" feel the user has been asking us to kill
+ * (every element flying/sliding into place on layout shifts). We keep
+ * color/opacity/shadow transitions so hover states still feel polished.
+ */
 * {
-  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
 
-/* Hover lift effect for cards */
+/* Hover lift effect for cards (kept for explicit opt-in via the class) */
 .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
-  transform: translateY(-4px);
   box-shadow: 0 12px 24px -8px rgba(8, 44, 89, 0.15);
 }
 
-/* Click/Active feedback */
-.click-feedback:active {
-  transform: scale(0.97);
-}
+/* Click/Active feedback — disabled globally (iter 257). The
+   universal `button:active` rule below also previously scaled every
+   button on click, which read as "things zooming" on the page. */
+.click-feedback:active { /* opt-in only */ }
 
-/* Button press effect */
-button:not(:disabled):active,
-.btn-press:active {
-  transform: scale(0.97);
-}
+/* Button press effect — removed (iter 257). */
 
-/* Smooth scale on hover */
-.hover-scale:hover {
-  transform: scale(1.02);
-}
+/* Smooth scale on hover — disabled (iter 257). */
+.hover-scale:hover { /* opt-in only */ }
 
-/* Icon hover animation */
-.icon-hover:hover svg {
-  transform: scale(1.1);
-}
+/* Icon hover animation — disabled (iter 257). */
+.icon-hover:hover svg { /* opt-in only */ }
 
 /* Pulse animation for notifications */
 @keyframes pulse-ring {
@@ -95,7 +91,13 @@ button:not(:disabled):active,
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
+  /* Iter 257: kept the keyframe definition but neutralised this utility
+     class — Layout.jsx sidebar dropdowns were the main user of it, and
+     their fade-in was the "fly-in" the user wanted purged. The class is
+     left as a no-op so existing call-sites don't break; dialogs use the
+     scoped `[data-state="open"][role="dialog"]` rule below to keep their
+     softer fade. */
+  animation: none;
 }
 
 /* Slide in from left */
@@ -173,18 +175,16 @@ button:not(:disabled):active,
    ============================================ */
 
 .card-interactive {
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
   cursor: pointer;
 }
 
 .card-interactive:hover {
-  transform: translateY(-2px);
   box-shadow: 0 8px 25px -5px rgba(8, 44, 89, 0.1), 0 4px 10px -5px rgba(8, 44, 89, 0.04);
 }
 
-.card-interactive:active {
-  transform: translateY(0);
-}
+/* iter 257: removed `:active { transform: translateY(0) }` since hover
+   no longer lifts the card. */
 
 /* ============================================
    SIDEBAR SPECIFIC STYLES

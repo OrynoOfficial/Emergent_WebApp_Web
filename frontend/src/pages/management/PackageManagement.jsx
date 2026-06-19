@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ManagementShell from '@/components/management/shared/ManagementShell';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import SubpageCard from '@/components/management/shared/SubpageCard';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -553,17 +554,17 @@ export default function PackageManagement() {
               />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-44 bg-white" data-testid="package-status-filter">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {STATUS_OPTIONS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FilterChipSelect
+                icon={CheckCircle}
+                label="Status"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  ...STATUS_OPTIONS,
+                ]}
+                data-testid="package-status-filter"
+              />
               <ViewModeToggle value={viewMode} onChange={setViewMode} />
               <PermissionGate permission="packages.create">
                 <Button onClick={() => openForm()} className="bg-[#082c59] hover:bg-[#0a3a75]" data-testid="add-package-btn">

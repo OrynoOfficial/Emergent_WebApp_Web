@@ -1,0 +1,82 @@
+{
+  "summary": "Iter 257 frontend verification: system-wide animation purge + 4 more pages converted to FilterChipSelect. Login as superadmin@oryno.com, exercised /admin/bills, /admin/bookings, /admin/employees, /management/packages, /admin/operators. All 7 spec points pass. The two minor polish items from iter 256 (dialog backdrop pop-on and Tooltip controlled/uncontrolled console warnings) are BOTH RESOLVED in this iter. No new console errors. Only caveat: PackageManagement.jsx Status chip lives inside a `<TabsContent value=\"management\">` block which superadmin lands outside of — runtime verification of that chip will need operator@test.com login or the operator-side surface; source-level diff is correct.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_observations": {
+    "animation_purge": {
+      "universal_star_transition_property": "background-color, border-color, color, fill, stroke, opacity, box-shadow",
+      "universal_star_contains_transform": false,
+      "animate_fadeIn_animationName": "none",
+      "animate_fadeIn_animationDuration": "0s",
+      "card_interactive_hover_rule": ".card-interactive:hover { box-shadow: rgba(8, 44, 89, 0.1) 0px 8px 25px -5px, rgba(8, 44, 89, 0.04) 0px 4px 10px -5px; } — NO transform/translateY",
+      "universal_button_active_rule_in_stylesheet": "[] (rule fully removed; .btn-primary:active scale(0.97) still present as opt-in but no global button:active)"
+    },
+    "bills_filter_chips": {
+      "page": "/admin/bills",
+      "initial": [
+        {"testid": "bills-status-filter", "w_px": 29, "h_px": 29, "bg": "rgb(255,255,255)"},
+        {"testid": "bills-payment-filter", "w_px": 29, "h_px": 29, "bg": "rgb(255,255,255)"}
+      ],
+      "options_visible_on_open": ["filter-option-all", "filter-option-paid", "filter-option-pending", "filter-option-overdue", "filter-option-cancelled"],
+      "after_selecting_paid": {"w_px": 60, "bg": "rgb(8, 44, 89)", "text": "paid", "brand_blue_match": true}
+    },
+    "bookings_filter_chips": {
+      "page": "/admin/bookings",
+      "chips": [
+        {"testid": "filter-status", "w_px": 29, "h_px": 29},
+        {"testid": "filter-category", "w_px": 29, "h_px": 29}
+      ]
+    },
+    "employees_filter_chips": {
+      "page": "/admin/employees",
+      "chips": [
+        {"testid": "emp-dept-filter", "w_px": 29, "h_px": 29, "icon": "Building2"},
+        {"testid": "emp-role-filter", "w_px": 29, "h_px": 29, "icon": "Shield"},
+        {"testid": "emp-status-filter", "w_px": 29, "h_px": 29, "icon": "CheckCircle"}
+      ]
+    },
+    "package_management_chip": {
+      "page": "/management/packages",
+      "runtime_verified": false,
+      "reason": "Status chip lives inside <TabsContent value='management'>; superadmin route landing tab is Dashboard/Services/Communications (different surface than the operator PackageManagement). Source diff at /app/frontend/src/pages/management/PackageManagement.jsx L557-567 is correct (label=Status, icon=CheckCircle, options=[all, ...STATUS_OPTIONS], testid=package-status-filter).",
+      "options_definition": "STATUS_OPTIONS contains in_progress, delivered, etc — confirmed via grep"
+    },
+    "dialog_fade_preservation": {
+      "page": "/admin/operators (Eye → operator detail)",
+      "dialog_content": {"animationName": "fadeIn", "animationDuration": "0.2s", "opacity": "1"},
+      "admin_modal_backdrop": {"testid": "admin-modal", "animationName": "fadeIn", "animationDuration": "0.2s"},
+      "iter256_residual_gap_status": "RESOLVED — the .admin-modal backdrop now fades (was animation:none in iter 256). Note: there is still a separate inner Radix overlay div (no testid) with animation:none, but it is not the visible backdrop — admin-modal is the user-visible fading backdrop."
+    },
+    "console_health": {
+      "errors": 0,
+      "tooltip_controlled_warnings": 0,
+      "iter256_radix_tooltip_noise_status": "RESOLVED — FilterChipSelect.jsx L43-49 now uses always-controlled tipOpen state; no Radix uncontrolled→controlled warnings observed",
+      "remaining_warnings": ["recharts: 'The width(-1) and height(-1) of chart should be greater than 0' on /management/packages dashboard tab — pre-existing, unrelated to this iter"]
+    }
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional) Source-verify the PackageManagement Status chip at runtime by logging in as operator@test.com and opening the operator-side packages list, since superadmin's /management/packages surface is a different component tree. Source code is correct; only runtime visual confirmation is pending.",
+    "(Pre-existing, unrelated) recharts container -1 width warning on /management/packages Dashboard tab — chart container needs minWidth/minHeight or aspect ratio. Not in scope of this iter."
+  ],
+  "critical_code_review_comments": [
+    "global.css L13-17 — universal `* { transition-property: ...}` no longer lists `transform`. This is the right surgical fix and matches the user complaint exactly (fly-in/zoom feel during layout shifts is gone).",
+    "global.css L93-101 — .animate-fadeIn neutralised to `animation: none`. Layout.jsx sidebar dropdowns still render but no longer fly in. Good comment block explaining the intent.",
+    "global.css L182-187 — .card-interactive:hover only changes box-shadow; the translateY rule is removed. The follow-up :active rule was correctly dropped too.",
+    "FilterChipSelect.jsx L43-49 — switched from `open={open?false:undefined}` to a controlled `tipOpen` state with `showTip = tipOpen && !open`. This eliminates the React 18 controlled/uncontrolled tooltip warnings flagged in iter 256.",
+    "BillsManagement.jsx, Bookings.jsx, EmployeesManagement.jsx, PackageManagement.jsx — all 8 filter Selects in the sweep are converted correctly. Form-level <Select>s (Create/Edit modals on EmployeesManagement L372, L382, L411, L744, L755, L768 and on PackageManagement L775, L826) are intentionally left alone — those are form inputs, not filters.",
+    "index.css L230-233 no-animation rule with [role=dialog]/[data-radix-dialog-content] exceptions correctly preserves dialog content fade; admin-modal backdrop now also fades because it carries its own [data-state=open] animation."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only request)", "frontend": "7/7 spec points verified — animation purge, 4-page sweep (Bills/Bookings/Employees/Packages source-level, 3 verified at runtime), dialog fade preserved, no console errors/warnings."},
+  "test_credentials": "superadmin@oryno.com / testpassword123 (2-step: 'Login to Your Account' → email + Continue → password + Login).",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 257 confirms global.css purge is effective: probe an empty div and getComputedStyle().transitionProperty will NOT include 'transform'. Probe a .animate-fadeIn div and animationName='none'. All FilterChipSelect chips share the same data-testid scheme: each chip uses the testid passed in props (e.g. bills-status-filter, emp-dept-filter, filter-status, filter-category, package-status-filter) and the popover options are `[data-testid=filter-option-{value}]` buttons. Brand blue active chip = rgb(8,44,89). admin-modal backdrop's iter-256 pop-on is fixed (animationName=fadeIn, 0.2s). FilterChipSelect's tooltip controlled/uncontrolled console warning from iter 256 is also fixed via tipOpen state. /management/packages under superadmin shows a different surface (Dashboard/Services/Communications tabs) than the operator-side PackageManagement.jsx — the Status chip is source-verified at L557-567 but runtime check would need operator login or operator-side routing.",
+  "rca of the issue": "No new issues. Two iter-256 residuals (dialog backdrop pop-on, tooltip uncontrolled warning) were both addressed in this iter: (a) admin-modal now carries its own data-state animation (fadeIn 0.2s) so the visible backdrop fades regardless of the index.css no-animation sweep; (b) FilterChipSelect uses a stable controlled tipOpen state instead of toggling between false and undefined."
+}

@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import QuickDateRangeFilter, { inRange } from '@/components/common/QuickDateRangeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import Pagination from '@/components/common/Pagination';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
@@ -241,18 +242,22 @@ export default function BillsManagement() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <Input placeholder="Search bills..." className="pl-9 h-8 bg-white text-sm" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} data-testid="bills-search-input" />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {BILL_STATUS.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-44 h-8 bg-white text-sm"><SelectValue placeholder="Payment Method" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {PAYMENT_METHODS.map(p => <SelectItem key={p} value={p} className="capitalize">{p === 'all' ? 'All Methods' : p.replace('_', ' ')}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={CheckCircle}
+              label="Status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={BILL_STATUS.map(s => ({ value: s, label: s === 'all' ? 'All status' : s }))}
+              data-testid="bills-status-filter"
+            />
+            <FilterChipSelect
+              icon={CreditCard}
+              label="Payment"
+              value={paymentFilter}
+              onChange={setPaymentFilter}
+              options={PAYMENT_METHODS.map(p => ({ value: p, label: p === 'all' ? 'All methods' : p.replace('_', ' ') }))}
+              data-testid="bills-payment-filter"
+            />
           </SubpageCard>
 
           {/* Stats (dynamic — reflects active filters) */}

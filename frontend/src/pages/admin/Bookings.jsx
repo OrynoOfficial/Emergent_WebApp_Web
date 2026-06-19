@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Search, Package, Check, X, Eye, Calendar, User, Mail, Building2,
-  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, Plus, SlidersHorizontal
+  Globe2, Store, CreditCard, Banknote, Receipt, Loader2, Plus, SlidersHorizontal,
+  CheckCircle, Layers
 } from 'lucide-react';
 import { formatFCFA } from '../../utils/currency';
 import { formatDate } from '../../utils/dateUtils';
@@ -25,6 +26,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 
 const CATEGORY_ICONS = {
   hotel: '🏨', restaurant: '🍽️', travel: '🚌', car_rental: '🚗',
@@ -318,31 +320,37 @@ export default function AdminBookings() {
                 data-testid="admin-bookings-search"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-36 h-8 bg-white text-sm"><SelectValue placeholder="Category" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Services</SelectItem>
-                <SelectItem value="hotel">Hotels</SelectItem>
-                <SelectItem value="restaurant">Restaurants</SelectItem>
-                <SelectItem value="travel">Travel</SelectItem>
-                <SelectItem value="car_rental">Car Rental</SelectItem>
-                <SelectItem value="event">Events</SelectItem>
-                <SelectItem value="package">Packages</SelectItem>
-                <SelectItem value="cinema">Cinema</SelectItem>
-                <SelectItem value="laundry">Laundry</SelectItem>
-                <SelectItem value="banquet">Banquets</SelectItem>
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+      icon={CheckCircle}
+      label="Status"
+      value={statusFilter}
+      onChange={setStatusFilter}
+      options={[
+        { value: 'all', label: 'All Status' },
+        { value: 'pending', label: 'Pending' },
+        { value: 'confirmed', label: 'Confirmed' },
+        { value: 'completed', label: 'Completed' },
+        { value: 'cancelled', label: 'Cancelled' },
+      ]}
+    />
+            <FilterChipSelect
+      icon={Layers}
+      label="Category"
+      value={categoryFilter}
+      onChange={setCategoryFilter}
+      options={[
+        { value: 'all', label: 'All Services' },
+        { value: 'hotel', label: 'Hotels' },
+        { value: 'restaurant', label: 'Restaurants' },
+        { value: 'travel', label: 'Travel' },
+        { value: 'car_rental', label: 'Car Rental' },
+        { value: 'event', label: 'Events' },
+        { value: 'package', label: 'Packages' },
+        { value: 'cinema', label: 'Cinema' },
+        { value: 'laundry', label: 'Laundry' },
+        { value: 'banquet', label: 'Banquets' },
+      ]}
+    />
           </SubpageCard>
 
           {/* Stats Cards (dynamic — reflect channel + filters) */}

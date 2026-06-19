@@ -12,8 +12,9 @@ import {
   Users, Plus, Search, Edit, Trash2, Eye, UserPlus,
   Phone, Mail, MapPin, Calendar, Briefcase, Clock,
   CheckCircle, XCircle, MoreHorizontal, FileText, ShieldCheck, Network, Crown,
-  LayoutGrid, List
+  LayoutGrid, List, Building2, Shield,
 } from 'lucide-react';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
 import { toast } from 'sonner';
@@ -494,24 +495,30 @@ export default function EmployeesManagement() {
                 <Input placeholder="Search employees..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </div>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-40"><SelectValue placeholder="Department" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {DEPARTMENTS.map(d => <SelectItem key={d} value={d} className="capitalize">{d === 'all' ? 'All Departments' : d.replace('_', ' ')}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Role" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {ROLES.map(r => <SelectItem key={r} value={r} className="capitalize">{r === 'all' ? 'All Roles' : r}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent className="bg-white">
-                {STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s === 'all' ? 'All Status' : s.replace('_', ' ')}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <FilterChipSelect
+              icon={Building2}
+              label="Department"
+              value={departmentFilter}
+              onChange={setDepartmentFilter}
+              options={DEPARTMENTS.map(d => ({ value: d, label: d === 'all' ? 'All departments' : d.replace('_', ' ') }))}
+              data-testid="emp-dept-filter"
+            />
+            <FilterChipSelect
+              icon={Shield}
+              label="Role"
+              value={roleFilter}
+              onChange={setRoleFilter}
+              options={ROLES.map(r => ({ value: r, label: r === 'all' ? 'All roles' : r }))}
+              data-testid="emp-role-filter"
+            />
+            <FilterChipSelect
+              icon={CheckCircle}
+              label="Status"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={STATUSES.map(s => ({ value: s, label: s === 'all' ? 'All status' : s.replace('_', ' ') }))}
+              data-testid="emp-status-filter"
+            />
             <div className="flex border rounded-lg overflow-hidden" data-testid="view-mode-toggle">
               <button onClick={() => setViewMode('grid')} className={`p-2.5 transition-colors ${viewMode === 'grid' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} data-testid="grid-view-btn">
                 <LayoutGrid className="w-4 h-4" />
