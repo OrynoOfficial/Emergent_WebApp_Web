@@ -644,7 +644,7 @@ async def set_operator_refund_policy(
     operator_id: str,
     service_type: str,
     payload: dict,
-    current_user: dict = Depends(require_permission("operators.edit")),
+    current_user: dict = Depends(get_current_active_user),
 ):
     """Set the operator-level refund policy for ONE service type.
 
@@ -654,14 +654,24 @@ async def set_operator_refund_policy(
 
     Setting ``preset`` to ``null`` clears the override and falls back to
     the platform default for that service.
+
+    Allowed callers:
+      - admin / super_admin (any operator)
+      - operator owner (legacy `owner_user_id` match)
+      - any operator user whose `operator_id` matches the target operator
+        (covers team-members invited by the owner; the owner-only check
+        previously locked them out even when they hold `operators.edit`).
     """
     db = get_database()
     op = await db.operators.find_one({"_id": operator_id}, {"owner_user_id": 1})
     if not op:
         raise HTTPException(status_code=404, detail="Operator not found")
-    is_super_admin = current_user["role"] == "super_admin"
-    if not is_super_admin and op.get("owner_user_id") != current_user["_id"]:
-        raise HTTPException(status_code=403, detail="You can only edit your own operator")
+    role = current_user.get("role")
+    is_admin = role in ("admin", "super_admin")
+    is_owner = op.get("owner_user_id") == current_user.get("_id")
+    is_team_member = current_user.get("operator_id") == operator_id
+    if not (is_admin or is_owner or is_team_member):
+        raise HTTPException(status_code=403, detail="You can only edit your own operator's policies")
 
     preset = (payload or {}).get("preset")
     custom_tiers = (payload or {}).get("custom_tiers") or []

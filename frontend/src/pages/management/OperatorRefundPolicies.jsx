@@ -1,24 +1,28 @@
-// Operator-level Refund Policies management.
+// Refund Policies management — works for both operators AND admins.
 //
-// One screen lets an operator set their **default** cancellation policy
-// (Strict / Standard / Flexible / Custom-via-API) per service category they
-// offer. Each individual listing can still override via the inline picker
-// on its editor — but this screen handles the bulk-default case so ops
-// don't have to touch 50+ hotels one by one.
+// Operator scope (role=operator):
+//   - Page is automatically pinned to the user's own operator
+//   - SERVICE_CATALOG is filtered to only the categories the operator
+//     actually offers (operator.service_types). Showing all 9 was misleading.
+//
+// Admin / Super-admin scope:
+//   - Top selector lets them switch between:
+//       1) "Platform default" — the fallback policy for every service category
+//       2) Any individual operator — to edit their per-service overrides
+//   - All edits propagate via the same picker → simply route to the right
+//     backend endpoint (refunds/platform-defaults vs operators/{id}/refund-policies).
 //
 // Resolution order at refund time:
-//   Listing override > Operator default (this screen) > Platform default
-import React, { useEffect, useState, useMemo } from 'react';
+//   Listing override > Operator default > Platform default > Hardcoded preset
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, Settings as SettingsIcon, Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Package, Shirt, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Settings as SettingsIcon, Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Package, Shirt, Save, Globe, Building2 } from 'lucide-react';
 import api from '@/api/client';
 import { toast } from 'sonner';
 import CancellationPolicyPicker from '@/components/refunds/CancellationPolicyPicker';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Display config for every service type the platform supports. Icons + accent
-// colours match the rest of the management UI so this feels native.
 const SERVICE_CATALOG = [
   { key: 'hotel',      label: 'Hotels',       icon: Hotel,     accent: 'pink',     tagline: 'Bookings, rooms, nights' },
   { key: 'travel',     label: 'Travel',       icon: Bus,       accent: 'blue',     tagline: 'Routes, schedules, seats' },
@@ -43,41 +47,105 @@ const accentText = {
   violet: 'text-violet-600 bg-violet-50',
 };
 
+// service_types stored on operators use multiple slug variants — normalise
+// them to the catalog keys so a row like `['events', 'banquets']` maps to
+// `{event, banquet}`.
+const SERVICE_TAG_ALIASES = {
+  hotel: 'hotel', hotels: 'hotel',
+  travel: 'travel',
+  car_rental: 'car_rental', 'car-rental': 'car_rental', car_rentals: 'car_rental',
+  restaurant: 'restaurant', restaurants: 'restaurant', catering: 'restaurant',
+  event: 'event', events: 'event',
+  cinema: 'cinema', cinemas: 'cinema',
+  banquet: 'banquet', banquets: 'banquet',
+  laundry: 'laundry', pressing: 'laundry', pressings: 'laundry',
+  package: 'package', packages: 'package', logistics: 'package',
+};
+
+const normalizeServiceTypes = (raw) => {
+  const set = new Set();
+  for (const tag of raw || []) {
+    const k = SERVICE_TAG_ALIASES[String(tag).toLowerCase().trim()];
+    if (k) set.add(k);
+  }
+  return set;
+};
+
 export default function OperatorRefundPolicies() {
   const { user } = useAuth();
-  const operatorId = user?.operator_id || user?.operatorId;
+  const role = user?.role;
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const ownOperatorId = user?.operator_id || user?.operatorId;
+
+  // Selector state — for admins this drives which scope is shown.
+  // Value is either '__platform__' or an operator_id.
+  const [scopeId, setScopeId] = useState(isAdmin ? '__platform__' : ownOperatorId || '');
+  const [operators, setOperators] = useState([]);
+
   const [byService, setByService] = useState({});
+  const [allowedServiceTypes, setAllowedServiceTypes] = useState(null); // null = show all
   const [loading, setLoading] = useState(true);
   const [savingService, setSavingService] = useState(null);
 
+  // For admins — load the operator list once so the selector can render.
   useEffect(() => {
-    if (!operatorId) {
+    if (!isAdmin) return;
+    api.get('/operators')
+      .then(r => setOperators(r.data?.operators || r.data || []))
+      .catch(() => setOperators([]));
+  }, [isAdmin]);
+
+  // Re-fetch policies whenever the selected scope changes.
+  const loadPolicies = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (scopeId === '__platform__') {
+        const r = await api.get('/refunds/platform-defaults');
+        setByService(r.data?.by_service || {});
+        setAllowedServiceTypes(null); // platform default covers every category
+      } else if (scopeId) {
+        const r = await api.get(`/operators/${scopeId}/refund-policies`);
+        setByService(r.data?.by_service || {});
+        // Scope visible categories to operator.service_types when known.
+        const opRow = operators.find(o => o._id === scopeId || o.id === scopeId);
+        if (opRow?.service_types?.length) {
+          setAllowedServiceTypes(normalizeServiceTypes(opRow.service_types));
+        } else if (!isAdmin) {
+          // Operator-self path: opRow may not be in the loaded list — fetch.
+          const me = await api.get(`/operators/${scopeId}`).catch(() => null);
+          const types = me?.data?.service_types || me?.data?.operator?.service_types || [];
+          setAllowedServiceTypes(types.length ? normalizeServiceTypes(types) : null);
+        } else {
+          setAllowedServiceTypes(null);
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not load policies');
+    } finally {
       setLoading(false);
-      return;
     }
-    api.get(`/operators/${operatorId}/refund-policies`)
-      .then(r => setByService(r.data?.by_service || {}))
-      .catch(err => toast.error(err.response?.data?.detail || 'Could not load policies'))
-      .finally(() => setLoading(false));
-  }, [operatorId]);
+  }, [scopeId, operators, isAdmin]);
+
+  useEffect(() => { loadPolicies(); }, [loadPolicies]);
 
   const savePolicy = async (serviceKey, policy) => {
-    if (!operatorId) return;
     setSavingService(serviceKey);
     try {
-      // `policy === null` clears the override and falls back to platform default
       const payload = policy
         ? { preset: policy.preset, custom_tiers: policy.custom_tiers || [] }
         : { preset: null };
-      await api.put(`/operators/${operatorId}/refund-policies/${serviceKey}`, payload);
-      // Mirror local state to match what we just persisted
+      if (scopeId === '__platform__') {
+        await api.put(`/refunds/platform-defaults/${serviceKey}`, payload);
+      } else {
+        await api.put(`/operators/${scopeId}/refund-policies/${serviceKey}`, payload);
+      }
       setByService(prev => {
         const next = { ...prev };
         if (policy) next[serviceKey] = policy;
         else delete next[serviceKey];
         return next;
       });
-      toast.success(policy ? `${serviceKey} → ${policy.preset}` : `Reverted ${serviceKey} to platform default`);
+      toast.success(policy ? `${serviceKey} → ${policy.preset}` : `Reverted ${serviceKey} to default`);
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to save');
     } finally {
@@ -85,9 +153,14 @@ export default function OperatorRefundPolicies() {
     }
   };
 
+  const visibleCatalog = useMemo(() => {
+    if (!allowedServiceTypes) return SERVICE_CATALOG;
+    return SERVICE_CATALOG.filter(s => allowedServiceTypes.has(s.key));
+  }, [allowedServiceTypes]);
+
   const configuredCount = useMemo(() => Object.keys(byService).length, [byService]);
 
-  if (!operatorId) {
+  if (!isAdmin && !ownOperatorId) {
     return (
       <div className="p-6 text-center">
         <SettingsIcon className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -96,83 +169,130 @@ export default function OperatorRefundPolicies() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-      </div>
-    );
-  }
+  const isPlatformScope = scopeId === '__platform__';
+  const selectedOp = operators.find(o => (o._id || o.id) === scopeId);
 
   return (
     <div className="space-y-6" data-testid="operator-refund-policies-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <SettingsIcon className="w-5 h-5 text-slate-700" />
             Refund Policies
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Set the default cancellation policy for each of your service categories.
-            Individual listings can still override these in their own editor.
+          <p className="text-sm text-slate-500 mt-0.5 max-w-xl">
+            {isPlatformScope
+              ? 'Platform-wide default cancellation policy per service category. Operators inherit these unless they configure their own override below.'
+              : 'Set the default cancellation policy for each service category. Individual listings can still override these in their own editor.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{configuredCount}/{SERVICE_CATALOG.length} services customised</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-slate-500">{configuredCount}/{visibleCatalog.length} configured</span>
           <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold">
-            Resolution: Listing → Operator → Platform
+            Listing → Operator → Platform
           </span>
         </div>
       </div>
 
-      {/* One card per service category */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {SERVICE_CATALOG.map(svc => {
-          const Icon = svc.icon;
-          const currentPolicy = byService[svc.key] || null;
-          const isCustomised = !!currentPolicy;
-          return (
-            <Card key={svc.key} data-testid={`refund-policy-card-${svc.key}`} className="p-5 bg-white border border-slate-200 shadow-sm">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${accentText[svc.accent]}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{svc.label}</h3>
-                    <p className="text-xs text-slate-500">{svc.tagline}</p>
-                  </div>
-                </div>
+      {/* Admin / super-admin: scope selector */}
+      {isAdmin && (
+        <div className="flex items-center gap-3 flex-wrap bg-white border border-slate-200 rounded-xl p-3" data-testid="policy-scope-selector">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scope</span>
+          <Select value={scopeId} onValueChange={setScopeId}>
+            <SelectTrigger className="w-80 bg-white" data-testid="policy-scope-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white max-h-80">
+              <SelectItem value="__platform__">
                 <div className="flex items-center gap-2">
-                  {savingService === svc.key && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
-                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    isCustomised ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {isCustomised ? `Custom: ${currentPolicy.preset}` : 'Platform default'}
-                  </span>
+                  <Globe className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="font-medium">Platform default</span>
                 </div>
-              </div>
+              </SelectItem>
+              {operators.map(op => (
+                <SelectItem key={op._id || op.id} value={op._id || op.id}>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{op.name}</span>
+                    {op.service_types?.length ? (
+                      <span className="text-[10px] text-slate-400 ml-1">· {op.service_types.slice(0, 3).join(', ')}</span>
+                    ) : null}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!isPlatformScope && selectedOp && (
+            <span className="text-xs text-slate-500">
+              {selectedOp.service_types?.length
+                ? `Showing ${selectedOp.service_types.length} service categor${selectedOp.service_types.length === 1 ? 'y' : 'ies'} this operator offers.`
+                : 'This operator has no service types configured — showing all categories.'}
+            </span>
+          )}
+        </div>
+      )}
 
-              <CancellationPolicyPicker
-                serviceType={svc.key}
-                scope="operator"
-                value={currentPolicy}
-                onChange={(next) => savePolicy(svc.key, next)}
-                compact
-              />
-            </Card>
-          );
-        })}
-      </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : visibleCatalog.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center" data-testid="policies-empty-state">
+          <Package className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+          <h3 className="font-semibold text-slate-700">No service categories assigned</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            This operator does not offer any services yet. Assign service categories from the operator profile, then come back here to set their refund policies.
+          </p>
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-6">
+          {visibleCatalog.map(svc => {
+            const Icon = svc.icon;
+            const currentPolicy = byService[svc.key] || null;
+            const isCustomised = !!currentPolicy;
+            return (
+              <Card key={svc.key} data-testid={`refund-policy-card-${svc.key}`} className="p-5 bg-white border border-slate-200 shadow-sm">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${accentText[svc.accent]}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{svc.label}</h3>
+                      <p className="text-xs text-slate-500">{svc.tagline}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {savingService === svc.key && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      isCustomised ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {isCustomised ? `Custom: ${currentPolicy.preset}` : (isPlatformScope ? 'Unset' : 'Inherits default')}
+                    </span>
+                  </div>
+                </div>
+
+                <CancellationPolicyPicker
+                  serviceType={svc.key}
+                  scope={isPlatformScope ? 'platform' : 'operator'}
+                  value={currentPolicy}
+                  onChange={(next) => savePolicy(svc.key, next)}
+                  compact
+                />
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Footer help */}
       <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-600 leading-relaxed">
         <p className="flex items-start gap-2">
           <Save className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-400" />
           <span>
-            <span className="font-semibold text-slate-700">Auto-save</span> — changes are persisted immediately to your operator profile.
-            New bookings on existing or future listings will use the policy in effect at the moment the refund is requested.
+            <span className="font-semibold text-slate-700">Auto-save</span> — changes are persisted immediately.
+            New bookings will use the policy in effect when the refund is requested.
           </span>
         </p>
       </div>

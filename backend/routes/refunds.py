@@ -75,6 +75,70 @@ async def get_presets(service_type: Optional[str] = None):
     return {st: list_presets_for(st) for st in PRESET_DEFINITIONS.keys()}
 
 
+# ── Platform-default refund policies (admin / super-admin only) ─────────────
+# Stored as a single doc in `system_settings` under key `refund_policy_defaults`.
+# Shape: { service_type: { preset, custom_tiers? } }
+# Read order at refund time: listing > operator > platform default > preset.
+_DEFAULTS_KEY = "refund_policy_defaults"
+
+
+@router.get("/platform-defaults")
+async def get_platform_default_policies(
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Read the platform-wide default refund policy per service type.
+
+    Anyone can read (operators need it to render the inheritance label).
+    """
+    db = get_database()
+    doc = await db.system_settings.find_one({"_id": _DEFAULTS_KEY})
+    return {"by_service": (doc or {}).get("by_service") or {}}
+
+
+@router.put("/platform-defaults/{service_type}")
+async def set_platform_default_policy(
+    service_type: str,
+    payload: dict,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Set the platform-wide default for one service type. Admins only.
+
+    Payload: { preset, custom_tiers? }  — preset=null clears the override.
+    """
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Admins only")
+
+    preset = (payload or {}).get("preset")
+    custom_tiers = (payload or {}).get("custom_tiers") or []
+    valid_presets = {"strict", "standard", "flexible", "custom", None, ""}
+    if preset not in valid_presets:
+        raise HTTPException(status_code=400, detail=f"Invalid preset '{preset}'")
+    if preset == "custom" and not custom_tiers:
+        raise HTTPException(status_code=400, detail="Custom preset requires at least one tier")
+
+    db = get_database()
+    if not preset:
+        await db.system_settings.update_one(
+            {"_id": _DEFAULTS_KEY},
+            {"$unset": {f"by_service.{service_type}": ""},
+             "$set": {"updated_at": datetime.now(timezone.utc), "updated_by": current_user.get("_id")}},
+            upsert=True,
+        )
+        return {"message": f"Cleared platform default for {service_type}"}
+
+    policy = {"preset": preset}
+    if preset == "custom":
+        policy["custom_tiers"] = custom_tiers
+    await db.system_settings.update_one(
+        {"_id": _DEFAULTS_KEY},
+        {"$set": {f"by_service.{service_type}": policy,
+                  "updated_at": datetime.now(timezone.utc),
+                  "updated_by": current_user.get("_id")}},
+        upsert=True,
+    )
+    return {"message": f"Platform default for {service_type} set to {preset}"}
+
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 async def _restore_event_stock(db, order: dict) -> None:
     """Atomically increment class.available_units AND remove any reserved
@@ -134,7 +198,9 @@ async def _load_policies(db, order: dict) -> tuple[Optional[dict], Optional[dict
     service_type = (order.get("service_type") or "").lower()
 
     # Operator-level — stored on `operators.refund_policies` keyed by service
-    # type, with optional fallback `operators.default_refund_policy`.
+    # type, with optional fallback `operators.default_refund_policy`. When the
+    # operator hasn't set anything, fall through to the platform default
+    # configured by admins under `system_settings.refund_policy_defaults`.
     op_id = order.get("operator_id")
     if op_id:
         try:
@@ -145,6 +211,13 @@ async def _load_policies(db, order: dict) -> tuple[Optional[dict], Optional[dict
             if op:
                 per_service = (op.get("refund_policies") or {}).get(service_type)
                 operator_policy = per_service or op.get("default_refund_policy")
+        except Exception:
+            pass
+    if operator_policy is None:
+        try:
+            defaults_doc = await db.system_settings.find_one({"_id": _DEFAULTS_KEY})
+            if defaults_doc:
+                operator_policy = (defaults_doc.get("by_service") or {}).get(service_type)
         except Exception:
             pass
 

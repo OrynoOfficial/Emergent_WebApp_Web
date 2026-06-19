@@ -8,6 +8,29 @@
 
 
 
+## Latest Changes (Feb 2026 — iter 255: Refund Policies — operator scoping + admin platform defaults)
+
+### Bug 1: Operators couldn't save their refund policies (silent 403)
+- **Root cause**: `PUT /api/operators/{id}/refund-policies/{svc}` required the `operators.edit` permission AND an exact `owner_user_id == current_user._id` match. Team-members invited by the owner (and even the owner themselves when `owner_user_id` had drifted in seed data) fell into the 403 branch.
+- **Fix (`routes/operators.py`)**: dropped the permission requirement (the route now uses `get_current_active_user`) and replaced the ownership check with **`is_admin OR is_owner OR operator_id == target_operator_id`**. Team members can now manage their own operator's policies, admins/super-admins can touch any operator.
+
+### Bug 2: Operator page leaked irrelevant service categories
+- **Root cause**: `OperatorRefundPolicies.jsx` rendered all 9 categories from `SERVICE_CATALOG` regardless of which services the operator actually offers.
+- **Fix**: page now filters the catalog by `operator.service_types`. Aliases (events↔event, banquets↔banquet, pressing↔laundry, etc.) are normalised so all stored variants collapse to the right card.
+
+### Feature: Admin / Super-admin backend for refund policies
+- **New backend endpoints (`routes/refunds.py`)**:
+  - `GET /api/refunds/platform-defaults` — anyone can read (used to render inheritance labels).
+  - `PUT /api/refunds/platform-defaults/{service_type}` — admins/super-admins only; `{preset, custom_tiers?}`, `preset=null` clears.
+  - Stored in `db.system_settings._id="refund_policy_defaults".by_service.<service_type>`.
+- **Refund resolution chain extended**: `_load_policies` now falls back to the platform default doc when neither the listing nor the operator has an override, _before_ hitting the hard-coded preset.
+- **Frontend**: same page reused with a new **Scope selector** for admins — choose `Platform default` (all 9 categories) or any individual operator (filtered to that operator's service_types). Each card writes to the right endpoint automatically.
+
+### Tests
+- Verified via curl: operator saves own policy (200), operator hitting another operator (404/403), admin sets platform default (200), operator can read but not write platform defaults (200/403).
+
+
+
 ## Latest Changes (Feb 2026 — iter 254: search scoping bug fix)
 
 ### Bug: irrelevant operators leaked into service-scoped landing-page search
