@@ -1,280 +1,228 @@
+/**
+ * Team & Roles management — Ratings-page-style refresh.
+ *
+ * Visual targets (per iter 254 user feedback):
+ *   • Compact slim-chip stat strip (mirrors `/Ratings` page header).
+ *   • No gradient hero, no big colored bands, no oversized metric tiles.
+ *   • Icon-only top-bar buttons with tooltips (Refresh, etc.).
+ *   • Two-tone palette: slate + brand `#082c59`.
+ *
+ * Functional contract (unchanged):
+ *   • Wraps `OperatorTeamManagement` (team CRUD) and `OperatorRolesManagement`
+ *     (custom roles) inside two tabs.
+ *   • Owner-only access to the Roles tab.
+ *   • Platform admins are routed to `/admin/operators` where they can pick a
+ *     specific operator and see the same content in the operator preview
+ *     modal (eye-icon view).
+ */
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Users, Shield, Building2, RefreshCw, Settings, 
-  Crown, UserCog, AlertCircle
+import {
+  Users, Shield, Building2, RefreshCw, Crown, UserCog, AlertCircle, Sparkles,
 } from 'lucide-react';
 import OperatorTeamManagement from '@/components/management/OperatorTeamManagement';
 import OperatorRolesManagement from '@/components/management/OperatorRolesManagement';
+import IconButton from '@/components/shared/IconButton';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/api/client';
 import { toast } from 'sonner';
 
-/**
- * TeamRolesManagement - Dedicated page for operators to manage their team members and roles
- * Accessible to operator owners and local admins
- */
 export default function TeamRolesManagement() {
   const { user } = useAuth();
   const [operatorInfo, setOperatorInfo] = useState(null);
+  const [stats, setStats] = useState({ team: 0, roles: 0, owner: '—' });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('team');
 
-  // Check if user is an operator user
-  const isOperatorUser = user?.operator_id && ['owner', 'local_admin', 'local_user'].includes(user?.operator_role);
+  const isOperatorUser =
+    user?.operator_id && ['owner', 'local_admin', 'local_user'].includes(user?.operator_role);
   const isPlatformAdmin = user?.role === 'super_admin' || user?.role === 'admin';
   const canManageTeam = user?.operator_role === 'owner' || user?.operator_role === 'local_admin';
   const canManageRoles = user?.operator_role === 'owner';
 
   useEffect(() => {
     if (user?.operator_id) {
-      loadOperatorInfo();
+      loadAll();
     } else {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.operator_id]);
 
-  const loadOperatorInfo = async () => {
+  const loadAll = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/operators/${user.operator_id}`);
-      setOperatorInfo(response.data.operator || response.data);
+      const [opRes, teamRes, rolesRes] = await Promise.all([
+        api.get(`/operators/${user.operator_id}`).catch(() => null),
+        api.get(`/operators/${user.operator_id}/users`).catch(() => null),
+        api.get(`/operators/${user.operator_id}/roles`).catch(() => null),
+      ]);
+      const op = opRes?.data?.operator || opRes?.data || null;
+      setOperatorInfo(op);
+      const teamCount = teamRes?.data?.users?.length ?? teamRes?.data?.length ?? 0;
+      const rolesCount = rolesRes?.data?.roles?.length ?? rolesRes?.data?.length ?? 0;
+      const ownerName =
+        op?.owner_name ||
+        (teamRes?.data?.users || teamRes?.data || []).find?.(u => u.operator_role === 'owner')?.full_name ||
+        op?.owner_email ||
+        '—';
+      setStats({ team: teamCount, roles: rolesCount, owner: ownerName });
     } catch (error) {
-      console.error('Failed to load operator info:', error);
-      toast.error('Failed to load organization details');
+      console.error('Failed to load organisation:', error);
+      toast.error('Failed to load organisation details');
     } finally {
       setLoading(false);
     }
   };
 
-  // Not an operator user - show different message for admins vs regular users
+  // ── Empty / wrong-account states ──────────────────────────────────────────
   if (!loading && !isOperatorUser) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
-        <Card className="max-w-lg mx-auto mt-20">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-amber-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-              {isPlatformAdmin ? 'Admin Access' : 'Access Restricted'}
-            </h3>
-            <p className="text-slate-500 max-w-sm">
-              {isPlatformAdmin ? (
-                <>
-                  As a platform administrator, you can manage operator teams through the 
-                  <a href="/admin/operators" className="text-blue-600 hover:underline mx-1">Operator Management</a>
-                  page. Click on any operator and navigate to the Team or Roles tab.
-                </>
-              ) : (
-                'This page is only accessible to operator team members. If you believe you should have access, please contact your administrator.'
-              )}
-            </p>
-            {isPlatformAdmin && (
-              <Button 
-                onClick={() => window.location.href = '/admin/operators'}
-                className="mt-4 bg-blue-600 hover:bg-blue-700"
-              >
-                <Building2 className="w-4 h-4 mr-2" />
-                Go to Operators Management
-              </Button>
+      <div className="p-6">
+        <div className="max-w-lg mx-auto mt-16 bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <AlertCircle className="w-6 h-6 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 mb-1.5">
+            {isPlatformAdmin ? 'Admin Access' : 'Access Restricted'}
+          </h3>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
+            {isPlatformAdmin ? (
+              <>
+                As a platform administrator, manage operator teams through the
+                <a href="/admin/operators" className="text-[#082c59] font-medium hover:underline mx-1">
+                  Operator Management
+                </a>
+                page (eye-icon preview opens the same Team &amp; Roles view).
+              </>
+            ) : (
+              "This page is only accessible to operator team members. If you believe you should have access, please contact your administrator."
             )}
-          </CardContent>
-        </Card>
+          </p>
+          {isPlatformAdmin && (
+            <Button
+              onClick={() => (window.location.href = '/admin/operators')}
+              className="mt-4 bg-[#082c59] hover:bg-[#0a3a75]"
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              Go to operators
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
-  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
-          <p className="text-slate-600">Loading organization...</p>
-        </div>
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
       </div>
     );
   }
 
-  const getRoleBadge = () => {
-    const roleConfig = {
-      owner: { label: 'Owner', icon: Crown, className: 'bg-amber-100 text-amber-800 border-amber-200' },
-      local_admin: { label: 'Admin', icon: Shield, className: 'bg-blue-100 text-blue-800 border-blue-200' },
-      local_user: { label: 'User', icon: UserCog, className: 'bg-slate-100 text-slate-800 border-slate-200' }
-    };
-    const config = roleConfig[user?.operator_role] || roleConfig.local_user;
-    const Icon = config.icon;
-    
-    return (
-      <Badge className={`${config.className} border`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {config.label}
-      </Badge>
-    );
+  const roleConfig = {
+    owner:       { label: 'Owner', icon: Crown,    cls: 'bg-amber-100 text-amber-800 border-amber-200' },
+    local_admin: { label: 'Admin', icon: Shield,   cls: 'bg-slate-100 text-slate-700 border-slate-200' },
+    local_user:  { label: 'User',  icon: UserCog,  cls: 'bg-slate-50 text-slate-600 border-slate-200' },
   };
+  const myRole = roleConfig[user?.operator_role] || roleConfig.local_user;
+  const MyRoleIcon = myRole.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Building2 className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold text-slate-900">
-                    {operatorInfo?.name || user?.operator_name || 'My Organization'}
-                  </h1>
-                  {getRoleBadge()}
-                </div>
-                <p className="text-slate-500 mt-0.5">
-                  Manage your team members and access permissions
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={loadOperatorInfo} className="gap-2">
-                <RefreshCw className="w-4 h-4" />
-                Refresh
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-6" data-testid="team-roles-page">
+      {/* Header strip — slim, Ratings-style */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-[#082c59]" />
+            {operatorInfo?.name || user?.operator_name || 'My organisation'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5 flex items-center gap-2">
+            Manage your team members and access permissions
+            <Badge className={`${myRole.cls} border text-[10px] font-semibold`}>
+              <MyRoleIcon className="w-3 h-3 mr-1" />{myRole.label}
+            </Badge>
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <IconButton icon={RefreshCw} label="Refresh" onClick={loadAll} data-testid="team-roles-refresh" />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white border shadow-sm p-1 rounded-xl">
-            <TabsTrigger 
-              value="team" 
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Team Members
-            </TabsTrigger>
-            <TabsTrigger 
-              value="roles"
-              disabled={!canManageRoles && user?.role !== 'super_admin' && user?.role !== 'admin'}
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg px-6 py-2.5 transition-all disabled:opacity-50"
-            >
-              <Shield className="w-4 h-4 mr-2" />
-              Roles & Permissions
-              {!canManageRoles && user?.role !== 'super_admin' && user?.role !== 'admin' && (
-                <Badge variant="outline" className="ml-2 text-xs">Owner Only</Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+      {/* Stat chip strip — mirrors the /Ratings page exactly */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="team-roles-stats">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#082c59]/5 border border-[#082c59]/20 text-[#082c59] text-xs font-medium">
+          <Users className="h-3.5 w-3.5" /> Team Members <span className="font-bold">{stats.team}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+          <Shield className="h-3.5 w-3.5" /> Custom Roles <span className="font-bold">{stats.roles}</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium max-w-xs">
+          <Crown className="h-3.5 w-3.5 text-amber-500" /> Owner <span className="font-bold truncate">{stats.owner}</span>
+        </div>
+      </div>
 
-          {/* Team Tab */}
-          <TabsContent value="team" className="mt-6">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-xl">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-white">Team Members</CardTitle>
-                    <CardDescription className="text-blue-100">
-                      {canManageTeam 
-                        ? 'Manage your team members, roles, and permissions'
-                        : 'View team members in your organization'}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <OperatorTeamManagement 
-                  operatorId={user?.operator_id} 
-                  operatorName={operatorInfo?.name || user?.operator_name}
-                  embedded={true}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-white border border-slate-200 p-1 rounded-lg h-auto">
+          <TabsTrigger
+            value="team"
+            className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-md px-4 py-1.5 text-sm transition-all"
+            data-testid="tab-team"
+          >
+            <Users className="w-3.5 h-3.5 mr-1.5" />Team
+          </TabsTrigger>
+          <TabsTrigger
+            value="roles"
+            disabled={!canManageRoles && !isPlatformAdmin}
+            className="data-[state=active]:bg-[#082c59] data-[state=active]:text-white rounded-md px-4 py-1.5 text-sm transition-all disabled:opacity-40"
+            data-testid="tab-roles"
+          >
+            <Shield className="w-3.5 h-3.5 mr-1.5" />Roles
+            {!canManageRoles && !isPlatformAdmin && (
+              <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">Owner</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Roles Tab */}
-          <TabsContent value="roles" className="mt-6">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-xl">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <Shield className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-white">Roles & Permissions</CardTitle>
-                    <CardDescription className="text-purple-100">
-                      Create custom roles and manage permission delegation
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                {canManageRoles || user?.role === 'super_admin' || user?.role === 'admin' ? (
-                  <OperatorRolesManagement 
-                    operatorId={user?.operator_id} 
-                    operatorName={operatorInfo?.name || user?.operator_name}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <Shield className="w-8 h-8 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">Owner Access Required</h3>
-                    <p className="text-slate-500 max-w-sm">
-                      Only organization owners can create and manage custom roles.
-                      Contact your owner if you need role changes.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <TabsContent value="team" className="mt-0 bg-white rounded-xl border border-slate-200 p-5">
+          <OperatorTeamManagement
+            operatorId={user?.operator_id}
+            operatorName={operatorInfo?.name || user?.operator_name}
+            embedded={true}
+          />
+        </TabsContent>
 
-        {/* Help Card */}
-        <Card className="mt-8 bg-gradient-to-r from-slate-800 to-slate-900 text-white border-0">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-white/10 rounded-xl">
-                <Settings className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">Understanding Roles & Permissions</h3>
-                <p className="text-slate-300 text-sm mb-4">
-                  Your organization has three built-in roles: Owner (full control), Local Admin (can manage team), 
-                  and Local User (limited access). Owners can also create custom roles with specific permissions.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <Crown className="w-4 h-4 text-amber-400 mb-1" />
-                    <span className="font-medium text-amber-200">Owner</span>
-                    <p className="text-slate-400 text-xs mt-1">Full control over all settings, team, and roles</p>
-                  </div>
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <Shield className="w-4 h-4 text-blue-400 mb-1" />
-                    <span className="font-medium text-blue-200">Local Admin</span>
-                    <p className="text-slate-400 text-xs mt-1">Can manage team members and view reports</p>
-                  </div>
-                  <div className="bg-white/10 rounded-lg p-3">
-                    <UserCog className="w-4 h-4 text-slate-400 mb-1" />
-                    <span className="font-medium text-slate-200">Local User</span>
-                    <p className="text-slate-400 text-xs mt-1">Basic access to assigned features only</p>
-                  </div>
-                </div>
-              </div>
+        <TabsContent value="roles" className="mt-0 bg-white rounded-xl border border-slate-200 p-5">
+          {canManageRoles || isPlatformAdmin ? (
+            <OperatorRolesManagement
+              operatorId={user?.operator_id}
+              operatorName={operatorInfo?.name || user?.operator_name}
+            />
+          ) : (
+            <div className="text-center py-10">
+              <Shield className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <h3 className="text-sm font-semibold text-slate-700">Owner access required</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                Only the operator owner can create and manage custom roles. Contact your owner if you need role changes.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Slim footer note — replaces the heavy "Understanding Roles" card */}
+      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs text-slate-600 leading-relaxed flex items-start gap-2">
+        <Sparkles className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#082c59]" />
+        <span>
+          <span className="font-semibold text-slate-700">Three built-in roles:</span>{' '}
+          <strong>Owner</strong> (full control · only one per organisation),{' '}
+          <strong>Local Admin</strong> (can manage team &amp; reports),{' '}
+          <strong>Local User</strong> (basic access). Owners can also create custom roles in the Roles tab.
+        </span>
       </div>
     </div>
   );

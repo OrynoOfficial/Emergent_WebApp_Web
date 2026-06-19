@@ -327,56 +327,23 @@ export default function OperatorTeamManagement({ operatorId, operatorName, embed
   // Render content
   const content = (
     <div className="space-y-6">
-      {/* Stats Row */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-600 text-sm">Total Members</p>
-                  <p className="text-2xl font-bold text-blue-900">{stats.total_users}</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-600 text-sm">Owners</p>
-                  <p className="text-2xl font-bold text-amber-900">{stats.by_role?.owner || 0}</p>
-                </div>
-                <Crown className="h-8 w-8 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-600 text-sm">Local Admins</p>
-                  <p className="text-2xl font-bold text-purple-900">{stats.by_role?.local_admin || 0}</p>
-                </div>
-                <Shield className="h-8 w-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-600 text-sm">Active</p>
-                  <p className="text-2xl font-bold text-green-900">{stats.active_users}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Stats — slim chip strip (matches /Ratings + parent Team & Roles).
+          Hidden when embedded since the parent page already shows the
+          same numbers in its own chip strip. */}
+      {stats && !embedded && (
+        <div className="flex flex-wrap items-center gap-2" data-testid="team-stats-chips">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#082c59]/5 border border-[#082c59]/20 text-[#082c59] text-xs font-medium">
+            <Users className="h-3.5 w-3.5" /> Total <strong className="font-bold">{stats.total_users}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+            <Crown className="h-3.5 w-3.5 text-amber-500" /> Owners <strong className="font-bold">{stats.by_role?.owner || 0}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+            <Shield className="h-3.5 w-3.5" /> Admins <strong className="font-bold">{stats.by_role?.local_admin || 0}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+            <CheckCircle className="h-3.5 w-3.5" /> Active <strong className="font-bold">{stats.active_users}</strong>
+          </span>
         </div>
       )}
       

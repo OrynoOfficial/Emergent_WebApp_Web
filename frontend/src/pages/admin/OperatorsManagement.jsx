@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DatePickerField from '@/components/shared/DatePickerField';
+import IconButton from '@/components/shared/IconButton';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -396,10 +397,14 @@ export default function OperatorsManagement() {
         icon={Building}
         subtitle="Manage service providers and operators"
         scopeFilter={canManageOperators && (
-          <Button className="bg-[#082c59] hover:bg-[#0a3a75] h-8" size="sm" onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add Operator
-          </Button>
+          <IconButton
+            icon={Plus}
+            label="Add operator"
+            variant="solid"
+            size="md"
+            onClick={() => setIsCreateOpen(true)}
+            data-testid="add-operator-btn"
+          />
         )}
         testIdPrefix="operator-mgmt"
         activeTab="operators"
@@ -450,14 +455,24 @@ export default function OperatorsManagement() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant={showFilters ? 'default' : 'outline'} size="sm" className={`gap-1.5 ${showFilters ? 'bg-[#082c59]' : ''}`} onClick={() => setShowFilters(p => !p)} data-testid="more-filters-btn">
-            <Filter className="h-4 w-4" /> Filters
-            {(ownerFilter || dateFrom || dateTo) && <Badge className="bg-white/20 text-xs ml-1 h-5 w-5 flex items-center justify-center rounded-full p-0">{[ownerFilter, dateFrom, dateTo].filter(Boolean).length}</Badge>}
-          </Button>
+          <IconButton
+            icon={Filter}
+            label="More filters"
+            variant={showFilters ? 'solid' : 'outline'}
+            active={showFilters}
+            size="sm"
+            onClick={() => setShowFilters(p => !p)}
+            data-testid="more-filters-btn"
+          />
           {(ownerFilter || dateFrom || dateTo) && (
-            <Button variant="ghost" size="sm" className="text-slate-500 gap-1" onClick={() => { setOwnerFilter(''); setDateFrom(''); setDateTo(''); }} data-testid="clear-filters-btn">
-              <XIcon className="h-3.5 w-3.5" /> Clear
-            </Button>
+            <IconButton
+              icon={XIcon}
+              label="Clear filters"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setOwnerFilter(''); setDateFrom(''); setDateTo(''); }}
+              data-testid="clear-filters-btn"
+            />
           )}
           <div className="ml-auto">
             <ViewModeToggle value={viewMode} onChange={setViewMode} />
@@ -771,79 +786,79 @@ export default function OperatorsManagement() {
         </>
       )}
 
-      {/* View Operator Dialog */}
+      {/* View Operator Dialog — two-tone aesthetic (slate + brand #082c59) */}
       <AdminModal
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         title={selectedOperator?.name || 'Operator Details'}
         subtitle={selectedOperator?.email}
         icon={<Building className="w-5 h-5 text-white" />}
-        accentColor="blue"
+        accentColor="slate"
         size="xl"
       >
         {selectedOperator && (
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent mb-4">
-              <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-700 rounded-none px-4 py-2.5 font-medium">
+              <TabsTrigger value="details" className="data-[state=active]:border-b-2 data-[state=active]:border-[#082c59] data-[state=active]:text-[#082c59] rounded-none px-4 py-2.5 font-medium text-slate-600">
                 <Building className="h-4 w-4 mr-2" /> Details
               </TabsTrigger>
-              <TabsTrigger value="team" className="data-[state=active]:border-b-2 data-[state=active]:border-emerald-600 data-[state=active]:text-emerald-700 rounded-none px-4 py-2.5 font-medium">
+              <TabsTrigger value="team" className="data-[state=active]:border-b-2 data-[state=active]:border-[#082c59] data-[state=active]:text-[#082c59] rounded-none px-4 py-2.5 font-medium text-slate-600">
                 <Users className="h-4 w-4 mr-2" /> Team
               </TabsTrigger>
-              <TabsTrigger value="roles" className="data-[state=active]:border-b-2 data-[state=active]:border-violet-600 data-[state=active]:text-violet-700 rounded-none px-4 py-2.5 font-medium">
+              <TabsTrigger value="roles" className="data-[state=active]:border-b-2 data-[state=active]:border-[#082c59] data-[state=active]:text-[#082c59] rounded-none px-4 py-2.5 font-medium text-slate-600">
                 <Shield className="h-4 w-4 mr-2" /> Roles
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="details" className="mt-2">
-              <div className="space-y-6">
-                {/* Hero Card */}
-                <div className="flex items-center gap-5 p-5 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl border border-blue-100">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+              <div className="space-y-5">
+                {/* Hero — slate base with single brand accent */}
+                <div className="flex items-center gap-5 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="w-16 h-16 bg-[#082c59] rounded-xl flex items-center justify-center shadow-sm">
                     <Building className="w-8 h-8 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-slate-900">{selectedOperator.name}</h3>
-                    <div className="flex items-center gap-3 mt-1.5">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-slate-900 truncate">{selectedOperator.name}</h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       {getStatusBadge(selectedOperator.status)}
                       {selectedOperator.market_segment && getSegmentBadge(selectedOperator.market_segment)}
                       {selectedOperator.operator_type && getServiceBadge(selectedOperator.operator_type)}
                     </div>
                   </div>
                   {selectedOperator.owner_name && (
-                    <div className="text-right">
-                      <p className="text-xs text-slate-500">Owner</p>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Owner</p>
                       <p className="text-sm font-semibold text-slate-700">{selectedOperator.owner_name}</p>
                     </div>
                   )}
                 </div>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Mail className="w-4 h-4 text-blue-500" />
-                    <div><p className="text-xs text-slate-400">Email</p><p className="text-sm font-medium">{selectedOperator.email || '-'}</p></div>
+                {/* Info Grid — monochrome slate */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <Mail className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Email</p><p className="text-sm font-medium text-slate-700 truncate">{selectedOperator.email || '—'}</p></div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Phone className="w-4 h-4 text-emerald-500" />
-                    <div><p className="text-xs text-slate-400">Phone</p><p className="text-sm font-medium">{selectedOperator.phone || '-'}</p></div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <Phone className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Phone</p><p className="text-sm font-medium text-slate-700 truncate">{selectedOperator.phone || '—'}</p></div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <MapPin className="w-4 h-4 text-rose-500" />
-                    <div><p className="text-xs text-slate-400">Location</p><p className="text-sm font-medium">{selectedOperator.city}{selectedOperator.country ? `, ${getCountryName(selectedOperator.country)}` : ''}</p></div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Location</p><p className="text-sm font-medium text-slate-700 truncate">{selectedOperator.city}{selectedOperator.country ? `, ${getCountryName(selectedOperator.country)}` : ''}</p></div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Globe className="w-4 h-4 text-amber-500" />
-                    <div><p className="text-xs text-slate-400">Region</p><p className="text-sm font-medium">{selectedOperator.region ? getRegionName(selectedOperator.region) : '-'}</p></div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <Globe className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Region</p><p className="text-sm font-medium text-slate-700 truncate">{selectedOperator.region ? getRegionName(selectedOperator.region) : '—'}</p></div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <Calendar className="w-4 h-4 text-violet-500" />
-                    <div><p className="text-xs text-slate-400">Joined</p><p className="text-sm font-medium">{selectedOperator.joined_date || '-'}</p></div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Joined</p><p className="text-sm font-medium text-slate-700 truncate">{selectedOperator.joined_date || '—'}</p></div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                    <TrendingUp className="w-4 h-4 text-teal-500" />
-                    <div><p className="text-xs text-slate-400">Segment</p>
-                      <div className="mt-0.5">{selectedOperator.market_segment ? getSegmentBadge(selectedOperator.market_segment) : <span className="text-sm">-</span>}</div>
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200">
+                    <TrendingUp className="w-4 h-4 text-slate-400" />
+                    <div className="min-w-0"><p className="text-[10px] text-slate-400 uppercase tracking-wide">Segment</p>
+                      <div className="mt-0.5">{selectedOperator.market_segment ? getSegmentBadge(selectedOperator.market_segment) : <span className="text-sm text-slate-500">—</span>}</div>
                     </div>
                   </div>
                 </div>
@@ -851,36 +866,33 @@ export default function OperatorsManagement() {
                 {/* Services */}
                 {selectedOperator.service_types?.length > 0 && (
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-2">Assigned Services</p>
-                    <div className="flex flex-wrap gap-2">{selectedOperator.service_types.map(s => getServiceBadge(s))}</div>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Assigned Services</p>
+                    <div className="flex flex-wrap gap-1.5">{selectedOperator.service_types.map(s => getServiceBadge(s))}</div>
                   </div>
                 )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                    <p className="text-2xl font-bold text-blue-700">{selectedOperator.total_bookings?.toLocaleString() || '0'}</p>
-                    <p className="text-xs text-blue-600 mt-0.5">Total Bookings</p>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
-                    <p className="text-2xl font-bold text-emerald-700">{formatFCFA(selectedOperator.revenue || 0)}</p>
-                    <p className="text-xs text-emerald-600 mt-0.5">Revenue</p>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100">
-                    <p className="text-2xl font-bold text-amber-700">{selectedOperator.rating || '-'}</p>
-                    <p className="text-xs text-amber-600 mt-0.5">Rating</p>
-                  </div>
+                {/* Stats — slim chips, two-tone */}
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100" data-testid="operator-preview-stats">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#082c59]/5 border border-[#082c59]/20 text-[#082c59] text-xs font-medium">
+                    Total Bookings <strong className="font-bold">{selectedOperator.total_bookings?.toLocaleString() || '0'}</strong>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+                    Revenue <strong className="font-bold">{formatFCFA(selectedOperator.revenue || 0)}</strong>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium">
+                    Rating <strong className="font-bold">{selectedOperator.rating || '—'}</strong>
+                  </span>
                 </div>
               </div>
             </TabsContent>
             
             <TabsContent value="team" className="mt-2 max-h-[55vh] overflow-y-auto">
-              <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 mb-4">
-                <div className="flex items-center gap-2 text-emerald-700">
-                  <Users className="w-5 h-5" />
-                  <span className="font-semibold">Team Members</span>
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Users className="w-4 h-4 text-[#082c59]" />
+                  <span className="font-semibold text-sm">Team Members</span>
                 </div>
-                <p className="text-xs text-emerald-600 mt-1">Manage team members and their roles within this operator</p>
+                <span className="text-[11px] text-slate-500">Owner-led organisation · roles inherited from this operator</span>
               </div>
               <OperatorTeamManagement 
                 operatorId={selectedOperator._id || selectedOperator.id} 
@@ -890,12 +902,12 @@ export default function OperatorsManagement() {
             </TabsContent>
             
             <TabsContent value="roles" className="mt-2 max-h-[55vh] overflow-y-auto">
-              <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-100 mb-4">
-                <div className="flex items-center gap-2 text-violet-700">
-                  <Shield className="w-5 h-5" />
-                  <span className="font-semibold">Operator Roles</span>
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 mb-4">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Shield className="w-4 h-4 text-[#082c59]" />
+                  <span className="font-semibold text-sm">Operator Roles</span>
                 </div>
-                <p className="text-xs text-violet-600 mt-1">Define roles and permissions for team members</p>
+                <span className="text-[11px] text-slate-500">Custom roles defined by this operator&apos;s owner</span>
               </div>
               <OperatorRolesManagement 
                 operatorId={selectedOperator._id || selectedOperator.id} 
