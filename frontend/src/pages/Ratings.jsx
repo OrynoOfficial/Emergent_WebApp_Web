@@ -95,6 +95,13 @@ function CustomerRatingsView() {
   const [editingRating, setEditingRating] = useState(null);
   const [editComment, setEditComment] = useState('');
 
+  // ── Multi-combo filters ─────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterService, setFilterService] = useState('all');
+  const [filterRating, setFilterRating] = useState('all');
+  const [filterTimeframe, setFilterTimeframe] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+
   // New-rating modal (triggered from the "Awaiting rating" list)
   const [ratingTarget, setRatingTarget] = useState(null); // pending item being rated
   const [newRating, setNewRating] = useState(5);
@@ -190,6 +197,61 @@ function CustomerRatingsView() {
       average: (ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length).toFixed(1)
     };
   }, [ratings]);
+
+  // ── Filtered + sorted (multi-combo) ─────────────────────────────────
+  const filteredRatings = useMemo(() => {
+    let list = [...ratings];
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(r =>
+        r.entity_name?.toLowerCase().includes(q) ||
+        r.operator_name?.toLowerCase().includes(q) ||
+        r.comment?.toLowerCase().includes(q) ||
+        r.review?.toLowerCase().includes(q)
+      );
+    }
+    if (filterService !== 'all') {
+      list = list.filter(r => r.service_category === filterService);
+    }
+    if (filterRating !== 'all') {
+      list = list.filter(r => r.rating === parseInt(filterRating));
+    }
+    if (filterTimeframe !== 'all') {
+      const now = Date.now();
+      const cutoff = {
+        '7d': 7 * 86400000,
+        '30d': 30 * 86400000,
+        '90d': 90 * 86400000,
+        '1y': 365 * 86400000,
+      }[filterTimeframe];
+      if (cutoff) list = list.filter(r => (now - new Date(r.created_at).getTime()) <= cutoff);
+    }
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === 'highest') return b.rating - a.rating;
+      if (sortBy === 'lowest') return a.rating - b.rating;
+      if (sortBy === 'helpful') return (b.helpful_count || 0) - (a.helpful_count || 0);
+      return 0;
+    });
+    return list;
+  }, [ratings, searchTerm, filterService, filterRating, filterTimeframe, sortBy]);
+
+  const activeFiltersCount = (searchTerm ? 1 : 0)
+    + (filterService !== 'all' ? 1 : 0)
+    + (filterRating !== 'all' ? 1 : 0)
+    + (filterTimeframe !== 'all' ? 1 : 0)
+    + (sortBy !== 'newest' ? 1 : 0);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterService('all');
+    setFilterRating('all');
+    setFilterTimeframe('all');
+    setSortBy('newest');
+    setPage(1);
+  };
 
   if (loading) {
     return (
@@ -366,8 +428,112 @@ function CustomerRatingsView() {
         </Card>
       ) : (
         <>
+        {/* Filter bar — multi-combo. All filters AND together. */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[220px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                  placeholder="Search by name, operator, or text…"
+                  className="pl-9 h-9 text-sm bg-white"
+                  data-testid="customer-ratings-search"
+                />
+              </div>
+              <FilterChipSelect
+                icon={Briefcase}
+                label="Service"
+                value={filterService}
+                onChange={(v) => { setFilterService(v); setPage(1); }}
+                options={[
+                  { value: 'all', label: 'All Services' },
+                  { value: 'hotel', label: 'Hotels' },
+                  { value: 'restaurant', label: 'Restaurants' },
+                  { value: 'travel', label: 'Travel' },
+                  { value: 'car_rental', label: 'Car Rental' },
+                  { value: 'cinema', label: 'Cinema' },
+                  { value: 'laundry', label: 'Laundry' },
+                  { value: 'events', label: 'Events' },
+                ]}
+                data-testid="customer-ratings-service-filter"
+              />
+              <FilterChipSelect
+                icon={Star}
+                label="Rating"
+                value={filterRating}
+                onChange={(v) => { setFilterRating(v); setPage(1); }}
+                options={[
+                  { value: 'all', label: 'Any rating' },
+                  { value: '5', label: '5 Stars' },
+                  { value: '4', label: '4 Stars' },
+                  { value: '3', label: '3 Stars' },
+                  { value: '2', label: '2 Stars' },
+                  { value: '1', label: '1 Star' },
+                ]}
+                data-testid="customer-ratings-rating-filter"
+              />
+              <FilterChipSelect
+                icon={Clock}
+                label="When"
+                value={filterTimeframe}
+                onChange={(v) => { setFilterTimeframe(v); setPage(1); }}
+                options={[
+                  { value: 'all', label: 'Any time' },
+                  { value: '7d', label: 'Last 7 days' },
+                  { value: '30d', label: 'Last 30 days' },
+                  { value: '90d', label: 'Last 3 months' },
+                  { value: '1y', label: 'Last year' },
+                ]}
+                data-testid="customer-ratings-timeframe-filter"
+              />
+              <FilterChipSelect
+                icon={SlidersHorizontal}
+                label="Sort"
+                value={sortBy}
+                onChange={(v) => { setSortBy(v); setPage(1); }}
+                options={[
+                  { value: 'newest', label: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest first' },
+                  { value: 'highest', label: 'Highest rated' },
+                  { value: 'lowest', label: 'Lowest rated' },
+                  { value: 'helpful', label: 'Most helpful' },
+                ]}
+                allValue="newest"
+                data-testid="customer-ratings-sort"
+              />
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-[11px] text-slate-500 hover:text-[#082c59] font-medium px-2 py-1"
+                  data-testid="customer-ratings-clear-filters"
+                >
+                  Clear {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''}
+                </button>
+              )}
+            </div>
+            {filteredRatings.length !== ratings.length && (
+              <p className="text-[11px] text-slate-500 mt-2" data-testid="customer-ratings-count">
+                Showing <span className="font-semibold text-slate-700">{filteredRatings.length}</span> of {ratings.length} reviews
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {filteredRatings.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-slate-700 mb-1">No reviews match your filters</h3>
+              <p className="text-sm text-slate-500 mb-4">Try removing or relaxing a filter to see more results.</p>
+              <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
+            </CardContent>
+          </Card>
+        ) : (
         <div className="space-y-4">
-          {ratings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
+          {filteredRatings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE).map((review) => {
             const IconComponent = SERVICE_ICONS[review.service_category] || Package;
             const color = SERVICE_COLORS[review.service_category] || '#64748B';
             
@@ -451,14 +617,15 @@ function CustomerRatingsView() {
             );
           })}
         </div>
+        )}
         {/* Pagination */}
-        {ratings.length > ITEMS_PER_PAGE && (
+        {filteredRatings.length > ITEMS_PER_PAGE && (
           <div className="flex items-center justify-between pt-4">
             <span className="text-sm text-slate-500">
-              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, ratings.length)} of {ratings.length}
+              Showing {((page - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredRatings.length)} of {filteredRatings.length}
             </span>
             <div className="flex gap-1">
-              {Array.from({ length: Math.ceil(ratings.length / ITEMS_PER_PAGE) }, (_, i) => (
+              {Array.from({ length: Math.ceil(filteredRatings.length / ITEMS_PER_PAGE) }, (_, i) => (
                 <button key={i} onClick={() => setPage(i + 1)} className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${page === i + 1 ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`} data-testid={`cust-page-${i + 1}`}>
                   {i + 1}
                 </button>

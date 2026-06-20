@@ -8,6 +8,7 @@ import MobileAppGate from './components/MobileAppGate';
 import OfflineBanner from './components/OfflineBanner';
 import NativeBridge from './components/NativeBridge';
 import ScrollToTop from './components/ScrollToTop';
+import AccessibilityBridge from './components/AccessibilityBridge';
 import { resolveLandingPath } from './utils/operatorLandingPath';
 
 // Auth Pages
@@ -159,6 +160,9 @@ function App() {
               policy is `mobile_only` and the user is on a phone/tablet web
               browser. Self-renders to `null` otherwise. */}
           <MobileAppGate />
+          {/* Site-wide accessibility prefs (reduce_motion / high_contrast /
+              font_scale) — paints data-* attrs on <html> that CSS picks up. */}
+          <AccessibilityBridge />
           {/* Native-aware offline strip. Renders null whenever the device is
               online; on Capacitor it listens to true network status, on web
               it falls back to navigator.onLine. */}

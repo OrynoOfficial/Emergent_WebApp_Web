@@ -15,6 +15,7 @@ import {
   LayoutGrid, List, Building2, Shield,
 } from 'lucide-react';
 import FilterChipSelect from '@/components/shared/FilterChipSelect';
+import StatChipStrip from '@/components/shared/StatChipStrip';
 import IconButton from '@/components/shared/IconButton';
 import { formatFCFA } from '@/utils/currency';
 import api from '@/api/client';
@@ -451,20 +452,15 @@ export default function EmployeesManagement() {
 
       {/* Stats */}
       {/* Stats — compact chip strip */}
-      <div className="flex flex-wrap items-center gap-2" data-testid="employees-stats-grid">
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
-          <Users className="h-3 w-3" /> Total <span className="font-bold">{stats.total}</span>
-        </div>
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
-          <CheckCircle className="h-3 w-3" /> Active <span className="font-bold">{stats.active}</span>
-        </div>
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
-          <Clock className="h-3 w-3" /> On Leave <span className="font-bold">{stats.onLeave}</span>
-        </div>
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-[11px] font-medium">
-          <Briefcase className="h-3 w-3" /> Payroll <span className="font-bold">{formatFCFA(stats.totalSalary)}</span>
-        </div>
-      </div>
+      <StatChipStrip
+        testid="employees-stats-grid"
+        stats={[
+          { label: 'Total', value: stats.total, icon: Users, tone: 'blue' },
+          { label: 'Active', value: stats.active, icon: CheckCircle, tone: 'emerald' },
+          { label: 'On Leave', value: stats.onLeave, icon: Clock, tone: 'amber' },
+          { label: 'Payroll', value: formatFCFA(stats.totalSalary), icon: Briefcase, tone: 'violet' },
+        ]}
+      />
 
       {/* Filters */}
       <Card>

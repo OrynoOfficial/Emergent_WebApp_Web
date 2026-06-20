@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import {
   HelpCircle, MessageCircle, Search, Plus,
   ChevronDown, ChevronRight, ChevronLeft, Send, Bot, User, Clock,
-  X, Loader2, FileText, AlertCircle, CheckCircle,
+  X, Loader2, FileText, AlertCircle, CheckCircle, Mail, Package, Building2,
   Filter, Inbox, RefreshCw, MessageSquare, Calendar, Tag,
   LayoutGrid, List, ArrowUp
 } from 'lucide-react';
@@ -66,6 +66,23 @@ const TAG_COLORS = {
 const getTagColor = (tag) => TAG_COLORS[tag?.toLowerCase()] || 'bg-slate-100 text-slate-600 border-slate-200';
 
 const ITEMS_PER_PAGE = 8;
+
+// Short, friendly relative-time formatter (matches admin ticket cards)
+const getTimeAgo = (date) => {
+  if (!date) return '';
+  const now = new Date();
+  const past = new Date(date);
+  const diffMs = now - past;
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days >= 7) return formatDate(date);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+};
 
 const FAQ_DATA = [
   {
@@ -212,49 +229,92 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onRefresh, isCustomer }) 
   const category = TICKET_CATEGORIES.find(c => c.value === ticket.category);
   const CategoryIcon = category?.icon || HelpCircle;
   const visibleMessages = (ticket.messages || []).filter(m => !m.is_internal || !isCustomer);
+  const conversationCount = Math.max(0, visibleMessages.length - 1);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-2xl border-0 shadow-2xl rounded-2xl p-0 bg-gradient-to-b from-[#082c59]/[0.04] to-slate-100/80"
+        className="max-w-3xl w-[95vw] max-h-[92vh] p-0 overflow-hidden flex flex-col border-0 shadow-2xl rounded-2xl bg-white [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
-        style={{ maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}
       >
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200/60 bg-gradient-to-r from-[#082c59]/[0.06] to-slate-100/50 flex-shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+        {/* Header — deep navy banner (matches AdminTicketDetailModal aesthetic) */}
+        <div className="px-6 py-5 bg-gradient-to-br from-[#082c59] via-[#0a3a75] to-[#082c59] text-white relative overflow-hidden flex-shrink-0">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_white_0%,_transparent_60%)]" />
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="font-mono text-xs text-slate-500 bg-white/60 px-2 py-0.5 rounded-md border border-slate-200/50">{ticket.ticket_number}</span>
-                <Badge className={`${status.bg} ${status.text} border ${status.border} gap-1`}>
+                <span className="font-mono text-xs text-white/90 bg-white/15 backdrop-blur-sm px-2 py-1 rounded-md border border-white/20">{ticket.ticket_number}</span>
+                <Badge className={`${status.bg} ${status.text} gap-1 text-xs border-0`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />{ticket.status?.replace('_', ' ')}
                 </Badge>
-                {!isCustomer && <Badge className="bg-slate-100 text-slate-600 border border-slate-200">{ticket.priority}</Badge>}
+                {!isCustomer && ticket.priority && (
+                  <Badge className="bg-white/15 text-white border border-white/20 text-xs">Priority: {ticket.priority}</Badge>
+                )}
+                <Badge className="bg-white/10 text-white border border-white/15 text-[10px] gap-1">
+                  <CategoryIcon className="h-2.5 w-2.5" />{category?.label || ticket.category}
+                </Badge>
+                {!isCustomer && ticket.user_type === 'operator' && (
+                  <Badge className="bg-indigo-500/25 text-indigo-100 border border-indigo-300/30 text-[10px] gap-1">
+                    <Building2 className="w-2.5 h-2.5" />Operator
+                  </Badge>
+                )}
               </div>
-              <h3 className="font-semibold text-lg text-slate-900">{ticket.subject}</h3>
-              <p className="text-sm text-slate-500 mt-0.5">Created {formatDateTime(ticket.created_at)}</p>
+              <DialogTitle className="text-xl text-white">{ticket.subject}</DialogTitle>
+              <DialogDescription className="mt-1 text-xs text-white/80">
+                Opened {getTimeAgo(ticket.created_at)} · {conversationCount} reply{conversationCount === 1 ? '' : 'ies'}
+              </DialogDescription>
             </div>
+            <Button variant="ghost" size="sm" onClick={() => onClose(false)} className="text-white/85 hover:bg-white/15 hover:text-white" data-testid="close-ticket-modal-btn">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          {ticket.tags?.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {ticket.tags.map((tag, i) => (
-                <Badge key={i} className={`text-[10px] border ${getTagColor(tag)}`}><Tag className="h-2.5 w-2.5 mr-1" />{tag}</Badge>
+          {(ticket.tags?.length > 0 || ticket.product_involved) && (
+            <div className="relative flex items-center gap-1.5 mt-3 flex-wrap">
+              {ticket.product_involved && (
+                <Badge className="bg-blue-500/25 text-blue-50 border border-blue-300/30 text-xs gap-1">
+                  <Package className="w-3 h-3" />{ticket.product_involved}
+                </Badge>
+              )}
+              {ticket.tags?.map((tag, i) => (
+                <Badge key={i} className="text-[10px] bg-white/15 text-white border border-white/20">
+                  <Tag className="w-2.5 h-2.5 mr-1" />{tag}
+                </Badge>
               ))}
             </div>
           )}
-          {ticket.product_involved && (
-            <div className="mt-2"><Badge className="bg-blue-50 text-blue-700 border border-blue-100 text-xs">Product: {ticket.product_involved}</Badge></div>
-          )}
         </div>
+
         {/* Content - scrollable */}
-        <div className="px-6 py-4 flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
-          <div className="p-4 bg-white/50 rounded-xl border border-slate-200/40 mb-4 shadow-sm">
-            <p className="text-slate-700 whitespace-pre-wrap text-sm leading-relaxed">{ticket.description}</p>
+        <div className="px-6 py-5 flex-1 overflow-y-auto bg-slate-50" style={{ minHeight: 0 }}>
+          {/* Original message — boxed like admin modal */}
+          <div className="mb-5 p-5 rounded-xl bg-gradient-to-br from-slate-50 to-white border-2 border-slate-200 shadow-sm">
+            <div className="flex items-start gap-3 mb-3">
+              <Avatar className="w-10 h-10 ring-2 ring-[#082c59]/10">
+                <AvatarFallback className="bg-[#082c59] text-white text-sm font-semibold">
+                  {(ticket.customer_name || 'You').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm text-slate-900">{ticket.customer_name || 'You'}</span>
+                  <span className="text-[11px] text-slate-500">{getTimeAgo(ticket.created_at)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                  {ticket.customer_email && !isCustomer && (
+                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{ticket.customer_email}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
           </div>
+
           {visibleMessages.length > 1 && (
             <div className="space-y-3">
-              <h4 className="font-medium text-sm text-slate-600 flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Conversation</h4>
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5" /> Conversation ({conversationCount})
+              </h4>
               {visibleMessages.slice(1).map((msg, idx) => (
                 msg.is_system ? (
                   <div key={idx} className="flex items-center gap-2 py-0.5 pl-8">
@@ -262,28 +322,34 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onRefresh, isCustomer }) 
                     <span className={`text-[9px] font-medium px-2 py-0.5 rounded-full border ${getTagColor(msg.tag?.toLowerCase().replace(/ /g, '-') || '')}`}>{msg.tag || msg.message}</span>
                   </div>
                 ) : (
-                <div key={idx} className={`p-3.5 rounded-xl ${msg.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border border-[#082c59]/10 ml-4' : 'bg-white/60 border border-slate-200/40 mr-4'} shadow-sm`}>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <Avatar className="w-6 h-6">
-                      <AvatarFallback className={`text-[9px] ${msg.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-200 text-slate-600'}`}>
-                        {msg.sender_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium text-xs text-slate-700">{msg.sender_type === 'agent' ? 'Support Agent' : msg.sender_name || 'You'}</span>
-                    <span className="text-[10px] text-slate-400 ml-auto">{formatDateTime(msg.created_at || msg.timestamp)}</span>
-                  </div>
-                  <p className="text-sm text-slate-700 pl-8">{msg.message || msg.content}</p>
-                  {/* Attachments */}
-                  {msg.attachments?.length > 0 && (
-                    <div className="flex gap-2 flex-wrap mt-2 pl-8">
-                      {msg.attachments.map((att, ai) => (
-                        <a key={ai} href={att.url} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                          <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
-                        </a>
-                      ))}
+                  <div key={idx} className={`p-4 rounded-xl shadow-sm border-2 ${msg.sender_type === 'agent' ? 'bg-[#082c59]/[0.06] border-[#082c59]/20 ml-6' : 'bg-white border-slate-200 mr-6'}`}>
+                    <div className="flex items-start gap-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback className={`text-[10px] font-semibold ${msg.sender_type === 'agent' ? 'bg-[#082c59] text-white' : 'bg-slate-300 text-slate-700'}`}>
+                          {msg.sender_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-xs text-slate-900">{msg.sender_type === 'agent' ? msg.sender_name || 'Support Agent' : msg.sender_name || 'You'}</span>
+                            {msg.sender_type === 'agent' && <Badge className="bg-[#082c59] text-white text-[9px] h-4 border-0">Staff</Badge>}
+                          </div>
+                          <span className="text-[10px] text-slate-400">{getTimeAgo(msg.created_at || msg.timestamp)}</span>
+                        </div>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{msg.message || msg.content}</p>
+                        {msg.attachments?.length > 0 && (
+                          <div className="flex gap-2 flex-wrap mt-2">
+                            {msg.attachments.map((att, ai) => (
+                              <a key={ai} href={att.url} target="_blank" rel="noopener noreferrer" className="block w-16 h-16 rounded-lg overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                                <img src={att.url} alt={att.name} className="w-full h-full object-cover" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </div>
                 )
               ))}
             </div>
@@ -297,78 +363,125 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onRefresh, isCustomer }) 
   );
 }
 
-// ========== Ticket Card (Grid) ==========
-function TicketCardGrid({ ticket, onClick }) {
+// ========== Ticket Card (Grid) — matches AdminTicketCard styling ==========
+function TicketCardGrid({ ticket, onClick, isCustomer }) {
   const status = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.open;
   const category = TICKET_CATEGORIES.find(c => c.value === ticket.category);
   const CategoryIcon = category?.icon || HelpCircle;
+  const replies = Math.max(0, (ticket.messages?.length || 1) - 1);
   return (
     <div
-      className="bg-gradient-to-br from-[#082c59]/[0.03] to-slate-100/60 rounded-xl border border-slate-200/50 p-4 hover:shadow-lg hover:border-[#082c59]/20 transition-all cursor-pointer group shadow-sm"
+      className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:shadow-md hover:border-[#082c59]/30 transition-all cursor-pointer group"
       onClick={onClick}
       data-testid={`ticket-card-${ticket.id}`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={`w-9 h-9 rounded-lg ${status.bg} border ${status.border} flex items-center justify-center`}>
-          <CategoryIcon className={`h-4 w-4 ${status.text}`} />
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">{ticket.ticket_number}</span>
+          {!isCustomer && ticket.priority && (
+            <Badge className="bg-slate-100 text-slate-700 border border-slate-200 text-[10px] h-5">
+              {ticket.priority}
+            </Badge>
+          )}
+          {ticket.source === 'chat' && (
+            <Badge className="bg-violet-50 text-violet-700 border border-violet-100 text-[10px] h-5">From Chat</Badge>
+          )}
         </div>
-        <Badge className={`${status.bg} ${status.text} border ${status.border} text-[10px] gap-1`}>
+        <Badge className={`${status.bg} ${status.text} border ${status.border} text-[10px] gap-1 shrink-0`}>
           <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />{ticket.status?.replace('_', ' ')}
         </Badge>
       </div>
-      <h3 className="font-semibold text-sm text-slate-800 group-hover:text-[#082c59] transition-colors line-clamp-2 mb-1.5">{ticket.subject}</h3>
+
+      <h3 className="font-semibold text-sm text-slate-800 group-hover:text-[#082c59] transition-colors line-clamp-2 mb-1">{ticket.subject}</h3>
       <p className="text-xs text-slate-500 line-clamp-2 mb-3">{ticket.description}</p>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {ticket.tags?.slice(0, 2).map((tag, i) => (
+
+      {/* Tags + product */}
+      <div className="flex flex-wrap gap-1 mb-3">
+        {ticket.tags?.slice(0, 3).map((tag, i) => (
           <Badge key={i} className={`text-[9px] border h-5 ${getTagColor(tag)}`}>{tag}</Badge>
         ))}
-        {ticket.product_involved && <Badge className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 h-5">{ticket.product_involved}</Badge>}
+        {ticket.product_involved && (
+          <Badge className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 h-5 gap-0.5">
+            <Package className="w-2.5 h-2.5" />{ticket.product_involved}
+          </Badge>
+        )}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-2 border-t border-slate-200/40">
-        <span className="font-mono">{ticket.ticket_number}</span>
-        <span>{formatDate(ticket.created_at)}</span>
+
+      {/* Footer — category + time + replies */}
+      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+          <CategoryIcon className="w-3 h-3" />
+          <span className="capitalize">{category?.label || ticket.category}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {replies > 0 && (
+            <span className="flex items-center gap-1 text-slate-400">
+              <MessageSquare className="w-3 h-3" />{replies}
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-slate-400">
+            <Clock className="w-3 h-3" />{getTimeAgo(ticket.created_at)}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
-// ========== Ticket Card (List) ==========
-function TicketCardList({ ticket, onClick }) {
+// ========== Ticket Card (List) — matches AdminTicketCard styling ==========
+function TicketCardList({ ticket, onClick, isCustomer }) {
   const status = STATUS_CONFIG[ticket.status] || STATUS_CONFIG.open;
   const category = TICKET_CATEGORIES.find(c => c.value === ticket.category);
   const CategoryIcon = category?.icon || HelpCircle;
+  const replies = Math.max(0, (ticket.messages?.length || 1) - 1);
   return (
     <div
-      className="bg-gradient-to-r from-[#082c59]/[0.03] via-slate-50/50 to-slate-100/40 rounded-xl border border-slate-200/50 p-4 hover:shadow-md hover:border-[#082c59]/20 transition-all cursor-pointer group shadow-sm"
+      className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 hover:shadow-md hover:border-[#082c59]/30 transition-all cursor-pointer group"
       onClick={onClick}
       data-testid={`ticket-card-${ticket.id}`}
     >
       <div className="flex items-start gap-3.5">
         <div className={`w-10 h-10 rounded-xl ${status.bg} border ${status.border} flex items-center justify-center flex-shrink-0`}>
-          <CategoryIcon className={`h-4.5 w-4.5 ${status.text}`} />
+          <CategoryIcon className={`h-4 w-4 ${status.text}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 mb-1">
             <div className="min-w-0">
               <h3 className="font-semibold text-sm text-slate-800 group-hover:text-[#082c59] transition-colors truncate">{ticket.subject}</h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs text-slate-400 font-mono">{ticket.ticket_number}</span>
-                <span className="text-xs text-slate-300">|</span>
-                <span className="text-xs text-slate-400">{formatDate(ticket.created_at)}</span>
+                <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">{ticket.ticket_number}</span>
+                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />{getTimeAgo(ticket.created_at)}
+                </span>
+                {!isCustomer && ticket.priority && (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 text-[10px] h-5">
+                    {ticket.priority}
+                  </Badge>
+                )}
               </div>
             </div>
             <Badge className={`${status.bg} ${status.text} border ${status.border} text-[10px] gap-1 flex-shrink-0`}>
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />{ticket.status?.replace('_', ' ')}
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-2 line-clamp-1">{ticket.description}</p>
+          <p className="text-xs text-slate-500 mt-1 line-clamp-1">{ticket.description}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+              <CategoryIcon className="w-3 h-3" />
+              <span className="capitalize">{category?.label || ticket.category}</span>
+            </div>
             {ticket.tags?.slice(0, 3).map((tag, i) => (
               <Badge key={i} className={`text-[9px] border h-5 ${getTagColor(tag)}`}>{tag}</Badge>
             ))}
-            {ticket.product_involved && <Badge className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 h-5">{ticket.product_involved}</Badge>}
-            {ticket.messages?.length > 1 && (
-              <span className="text-[10px] text-slate-400 flex items-center gap-1 ml-auto"><MessageSquare className="h-3 w-3" /> {ticket.messages.length - 1} replies</span>
+            {ticket.product_involved && (
+              <Badge className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 h-5 gap-0.5">
+                <Package className="w-2.5 h-2.5" />{ticket.product_involved}
+              </Badge>
+            )}
+            {replies > 0 && (
+              <span className="text-[11px] text-slate-400 flex items-center gap-1 ml-auto">
+                <MessageSquare className="w-3 h-3" />{replies} repl{replies === 1 ? 'y' : 'ies'}
+              </span>
             )}
           </div>
         </div>
@@ -568,13 +681,13 @@ export default function Support() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {paginatedTickets.map(ticket => (
-                <TicketCardGrid key={ticket.id} ticket={ticket} onClick={() => setSelectedTicket(ticket)} />
+                <TicketCardGrid key={ticket.id} ticket={ticket} onClick={() => setSelectedTicket(ticket)} isCustomer={isCustomer} />
               ))}
             </div>
           ) : (
             <div className="space-y-2.5">
               {paginatedTickets.map(ticket => (
-                <TicketCardList key={ticket.id} ticket={ticket} onClick={() => setSelectedTicket(ticket)} />
+                <TicketCardList key={ticket.id} ticket={ticket} onClick={() => setSelectedTicket(ticket)} isCustomer={isCustomer} />
               ))}
             </div>
           )}
@@ -641,7 +754,7 @@ export default function Support() {
       {/* Dialogs */}
       <CreateTicketDialog isOpen={createDialogOpen} onClose={() => { setCreateDialogOpen(false); setChatSessionForTicket(null); setChatMessagesForTicket(null); }} onSubmit={handleCreateTicket} chatSessionId={chatSessionForTicket} chatMessages={chatMessagesForTicket} isCustomer={isCustomer} />
       <TicketDetailDialog ticket={selectedTicket} isOpen={!!selectedTicket} onClose={() => setSelectedTicket(null)} onRefresh={async () => {
-        try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); fetchTickets(); } catch {}
+        try { const r = await api.get(`/support-tickets/${selectedTicket.id}`); setSelectedTicket(r.data); fetchTickets(); } catch { /* ignore refresh error */ }
       }} isCustomer={isCustomer} />
 
       {/* AI Chatbot */}

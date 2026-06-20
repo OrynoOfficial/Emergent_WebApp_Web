@@ -249,3 +249,52 @@
     transform: none !important;
   }
 }
+
+/* ============================================================
+   ACCESSIBILITY PREFERENCES (mounted by AccessibilityBridge)
+   Toggle these via the Settings → Preferences tab.
+   ============================================================ */
+
+/* Reduce motion — kills page transitions/animations but keeps focus
+   rings & loading spinners legible. Mirrors prefers-reduced-motion. */
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High-contrast — boost text/background contrast and outline links/buttons. */
+html[data-high-contrast="true"] {
+  --hc-bg: #ffffff;
+  --hc-fg: #000000;
+}
+html[data-high-contrast="true"] body {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+html[data-high-contrast="true"] .text-slate-400,
+html[data-high-contrast="true"] .text-slate-500,
+html[data-high-contrast="true"] .text-slate-600,
+html[data-high-contrast="true"] .text-slate-700 {
+  color: #000000 !important;
+}
+html[data-high-contrast="true"] a,
+html[data-high-contrast="true"] button:not([disabled]) {
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+}
+html[data-high-contrast="true"] input,
+html[data-high-contrast="true"] textarea,
+html[data-high-contrast="true"] select {
+  border-color: #000000 !important;
+}
+
+/* Font scale — small / normal / large. Scales the root font size
+   so every Tailwind `rem`-based class follows along. */
+html[data-font-scale="small"] { font-size: 14px; }
+html[data-font-scale="normal"] { font-size: 16px; }
+html[data-font-scale="large"] { font-size: 18px; }
+
