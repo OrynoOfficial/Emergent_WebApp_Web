@@ -8,12 +8,14 @@ import { Label } from '../ui/label';
 import {
   Mail, Phone, User as UserIcon, Calendar, Shield, Package, CheckCircle, XCircle,
   CreditCard, MapPin, Activity, Save, Edit2, Search, Building2, UserX, Loader2,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, FileText, ShieldCheck, ExternalLink, Hash, Users as UsersIcon,
 } from 'lucide-react';
 import api from '../../api/client';
 import OperatorPicker from '../shared/OperatorPicker';
+import DatePickerField from '../shared/DatePickerField';
 import { toast } from 'sonner';
 import { formatDate } from '../../utils/dateUtils';
+import { useNavigate } from 'react-router-dom';
 
 const roleTone = (r) => ({
   super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
@@ -26,6 +28,7 @@ const roleTone = (r) => ({
 const fmtFCFA = (n) => `${Number(n || 0).toLocaleString()} FCFA`;
 
 export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
+  const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -46,9 +49,14 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
       full_name: user.full_name || '',
       email: user.email || '',
       phone: user.phone || '',
+      date_of_birth: user.date_of_birth || '',
+      id_document_number: user.id_document_number || '',
+      gender: user.gender || '',
       address: user.address || '',
       city: user.city || '',
       region: user.region || '',
+      postal_code: user.postal_code || '',
+      country: user.country || '',
       operator_id: user.operator_id || '',
       status: user.status || 'active',
     });
@@ -111,9 +119,14 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
         full_name: form.full_name,
         email: form.email,
         phone: form.phone,
+        date_of_birth: form.date_of_birth,
+        id_document_number: form.id_document_number,
+        gender: form.gender,
         address: form.address,
         city: form.city,
         region: form.region,
+        postal_code: form.postal_code,
+        country: form.country,
         status: form.status,
       };
       // Only include operator_id if the user is currently an operator (or being kept as one).
@@ -220,6 +233,8 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
         <Tabs defaultValue="profile" className="flex-1 flex flex-col min-h-0">
           <TabsList className="mx-6 mt-3 flex-shrink-0">
             <TabsTrigger value="profile" data-testid="tab-profile"><UserIcon className="h-4 w-4 mr-2" />Profile</TabsTrigger>
+            <TabsTrigger value="address" data-testid="tab-address"><MapPin className="h-4 w-4 mr-2" />Address</TabsTrigger>
+            <TabsTrigger value="permissions" data-testid="tab-permissions"><ShieldCheck className="h-4 w-4 mr-2" />Permissions</TabsTrigger>
             <TabsTrigger value="activity" data-testid="tab-activity"><Activity className="h-4 w-4 mr-2" />Activity</TabsTrigger>
           </TabsList>
 
@@ -239,14 +254,51 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
                   value={form.phone}
                   onChange={(v) => setForm(f => ({ ...f, phone: v }))}
                   fallback={user.phone || '—'} testid="field-phone" />
-                <Field icon={MapPin} label="City" editMode={editMode}
-                  value={form.city}
-                  onChange={(v) => setForm(f => ({ ...f, city: v }))}
-                  fallback={user.city || '—'} />
-                <Field icon={MapPin} label="Region" editMode={editMode}
-                  value={form.region}
-                  onChange={(v) => setForm(f => ({ ...f, region: v }))}
-                  fallback={user.region || '—'} />
+                {/* Date of birth — special date picker */}
+                <div>
+                  <Label className="text-[11px] uppercase tracking-wide text-slate-500 flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3" /> Date of Birth
+                  </Label>
+                  {editMode ? (
+                    <DatePickerField
+                      value={form.date_of_birth}
+                      onChange={(v) => setForm(f => ({ ...f, date_of_birth: v }))}
+                      placeholder="Date of birth"
+                      title="Date of Birth"
+                      minDate={null}
+                    />
+                  ) : (
+                    <p className="mt-1 text-sm font-medium text-slate-800">
+                      {user.date_of_birth ? formatDate(user.date_of_birth) : '—'}
+                    </p>
+                  )}
+                </div>
+                {/* Gender — special select */}
+                <div>
+                  <Label className="text-[11px] uppercase tracking-wide text-slate-500 flex items-center gap-1.5">
+                    <UsersIcon className="h-3 w-3" /> Gender
+                  </Label>
+                  {editMode ? (
+                    <select
+                      value={form.gender || ''}
+                      onChange={(e) => setForm(f => ({ ...f, gender: e.target.value }))}
+                      className="mt-1 w-full h-9 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#082c59]/20"
+                      data-testid="field-gender"
+                    >
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                      <option value="prefer_not_to_say">Prefer not to say</option>
+                    </select>
+                  ) : (
+                    <p className="mt-1 text-sm font-medium text-slate-800 capitalize">{user.gender?.replace(/_/g, ' ') || '—'}</p>
+                  )}
+                </div>
+                <Field icon={Hash} label="ID / Passport #" editMode={editMode}
+                  value={form.id_document_number}
+                  onChange={(v) => setForm(f => ({ ...f, id_document_number: v }))}
+                  fallback={user.id_document_number || '—'} testid="field-id-doc" />
                 <Field icon={Calendar} label="Joined"
                   fallback={formatDate(user.created_at) || '—'} />
               </div>
@@ -260,7 +312,7 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
                         <Building2 className="h-4 w-4" /> Operator assignment
                       </h3>
                       <p className="text-xs text-amber-700/80 mt-0.5">
-                        This user is a member of the assigned operator's team.
+                        This user is a member of the assigned operator&apos;s team.
                       </p>
                     </div>
                     {user.operator_id && !editMode && (
@@ -287,6 +339,97 @@ export default function UserDetailModal({ isOpen, onClose, user, onUpdate }) {
                   )}
                 </div>
               )}
+            </TabsContent>
+
+            {/* Address tab */}
+            <TabsContent value="address" className="space-y-4 mt-0" data-testid="address-panel">
+              <p className="text-xs text-slate-500">Update this user&apos;s mailing address. These fields are always editable by administrators.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Field icon={MapPin} label="Street address" editMode={editMode}
+                    value={form.address}
+                    onChange={(v) => setForm(f => ({ ...f, address: v }))}
+                    fallback={user.address || '—'} testid="field-address" />
+                </div>
+                <Field icon={MapPin} label="City" editMode={editMode}
+                  value={form.city}
+                  onChange={(v) => setForm(f => ({ ...f, city: v }))}
+                  fallback={user.city || '—'} testid="field-city" />
+                <Field icon={MapPin} label="Region / State" editMode={editMode}
+                  value={form.region}
+                  onChange={(v) => setForm(f => ({ ...f, region: v }))}
+                  fallback={user.region || '—'} testid="field-region" />
+                <Field icon={Hash} label="Postal code" editMode={editMode}
+                  value={form.postal_code}
+                  onChange={(v) => setForm(f => ({ ...f, postal_code: v }))}
+                  fallback={user.postal_code || '—'} testid="field-postal" />
+                <Field icon={MapPin} label="Country" editMode={editMode}
+                  value={form.country}
+                  onChange={(v) => setForm(f => ({ ...f, country: v }))}
+                  fallback={user.country || '—'} testid="field-country" />
+              </div>
+            </TabsContent>
+
+            {/* Permissions tab — shortcut to dedicated Permissions Manager */}
+            <TabsContent value="permissions" className="space-y-3 mt-0" data-testid="permissions-panel">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-[#082c59] text-white">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm">Role &amp; permissions</p>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Current role: <span className="font-semibold capitalize">{user.role || 'customer'}</span>
+                      {user.custom_permissions?.length > 0 && (
+                        <> · {user.custom_permissions.length} custom permission(s)</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button type="button"
+                  onClick={() => { onClose(); navigate(`/admin/users/permissions?user=${user.id}#user-permissions`); }}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-[#082c59]/40 hover:shadow-sm transition"
+                  data-testid="goto-user-permissions">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">User Permissions</p>
+                    <p className="text-[11px] text-slate-500">Override role defaults for this user</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-slate-400" />
+                </button>
+                <button type="button"
+                  onClick={() => { onClose(); navigate('/admin/users/permissions#roles'); }}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-[#082c59]/40 hover:shadow-sm transition"
+                  data-testid="goto-roles">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Roles</p>
+                    <p className="text-[11px] text-slate-500">Review &amp; configure roles</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-slate-400" />
+                </button>
+                <button type="button"
+                  onClick={() => { onClose(); navigate('/admin/users/permissions#matrix'); }}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-[#082c59]/40 hover:shadow-sm transition"
+                  data-testid="goto-matrix">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Permission Matrix</p>
+                    <p className="text-[11px] text-slate-500">See what every role can do</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-slate-400" />
+                </button>
+                <button type="button"
+                  onClick={() => { onClose(); navigate(`/admin/users/permissions?user=${user.id}#audit-trail`); }}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left hover:border-[#082c59]/40 hover:shadow-sm transition"
+                  data-testid="goto-audit-trail">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Audit Trail</p>
+                    <p className="text-[11px] text-slate-500">Denied actions &amp; access events</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-slate-400" />
+                </button>
+              </div>
             </TabsContent>
 
             {/* Activity tab */}

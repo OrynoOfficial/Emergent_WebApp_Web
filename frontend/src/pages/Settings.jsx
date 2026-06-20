@@ -264,8 +264,28 @@ export default function Settings() {
     region: user?.region || '',
     postal_code: user?.postal_code || '',
     country: user?.country || 'Cameroon',
-    avatar_url: user?.avatar_url || '',
+    avatar_url: user?.avatar_url || user?.profile_picture || '',
   });
+
+  // Re-sync profileData when user object refreshes (e.g. after avatar upload + reauth)
+  useEffect(() => {
+    if (!user) return;
+    setProfileData((prev) => ({
+      ...prev,
+      full_name: user.full_name || prev.full_name,
+      email: user.email || prev.email,
+      phone: user.phone || prev.phone,
+      date_of_birth: user.date_of_birth || prev.date_of_birth,
+      id_document_number: user.id_document_number || prev.id_document_number,
+      gender: user.gender || prev.gender,
+      address: user.address ?? prev.address,
+      city: user.city ?? prev.city,
+      region: user.region ?? prev.region,
+      postal_code: user.postal_code ?? prev.postal_code,
+      country: user.country || prev.country,
+      avatar_url: user.avatar_url || user.profile_picture || prev.avatar_url,
+    }));
+  }, [user]);
 
   // Security form data
   const [securityData, setSecurityData] = useState({
@@ -285,12 +305,31 @@ export default function Settings() {
     newsletter: false,
   });
 
-  // Preferences — default to the browser-detected timezone
+  // Preferences — default to the browser-detected timezone + extended options
   const [preferences, setPreferences] = useState({
     language: 'en',
     currency: 'XAF',
     timezone: detectBrowserTimezone(),
     theme: 'light',
+    // Display
+    date_format: 'DD/MM/YYYY',
+    time_format: '24h',
+    first_day_of_week: 'monday',
+    number_format: 'fr',
+    distance_unit: 'km',
+    temperature_unit: 'celsius',
+    // App behaviour
+    default_landing_page: 'auto',
+    default_search_radius_km: 25,
+    results_per_page: 20,
+    // Communication
+    marketing_opt_in: false,
+    show_profile_publicly: false,
+    share_usage_data: true,
+    // Accessibility
+    reduce_motion: false,
+    high_contrast: false,
+    font_scale: 'normal',
   });
 
   // Admin system config
@@ -366,22 +405,34 @@ export default function Settings() {
     loadNotificationPreferences();
   }, []);
 
-  // Load user preferences (language, currency, etc.) from user object.
-  // Timezone default = user-saved → browser-detected → "Africa/Douala".
+  // Load extended user preferences from backend.
+  // The user object only contains the basic 4 fields (language, currency, timezone, theme);
+  // the extended display/behaviour/communication/accessibility fields live behind the
+  // /users/me/preferences endpoint.
   useEffect(() => {
-    if (user) {
-      const tz = user.timezone || detectBrowserTimezone() || 'Africa/Douala';
-      setPreferences(prev => ({
-        ...prev,
-        language: user.language || 'en',
-        currency: user.currency || 'XAF',
-        timezone: tz,
-        theme: user.theme || 'light',
-      }));
-      // Keep the global dateUtils in sync so every rendered date reflects the saved TZ
-      persistTimezone(tz);
-    }
-  }, [user]);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/users/me/preferences');
+        if (cancelled || !data) return;
+        setPreferences(prev => ({ ...prev, ...data }));
+        if (data.timezone) persistTimezone(data.timezone);
+      } catch (e) {
+        // Fallback to the basic four from the user object
+        const tz = user.timezone || detectBrowserTimezone() || 'Africa/Douala';
+        setPreferences(prev => ({
+          ...prev,
+          language: user.language || 'en',
+          currency: user.currency || 'XAF',
+          timezone: tz,
+          theme: user.theme || 'light',
+        }));
+        persistTimezone(tz);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load session timeout & mobile policy settings for admins
   useEffect(() => {
@@ -444,8 +495,26 @@ export default function Settings() {
       });
 
       if (response.data?.file_url) {
-        setProfileData({ ...profileData, avatar_url: response.data.file_url });
-        toast.success('Profile picture uploaded successfully');
+        const newAvatar = response.data.file_url;
+        setProfileData((prev) => ({ ...prev, avatar_url: newAvatar }));
+
+        // Persist immediately so the avatar survives logout/login.
+        // Save both `avatar_url` and `profile_picture` so older/newer clients
+        // and the User model both pick it up.
+        try {
+          const userId = user?._id || user?.id;
+          if (userId) {
+            await api.put(`/users/${userId}`, {
+              avatar_url: newAvatar,
+              profile_picture: newAvatar,
+            });
+            if (reAuthenticate) await reAuthenticate();
+          }
+          toast.success('Profile picture saved');
+        } catch (saveErr) {
+          console.error('Avatar persist error:', saveErr);
+          toast.error('Picture uploaded but failed to save to your profile. Click "Save Changes" to retry.');
+        }
       }
     } catch (error) {
       console.error('Avatar upload failed:', error);
@@ -684,75 +753,85 @@ export default function Settings() {
 
             <Separator />
 
-            {/* Basic Information - Read-only for Customers */}
+            {/* Basic Information — fill once. Locks after first save. */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-between">
                 <h4 className="font-semibold text-slate-900">Basic Information</h4>
-                {isCustomer && (
-                  <Badge variant="outline" className="text-xs">Some fields are read-only</Badge>
-                )}
+                <Badge variant="outline" className="text-[11px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
+                  <Lock className="h-3 w-3" /> Fill once · locks after save
+                </Badge>
               </div>
+              <p className="text-xs text-slate-500 -mt-2">
+                Once you save these details, only an administrator can change them via User Management.
+              </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="full_name">Full Name {isCustomer && <span className="text-xs text-slate-400">(read-only)</span>}</Label>
+                  <Label htmlFor="full_name">Full Name {!!user?.full_name && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <Input
                     id="full_name"
                     value={profileData.full_name}
                     onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-                    className={`mt-1 ${isCustomer ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
-                    disabled={isCustomer}
+                    className={`mt-1 ${user?.full_name ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                    disabled={!!user?.full_name}
+                    data-testid="profile-full-name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Email Address {!!user?.email && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <Input
                     id="email"
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    className="mt-1 bg-white"
+                    className={`mt-1 ${user?.email ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                    disabled={!!user?.email}
+                    data-testid="profile-email"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number {!!user?.phone && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <Input
                     id="phone"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     placeholder="+237 6XX XXX XXX"
-                    className="mt-1 bg-white"
+                    className={`mt-1 ${user?.phone ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                    disabled={!!user?.phone}
+                    data-testid="profile-phone"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dob">Date of Birth {isCustomer && <span className="text-xs text-slate-400">(read-only)</span>}</Label>
+                  <Label htmlFor="dob">Date of Birth {!!user?.date_of_birth && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <DatePickerField
                     value={profileData.date_of_birth}
                     onChange={(v) => setProfileData({ ...profileData, date_of_birth: v })}
                     placeholder="Date of birth"
                     title="Date of Birth"
                     minDate={null}
-                    disabled={isCustomer}
+                    disabled={!!user?.date_of_birth}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="id_doc">ID Card / Passport Number {isCustomer && <span className="text-xs text-slate-400">(read-only)</span>}</Label>
+                  <Label htmlFor="id_doc">ID Card / Passport Number {!!user?.id_document_number && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <Input
                     id="id_doc"
                     value={profileData.id_document_number}
                     onChange={(e) => setProfileData({ ...profileData, id_document_number: e.target.value })}
-                    className={`mt-1 ${isCustomer ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
-                    disabled={isCustomer}
+                    className={`mt-1 ${user?.id_document_number ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+                    disabled={!!user?.id_document_number}
                     placeholder="e.g., 12345678"
+                    data-testid="profile-id-doc"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="gender">Gender</Label>
+                  <Label htmlFor="gender">Gender {!!user?.gender && <span className="text-xs text-amber-600">(locked)</span>}</Label>
                   <select
                     id="gender"
                     value={profileData.gender || ''}
                     onChange={(e) => setProfileData({ ...profileData, gender: e.target.value })}
-                    className="mt-1 w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#082c59]/20 focus:border-[#082c59]"
+                    disabled={!!user?.gender}
+                    className={`mt-1 w-full h-10 px-3 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#082c59]/20 focus:border-[#082c59] ${user?.gender ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -1054,108 +1133,324 @@ export default function Settings() {
       case 'preferences':
         return (
           <div className="space-y-6">
-            <div>
-              <Label>Language</Label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                {[
-                  { code: 'en', label: 'English', flag: '🇬🇧' },
-                  { code: 'fr', label: 'Français', flag: '🇫🇷' },
-                ].map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => setPreferences({ ...preferences, language: lang.code })}
-                    className={`p-4 rounded-lg border flex items-center gap-3 transition-colors ${
-                      preferences.language === lang.code
-                        ? 'bg-blue-50 border-[#082c59] text-[#082c59]'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <span className="text-2xl">{lang.flag}</span>
-                    <span className="font-medium">{lang.label}</span>
-                    {preferences.language === lang.code && <Check className="ml-auto h-5 w-5" />}
-                  </button>
-                ))}
+            {/* Language & locale */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Languages className="h-4 w-4 text-[#082c59]" />
+                <h3 className="font-bold text-slate-900">Language &amp; Locale</h3>
               </div>
-            </div>
-
-            <div>
-              <Label>Currency</Label>
-              <select
-                value={preferences.currency}
-                onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
-                className="w-full mt-1 p-2 border rounded-lg bg-white"
-              >
-                <option value="XAF">XAF (FCFA)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-              </select>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label>Timezone</Label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const browserTz = detectBrowserTimezone();
-                    setPreferences({ ...preferences, timezone: browserTz });
-                    toast.success(`Detected: ${browserTz}`);
-                  }}
-                  className="text-xs text-[#082c59] hover:underline font-medium"
-                  data-testid="detect-timezone-btn"
-                >
-                  Use system timezone
-                </button>
-              </div>
-              <Select
-                value={preferences.timezone}
-                onValueChange={(v) => setPreferences({ ...preferences, timezone: v })}
-              >
-                <SelectTrigger className="mt-1 bg-white" data-testid="timezone-select">
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent className="bg-white max-h-80">
-                  {COMMON_TIMEZONES.map((group) => (
-                    <SelectGroup key={group.group}>
-                      <SelectLabel>{group.group}</SelectLabel>
-                      {group.zones.map((tz) => (
-                        <SelectItem key={tz} value={tz}>{tz.replace('_', ' ')}</SelectItem>
-                      ))}
-                    </SelectGroup>
+              <div>
+                <Label>Language</Label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  {[
+                    { code: 'en', label: 'English', flag: '🇬🇧' },
+                    { code: 'fr', label: 'Français', flag: '🇫🇷' },
+                  ].map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => setPreferences({ ...preferences, language: lang.code })}
+                      className={`p-3 rounded-lg border flex items-center gap-3 transition-colors ${
+                        preferences.language === lang.code
+                          ? 'bg-blue-50 border-[#082c59] text-[#082c59]'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                      data-testid={`pref-lang-${lang.code}`}
+                    >
+                      <span className="text-xl">{lang.flag}</span>
+                      <span className="font-medium text-sm">{lang.label}</span>
+                      {preferences.language === lang.code && <Check className="ml-auto h-4 w-4" />}
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500 mt-1">
-                All dates and times across the app use this timezone. Default is taken from your device.
-              </p>
-            </div>
-
-            <div>
-              <Label>Theme</Label>
-              <p className="text-sm text-slate-500 mt-1 mb-2">Theme customization coming soon</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { code: 'light', label: 'Light', icon: '☀️' },
-                  { code: 'dark', label: 'Dark', icon: '🌙', disabled: true },
-                ].map((themeOption) => (
-                  <button
-                    key={themeOption.code}
-                    disabled={themeOption.disabled}
-                    className={`p-4 rounded-lg border flex items-center gap-3 transition-colors ${
-                      themeOption.code === 'light'
-                        ? 'bg-blue-50 border-[#082c59]'
-                        : 'bg-slate-100 border-slate-200 opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <span className="text-xl">{themeOption.icon}</span>
-                    <span className="font-medium">{themeOption.label}</span>
-                    {themeOption.code === 'light' && <Check className="ml-auto h-5 w-5 text-[#082c59]" />}
-                  </button>
-                ))}
+                </div>
               </div>
-            </div>
 
-            <div className="pt-4 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Currency</Label>
+                  <select
+                    value={preferences.currency}
+                    onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-currency"
+                  >
+                    <option value="XAF">XAF (FCFA)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Number format</Label>
+                  <select
+                    value={preferences.number_format}
+                    onChange={(e) => setPreferences({ ...preferences, number_format: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-number-format"
+                  >
+                    <option value="fr">1 234,56 (FR)</option>
+                    <option value="en">1,234.56 (EN)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Timezone</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const browserTz = detectBrowserTimezone();
+                      setPreferences({ ...preferences, timezone: browserTz });
+                      toast.success(`Detected: ${browserTz}`);
+                    }}
+                    className="text-xs text-[#082c59] hover:underline font-medium"
+                    data-testid="detect-timezone-btn"
+                  >
+                    Use system timezone
+                  </button>
+                </div>
+                <Select
+                  value={preferences.timezone}
+                  onValueChange={(v) => setPreferences({ ...preferences, timezone: v })}
+                >
+                  <SelectTrigger className="mt-1 bg-white" data-testid="timezone-select">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white max-h-80">
+                    {COMMON_TIMEZONES.map((group) => (
+                      <SelectGroup key={group.group}>
+                        <SelectLabel>{group.group}</SelectLabel>
+                        {group.zones.map((tz) => (
+                          <SelectItem key={tz} value={tz}>{tz.replace('_', ' ')}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500 mt-1">
+                  All dates and times across the app use this timezone.
+                </p>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Display */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-[#082c59]" />
+                <h3 className="font-bold text-slate-900">Display</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Date format</Label>
+                  <select
+                    value={preferences.date_format}
+                    onChange={(e) => setPreferences({ ...preferences, date_format: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-date-format"
+                  >
+                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                    <option value="DD MMM YYYY">DD MMM YYYY</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Time format</Label>
+                  <select
+                    value={preferences.time_format}
+                    onChange={(e) => setPreferences({ ...preferences, time_format: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-time-format"
+                  >
+                    <option value="24h">24-hour (14:30)</option>
+                    <option value="12h">12-hour (2:30 PM)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>First day of week</Label>
+                  <select
+                    value={preferences.first_day_of_week}
+                    onChange={(e) => setPreferences({ ...preferences, first_day_of_week: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-first-day"
+                  >
+                    <option value="monday">Monday</option>
+                    <option value="sunday">Sunday</option>
+                    <option value="saturday">Saturday</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Distance unit</Label>
+                  <select
+                    value={preferences.distance_unit}
+                    onChange={(e) => setPreferences({ ...preferences, distance_unit: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-distance"
+                  >
+                    <option value="km">Kilometers</option>
+                    <option value="mi">Miles</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Temperature unit</Label>
+                  <select
+                    value={preferences.temperature_unit}
+                    onChange={(e) => setPreferences({ ...preferences, temperature_unit: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-temperature"
+                  >
+                    <option value="celsius">Celsius (°C)</option>
+                    <option value="fahrenheit">Fahrenheit (°F)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Theme</Label>
+                  <select
+                    value={preferences.theme}
+                    onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-theme"
+                  >
+                    <option value="light">Light</option>
+                    <option value="dark" disabled>Dark (coming soon)</option>
+                    <option value="system" disabled>System (coming soon)</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* App behaviour */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-[#082c59]" />
+                <h3 className="font-bold text-slate-900">App Behaviour</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Default landing page</Label>
+                  <select
+                    value={preferences.default_landing_page}
+                    onChange={(e) => setPreferences({ ...preferences, default_landing_page: e.target.value })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-landing-page"
+                  >
+                    <option value="auto">Smart (by role)</option>
+                    <option value="dashboard">Dashboard</option>
+                    <option value="orders">My Orders</option>
+                    <option value="services">Browse Services</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Default search radius</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      min={1} max={500}
+                      value={preferences.default_search_radius_km}
+                      onChange={(e) => setPreferences({ ...preferences, default_search_radius_km: Number(e.target.value) })}
+                      className="h-10 bg-white"
+                      data-testid="pref-search-radius"
+                    />
+                    <span className="text-sm text-slate-500">{preferences.distance_unit}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label>Results per page</Label>
+                  <select
+                    value={preferences.results_per_page}
+                    onChange={(e) => setPreferences({ ...preferences, results_per_page: Number(e.target.value) })}
+                    className="w-full mt-1 h-10 px-3 border rounded-lg bg-white text-sm"
+                    data-testid="pref-results-per-page"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <Separator />
+
+            {/* Communication & privacy */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-[#082c59]" />
+                <h3 className="font-bold text-slate-900">Communication &amp; Privacy</h3>
+              </div>
+              <PrefToggle
+                label="Promotional emails &amp; offers"
+                description="Receive marketing emails about new deals and operators you might like."
+                checked={preferences.marketing_opt_in}
+                onChange={(v) => setPreferences({ ...preferences, marketing_opt_in: v })}
+                testid="pref-marketing"
+              />
+              <PrefToggle
+                label="Show my profile publicly"
+                description="Operators can see your reviews next to your display name."
+                checked={preferences.show_profile_publicly}
+                onChange={(v) => setPreferences({ ...preferences, show_profile_publicly: v })}
+                testid="pref-public-profile"
+              />
+              <PrefToggle
+                label="Share anonymous usage data"
+                description="Helps us improve the app. No personal information is shared."
+                checked={preferences.share_usage_data}
+                onChange={(v) => setPreferences({ ...preferences, share_usage_data: v })}
+                testid="pref-usage-data"
+              />
+            </section>
+
+            <Separator />
+
+            {/* Accessibility */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-[#082c59]" />
+                <h3 className="font-bold text-slate-900">Accessibility</h3>
+              </div>
+              <PrefToggle
+                label="Reduce motion"
+                description="Disable non-essential animations and transitions."
+                checked={preferences.reduce_motion}
+                onChange={(v) => setPreferences({ ...preferences, reduce_motion: v })}
+                testid="pref-reduce-motion"
+              />
+              <PrefToggle
+                label="High contrast"
+                description="Boost colour contrast for easier reading."
+                checked={preferences.high_contrast}
+                onChange={(v) => setPreferences({ ...preferences, high_contrast: v })}
+                testid="pref-high-contrast"
+              />
+              <div>
+                <Label>Font size</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  {['small', 'normal', 'large'].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setPreferences({ ...preferences, font_scale: size })}
+                      className={`p-2.5 rounded-lg border text-sm font-medium capitalize transition ${
+                        preferences.font_scale === size
+                          ? 'bg-[#082c59] text-white border-[#082c59]'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                      data-testid={`pref-font-${size}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <div className="pt-4 border-t sticky bottom-0 bg-white">
               <Button 
                 onClick={handleSavePreferences} 
                 disabled={saving} 
@@ -1164,6 +1459,7 @@ export default function Settings() {
                     ? 'bg-green-600 hover:bg-green-700' 
                     : 'bg-[#082c59]'
                 }`}
+                data-testid="save-preferences-btn"
               >
                 {saving ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1594,13 +1890,20 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <SettingsIcon className="h-7 w-7 text-[#082c59]" />
-          Settings
-        </h1>
-        <p className="text-slate-600 mt-1">Manage your account settings and preferences</p>
-      </div>
+      {/* Header card — title + description live inside a modal-style card */}
+      <Card className="bg-gradient-to-br from-[#082c59] to-[#0a3a75] text-white border-0 shadow-md">
+        <CardContent className="p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
+            <SettingsIcon className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold flex items-center gap-2" data-testid="settings-title">Settings</h1>
+            <p className="text-sm text-white/80 mt-0.5" data-testid="settings-description">
+              Manage your account settings and preferences
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Settings Menu */}
@@ -1660,6 +1963,19 @@ export default function Settings() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Compact toggle row used in Preferences > Communication / Accessibility
+function PrefToggle({ label, description, checked, onChange, testid }) {
+  return (
+    <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-slate-200 bg-white">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-900">{label}</p>
+        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+      </div>
+      <Switch checked={!!checked} onCheckedChange={onChange} data-testid={testid} />
     </div>
   );
 }

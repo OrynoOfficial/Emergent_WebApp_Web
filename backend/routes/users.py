@@ -719,16 +719,56 @@ async def update_notification_preferences(
     
     return {"message": "Notification preferences updated successfully"}
 
+@router.get("/me/preferences")
+async def get_user_preferences(
+    current_user: dict = Depends(get_current_active_user)
+):
+    """Get current user's preferences with defaults."""
+    user = current_user
+    return {
+        "language": user.get("language", "en"),
+        "currency": user.get("currency", "XAF"),
+        "timezone": user.get("timezone"),
+        "theme": user.get("theme", "light"),
+        # Display preferences
+        "date_format": user.get("date_format", "DD/MM/YYYY"),
+        "time_format": user.get("time_format", "24h"),
+        "first_day_of_week": user.get("first_day_of_week", "monday"),
+        "number_format": user.get("number_format", "fr"),  # fr = 1 234,56 / en = 1,234.56
+        "distance_unit": user.get("distance_unit", "km"),
+        "temperature_unit": user.get("temperature_unit", "celsius"),
+        # App behaviour
+        "default_landing_page": user.get("default_landing_page", "auto"),
+        "default_search_radius_km": user.get("default_search_radius_km", 25),
+        "results_per_page": user.get("results_per_page", 20),
+        # Communication & privacy
+        "marketing_opt_in": user.get("marketing_opt_in", False),
+        "show_profile_publicly": user.get("show_profile_publicly", False),
+        "share_usage_data": user.get("share_usage_data", True),
+        # Accessibility
+        "reduce_motion": user.get("reduce_motion", False),
+        "high_contrast": user.get("high_contrast", False),
+        "font_scale": user.get("font_scale", "normal"),  # small / normal / large
+    }
+
+
 @router.put("/me/preferences")
 async def update_user_preferences(
     preferences: dict,
     current_user: dict = Depends(get_current_active_user)
 ):
-    """Update user's general preferences (language, currency, timezone, theme)"""
+    """Update user's general preferences (language, currency, timezone, theme + extended)"""
     db = get_database()
     
-    # Allowed preference fields
-    allowed_fields = ["language", "currency", "timezone", "theme"]
+    # Allowed preference fields (extended set)
+    allowed_fields = [
+        "language", "currency", "timezone", "theme",
+        "date_format", "time_format", "first_day_of_week",
+        "number_format", "distance_unit", "temperature_unit",
+        "default_landing_page", "default_search_radius_km", "results_per_page",
+        "marketing_opt_in", "show_profile_publicly", "share_usage_data",
+        "reduce_motion", "high_contrast", "font_scale",
+    ]
     
     # Filter
     update_data = {k: v for k, v in preferences.items() if k in allowed_fields}

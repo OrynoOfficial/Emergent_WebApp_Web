@@ -1,0 +1,79 @@
+{
+  "summary": "Iter-261 verification of Settings refresh (header card, fill-once lock, address editable, expanded Preferences with 19 fields & persistence) + UserDetailModal extended fields/Permissions tab. Backend /api/users/me/preferences GET/PUT verified (3/3 pytest pass). Frontend: Settings header gradient card, fill-once locks, 'Fill once · locks after save' badge, Address Information editable section, all 23 expected Preferences testids present, Save Preferences toast 'Preferences saved successfully', and reload-persistence of reduce_motion + font_scale all confirmed. UserDetailModal could NOT be opened — clicking either the row or the [data-testid^=view-user] button (14 found) did not surface a [role=dialog]; no modal markup appeared in DOM, so Profile/Address/Permissions/Activity tabs + DOB/Gender/ID fields + the 4 Permissions navigation cards (goto-user-permissions/goto-roles/goto-matrix/goto-audit-trail) could not be validated end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "UserDetailModal (/admin/users)",
+        "issue": "Modal does not open when clicking the row OR the per-row view (eye) action button. 14 buttons with data-testid prefix 'view-user' exist on the Users table but clicking the first one (force=True, scroll-into-view) does not produce any [role=dialog] in DOM. As a result Profile/Address/Permissions/Activity tabs, extended fields (DOB, Gender, ID/Passport, postal_code, country, street), and the 4 Permissions nav cards (goto-user-permissions, goto-roles, goto-matrix, goto-audit-trail) could not be exercised. This blocks 2 of the 9 spec items.",
+        "selector": "[data-testid^='view-user']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_observations": {
+    "backend_preferences": {
+      "GET /api/users/me/preferences_returns_all_19_fields": true,
+      "PUT_with_6_fields_persists_and_GET_round_trips": true,
+      "reset_to_defaults_PUT_returns_200": true,
+      "pytest_pass_rate": "3/3"
+    },
+    "settings_header_card": {
+      "settings-title_present": true,
+      "settings-description_present": true,
+      "wrapped_in_gradient_card": true,
+      "gradient_classes_observed": "rounded-xl border-slate-200/80 bg-gradient-to-br from-[#082c59] to-[#0a3a75]"
+    },
+    "basic_info_fill_once_lock": {
+      "(locked)_suffix_present_in_DOM": true,
+      "'Fill once · locks after save'_badge_present": true,
+      "locked_fields_visible_in_screenshot": ["Full Name", "Email Address", "Phone Number", "ID Card / Passport Number", "Gender"]
+    },
+    "address_information": {
+      "section_present": true,
+      "5_fields_visible_and_editable": ["Street Address", "City", "Region/State", "Postal Code", "Country"],
+      "save_changes_button_visible": true
+    },
+    "preferences_tab": {
+      "23_of_23_expected_testids_present": true,
+      "save_toast_'Preferences saved successfully'_appeared": true,
+      "after_reload_reduce_motion_persisted_data-state=checked_aria-checked=true": true,
+      "after_reload_font_scale=Large_active_(visual_confirmation_in_screenshot)": true
+    },
+    "user_detail_modal": {
+      "view_button_clicks_open_modal": false,
+      "blocker_for_spec_items": ["UserDetailModal extended fields", "UserDetailModal Permissions tab navigation"]
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter261_preferences.py"
+  ],
+  "action_items": [
+    "Investigate why UserDetailModal does not open from /admin/users — verify the onClick handler on the view-user[id] buttons is wired to a setOpen state and that the Dialog is rendered when state=true. Check the Users.jsx click handler / ensure UserDetailModal is mounted in the tree.",
+    "Once modal opens, re-verify: (a) 4 tabs Profile/Address/Permissions/Activity, (b) view-mode DOB/Gender/ID/Joined display, (c) edit-mode editable extended fields, (d) Address tab 5 read-only-then-editable fields, (e) 4 Permissions cards goto-user-permissions / goto-roles / goto-matrix / goto-audit-trail and their navigation to /admin/users/permissions."
+  ],
+  "critical_code_review_comments": [
+    "Settings.jsx — header card refactor + 19-field Preferences UI is clean and all 23 expected data-testids are exposed. Excellent test surface.",
+    "Preferences persistence verified end-to-end (UI -> backend -> reload). Backend PUT /api/users/me/preferences correctly allows the 6 new fields tested (distance_unit, reduce_motion, font_scale, date_format, marketing_opt_in, default_search_radius_km).",
+    "UserDetailModal — modal trigger appears broken from the Users.jsx row/eye-button click path. Worth double-checking that the modal component is imported and rendered conditionally on a per-row state.",
+    "Login flow note for future testers: the post-email step uses 'Continue' button, but the post-password step uses literal 'Login' (not 'Sign in'/'Continue'). Selectors should match 'Login'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter261_preferences.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (3/3 preference tests)",
+    "frontend": "7/9 spec items verified — Settings header card, fill-once lock, address editable, preferences 23 testids, preferences save toast, preferences reload-persistence, all confirmed. UserDetailModal extended fields + Permissions tab navigation blocked because modal does not open."
+  },
+  "test_credentials": "customer@test.com / testpassword123 ; admin@test.com / testpassword123. 2-step login: 'Login to Your Account' -> email -> 'Continue' -> password -> 'Login'.",
+  "seed_data_creation": "None. Preference values were reset to defaults at end of pytest run.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Backend preferences /api/users/me/preferences GET/PUT is solid (test file: /app/backend/tests/test_iter261_preferences.py). Settings page is fully verified (header card, locks, address, preferences 19 fields, save & persistence). The only outstanding item is the UserDetailModal NOT opening on click — once E1 fixes the modal trigger, re-run targeting the 'goto-*' permission card testids and the extended profile fields (DOB / Gender / ID / postal_code / country / street). Avatar persistence flow was NOT tested in this run because of test-time constraints — E1 should manually verify the file upload + immediate PUT to /users/{id} round-trip after fixing the modal blocker.",
+  "rca of the issue": "UserDetailModal blocker — likely root cause: the onClick handler on the view-user buttons in Users.jsx either (a) does not set the selectedUser state, (b) does not toggle the open state to true, or (c) the UserDetailModal component is not actually mounted in the Users.jsx tree. Reproduction: login as admin@test.com, go to /admin/users, click any row OR any button with data-testid starting with 'view-user' — no [role=dialog] appears in DOM. Mitigation: verify Users.jsx imports & renders <UserDetailModal open={openModal} user={selectedUser} ... /> and that the row-action eye button's onClick sets both states."
+}
