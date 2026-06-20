@@ -1,0 +1,69 @@
+{
+  "summary": "Iter-262 retest of UserDetailModal — previously blocked items (modal opening + Permissions tab navigation) are now FULLY PASSING. All 5 spec items verified end-to-end against the live preview URL. The newly added data-testid='view-user-{id}' and data-testid='edit-user-{id}' on the row action buttons in Users.jsx correctly trigger the modal. Modal renders with 4 tabs, extended Profile fields, editable Edit-mode, Address tab with 5 fields, Permissions tab with 4 navigation cards. Save flow confirmed via network (PUT /api/users/{id} -> 200) and toast 'User updated' is shown. Both goto-roles and goto-user-permissions routing work as specified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_observations": {
+    "modal_open": {
+      "edit-user-{id}_buttons_present_count": 10,
+      "view-user-{id}_buttons_present_count": 11,
+      "clicking_edit-user_opens_modal": true,
+      "user-detail-modal_role_dialog_visible": true
+    },
+    "tabs_present_in_TabsList": {
+      "tab-profile": 1,
+      "tab-address": 1,
+      "tab-permissions": 1,
+      "tab-activity": 1
+    },
+    "profile_tab_view_mode_fields": ["FULL NAME", "EMAIL", "PHONE", "DATE OF BIRTH", "GENDER", "ID/PASSPORT #", "JOINED"],
+    "profile_tab_edit_mode": {
+      "DOB_datepicker_editable": true,
+      "Gender_select_editable": true,
+      "ID/Passport_input_editable": true,
+      "Save_button_testid": "user-save-btn",
+      "PUT_/api/users/{id}_status": 200,
+      "toast_text_observed": "User updated",
+      "ID_field_persisted_after_reopen": "TEST_ID_99999"
+    },
+    "address_tab": {
+      "5_fields_present_in_view_mode_with_dash": ["Street address", "City", "Region / State", "Postal code", "Country"],
+      "panel_testid": "address-panel",
+      "always_editable_for_admins": true
+    },
+    "permissions_tab_4_navigation_cards": {
+      "goto-user-permissions": 1,
+      "goto-roles": 1,
+      "goto-matrix": 1,
+      "goto-audit-trail": 1
+    },
+    "permission_navigation": {
+      "goto-roles_resulting_url": "/admin/users/permissions#roles",
+      "goto-user-permissions_resulting_url": "/admin/users/permissions?user=d47891c2-2d6d-4f01-b893-2351a3c7aa31#user-permissions"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Users.jsx row action: both eye (view) and pencil (edit) buttons call handleViewUser(user). UX-wise these two buttons currently do the exact same thing — the 'Edit' icon does not jump straight into edit mode. Consider passing { startInEdit: true } when clicking the pencil icon for clearer intent.",
+    "UserDetailModal — Save flow is working and persists. Network response 200 + toast confirmed.",
+    "Permissions tab navigation correctly closes the modal before navigating (URL changes immediately on click)."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only retest, but observed PUT /api/users/{id} -> 200)",
+    "frontend": "5/5 spec items verified"
+  },
+  "test_credentials": "admin@test.com / testpassword123 — 2-step: click 'Login to Your Account' -> fill email -> Continue -> fill password -> Login",
+  "seed_data_creation": "Updated user d47891c2-2d6d-4f01-b893-2351a3c7aa31 (Carter Jr.) id_document_number=TEST_ID_99999. Should be reset by E1 if needed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter-261 blockers are fully resolved. The view-user-{id}/edit-user-{id} buttons in Users.jsx now correctly open the UserDetailModal. All 4 tabs (Profile/Address/Permissions/Activity), editable extended fields (DOB/Gender/ID/Passport), Address tab 5 fields, and Permissions tab 4 navigation cards (goto-user-permissions/goto-roles/goto-matrix/goto-audit-trail) are all wired correctly. Toast 'User updated' confirmed. Network PUT /api/users/{id} returns 200.",
+  "rca of the issue": "N/A — previous blocker fixed by E1 adding data-testid='view-user-{id}' and data-testid='edit-user-{id}' on the row action buttons in Users.jsx (L731-748). Verified clicking either button calls handleViewUser(user) which sets selectedUser + opens isDetailModalOpen, rendering the Dialog from UserDetailModal."
+}

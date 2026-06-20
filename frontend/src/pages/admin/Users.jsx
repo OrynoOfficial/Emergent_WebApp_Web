@@ -732,6 +732,7 @@ export default function UserManagement() {
                           className="p-2 hover:bg-blue-100 rounded-lg"
                           title="View Details"
                           onClick={() => handleViewUser(user)}
+                          data-testid={`view-user-${user.id}`}
                         >
                           <Eye className="h-4 w-4 text-blue-600" />
                         </button>
@@ -741,6 +742,7 @@ export default function UserManagement() {
                               className="p-2 hover:bg-slate-100 rounded-lg"
                               title="Edit"
                               onClick={() => handleViewUser(user)}
+                              data-testid={`edit-user-${user.id}`}
                             >
                               <Edit className="h-4 w-4 text-slate-600" />
                             </button>
