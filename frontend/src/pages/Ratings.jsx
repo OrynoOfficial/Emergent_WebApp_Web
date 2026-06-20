@@ -679,6 +679,9 @@ function OperatorRatingsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('all');
   const [filterRating, setFilterRating] = useState('all');
+  const [filterResponse, setFilterResponse] = useState('all'); // all | needs_response | responded
+  const [filterTimeframe, setFilterTimeframe] = useState('all'); // all | 7d | 30d | 90d | 1y
+  const [sortBy, setSortBy] = useState('newest'); // newest | oldest | highest | lowest | helpful
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
