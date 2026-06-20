@@ -810,18 +810,59 @@ function OperatorRatingsView() {
     }
   };
 
-  // Filter ratings
+  // Filter ratings — multi-combo (AND) + sort
   const filteredRatings = useMemo(() => {
-    return ratings.filter(r => {
-      const matchesSearch = !searchTerm || 
+    let list = ratings.filter(r => {
+      const matchesSearch = !searchTerm ||
         r.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.comment.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesService = filterService === 'all' || r.service_category === filterService;
       const matchesRating = filterRating === 'all' || r.rating === parseInt(filterRating);
-      return matchesSearch && matchesService && matchesRating;
+      const matchesResponse =
+        filterResponse === 'all' ||
+        (filterResponse === 'responded' && !!r.operator_response) ||
+        (filterResponse === 'needs_response' && !r.operator_response);
+      let matchesTime = true;
+      if (filterTimeframe !== 'all') {
+        const cutoff = {
+          '7d': 7 * 86400000,
+          '30d': 30 * 86400000,
+          '90d': 90 * 86400000,
+          '1y': 365 * 86400000,
+        }[filterTimeframe];
+        if (cutoff) matchesTime = (Date.now() - new Date(r.created_at).getTime()) <= cutoff;
+      }
+      return matchesSearch && matchesService && matchesRating && matchesResponse && matchesTime;
     });
-  }, [ratings, searchTerm, filterService, filterRating]);
+    list.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === 'highest') return b.rating - a.rating;
+      if (sortBy === 'lowest') return a.rating - b.rating;
+      if (sortBy === 'helpful') return (b.helpful_count || 0) - (a.helpful_count || 0);
+      return 0;
+    });
+    return list;
+  }, [ratings, searchTerm, filterService, filterRating, filterResponse, filterTimeframe, sortBy]);
+
+  const activeFiltersCount =
+    (searchTerm ? 1 : 0) +
+    (filterService !== 'all' ? 1 : 0) +
+    (filterRating !== 'all' ? 1 : 0) +
+    (filterResponse !== 'all' ? 1 : 0) +
+    (filterTimeframe !== 'all' ? 1 : 0) +
+    (sortBy !== 'newest' ? 1 : 0);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterService('all');
+    setFilterRating('all');
+    setFilterResponse('all');
+    setFilterTimeframe('all');
+    setSortBy('newest');
+    setPage(1);
+  };
 
   // Stats
   const stats = useMemo(() => {
@@ -850,31 +891,38 @@ function OperatorRatingsView() {
       {/* Filters + stats (stats sit just below the search bar) */}
       <Card>
         <CardContent className="p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search reviews..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white"
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                className="pl-9 h-9 text-sm bg-white"
+                data-testid="operator-ratings-search"
               />
+            </div>
+            <div className="hidden md:block h-6 w-px bg-slate-200" aria-hidden />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <SlidersHorizontal className="h-3 w-3" />
+              Filters:
             </div>
             <FilterChipSelect
               icon={Briefcase}
               label="Service"
               value={filterService}
-              onChange={setFilterService}
+              onChange={(v) => { setFilterService(v); setPage(1); }}
               options={[
                 { value: 'all', label: 'All Services' },
                 ...assignedServices.map(s => ({ value: s, label: s.replace('_', ' ') })),
               ]}
+              data-testid="operator-ratings-service-filter"
             />
             <FilterChipSelect
               icon={Star}
               label="Rating"
               value={filterRating}
-              onChange={setFilterRating}
+              onChange={(v) => { setFilterRating(v); setPage(1); }}
               options={[
                 { value: 'all', label: 'All Ratings' },
                 { value: '5', label: '5 Stars' },
@@ -883,8 +931,65 @@ function OperatorRatingsView() {
                 { value: '2', label: '2 Stars' },
                 { value: '1', label: '1 Star' },
               ]}
+              data-testid="operator-ratings-rating-filter"
             />
+            <FilterChipSelect
+              icon={MessageCircle}
+              label="Response"
+              value={filterResponse}
+              onChange={(v) => { setFilterResponse(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'Any status' },
+                { value: 'needs_response', label: 'Needs response' },
+                { value: 'responded', label: 'Responded' },
+              ]}
+              data-testid="operator-ratings-response-filter"
+            />
+            <FilterChipSelect
+              icon={Clock}
+              label="When"
+              value={filterTimeframe}
+              onChange={(v) => { setFilterTimeframe(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'Any time' },
+                { value: '7d', label: 'Last 7 days' },
+                { value: '30d', label: 'Last 30 days' },
+                { value: '90d', label: 'Last 3 months' },
+                { value: '1y', label: 'Last year' },
+              ]}
+              data-testid="operator-ratings-timeframe-filter"
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={(v) => { setSortBy(v); setPage(1); }}
+              options={[
+                { value: 'newest', label: 'Newest first' },
+                { value: 'oldest', label: 'Oldest first' },
+                { value: 'highest', label: 'Highest rated' },
+                { value: 'lowest', label: 'Lowest rated' },
+                { value: 'helpful', label: 'Most helpful' },
+              ]}
+              allValue="newest"
+              data-testid="operator-ratings-sort"
+            />
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-[11px] text-slate-500 hover:text-[#082c59] font-medium px-2 py-1"
+                data-testid="operator-ratings-clear-filters"
+              >
+                Clear {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''}
+              </button>
+            )}
           </div>
+          {filteredRatings.length !== ratings.length && (
+            <p className="text-[11px] text-slate-500" data-testid="operator-ratings-count">
+              Showing <span className="font-semibold text-slate-700">{filteredRatings.length}</span> of {ratings.length} reviews
+            </p>
+          )}
 
           {/* Stats chip strip — at-a-glance metrics below the search bar */}
           <div className="flex flex-wrap items-center gap-2 pt-1" data-testid="operator-ratings-stats">
@@ -1070,6 +1175,9 @@ function AdminRatingsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterService, setFilterService] = useState('all');
   const [filterRating, setFilterRating] = useState('all');
+  const [filterResponse, setFilterResponse] = useState('all'); // all | needs_response | responded
+  const [filterTimeframe, setFilterTimeframe] = useState('all'); // all | 7d | 30d | 90d | 1y
+  const [sortBy, setSortBy] = useState('newest');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const [selectedRating, setSelectedRating] = useState(null);
   const [showModerateDialog, setShowModerateDialog] = useState(false);
@@ -1294,19 +1402,60 @@ function AdminRatingsView() {
     }
   };
 
-  // Filter ratings
+  // Filter ratings — multi-combo (AND) + sort
   const filteredRatings = useMemo(() => {
-    return ratings.filter(r => {
-      const matchesSearch = !searchTerm || 
+    let list = ratings.filter(r => {
+      const matchesSearch = !searchTerm ||
         r.service_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.operator_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.comment.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesService = filterService === 'all' || r.service_category === filterService;
       const matchesRating = filterRating === 'all' || r.rating === parseInt(filterRating);
-      return matchesSearch && matchesService && matchesRating;
+      const matchesResponse =
+        filterResponse === 'all' ||
+        (filterResponse === 'responded' && !!r.operator_response) ||
+        (filterResponse === 'needs_response' && !r.operator_response);
+      let matchesTime = true;
+      if (filterTimeframe !== 'all') {
+        const cutoff = {
+          '7d': 7 * 86400000,
+          '30d': 30 * 86400000,
+          '90d': 90 * 86400000,
+          '1y': 365 * 86400000,
+        }[filterTimeframe];
+        if (cutoff) matchesTime = (Date.now() - new Date(r.created_at).getTime()) <= cutoff;
+      }
+      return matchesSearch && matchesService && matchesRating && matchesResponse && matchesTime;
     });
-  }, [ratings, searchTerm, filterService, filterRating]);
+    list.sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === 'highest') return b.rating - a.rating;
+      if (sortBy === 'lowest') return a.rating - b.rating;
+      if (sortBy === 'helpful') return (b.helpful_count || 0) - (a.helpful_count || 0);
+      return 0;
+    });
+    return list;
+  }, [ratings, searchTerm, filterService, filterRating, filterResponse, filterTimeframe, sortBy]);
+
+  const activeFiltersCount =
+    (searchTerm ? 1 : 0) +
+    (filterService !== 'all' ? 1 : 0) +
+    (filterRating !== 'all' ? 1 : 0) +
+    (filterResponse !== 'all' ? 1 : 0) +
+    (filterTimeframe !== 'all' ? 1 : 0) +
+    (sortBy !== 'newest' ? 1 : 0);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterService('all');
+    setFilterRating('all');
+    setFilterResponse('all');
+    setFilterTimeframe('all');
+    setSortBy('newest');
+    setPage(1);
+  };
 
   // Stats
   const stats = useMemo(() => {
@@ -1339,21 +1488,27 @@ function AdminRatingsView() {
       {/* Filters + stats (stats sit just below the search bar — at-a-glance with the controls) */}
       <Card className="bg-gradient-to-r from-[#082c59]/5 to-slate-100 border-slate-200">
         <CardContent className="p-4 space-y-3">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap gap-2.5 items-center">
+            <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="Search by service, customer, operator..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white"
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                className="pl-9 h-9 text-sm bg-white"
+                data-testid="admin-ratings-search"
               />
+            </div>
+            <div className="hidden md:block h-6 w-px bg-slate-200" aria-hidden />
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <SlidersHorizontal className="h-3 w-3" />
+              Filters:
             </div>
             <FilterChipSelect
               icon={Briefcase}
               label="Service"
               value={filterService}
-              onChange={setFilterService}
+              onChange={(v) => { setFilterService(v); setPage(1); }}
               options={[
                 { value: 'all', label: 'All Services' },
                 { value: 'hotel', label: 'Hotels' },
@@ -1364,12 +1519,13 @@ function AdminRatingsView() {
                 { value: 'laundry', label: 'Laundry' },
                 { value: 'events', label: 'Events' },
               ]}
+              data-testid="admin-ratings-service-filter"
             />
             <FilterChipSelect
               icon={Star}
               label="Rating"
               value={filterRating}
-              onChange={setFilterRating}
+              onChange={(v) => { setFilterRating(v); setPage(1); }}
               options={[
                 { value: 'all', label: 'All Ratings' },
                 { value: '5', label: '5 Stars' },
@@ -1378,7 +1534,59 @@ function AdminRatingsView() {
                 { value: '2', label: '2 Stars' },
                 { value: '1', label: '1 Star' },
               ]}
+              data-testid="admin-ratings-rating-filter"
             />
+            <FilterChipSelect
+              icon={MessageCircle}
+              label="Response"
+              value={filterResponse}
+              onChange={(v) => { setFilterResponse(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'Any status' },
+                { value: 'needs_response', label: 'Needs response' },
+                { value: 'responded', label: 'Responded' },
+              ]}
+              data-testid="admin-ratings-response-filter"
+            />
+            <FilterChipSelect
+              icon={Clock}
+              label="When"
+              value={filterTimeframe}
+              onChange={(v) => { setFilterTimeframe(v); setPage(1); }}
+              options={[
+                { value: 'all', label: 'Any time' },
+                { value: '7d', label: 'Last 7 days' },
+                { value: '30d', label: 'Last 30 days' },
+                { value: '90d', label: 'Last 3 months' },
+                { value: '1y', label: 'Last year' },
+              ]}
+              data-testid="admin-ratings-timeframe-filter"
+            />
+            <FilterChipSelect
+              icon={SlidersHorizontal}
+              label="Sort"
+              value={sortBy}
+              onChange={(v) => { setSortBy(v); setPage(1); }}
+              options={[
+                { value: 'newest', label: 'Newest first' },
+                { value: 'oldest', label: 'Oldest first' },
+                { value: 'highest', label: 'Highest rated' },
+                { value: 'lowest', label: 'Lowest rated' },
+                { value: 'helpful', label: 'Most helpful' },
+              ]}
+              allValue="newest"
+              data-testid="admin-ratings-sort"
+            />
+            {activeFiltersCount > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-[11px] text-slate-500 hover:text-[#082c59] font-medium px-2 py-1"
+                data-testid="admin-ratings-clear-filters"
+              >
+                Clear {activeFiltersCount} filter{activeFiltersCount > 1 ? 's' : ''}
+              </button>
+            )}
             <IconButton
               icon={FileText}
               label="Export ratings"
@@ -1407,6 +1615,11 @@ function AdminRatingsView() {
           </div>
 
           {/* Stats chip strip — sits just below the search bar so at-a-glance numbers don't take their own row */}
+          {filteredRatings.length !== ratings.length && (
+            <p className="text-[11px] text-slate-500" data-testid="admin-ratings-count">
+              Showing <span className="font-semibold text-slate-700">{filteredRatings.length}</span> of {ratings.length} reviews
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-2 pt-1" data-testid="admin-ratings-stats">
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium" data-testid="stat-total">
               <BarChart3 className="h-3 w-3" /> Total <span className="font-bold">{stats.total}</span>
