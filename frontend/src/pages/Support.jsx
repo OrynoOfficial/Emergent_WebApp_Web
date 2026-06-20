@@ -262,7 +262,7 @@ function TicketDetailDialog({ ticket, isOpen, onClose, onRefresh, isCustomer }) 
               </div>
               <DialogTitle className="text-xl text-white">{ticket.subject}</DialogTitle>
               <DialogDescription className="mt-1 text-xs text-white/80">
-                Opened {getTimeAgo(ticket.created_at)} · {conversationCount} reply{conversationCount === 1 ? '' : 'ies'}
+                Opened {getTimeAgo(ticket.created_at)} · {conversationCount} repl{conversationCount === 1 ? 'y' : 'ies'}
               </DialogDescription>
             </div>
             <Button variant="ghost" size="sm" onClick={() => onClose(false)} className="text-white/85 hover:bg-white/15 hover:text-white" data-testid="close-ticket-modal-btn">

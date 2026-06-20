@@ -1,3 +1,11 @@
+### 2026-02-19 — Shared `StatChipStrip` + Customer Ratings multi-combo filters + Accessibility bridge + Support customer/operator polish (iter264)
+- **`<StatChipStrip>`** new shared component at `/components/shared/StatChipStrip.jsx`. 12 colour tones, optional clickable chips with active ring. Adopted in `EmployeesManagement.jsx` as the first proof-of-adoption; other pages can be migrated incrementally.
+- **Customer Ratings multi-combo filters**: added search + Service + Rating + Timeframe + Sort filters that AND together. Empty-state card, active-filter count + clear-button, count footer ("Showing X of Y reviews"). Pagination & list switched to `filteredRatings`.
+- **Accessibility preferences applied site-wide** via new `<AccessibilityBridge>` component mounted in `App.jsx` inside `AuthProvider`. Sets `data-reduce-motion`, `data-high-contrast`, `data-font-scale` on `<html>` from `/users/me/preferences`. New CSS rules in `index.css` enforce: reduced motion (kills animations/transitions), high contrast (boost text/borders, outline links), font scale (14px / 16px / 18px root font-size).
+- **Support page customer/operator polish**: `TicketCardGrid` + `TicketCardList` rewritten to match the admin `TicketCard` aesthetic (white cards, ticket-number chip, status badge with dot, category pill, replies count, time-ago). `TicketDetailDialog` now uses the same deep-navy gradient header banner as `AdminTicketDetailModal` (#082c59 → #0a3a75) with status / category / priority chips and a white message card inside. Priority chip is hidden for customers (scoped view) and shown for operators.
+- **Tested**: iter-264 — 7/7 frontend + backend smoke pass. 0 console errors. One cosmetic typo (`replyies` → `replies`) fixed post-test.
+
+
 ### 2026-02-19 — Iconization Sweep #4: Operator Mgmt + Employee Mgmt families (iter263)
 - **Operator Management page family** (`OperatorsManagement.jsx`, `GeographyManagement.jsx`, `MarketSegmentManagement.jsx`):
   - 5/3/3 big stat cards → compact pill chip strip matching the Ratings page (data-testids unchanged: operators-stats-grid, geography-stats-grid, market-segments-stats-grid).
