@@ -1,3 +1,10 @@
+### 2026-02-20 — Operator + Admin Ratings multi-combo filters (iter266)
+- **OperatorRatingsView** (`/app/frontend/src/pages/Ratings.jsx`): wired `filterResponse` (Any / Needs response / Responded), `filterTimeframe` (7d/30d/90d/1y), and `sortBy` (newest/oldest/highest/lowest/helpful) into the `filteredRatings` memo. Added discoverable `FILTERS:` label row with `<SlidersHorizontal>` icon and 5 `FilterChipSelect` chips (Service, Rating, Response, When, Sort). Added `activeFiltersCount` + `clearFilters` and a "Showing X of Y reviews" count hint. Every chip resets `page` to 1 on change.
+- **AdminRatingsView**: same treatment — extended state with `filterResponse` / `filterTimeframe` / `sortBy`, multi-combo `filteredRatings` (AND across all filters + sort), `FILTERS:` label, 5 chip filters preserved alongside the existing Export button and list/grid view toggle. Stats chip strip and `showFlaggedOnly` button untouched.
+- **CustomerRatingsView** untouched (regression check passed).
+- **Tested**: iter-266 — 100% frontend pass. 0 console errors across operator / super-admin / customer sessions. Verified: chip popovers expose all option testids (filter-option-needs_response, filter-option-7d, filter-option-newest, etc.), AND filtering works, "Clear N filters" text reflects active count, pagination resets on each filter change.
+
+
 ### 2026-02-19 — Legal Information merge + Preferences with real-world outcomes (iter265)
 - **Settings sidebar**: removed standalone "Data Protection" entry. "Legal Information" now opens a `<LegalContentPanel>` with two sub-tabs — Terms & Conditions and Data Protection — both pulling from oryno.tech/terms and oryno.tech/privacy.
 - **New backend module `routes/legal.py`**: `GET /api/legal/content?type=terms|privacy` (24h TTL Mongo cache, refresh=true forces re-scrape), `POST /api/legal/content/refresh` (re-scrape both). 422 on invalid type. Tz-aware datetime fix applied (Mongo strips tzinfo on read).

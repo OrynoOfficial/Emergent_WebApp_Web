@@ -8,6 +8,14 @@
 
 
 
+## Feb 2026 — iter 266: Operator + Admin Ratings multi-combo filters
+- Carried over P0 from previous fork — wired `filterResponse` / `filterTimeframe` / `sortBy` into `OperatorRatingsView` and `AdminRatingsView` (`/app/frontend/src/pages/Ratings.jsx`).
+- Added discoverable `FILTERS:` label row to both views, each with 5 `FilterChipSelect` chips (Service, Rating, Response, When, Sort). `activeFiltersCount` + `clearFilters` helpers mirror the Customer view.
+- Customer view untouched. iter-266 100% frontend pass across all 3 roles.
+
+
+
+
 ## Latest Changes (Feb 2026 — iter 256: platform-wide iconisation ripple + dialog fade preservation)
 
 ### Strategy: ripple via shared components (not per-page sweep)
