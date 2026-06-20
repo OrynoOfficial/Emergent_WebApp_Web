@@ -40,6 +40,7 @@ from config.database import connect_to_mongo, close_mongo_connection, get_databa
 # Import new management routes
 from routes.vehicles import router as vehicles_router
 from routes.operators import router as operators_router
+from routes.legal import router as legal_router
 from routes.seat_bookings import router as seat_bookings_router, seat_ws_router
 from routes.rooms import router as rooms_router
 from routes.inventory import router as inventory_router
@@ -503,6 +504,7 @@ app.include_router(analytics_router)
 app.include_router(vehicles_router)
 app.include_router(resource_reassignments_router)
 app.include_router(operators_router)
+app.include_router(legal_router)
 app.include_router(seat_bookings_router)
 app.include_router(rooms_router)
 app.include_router(inventory_router)

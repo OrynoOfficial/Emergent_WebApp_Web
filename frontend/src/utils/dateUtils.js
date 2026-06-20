@@ -9,6 +9,31 @@
 const DEFAULT_FALLBACK = 'Africa/Douala';
 const LOCALE = 'en-GB';
 export const TIMEZONE_KEY = 'oryno_tz';
+export const DATE_FORMAT_KEY = 'oryno_date_format';
+export const TIME_FORMAT_KEY = 'oryno_time_format';
+
+const readLocal = (key) => {
+  try {
+    return (typeof localStorage !== 'undefined' && localStorage.getItem(key)) || null;
+  } catch {
+    return null;
+  }
+};
+
+/** User's preferred date format. One of: DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD MMM YYYY. Default DD/MM/YYYY. */
+export const getDateFormat = () => readLocal(DATE_FORMAT_KEY) || 'DD/MM/YYYY';
+export const setDateFormat = (v) => {
+  try { v ? localStorage.setItem(DATE_FORMAT_KEY, v) : localStorage.removeItem(DATE_FORMAT_KEY); } catch { /* ignore */ }
+};
+
+/** User's preferred clock format: '24h' (default) or '12h'. */
+export const getTimeFormat = () => readLocal(TIME_FORMAT_KEY) || '24h';
+export const setTimeFormat = (v) => {
+  try { v ? localStorage.setItem(TIME_FORMAT_KEY, v) : localStorage.removeItem(TIME_FORMAT_KEY); } catch { /* ignore */ }
+};
+
+// Month abbreviations for the "DD MMM YYYY" template
+const MONTHS_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /** Detect the browser's current IANA timezone string. */
 export const detectBrowserTimezone = () => {
@@ -111,28 +136,48 @@ export const isPast = (dateInput, timeStr = null) => {
 
 export const isShowtimePast = (dateStr, timeStr) => isPast(dateStr, timeStr);
 
-/** DD.MM.YYYY in the active timezone. */
+/** Apply the user's preferred date format template to a parts dict. */
+const applyDateFormat = (p) => {
+  switch (getDateFormat()) {
+    case 'MM/DD/YYYY': return `${p.month}/${p.day}/${p.year}`;
+    case 'YYYY-MM-DD': return `${p.year}-${p.month}-${p.day}`;
+    case 'DD MMM YYYY': return `${p.day} ${MONTHS_ABBR[Number(p.month) - 1] || p.month} ${p.year}`;
+    case 'DD/MM/YYYY':
+    default:           return `${p.day}/${p.month}/${p.year}`;
+  }
+};
+
+/** Apply the user's preferred clock format (24h vs 12h) to a parts dict. */
+const applyTimeFormat = (p) => {
+  if (getTimeFormat() === '12h') {
+    let h = Number(p.hour);
+    const period = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${p.minute} ${period}`;
+  }
+  return `${p.hour}:${p.minute}`;
+};
+
+/** Date formatted with the user's selected date_format preference. */
 export const formatDate = (input) => {
   const d = toDate(input);
   if (!d) return '-';
-  const p = partsInTz(d, getTimezone());
-  return `${p.day}.${p.month}.${p.year}`;
+  return applyDateFormat(partsInTz(d, getTimezone()));
 };
 
-/** DD.MM.YYYY HH:mm in the active timezone. */
+/** Date + time formatted with the user's selected date_format & time_format prefs. */
 export const formatDateTime = (input) => {
   const d = toDate(input);
   if (!d) return '-';
   const p = partsInTz(d, getTimezone());
-  return `${p.day}.${p.month}.${p.year} ${p.hour}:${p.minute}`;
+  return `${applyDateFormat(p)} ${applyTimeFormat(p)}`;
 };
 
-/** HH:mm in the active timezone. */
+/** Clock time honoring the user's time_format preference. */
 export const formatTime = (input) => {
   const d = toDate(input);
   if (!d) return '-';
-  const p = partsInTz(d, getTimezone());
-  return `${p.hour}:${p.minute}`;
+  return applyTimeFormat(partsInTz(d, getTimezone()));
 };
 
 /** DD Month YYYY (long month) in the active timezone. */

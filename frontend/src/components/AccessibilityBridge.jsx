@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/api/client';
+import { syncPreferencesToLocal } from '@/utils/prefStore';
+import { setDateFormat, setTimeFormat, setTimezone as persistTimezone } from '@/utils/dateUtils';
 
 /**
  * Applies the user's accessibility preferences to the document root.
@@ -45,6 +47,13 @@ export default function AccessibilityBridge() {
       try {
         const { data } = await api.get('/users/me/preferences');
         apply(data);
+        // Cache the full set in localStorage so synchronous consumers
+        // (RoleBasedRedirect, formatters, etc.) can read prefs without
+        // waiting for an async fetch on every page nav.
+        syncPreferencesToLocal(data);
+        if (data?.date_format) setDateFormat(data.date_format);
+        if (data?.time_format) setTimeFormat(data.time_format);
+        if (data?.timezone) persistTimezone(data.timezone);
       } catch {
         /* ignore — defaults already applied above */
       }

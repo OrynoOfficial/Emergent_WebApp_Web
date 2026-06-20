@@ -17,11 +17,13 @@ import {
   Settings as SettingsIcon, HelpCircle, CreditCard, FileText, Info,
   Languages, MessageSquare, ChevronRight, Check, Palette, Smartphone,
   Database, Key, AlertTriangle, Eye, EyeOff, Loader2, Edit, LogOut, MapPin, Heart, Trash2,
-  Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Gift, Package, Star
+  Hotel, Bus, Car, Utensils, Calendar, Film, Sparkles, Gift, Package, Star,
+  ExternalLink, RefreshCw, Scale
 } from 'lucide-react';
 import api from '../api/client';
 import { toast } from 'sonner';
-import { setTimezone as persistTimezone, detectBrowserTimezone } from '@/utils/dateUtils';
+import { setTimezone as persistTimezone, detectBrowserTimezone, setDateFormat, setTimeFormat } from '@/utils/dateUtils';
+import { syncPreferencesToLocal } from '@/utils/prefStore';
 
 // Common IANA timezones grouped by region (rendered in the dropdown)
 const COMMON_TIMEZONES = [
@@ -64,8 +66,7 @@ const CUSTOMER_SETTINGS_SECTIONS = [
   { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
   { key: 'preferences', label: 'Preferences', icon: Globe, description: 'Language, currency, and display' },
   { key: 'payment', label: 'Payment Methods', icon: CreditCard, description: 'Manage your payment options' },
-  { key: 'data_protection', label: 'Data Protection', icon: Lock, description: 'Privacy and data settings' },
-  { key: 'legal', label: 'Legal Information', icon: FileText, description: 'Terms and conditions' },
+  { key: 'legal', label: 'Legal Information', icon: FileText, description: 'Terms, conditions & data protection' },
   { key: 'about', label: 'About / Impressum', icon: Info, description: 'App information' },
 ];
 
@@ -75,8 +76,7 @@ const OPERATOR_SETTINGS_SECTIONS = [
   { key: 'security', label: 'Security', icon: Shield, description: 'Password and authentication settings' },
   { key: 'notifications', label: 'Notifications', icon: Bell, description: 'Manage alerts and push messages' },
   { key: 'preferences', label: 'Preferences', icon: Globe, description: 'Language, currency, and display' },
-  { key: 'data_protection', label: 'Data Protection', icon: Lock, description: 'Privacy and data settings' },
-  { key: 'legal', label: 'Legal Information', icon: FileText, description: 'Terms and conditions' },
+  { key: 'legal', label: 'Legal Information', icon: FileText, description: 'Terms, conditions & data protection' },
   { key: 'about', label: 'About / Impressum', icon: Info, description: 'App information' },
 ];
 
@@ -234,6 +234,154 @@ function SubscriptionsSection() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Legal Information panel
+// ─────────────────────────────────────────────────────────────────────
+// Two tabs: Terms & Conditions and Data Protection (Privacy).
+// Each tab pulls content from the backend cache populated by /api/legal/content
+// (server-side scrape of oryno.tech/terms & oryno.tech/privacy with a 24h TTL).
+// If the cached HTML is empty (the marketing site is JS-rendered → server-side
+// scrape returns no body), we fall back to an embedded iframe of the live page
+// so the user always sees up-to-date content.
+function LegalContentPanel() {
+  const [activeTab, setActiveTab] = useState('terms');
+  const [data, setData] = useState({ terms: null, privacy: null });
+  const [loading, setLoading] = useState({ terms: false, privacy: false });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadContent = async (type, force = false) => {
+    setLoading((s) => ({ ...s, [type]: true }));
+    try {
+      const url = `/legal/content?type=${type}${force ? '&refresh=true' : ''}`;
+      const { data: res } = await api.get(url);
+      setData((s) => ({ ...s, [type]: res }));
+    } catch (e) {
+      // fall back to "no content" state — iframe will still render
+      setData((s) => ({ ...s, [type]: null }));
+    } finally {
+      setLoading((s) => ({ ...s, [type]: false }));
+    }
+  };
+
+  useEffect(() => {
+    loadContent('terms');
+    loadContent('privacy');
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadContent('terms', true), loadContent('privacy', true)]);
+    setRefreshing(false);
+    toast.success('Legal content refreshed from oryno.tech');
+  };
+
+  const renderTabContent = (type) => {
+    const content = data[type];
+    const isLoading = loading[type];
+    const sourceUrl = type === 'terms' ? 'https://oryno.tech/terms' : 'https://oryno.tech/privacy';
+    const hasCachedText = content && content.html_content && content.html_content.length > 200;
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+          <span className="ml-3 text-sm text-slate-500">Loading from oryno.tech…</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* Header strip — source + last fetched */}
+        <div className="flex items-center justify-between flex-wrap gap-2 text-[11px] text-slate-500">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3 w-3" />
+            <span>Source:</span>
+            <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline font-mono">
+              {sourceUrl}
+            </a>
+            <ExternalLink className="h-3 w-3 text-slate-400" />
+          </div>
+          {content?.fetched_at && (
+            <span>
+              Cached: {new Date(content.fetched_at).toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {hasCachedText ? (
+          <div
+            className="prose prose-sm max-w-none p-4 rounded-lg border border-slate-200 bg-slate-50/50 overflow-x-auto"
+            data-testid={`legal-${type}-content`}
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: content.html_content }}
+          />
+        ) : (
+          // Live fallback — the marketing site is a SPA so the server-side
+          // scrape returns no body. Embed the page directly so the user still
+          // sees the live, dynamic copy.
+          <div className="space-y-2" data-testid={`legal-${type}-iframe-wrapper`}>
+            <p className="text-[11px] text-slate-500 italic">
+              Live view (server-side cache empty — pulling directly from oryno.tech).
+            </p>
+            <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+              <iframe
+                src={sourceUrl}
+                title={type === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                className="w-full"
+                style={{ minHeight: '60vh' }}
+                sandbox="allow-same-origin allow-scripts allow-popups"
+                data-testid={`legal-${type}-iframe`}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4" data-testid="legal-panel">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <Scale className="h-4 w-4 text-[#082c59]" /> Legal Information
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Terms &amp; Conditions and Data Protection notice. Pulled live from oryno.tech and cached for 24 h.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          data-testid="legal-refresh-btn"
+          className="gap-1.5"
+        >
+          {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Refresh now
+        </Button>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2 bg-slate-100">
+          <TabsTrigger value="terms" className="gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="legal-tab-terms">
+            <FileText className="h-3.5 w-3.5" />Terms &amp; Conditions
+          </TabsTrigger>
+          <TabsTrigger value="privacy" className="gap-2 data-[state=active]:bg-[#082c59] data-[state=active]:text-white" data-testid="legal-tab-privacy">
+            <Lock className="h-3.5 w-3.5" />Data Protection
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="terms" className="mt-4">{renderTabContent('terms')}</TabsContent>
+        <TabsContent value="privacy" className="mt-4">{renderTabContent('privacy')}</TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+
 
 export default function Settings() {
   const { user, logout, reAuthenticate } = useAuth();
@@ -610,8 +758,18 @@ export default function Settings() {
     setSaveSuccess(prev => ({ ...prev, preferences: false }));
     try {
       await api.put('/users/me/preferences', preferences);
-      // Persist the chosen timezone locally so every date instantly reflects it
+      // Persist locally so every part of the app picks them up immediately
       persistTimezone(preferences.timezone);
+      setDateFormat(preferences.date_format);
+      setTimeFormat(preferences.time_format);
+      syncPreferencesToLocal(preferences);
+      // Apply accessibility prefs to <html> right away (no page refresh needed)
+      const root = document.documentElement;
+      if (preferences.reduce_motion) root.setAttribute('data-reduce-motion', 'true');
+      else root.removeAttribute('data-reduce-motion');
+      if (preferences.high_contrast) root.setAttribute('data-high-contrast', 'true');
+      else root.removeAttribute('data-high-contrast');
+      root.setAttribute('data-font-scale', preferences.font_scale || 'normal');
       toast.success('Preferences saved successfully');
       setSaveSuccess(prev => ({ ...prev, preferences: true }));
       setTimeout(() => setSaveSuccess(prev => ({ ...prev, preferences: false })), 3000);
@@ -1133,6 +1291,15 @@ export default function Settings() {
       case 'preferences':
         return (
           <div className="space-y-6">
+            {/* Hint banner explaining which prefs are enforced today */}
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-[11px] text-blue-800 flex items-start gap-2" data-testid="prefs-info-banner">
+              <Info className="h-3.5 w-3.5 mt-0.5 flex-shrink-0 text-blue-600" />
+              <div>
+                <p className="font-semibold mb-0.5">All preferences are saved to your account and persist across sessions.</p>
+                <p>Live-applied right now: <strong>Timezone, Date / Time format, Theme, Reduce motion, High contrast, Font size, Default landing page, Distance unit, Number format</strong>. Other preferences (results-per-page, search radius, marketing &amp; profile flags, temperature unit, first day of week) are stored on your account and surfaced to feature endpoints — full UI plumbing rolls out incrementally.</p>
+              </div>
+            </div>
+
             {/* Language & locale */}
             <section className="space-y-4">
               <div className="flex items-center gap-2">
@@ -1523,36 +1690,34 @@ export default function Settings() {
           </div>
         );
 
-      case 'data_protection':
       case 'legal':
+        return <LegalContentPanel />;
+
       case 'about':
-        const contentType = activeSection;
-        const content = contentData[contentType];
-        const isEditing = editingContent === contentType;
-        
+        // eslint-disable-next-line no-case-declarations
+        const aboutContent = contentData.about;
+        // eslint-disable-next-line no-case-declarations
+        const isAboutEditing = editingContent === 'about';
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 capitalize">{contentType.replace('_', ' ')}</h3>
+              <h3 className="font-bold text-slate-900">About / Impressum</h3>
               {isAdmin && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setEditingContent(isEditing ? null : contentType)}
-                >
-                  {isEditing ? 'Cancel' : 'Edit'}
+                <Button variant="outline" onClick={() => setEditingContent(isAboutEditing ? null : 'about')}>
+                  {isAboutEditing ? 'Cancel' : 'Edit'}
                 </Button>
               )}
             </div>
 
-            {isEditing ? (
+            {isAboutEditing ? (
               <div className="space-y-4">
                 <div>
                   <Label>Title</Label>
                   <Input
-                    value={content.title}
-                    onChange={(e) => setContentData({ 
-                      ...contentData, 
-                      [contentType]: { ...content, title: e.target.value } 
+                    value={aboutContent.title}
+                    onChange={(e) => setContentData({
+                      ...contentData,
+                      about: { ...aboutContent, title: e.target.value },
                     })}
                     className="mt-1 bg-white"
                   />
@@ -1560,29 +1725,29 @@ export default function Settings() {
                 <div>
                   <Label>Content</Label>
                   <Textarea
-                    value={content.content}
-                    onChange={(e) => setContentData({ 
-                      ...contentData, 
-                      [contentType]: { ...content, content: e.target.value } 
+                    value={aboutContent.content}
+                    onChange={(e) => setContentData({
+                      ...contentData,
+                      about: { ...aboutContent, content: e.target.value },
                     })}
                     rows={12}
                     className="mt-1 bg-white"
                   />
                 </div>
-                <Button onClick={() => handleSaveContent(contentType)} disabled={saving} className="bg-[#082c59]">
+                <Button onClick={() => handleSaveContent('about')} disabled={saving} className="bg-[#082c59]">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Save Changes
                 </Button>
               </div>
             ) : (
               <div className="prose max-w-none">
-                {content.title ? (
+                {aboutContent.title ? (
                   <>
-                    <h4>{content.title}</h4>
-                    <div className="whitespace-pre-wrap text-slate-700">{content.content}</div>
+                    <h4>{aboutContent.title}</h4>
+                    <div className="whitespace-pre-wrap text-slate-700">{aboutContent.content}</div>
                   </>
                 ) : (
-                  <p className="text-slate-500">No {contentType.replace('_', ' ')} content available.</p>
+                  <p className="text-slate-500">No about content available.</p>
                 )}
               </div>
             )}
