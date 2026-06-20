@@ -8,6 +8,15 @@
 
 
 
+## Feb 2026 — iter 267: Unified service-ticket visual paradigm
+- New `BaseTicket.jsx` shared primitive — two-panel ticket-stub layout with brand-color band + perforation dots + LEFT poster/badges/meta-grid/extras + RIGHT dark "Important Info" + rules rail.
+- 6 new service-specific tickets (Travel/Cinema/Hotel/Restaurant/CarRental/Laundry) all built on BaseTicket; EventTicket refactored onto BaseTicket.
+- OrderDetailModal slimmed from ~1122 → ~628 lines (-44%); inline IIFE blocks replaced with declarative ticket components.
+- iter-267 100% frontend pass on the 4 live ticket types (Event/Travel/Hotel/CarRental); other 3 verified by code inspection.
+
+
+
+
 ## Feb 2026 — iter 266: Operator + Admin Ratings multi-combo filters
 - Carried over P0 from previous fork — wired `filterResponse` / `filterTimeframe` / `sortBy` into `OperatorRatingsView` and `AdminRatingsView` (`/app/frontend/src/pages/Ratings.jsx`).
 - Added discoverable `FILTERS:` label row to both views, each with 5 `FilterChipSelect` chips (Service, Rating, Response, When, Sort). `activeFiltersCount` + `clearFilters` helpers mirror the Customer view.
