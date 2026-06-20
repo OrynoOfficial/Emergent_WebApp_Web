@@ -1,3 +1,13 @@
+### 2026-02-19 — Settings page overhaul + UserDetailModal extended + Enhanced Preferences (iter261-262)
+- **Settings header**: title "Settings" + description now wrapped in a deep-blue gradient `Card`, matching the modal-card aesthetic.
+- **Basic Info "fill-once-lock"**: Full Name / Email / Phone / DOB / ID number / Gender are read-only once the user has saved them. Badge: "Fill once · locks after save". Only Super Admin / Admin can change them via the User Management Edit modal.
+- **`UserDetailModal` extended**: 4 tabs now → Profile / Address / Permissions / Activity. Profile gained DOB datepicker, Gender select, ID/Passport #. Address tab has all 5 fields (Street/City/Region/Postal/Country). Permissions tab has 4 navigation cards routing to `/admin/users/permissions` sub-tabs (Roles, User Permissions, Matrix, Audit Trail) — preserve `?user=<id>` query.
+- **Address section**: always-editable for the user; "Save Changes" button persists via PUT `/users/{id}`.
+- **Avatar persistence bug fixed**: after upload, immediately PUT `/users/{id}` with `avatar_url + profile_picture` and call `reAuthenticate()` so the avatar survives logout/login. Settings.jsx now reads `user.avatar_url || user.profile_picture`.
+- **Enhanced Preferences**: extended from 4 fields to 19 — added `date_format`, `time_format`, `first_day_of_week`, `number_format`, `distance_unit`, `temperature_unit`, `default_landing_page`, `default_search_radius_km`, `results_per_page`, `marketing_opt_in`, `show_profile_publicly`, `share_usage_data`, `reduce_motion`, `high_contrast`, `font_scale`. New backend endpoint `GET /api/users/me/preferences` returns the full set with defaults. PUT allowed-list expanded. All persist across sessions.
+- **Tested**: iter-261 (7/9 + 3/3 backend tests pass), iter-262 retest of modal opening (5/5 pass). 0 console errors. PUT `/users/{id}` -> 200 confirmed.
+
+
 ### 2026-02-19 — Iconization Sweep #3: User Management family + tab-disappearance bug fix (iter260)
 - **Critical bug fixed**: Clicking the "Permissions" tab used to make the "Invitations" tab disappear because `Permissions.jsx` only rendered 2 parent tabs. Now Permissions.jsx renders all 3 (Users / Permissions / Invitations) unconditionally, so the nav stays consistent across all sub-pages.
 - **New route**: `/admin/users/invitations` — Invitations is now a real route (was previously only an internal state of `Users.jsx`). Both Users.jsx and Permissions.jsx parent navs route correctly to it.
