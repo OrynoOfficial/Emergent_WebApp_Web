@@ -18,6 +18,7 @@ import api from '@/api/client';
 import { AdminModal, FormField, StyledInput } from '@/components/shared/AdminModal';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
+import IconButton from '@/components/shared/IconButton';
 import { TabsContent } from '@/components/ui/tabs';
 
 export default function EmployeeScopeManagement() {
@@ -197,11 +198,9 @@ export default function EmployeeScopeManagement() {
       scopeFilter={
         <div className="flex items-center gap-2 flex-wrap">
           {scopes.length === 0 && (
-            <Button variant="outline" size="sm" onClick={initializeDefaults} className="h-8">Initialize Defaults</Button>
+            <IconButton icon={Shield} label="Initialize defaults" variant="outline" onClick={initializeDefaults} data-testid="init-scope-defaults-btn" />
           )}
-          <Button className="h-8 bg-[#082c59]" size="sm" onClick={() => { setEditingScope(null); resetScopeForm(); setShowScopeModal(true); }}>
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Scope
-          </Button>
+          <IconButton icon={Plus} label="Create scope" variant="solid" onClick={() => { setEditingScope(null); resetScopeForm(); setShowScopeModal(true); }} data-testid="add-scope-btn" />
         </div>
       }
       onRefresh={fetchData}
@@ -228,12 +227,20 @@ export default function EmployeeScopeManagement() {
         </div>
       </SubpageCard>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="access-scopes-stats-grid">
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-blue-100 rounded-xl"><Shield className="w-6 h-6 text-blue-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.length}</p><p className="text-slate-600">Total Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-green-100 rounded-xl"><Globe className="w-6 h-6 text-green-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.filter(isGlobalScope).length}</p><p className="text-slate-600">Global Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-purple-100 rounded-xl"><MapPin className="w-6 h-6 text-purple-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.filter(s => s.countries?.length).length}</p><p className="text-slate-600">Country Scopes</p></div></div></CardContent></Card>
-        <Card><CardContent className="pt-6"><div className="flex items-center gap-4"><div className="p-3 bg-orange-100 rounded-xl"><Briefcase className="w-6 h-6 text-orange-600" /></div><div><p className="text-2xl font-bold">{filteredScopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</p><p className="text-slate-600">Assignments</p></div></div></CardContent></Card>
+      {/* Stats — compact chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="access-scopes-stats-grid">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+          <Shield className="h-3 w-3" /> Total <span className="font-bold">{filteredScopes.length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-[11px] font-medium">
+          <Globe className="h-3 w-3" /> Global <span className="font-bold">{filteredScopes.filter(isGlobalScope).length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-[11px] font-medium">
+          <MapPin className="h-3 w-3" /> Country <span className="font-bold">{filteredScopes.filter(s => s.countries?.length).length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-[11px] font-medium">
+          <Briefcase className="h-3 w-3" /> Assignments <span className="font-bold">{filteredScopes.reduce((sum, s) => sum + (s.assigned_users || 0), 0)}</span>
+        </div>
       </div>
 
       {/* Content */}

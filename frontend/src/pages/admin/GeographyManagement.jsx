@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import api from '@/api/client';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
+import IconButton from '@/components/shared/IconButton';
 import { TabsContent } from '@/components/ui/tabs';
 
 export default function GeographyManagement() {
@@ -170,13 +171,15 @@ export default function GeographyManagement() {
       scopeFilter={
         <div className="flex items-center gap-2 flex-wrap">
           {countries.length === 0 && (
-            <Button onClick={initializeDefaults} className="h-8" size="sm" data-testid="init-defaults-btn">
-              <Flag className="w-3.5 h-3.5 mr-1.5" /> Initialize Defaults
-            </Button>
+            <IconButton icon={Flag} label="Initialize defaults" variant="outline" onClick={initializeDefaults} data-testid="init-defaults-btn" />
           )}
-          <Button onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }} className="h-8" size="sm" data-testid="add-country-btn">
-            <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Country
-          </Button>
+          <IconButton
+            icon={Plus}
+            label="Add country"
+            variant="solid"
+            onClick={() => { setEditingCountry(null); setCountryForm({ code: '', name: '', continent: 'Africa', currency_code: 'XAF', phone_code: '+237', timezone: 'Africa/Douala' }); setShowCountryModal(true); }}
+            data-testid="add-country-btn"
+          />
         </div>
       }
       onRefresh={fetchData}
@@ -210,47 +213,17 @@ export default function GeographyManagement() {
         </div>
       </SubpageCard>
 
-      {/* Stats (dynamic — reflects search) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="geography-stats-grid">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Globe className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{filteredCountries.length}</p>
-                <p className="text-slate-600">Countries</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <MapPin className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{filteredCountries.reduce((acc, c) => acc + getRegionsForCountry(c.id).length, 0)}</p>
-                <p className="text-slate-600">Total Regions</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <Flag className="w-6 h-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{filteredCountries.filter(c => getRegionsForCountry(c.id).length > 0).length}</p>
-                <p className="text-slate-600">Countries with Regions</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats — compact chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="geography-stats-grid">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+          <Globe className="h-3 w-3" /> Countries <span className="font-bold">{filteredCountries.length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-[11px] font-medium">
+          <MapPin className="h-3 w-3" /> Regions <span className="font-bold">{filteredCountries.reduce((acc, c) => acc + getRegionsForCountry(c.id).length, 0)}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+          <Flag className="h-3 w-3" /> With regions <span className="font-bold">{filteredCountries.filter(c => getRegionsForCountry(c.id).length > 0).length}</span>
+        </div>
       </div>
 
       {/* Countries with nested Regions */}

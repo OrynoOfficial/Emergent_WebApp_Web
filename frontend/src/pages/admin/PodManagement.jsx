@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Users, Plus, Edit2, Trash2, Search, RefreshCw, UserPlus, UserMinus,
-  Building2, Crown, Briefcase, Headphones, Wrench, Loader2, ChevronRight, Network, ShieldCheck
+  Building2, Crown, Briefcase, Headphones, Wrench, Loader2, ChevronRight, Network, ShieldCheck, Filter, Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/api/client';
 import { AdminModal, FormField, StyledInput } from '@/components/shared/AdminModal';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
+import IconButton from '@/components/shared/IconButton';
+import FilterChipSelect from '@/components/shared/FilterChipSelect';
 import { TabsContent } from '@/components/ui/tabs';
 
 const POD_ROLE_CONFIG = {
@@ -256,9 +258,7 @@ export default function PodManagement() {
       icon={Users}
       subtitle="Manage staff, pods, and access scopes"
       scopeFilter={
-        <Button className="bg-[#082c59] h-8" size="sm" onClick={() => { setEditingPod(null); setPodForm({ name: '', description: '' }); setShowPodModal(true); }}>
-          <Plus className="w-3.5 h-3.5 mr-1.5" /> Create Pod
-        </Button>
+        <IconButton icon={Plus} label="Create pod" variant="solid" onClick={() => { setEditingPod(null); setPodForm({ name: '', description: '' }); setShowPodModal(true); }} data-testid="add-pod-btn" />
       }
       onRefresh={fetchData}
       refreshing={loading}
@@ -281,60 +281,20 @@ export default function PodManagement() {
         <p className="text-xs text-slate-500">Manage internal team pods and operator assignments</p>
       </SubpageCard>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" data-testid="pods-stats-grid">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500 rounded-xl shadow-sm">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-900">{pods.length}</p>
-                <p className="text-blue-700 text-sm">Total Pods</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-yellow-100/50 border-amber-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-amber-500 rounded-xl shadow-sm">
-                <Crown className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-amber-900">{pods.filter(p => p.team_lead_id).length}</p>
-                <p className="text-amber-700 text-sm">With Team Leads</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-violet-50 to-purple-100/50 border-violet-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-violet-500 rounded-xl shadow-sm">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-violet-900">{pods.reduce((sum, p) => sum + (p.total_operators || 0), 0)}</p>
-                <p className="text-violet-700 text-sm">Assigned Operators</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-100/50 border-emerald-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-500 rounded-xl shadow-sm">
-                <Briefcase className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-emerald-900">{pods.reduce((sum, p) => sum + (p.total_members || 0), 0)}</p>
-                <p className="text-emerald-700 text-sm">Total Members</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats — compact chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="pods-stats-grid">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+          <Users className="h-3 w-3" /> Pods <span className="font-bold">{pods.length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+          <Crown className="h-3 w-3" /> With leads <span className="font-bold">{pods.filter(p => p.team_lead_id).length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-[11px] font-medium">
+          <Building2 className="h-3 w-3" /> Operators <span className="font-bold">{pods.reduce((sum, p) => sum + (p.total_operators || 0), 0)}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
+          <Briefcase className="h-3 w-3" /> Members <span className="font-bold">{pods.reduce((sum, p) => sum + (p.total_members || 0), 0)}</span>
+        </div>
       </div>
 
       {/* Content */}
@@ -588,17 +548,17 @@ export default function PodManagement() {
                   data-testid="member-search-input"
                 />
               </div>
-              <Select value={memberDeptFilter} onValueChange={setMemberDeptFilter}>
-                <SelectTrigger className="w-[140px]" data-testid="member-dept-filter">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Depts</SelectItem>
-                  {[...new Set(availableUsers.map(u => u.department).filter(Boolean))].map(d => (
-                    <SelectItem key={d} value={d} className="capitalize">{d.replace('_', ' ')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FilterChipSelect
+                icon={Building2}
+                label="Department"
+                value={memberDeptFilter}
+                onChange={setMemberDeptFilter}
+                options={[
+                  { value: 'all', label: 'All Depts' },
+                  ...[...new Set(availableUsers.map(u => u.department).filter(Boolean))].map(d => ({ value: d, label: d.replace('_', ' ') })),
+                ]}
+                data-testid="member-dept-filter"
+              />
             </div>
 
             {/* Employee List */}
@@ -690,39 +650,41 @@ export default function PodManagement() {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Select value={opStatusFilter} onValueChange={setOpStatusFilter}>
-                <SelectTrigger className="w-[130px]" data-testid="operator-status-filter">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={opTypeFilter} onValueChange={setOpTypeFilter}>
-                <SelectTrigger className="w-[140px]" data-testid="operator-type-filter">
-                  <SelectValue placeholder="Service Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {[...new Set(operators.map(o => o.operator_type).filter(Boolean))].sort().map(t => (
-                    <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={opCountryFilter} onValueChange={setOpCountryFilter}>
-                <SelectTrigger className="w-[140px]" data-testid="operator-country-filter">
-                  <SelectValue placeholder="Country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
-                  {[...new Set(operators.map(o => o.country).filter(Boolean))].sort().map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FilterChipSelect
+                icon={Filter}
+                label="Status"
+                value={opStatusFilter}
+                onChange={setOpStatusFilter}
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'suspended', label: 'Suspended' },
+                ]}
+                data-testid="operator-status-filter"
+              />
+              <FilterChipSelect
+                icon={Building2}
+                label="Service Type"
+                value={opTypeFilter}
+                onChange={setOpTypeFilter}
+                options={[
+                  { value: 'all', label: 'All Types' },
+                  ...[...new Set(operators.map(o => o.operator_type).filter(Boolean))].sort().map(t => ({ value: t, label: t })),
+                ]}
+                data-testid="operator-type-filter"
+              />
+              <FilterChipSelect
+                icon={Globe}
+                label="Country"
+                value={opCountryFilter}
+                onChange={setOpCountryFilter}
+                options={[
+                  { value: 'all', label: 'All Countries' },
+                  ...[...new Set(operators.map(o => o.country).filter(Boolean))].sort().map(c => ({ value: c, label: c })),
+                ]}
+                data-testid="operator-country-filter"
+              />
             </div>
           </div>
 

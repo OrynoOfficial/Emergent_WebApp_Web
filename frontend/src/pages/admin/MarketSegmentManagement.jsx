@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import api from '@/api/client';
 import ManagementShell from '@/components/management/shared/ManagementShell';
 import SubpageCard from '@/components/management/shared/SubpageCard';
+import IconButton from '@/components/shared/IconButton';
 import { TabsContent } from '@/components/ui/tabs';
 
 const DEFAULT_COLORS = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#EC4899', '#06B6D4', '#F97316'];
@@ -95,25 +96,20 @@ export default function MarketSegmentManagement() {
         count={segments.length}
         testId="market-segments-subpage"
       >
-        <Button onClick={() => { setEditing(null); setForm({ name: '', description: '', color: '#3B82F6' }); setShowModal(true); }} className="h-8" size="sm" data-testid="add-segment-btn">
-          <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Segment
-        </Button>
+        <IconButton icon={Plus} label="Add segment" variant="solid" onClick={() => { setEditing(null); setForm({ name: '', description: '', color: '#3B82F6' }); setShowModal(true); }} data-testid="add-segment-btn" />
       </SubpageCard>
 
-      {/* Stats (dynamic) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="market-segments-stats-grid">
-        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg"><TrendingUp className="h-5 w-5 text-blue-600" /></div>
-          <div><p className="text-2xl font-bold text-slate-900">{segments.length}</p><p className="text-sm text-slate-500">Total Segments</p></div>
-        </CardContent></Card>
-        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg"><TrendingUp className="h-5 w-5 text-green-600" /></div>
-          <div><p className="text-2xl font-bold text-slate-900">{segments.filter(s => s.description).length}</p><p className="text-sm text-slate-500">Described</p></div>
-        </CardContent></Card>
-        <Card className="bg-white"><CardContent className="p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-lg"><TrendingUp className="h-5 w-5 text-amber-600" /></div>
-          <div><p className="text-2xl font-bold text-slate-900">{new Set(segments.map(s => s.color)).size}</p><p className="text-sm text-slate-500">Unique Colors</p></div>
-        </CardContent></Card>
+      {/* Stats — compact chip strip */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="market-segments-stats-grid">
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-medium">
+          <TrendingUp className="h-3 w-3" /> Total <span className="font-bold">{segments.length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-[11px] font-medium">
+          <TrendingUp className="h-3 w-3" /> Described <span className="font-bold">{segments.filter(s => s.description).length}</span>
+        </div>
+        <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-medium">
+          <TrendingUp className="h-3 w-3" /> Unique colors <span className="font-bold">{new Set(segments.map(s => s.color)).size}</span>
+        </div>
       </div>
 
       {loading ? (
@@ -148,7 +144,7 @@ export default function MarketSegmentManagement() {
             </Card>
           ))}
           {segments.length === 0 && (
-            <div className="col-span-full text-center py-12 text-slate-500">No market segments. Click "Add Segment" to create one.</div>
+            <div className="col-span-full text-center py-12 text-slate-500">No market segments. Click &quot;Add Segment&quot; to create one.</div>
           )}
         </div>
       )}

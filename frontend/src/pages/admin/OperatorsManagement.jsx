@@ -492,21 +492,22 @@ export default function OperatorsManagement() {
         )}
       </SubpageCard>
 
-      {/* Stats (mirrors Users page compact style — keeps the layout
-          inside 1366px viewports without horizontal overflow). */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4" data-testid="operators-stats-grid">
+      {/* Stats — compact chip strip (matches Ratings page aesthetic) */}
+      <div className="flex flex-wrap items-center gap-2" data-testid="operators-stats-grid">
         {[
-          { label: 'Total Operators', count: stats.total, color: 'bg-slate-100 text-slate-700' },
-          { label: 'Active', count: stats.active, color: 'bg-green-100 text-green-700' },
-          { label: 'Pending', count: stats.pending, color: 'bg-yellow-100 text-yellow-700' },
-          { label: 'Suspended', count: stats.suspended, color: 'bg-red-100 text-red-700' },
-          { label: 'Total Revenue', count: formatFCFA(stats.totalRevenue), color: 'bg-purple-100 text-purple-700', isCurrency: true },
-        ].map((stat) => (
-          <div key={stat.label} className={`p-3 rounded-lg ${stat.color}`}>
-            <p className={`${stat.isCurrency ? 'text-base' : 'text-2xl'} font-bold truncate`} title={String(stat.count)}>{stat.count}</p>
-            <p className="text-sm">{stat.label}</p>
-          </div>
-        ))}
+          { label: 'Total', count: stats.total, color: 'bg-slate-50 border-slate-200 text-slate-700', icon: Building },
+          { label: 'Active', count: stats.active, color: 'bg-green-50 border-green-200 text-green-700', icon: CheckCircle },
+          { label: 'Pending', count: stats.pending, color: 'bg-amber-50 border-amber-200 text-amber-700', icon: Filter },
+          { label: 'Suspended', count: stats.suspended, color: 'bg-red-50 border-red-200 text-red-700', icon: XIcon },
+          { label: 'Revenue', count: formatFCFA(stats.totalRevenue), color: 'bg-purple-50 border-purple-200 text-purple-700', icon: Users },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} className={`flex items-center gap-2 px-2.5 py-1 rounded-full border ${stat.color} text-[11px] font-medium`}>
+              <Icon className="h-3 w-3" /> {stat.label} <span className="font-bold">{stat.count}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Operators — list / grid / details */}
