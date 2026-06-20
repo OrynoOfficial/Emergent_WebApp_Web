@@ -292,9 +292,11 @@ html[data-high-contrast="true"] select {
   border-color: #000000 !important;
 }
 
-/* Font scale — small / normal / large. Scales the root font size
-   so every Tailwind `rem`-based class follows along. */
-html[data-font-scale="small"] { font-size: 14px; }
-html[data-font-scale="normal"] { font-size: 16px; }
-html[data-font-scale="large"] { font-size: 18px; }
+/* Font scale — small / normal / large. Scales the root font size so every
+   Tailwind `rem`-based class follows along. "normal" matches the platform's
+   original 90% baseline (see html { font-size: 90% } at the top of this file)
+   so toggling the pref off restores the dense layout exactly. */
+html[data-font-scale="small"] { font-size: 80%; }
+html[data-font-scale="normal"] { font-size: 90%; }
+html[data-font-scale="large"] { font-size: 100%; }
 

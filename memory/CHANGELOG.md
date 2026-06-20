@@ -1,3 +1,17 @@
+### 2026-02-19 — Legal Information merge + Preferences with real-world outcomes (iter265)
+- **Settings sidebar**: removed standalone "Data Protection" entry. "Legal Information" now opens a `<LegalContentPanel>` with two sub-tabs — Terms & Conditions and Data Protection — both pulling from oryno.tech/terms and oryno.tech/privacy.
+- **New backend module `routes/legal.py`**: `GET /api/legal/content?type=terms|privacy` (24h TTL Mongo cache, refresh=true forces re-scrape), `POST /api/legal/content/refresh` (re-scrape both). 422 on invalid type. Tz-aware datetime fix applied (Mongo strips tzinfo on read).
+- **Graceful iframe fallback**: oryno.tech is a JS-rendered SPA, so the server-side scrape returns an empty `<main>`. The panel detects an empty cache (<200 chars) and renders an `<iframe sandbox>` to the live page so the user always sees the current copy. A header strip with the source URL + `Refresh now` button remains visible at all times.
+- **Preferences audit + wiring**:
+  - `default_landing_page` → `resolveLandingPath` honors it (post-login redirects to `/dashboard`, `/orders`, `/`, or role-based depending on choice).
+  - `date_format` & `time_format` → `formatDate` / `formatDateTime` / `formatTime` in `dateUtils.js` now render `DD/MM/YYYY` / `MM/DD/YYYY` / `YYYY-MM-DD` / `DD MMM YYYY` and 24h vs 12h with AM/PM.
+  - `distance_unit` + `number_format` → new `formatDistance` / `formatNumber` helpers in new `utils/prefStore.js` ready for adoption in distance pickers / FCFA formatters.
+  - All prefs synced to `localStorage` (via `syncPreferencesToLocal`) by AccessibilityBridge on user mount and by Settings on save — synchronous consumers (RoleBasedRedirect, formatters) can read them without an async fetch.
+  - Reduce motion / high contrast / font scale apply live on Save (no page refresh required).
+- **Info banner** in Preferences explaining which prefs are live-applied vs incremental (transparency about ongoing rollout).
+- **Tested**: iter-265 — 5/5 backend + 100% frontend pass. testing_agent created pytest at `/app/backend/tests/test_iter265_legal_content.py` and fixed the tz-aware Mongo datetime bug.
+
+
 ### 2026-02-19 — Shared `StatChipStrip` + Customer Ratings multi-combo filters + Accessibility bridge + Support customer/operator polish (iter264)
 - **`<StatChipStrip>`** new shared component at `/components/shared/StatChipStrip.jsx`. 12 colour tones, optional clickable chips with active ring. Adopted in `EmployeesManagement.jsx` as the first proof-of-adoption; other pages can be migrated incrementally.
 - **Customer Ratings multi-combo filters**: added search + Service + Rating + Timeframe + Sort filters that AND together. Empty-state card, active-filter count + clear-button, count footer ("Showing X of Y reviews"). Pagination & list switched to `filteredRatings`.
