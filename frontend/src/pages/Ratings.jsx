@@ -431,7 +431,7 @@ function CustomerRatingsView() {
         {/* Filter bar — multi-combo. All filters AND together. */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               <div className="relative flex-1 min-w-[220px] max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
@@ -441,6 +441,11 @@ function CustomerRatingsView() {
                   className="pl-9 h-9 text-sm bg-white"
                   data-testid="customer-ratings-search"
                 />
+              </div>
+              <div className="hidden md:block h-6 w-px bg-slate-200" aria-hidden />
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <SlidersHorizontal className="h-3 w-3" />
+                Filters:
               </div>
               <FilterChipSelect
                 icon={Briefcase}
