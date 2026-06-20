@@ -1,0 +1,89 @@
+{
+  "summary": "Frontend-only validation of the new shared BaseTicket primitive and 6 service-specific ticket components rendered through OrderDetailModal. Logged in as customer@test.com on /orders and opened tickets across all available service types (Event, Travel, Hotel, Car Rental). Cinema/Restaurant/Laundry orders are not present in this account, so they were validated via code/structure inspection. All four live tickets render with the Event-style two-panel paradigm (brand band + perforation + LEFT poster/badges/meta-grid/extras + RIGHT dark info+rules panel). Modal scaffolding (operator strip, customer block, payment summary, money trail) all intact. No real frontend console errors triggered by the ticket components.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "playwright_results": {
+    "event_ticket": {
+      "testid": "event-ticket",
+      "rendered": true,
+      "checks": {
+        "title 'Pytest BI Show'": "PASS",
+        "'GA' class badge with indigo dot": "PASS (visible in screenshot)",
+        "'× 1' qty badge": "PASS",
+        "WHEN/WHERE/HOLDER/PAID 2x2 meta grid": "PASS",
+        "right panel 'IMPORTANT INFO'": "PASS",
+        "'VENUE RULES' bullets (No outside drinks, Photo ID required)": "PASS",
+        "indigo brand band top+bottom": "PASS (visible)"
+      },
+      "modal_scaffolding": {
+        "order-detail-operator-strip": "present",
+        "payment-summary-total": "present (5,150 FCFA)",
+        "money-trail-section": "present"
+      }
+    },
+    "travel_ticket": {
+      "testid": "travel-ticket",
+      "rendered": true,
+      "checks": {
+        "navy brand band": "PASS",
+        "plate badge 'CE-456-CD'": "PASS",
+        "VIP + 'Seats 3, 4' chips": "PASS",
+        "title 'Yaoundé → Douala' subtitle 'Test Bus Beta'": "PASS",
+        "Departure/Route/Passenger/Fare meta grid": "PASS",
+        "Vehicle section 'Test Bus Beta · Toyota Coaster'": "PASS",
+        "Extra Luggage Manifest (2) bag-0 & bag-1": "PASS (both data-testid='travel-ticket-bag-0|1' found, content visible)",
+        "right panel 'BOARDING INFO' + 'TRAVEL NOTES'": "PASS"
+      }
+    },
+    "hotel_ticket": {
+      "testid": "hotel-ticket",
+      "rendered": true,
+      "checks": {
+        "title 'Pytest Hotel'": "PASS",
+        "'STAY INFO' right panel": "PASS",
+        "'HOTEL POLICIES' rules rail": "PASS"
+      }
+    },
+    "car_rental_ticket": {
+      "testid": "car-rental-ticket",
+      "rendered": true,
+      "checks": {
+        "'Pytest Hatch' in title/content": "PASS",
+        "'RENTAL INFO' right panel": "PASS",
+        "'RENTAL NOTES' rules rail": "PASS"
+      }
+    },
+    "cinema_ticket": "SKIPPED - no cinema order in customer@test.com account. Code inspection: /app/frontend/src/components/tickets/CinemaTicket.jsx exists, exports testId='cinema-ticket', uses BaseTicket with accent #0891b2, includes ticket-film-genres / ticket-film-credits / ticket-film-synopsis / ticket-film-trailer-link sub-testids. OrderDetailModal line 379-382 conditionally renders <CinemaTicket/> for service_type='cinema'.",
+    "restaurant_ticket": "SKIPPED - no restaurant order. Code inspection: RestaurantTicket.jsx exists, testId='restaurant-ticket', BaseTicket accent #c2410c, restaurant-ticket-items sub-testid for pre-ordered items. OrderDetailModal lines 399-402 wire it up.",
+    "laundry_ticket": "SKIPPED - no laundry order. Code inspection: LaundryTicket.jsx exists, testId='laundry-ticket', BaseTicket accent #7e22ce, laundry-ticket-items + laundry-ticket-price-summary sub-testids. OrderDetailModal lines 389-392 wire it up."
+  },
+  "code_structure_check": {
+    "tickets_dir": "7 files present (BaseTicket, EventTicket, TravelTicket, CinemaTicket, HotelTicket, RestaurantTicket, CarRentalTicket, LaundryTicket) -- PASS",
+    "OrderDetailModal_line_count": "628 lines (target ~640, down from ~1122) -- PASS",
+    "old_inline_testids_removed": "grep for order-vehicle-info | order-screening-info | order-laundry-info | order-luggage-manifest returned 0 matches in OrderDetailModal.jsx -- PASS",
+    "new_ticket_testids_defined": "All 7 testIds set as BaseTicket testId prop in respective wrappers -- PASS"
+  },
+  "console_errors": "No new errors introduced by ticket components. Pre-existing noise only: 'Error fetching permissions' (network/auth context) and ERR_NAME_NOT_RESOLVED for external image hosts (operator logos etc.) — neither related to the ticket refactor.",
+  "test_report_links": ["/app/test_reports/iteration_267.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Excellent refactor: ~480 lines (≈43%) eliminated from OrderDetailModal by extracting per-service tickets behind a shared BaseTicket primitive — strong DRY win.",
+    "BaseTicket is well-parameterised (accentColor, posterAspect, badges, metaItems, extraSections, rightPanelTitle/Description, rules) which makes future service additions trivial.",
+    "Minor: BaseTicket.jsx uses inline style={{ borderColor: `${ACCENT}40` }} pattern in 2 child components — works fine but consider extracting a tiny helper to avoid the hex-suffix opacity convention being copy-pasted across files.",
+    "No accessibility regressions observed in modal close/Esc dismissal flow.",
+    "Travel ticket correctly handles the 'Extra Luggage Manifest (2)' edge case with both bag items rendering individually testable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% on tested types (Event, Travel, Hotel, Car Rental); 3 types not tested due to absent seed orders but verified by code inspection"},
+  "test_credentials": "customer@test.com / testpassword123 — used and worked",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "If a future iteration adds seed cinema/restaurant/laundry orders for customer@test.com, just open each via :has-text(service_name) selector and assert data-testid in [cinema-ticket, restaurant-ticket, laundry-ticket]. The conditional renderers in OrderDetailModal (lines 374-407) are confirmed wired correctly — only missing the orders to drive them. Modal close uses Esc key reliably.",
+  "rca of the issue": "N/A — no issues found. Refactor is complete, visually polished, and behaviour-equivalent across the four service types we could observe live."
+}

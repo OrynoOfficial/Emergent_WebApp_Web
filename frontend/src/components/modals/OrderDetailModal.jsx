@@ -26,19 +26,11 @@ import {
   XCircle,
   AlertCircle,
   Truck,
-  Bus,
   Hash,
-  Armchair,
   Users as UsersIcon,
   RefreshCw,
   Info,
-  Film,
   Ticket,
-  Monitor,
-  Shirt,
-  Droplets,
-  Sparkles,
-  Home,
   CheckCircle2,
   Building2,
   Wallet,
@@ -47,6 +39,12 @@ import { formatFCFA } from '@/utils/currency';
 import { formatDate as fmtDate, formatDateTime as fmtDateTime, getTimezone } from '@/utils/dateUtils';
 import MoneyTrail from '@/components/payment/MoneyTrail';
 import EventTicket from '@/components/tickets/EventTicket';
+import TravelTicket from '@/components/tickets/TravelTicket';
+import CinemaTicket from '@/components/tickets/CinemaTicket';
+import HotelTicket from '@/components/tickets/HotelTicket';
+import RestaurantTicket from '@/components/tickets/RestaurantTicket';
+import CarRentalTicket from '@/components/tickets/CarRentalTicket';
+import LaundryTicket from '@/components/tickets/LaundryTicket';
 import RefundRequestDialog from '@/components/refunds/RefundRequestDialog';
 import { RefreshCcw } from 'lucide-react';
 
@@ -372,328 +370,14 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             </div>
           </div>
 
-          {/* Vehicle Info — for travel bookings */}
-          {(order.service_type === 'travel' || order.service_category === 'travel') && (
-            (() => {
-              const v = order.booking_details?.vehicle_info || {};
-              const plate = v.plate_number || order.booking_details?.plate_number;
-              const vName = v.vehicle_name || v.name || order.booking_details?.vehicle_name;
-              const model = [v.manufacturer, v.model].filter(Boolean).join(' ') || order.booking_details?.vehicle_model;
-              const images = v.images || order.booking_details?.vehicle_images || [];
-              const vType = v.vehicle_type || order.booking_details?.vehicle_type;
-              const seats = order.booking_details?.seat_numbers || order.booking_details?.selected_seats || [];
-              if (!plate && !vName && !model && images.length === 0 && !vType) return null;
-              return (
-                <div data-testid="order-vehicle-info">
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Bus className="h-4 w-4 text-[#082c59]" /> Your Vehicle
-                  </h3>
-                  <div className="rounded-xl border-2 border-[#082c59]/10 bg-gradient-to-br from-[#082c59]/5 to-white p-4">
-                    <div className="flex gap-4 items-start">
-                      {images.length > 0 ? (
-                        <img
-                          src={images[0]}
-                          alt={vName || 'Vehicle'}
-                          className="w-28 h-20 rounded-lg object-cover border border-slate-200 flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-28 h-20 rounded-lg bg-[#082c59]/10 flex items-center justify-center flex-shrink-0">
-                          <Bus className="h-8 w-8 text-[#082c59]" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        {vName && <p className="font-bold text-slate-900">{vName}</p>}
-                        {model && <p className="text-sm text-slate-600">{model}</p>}
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {plate && (
-                            <Badge className="bg-[#082c59] text-white font-mono text-xs gap-1" data-testid="ticket-plate-number">
-                              <Hash className="h-3 w-3" /> {plate}
-                            </Badge>
-                          )}
-                          {vType && (
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {vType.replace('_', ' ')}
-                            </Badge>
-                          )}
-                          {seats.length > 0 && (
-                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs gap-1">
-                              <Armchair className="h-3 w-3" /> Seat{seats.length > 1 ? 's' : ''} {seats.join(', ')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500 italic">
-                      Show this ticket and the plate number to the agent at boarding.
-                    </p>
-                  </div>
-                </div>
-              );
-            })()
+          {/* Travel boarding ticket */}
+          {(order.service_type === 'travel' || order.service_category === 'travel') && !order.ticket_invalidated && (
+            <TravelTicket order={order} formatDate={formatDate} />
           )}
 
-          {/* Extra-luggage manifest — directly under "Your Vehicle" since
-              passengers reference both side-by-side at boarding. Operators
-              and station staff can verify each bag's contents at a glance. */}
-          {Array.isArray(order.booking_details?.extra_luggage_descriptions) && order.booking_details.extra_luggage_descriptions.length > 0 && (
-            <div data-testid="order-luggage-manifest">
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-800 text-[10px] font-bold">
-                  {order.booking_details.extra_luggage_descriptions.length}
-                </span>
-                Extra Luggage Manifest
-              </h3>
-              <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
-                <ol className="space-y-2">
-                  {order.booking_details.extra_luggage_descriptions.map((desc, idx) => (
-                    <li key={idx} className="flex gap-3 items-start text-sm" data-testid={`order-luggage-bag-${idx}`}>
-                      <span className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-amber-300 text-amber-800 text-[11px] font-bold shrink-0">
-                        #{idx + 1}
-                      </span>
-                      <p className="text-slate-700 leading-snug">{desc}</p>
-                    </li>
-                  ))}
-                </ol>
-                <p className="text-[11px] text-amber-700/80 italic mt-3">
-                  Contents declared at booking. Show this list at boarding for verification.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Screening Info — for cinema bookings */}
-          {(order.service_type === 'cinema' || order.service_category === 'cinema') && (
-            (() => {
-              const si = order.booking_details?.showtime_info || {};
-              const bd = order.booking_details || {};
-              const filmTitle = si.film_title || bd.film_title || order.service_name;
-              const cinemaName = si.cinema_name || bd.cinema || order.operator_name;
-              const cinemaCity = si.cinema_city || bd.cinema_city;
-              const cinemaAddress = si.cinema_address;
-              const cinemaPhone = si.cinema_phone;
-              const cinemaAmenities = si.cinema_amenities || [];
-              const screenName = si.screen_name || bd.screen;
-              const screenType = si.screen_type || bd.screen_type;
-              const showDate = si.show_date || bd.show_date;
-              const showTime = si.show_time || bd.show_time;
-              const endTime = si.end_time || bd.end_time;
-              const seats = bd.seats || bd.selected_seats || [];
-              const counts = bd.ticket_counts || {};
-              const poster = si.poster_url || bd.poster_url;
-              // Rich film metadata (added by backend enrichment)
-              const filmDuration = si.film_duration_minutes;
-              const filmGenre = si.film_genre || [];
-              const filmLanguage = si.film_language || si.language;
-              const filmRating = si.film_rating;
-              const filmDirector = si.film_director;
-              const filmCast = si.film_cast || [];
-              const filmSynopsis = si.film_synopsis;
-              const filmImdb = si.film_imdb_rating;
-              const filmTrailerUrl = si.film_trailer_url;
-              if (!filmTitle && !cinemaName && !screenName && seats.length === 0) return null;
-              return (
-                <div data-testid="order-screening-info">
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Film className="h-4 w-4 text-[#082c59]" /> Your Screening
-                  </h3>
-                  <div className="rounded-xl border-2 border-cyan-500/15 bg-gradient-to-br from-cyan-50 to-white p-4">
-                    <div className="flex gap-4 items-start">
-                      {poster ? (
-                        <img
-                          src={poster}
-                          alt={filmTitle || 'Film'}
-                          className="w-24 h-36 rounded-lg object-cover border border-slate-200 flex-shrink-0 shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-24 h-36 rounded-lg bg-gradient-to-br from-red-700 to-rose-600 flex items-center justify-center flex-shrink-0">
-                          <Film className="h-10 w-10 text-white/80" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        {filmTitle && (
-                          <div className="flex items-start justify-between gap-2 flex-wrap">
-                            <p className="font-bold text-slate-900 text-base leading-tight" data-testid="ticket-film-title">{filmTitle}</p>
-                            {filmRating && (
-                              <Badge variant="outline" className="text-[10px] bg-slate-100 border-slate-300 text-slate-700 uppercase">{filmRating}</Badge>
-                            )}
-                          </div>
-                        )}
-                        {/* Film meta line — duration / language / IMDB */}
-                        {(filmDuration || filmLanguage || filmImdb) && (
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500">
-                            {filmDuration && (
-                              <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {filmDuration} min</span>
-                            )}
-                            {filmLanguage && (
-                              <span className="inline-flex items-center gap-1 capitalize">{filmLanguage}</span>
-                            )}
-                            {filmImdb && (
-                              <span className="inline-flex items-center gap-1 text-amber-700 font-semibold">★ {Number(filmImdb).toFixed(1)} IMDb</span>
-                            )}
-                          </div>
-                        )}
-                        {/* Genres */}
-                        {filmGenre.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-0.5" data-testid="ticket-film-genres">
-                            {filmGenre.slice(0, 4).map((g, idx) => (
-                              <Badge key={idx} variant="outline" className="text-[10px] capitalize bg-purple-50 border-purple-200 text-purple-700 px-1.5 py-0">
-                                {(g || '').replace(/_/g, ' ')}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        {cinemaName && (
-                          <p className="text-sm text-slate-700 flex items-start gap-1 pt-0.5">
-                            <MapPin className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                            <span>
-                              <span className="font-medium">{cinemaName}</span>
-                              {cinemaAddress && <span className="text-slate-500"> · {cinemaAddress}</span>}
-                              {cinemaCity && <span className="text-slate-500"> · {cinemaCity}</span>}
-                            </span>
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {screenName && (
-                            <Badge className="bg-[#082c59] text-white text-xs gap-1" data-testid="ticket-screen-name">
-                              <Monitor className="h-3 w-3" /> {screenName}
-                            </Badge>
-                          )}
-                          {screenType && (
-                            <Badge variant="outline" className="text-xs uppercase tracking-wide bg-cyan-50 border-cyan-200 text-cyan-700">
-                              {screenType.replace('_', ' ')}
-                            </Badge>
-                          )}
-                          {seats.length > 0 && (
-                            <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs gap-1" data-testid="ticket-seats">
-                              <Armchair className="h-3 w-3" /> Seat{seats.length > 1 ? 's' : ''} {seats.join(', ')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Director + cast — pulled from the enriched film snapshot */}
-                    {(filmDirector || filmCast.length > 0) && (
-                      <div className="mt-3 pt-3 border-t border-cyan-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs" data-testid="ticket-film-credits">
-                        {filmDirector && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Director</p>
-                            <p className="text-slate-800 font-medium mt-0.5">{filmDirector}</p>
-                          </div>
-                        )}
-                        {filmCast.length > 0 && (
-                          <div>
-                            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Starring</p>
-                            <p className="text-slate-800 font-medium mt-0.5 truncate" title={filmCast.join(', ')}>
-                              {filmCast.slice(0, 4).join(', ')}{filmCast.length > 4 ? '…' : ''}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Synopsis — short description from the film row */}
-                    {filmSynopsis && (
-                      <div className="mt-3 pt-3 border-t border-cyan-200/60" data-testid="ticket-film-synopsis">
-                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Synopsis</p>
-                        <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">{filmSynopsis}</p>
-                        {filmTrailerUrl && (
-                          <a
-                            href={filmTrailerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-cyan-700 hover:text-cyan-800 underline mt-1.5 inline-flex items-center gap-1"
-                            data-testid="ticket-film-trailer-link"
-                          >
-                            Watch trailer →
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-                    {/* When */}
-                    {(showDate || showTime) && (
-                      <div className="mt-3 pt-3 border-t border-cyan-200/60 grid grid-cols-2 gap-3 text-sm">
-                        {showDate && (
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-cyan-600 flex-shrink-0" />
-                            <div>
-                              <p className="text-[11px] text-slate-500 leading-none mb-0.5">Date</p>
-                              <p className="font-semibold text-slate-900 leading-none">{formatDate(showDate)}</p>
-                            </div>
-                          </div>
-                        )}
-                        {showTime && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-cyan-600 flex-shrink-0" />
-                            <div>
-                              <p className="text-[11px] text-slate-500 leading-none mb-0.5">Showtime</p>
-                              <p className="font-semibold text-slate-900 leading-none">
-                                {showTime}{endTime ? ` – ${endTime}` : ''}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Cinema phone + amenities — pulled from cinema snapshot */}
-                    {(cinemaPhone || cinemaAmenities.length > 0) && (
-                      <div className="mt-3 pt-3 border-t border-cyan-200/60 space-y-2 text-xs" data-testid="ticket-cinema-extras">
-                        {cinemaPhone && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Phone className="h-3.5 w-3.5 text-cyan-600 flex-shrink-0" />
-                            <span>{cinemaPhone}</span>
-                          </div>
-                        )}
-                        {cinemaAmenities.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {cinemaAmenities.slice(0, 6).map((a, idx) => (
-                              <Badge key={idx} variant="outline" className="text-[10px] capitalize bg-white border-slate-200 text-slate-600 px-1.5 py-0">
-                                {(a || '').replace(/_/g, ' ')}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Ticket type breakdown — only when the booking captured it */}
-                    {(counts.adult || counts.child || counts.senior || counts.vip) && (
-                      <div className="mt-3 pt-3 border-t border-cyan-200/60">
-                        <p className="text-[11px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5">Tickets</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {counts.adult > 0 && (
-                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
-                              <Ticket className="h-3 w-3" /> {counts.adult} Adult{counts.adult > 1 ? 's' : ''}
-                            </Badge>
-                          )}
-                          {counts.child > 0 && (
-                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
-                              <Ticket className="h-3 w-3" /> {counts.child} Child{counts.child > 1 ? 'ren' : ''}
-                            </Badge>
-                          )}
-                          {counts.senior > 0 && (
-                            <Badge variant="outline" className="text-xs bg-white border-slate-200 text-slate-700 gap-1">
-                              <Ticket className="h-3 w-3" /> {counts.senior} Senior{counts.senior > 1 ? 's' : ''}
-                            </Badge>
-                          )}
-                          {counts.vip > 0 && (
-                            <Badge className="text-xs bg-amber-400 text-amber-950 gap-1">
-                              <Ticket className="h-3 w-3" /> {counts.vip} VIP
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="mt-3 text-xs text-slate-500 italic">
-                      Present this ticket (or the QR code below) at the cinema entrance.
-                    </p>
-                  </div>
-                </div>
-              );
-            })()
+          {/* Cinema screening ticket */}
+          {(order.service_type === 'cinema' || order.service_category === 'cinema') && !order.ticket_invalidated && (
+            <CinemaTicket order={order} formatDate={formatDate} />
           )}
 
           {/* Event Showtime Ticket — new Location → Showtime architecture */}
@@ -701,201 +385,24 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             <EventTicket order={order} />
           )}
 
-          {/* Laundry / Pressing Order Info */}
-          {(order.service_type === 'laundry' || order.service_type === 'pressing' || order.service_category === 'laundry' || order.service_category === 'pressing') && (
-            (() => {
-              const bd = order.booking_details || {};
-              const pi = bd.pressing_info || {};
-              const shopName = pi.name || bd.shop_name || order.service_name;
-              const shopAddress = pi.address;
-              const shopCity = pi.city;
-              const shopPhone = pi.phone;
-              const turnaround = pi.turnaround_hours;
-              const operatorName = pi.operator_name || order.operator_name;
-              const heroImg = (pi.images && pi.images[0]) || null;
-              const shopType = pi.shop_type || bd.shop_type || 'laundry';
-              const isPressing = shopType === 'pressing' || shopType === 'both';
+          {/* Laundry / Pressing voucher */}
+          {(order.service_type === 'laundry' || order.service_type === 'pressing' || order.service_category === 'laundry' || order.service_category === 'pressing') && !order.ticket_invalidated && (
+            <LaundryTicket order={order} formatDate={formatDate} />
+          )}
 
-              const pickupMethod = bd.pickup_method || 'pickup';
-              const pickupDate = bd.pickup_date;
-              const pickupTime = bd.pickup_time;
-              const deliveryDate = bd.delivery_date;
-              const items = bd.items || [];
-              const itemsSubtotal = bd.items_subtotal || 0;
-              const expressOn = !!bd.express;
-              const expressSurcharge = bd.express_surcharge || 0;
-              const pickupSurcharge = bd.pickup_surcharge || 0;
-              const serviceFee = bd.service_fee || 0;
-              const promoCode = bd.promo_code;
-              const promoDiscount = bd.promo_discount || 0;
+          {/* Hotel booking voucher */}
+          {(order.service_type === 'hotel' || order.service_category === 'hotel') && !order.ticket_invalidated && (
+            <HotelTicket order={order} formatDate={formatDate} />
+          )}
 
-              const stBadge = shopType === 'pressing'
-                ? 'bg-fuchsia-500 text-white'
-                : shopType === 'both'
-                ? 'bg-gradient-to-r from-purple-500 to-fuchsia-500 text-white'
-                : 'bg-purple-500 text-white';
-              const stLabel = shopType === 'pressing' ? 'Pressing' : shopType === 'both' ? 'Laundry + Pressing' : 'Laundry';
+          {/* Restaurant reservation voucher */}
+          {(order.service_type === 'restaurant' || order.service_category === 'restaurant') && !order.ticket_invalidated && (
+            <RestaurantTicket order={order} formatDate={formatDate} />
+          )}
 
-              if (!shopName && items.length === 0) return null;
-
-              return (
-                <div data-testid="order-laundry-info">
-                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                    <Shirt className="h-4 w-4 text-purple-700" /> Your {isPressing ? 'Pressing' : 'Laundry'} Order
-                  </h3>
-                  <div className="rounded-xl border-2 border-purple-500/15 bg-gradient-to-br from-purple-50 to-white p-4">
-                    {/* Header — shop card */}
-                    <div className="flex gap-4 items-start">
-                      {heroImg ? (
-                        <img
-                          src={heroImg}
-                          alt={shopName || 'Shop'}
-                          className="w-24 h-24 rounded-lg object-cover border border-purple-200 flex-shrink-0 shadow-sm"
-                        />
-                      ) : (
-                        <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
-                          <Shirt className="h-10 w-10 text-white/80" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <div className="flex items-start justify-between gap-2 flex-wrap">
-                          <p className="font-bold text-slate-900 text-base leading-tight" data-testid="laundry-shop-name">{shopName}</p>
-                          <Badge className={`text-[10px] capitalize ${stBadge} border-transparent`} data-testid="laundry-shop-type">{stLabel}</Badge>
-                        </div>
-                        {operatorName && (
-                          <p className="text-xs text-slate-500">by {operatorName}</p>
-                        )}
-                        {(shopAddress || shopCity) && (
-                          <p className="text-sm text-slate-700 flex items-start gap-1 pt-0.5">
-                            <MapPin className="h-3.5 w-3.5 text-purple-700 mt-0.5 flex-shrink-0" />
-                            <span>
-                              {shopAddress && <span className="font-medium">{shopAddress}</span>}
-                              {shopAddress && shopCity && <span className="text-slate-500"> · </span>}
-                              {shopCity && <span className="text-slate-500">{shopCity}</span>}
-                            </span>
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600">
-                          {shopPhone && (
-                            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {shopPhone}</span>
-                          )}
-                          {turnaround && (
-                            <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {turnaround}h turnaround</span>
-                          )}
-                          {pi.delivery_available && (
-                            <span className="inline-flex items-center gap-1 text-emerald-700"><Truck className="h-3 w-3" /> Pickup &amp; delivery</span>
-                          )}
-                          {pi.express_available && (
-                            <span className="inline-flex items-center gap-1 text-orange-700"><Sparkles className="h-3 w-3" /> Express</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pickup vs drop-off + dates */}
-                    <div className="mt-3 pt-3 border-t border-purple-200/60 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        {pickupMethod === 'pickup' ? <Truck className="h-4 w-4 text-purple-700 flex-shrink-0" /> : <Home className="h-4 w-4 text-purple-700 flex-shrink-0" />}
-                        <div>
-                          <p className="text-[11px] text-slate-500 leading-none mb-0.5">Logistics</p>
-                          <p className="font-semibold text-slate-900 leading-none text-xs">
-                            {pickupMethod === 'pickup' ? 'Pickup from customer' : 'Customer drops off'}
-                          </p>
-                        </div>
-                      </div>
-                      {pickupDate && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-purple-700 flex-shrink-0" />
-                          <div>
-                            <p className="text-[11px] text-slate-500 leading-none mb-0.5">{pickupMethod === 'pickup' ? 'Pickup date' : 'Drop-off date'}</p>
-                            <p className="font-semibold text-slate-900 leading-none text-xs">{formatDate(pickupDate)}{pickupTime ? ` · ${pickupTime}` : ''}</p>
-                          </div>
-                        </div>
-                      )}
-                      {deliveryDate && (
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-fuchsia-700 flex-shrink-0" />
-                          <div>
-                            <p className="text-[11px] text-slate-500 leading-none mb-0.5">Delivery date</p>
-                            <p className="font-semibold text-slate-900 leading-none text-xs">{formatDate(deliveryDate)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Items breakdown — for pressing or pay-per-item */}
-                    {items.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-purple-200/60" data-testid="laundry-items-list">
-                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1.5">Items ({items.reduce((s, i) => s + (i.quantity || 0), 0)})</p>
-                        <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
-                          {items.map((it, idx) => {
-                            const qty = it.quantity || 1;
-                            const unit = it.unit_price || it.price || 0;
-                            return (
-                              <div key={idx} className="flex justify-between text-xs">
-                                <span className="text-slate-700 truncate"><span className="font-medium">{qty}×</span> {it.name}</span>
-                                <span className="text-slate-800 font-medium ml-2 whitespace-nowrap">{formatFCFA(unit * qty)}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Special instructions */}
-                    {bd.notes && (
-                      <div className="mt-3 pt-3 border-t border-purple-200/60" data-testid="laundry-notes">
-                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Special Instructions</p>
-                        <p className="text-xs text-slate-700 italic leading-relaxed">"{bd.notes}"</p>
-                      </div>
-                    )}
-
-                    {/* Price breakdown — surcharges + promo */}
-                    {(expressSurcharge > 0 || pickupSurcharge > 0 || serviceFee > 0 || promoDiscount > 0) && (
-                      <div className="mt-3 pt-3 border-t border-purple-200/60 space-y-1 text-xs" data-testid="laundry-price-summary">
-                        <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Order Breakdown</p>
-                        {itemsSubtotal > 0 && (
-                          <div className="flex justify-between text-slate-600">
-                            <span>Items subtotal</span>
-                            <span className="font-medium">{formatFCFA(itemsSubtotal)}</span>
-                          </div>
-                        )}
-                        {expressSurcharge > 0 && (
-                          <div className="flex justify-between text-orange-700">
-                            <span className="inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Express surcharge</span>
-                            <span className="font-medium">+{formatFCFA(expressSurcharge)}</span>
-                          </div>
-                        )}
-                        {pickupSurcharge > 0 && (
-                          <div className="flex justify-between text-purple-700">
-                            <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> Pickup surcharge</span>
-                            <span className="font-medium">+{formatFCFA(pickupSurcharge)}</span>
-                          </div>
-                        )}
-                        {serviceFee > 0 && (
-                          <div className="flex justify-between text-slate-600">
-                            <span>Service fee</span>
-                            <span className="font-medium">+{formatFCFA(serviceFee)}</span>
-                          </div>
-                        )}
-                        {promoDiscount > 0 && (
-                          <div className="flex justify-between text-emerald-700">
-                            <span className="inline-flex items-center gap-1">🎟️ Promo {promoCode ? `(${promoCode})` : ''}</span>
-                            <span className="font-medium">-{formatFCFA(promoDiscount)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <p className="mt-3 text-xs text-slate-500 italic">
-                      {pickupMethod === 'pickup'
-                        ? 'A rider will collect your items at the agreed time.'
-                        : 'Please drop off your items at the shop on the scheduled date.'}
-                    </p>
-                  </div>
-                </div>
-              );
-            })()
+          {/* Car rental voucher */}
+          {(order.service_type === 'car_rental' || order.service_category === 'car_rental') && !order.ticket_invalidated && (
+            <CarRentalTicket order={order} formatDate={formatDate} />
           )}
 
           {/* Customer Info — compact 3-column grid so Name/Phone/Email sit
@@ -965,7 +472,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             <div>
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Special Requests</h3>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800 italic">"{order.customer_notes}"</p>
+                <p className="text-sm text-amber-800 italic">&ldquo;{order.customer_notes}&rdquo;</p>
               </div>
             </div>
           )}
