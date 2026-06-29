@@ -24,6 +24,42 @@ class NotificationChannel(str, Enum):
     SMS = "sms"
     PUSH = "push"
 
+
+class DevicePlatform(str, Enum):
+    IOS = "ios"
+    ANDROID = "android"
+    WEB = "web"
+
+class PushDeviceRegister(BaseModel):
+    """Mobile / web client registers (or rotates) its push token.
+    `device_id` is a stable per-install UUID the client generates once
+    and keeps in secure storage — re-using it on token rotation keeps
+    the same row updated instead of piling up duplicates.
+    """
+    device_token: str = Field(..., min_length=10, max_length=512)
+    platform: DevicePlatform
+    device_id: str = Field(..., min_length=4, max_length=128)
+    app_version: Optional[str] = Field(default=None, max_length=32)
+    locale: Optional[str] = Field(default=None, max_length=16)
+    timezone: Optional[str] = Field(default=None, max_length=64)
+
+class PushDevice(BaseModel):
+    id: Optional[str] = Field(default=None, alias="_id")  # = device_id
+    user_id: str
+    device_token: str
+    platform: DevicePlatform
+    app_version: Optional[str] = None
+    locale: Optional[str] = None
+    timezone: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_seen_at: Optional[datetime] = None
+
+    class Config:
+        populate_by_name = True
+
+
 class Notification(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
     user_id: str

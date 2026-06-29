@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from config.database import get_database
 from middleware.auth import get_current_active_user
-from models.notification import NotificationCreate, NotificationType
+from models.notification import NotificationCreate, NotificationType, PushDeviceRegister, DevicePlatform
 from utils.notifications import (
     create_notification as create_notification_helper,
     dedupe_existing_notifications,
@@ -267,3 +267,92 @@ async def resolve_support_chat(
         raise HTTPException(status_code=404, detail="Chat not found")
     
     return {"message": "Chat resolved"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Push-notification device registry
+# ─────────────────────────────────────────────────────────────────────────────
+# A device row is keyed by `device_id` (stable per-install UUID supplied by the
+# mobile client). The token itself (APNs/FCM/Expo) rotates frequently and is
+# upserted on every login + cold start. We never trust the token as the
+# primary key for that reason.
+#
+# Why this matters: Apple/Google will silently invalidate stale tokens — if
+# we used the token as the PK we'd accumulate dead rows forever and end up
+# sending notifications to wrong users when a phone is wiped and re-registered.
+
+@router.post("/register-device", status_code=200)
+async def register_push_device(
+    payload: PushDeviceRegister,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Register or refresh a push-notification device for the current user.
+
+    Idempotent: same `device_id` upserts the row (rotates token, bumps
+    `last_seen_at`, re-binds to the current user if the device was previously
+    logged into a different account on the same phone). Returns the stored
+    row so the client can confirm the platform/locale it sent.
+    """
+    db = get_database()
+    now = datetime.now(timezone.utc)
+
+    doc_set = {
+        "user_id": current_user["_id"],
+        "device_token": payload.device_token,
+        "platform": payload.platform.value,
+        "app_version": payload.app_version,
+        "locale": payload.locale,
+        "timezone": payload.timezone,
+        "is_active": True,
+        "updated_at": now,
+        "last_seen_at": now,
+    }
+    doc_set_on_insert = {
+        "_id": payload.device_id,
+        "created_at": now,
+    }
+
+    await db.push_devices.update_one(
+        {"_id": payload.device_id},
+        {"$set": doc_set, "$setOnInsert": doc_set_on_insert},
+        upsert=True,
+    )
+
+    stored = await db.push_devices.find_one({"_id": payload.device_id})
+    if stored:
+        stored["id"] = stored.pop("_id")
+    return {"message": "Device registered", "device": stored}
+
+
+@router.get("/devices")
+async def list_my_push_devices(
+    current_user: dict = Depends(get_current_active_user),
+):
+    """List the current user's registered push-notification devices.
+    Useful for a 'Logged-in devices' Settings screen on mobile/web."""
+    db = get_database()
+    cursor = db.push_devices.find({"user_id": current_user["_id"], "is_active": True})
+    items = []
+    async for d in cursor:
+        d["id"] = d.pop("_id")
+        d.pop("device_token", None)  # never expose the raw token over the API
+        items.append(d)
+    return {"devices": items, "total": len(items)}
+
+
+@router.delete("/devices/{device_id}", status_code=200)
+async def unregister_push_device(
+    device_id: str,
+    current_user: dict = Depends(get_current_active_user),
+):
+    """Soft-delete (deactivate) a push device. Called on logout, or from the
+    Settings 'Logged-in devices' screen when a user revokes one.
+    """
+    db = get_database()
+    result = await db.push_devices.update_one(
+        {"_id": device_id, "user_id": current_user["_id"]},
+        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return {"message": "Device unregistered"}

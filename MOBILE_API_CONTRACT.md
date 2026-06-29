@@ -67,19 +67,56 @@ Oryno does NOT have a server-side cart — clients accumulate items locally and 
 
 ## 5. Push Notifications
 
-⚠️ **Heads-up:** the in-app notifications endpoints exist (`/api/notifications/*`) for fetching the user's notification feed, but **the device-token registration endpoint for APNs/FCM does NOT exist yet**. The web backend will need to add:
+✅ **Device-registration endpoints are now LIVE** (`POST /api/notifications/register-device`, `GET /api/notifications/devices`, `DELETE /api/notifications/devices/{device_id}`).
 
-```
-POST /api/notifications/register-device
-Body: {
-  device_token: string,       // FCM token (Android) or APNs token (iOS)
-  platform: 'ios' | 'android',
-  app_version: string,
-  device_id: string           // stable per-install ID
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/notifications/register-device` | Register or rotate this install's push token. **Idempotent on `device_id`.** Body: `{device_token, platform, device_id, app_version?, locale?, timezone?}`. `platform` ∈ `ios`/`android`/`web`. `device_token` 10–512 chars (APNs / FCM / Expo token). `device_id` is a stable per-install UUID the client generates once and persists in secure storage. |
+| `GET`  | `/api/notifications/devices` | List the current user's active devices (raw token is redacted in the response — never sent over the wire after registration). Useful for a Settings "Logged-in devices" screen. |
+| `DELETE` | `/api/notifications/devices/{device_id}` | Soft-deactivate the device. Call this on logout, or when the user revokes access from the Settings screen. Returns 404 if the device wasn't registered to the current user. |
+
+**Example registration call from the mobile client:**
+
+```ts
+import * as Notifications from 'expo-notifications';
+import * as SecureStore from 'expo-secure-store';
+import * as Localization from 'expo-localization';
+import { Platform } from 'react-native';
+import { randomUUID } from 'expo-crypto';
+
+async function ensureDeviceRegistered(accessToken: string) {
+  // 1. Stable device_id: generated once, kept in secure storage forever
+  let deviceId = await SecureStore.getItemAsync('oryno.device_id');
+  if (!deviceId) {
+    deviceId = randomUUID();
+    await SecureStore.setItemAsync('oryno.device_id', deviceId);
+  }
+
+  // 2. Ask Expo / OS for the push token
+  const { data: deviceToken } = await Notifications.getExpoPushTokenAsync();
+
+  // 3. Send to backend (idempotent — safe to call on every cold start)
+  await fetch(`${API_BASE}/api/notifications/register-device`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      device_token: deviceToken,
+      platform: Platform.OS,           // 'ios' | 'android'
+      device_id: deviceId,
+      app_version: Constants.expoConfig?.version,
+      locale: Localization.locale,
+      timezone: Localization.timezone,
+    }),
+  });
 }
 ```
 
-For now, scaffold the call site in the mobile app but don't block on it — the web team will add this endpoint shortly. In-app notification fetching works already:
+**Storage model (for reference):** rows live in MongoDB collection `push_devices`, keyed by `_id = device_id`. Soft-delete via `is_active: false` (preserves history for fraud/audit). Token rotation on the same device just upserts the existing row.
+
+In-app notification feed (read-only on mobile, write happens server-side when bookings/orders update):
 
 | Method | Path | Purpose |
 |---|---|---|
