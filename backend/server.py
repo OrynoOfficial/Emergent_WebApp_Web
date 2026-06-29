@@ -140,8 +140,28 @@ logger = logging.getLogger(__name__)
 # Production: list ONLY your real custom domains (apex + www + any subdomain
 # that hosts the SPA / admin panel). This is what unlocks Cloudflare's
 # "Full (Strict)" SSL mode without breaking cross-origin XHR.
+#
+# Mobile clients (native iOS/Android) don't send an Origin header, so CORS
+# never blocks them. The regex defaults below cover BROWSER-based mobile
+# development surfaces only: Expo Go web mode, Expo tunnels, Emergent's
+# Mobile Agent preview iframe, and localhost dev ports.
 cors_origins = os.environ.get('CORS_ORIGINS', '*').strip()
 cors_origin_regex = None
+
+# Always-allowed dev surfaces for mobile/web preview tooling. These are
+# OR'd with whatever's in CORS_ORIGINS so prod can pin its own list AND
+# still let Expo/Emergent previews hit the API.
+_MOBILE_DEV_ORIGIN_REGEX = (
+    r"^https?://("
+    r"localhost(:\d+)?"
+    r"|127\.0\.0\.1(:\d+)?"
+    r"|.*\.preview\.emergentagent\.com"
+    r"|.*\.exp\.direct"
+    r"|.*\.tunnel\.expo\.dev"
+    r"|.*\.exp\.host"
+    r")$"
+)
+
 if cors_origins == '*':
     # Mirror any origin while still allowing credentials. Equivalent to
     # `Access-Control-Allow-Origin: <request Origin>` instead of `*`.
@@ -155,6 +175,8 @@ else:
             if cors_origins.startswith('[')
             else [o.strip() for o in cors_origins.split(',') if o.strip()]
         )
+        # Production allowlist + always-allowed mobile/preview surfaces.
+        cors_origin_regex = _MOBILE_DEV_ORIGIN_REGEX
     except Exception:
         origins = []
         cors_origin_regex = ".*"
