@@ -95,7 +95,14 @@ from routes.manual_bookings import router as manual_bookings_router
 app = FastAPI(
     title="Oryno WebApp API",
     description="Backend API for Oryno service booking platform",
-    version="1.0.0"
+    version="1.0.0",
+    # Expose docs UNDER the /api prefix so they're reachable through the
+    # Kubernetes ingress (which only routes /api/* to this service). Same
+    # URL works in preview AND production, and is what the mobile agent
+    # (and any third-party API consumer) expects.
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
 )
 
 # Attach the global rate limiter (used by auth/OTP routes via @limiter.limit).
