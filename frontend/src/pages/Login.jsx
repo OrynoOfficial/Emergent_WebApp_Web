@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import { AUTH_VIEWS, backgroundImages } from './auth/AuthConstants';
@@ -9,9 +10,11 @@ import { SignupRoleView } from './auth/SignupRoleView';
 import { SignupFormView } from './auth/SignupFormView';
 import { OperatorContactView, PhoneOtpView, TwoFactorView } from './auth/OtpViews';
 import { ForgotPasswordView } from './auth/ForgotPasswordView';
+import LanguageDropdown from '../components/shared/LanguageDropdown';
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { login, register } = useAuth();
   
   const [currentView, setCurrentView] = useState(AUTH_VIEWS.WELCOME);
@@ -253,9 +256,17 @@ export default function AuthPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-[#082c59]/80 to-[#082c59]/40" />
           </div>
         ))}
+
+        {/* Language switch — floats over the hero image so it's discoverable
+            before the user has typed anything. Compact variant reads well
+            against the dark navy overlay. */}
+        <div className="absolute top-6 right-6 z-20">
+          <LanguageDropdown variant="compact" align="end" />
+        </div>
+
         <div className="relative z-10 flex flex-col justify-end p-12 text-white">
-          <h2 className="text-4xl font-bold mb-4">Your Gateway to Amazing Services</h2>
-          <p className="text-lg text-white/80">Book hotels, travel tickets, restaurants, and more — all in one place.</p>
+          <h2 className="text-4xl font-bold mb-4">{t('auth.hero_headline')}</h2>
+          <p className="text-lg text-white/80">{t('auth.hero_subline')}</p>
           <div className="flex gap-2 mt-8">
             {backgroundImages.map((_, index) => (
               <button key={index} onClick={() => setBgIndex(index)} className={`w-2 h-2 rounded-full transition-all ${index === bgIndex ? 'bg-white w-8' : 'bg-white/50'}`} />
@@ -264,8 +275,15 @@ export default function AuthPage() {
         </div>
       </div>
       <div className="w-full lg:w-[40%] bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col">
-        <div className="lg:hidden p-4 border-b border-slate-200 bg-white">
+        <div className="lg:hidden p-4 border-b border-slate-200 bg-white flex items-center justify-between">
           <img src="/images/logo.png" alt="Logo" className="h-10 w-auto object-contain" />
+          {/* Mobile: dropdown lives in the header since there's no hero panel. */}
+          <LanguageDropdown variant="ghost" align="end" />
+        </div>
+        {/* Desktop: mirrored dropdown in the right panel so it's still
+            reachable from the login form itself, not only the hero. */}
+        <div className="hidden lg:flex justify-end px-6 pt-4">
+          <LanguageDropdown variant="ghost" align="end" />
         </div>
         <div className="flex-1 overflow-y-auto">
           {renderContent()}

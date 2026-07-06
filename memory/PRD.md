@@ -8,6 +8,17 @@
 
 
 
+## Feb 2026 — iter 268: Bilingual (EN / FR) i18n with login-side language picker
+- Added `i18next` + `react-i18next` + `i18next-browser-languagedetector`.
+- `LanguageDropdown` component on both sides of the login page (mirrors mobile).
+- Persists via `localStorage.oryno_language` (pre-auth) + `PUT /users/me/preferences` (post-auth).
+- `AuthContext` syncs `user.language` into runtime i18n on every login. Pre-login local override wins.
+- ~90 translation keys shipped for login flow / nav / order statuses / service categories / ticket rail titles.
+- Full page-by-page sweep queued as follow-up work.
+
+
+
+
 ## Feb 2026 — iter 267: Unified service-ticket visual paradigm
 - New `BaseTicket.jsx` shared primitive — two-panel ticket-stub layout with brand-color band + perforation dots + LEFT poster/badges/meta-grid/extras + RIGHT dark "Important Info" + rules rail.
 - 6 new service-specific tickets (Travel/Cinema/Hotel/Restaurant/CarRental/Laundry) all built on BaseTicket; EventTicket refactored onto BaseTicket.

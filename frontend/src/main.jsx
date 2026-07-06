@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import './styles/global.css';
+import './i18n'; // bootstraps react-i18next before the app mounts
 import { bootstrapStorage } from './utils/storageBootstrap';
 
 // Hydrate persisted credentials from Capacitor Preferences into localStorage

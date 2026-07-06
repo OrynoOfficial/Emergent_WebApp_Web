@@ -14,10 +14,11 @@
  * Enter-key press does the right thing (continue vs sign-in).
  */
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Mail, Lock, Phone, Loader2, ArrowLeft, Globe, Pencil } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Phone, Loader2, ArrowLeft, Pencil } from 'lucide-react';
 import { FormModal, AUTH_VIEWS } from './AuthConstants';
 import api from '../../api/client';
 
@@ -32,6 +33,7 @@ export function LoginView({
   const [step, setStep] = useState(1);            // 1 = identifier · 2 = password
   const [checking, setChecking] = useState(false);
   const [accountInfo, setAccountInfo] = useState(null);  // {exists, role, status}
+  const { t } = useTranslation();
 
   const editIdentifier = useCallback(() => {
     setStep(1);
@@ -89,16 +91,15 @@ export function LoginView({
     <FormModal>
       <div className="flex items-center justify-between mb-4">
         <button onClick={goBack} className="flex items-center text-slate-600 hover:text-[#082c59] text-sm" data-testid="login-back-btn">
-          <ArrowLeft className="h-4 w-4 mr-1" />Back
+          <ArrowLeft className="h-4 w-4 mr-1" />{t('common.back')}
         </button>
-        <div className="flex items-center gap-1 text-xs text-slate-500"><Globe className="h-3 w-3" /><span>EN</span></div>
       </div>
 
       <div className="text-center mb-5">
         <img src="/images/logo.png" alt="Oryno" className="h-12 w-auto mx-auto mb-2 object-contain" />
-        <h1 className="text-xl font-bold text-slate-900">Welcome Back</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('auth.login_title')}</h1>
         <p className="text-slate-500 text-sm">
-          {step === 1 ? 'Login to your account' : 'Enter your password to continue'}
+          {step === 1 ? t('auth.login_subtitle_step1') : t('auth.login_subtitle_step2')}
         </p>
       </div>
 
@@ -112,7 +113,7 @@ export function LoginView({
               className="mt-2 w-full text-sm font-semibold underline hover:no-underline"
               data-testid="login-signup-from-error"
             >
-              Create a new account →
+              {t('auth.login_create_from_error')}
             </button>
           )}
         </div>
@@ -122,16 +123,16 @@ export function LoginView({
         <form onSubmit={continueToPassword} className="space-y-4">
           <div className="flex rounded-lg overflow-hidden border border-slate-200">
             <button type="button" onClick={() => switchMethod('email')} className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${loginMethod === 'email' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="login-method-email">
-              <Mail className="h-4 w-4" />Email
+              <Mail className="h-4 w-4" />{t('common.email')}
             </button>
             <button type="button" onClick={() => switchMethod('phone')} className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${loginMethod === 'phone' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="login-method-phone">
-              <Phone className="h-4 w-4" />Phone
+              <Phone className="h-4 w-4" />{t('common.phone')}
             </button>
           </div>
 
           <div>
             <Label htmlFor="login-identifier" className="text-slate-700 text-sm">
-              {loginMethod === 'email' ? 'Email Address' : 'Phone Number'}
+              {loginMethod === 'email' ? t('auth.login_email_label') : t('auth.login_phone_label')}
             </Label>
             <div className="relative mt-1">
               {loginMethod === 'email'
@@ -158,7 +159,7 @@ export function LoginView({
             className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl"
             data-testid="login-continue-btn"
           >
-            {checking ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Continue'}
+            {checking ? <Loader2 className="h-5 w-5 animate-spin" /> : t('common.continue')}
           </Button>
         </form>
       ) : (
@@ -179,18 +180,18 @@ export function LoginView({
               className="flex items-center gap-1 text-xs text-[#082c59] hover:underline flex-shrink-0"
               data-testid="login-edit-identifier"
             >
-              <Pencil className="h-3 w-3" />Edit
+              <Pencil className="h-3 w-3" />{t('auth.login_edit_identifier')}
             </button>
           </div>
 
           <div>
-            <Label htmlFor="login-password" className="text-slate-700 text-sm">Password</Label>
+            <Label htmlFor="login-password" className="text-slate-700 text-sm">{t('common.password')}</Label>
             <div className="relative mt-1">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
               <Input
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
+                placeholder={t('auth.password_placeholder')}
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 className="pl-10 pr-10 h-11 bg-white border-slate-200 focus:bg-white focus:border-[#082c59] focus:ring-2 focus:ring-[#082c59]/20 transition-all caret-[#082c59]"
@@ -215,7 +216,7 @@ export function LoginView({
                 className="text-xs text-[#082c59] hover:underline"
                 data-testid="login-forgot-password-link"
               >
-                Forgot password?
+                {t('common.forgot_password')}
               </button>
             </div>
           </div>
@@ -226,19 +227,19 @@ export function LoginView({
             className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white font-medium rounded-xl"
             data-testid="login-submit-btn"
           >
-            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login'}
+            {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('auth.login_submit')}
           </Button>
         </form>
       )}
 
       <p className="text-center text-slate-600 mt-4 text-sm">
-        Don&apos;t have an account?{' '}
+        {t('auth.login_no_account')}{' '}
         <button
           onClick={() => setCurrentView(AUTH_VIEWS.SIGNUP_ROLE)}
           className="text-[#082c59] font-medium hover:underline"
           data-testid="login-go-signup"
         >
-          Sign up
+          {t('auth.login_sign_up_link')}
         </button>
       </p>
     </FormModal>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { setAppLanguage } from '../i18n';
 import DatePickerField from '@/components/shared/DatePickerField';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -1315,7 +1316,13 @@ export default function Settings() {
                   ].map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => setPreferences({ ...preferences, language: lang.code })}
+                      onClick={() => {
+                        setPreferences({ ...preferences, language: lang.code });
+                        // Apply the language change instantly so the page
+                        // re-renders in the newly chosen language without
+                        // waiting for the Save button.
+                        setAppLanguage(lang.code);
+                      }}
                       className={`p-3 rounded-lg border flex items-center gap-3 transition-colors ${
                         preferences.language === lang.code
                           ? 'bg-blue-50 border-[#082c59] text-[#082c59]'

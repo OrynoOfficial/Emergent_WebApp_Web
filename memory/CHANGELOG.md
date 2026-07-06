@@ -1,3 +1,17 @@
+### 2026-02-27 — i18n (English / Français) system-wide (iter268)
+- **New i18n stack**: `i18next` + `react-i18next` + `i18next-browser-languagedetector`. Init in `/app/frontend/src/i18n/index.js` with `SUPPORTED_LANGUAGES`, `setAppLanguage()`, `getAppLanguage()`. Detection order: `localStorage → navigator → htmlTag`. `<html lang>` auto-syncs on change (a11y + SEO).
+- **Bundles**: `/app/frontend/src/i18n/locales/en.json` + `fr.json` — `common`, `nav`, `auth`, `services`, `orders`, `settings` namespaces with ~90 keys covering the most user-visible copy (login flow, top nav, service categories, order statuses, ticket rail titles, generic buttons).
+- **`<LanguageDropdown>` component** (`/app/frontend/src/components/shared/LanguageDropdown.jsx`) — 3 variants (`default` / `compact` / `ghost`). Compact used on the login hero, ghost inside the right panel + mobile header. Auto-persists to server via `PUT /api/users/me/preferences` when `persistToServer` prop is set.
+- **Login page** now renders the language dropdown top-right of both the hero panel AND the right auth panel, mirroring the mobile app's login language picker. `WelcomeView.jsx` and `LoginView.jsx` fully translated (title, subtitle, CTAs, terms links, method toggles, forgot password, "no account" prompt).
+- **AuthContext** now calls `setAppLanguage(user.language)` on every successful `fetchUser()` — sign-in propagates the user's saved language into the runtime, but a local pre-login override wins so pre-auth language choices stick.
+- **Settings page** language chips now apply the change instantly via `setAppLanguage()` (no need to click "Save") while ALSO persisting to server via the existing `PUT /users/me/preferences` handler.
+- **Tested manually via screenshots**: 
+  - EN → FR switch on login instantly re-renders hero + Welcome View
+  - `localStorage.oryno_language = 'fr'` persists across a hard reload
+  - `PUT /api/users/me/preferences {language: 'fr'}` → server round-trip verified via curl
+- **Remaining work (queued)**: page-by-page string sweep. Framework is in place — remaining pages just need `useTranslation()` + key extraction. Highest-value next targets: Sidebar (`Layout.jsx`), Orders list + OrderDetailModal, Dashboard, service Search/Results screens.
+
+
 ### 2026-02-20 — Service tickets refactor: unified BaseTicket paradigm (iter267)
 - **New `BaseTicket.jsx`** at `/app/frontend/src/components/tickets/` — shared two-panel ticket primitive (brand-color band top/bottom + perforation dots + LEFT face with poster/badges/meta-grid/extras + RIGHT dark "Important Info" + rules rail). Fully parameterised (accentColor, posterAspect, badges, metaItems, extraSections, rightPanelTitle/Description, rules).
 - **6 new service-specific tickets** all built on BaseTicket: `TravelTicket` (navy + plate + extra-luggage manifest), `CinemaTicket` (cyan + film poster portrait + director/cast/synopsis/trailer), `HotelTicket` (amber + room type + nights + policies), `RestaurantTicket` (orange + date/time/guests + pre-ordered items), `CarRentalTicket` (teal + pickup/return + add-ons), `LaundryTicket` (purple + items breakdown + price surcharges).

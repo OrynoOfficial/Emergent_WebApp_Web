@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/client';
 import { setTimezone as persistTimezone, detectBrowserTimezone } from '../utils/dateUtils';
+import { setAppLanguage } from '../i18n';
 
 const AuthContext = createContext(null);
 
@@ -61,6 +62,14 @@ export const AuthProvider = ({ children }) => {
       // Sync the user's preferred timezone (or detect from the browser) so every
       // rendered date uses the correct zone from first paint.
       persistTimezone(userData.timezone || detectBrowserTimezone());
+
+      // Sync the user's preferred language into i18n so the app renders in
+      // the right language on the very first paint after login. localStorage
+      // wins if the user has already picked one manually pre-login.
+      if (userData.language) {
+        const localOverride = (() => { try { return localStorage.getItem('oryno_language'); } catch { return null; } })();
+        if (!localOverride) setAppLanguage(userData.language);
+      }
 
       // Cache data for resilience
       localStorage.setItem('user', JSON.stringify(userData));
