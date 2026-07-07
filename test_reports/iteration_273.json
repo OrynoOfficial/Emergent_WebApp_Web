@@ -1,0 +1,22 @@
+{
+  "summary": "Verified all 4 Settings > Security English leaks are now closed in FR. 12/12 FR strings present, 0 English leaks. Regression sanity on Orders (FR labels present) and Settings sidebar (FR) PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global header (all pages)", "issues": ["'Welcome back, Customer!' and 'Manage your services and bookings' still hardcoded English — out of scope for this iteration but flagging"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": ["Header greeting/subtitle in TopBar not localised — likely another minor FR leak to address in a future pass."],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "test_credentials": "customer@test.com / testpassword123",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Security tab FR verified fully: change_password_header, current_password, new_password, confirm_new_password, update_password, two_factor_auth_header, authenticator_app, add_2fa_desc, active_sessions, current_device, chrome_windows, active_now. Regression on Orders + Settings sidebar OK.",
+  "rca of the issue": "N/A - all reported strings now render FR correctly after i18n key wiring."
+}

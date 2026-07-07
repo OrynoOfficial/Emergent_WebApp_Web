@@ -1148,10 +1148,10 @@ export default function Settings() {
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="font-bold text-slate-900 mb-4">Change Password</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('settings.change_password_header')}</h3>
               <div className="space-y-4 max-w-md">
                 <div>
-                  <Label>Current Password</Label>
+                  <Label>{t('settings.current_password')}</Label>
                   <div className="relative mt-1">
                     <Input
                       type={showPassword ? 'text' : 'password'}
@@ -1210,11 +1210,11 @@ export default function Settings() {
             <Separator />
 
             <div>
-              <h3 className="font-bold text-slate-900 mb-4">Two-Factor Authentication</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('settings.two_factor_auth_header')}</h3>
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                 <div>
-                  <p className="font-medium text-slate-900">Authenticator App</p>
-                  <p className="text-sm text-slate-500">Add extra security with 2FA</p>
+                  <p className="font-medium text-slate-900">{t('settings.authenticator_app')}</p>
+                  <p className="text-sm text-slate-500">{t('settings.add_2fa_desc')}</p>
                 </div>
                 <Switch
                   checked={securityData.two_factor_enabled}
