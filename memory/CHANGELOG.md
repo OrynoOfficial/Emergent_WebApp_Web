@@ -229,6 +229,30 @@
 # Oryno Platform — Changelog
 
 
+## Feb 7, 2026 — i18n Polish Round 2 + Operator 403 Fix (iteration_271)
+**P0 — Operator 403 on Management Pages FIXED** (verified)
+- Created `/app/frontend/src/utils/roleHelpers.js` with `canListOperators(user)` helper.
+- Gated 9 management pages so non-admin operator role skips `GET /api/operators/` (silent, no console noise):
+  - `EventsManagement.jsx`, `HotelManagement.jsx`, `BanquetManagement.jsx`, `CinemaManagement.jsx`,
+    `CarRentalManagement.jsx`, `LaundryManagement.jsx`, `RestaurantManagement.jsx`,
+    `PackageManagement.jsx`, `PackageShipments.jsx`.
+- Verified: 0 × 403 for operator on all 8 pages; 16 × 200 for admin. Operator picker still works for admins.
+
+**i18n Polish — Round 2** (verified)
+- `Orders.jsx`: filter card title, search placeholder, filter chip labels (`Category`/`Status`/`Sort`),
+  status stat cards (`Pending`/`Completed`/`Cancelled`), row action buttons (`View`/`Cancel`/`Review`)
+  across all 3 view modes (grid/details/list), results counter, `Clear` filter button — all now use `t()`.
+- `Settings.jsx`: Basic Information section, Address Information section, Gender field label + `(locked)`
+  suffix + `<select>` options (`Male`/`Female`/`Other`/`Prefer not to say` → `Homme`/`Femme`/`Autre`/
+  `Préfère ne pas préciser`), sign-out card subtitle — all now use `t()`.
+- `EventTicket.jsx`: `rightPanelDescription` now translated (`Present this ticket at the venue entrance…` → `Présentez ce billet…`).
+- `en.json` / `fr.json` grew to ~530 keys (added under `orders.*` and `settings.*`).
+
+**Ops Note**
+- `frontend` supervisor unit runs `vite build && vite preview` (production build), so file edits require
+  `sudo supervisorctl restart frontend` before the preview URL reflects the change. Hot reload does NOT apply.
+
+
 ## Feb 7, 2026 — i18n Sweep Extension + Dashboard Cancelled Order Fix Verified
 **Verified P0 fix — Management Dashboards** (iteration_268)
 - Backend `/api/management/dashboard-stats` now returns both `grossBookings`/`grossRevenue` (raw) and `totalBookings`/`totalRevenue` (effective, excluding `cancelled`/`refunded`/`refund_requested`/`abandoned`/`failed`/`expired`).
