@@ -229,6 +229,26 @@
 # Oryno Platform — Changelog
 
 
+## Feb 7, 2026 — i18n Sweep Extension + Dashboard Cancelled Order Fix Verified
+**Verified P0 fix — Management Dashboards** (iteration_268)
+- Backend `/api/management/dashboard-stats` now returns both `grossBookings`/`grossRevenue` (raw) and `totalBookings`/`totalRevenue` (effective, excluding `cancelled`/`refunded`/`refund_requested`/`abandoned`/`failed`/`expired`).
+- Frontend `useRealDashboardData.js` polls every 10s → true real-time refresh.
+- Verified: events operator sees 6 effective vs 7 gross (one cancelled correctly excluded); all 5 service dashboards render without NaN.
+
+**i18n Sweep — Extended EN/FR Coverage**
+- `en.json` / `fr.json` grew from 311 → 487 keys.
+- Added `order_detail.*` (32 keys), `booking.*` (26 keys), `results.*` (55 keys), extended `settings.*` (26 new keys).
+- Updated files with `useTranslation` + translated strings:
+  - `components/modals/OrderDetailModal.jsx` — full chrome translated (status pills, section headers, buttons, refund banners).
+  - `pages/Settings.jsx` — sidebar sections now use `t('settings.section_${key}')` + descriptions.
+  - `pages/services/HotelsResults.jsx` — filter sheet fully translated (Filters, Price Range, Star Rating, Amenities, Deals & Policies, Min Guest Rating, empty state).
+  - `pages/services/HotelBooking.jsx` — Booking Summary, Room Policies, Taxes & Fees, session-expired, loading states, check-in/out labels.
+  - `pages/services/CinemaResults.jsx` — Genres, list table headers (Title/Genre/Duration/Rating/Status/From/Actions), empty state.
+  - `pages/services/EventsResults.jsx`, `RestaurantsResults.jsx`, `TravelResults.jsx`, `CarRentalResults.jsx`, `LaundryResults.jsx`, `PackagesResults.jsx`, `BanquetResults.jsx` — empty states + no-results messages.
+  - `pages/services/CinemaBooking.jsx`, `EventBooking.jsx`, `RestaurantBooking.jsx` — Contact Information + Special Requests section titles.
+- Verified by testing agent: French renders correctly in OrderDetailModal, Settings sidebar, language persists across reload.
+
+
 ## Jun 14, 2026 — Banquet Customer Flow Overhaul (Laundry-style polish)
 **Bug fix**
 - **Cart → Checkout was blocked** when no event_date was set: `EventCartDrawer.goCheckout` required `cart.event_date` and threw an alert. Removed — checkout now collects the date itself (mirrors Laundry).
