@@ -4,6 +4,7 @@
 // service-specific data via props/slots. Each service ticket is a thin wrapper
 // over BaseTicket that maps its booking_details into these props.
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Image as ImageIcon } from 'lucide-react';
 
@@ -29,13 +30,17 @@ export default function BaseTicket({
   operatorLogo,
   operatorName,
   extraSections,
-  rightPanelTitle = 'Important Info',
+  rightPanelTitle,
   rightPanelDescription,
-  rulesTitle = 'Notes',
+  rulesTitle,
   rules = [],
   bottomNote,
   testId = 'service-ticket',
 }) {
+  const { t } = useTranslation();
+  // Localised defaults — wrappers still override via props.
+  const resolvedRightTitle = rightPanelTitle || t('orders.important_info');
+  const resolvedRulesTitle = rulesTitle || t('orders.notes');
   const aspect = ASPECTS[posterAspect] || ASPECTS.square;
   return (
     <div
@@ -182,10 +187,10 @@ export default function BaseTicket({
             style={{ borderColor: `${accentColor}80` }}
           />
 
-          {rightPanelTitle && (
+          {resolvedRightTitle && (
             <div>
               <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold">
-                {rightPanelTitle}
+                {resolvedRightTitle}
               </p>
               {rightPanelDescription && (
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
@@ -198,7 +203,7 @@ export default function BaseTicket({
           {rules.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-widest text-amber-400 font-bold mb-1.5">
-                {rulesTitle}
+                {resolvedRulesTitle}
               </p>
               <ul
                 className="text-xs text-slate-200 space-y-1.5"

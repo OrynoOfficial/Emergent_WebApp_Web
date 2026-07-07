@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -48,52 +49,52 @@ import LaundryTicket from '@/components/tickets/LaundryTicket';
 import RefundRequestDialog from '@/components/refunds/RefundRequestDialog';
 import { RefreshCcw } from 'lucide-react';
 
-const getStatusConfig = (status) => {
+const getStatusConfig = (status, t) => {
   const configs = {
     pending: {
       color: 'bg-amber-100 text-amber-700 border-amber-200',
       icon: AlertCircle,
-      label: 'Pending'
+      label: t('order_detail.status_pending')
     },
     confirmed: {
       color: 'bg-blue-100 text-blue-700 border-blue-200',
       icon: CheckCircle,
-      label: 'Confirmed'
+      label: t('order_detail.status_confirmed')
     },
     completed: {
       color: 'bg-green-100 text-green-700 border-green-200',
       icon: CheckCircle,
-      label: 'Completed'
+      label: t('order_detail.status_completed')
     },
     delivered: {
       color: 'bg-green-100 text-green-700 border-green-200',
       icon: Truck,
-      label: 'Delivered'
+      label: t('order_detail.status_delivered')
     },
     cancelled: {
       color: 'bg-red-100 text-red-700 border-red-200',
       icon: XCircle,
-      label: 'Cancelled'
+      label: t('order_detail.status_cancelled')
     },
     reserved: {
       color: 'bg-purple-100 text-purple-700 border-purple-200',
       icon: Clock,
-      label: 'Reserved'
+      label: t('order_detail.status_reserved')
     },
     refund_requested: {
       color: 'bg-rose-100 text-rose-700 border-rose-200',
       icon: RefreshCw,
-      label: 'Refund Request Submitted'
+      label: t('order_detail.status_refund_requested')
     },
     refunded: {
       color: 'bg-slate-200 text-slate-700 border-slate-300',
       icon: CheckCircle2,
-      label: 'Refunded'
+      label: t('order_detail.status_refunded')
     },
     expired: {
       color: 'bg-slate-100 text-slate-600 border-slate-200',
       icon: XCircle,
-      label: 'Expired'
+      label: t('order_detail.status_expired')
     },
   };
   return configs[status] || configs.pending;
@@ -134,10 +135,11 @@ const generateQRCodeUrl = (order) => {
 };
 
 export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onDownloadReceipt }) {
+  const { t } = useTranslation();
   const [refundOpen, setRefundOpen] = useState(false);
   if (!order) return null;
 
-  const statusConfig = getStatusConfig(order.status);
+  const statusConfig = getStatusConfig(order.status, t);
   const StatusIcon = statusConfig.icon;
   const qrCodeUrl = generateQRCodeUrl(order);
 
@@ -171,7 +173,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-3xl">{getCategoryIcon(order.service_category || order.service_type)}</span>
               <div className="min-w-0">
-                <h2 className="text-xl font-bold">Order Details</h2>
+                <h2 className="text-xl font-bold">{t('order_detail.title')}</h2>
                 <p className="text-sm text-slate-500 font-normal truncate">#{order.order_number || (order.id || order._id || '').slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
@@ -193,7 +195,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             the operator block reaches Service Information with no wasted gap. */}
         <p className="mt-3 text-[11px] text-slate-500 flex items-center gap-1.5" data-testid="order-booked-on">
           <Clock className="h-3 w-3" />
-          Booked on <span className="font-medium text-slate-700">{formatDate(order.created_at, true)}</span>
+          {t('order_detail.booked_on')} <span className="font-medium text-slate-700">{formatDate(order.created_at, true)}</span>
           <span className="text-slate-400">· {getTimezone()}</span>
         </p>
 
@@ -217,9 +219,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Operator</p>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{t('order_detail.operator')}</p>
               <p className="text-sm font-bold text-slate-900 truncate">
-                {order.operator_name || order.booking_details?.operator_name || 'Operator'}
+                {order.operator_name || order.booking_details?.operator_name || t('order_detail.operator')}
               </p>
             </div>
             <Badge variant="outline" className="text-[10px] uppercase tracking-wide bg-white border-slate-300 text-slate-600 capitalize hidden sm:inline-flex">
@@ -237,10 +239,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             >
               <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <p className="text-xs text-emerald-800">
-                <span className="font-semibold">Money refunded.</span>{' '}
+                <span className="font-semibold">{t('order_detail.money_refunded')}</span>{' '}
                 {order.payment_method === 'stripe'
-                  ? `${formatFCFA(order.refunded_amount || order.total_amount)} will land on your original card within 5–10 business days.`
-                  : `Expect ${formatFCFA(order.refunded_amount || order.total_amount)} on your MoMo / Orange wallet within 2–3 business days.`}
+                  ? t('order_detail.refunded_card_msg', { amount: formatFCFA(order.refunded_amount || order.total_amount) })
+                  : t('order_detail.refunded_wallet_msg', { amount: formatFCFA(order.refunded_amount || order.total_amount) })}
               </p>
             </div>
           ) : order.ticket_invalidated && (
@@ -250,7 +252,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             >
               <XCircle className="h-4 w-4 text-rose-600 shrink-0" />
               <p className="text-xs text-rose-800">
-                <span className="font-semibold">Ticket invalidated.</span> A refund request is in progress for this booking, so the QR / bar code has been removed and the ticket cannot be scanned.
+                <span className="font-semibold">{t('order_detail.ticket_invalidated')}</span> {t('order_detail.ticket_invalidated_desc')}
               </p>
             </div>
           )}
@@ -272,7 +274,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-amber-900">
-                    Your {order.service_type === 'travel' ? 'bus' : 'resource'} was changed
+                    {t('order_detail.resource_changed', { resource: order.service_type === 'travel' ? t('order_detail.bus') : t('order_detail.resource') })}
                   </p>
                   <p className="text-sm text-amber-800 mt-0.5">
                     <span className="font-mono text-xs bg-white/60 border border-amber-200 px-1.5 py-0.5 rounded">{fromLabel}</span>
@@ -284,7 +286,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                   </p>
                   {order.reassignment_history.length > 1 && (
                     <p className="text-[11px] text-amber-600 mt-1">
-                      {order.reassignment_history.length} changes recorded for this booking.
+                      {t('order_detail.changes_recorded', { count: order.reassignment_history.length })}
                     </p>
                   )}
                 </div>
@@ -299,7 +301,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               Operator info now lives in the hero strip above, so we don't
               repeat it here. */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Service Information</h3>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('order_detail.service_information')}</h3>
             {order.checked_in && (
               <div
                 className="mb-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-300"
@@ -309,9 +311,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold uppercase tracking-wider">Checked In</p>
+                  <p className="text-sm font-bold uppercase tracking-wider">{t('order_detail.checked_in')}</p>
                   <p className="text-xs opacity-90">
-                    {order.checked_in_at ? new Date(order.checked_in_at).toLocaleString() : 'Successfully verified'}
+                    {order.checked_in_at ? new Date(order.checked_in_at).toLocaleString() : t('order_detail.successfully_verified')}
                   </p>
                 </div>
               </div>
@@ -340,20 +342,20 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                 const checkIn = bd.check_in;
                 const checkOut = bd.check_out;
                 const serviceTime = order.service_time || bd.service_time || bd.travel_time || bd.departure_time || bd.show_time || si.show_time;
-                const arrivalLabel = bd.arrival_time ? 'Arrival Time' : 'End Time';
+                const arrivalLabel = bd.arrival_time ? t('order_detail.arrival_time') : t('order_detail.end_time');
                 const arrivalValue = bd.arrival_time || bd.end_time || si.end_time;
                 const vehicleType = bd.vehicle_type;
                 const guests = bd.guests;
                 const seats = bd.selected_seats?.length > 0 ? bd.selected_seats.join(', ') : null;
                 const rows = [
-                  serviceDate && { label: 'Service Date', value: formatDate(serviceDate), testId: 'service-date' },
-                  serviceTime && { label: 'Service Time', value: serviceTime, testId: 'service-time' },
-                  checkIn && { label: 'Check-in', value: formatDate(checkIn) },
-                  checkOut && { label: 'Check-out', value: formatDate(checkOut) },
+                  serviceDate && { label: t('order_detail.service_date'), value: formatDate(serviceDate), testId: 'service-date' },
+                  serviceTime && { label: t('order_detail.service_time'), value: serviceTime, testId: 'service-time' },
+                  checkIn && { label: t('order_detail.check_in'), value: formatDate(checkIn) },
+                  checkOut && { label: t('order_detail.check_out'), value: formatDate(checkOut) },
                   arrivalValue && { label: arrivalLabel, value: arrivalValue },
-                  vehicleType && { label: 'Vehicle Type', value: vehicleType },
-                  guests && { label: 'Guests', value: guests },
-                  seats && { label: 'Seats', value: seats },
+                  vehicleType && { label: t('order_detail.vehicle_type'), value: vehicleType },
+                  guests && { label: t('order_detail.guests'), value: guests },
+                  seats && { label: t('order_detail.seats'), value: seats },
                 ].filter(Boolean);
                 if (rows.length === 0) return null;
                 return (
@@ -409,7 +411,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               on a single row on desktop instead of stacking. Saves ~120px
               of vertical space. */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Customer Information</h3>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('order_detail.customer_information')}</h3>
             <div className="bg-slate-50 rounded-lg p-3.5 text-sm">
               {(() => {
                 const customerName = order.customer_name ||
@@ -425,10 +427,10 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                   order.booking_details?.phone || null;
                 const email = order.customer_email || order.user_email;
                 const cells = [
-                  { icon: User,  label: 'Name',  value: customerName || email || 'N/A' },
-                  phone   && { icon: Phone, label: 'Phone', value: phone },
-                  email   && { icon: Mail,  label: 'Email', value: email },
-                  idNumber && { icon: Hash, label: 'ID / Passport', value: idNumber },
+                  { icon: User,  label: t('order_detail.name'),  value: customerName || email || 'N/A' },
+                  phone   && { icon: Phone, label: t('order_detail.phone'), value: phone },
+                  email   && { icon: Mail,  label: t('order_detail.email'), value: email },
+                  idNumber && { icon: Hash, label: t('order_detail.id_passport'), value: idNumber },
                 ].filter(Boolean);
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-2">
@@ -452,7 +454,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               {order.booking_details?.passengers?.length > 1 && (
                 <div className="pt-2.5 mt-2.5 border-t border-slate-200">
                   <p className="text-[10px] uppercase tracking-wide text-slate-500 font-medium mb-1">
-                    All Passengers ({order.booking_details.passengers.length})
+                    {t('order_detail.all_passengers')} ({order.booking_details.passengers.length})
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {order.booking_details.passengers.map((p, idx) => (
@@ -470,7 +472,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
           {/* Customer Notes */}
           {order.customer_notes && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Special Requests</h3>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('order_detail.special_requests')}</h3>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <p className="text-sm text-amber-800 italic">&ldquo;{order.customer_notes}&rdquo;</p>
               </div>
@@ -484,13 +486,13 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               the customer cares about most. */}
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-emerald-600" /> Payment Summary
+              <Wallet className="h-4 w-4 text-emerald-600" /> {t('order_detail.payment_summary')}
             </h3>
             <div className="rounded-xl border-2 border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white overflow-hidden">
               {/* Hero total banner */}
               <div className="bg-gradient-to-r from-[#082c59] to-[#0a3b78] text-white p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/70 font-semibold">Total Paid</p>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/70 font-semibold">{t('order_detail.total_paid')}</p>
                   <p className="text-2xl font-bold mt-0.5" data-testid="payment-summary-total">
                     {formatFCFA(order.total_amount || order.final_amount || 0)}
                   </p>
@@ -513,18 +515,18 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               {((order.subtotal && order.subtotal !== order.total_amount) || order.tax > 0 || order.discount > 0) && (
                 <div className="p-4 space-y-1.5 text-sm">
                   <div className="flex justify-between text-slate-600">
-                    <span>Subtotal</span>
+                    <span>{t('order_detail.subtotal')}</span>
                     <span className="font-medium">{formatFCFA(order.subtotal || order.amount || 0)}</span>
                   </div>
                   {order.tax > 0 && (
                     <div className="flex justify-between text-slate-600">
-                      <span>Tax</span>
+                      <span>{t('order_detail.tax')}</span>
                       <span className="font-medium">{formatFCFA(order.tax)}</span>
                     </div>
                   )}
                   {order.discount > 0 && (
                     <div className="flex justify-between text-emerald-700">
-                      <span className="inline-flex items-center gap-1">🎟️ Discount</span>
+                      <span className="inline-flex items-center gap-1">🎟️ {t('order_detail.discount')}</span>
                       <span className="font-medium">-{formatFCFA(order.discount)}</span>
                     </div>
                   )}
@@ -534,9 +536,9 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               {/* Payment method strip */}
               <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-t border-emerald-100">
                 <CreditCard className="h-4 w-4 text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-500">Method</span>
+                <span className="text-xs text-slate-500">{t('order_detail.method')}</span>
                 <Badge variant="outline" className="bg-white border-slate-300 text-slate-700 font-medium text-[11px] capitalize">
-                  {order.payment_method || 'Not specified'}
+                  {order.payment_method || t('order_detail.not_specified')}
                 </Badge>
               </div>
             </div>
@@ -547,7 +549,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               through captured → refunded → disputed lives here. Pulled
               from /api/v2/payments/by-order/{order_id}/timeline. */}
           <div data-testid="money-trail-section">
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Money Trail</h3>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('order_detail.money_trail')}</h3>
             <MoneyTrail orderId={order.id || order._id || order.order_id} />
           </div>
 
@@ -557,7 +559,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
             && ['confirmed', 'reserved', 'completed'].includes(order.status)
             && ['paid', 'verified', 'captured', 'completed', 'succeeded'].includes((order.payment_status || '').toLowerCase()) && (
             <div>
-              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Your Ticket</h3>
+              <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('order_detail.your_ticket')}</h3>
               <div className="bg-slate-50 rounded-lg p-4 text-center">
                 <img
                   src={qrCodeUrl}
@@ -565,11 +567,11 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
                   className="mx-auto rounded-lg shadow-md mb-3"
                 />
                 <p className="text-xs text-slate-500 mb-3">
-                  Present this QR code to the service provider
+                  {t('order_detail.present_qr')}
                 </p>
                 <Button variant="outline" size="sm" onClick={handleDownloadQR}>
                   <Download className="h-4 w-4 mr-2" />
-                  Download QR Code
+                  {t('order_detail.download_qr')}
                 </Button>
               </div>
             </div>
@@ -583,7 +585,7 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               onClick={() => onCancel(order.id || order._id)}
             >
               <XCircle className="h-4 w-4 mr-2" />
-              Cancel Order
+              {t('order_detail.cancel_order')}
             </Button>
           )}
           {/* Refund request — only on paid orders that aren't already refunded,
@@ -600,21 +602,21 @@ export default function OrderDetailModal({ order, isOpen, onClose, onCancel, onD
               data-testid="open-refund-request-btn"
             >
               <RefreshCcw className="h-4 w-4 mr-2" />
-              Request refund
+              {t('order_detail.request_refund')}
             </Button>
           )}
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
-            Print
+            {t('order_detail.print')}
           </Button>
           {onDownloadReceipt && (
             <Button variant="outline" onClick={() => onDownloadReceipt(order)}>
               <Receipt className="h-4 w-4 mr-2" />
-              Receipt
+              {t('order_detail.receipt')}
             </Button>
           )}
           <Button onClick={onClose} className="bg-[#082c59]">
-            Close
+            {t('order_detail.close')}
           </Button>
         </DialogFooter>
       </DialogContent>

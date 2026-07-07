@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function TravelSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     from_city: '',
@@ -91,7 +93,7 @@ export default function TravelSearch() {
       <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Bus className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
-          <h1 className="text-3xl font-bold mb-2">Search Intercity Travel</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('services.hero_travel')}</h1>
           <p className="text-sm text-slate-200 mb-5">Book bus tickets across all major cities in Cameroon</p>
           {/* Dual smart-search bars — From + To — with a swap arrow between
               them. Replaces the legacy single hero bar + secondary "To"
@@ -283,7 +285,7 @@ export default function TravelSearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Travel With Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">{t('services.why_travel')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">

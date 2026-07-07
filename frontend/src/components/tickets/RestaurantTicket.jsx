@@ -3,11 +3,13 @@
 import React from 'react';
 import { Utensils, Calendar, Clock, Users as UsersIcon, MapPin, Ticket, User, ChefHat } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#c2410c'; // orange-700
 
 export default function RestaurantTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const restaurantName = bd.restaurant_name || order?.service_name || 'Restaurant';
   const date = bd.date || bd.reservation_date || order?.service_date;
@@ -40,22 +42,22 @@ export default function RestaurantTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: Calendar,
-      label: 'Date',
+      label: t('common.date'),
       value: date && formatDate ? formatDate(date) : date || '—',
     },
     {
       icon: Clock,
-      label: 'Time',
+      label: t('common.time'),
       value: time || '—',
     },
     {
       icon: User,
-      label: 'Booked for',
+      label: t('common.holder'),
       value: customerName || '—',
     },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -123,13 +125,13 @@ export default function RestaurantTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Reservation Info"
+      rightPanelTitle={t('orders.reservation_info')}
       rightPanelDescription={
         orderType === 'takeaway'
-          ? 'Show this voucher at the counter when collecting your order.'
-          : 'Show this voucher to the host on arrival. Tables are held for up to 15 minutes after the booked time.'
+          ? t('orders.restaurant_present_takeaway')
+          : t('orders.restaurant_present_dinein')
       }
-      rulesTitle="Restaurant Notes"
+      rulesTitle={t('orders.restaurant_notes')}
       rules={[
         orderType === 'dine-in' && 'Please arrive within 15 minutes of your booked time.',
         'Larger parties may incur a service charge.',

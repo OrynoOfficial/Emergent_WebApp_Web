@@ -4,11 +4,13 @@
 import React from 'react';
 import { Hotel, Calendar, Clock, Users as UsersIcon, MapPin, Ticket, BedDouble, User } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#b45309'; // amber-700
 
 export default function HotelTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const hotelName = bd.hotel_name || order?.service_name || 'Hotel';
   const checkIn = bd.check_in || bd.check_in_date;
@@ -49,26 +51,26 @@ export default function HotelTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: Calendar,
-      label: 'Check-in',
+      label: t('orders.check_in'),
       value: checkIn && formatDate ? formatDate(checkIn) : checkIn || '—',
       sublabel: checkInTime,
     },
     {
       icon: Calendar,
-      label: 'Check-out',
+      label: t('orders.check_out'),
       value: checkOut && formatDate ? formatDate(checkOut) : checkOut || '—',
       sublabel: checkOutTime,
     },
     {
       icon: UsersIcon,
-      label: 'Guests',
+      label: t('orders.guests'),
       value: guests
         ? `${guests}${adults || children ? ` (${[adults && `${adults} adult${adults > 1 ? 's' : ''}`, children && `${children} child${children > 1 ? 'ren' : ''}`].filter(Boolean).join(', ')})` : ''}`
         : '—',
     },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -128,9 +130,9 @@ export default function HotelTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Stay Info"
-      rightPanelDescription="Present this voucher (or the QR below) at the front desk on arrival."
-      rulesTitle="Hotel Policies"
+      rightPanelTitle={t("orders.stay_info")}
+      rightPanelDescription={t("orders.hotel_present_at_desk")}
+      rulesTitle={t("orders.hotel_policies")}
       rules={rules}
     />
   );

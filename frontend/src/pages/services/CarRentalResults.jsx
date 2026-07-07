@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -308,6 +309,7 @@ const VehicleCardList = ({ vehicle, days, onSelect, isFav, toggleFav }) => {
 };
 
 export default function CarRentalResults() {
+  const { t } = useTranslation();
 
   const { isFav, toggleFav } = useFavourites('car_rental');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -610,8 +612,8 @@ export default function CarRentalResults() {
         {filteredVehicles.length === 0 ? (
           <div className="text-center py-16">
             <Car className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No vehicles found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">{t('results.no_vehicles')}</h3>
+            <p className="text-slate-500 mb-4">{t('results.adjust_search')}</p>
             <Button onClick={() => navigate('/services/car-rental')} className="bg-[#082c59]">
               Modify Search
             </Button>

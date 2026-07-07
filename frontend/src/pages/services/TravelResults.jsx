@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card, CardContent } from '../../components/ui/card';
@@ -36,6 +37,7 @@ import {
 } from './TravelResults/index';
 
 export default function TravelResults() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
@@ -502,8 +504,8 @@ export default function TravelResults() {
         {filteredAndSortedTrips.length === 0 ? (
           <Card className="p-12 text-center">
             <Bus className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No trips found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search criteria</p>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('results.no_trips')}</h3>
+            <p className="text-slate-500 mb-4">{t('results.adjust_search_criteria')}</p>
             <Button onClick={() => setIsEditingSearch(true)} className="bg-[#082c59]">
               <Edit2 className="w-4 h-4 mr-2" /> Modify Search
             </Button>

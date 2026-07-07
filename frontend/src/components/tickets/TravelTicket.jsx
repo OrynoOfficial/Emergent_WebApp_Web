@@ -5,11 +5,13 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Bus, Hash, Armchair, MapPin, Clock, User, Ticket } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#082c59'; // brand navy
 
 export default function TravelTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const v = bd.vehicle_info || {};
   const plate = v.plate_number || bd.plate_number;
@@ -53,23 +55,23 @@ export default function TravelTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: Clock,
-      label: 'Departure',
+      label: t('orders.departure'),
       value: date && formatDate ? formatDate(date) : date,
       sublabel: time && arrival ? `${time} → ${arrival}` : time,
     },
     {
       icon: MapPin,
-      label: 'Route',
+      label: t('orders.route'),
       value: dep && dest ? `${dep} → ${dest}` : '—',
     },
     {
       icon: User,
-      label: 'Passenger',
+      label: t('orders.passenger'),
       value: passengerName || '—',
     },
     {
       icon: Ticket,
-      label: 'Fare',
+      label: t('orders.fare'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -127,9 +129,9 @@ export default function TravelTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Boarding Info"
-      rightPanelDescription="Show this ticket and the plate number to the agent at boarding. Arrive at least 20 minutes before departure."
-      rulesTitle="Travel Notes"
+      rightPanelTitle={t("orders.boarding_info")}
+      rightPanelDescription={t("orders.travel_boarding_note")}
+      rulesTitle={t("orders.travel_notes")}
       rules={[
         operatorPhone && `Operator support: ${operatorPhone}`,
         luggage.length > 0 && 'Declared luggage will be verified before boarding.',

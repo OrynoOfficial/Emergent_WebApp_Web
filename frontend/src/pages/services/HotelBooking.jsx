@@ -451,7 +451,7 @@ export default function HotelBooking() {
             <div className="w-20 h-20 border-4 border-[#082c59]/20 rounded-full animate-pulse"></div>
             <Hotel className="h-10 w-10 text-[#082c59] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-bounce" />
           </div>
-          <p className="text-slate-600 mt-4 font-medium">Loading booking details...</p>
+          <p className="text-slate-600 mt-4 font-medium">{t('booking.loading_booking')}</p>
         </div>
       </div>
     );
@@ -464,7 +464,7 @@ export default function HotelBooking() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Clock className="w-8 h-8 text-amber-600" />
           </div>
-          <p className="text-slate-600 mb-4">Booking session expired. Please search again.</p>
+          <p className="text-slate-600 mb-4">{t('booking.session_expired')}</p>
           <Button onClick={() => navigate('/services/hotels')} className="bg-[#082c59]">
             Back to Search
           </Button>
@@ -514,7 +514,7 @@ export default function HotelBooking() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">{t('guestInfo')}</h3>
-                    <p className="text-sm text-white/70">Who will be staying?</p>
+                    <p className="text-sm text-white/70">{t('booking.who_staying')}</p>
                   </div>
                 </div>
               </div>
@@ -537,7 +537,7 @@ export default function HotelBooking() {
                       className="data-[state=checked]:bg-[#082c59] data-[state=unchecked]:bg-slate-400"
                     />
                   </div>
-                  <p className="text-sm text-slate-500 mt-2 ml-8">Auto-fill with your profile information</p>
+                  <p className="text-sm text-slate-500 mt-2 ml-8">{t('booking.auto_fill_profile')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -621,7 +621,7 @@ export default function HotelBooking() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">{t('specialRequests')}</h3>
-                    <p className="text-sm text-white/70">Let us know your preferences</p>
+                    <p className="text-sm text-white/70">{t('booking.let_us_know_preferences')}</p>
                   </div>
                 </div>
               </div>
@@ -674,7 +674,7 @@ export default function HotelBooking() {
                   <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Clock className="h-3.5 w-3.5 text-emerald-600" />
-                      <p className="text-xs font-semibold text-emerald-700">Check-in</p>
+                      <p className="text-xs font-semibold text-emerald-700">{t('results.check_in')}</p>
                     </div>
                     <p className="font-bold text-slate-900 text-sm" data-testid="hotel-checkin-time">
                       {hotel.check_in_time || 'From 14:00'}
@@ -683,7 +683,7 @@ export default function HotelBooking() {
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Clock className="h-3.5 w-3.5 text-amber-600" />
-                      <p className="text-xs font-semibold text-amber-700">Check-out</p>
+                      <p className="text-xs font-semibold text-amber-700">{t('results.check_out')}</p>
                     </div>
                     <p className="font-bold text-slate-900 text-sm" data-testid="hotel-checkout-time">
                       {hotel.check_out_time || 'Before 12:00'}
@@ -723,8 +723,8 @@ export default function HotelBooking() {
                     <Calendar className="h-6 w-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">Booking Summary</h3>
-                    <p className="text-sm text-white/70">Your stay details</p>
+                    <h3 className="font-bold text-lg">{t('booking.booking_summary')}</h3>
+                    <p className="text-sm text-white/70">{t('booking.your_stay_details')}</p>
                   </div>
                 </div>
               </div>
@@ -741,7 +741,7 @@ export default function HotelBooking() {
                     <div className="p-3 bg-[#082c59]/5 space-y-2">
                       <div className="flex items-center gap-2">
                         <Bed className="h-4 w-4 text-[#082c59]" />
-                        <p className="text-[10px] uppercase tracking-wide text-slate-500">Your Selected Room</p>
+                        <p className="text-[10px] uppercase tracking-wide text-slate-500">{t('booking.your_selected_room')}</p>
                       </div>
                       <p className="font-bold text-[#082c59] text-sm leading-tight">{hotel.room_type}</p>
                       {(hotel.room_bed_type || hotel.room_capacity || hotel.room_size_sqm) && (
@@ -759,7 +759,7 @@ export default function HotelBooking() {
                       )}
                       {Array.isArray(hotel.room_policies) && hotel.room_policies.length > 0 && (
                         <div className="pt-2 border-t border-[#082c59]/10">
-                          <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">Room Policies</p>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-1.5">{t('booking.room_policies')}</p>
                           <ul className="space-y-0.5">
                             {hotel.room_policies.slice(0, 3).map((p, i) => (
                               <li key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
@@ -810,7 +810,7 @@ export default function HotelBooking() {
                     <span className="font-medium">{formatCurrency(pricing.baseAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Taxes & Fees</span>
+                    <span className="text-slate-500">{t('booking.taxes_and_fees')}</span>
                     <span className="font-medium">{formatCurrency(pricing.taxes)}</span>
                   </div>
 

@@ -17,6 +17,7 @@
  * the OTP itself in the success card.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +30,7 @@ import api from '../../api/client';
 const RESEND_COOLDOWN_SEC = 45;  // ← hide brute-force; mirrors AUTH_RESEND_RATE
 
 export function ForgotPasswordView({ setCurrentView }) {
+  const { t } = useTranslation();
   const [stage, setStage] = useState('request');  // request → sent → reset → done
   const [method, setMethod] = useState('email');  // 'email' | 'phone'
   const [identifier, setIdentifier] = useState('');
@@ -149,19 +151,19 @@ export function ForgotPasswordView({ setCurrentView }) {
         className="flex items-center text-slate-600 hover:text-[#082c59] text-sm mb-4"
         data-testid="forgot-back-btn"
       >
-        <ArrowLeft className="h-4 w-4 mr-1" />Back to login
+        <ArrowLeft className="h-4 w-4 mr-1" />{t('auth.forgot_done_cta')}
       </button>
 
       <div className="text-center mb-5">
         <div className="mx-auto mb-3 w-12 h-12 rounded-full bg-[#082c59]/10 flex items-center justify-center">
           <KeyRound className="h-6 w-6 text-[#082c59]" />
         </div>
-        <h1 className="text-xl font-bold text-slate-900">Reset your password</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('auth.forgot_title')}</h1>
         <p className="text-slate-500 text-sm">
-          {stage === 'request' && 'Choose how you want to recover access.'}
-          {stage === 'sent' && 'Check your inbox for the reset link.'}
-          {stage === 'reset' && 'Enter the code and pick a new password.'}
-          {stage === 'done' && 'All set! You can sign in with your new password.'}
+          {stage === 'request' && t('auth.forgot_subtitle')}
+          {stage === 'sent' && t('auth.forgot_email_sent_desc')}
+          {stage === 'reset' && t('auth.forgot_otp_desc')}
+          {stage === 'done' && t('auth.forgot_done_desc')}
         </p>
       </div>
 
@@ -176,15 +178,15 @@ export function ForgotPasswordView({ setCurrentView }) {
         <form onSubmit={submitRequest} className="space-y-4">
           <div className="flex rounded-lg overflow-hidden border border-slate-200">
             <button type="button" onClick={() => { setMethod('email'); setIdentifier(''); }} className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 ${method === 'email' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="forgot-method-email">
-              <Mail className="h-4 w-4" />Email
+              <Mail className="h-4 w-4" />{t('common.email')}
             </button>
             <button type="button" onClick={() => { setMethod('phone'); setIdentifier(''); }} className={`flex-1 py-2 px-4 text-sm font-medium flex items-center justify-center gap-2 ${method === 'phone' ? 'bg-[#082c59] text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`} data-testid="forgot-method-phone">
-              <Phone className="h-4 w-4" />Phone
+              <Phone className="h-4 w-4" />{t('common.phone')}
             </button>
           </div>
           <div>
             <Label className="text-slate-700 text-sm">
-              {method === 'email' ? 'Email Address' : 'Phone Number'}
+              {method === 'email' ? t('auth.login_email_label') : t('auth.login_phone_label')}
             </Label>
             <div className="relative mt-1">
               {method === 'email'
@@ -192,7 +194,7 @@ export function ForgotPasswordView({ setCurrentView }) {
                 : <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />}
               <Input
                 type={method === 'email' ? 'email' : 'tel'}
-                placeholder={method === 'email' ? 'your@email.com' : '+237 6XX XXX XXX'}
+                placeholder={method === 'email' ? t('auth.signup_email_placeholder') : t('auth.phone_placeholder')}
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="pl-10 h-11"
@@ -204,7 +206,7 @@ export function ForgotPasswordView({ setCurrentView }) {
           </div>
           <Button type="submit" disabled={busy || !identifier.trim()} className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white rounded-xl" data-testid="forgot-submit-btn">
             {busy ? <Loader2 className="h-5 w-5 animate-spin" />
-              : (method === 'email' ? 'Send reset link' : 'Send 6-digit code')}
+              : (method === 'email' ? t('auth.forgot_channel_email') : t('auth.forgot_channel_phone'))}
           </Button>
         </form>
       )}
@@ -214,7 +216,7 @@ export function ForgotPasswordView({ setCurrentView }) {
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">
             <p className="font-semibold mb-1 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" />Reset link sent
+              <CheckCircle2 className="h-4 w-4" />{t('auth.forgot_email_sent_title')}
             </p>
             <p>If an account exists for <strong>{identifier}</strong>, you&apos;ll receive an email with a one-time link. It expires in 30 minutes.</p>
             {info?.reset_link && (
@@ -233,7 +235,7 @@ export function ForgotPasswordView({ setCurrentView }) {
             onClick={() => setCurrentView(AUTH_VIEWS.LOGIN)}
             data-testid="forgot-done-back-to-login"
           >
-            Back to login
+            {t('auth.forgot_done_cta')}
           </Button>
         </div>
       )}
@@ -252,7 +254,7 @@ export function ForgotPasswordView({ setCurrentView }) {
 
           <div>
             <div className="flex items-center justify-between">
-              <Label className="text-slate-700 text-sm">Verification Code</Label>
+              <Label className="text-slate-700 text-sm">{t('auth.enter_otp')}</Label>
               <button
                 type="button"
                 onClick={resendOtp}
@@ -262,8 +264,8 @@ export function ForgotPasswordView({ setCurrentView }) {
               >
                 <RotateCw className={`h-3 w-3 ${resending ? 'animate-spin' : ''}`} />
                 {cooldown > 0
-                  ? `Resend in ${cooldown}s`
-                  : (resending ? 'Sending…' : 'Resend code')}
+                  ? t('auth.forgot_resend_in', { seconds: cooldown })
+                  : (resending ? t('auth.phone_otp_sending') : t('auth.forgot_resend'))}
               </button>
             </div>
             <Input
@@ -281,12 +283,12 @@ export function ForgotPasswordView({ setCurrentView }) {
           </div>
 
           <div>
-            <Label className="text-slate-700 text-sm">New Password</Label>
+            <Label className="text-slate-700 text-sm">{t('auth.forgot_new_password')}</Label>
             <div className="relative mt-1">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Minimum 6 characters"
+                placeholder={t('auth.forgot_new_password_placeholder')}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pl-10 pr-10 h-11"
@@ -300,12 +302,12 @@ export function ForgotPasswordView({ setCurrentView }) {
           </div>
 
           <div>
-            <Label className="text-slate-700 text-sm">Confirm Password</Label>
+            <Label className="text-slate-700 text-sm">{t('auth.forgot_confirm_new_password')}</Label>
             <div className="relative mt-1">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Repeat your new password"
+                placeholder={t('auth.forgot_confirm_new_password_placeholder')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10 h-11"
@@ -316,7 +318,7 @@ export function ForgotPasswordView({ setCurrentView }) {
           </div>
 
           <Button type="submit" disabled={busy} className="w-full h-11 bg-[#082c59] hover:bg-[#0a3a75] text-white rounded-xl" data-testid="forgot-reset-submit-btn">
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Reset password'}
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : t('auth.forgot_reset_cta')}
           </Button>
         </form>
       )}
@@ -326,8 +328,8 @@ export function ForgotPasswordView({ setCurrentView }) {
         <div className="space-y-4">
           <div className="p-5 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
             <CheckCircle2 className="h-10 w-10 text-emerald-600 mx-auto mb-2" />
-            <p className="font-semibold text-emerald-900">Password updated</p>
-            <p className="text-sm text-emerald-800 mt-1">You can now sign in with your new password.</p>
+            <p className="font-semibold text-emerald-900">{t('auth.forgot_done_title')}</p>
+            <p className="text-sm text-emerald-800 mt-1">{t('auth.forgot_done_desc')}</p>
           </div>
           <Button
             type="button"
@@ -335,7 +337,7 @@ export function ForgotPasswordView({ setCurrentView }) {
             onClick={() => setCurrentView(AUTH_VIEWS.LOGIN)}
             data-testid="forgot-done-go-login"
           >
-            Sign in
+            {t('common.login')}
           </Button>
         </div>
       )}

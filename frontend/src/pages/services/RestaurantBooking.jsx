@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
@@ -55,6 +56,7 @@ const RestaurantStepIndicator = ({ currentStep }) => {
 };
 
 export default function RestaurantBooking() {
+  const { t } = useTranslation();
   const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
 
@@ -307,7 +309,7 @@ export default function RestaurantBooking() {
                 <div className="flex items-center gap-3 text-white">
                   <div className="p-2 bg-white/20 rounded-xl"><MessageSquare className="h-6 w-6" /></div>
                   <div>
-                    <h3 className="font-bold text-lg">Special Requests</h3>
+                    <h3 className="font-bold text-lg">{t('booking.special_requests')}</h3>
                     <p className="text-sm text-white/70">Let us know your preferences</p>
                   </div>
                 </div>

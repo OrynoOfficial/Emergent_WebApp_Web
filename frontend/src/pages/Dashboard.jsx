@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { analyticsAPI, ordersAPI } from '../api/client';
 import { formatCurrency } from '../utils/currency';
@@ -60,6 +61,7 @@ const MONTHLY_DATA = [
 ];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
@@ -102,7 +104,7 @@ export default function Dashboard() {
 
   const stats = [
     {
-      title: 'Total Orders',
+      title: t('orders.total_orders'),
       value: analytics?.total_orders || 12,
       icon: ShoppingBag,
       gradient: 'from-blue-500 to-blue-600',
@@ -111,7 +113,7 @@ export default function Dashboard() {
       growth: 12
     },
     {
-      title: 'Total Spent',
+      title: t('orders.total_spent'),
       value: formatCurrency(analytics?.total_spent || 156000),
       icon: DollarSign,
       gradient: 'from-purple-500 to-purple-600',

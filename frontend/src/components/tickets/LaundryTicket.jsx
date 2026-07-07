@@ -14,11 +14,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#7e22ce'; // purple-700
 
 export default function LaundryTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const pi = bd.pressing_info || {};
   const shopName = pi.name || bd.shop_name || order?.service_name;
@@ -75,7 +77,7 @@ export default function LaundryTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: pickupMethod === 'pickup' ? Truck : Home,
-      label: 'Logistics',
+      label: t('orders.logistics'),
       value: pickupMethod === 'pickup' ? 'Pickup from customer' : 'Customer drops off',
     },
     pickupDate && {
@@ -91,7 +93,7 @@ export default function LaundryTicket({ order, formatDate }) {
     },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -210,13 +212,13 @@ export default function LaundryTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Service Info"
+      rightPanelTitle={t('orders.service_info')}
       rightPanelDescription={
         pickupMethod === 'pickup'
-          ? 'A rider will collect your items at the agreed time. Please have them packed and ready.'
-          : 'Please drop off your items at the shop on the scheduled date.'
+          ? t('orders.laundry_pickup_note')
+          : t('orders.laundry_dropoff_note')
       }
-      rulesTitle="Service Notes"
+      rulesTitle={t('orders.service_notes')}
       rules={[
         turnaround && `Standard turnaround: ${turnaround} hours.`,
         expressOn && 'Express service: prioritized handling, faster turnaround.',

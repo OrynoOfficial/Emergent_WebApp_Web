@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -58,6 +59,7 @@ import GlobalSearchAllModal from './search/GlobalSearchAllModal';
 
 export default function Layout({ children }) {
   const { user, logout, operatorContext, isOperatorUser, operatorServiceTypes, operatorType } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { hasPermission, hasAnyPermission, canAccessModule, isSuperAdmin: isSuperAdminPerm, loading: permissionsLoading } = usePermissions();
@@ -408,6 +410,71 @@ export default function Layout({ children }) {
     };
     return labels[type] || type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ');
   };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Sidebar-item key → i18n key map. `useSidebarMenu` returns English labels
+  // as a fallback; this table translates them at render time so we don't
+  // have to plumb i18n through the hook. Keeps the hook framework-agnostic.
+  const SIDEBAR_KEY_TO_I18N = {
+    // Top-level
+    dashboard: 'nav.dashboard',
+    services: 'nav.services',
+    orders: 'nav.my_orders',
+    receipts: 'nav.receipts',
+    loyalty: 'nav.loyalty',
+    'promo-alerts': 'nav.promo_and_alerts',
+    ratings: 'nav.my_ratings',
+    support: 'nav.support',
+    settings: 'nav.settings',
+    revenue: 'nav.revenue',
+    transactions: 'nav.transactions',
+    // Service submenu
+    browse: 'nav.browse_services',
+    hotels: 'services.hotels',
+    restaurants: 'services.restaurants',
+    travel: 'services.travel',
+    'car-rental': 'services.car_rental',
+    events: 'services.events',
+    packages: 'services.packages',
+    laundry: 'services.laundry',
+    cinema: 'services.cinema',
+    banquet: 'services.banquet',
+    // Management submenu
+    'hotels-mgmt': 'nav.hotels_mgmt',
+    'travel-mgmt': 'nav.travel_mgmt',
+    'cars-mgmt': 'nav.car_rental_mgmt',
+    'events-mgmt': 'nav.events_mgmt',
+    'restaurants-mgmt': 'nav.restaurant_mgmt',
+    'cinema-mgmt': 'nav.cinema_mgmt',
+    'laundry-mgmt': 'nav.laundry_mgmt',
+    'banquet-mgmt': 'nav.banquet_mgmt',
+    'packages-mgmt': 'nav.packages_mgmt',
+    'refund-policies': 'nav.refund_policies',
+    // Admin
+    'user-mgmt': 'nav.user_mgmt',
+    'operator-mgmt': 'nav.operator_mgmt',
+    'employee-mgmt': 'nav.employee_mgmt',
+    commission: 'nav.commission',
+    'audit-logs': 'nav.audit_logs',
+    reports: 'nav.reports',
+    validation: 'nav.validation',
+    'all-bookings': 'nav.all_bookings',
+    'customer-service': 'nav.customer_service',
+    // Dashboards submenu
+    dashboards: 'nav.dashboards',
+    'analytics-dash': 'nav.analytics_dashboard',
+    'operator-compare': 'nav.operator_comparison',
+    'admin-dash': 'nav.admin_dashboard',
+  };
+
+  const tSidebarLabel = (item) => {
+    const key = SIDEBAR_KEY_TO_I18N[item?.key];
+    if (!key) return item?.label;
+    // If a translation key is missing in the current bundle, i18next returns
+    // the key itself — fall back to the English label in that case.
+    const translated = t(key);
+    return translated === key ? item.label : translated;
+  };
   
   // Get notifications from context (with safe fallback)
   const notificationData = useNotifications();
@@ -489,7 +556,7 @@ export default function Layout({ children }) {
           >
             <div className="flex items-center gap-3">
               <item.icon className="h-5 w-5" style={{ color: iconColor }} />
-              <span className="font-medium text-slate-200">{item.label}</span>
+              <span className="font-medium text-slate-200">{tSidebarLabel(item)}</span>
             </div>
             <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isSubmenuOpen ? 'text-white' : ''}`} />
           </button>
@@ -516,7 +583,7 @@ export default function Layout({ children }) {
           className="h-5 w-5" 
           style={{ color: iconColor }} 
         />
-        <span className="font-medium">{item.label}</span>
+        <span className="font-medium">{tSidebarLabel(item)}</span>
         {item.badgeKey && badgeCounts[item.badgeKey] > 0 && (
           <span
             className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-sm ring-2 ring-[#082c59]"
@@ -545,7 +612,7 @@ export default function Layout({ children }) {
         {/* Flyout header */}
         <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
           <item.icon className="h-4 w-4" style={{ color: iconColor }} />
-          <span className="text-sm font-semibold text-white">{item.label}</span>
+          <span className="text-sm font-semibold text-white">{tSidebarLabel(item)}</span>
         </div>
         {/* Flyout links */}
         <div className="py-1.5 max-h-[340px] overflow-y-auto sidebar-scroll">
@@ -553,7 +620,7 @@ export default function Layout({ children }) {
             if (sub.isDivider) {
               return (
                 <div key={sub.key || idx} className="px-4 py-1.5 mt-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-                  {sub.label}
+                  {tSidebarLabel(sub)}
                 </div>
               );
             }
@@ -574,7 +641,7 @@ export default function Layout({ children }) {
                 `}
               >
                 <sub.icon className="h-4 w-4 flex-shrink-0" style={{ color: isSubActive ? '#4D96FF' : subIconColor }} />
-                <span className="truncate">{sub.label}</span>
+                <span className="truncate">{tSidebarLabel(sub)}</span>
               </Link>
             );
           })}
@@ -642,7 +709,7 @@ export default function Layout({ children }) {
               "
             >
               <LogOut className="h-5 w-5" />
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">{t('nav.logout')}</span>
             </button>
           </div>
         </div>
@@ -692,7 +759,7 @@ export default function Layout({ children }) {
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search services, pages, actions... (Ctrl+K)"
+                  placeholder={t('common.search_placeholder')}
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -860,7 +927,7 @@ export default function Layout({ children }) {
                     <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-fadeIn">
                       <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-slate-800">Notifications</h3>
+                          <h3 className="font-semibold text-slate-800">{t('nav.notifications')}</h3>
                           {unreadCount > 0 && (
                             <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-medium rounded-full">
                               {unreadCount} new

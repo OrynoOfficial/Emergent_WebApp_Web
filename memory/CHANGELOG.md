@@ -1,3 +1,16 @@
+### 2026-02-27 — i18n full sweep (iter269) — auth funnel + sidebar + tickets + top pages
+- User reported: "language doesn't persist when I click Create Account". Root cause was NOT persistence (localStorage was fine) — the downstream auth views + sidebar + tickets + main customer pages had hardcoded English strings that never went through `useTranslation()`.
+- **Auth funnel** now fully bilingual: `WelcomeView`, `LoginView` (already done in iter268), `SignupRoleView`, `SignupFormView`, `ForgotPasswordView` (request → sent → reset → done stages), `OperatorContactView`, `PhoneOtpView`, `TwoFactorView`.
+- **Sidebar (`Layout.jsx`)**: added a `SIDEBAR_KEY_TO_I18N` map + `tSidebarLabel(item)` helper. Every sidebar item (Dashboard, Services, My Orders, Receipts, Loyalty, Ratings, Settings, all Management sub-items, all Admin sub-items, Service tiles) now translates at render time based on stable `item.key`. `useSidebarMenu.js` hook stays framework-agnostic — English labels serve as fallback.
+- **Top-nav / Header**: global search placeholder, Notifications label, Logout menu item.
+- **Tickets**: all 7 (EventTicket, TravelTicket, CinemaTicket, HotelTicket, RestaurantTicket, CarRentalTicket, LaundryTicket) + BaseTicket now use `useTranslation()`. Rail titles (Important Info / Venue Rules / Boarding Info / Cinema Info / Stay Info / Reservation Info / Rental Info / Service Info / Notes / Hotel Policies / Travel Notes / Rental Notes / Restaurant Notes / Service Notes), the "Present this ticket at the entrance / front desk / counter" bodies, and the WHEN / WHERE / HOLDER / PAID / PASSENGER / ROUTE / FARE / DEPARTURE / RETURN / CHECK-IN / CHECK-OUT / GUESTS / DATE / TIME / SHOWTIME / CINEMA / LOGISTICS meta-grid eyebrows all translated.
+- **Dashboard + Orders**: title, subtitle, "Book New" CTA, "Total Orders", "Total Spent" chips.
+- **8 service Search pages** (Hotels/Restaurants/Travel/CarRental/Cinema/Events/Laundry/Banquet): H1 hero headlines + "Why book with us?" section headings.
+- Total bundle now: ~200 keys across `common` / `nav` / `auth` / `services` / `orders` / `settings` namespaces (both `en.json` and `fr.json`).
+- **Tested manually via screenshots**: Login → FR → Welcome → Create Account → Signup Role → pick Client → Continue → Signup Form. Language 🇫🇷 FR persists through every step. Both hero copy and every visible form field in French.
+- **Remaining queued** (visible but lower-priority): OrderDetailModal chrome (Payment Summary, Customer Info section headings), individual `*Booking.jsx` form fields, `*Results.jsx` filter labels, Settings page section titles, admin pages.
+
+
 ### 2026-02-27 — i18n (English / Français) system-wide (iter268)
 - **New i18n stack**: `i18next` + `react-i18next` + `i18next-browser-languagedetector`. Init in `/app/frontend/src/i18n/index.js` with `SUPPORTED_LANGUAGES`, `setAppLanguage()`, `getAppLanguage()`. Detection order: `localStorage → navigator → htmlTag`. `<html lang>` auto-syncs on change (a11y + SEO).
 - **Bundles**: `/app/frontend/src/i18n/locales/en.json` + `fr.json` — `common`, `nav`, `auth`, `services`, `orders`, `settings` namespaces with ~90 keys covering the most user-visible copy (login flow, top nav, service categories, order statuses, ticket rail titles, generic buttons).

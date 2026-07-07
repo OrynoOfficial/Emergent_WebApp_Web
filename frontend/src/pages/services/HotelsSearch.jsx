@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import DatePickerModal from '@/components/shared/DatePickerModal';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function HotelsSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     destination: '',
@@ -84,7 +86,7 @@ export default function HotelsSearch() {
       <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Hotel className="w-12 h-12 mx-auto mb-3 text-amber-400" />
-          <h1 className="text-3xl font-bold mb-2">Find Your Perfect Stay</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('services.hero_hotels')}</h1>
           <p className="text-sm text-slate-200 mb-5">Book hotels, guesthouses, and apartments across Cameroon</p>
           {/* Smart hero search — owns destination selection (iter 251). */}
           <div className="max-w-2xl mx-auto text-left">
@@ -223,7 +225,7 @@ export default function HotelsSearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Book With Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">{t('services.why_book')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">
             <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">

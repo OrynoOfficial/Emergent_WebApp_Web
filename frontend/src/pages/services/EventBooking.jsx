@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OperatorBookingBlock from '../../components/shared/OperatorBookingBlock';
@@ -66,6 +67,7 @@ const StepIndicator = ({ currentStep }) => {
 };
 
 export default function EventBooking() {
+  const { t } = useTranslation();
   const { user, isOperatorUser } = useAuth();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
@@ -307,7 +309,7 @@ export default function EventBooking() {
 
             {/* Contact Information */}
             <BookerInfoSection
-              title="Contact Information"
+              title={t('booking.contact_information')}
               subtitle="Where should we send your tickets?"
               toggleLabel="Use my account details"
               firstName={formData.firstName}

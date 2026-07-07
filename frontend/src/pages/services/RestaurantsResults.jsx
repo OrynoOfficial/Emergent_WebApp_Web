@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -319,6 +320,7 @@ const RestaurantCardList = ({ restaurant, onViewDetails, isFav, toggleFav }) => 
 };
 
 export default function RestaurantsResults() {
+  const { t } = useTranslation();
   const { isFav, toggleFav } = useFavourites('restaurants');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -588,8 +590,8 @@ export default function RestaurantsResults() {
         {filteredRestaurants.length === 0 ? (
           <div className="text-center py-16">
             <Utensils className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No restaurants found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">{t('results.no_restaurants')}</h3>
+            <p className="text-slate-500 mb-4">{t('results.adjust_search')}</p>
             <Button onClick={() => navigate('/services/restaurants')} className="bg-[#082c59]">
               Modify Search
             </Button>

@@ -1,0 +1,34 @@
+{
+  "summary": "Verified (a) Management Dashboard bug fix: /api/management/dashboard-stats now returns both grossBookings/grossRevenue AND totalBookings/totalRevenue for all service types; totalBookings <= grossBookings (events: 6 vs 7 gross confirms cancelled/refunded exclusion). (b) i18n coverage: language dropdown switches EN<->FR and persists across reload; OrderDetailModal renders French labels (Détails de la commande, Récapitulatif du paiement, Informations client, Imprimer, Fermer); Settings sidebar shows French labels (Profil, Sécurité, Préférences, Moyens de paiement, Notifications, Langue). All operator management dashboards (events, travel, hotels, cinema, restaurants) render without NaN and show correct effective bookings matching the API.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Orders list (customer, French)", "issues": ["Mixed i18n: 'Pending', 'Completed', 'Cancelled', 'Filters', 'Search by order number...', 'View', 'Cancel', 'TOTAL', 'CONFIRMED', 'PENDING', 'Showing 10 of 278 orders', 'Welcome back, Customer!', 'Manage your services and bookings' remain in English"]},
+      {"screen": "OrderDetailModal (customer, French)", "issues": ["'Event' badge, 'PAID' pill, 'Present this ticket (or the QR below) at the venue entrance.', 'Photo ID required', 'No outside drinks' are still English"]},
+      {"screen": "Settings page (customer, French)", "issues": ["Right pane still English: 'Basic Information', 'Fill once · locks after save', 'Full Name (locked)', 'Email Address (locked)', 'Phone Number (locked)', 'Date of Birth', 'ID Card / Passport Number (locked)', 'Gender', 'Address Information', 'Street Address', 'City', 'Region/State', 'Logout', 'Sign out of your account'"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter268_dashboard_stats.py",
+    "/app/test_reports/pytest/iter268.xml"
+  ],
+  "action_items": [
+    "OPTIONAL polish: extend i18n coverage to Orders list statuses/actions, OrderDetailModal event-info section, and Settings right-pane form labels (out of scope of current review — the requested labels are correctly localized).",
+    "Console warnings 'Failed to load operators: fr' (GET /api/operators?... returns 403 for operator role) show up on management pages — not blocking KPIs but should be gated on role."
+  ],
+  "critical_code_review_comments": [
+    "management_dashboard.py correctly excludes cancelled/refunded/refund_requested/abandoned/failed/expired from EFFECTIVE_BOOKING_STATUSES and exposes gross_* keys for reconciliation — clean implementation.",
+    "'Distribution' pie chart on dashboards still uses raw status_counts (includes cancelled), which is intentional per code comment — matches UI (Confirmed:2, Pending:4, Cancelled:1 = 7 gross while KPI shows 6 effective)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter268_dashboard_stats.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100% for requested checks"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Language dropdown lives at top-right of every page as a button whose text is 'EN' or 'FR'. Login flow is two-step: email → 'Continuer'/'Continue' → password → submit. operator@test.com is Musango Bus Service (travel + events + hotels + restaurants). Backend dashboard-stats endpoint returns keys: totalBookings/totalRevenue (effective) and grossBookings/grossRevenue (raw). Events for operator: total=6, gross=7 (one cancelled/refunded excluded).",
+  "rca of the issue": "N/A — this iteration verified fixes, no new bug found."
+}

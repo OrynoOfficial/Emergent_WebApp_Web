@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -385,7 +386,7 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
             {hotel.breakfast_included && (
               <div className="flex items-center gap-1 text-xs text-orange-600 mb-2">
                 <Check className="h-3 w-3" />
-                <span>Breakfast Included</span>
+                <span>{t('results.breakfast_included')}</span>
               </div>
             )}
             
@@ -470,6 +471,7 @@ const HotelCardDetail = ({ hotel, nights, checkIn, checkOut, onViewDetails }) =>
 };
 
 export default function HotelsResults() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isFav, toggleFav } = useFavourites('hotels');
@@ -723,7 +725,7 @@ export default function HotelsResults() {
             <div className="w-20 h-20 border-4 border-[#082c59]/20 rounded-full animate-pulse"></div>
             <Loader2 className="h-12 w-12 animate-spin text-[#082c59] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           </div>
-          <p className="text-lg text-slate-600 mt-6 font-medium">Finding the best hotels for you...</p>
+          <p className="text-lg text-slate-600 mt-6 font-medium">{t('results.finding_hotels')}</p>
         </div>
       </div>
     );
@@ -891,12 +893,12 @@ export default function HotelsResults() {
                 </SheetTrigger>
                 <SheetContent className="w-full sm:max-w-md overflow-y-auto">
                   <SheetHeader>
-                    <SheetTitle className="text-xl">Filters</SheetTitle>
+                    <SheetTitle className="text-xl">{t('results.filters')}</SheetTitle>
                   </SheetHeader>
                   <div className="py-6 space-y-8">
                     {/* Price Range */}
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-4">Price Range</h4>
+                      <h4 className="font-semibold text-slate-900 mb-4">{t('results.price_range')}</h4>
                       <Slider
                         value={priceRange}
                         onValueChange={setPriceRange}
@@ -913,7 +915,7 @@ export default function HotelsResults() {
 
                     {/* Star Rating */}
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-4">Star Rating</h4>
+                      <h4 className="font-semibold text-slate-900 mb-4">{t('results.star_rating')}</h4>
                       <div className="flex flex-wrap gap-2">
                         {[5, 4, 3, 2, 1].map((star) => (
                           <Button
@@ -931,7 +933,7 @@ export default function HotelsResults() {
 
                     {/* Amenities */}
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-4">Amenities</h4>
+                      <h4 className="font-semibold text-slate-900 mb-4">{t('results.amenities')}</h4>
                       <div className="space-y-3">
                         {AMENITIES.map((amenity) => (
                           <label key={amenity.key} className="flex items-center space-x-3 cursor-pointer group">
@@ -952,7 +954,7 @@ export default function HotelsResults() {
 
                     {/* Guest Rating */}
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-4">Minimum Guest Rating</h4>
+                      <h4 className="font-semibold text-slate-900 mb-4">{t('results.min_guest_rating')}</h4>
                       <div className="flex flex-wrap gap-2">
                         {[0, 7, 8, 8.5, 9].map((rating) => (
                           <Button
@@ -970,7 +972,7 @@ export default function HotelsResults() {
 
                     {/* Deals & Policies */}
                     <div>
-                      <h4 className="font-semibold text-slate-900 mb-4">Deals & Policies</h4>
+                      <h4 className="font-semibold text-slate-900 mb-4">{t('results.deals_policies')}</h4>
                       <div className="space-y-3">
                         <label className="flex items-center space-x-3 cursor-pointer group">
                           <Checkbox
@@ -978,7 +980,7 @@ export default function HotelsResults() {
                             onCheckedChange={setFreeCancellation}
                             className="rounded"
                           />
-                          <span className="text-slate-700 group-hover:text-slate-900">Free Cancellation</span>
+                          <span className="text-slate-700 group-hover:text-slate-900">{t('results.free_cancellation')}</span>
                         </label>
                         <label className="flex items-center space-x-3 cursor-pointer group">
                           <Checkbox
@@ -986,7 +988,7 @@ export default function HotelsResults() {
                             onCheckedChange={setBreakfastIncluded}
                             className="rounded"
                           />
-                          <span className="text-slate-700 group-hover:text-slate-900">Breakfast Included</span>
+                          <span className="text-slate-700 group-hover:text-slate-900">{t('results.breakfast_included')}</span>
                         </label>
                       </div>
                     </div>

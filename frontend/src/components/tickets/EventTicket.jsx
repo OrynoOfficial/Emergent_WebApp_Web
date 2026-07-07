@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Clock, Ticket, User, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
 import { format, parseISO, isValid } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 function fmtWhen(iso) {
@@ -15,6 +16,7 @@ function fmtWhen(iso) {
 }
 
 export default function EventTicket({ order }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const title = bd.showtime_title || order?.service_name || 'Event';
   const venue = bd.location_name || order?.operator_name;
@@ -45,20 +47,20 @@ export default function EventTicket({ order }) {
   const metaItems = [
     {
       icon: Clock,
-      label: 'When',
+      label: t('orders.when'),
       value: fmtWhen(start),
       sublabel: doors ? `Doors ${doors}` : null,
     },
     {
       icon: MapPin,
-      label: 'Where',
+      label: t('orders.where'),
       value: venue,
       sublabel: [address, city].filter(Boolean).join(' · ') || null,
     },
-    { icon: User, label: 'Holder', value: contactName || '—' },
+    { icon: User, label: t('orders.holder'), value: contactName || '—' },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: classColor },
     },
@@ -98,9 +100,9 @@ export default function EventTicket({ order }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Important Info"
+      rightPanelTitle={t("orders.important_info")}
       rightPanelDescription={`Present this ticket (or the QR below) at the venue entrance.${doors ? ` Doors open at ${doors}.` : ''}`}
-      rulesTitle="Venue Rules"
+      rulesTitle={t("orders.venue_rules")}
       rules={policies}
     />
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -407,6 +408,7 @@ const ServiceCardList = ({ service, onBook, isFav, toggleFav }) => {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function LaundryResults() {
+  const { t } = useTranslation();
   const { isFav, toggleFav } = useFavourites('laundry');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -640,8 +642,8 @@ export default function LaundryResults() {
             <div className="w-16 h-16 rounded-full bg-purple-100 mx-auto mb-4 flex items-center justify-center">
               <Shirt className="w-8 h-8 text-purple-600" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No services found</h3>
-            <p className="text-slate-500 mb-4">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">{t('results.no_services')}</h3>
+            <p className="text-slate-500 mb-4">{t('results.adjust_search')}</p>
             <Button onClick={() => navigate('/services/laundry')} className="bg-purple-700 hover:bg-purple-800">
               Modify Search
             </Button>

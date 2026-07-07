@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 const CAR_TYPES = ['All Types', 'Sedan', 'SUV', 'Luxury', 'Van', 'Pickup', 'Economy'];
 
 export default function CarRentalSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     pickup_location: '',
@@ -86,7 +88,7 @@ export default function CarRentalSearch() {
       <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Car className="w-12 h-12 mx-auto mb-3 text-emerald-400" />
-          <h1 className="text-3xl font-bold mb-2">Rent a Car</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('services.hero_car_rental')}</h1>
           <p className="text-sm text-slate-200 mb-5">Find the perfect vehicle for your journey across Cameroon</p>
           {/* Smart hero search — autocompletes cities, operators and vehicles
               from /api/search scoped to car_rental. The chosen city becomes
@@ -335,7 +337,7 @@ export default function CarRentalSearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Rent With Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">{t('services.why_rent')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">
             <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">

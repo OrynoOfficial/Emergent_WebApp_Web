@@ -85,6 +85,7 @@ function resolvePoster(url) {
 }
 
 export default function CinemaBooking() {
+  const { t } = useTranslation();
   const { showtimeId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -514,7 +515,7 @@ export default function CinemaBooking() {
             <Card className="overflow-hidden border-cyan-200 bg-white backdrop-blur-md">
               <div className="p-2">
                 <BookerInfoSection
-                  title="Contact Information"
+                  title={t('booking.contact_information')}
                   subtitle="Where should we send your tickets?"
                   toggleLabel="Use my account details"
                   firstName={formData.firstName}

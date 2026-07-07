@@ -596,6 +596,7 @@ const ServiceDetailsModal = ({ service, open, onClose, onBook, isFav, toggleFav 
 };
 
 export default function PackagesResults() {
+  const { t } = useTranslation();
   const { isFav, toggleFav } = useFavourites('packages');
   const navigate = useNavigate();
   const [urlParams, setUrlParams] = useSearchParams();
@@ -1034,7 +1035,7 @@ export default function PackagesResults() {
         {filteredServices.length === 0 ? (
           <div className="text-center py-16">
             <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No operators available</h3>
+            <h3 className="text-xl font-semibold text-slate-700 mb-2">{t('results.no_operators')}</h3>
             <p className="text-slate-500 mb-4">
               {services.length === 0
                 ? 'No logistics operator currently serves this route with your package size/weight. Try adjusting your search.'

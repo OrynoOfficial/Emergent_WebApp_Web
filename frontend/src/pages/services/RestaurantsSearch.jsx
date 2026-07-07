@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ const CUISINE_TYPES = ['All Cuisines', 'African', 'French', 'Italian', 'Chinese'
 const TIME_SLOTS = ['12:00', '12:30', '13:00', '13:30', '14:00', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00'];
 
 export default function RestaurantsSearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     city: '',
@@ -73,7 +75,7 @@ export default function RestaurantsSearch() {
       <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Utensils className="w-12 h-12 mx-auto mb-3 text-orange-400" />
-          <h1 className="text-3xl font-bold mb-2">Discover Great Restaurants</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('services.hero_restaurants')}</h1>
           <p className="text-sm text-slate-200 mb-5">Reserve tables at the best restaurants in Cameroon</p>
           <div className="max-w-2xl mx-auto text-left">
             <LandingSmartSearch
@@ -209,7 +211,7 @@ export default function RestaurantsSearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Book With Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">{t('services.why_book')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">

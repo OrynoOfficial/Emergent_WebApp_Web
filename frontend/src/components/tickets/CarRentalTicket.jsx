@@ -3,6 +3,7 @@
 import React from 'react';
 import { Car, Calendar, Clock, MapPin, Ticket, User, Sparkles } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#0f766e'; // teal-700
@@ -17,6 +18,7 @@ const EXTRA_LABELS = {
 };
 
 export default function CarRentalTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const carName = bd.car_name || order?.service_name || 'Vehicle';
   const pickupDate = bd.pickup_date;
@@ -51,25 +53,25 @@ export default function CarRentalTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: Calendar,
-      label: 'Pick-up',
+      label: t('orders.check_in'),
       value: pickupDate && formatDate ? formatDate(pickupDate) : pickupDate || '—',
       sublabel: pickupLocation,
     },
     {
       icon: Calendar,
-      label: 'Return',
+      label: t('orders.return'),
       value: returnDate && formatDate ? formatDate(returnDate) : returnDate || '—',
       sublabel: dropoffLocation,
     },
     {
       icon: User,
-      label: 'Driver',
+      label: t('orders.holder'),
       value: driverName || '—',
       sublabel: licenseNumber ? `Lic: ${licenseNumber}` : null,
     },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -118,9 +120,9 @@ export default function CarRentalTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Rental Info"
-      rightPanelDescription="Present this voucher and a valid driver's license at the pick-up counter."
-      rulesTitle="Rental Notes"
+      rightPanelTitle={t("orders.rental_info")}
+      rightPanelDescription={t("orders.car_rental_present_at_counter")}
+      rulesTitle={t("orders.rental_notes")}
       rules={[
         'A valid driver\'s license is mandatory at pick-up.',
         'Return the vehicle with the same fuel level unless pre-paid fuel was added.',

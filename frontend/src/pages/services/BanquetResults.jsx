@@ -5,6 +5,7 @@
 // all filters are consolidated into a single "Filter" popover next to the
 // search bar. Theme is teal/cyan — the official banquet colour (#14B8A6).
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -346,6 +347,7 @@ function PackageCard({ pkg, services, inCart, onAdd, onRemove, onOpenDetails, on
 
 // ── Page ────────────────────────────────────────────────────────────────────
 export default function BanquetResults() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const cartApi = useEventCart();
@@ -752,7 +754,7 @@ export default function BanquetResults() {
           {filteredServices.length === 0 ? (
             <Card className="p-12 text-center bg-white border-teal-100">
               <Sparkles className="w-12 h-12 mx-auto text-teal-200 mb-3" />
-              <p className="text-slate-500">No services match your filters. Try a different category or clear the filter.</p>
+              <p className="text-slate-500">{t('results.no_banquet_match')}</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

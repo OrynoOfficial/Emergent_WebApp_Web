@@ -53,8 +53,16 @@ async def get_dashboard_stats(
 
     categories = get_categories_for_service(service_type)
 
-    # Base query for orders
-    order_query = {"service_category": {"$in": categories}}
+    # Base query for orders — match on EITHER service_category OR service_type.
+    # Historical data is inconsistent: some categories (event/banquet/travel)
+    # were saved with only one of the two fields populated, so an AND-style
+    # filter used to silently drop 30-70% of an operator's real bookings from
+    # the dashboard. The $or covers every legitimate shape without loosening
+    # tenant isolation (operator_id is still ANDed below).
+    order_query = {"$or": [
+        {"service_category": {"$in": categories}},
+        {"service_type": {"$in": categories}},
+    ]}
     if resolved_operator_id:
         order_query["operator_id"] = resolved_operator_id
 
@@ -73,19 +81,50 @@ async def get_dashboard_stats(
 
     period_orders = [o for o in all_orders if make_aware(o.get("created_at")) and make_aware(o["created_at"]) >= start_date]
 
-    # --- Core stats ---
-    total_bookings = len(period_orders)
-    total_revenue = sum(o.get("total_amount", 0) for o in period_orders)
+    # ─────────────────────────────────────────────────────────────────────────
+    # Booking-status accounting.
+    #
+    # `EFFECTIVE_BOOKING_STATUSES` = the statuses that represent a real,
+    # revenue-recognisable booking. Cancelled + refunded + refund_requested +
+    # abandoned + failed are EXPLICITLY EXCLUDED so they never inflate the
+    # "Booked Transactions" or "Revenue" widgets on the dashboards.
+    #
+    # We still expose the raw totals as `gross_*` so any consumer that wants
+    # a pure count of "everything the operator has ever seen" still has it.
+    # ─────────────────────────────────────────────────────────────────────────
+    EFFECTIVE_BOOKING_STATUSES = {
+        "pending",
+        "not_confirmed",
+        "confirmed",
+        "completed",
+        "paid",
+        "in_progress",
+        "checked_in",
+    }
+    # Note: cancelled / refunded / refund_requested / abandoned / failed /
+    # expired are intentionally NOT included in EFFECTIVE_BOOKING_STATUSES
+    # so they never inflate the "Booked Transactions" or "Revenue" widgets.
 
-    # Status breakdown
+    effective_orders = [o for o in period_orders if (o.get("status") or "").lower() in EFFECTIVE_BOOKING_STATUSES]
+
+    # --- Core stats (cancelled/refunded EXCLUDED) ---
+    total_bookings = len(effective_orders)
+    total_revenue = sum(o.get("total_amount", 0) for o in effective_orders)
+
+    # Raw counts for consumers that need them (audit views, reconciliation)
+    gross_bookings = len(period_orders)
+    gross_revenue = sum(o.get("total_amount", 0) for o in period_orders)
+
+    # Status breakdown (from raw period orders, so operators still see the
+    # split at a glance — this is the pie-chart data, not the KPI cards).
     status_counts = defaultdict(int)
     for o in period_orders:
-        status_counts[o.get("status", "unknown")] += 1
+        status_counts[(o.get("status") or "unknown").lower()] += 1
 
     pending = status_counts.get("pending", 0) + status_counts.get("not_confirmed", 0)
     confirmed = status_counts.get("confirmed", 0)
-    completed = status_counts.get("completed", 0)
-    cancelled = status_counts.get("cancelled", 0) + status_counts.get("refunded", 0)
+    completed = status_counts.get("completed", 0) + status_counts.get("paid", 0)
+    cancelled = status_counts.get("cancelled", 0) + status_counts.get("refunded", 0) + status_counts.get("refund_requested", 0)
 
     # --- Average rating (capped — newest 1000 within the period window) ---
     rating_query = {"entity_type": {"$in": categories}, "created_at": {"$gte": fetch_floor}}
@@ -94,16 +133,20 @@ async def get_dashboard_stats(
     ratings = await db.ratings.find(rating_query).sort("created_at", -1).to_list(1000)
     avg_rating = round(sum(r.get("rating", 0) for r in ratings) / len(ratings), 1) if ratings else 0
 
-    # --- Growth (compare to previous period) ---
+    # --- Growth (compare to previous period — cancelled/refunded also excluded
+    #     so period-over-period is apples-to-apples). ---
     prev_start = start_date - timedelta(days=days)
-    prev_orders = [o for o in all_orders if make_aware(o.get("created_at")) and prev_start <= make_aware(o["created_at"]) < start_date]
-    prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders)
-    prev_bookings = len(prev_orders)
+    prev_orders_all = [o for o in all_orders if make_aware(o.get("created_at")) and prev_start <= make_aware(o["created_at"]) < start_date]
+    prev_orders_effective = [o for o in prev_orders_all if (o.get("status") or "").lower() in EFFECTIVE_BOOKING_STATUSES]
+    prev_revenue = sum(o.get("total_amount", 0) for o in prev_orders_effective)
+    prev_bookings = len(prev_orders_effective)
 
     revenue_growth = round(((total_revenue - prev_revenue) / prev_revenue * 100), 1) if prev_revenue > 0 else 0
     bookings_growth = round(((total_bookings - prev_bookings) / prev_bookings * 100), 1) if prev_bookings > 0 else 0
 
     # --- Occupancy/utilization estimate ---
+    # completed / effective bookings — cancelled never counts against
+    # utilisation because a cancelled booking never occupied capacity.
     occupancy_rate = 0
     if total_bookings > 0:
         occupancy_rate = min(95, max(5, round(completed / max(total_bookings, 1) * 100)))
@@ -193,7 +236,7 @@ async def get_dashboard_stats(
     for o in recent_orders:
         recent_bookings.append({
             "id": str(o.get("_id", "")),
-            "customer_name": o.get("customer_email", o.get("user_id", "Guest"))[:30],
+            "customer_name": (o.get("customer_email") or o.get("user_id") or "Guest")[:30],
             "service_name": o.get("service_name", "Booking"),
             "amount": o.get("total_amount", 0),
             "status": o.get("status", "unknown"),
@@ -206,6 +249,9 @@ async def get_dashboard_stats(
             "activeItems": active_items,
             "totalBookings": total_bookings,
             "totalRevenue": total_revenue,
+            # Raw counts (include cancelled + refunded) — for audit / reconciliation views.
+            "grossBookings": gross_bookings,
+            "grossRevenue": gross_revenue,
             "avgRating": avg_rating,
             "occupancyRate": occupancy_rate,
             "bookingsGrowth": bookings_growth,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { setAppLanguage } from '../i18n';
 import DatePickerField from '@/components/shared/DatePickerField';
@@ -385,6 +386,7 @@ function LegalContentPanel() {
 
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user, logout, reAuthenticate } = useAuth();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('profile');
@@ -2069,9 +2071,9 @@ export default function Settings() {
             <SettingsIcon className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold flex items-center gap-2" data-testid="settings-title">Settings</h1>
+            <h1 className="text-xl font-bold flex items-center gap-2" data-testid="settings-title">{t('settings.title')}</h1>
             <p className="text-sm text-white/80 mt-0.5" data-testid="settings-description">
-              Manage your account settings and preferences
+              {t('settings.manage_account')}
             </p>
           </div>
         </CardContent>
@@ -2098,9 +2100,9 @@ export default function Settings() {
                     >
                       <IconComp className="h-5 w-5" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{section.label}</p>
+                        <p className="font-medium text-sm">{t(`settings.section_${section.key}`, section.label)}</p>
                         <p className={`text-xs truncate ${isActive ? 'text-white/70' : 'text-slate-400'}`}>
-                          {section.description}
+                          {t(`settings.desc_${section.key}`, section.description)}
                         </p>
                       </div>
                       <ChevronRight className={`h-4 w-4 ${isActive ? 'text-white/70' : 'text-slate-400'}`} />

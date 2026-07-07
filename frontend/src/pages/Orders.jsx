@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { formatDateTime } from '../utils/dateUtils';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
@@ -68,6 +69,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function Orders() {
+  const { t } = useTranslation();
   const { user, isOperatorUser } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -272,13 +274,13 @@ export default function Orders() {
   return (
     <>
       <ManagementShell
-        title={isAllOrdersView ? 'All Orders' : 'My Orders'}
+        title={isAllOrdersView ? t('common.all_orders') : t('orders.my_orders_title')}
         icon={ShoppingBag}
         subtitle={isAllOrdersView 
           ? 'View and manage all orders across the platform'
           : isOperator
-          ? 'Track and manage orders for your services'
-          : 'Track and manage your bookings'}
+          ? t('orders.track_manage_all')
+          : t('orders.track_manage')}
         scopeFilter={
           <div className="flex items-center gap-2 flex-wrap">
             <QuickDateRangeFilter value={dateRange} onChange={setDateRange} />
@@ -287,7 +289,7 @@ export default function Orders() {
               <Link to="/services">
                 <Button className="bg-[#082c59] hover:bg-[#0a3a75] h-8" size="sm">
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Book New
+                  {t('orders.book_new')}
                 </Button>
               </Link>
             )}
@@ -366,7 +368,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500 font-medium">Total Orders</p>
+                <p className="text-sm text-slate-500 font-medium">{t('orders.total_orders')}</p>
                 <p className="text-2xl font-bold text-slate-900">{stats.count}</p>
               </div>
               <div className="p-3 bg-slate-200 rounded-full">
@@ -418,7 +420,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#082c59] font-medium">Total Spent</p>
+                <p className="text-sm text-[#082c59] font-medium">{t('orders.total_spent')}</p>
                 <p className="text-xl font-bold text-[#082c59]">{formatFCFA(stats.total)}</p>
               </div>
               <div className="p-3 bg-[#082c59]/20 rounded-full">

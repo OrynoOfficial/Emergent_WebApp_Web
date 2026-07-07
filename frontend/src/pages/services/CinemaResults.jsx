@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -283,6 +284,7 @@ function FilmCardList({ film, onViewDetails, isFav, toggleFav }) {
 }
 
 export default function CinemaResults() {
+  const { t } = useTranslation();
   const { isFav, toggleFav } = useFavourites('cinema');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -543,7 +545,7 @@ export default function CinemaResults() {
               className="flex items-center gap-2 text-xs uppercase tracking-widest text-cyan-700/80 hover:text-cyan-200 transition-colors"
               data-testid="genre-filter-toggle"
             >
-              <span>Genres</span>
+              <span>{t('results.genres')}</span>
               {selectedGenres.length > 0 && (
                 <span className="bg-cyan-500/30 text-cyan-100 border border-cyan-400/40 rounded-full px-2 py-0.5 text-[10px]">
                   {selectedGenres.length}
@@ -584,8 +586,8 @@ export default function CinemaResults() {
             <div className="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mx-auto mb-5">
               <Film className="w-10 h-10 text-cyan-600/60" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No movies found</h3>
-            <p className="text-slate-500 mb-5">Try adjusting your search or filters</p>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">{t('results.no_movies')}</h3>
+            <p className="text-slate-500 mb-5">{t('results.adjust_search')}</p>
             <Button onClick={() => navigate('/services/cinema')} className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold">
               Modify search
             </Button>
@@ -608,14 +610,14 @@ export default function CinemaResults() {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 border-b border-slate-300 text-left text-xs uppercase tracking-wider text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">Title</th>
-                    <th className="px-4 py-3">Genre</th>
-                    <th className="px-4 py-3">Cinema</th>
-                    <th className="px-4 py-3">Duration</th>
-                    <th className="px-4 py-3">Rating</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">From</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3">{t('results.title')}</th>
+                    <th className="px-4 py-3">{t('results.genre')}</th>
+                    <th className="px-4 py-3">{t('services.cinema')}</th>
+                    <th className="px-4 py-3">{t('results.duration')}</th>
+                    <th className="px-4 py-3">{t('results.rating')}</th>
+                    <th className="px-4 py-3">{t('results.status')}</th>
+                    <th className="px-4 py-3">{t('results.from')}</th>
+                    <th className="px-4 py-3 text-right">{t('results.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>

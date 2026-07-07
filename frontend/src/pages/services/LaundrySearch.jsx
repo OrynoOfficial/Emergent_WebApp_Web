@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import LocationInput from '@/components/shared/LocationInput';
 import LandingSmartSearch from '@/components/search/LandingSmartSearch';
 
 export default function LaundrySearch() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useState({
     city: '',
@@ -47,7 +49,7 @@ export default function LaundrySearch() {
       <div className="bg-[#082c59] text-white pt-14 pb-10">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <Shirt className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
-          <h1 className="text-3xl font-bold mb-2">Laundry &amp; Pressing</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('services.hero_laundry')}</h1>
           <p className="text-sm text-cyan-100 mb-5">Professional cleaning services at your doorstep</p>
           <div className="max-w-2xl mx-auto text-left">
             <LandingSmartSearch
@@ -124,7 +126,7 @@ export default function LaundrySearch() {
 
       {/* Features Section */}
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">Why Choose Us?</h2>
+        <h2 className="text-2xl font-bold text-center mb-8 text-[#082c59]">{t('services.why_choose')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Card className="text-center p-6">
             <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -13,11 +13,13 @@ import {
   Calendar,
 } from 'lucide-react';
 import { formatFCFA } from '@/utils/currency';
+import { useTranslation } from 'react-i18next';
 import BaseTicket from './BaseTicket';
 
 const ACCENT = '#0891b2'; // cyan-600
 
 export default function CinemaTicket({ order, formatDate }) {
+  const { t } = useTranslation();
   const bd = order?.booking_details || {};
   const si = bd.showtime_info || {};
   const filmTitle = si.film_title || bd.film_title || order?.service_name || 'Film';
@@ -72,24 +74,24 @@ export default function CinemaTicket({ order, formatDate }) {
   const metaItems = [
     {
       icon: Calendar,
-      label: 'Date',
+      label: t('common.date'),
       value: showDate && formatDate ? formatDate(showDate) : showDate || '—',
     },
     {
       icon: Clock,
-      label: 'Showtime',
+      label: t('orders.showtime'),
       value: showTime ? `${showTime}${endTime ? ` – ${endTime}` : ''}` : '—',
       sublabel: filmDuration ? `${filmDuration} min` : null,
     },
     {
       icon: MapPin,
-      label: 'Cinema',
+      label: t('orders.cinema'),
       value: cinemaName || '—',
       sublabel: [cinemaAddress, cinemaCity].filter(Boolean).join(' · ') || null,
     },
     {
       icon: Ticket,
-      label: 'Paid',
+      label: t('common.paid'),
       value: formatFCFA(order?.total_amount || 0),
       valueStyle: { color: ACCENT },
     },
@@ -212,9 +214,9 @@ export default function CinemaTicket({ order, formatDate }) {
       operatorLogo={order?.operator_logo_url}
       operatorName={order?.operator_name}
       extraSections={extraSections}
-      rightPanelTitle="Cinema Info"
-      rightPanelDescription="Present this ticket (or the QR below) at the cinema entrance."
-      rulesTitle="Notes"
+      rightPanelTitle={t("orders.cinema_info")}
+      rightPanelDescription={t("orders.cinema_present_at_entrance")}
+      rulesTitle={t("orders.notes")}
       rules={rules}
     />
   );
