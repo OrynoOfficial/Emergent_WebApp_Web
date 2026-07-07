@@ -1,0 +1,34 @@
+{
+  "summary": "Re-verification of the 2 residual FR i18n leaks from iter_270 (Orders grid/details view buttons + Settings Gender label/options). Initially both leaks reproduced against the live preview because the frontend serves a production Vite build (start script = 'vite build && vite preview') and the compiled dist/ was older than the recent Orders.jsx / Settings.jsx edits. After `sudo supervisorctl restart frontend` (which re-runs `vite build`), all three view modes and the Gender field render fully in French. Regression PASSes preserved.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": {
+    "orders_fr_grid": "PASS - 'Voir' + 'Annuler' rendered; no English 'View'/'Cancel' leak",
+    "orders_fr_details": "PASS - 'Voir' + 'Annuler' rendered; no English leak",
+    "orders_fr_list": "PASS (regression) - 'Voir' + 'Annuler' rendered",
+    "settings_fr_gender": "PASS - label='Genre (verrouillé)', options=['Sélectionnez le genre','Homme','Femme','Autre','Préfère ne pas préciser']",
+    "operator_403_regression": "PASS - /api/operators/ calls = 0 on all 8 management pages (cinema/events/hotels/car-rental/laundry/restaurants/packages/banquets) when logged in as operator@test.com"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "IMPORTANT for main agent: frontend serves a production Vite build (package.json start = 'vite build && vite preview'), so any .jsx / i18n JSON edit requires `sudo supervisorctl restart frontend` before the preview URL reflects the change. Hot reload does NOT apply. Consider switching supervisor's frontend command to `yarn dev` for faster iteration, or always restart frontend after code edits."
+  ],
+  "critical_code_review_comments": [
+    "Orders.jsx has an empty-state ('No orders found', 'Clear Filters', 'Browse Services') and 'Loading orders...' + 'Page X of Y' + 'Previous'/'Next' still hardcoded in English (lines ~454/463-478/774/785/826) — minor leak, not in this iteration's scope but should be scheduled.",
+    "Orders.jsx line 286 'View and manage all orders across the platform' subtitle is hardcoded English for admin view.",
+    "Orders.jsx handleCancelOrder confirm() prompt is hardcoded English.",
+    "Settings.jsx many strings (Save Changes, section labels, notification list, security tab, etc.) are still hardcoded English — out of this iteration's scope but broadly present."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% for scoped fixes"},
+  "test_credentials": "customer@test.com / testpassword123 (verified); operator@test.com / testpassword123 (verified)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend uses vite build+preview (NOT dev). If you edit any React/i18n file and the preview URL still shows old text, run: sudo supervisorctl restart frontend, wait ~30s, then hard-reload. The two leaks flagged by iter_270 are now fully closed after rebuild.",
+  "rca of the issue": "Root cause of the initial repro: /app/frontend/dist/index.html (production bundle) timestamp was 22:32 while Orders.jsx (22:40) and Settings.jsx (22:41) had been edited AFTER the last build. The Vite preview server was still serving the pre-fix bundle, which contained the old inline 'View'/'Cancel'/'Gender'/'Male'/etc. Restarting the `frontend` supervisor unit re-ran `vite build` and served the new bundle — after which all four scoped checks (grid Voir/Annuler, details Voir/Annuler, list Voir/Annuler regression, gender FR label+options) passed."
+}

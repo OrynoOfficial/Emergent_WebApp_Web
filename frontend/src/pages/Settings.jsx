@@ -986,7 +986,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="gender">Gender {!!user?.gender && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="gender">{t('settings.gender')} {!!user?.gender && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <select
                     id="gender"
                     value={profileData.gender || ''}
@@ -994,11 +994,11 @@ export default function Settings() {
                     disabled={!!user?.gender}
                     className={`mt-1 w-full h-10 px-3 rounded-md border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#082c59]/20 focus:border-[#082c59] ${user?.gender ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
                   >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
+                    <option value="">{t('settings.select_gender')}</option>
+                    <option value="male">{t('settings.gender_male')}</option>
+                    <option value="female">{t('settings.gender_female')}</option>
+                    <option value="other">{t('settings.gender_other')}</option>
+                    <option value="prefer_not_to_say">{t('settings.gender_prefer_not')}</option>
                   </select>
                 </div>
               </div>

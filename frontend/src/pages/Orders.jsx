@@ -533,7 +533,7 @@ export default function Orders() {
                     </div>
                     <div className="flex gap-1.5">
                       <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm" className="h-7 px-2 bg-white text-[11px]" data-testid={`order-view-${order.id || order._id}`}>
-                        <Eye className="h-3 w-3 mr-1" /> View
+                        <Eye className="h-3 w-3 mr-1" /> {t('orders.view')}
                       </Button>
                       {order.status === 'pending' && (
                         <Button
@@ -541,7 +541,7 @@ export default function Orders() {
                           variant="outline" size="sm"
                           className="h-7 px-2 bg-white border-red-200 text-red-600 hover:bg-red-50 text-[11px]"
                         >
-                          <XCircle className="h-3 w-3 mr-1" /> Cancel
+                          <XCircle className="h-3 w-3 mr-1" /> {t('orders.cancel')}
                         </Button>
                       )}
                     </div>
@@ -618,11 +618,11 @@ export default function Orders() {
                         <p className="text-2xl font-extrabold text-emerald-600">{formatFCFA(order.total_amount || order.final_amount || 0)}</p>
                         <div className="flex gap-2">
                           <Button onClick={() => handleViewOrder(order)} variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" /> View
+                            <Eye className="h-4 w-4 mr-1" /> {t('orders.view')}
                           </Button>
                           {order.status === 'pending' && (
                             <Button onClick={() => handleCancelOrder(order.id || order._id)} variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
-                              <XCircle className="h-4 w-4 mr-1" /> Cancel
+                              <XCircle className="h-4 w-4 mr-1" /> {t('orders.cancel')}
                             </Button>
                           )}
                         </div>
