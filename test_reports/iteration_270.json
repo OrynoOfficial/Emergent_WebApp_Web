@@ -1,0 +1,76 @@
+{
+  "summary": "Re-verified 4 polish items after Vite frontend restart. Major improvements from iteration 269: (1) OPERATOR 403s FULLY FIXED — 0 /api/operators calls fired across all 8 management pages for operator role; (2) ADMIN 200 flow FULLY WORKING — 16 /api/operators calls all returned 200 (both /operators/ and /operators/by-service?service_type=X); (3) Orders FR mostly landed — Filtres title, search placeholder ('Rechercher par numéro, service ou catégorie…'), stat cards (En attente / Terminée / Annulée) and results counter ('Affichage de 10 sur 278 commandes') all translated. Row action buttons 'View'/'Cancel' STILL show English (should be 'Voir'/'Annuler'); (4) Settings FR mostly landed — 'Informations de base', 'À remplir une fois · verrouillé après enregistrement', 'Nom complet', 'Adresse e-mail', 'Numéro de téléphone', 'Date de naissance', 'Numéro de CNI / Passeport', 'Adresse postale', 'Ville', 'Région / Département', 'Code postal', 'Pays' all correct. Gender label + gender options + '(locked)' suffix on Gender field STILL English; (5) EventTicket FR FULLY FIXED — right-panel description now reads 'Présentez ce billet (ou le QR ci-dessous) à l'entrée du lieu.' Approx 90% of the polish work is now correctly in place.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "pages/Orders.jsx (row action buttons)",
+        "issue": "Order card row buttons 'View' and 'Cancel' still render in English even when i18n is FR. All other Orders strings translate correctly. Expected 'Voir' and 'Annuler'.",
+        "selector": "button:has-text('View'), button:has-text('Cancel')",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "pages/Settings.jsx (Profile → Gender field)",
+        "issue": "Gender label still reads 'Gender' (expected 'Genre'), the '(locked)' suffix on this field is still English (expected '(verrouillé)'), and the gender <select> options are still 'Male / Female / Other / Prefer not to say' (expected 'Homme / Femme / Autre / Préfère ne pas préciser'). Every other field in the Basic Information + Address blocks translates correctly.",
+        "selector": "label:has-text('Gender'), select[name='gender'] option",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_matrix": {
+    "operator_403_check": {
+      "status": "PASS",
+      "total_operators_calls": 0,
+      "total_403": 0,
+      "pages_visited": ["/management/cinema","/management/events","/management/hotels","/management/car-rental","/management/laundry","/management/restaurants","/management/packages","/management/banquets"],
+      "note": "canListOperators() guard is now effective on ALL 8 pages. operator@test.com still lands on /admin/analytics after login, but no /operators/ requests fire from there or downstream."
+    },
+    "admin_200_check": {
+      "status": "PASS",
+      "total_operators_calls": 16,
+      "total_200": 16,
+      "total_403": 0,
+      "sample_calls": ["200 /operators/by-service?service_type=cinema","200 /operators/","200 /operators/by-service?service_type=events","200 /operators/","...(same pattern for hotels/car-rental/laundry/restaurants/packages/banquets)"]
+    },
+    "orders_fr": {
+      "status": "PARTIAL",
+      "found_fr": ["Filtres","Rechercher par numéro, service ou catégorie… (placeholder)","En attente","Terminée","Annulée","Affichage de 10 sur 278 commandes","Mes commandes","Nouvelle réservation"],
+      "still_english": ["View (row button)","Cancel (row button)"],
+      "not_verified_in_this_run": ["Catégorie/Statut/Trier — inside filter popover which was not opened"]
+    },
+    "settings_fr": {
+      "status": "PARTIAL",
+      "found_fr": ["Informations de base","À remplir une fois · verrouillé après enregistrement","Nom complet","Adresse e-mail","Numéro de téléphone","Date de naissance","Numéro de CNI / Passeport","(verrouillé) suffix on Name/Email/Phone/ID","Adresse (section header)","Adresse postale","Ville","Région / Département","Code postal","Pays"],
+      "still_english": ["Gender (label — expected 'Genre')","(locked) suffix on Gender field","Male / Female / Other / Prefer not to say (gender <select> options)"]
+    },
+    "event_ticket_fr": {
+      "status": "PASS",
+      "found_fr": ["Présentez ce billet (ou le QR ci-dessous) à l'entrée du lieu.","Détails de la commande","Récapitulatif du paiement","Informations sur le service","Informations importantes","Règles du lieu","Titulaire","Quand","Où","Réservée le","Total payé","Confirmée"],
+      "note": "doors_open variant not verified because the sample event ticket did not have doors_open set. Rules text ('No outside drinks', 'Photo ID required') is still English but that was out-of-scope for this iteration."
+    }
+  },
+  "test_report_links": [
+    "/app/test_reports/orders_fr_v2.jpeg",
+    "/app/test_reports/settings_fr_v2.jpeg",
+    "/app/test_reports/event_ticket_v2.jpeg"
+  ],
+  "action_items": [
+    "Orders.jsx: translate the row action buttons — the 'View' and 'Cancel' labels on each order card are still hard-coded English. Search for `>View<` and `>Cancel<` (or a helper renderer) around lines 721/731 as noted in the review — the t() keys look wrong or aren't wired to the rendered JSX.",
+    "Settings.jsx: translate the Gender field. (a) label 'Gender' → t('settings.profile.gender_label') = 'Genre', (b) '(locked)' suffix on this specific field → '(verrouillé)' (other fields already use this pattern), (c) the <select> <option> labels ('Male'/'Female'/'Other'/'Prefer not to say') → 'Homme'/'Femme'/'Autre'/'Préfère ne pas préciser'.",
+    "(Optional) Verify Category / Statut / Trier dropdown labels inside the Filters popover render translated — this run did not open the popover, so untested."
+  ],
+  "critical_code_review_comments": [
+    "Orders.jsx has a mixture of translated strings and hard-coded English within the same card layout — this suggests the row-action button block was missed by the i18n sweep. Consider grepping for `>View<`, `>Cancel<`, `>Rate<` in the file to make sure no literal strings remain.",
+    "Settings.jsx Gender block is a distinct sibling from the other fields — it's the only one that uses a <select>. Whoever added the FR pass likely translated the surrounding <input> fields but skipped the <select> + its <option>s and the label. Standardise by wrapping options in a `genderOptions = useMemo(() => [{value:'male', label: t(...)}...])` pattern."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a", "frontend": "~85% (operator ✓, admin ✓, event-ticket ✓, orders ~85%, settings ~90%)" },
+  "test_credentials": "Operator: operator@test.com / testpassword123, Admin: admin@test.com / testpassword123, Customer: customer@test.com / testpassword123",
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The polish landed cleanly this time — just 2 residual leaks: (1) Orders row buttons 'View'/'Cancel' in EN and (2) Settings Gender label + gender <select> options + '(locked)' suffix on Gender in EN. Login flow: force `localStorage.setItem('oryno_language','fr')` BEFORE navigating to the login card, then click 'Se connecter à votre compte' → email → 'Continuer' → password → Enter. Session lives in httpOnly cookies so page.goto() with new context loses it — do everything in one script. The lang dropdown button is NOT visible on the customer chrome header (only 'Cameroon · Global' pill + user avatar are shown), so localStorage bootstrap is the only reliable trigger for FR before login.",
+  "rca of the issue": "Operator 403 fix: canListOperators(user) guard is now present + effective in all 8 management pages (BanquetManagement:1314, CarRentalManagement:443, CinemaManagement:222, EventsManagement:117, HotelManagement:176, LaundryManagement:198, PackageManagement:336, RestaurantManagement:316). Confirmed via network capture — zero /api/operators requests fire for operator role. Prior iteration 269's suspicion of a shell-level unguarded fetch was WRONG — the fix simply hadn't propagated to the running Vite bundle. i18n misses: the remaining Orders/Settings leaks are just missed t() calls on specific JSX subtrees (row buttons block in Orders, Gender <select> block in Settings), not a systemic i18n plumbing issue — the same file/component has neighbouring strings that DO translate."
+}
