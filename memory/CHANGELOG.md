@@ -229,6 +229,46 @@
 # Oryno Platform — Changelog
 
 
+## Feb 7, 2026 — Major Feature Pass (iter_274): 5-Part System Enhancement
+**All 5 workstreams verified 100% by testing_agent**
+
+### 1. Notification Preferences Enforcement (P0)
+- Created `/app/backend/utils/notification_gate.py` with `should_notify(user_id, channel, category)` helper.
+- Categories: `booking`, `promotional`, `newsletter`, `transactional` (transactional bypasses gate).
+- Channels: `email`, `sms`, `push`.
+- Wired gate into:
+  - `utils/notifications.py::create_notification()` — respects `push_notifications` + category prefs (booking_updates / promotional / newsletter).
+  - `utils/email.py::send_email_to_user()` — new gated wrapper (call this from operator-notifications, not the raw `send_email`).
+- Verified via subprocess: customer with `email_notifications=false, booking_updates=false` correctly returns False for booking-category emails while transactional messages bypass.
+
+### 2. User Preferences Auto-Sync (P1)
+- `AuthContext.jsx` now hydrates theme + currency + language + timezone from backend on login (`localStorage` wins if user has manually overridden).
+- `ThemeContext.jsx` now persists theme toggle to backend via `PUT /api/users/me/preferences`.
+- Preferences survive logout/login on any device.
+
+### 3. Info Pages + Settings Links (P2)
+- Created `pages/static/About.jsx`, `Impressum.jsx`, `LegalInformation.jsx`.
+- Registered routes: `/about`, `/impressum`, `/legal`, `/data-protection` (aliases Privacy Policy).
+- Added public-page links in Settings → About and Settings → Legal sub-tabs.
+- Small `RenderMarkdownLite` helper renders `**bold**` inline (fixes stale raw-asterisks in Privacy Policy body).
+
+### 4. Session Timeout Enforcement (P1 — was silently broken)
+- Backend: `create_access_token(timeout_minutes=…)` already existed; verified auth.py login + refresh flows read from `system_settings.get_session_timeout_minutes()`. JWT `exp` matches configured window.
+- Frontend: created `hooks/useIdleTimeout.js` + `components/shared/IdleWarningModal.jsx`. Layout fetches `/api/system-settings/public/session-timeout` on mount, warns 60s before logout, force-logs-out on timer expiry.
+- Verified: PATCHing session-timeout to 20 min → login → JWT `exp` is ~20 min in the future (±60s tolerance).
+
+### 5. API Keys Admin Page + Backend Audit (P2)
+- Created `/app/backend/routes/api_keys_status.py` — lists 12 integration env-vars for Stripe/Resend/Infobip/Emergent Integrations/MTN MoMo, returns masked previews (`abcd****wxyz`), mode detection (live/test/unknown), and 24h-cached last-validation status.
+- POST `/api/admin/api-keys/{Provider}/validate` — pings the provider (Stripe.Balance.retrieve, Resend /domains, Infobip /account/1/accounts, MoMo credential presence, Emergent format check).
+- Created `pages/admin/APIKeysStatus.jsx` — read-only UI with per-provider "Test key" button + toast feedback.
+- Removed fake hardcoded `sk_live_...` from old Settings API Keys section; replaced with security notice + "Full audit page →" link.
+- Verified: admin sees 200 with masked values, operator receives 403, `Stripe/validate` correctly returns `status=invalid` for placeholder key.
+
+**Files added:** 8 backend/frontend files
+**Files modified:** 6 files (Layout.jsx, AuthContext.jsx, ThemeContext.jsx, App.jsx, Settings.jsx, PrivacyPolicy.jsx)
+**Test artifacts:** `/app/backend/tests/test_iter274_notifications_prefs_apikeys.py`
+
+
 ## Feb 7, 2026 — i18n Polish Round 3 — Orders/Settings Complete (iter_272 + iter_273)
 **Verified 100% FR coverage on Orders + Settings scoped areas**
 - `Orders.jsx`: empty-state header/body/CTAs (`Aucune commande trouvée`, `Effacer les filtres`, `Parcourir les services`), pagination (`Page X sur Y`, `Précédent`, `Suivant`), admin subtitle (`Consultez et gérez toutes les commandes de la plateforme`), loading state (`Chargement des commandes...`), cancel-confirm `alert/confirm()` prompt, cancel-failed toast — all wrapped with `t()`.

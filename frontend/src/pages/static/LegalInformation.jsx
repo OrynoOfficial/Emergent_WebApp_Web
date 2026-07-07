@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Scale, FileText, Shield, AlertTriangle, Gavel, Handshake } from 'lucide-react';
+import RenderMarkdownLite from '@/components/shared/RenderMarkdownLite';
 
 const SECTIONS = [
   {
@@ -121,7 +122,7 @@ export default function LegalInformation() {
                 </div>
                 <div className="prose prose-slate max-w-none">
                   {section.content.split('\n').map((p, idx) => (
-                    <p key={idx} className="text-gray-600 mb-3 whitespace-pre-line">{p}</p>
+                    <RenderMarkdownLite key={idx} text={p} />
                   ))}
                 </div>
               </CardContent>

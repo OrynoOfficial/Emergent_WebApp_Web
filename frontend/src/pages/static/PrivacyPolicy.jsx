@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollText, Shield, Database, Share2, Lock, Eye } from 'lucide-react';
+import RenderMarkdownLite from '@/components/shared/RenderMarkdownLite';
 
 const SECTIONS = [
   {
@@ -197,9 +198,7 @@ export default function PrivacyPolicy() {
                 </div>
                 <div className="prose prose-slate max-w-none">
                   {section.content.split('\n').map((paragraph, idx) => (
-                    <p key={idx} className="text-gray-600 mb-3 whitespace-pre-line">
-                      {paragraph}
-                    </p>
+                    <RenderMarkdownLite key={idx} text={paragraph} />
                   ))}
                 </div>
               </CardContent>
