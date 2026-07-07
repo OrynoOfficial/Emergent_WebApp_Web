@@ -1,13 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../api/client';
 
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference
+  const [theme, setThemeState] = useState(() => {
     const stored = localStorage.getItem('theme');
-    if (stored) return stored;
-    
+    if (stored === 'light' || stored === 'dark') return stored;
     if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
@@ -16,40 +15,33 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    // Remove previous theme class
     root.classList.remove('light', 'dark');
-    
-    // Add current theme class
     root.classList.add(theme);
-    
-    // Store in localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  };
+  // Persist theme change to backend so it follows the user across devices/sessions.
+  const setTheme = useCallback((next) => {
+    if (next !== 'light' && next !== 'dark') return;
+    setThemeState(next);
+    // Fire-and-forget — only persist if the user is logged in.
+    if (localStorage.getItem('access_token')) {
+      api.put('/users/me/preferences', { theme: next }).catch(() => { /* silent */ });
+    }
+  }, []);
 
-  const value = {
-    theme,
-    setTheme,
-    toggleTheme,
-    isDark: theme === 'dark'
-  };
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  }, [theme, setTheme]);
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  const value = { theme, setTheme, toggleTheme, isDark: theme === 'dark' };
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+  if (!context) throw new Error('useTheme must be used within a ThemeProvider');
   return context;
 }
 

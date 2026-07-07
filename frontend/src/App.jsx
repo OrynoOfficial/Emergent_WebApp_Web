@@ -44,12 +44,16 @@ import ContactUs from './pages/static/ContactUs';
 import TermsAndConditions from './pages/static/TermsAndConditions';
 import News from './pages/static/News';
 import PrivacyPolicy from './pages/static/PrivacyPolicy';
+import About from './pages/static/About';
+import Impressum from './pages/static/Impressum';
+import LegalInformation from './pages/static/LegalInformation';
 
 // Admin Pages
 import CommissionManagement from './pages/admin/CommissionManagement';
 import AuditLogs from './pages/admin/AuditLogs';
 import AdminRefunds from './pages/admin/AdminRefunds';
 import SystemCleanup from './pages/admin/SystemCleanup';
+import APIKeysStatus from './pages/admin/APIKeysStatus';
 import Permissions from './pages/admin/Permissions';
 import OperatorsManagement from './pages/admin/OperatorsManagement';
 import OperatorCategoriesPage from './pages/admin/OperatorCategoriesPage';
@@ -689,6 +693,15 @@ function App() {
           />
 
           <Route
+            path="/admin/api-keys"
+            element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <APIKeysStatus />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/permissions"
             element={
               <ProtectedRoute requiredRoles={['admin']}>
@@ -1037,6 +1050,10 @@ function App() {
           <Route path="/terms" element={<TermsAndConditions />} />
           <Route path="/news" element={<News />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/impressum" element={<Impressum />} />
+          <Route path="/legal" element={<LegalInformation />} />
+          <Route path="/data-protection" element={<PrivacyPolicy />} />
           
           {/* Utility Pages */}
           <Route path="/scanner" element={<ProtectedRoute requiredRoles={['admin', 'operator']}><Scanner /></ProtectedRoute>} />

@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 274 — Full backend + frontend regression for the 5-part enhancement pass (notification gate, preferences persistence, info pages, session-timeout enforcement, API keys audit). Backend: 7/7 pytest cases pass. Frontend: all Info pages render, Settings About/Legal/API-Keys sub-tabs expose all expected links, /admin/api-keys renders with masked previews + mode badges + validation toast, and non-admin access is blocked with Access Denied.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "IdleWarningModal DOM presence",
+        "issue": "The review request asked to confirm data-testid='idle-warning-modal' exists in the DOM even in closed state. Because shadcn/Radix Dialog does NOT mount DialogContent into the DOM until `open=true`, the closed-state DOM check returns null. This is the expected behaviour of the Dialog primitive — the modal IS correctly integrated in Layout.jsx (line 1146-1151) with `open={idleShowWarning}` and useIdleTimeout is active (session-timeout endpoint is fetched on mount as verified). No fix required, only a note for the review request writer.",
+        "affected_selectors": ["[data-testid='idle-warning-modal']"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "/data-protection (Privacy Policy)",
+        "issues": ["Body content shows raw Markdown asterisks like `**Personal Information:**` — the markdown is not being rendered to bold. Cosmetic; low priority."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter274_notifications_prefs_apikeys.py",
+    "/app/test_reports/pytest/iter274.xml"
+  ],
+  "action_items": [
+    "(Optional cosmetic) Render markdown properly on /data-protection page — currently shows raw `**bold**` asterisks."
+  ],
+  "critical_code_review_comments": [
+    "notification_gate.should_notify uses safe fallback for unknown users AND correctly bypasses category checks for transactional messages — verified via subprocess.",
+    "Session timeout is honored end-to-end: PUT /api/system-settings/session-timeout 20 → login → JWT exp is 1140–1260s in the future (verified ±60s tolerance).",
+    "API keys audit endpoint properly masks (4+4), returns mode LIVE/TEST/unknown, admins allowed, operator receives 403, and the /Stripe/validate endpoint returns {status:'invalid', message} for placeholder key as expected.",
+    "Settings.jsx correctly gates the About/Legal/API-Keys links behind their respective tab keys — they only render when the corresponding tab is active (this is by design). The previous fake 'sk_live_...' hardcoded key display has been removed and replaced with the audit-page link."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter274_notifications_prefs_apikeys.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "customer@test.com/testpassword123, admin@test.com/testpassword123, operator@test.com/testpassword123, superadmin@oryno.com/testpassword123 (NOT superadmin@test.com as the review request stated — the seeded super admin is @oryno.com per /app/memory/test_credentials.md).",
+  "seed_data_creation": "None — all tests use existing seeded accounts and restore any preference/session-timeout mutations at the end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend BASE_URL is https://cinema-management-p0.preview.emergentagent.com. Super admin email is superadmin@oryno.com (NOT superadmin@test.com). Login is multi-step: click 'Login to Your Account' → enter email → click 'Continue' → password → submit. Settings page has tabs — clicking on 'About / Impressum', 'Legal Information', or 'API Keys' tabs is required to see the corresponding public-page/audit links. Radix Dialog (IdleWarningModal) does not mount DialogContent until open=true — verify integration via source code inspection, not DOM query. Session-timeout is fetched from /api/system-settings/public/session-timeout by Layout.jsx on mount (network log confirmed).",
+  "rca of the issue": "No blocking issues found. All 5 parts of the enhancement pass are working as specified."
+}

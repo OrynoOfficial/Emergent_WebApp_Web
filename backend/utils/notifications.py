@@ -29,6 +29,7 @@ async def create_notification(
     data: Optional[Dict[str, Any]] = None,
     action_url: Optional[str] = None,
     source: Optional[str] = None,
+    category: str = "booking",
     **extra: Any,
 ) -> Optional[str]:
     """
@@ -39,11 +40,26 @@ async def create_notification(
     the `is_read` flag — this is the fix for notifications reappearing as unread on
     subsequent logins.
 
-    Returns the notification id, or None on error.
+    Respects the user's push_notifications + <category> toggles (see notification_gate).
+    Transactional messages (OTP, password reset, invitations) bypass the gate.
+
+    Returns the notification id, or None on error / gated-off.
     """
     if not user_id:
         logger.warning("create_notification: skipped — no user_id")
         return None
+
+    # Gate in-app / push notifications on user preferences
+    try:
+        from utils.notification_gate import should_notify
+        allowed = await should_notify(user_id, "push", category)
+        if not allowed:
+            logger.debug("create_notification: gated off for %s (%s)", user_id, category)
+            return None
+    except Exception:
+        # If the gate check fails for any reason, err on the side of delivering
+        # the notification so we don't silently drop critical alerts.
+        pass
 
     now = datetime.now(timezone.utc)
     base_doc = {
@@ -107,6 +123,7 @@ async def bulk_create_notifications(
     data: Optional[Dict[str, Any]] = None,
     action_url: Optional[str] = None,
     source: Optional[str] = None,
+    category: str = "booking",
     **extra: Any,
 ) -> int:
     """Create the same notification for many users, with per-user dedupe."""
@@ -125,6 +142,7 @@ async def bulk_create_notifications(
             data=data,
             action_url=action_url,
             source=source,
+            category=category,
             **extra,
         )
         if nid:

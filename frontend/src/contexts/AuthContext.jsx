@@ -71,6 +71,20 @@ export const AuthProvider = ({ children }) => {
         if (!localOverride) setAppLanguage(userData.language);
       }
 
+      // Sync theme (light/dark) from backend preferences. localStorage wins if
+      // the user manually toggled the theme pre-login.
+      if (userData.theme && ['light', 'dark'].includes(userData.theme)) {
+        try {
+          const localTheme = localStorage.getItem('theme');
+          if (!localTheme) localStorage.setItem('theme', userData.theme);
+        } catch { /* ignore */ }
+      }
+
+      // Sync currency preference so the whole app formats prices consistently.
+      if (userData.currency) {
+        try { localStorage.setItem('oryno_currency', userData.currency); } catch { /* ignore */ }
+      }
+
       // Cache data for resilience
       localStorage.setItem('user', JSON.stringify(userData));
       if (opContext) {

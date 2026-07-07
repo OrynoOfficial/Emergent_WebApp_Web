@@ -89,6 +89,33 @@ async def send_email(
         logger.warning("SMTP enqueue failed, falling back to inline send: %s", e)
         return await _smtp_send_raw(to_email, subject, body, html=html)
 
+
+async def send_email_to_user(
+    user_id: str,
+    to_email: str,
+    subject: str,
+    body: str,
+    *,
+    html: bool = False,
+    category: str = "booking",
+) -> bool:
+    """Send email respecting the user's notification preferences.
+
+    Skips the send entirely when the user has opted out of `email_notifications`
+    OR the specific `category` (booking / promotional / newsletter).
+    Transactional messages (OTP, invite, password reset) should call `send_email`
+    directly to bypass the gate.
+    """
+    try:
+        from utils.notification_gate import should_notify
+        if not await should_notify(user_id, "email", category):
+            logger.debug("send_email_to_user: gated off for %s (%s)", user_id, category)
+            return False
+    except Exception:
+        # On gate failure, deliver the email so we don't silently drop critical alerts.
+        pass
+    return await send_email(to_email, subject, body, html=html)
+
 async def send_verification_email(to_email: str, verification_link: str) -> bool:
     """Send email verification link"""
     subject = "Verify Your Email - Oryno Platform"

@@ -54,6 +54,8 @@ import {
 } from 'lucide-react';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import GlobalSearchAllModal from './search/GlobalSearchAllModal';
+import IdleWarningModal from './shared/IdleWarningModal';
+import { useIdleTimeout } from '../hooks/useIdleTimeout';
 
 
 
@@ -98,6 +100,32 @@ export default function Layout({ children }) {
     const t = setInterval(fetchRefundCount, 60000);
     return () => clearInterval(t);
   }, [isAdmin, isSuperAdmin]);
+
+  // Session idle timeout — fetch server-configured window and auto-logout on inactivity
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/system-settings/public/session-timeout');
+        if (!cancelled && res.data?.session_timeout_minutes) {
+          setSessionTimeoutMinutes(Number(res.data.session_timeout_minutes));
+        }
+      } catch {
+        // Silent — JWT expiry still enforces server-side
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const { showWarning: idleShowWarning, secondsLeft: idleSecondsLeft, stayActive } = useIdleTimeout({
+    timeoutMinutes: sessionTimeoutMinutes,
+    warningSeconds: 60,
+    enabled: !!user,
+    onIdle: () => {
+      try { logout(); } catch { /* ignore */ }
+      navigate('/login', { replace: true });
+    },
+  });
   
   useEffect(() => {
     if (user?.role === 'customer') {
@@ -1112,6 +1140,14 @@ export default function Layout({ children }) {
         query={searchQuery}
         byType={searchByType}
         onSelect={(row) => { setSearchAllOpen(false); handleSearchSelect(row); }}
+      />
+
+      {/* Session idle warning */}
+      <IdleWarningModal
+        open={idleShowWarning}
+        secondsLeft={idleSecondsLeft}
+        onStay={stayActive}
+        onLogout={async () => { try { await logout(); } catch { /* ignore */ } navigate('/login', { replace: true }); }}
       />
     </div>
   );

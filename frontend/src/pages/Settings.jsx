@@ -1700,7 +1700,25 @@ export default function Settings() {
         );
 
       case 'legal':
-        return <LegalContentPanel />;
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-sm">
+              <a href="/legal" target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline flex items-center gap-1" data-testid="settings-legal-public-link">
+                Legal Information →
+              </a>
+              <a href="/data-protection" target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline flex items-center gap-1" data-testid="settings-data-protection-link">
+                Data Protection →
+              </a>
+              <a href="/impressum" target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline flex items-center gap-1">
+                Impressum →
+              </a>
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[#082c59] hover:underline flex items-center gap-1">
+                Terms & Conditions →
+              </a>
+            </div>
+            <LegalContentPanel />
+          </div>
+        );
 
       case 'about':
         // eslint-disable-next-line no-case-declarations
@@ -1711,11 +1729,19 @@ export default function Settings() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-900">About / Impressum</h3>
-              {isAdmin && (
-                <Button variant="outline" onClick={() => setEditingContent(isAboutEditing ? null : 'about')}>
-                  {isAboutEditing ? 'Cancel' : 'Edit'}
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <a href="/about" target="_blank" rel="noopener noreferrer" className="text-sm text-[#082c59] hover:underline" data-testid="settings-about-public-link">
+                  View About page →
+                </a>
+                <a href="/impressum" target="_blank" rel="noopener noreferrer" className="text-sm text-[#082c59] hover:underline" data-testid="settings-impressum-public-link">
+                  View Impressum →
+                </a>
+                {isAdmin && (
+                  <Button variant="outline" onClick={() => setEditingContent(isAboutEditing ? null : 'about')}>
+                    {isAboutEditing ? 'Cancel' : 'Edit'}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {isAboutEditing ? (
@@ -2027,30 +2053,19 @@ export default function Settings() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-slate-900">API Keys</h3>
-              <Button className="bg-[#082c59]">Generate New Key</Button>
+              <a href="/admin/api-keys" className="text-sm text-[#082c59] hover:underline" data-testid="settings-api-keys-full-audit-link">
+                Full audit page →
+              </a>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
                 <div>
-                  <p className="font-medium text-amber-800">Security Warning</p>
-                  <p className="text-sm text-amber-700">API keys provide full access to your account. Keep them secret and never share them publicly.</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-4 bg-slate-50 rounded-lg border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Production Key</p>
-                    <p className="text-sm text-slate-500 font-mono">sk_live_••••••••••••••••</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Copy</Button>
-                    <Button variant="outline" size="sm" className="text-red-600">Revoke</Button>
-                  </div>
+                  <p className="font-medium text-amber-800">Security notice</p>
+                  <p className="text-sm text-amber-700">
+                    Third-party integration keys (Stripe, Resend, Infobip, Emergent LLM, MTN MoMo) are stored in the backend <code className="px-1 bg-white/60 rounded">.env</code> file and cannot be edited from the UI. Visit the full audit page above to see each key's masked preview, environment mode, and validate it against the provider.
+                  </p>
                 </div>
               </div>
             </div>
