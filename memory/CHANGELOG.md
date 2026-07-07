@@ -229,6 +229,17 @@
 # Oryno Platform — Changelog
 
 
+## Feb 7, 2026 — i18n Polish Round 3 — Orders/Settings Complete (iter_272 + iter_273)
+**Verified 100% FR coverage on Orders + Settings scoped areas**
+- `Orders.jsx`: empty-state header/body/CTAs (`Aucune commande trouvée`, `Effacer les filtres`, `Parcourir les services`), pagination (`Page X sur Y`, `Précédent`, `Suivant`), admin subtitle (`Consultez et gérez toutes les commandes de la plateforme`), loading state (`Chargement des commandes...`), cancel-confirm `alert/confirm()` prompt, cancel-failed toast — all wrapped with `t()`.
+- `Settings.jsx`: Save button (`Enregistrer` / `Enregistré !`), Security section (`Changer le mot de passe`, all password labels, `Mettre à jour le mot de passe`, `Mot de passe mis à jour !`), Two-Factor block (`Authentification à deux facteurs`, `Application d'authentification`, `Ajoutez une sécurité supplémentaire…`), Active Sessions (`Sessions actives`, `Appareil actuel`, `Actif`), Notifications section (6 toggle rows + `Enregistrer les préférences`).
+- `en.json` / `fr.json` now ~600 keys.
+
+**Remaining out-of-scope leaks (flagged for future pass)**
+- Global TopBar greeting `Welcome back, Customer!` + subtitle `Manage your services and bookings`.
+- EventTicket rules text (operator-set data — cannot be translated by chrome).
+
+
 ## Feb 7, 2026 — i18n Polish Round 2 + Operator 403 Fix (iteration_271)
 **P0 — Operator 403 on Management Pages FIXED** (verified)
 - Created `/app/frontend/src/utils/roleHelpers.js` with `canListOperators(user)` helper.
