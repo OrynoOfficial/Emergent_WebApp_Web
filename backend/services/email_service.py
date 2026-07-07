@@ -1,7 +1,13 @@
 """
 Email service powered by Resend.
 
-Used for transactional emails such as the operator/staff "Confirm your account" invite.
+⚠️  Every function in this module sends TRANSACTIONAL email (invitations,
+account activation, account-security notices). They bypass the user's
+notification preference toggles by design because the user MUST receive
+them for the platform to function. For preference-gated email
+(booking confirmations, refund receipts, promotional, newsletter) use
+`utils.email.send_email_to_user` instead.
+
 The Resend SDK is synchronous, so we run each call in a thread to keep FastAPI non-blocking.
 """
 import asyncio

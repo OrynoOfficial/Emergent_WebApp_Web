@@ -229,6 +229,23 @@
 # Oryno Platform — Changelog
 
 
+## Feb 7, 2026 — Notification-Send Audit + Cleanup
+**Verified no operator-notification `send_email()` calls need swapping to `send_email_to_user()`**
+
+Full audit of every `send_email()` caller in the backend:
+- `routes/invitations.py:128` — user-invitation email, transactional, correctly bypasses gate.
+- `services/email_service::send_account_invite_email` (called from `operators.py`, `users.py`, `operator_users.py`, `auth.py`) — account-activation email, transactional, correctly bypasses gate.
+- `utils/email.py::send_verification_email`, `send_password_reset_email`, `send_otp_email` — all transactional, correctly bypass gate.
+
+**Cleanup:**
+- Removed unused `from utils.email import send_email` in `utils/order_package_sync.py` (dead import).
+- Updated stale doc-comment in `order_package_sync.py` (removed "+ email" — the module only sends in-app notifications via `create_notification`, which IS gated by user prefs).
+- Added prominent docstring warnings on `send_email()` (bypasses gate — transactional only) and `send_email_to_user()` (respects gate — use for booking/promotional/newsletter) so future devs pick the right one.
+- Added module-level docstring warning on `services/email_service.py` that ALL functions there are transactional-only.
+
+**No behavior change.** All existing user-facing notifications already flow through `create_notification()` which respects `push_notifications` + category prefs since iter_274.
+
+
 ## Feb 7, 2026 — Major Feature Pass (iter_274): 5-Part System Enhancement
 **All 5 workstreams verified 100% by testing_agent**
 

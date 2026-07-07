@@ -69,7 +69,13 @@ async def send_email(
     body: str,
     html: bool = False
 ) -> bool:
-    """Public SMTP send helper — enqueues onto Arq so callers don't block.
+    """Raw SMTP send — ALWAYS delivers, bypasses user notification preferences.
+
+    Use this ONLY for TRANSACTIONAL emails that the user must receive regardless
+    of preferences: account verification, OTP, password reset, invitations,
+    identity re-authentication. For every other email (booking confirmation,
+    refund receipt, promotional blasts, newsletters) use `send_email_to_user`
+    which respects the user's email_notifications + category toggles.
 
     Returns True if the job landed in the queue (or ran inline successfully
     on fallback). Note: queued delivery is best-effort; the caller can't
@@ -101,10 +107,27 @@ async def send_email_to_user(
 ) -> bool:
     """Send email respecting the user's notification preferences.
 
-    Skips the send entirely when the user has opted out of `email_notifications`
-    OR the specific `category` (booking / promotional / newsletter).
-    Transactional messages (OTP, invite, password reset) should call `send_email`
+    Use this for ANY user-facing email that isn't strictly required for
+    account access — booking confirmations, refund receipts, promotional
+    blasts, newsletters, weekly digests, etc.
+
+    Skips the send entirely when the user has opted out of
+    `email_notifications` OR the specific `category`
+    (booking_updates / promotional / newsletter). Transactional messages
+    (OTP, invite, verification, password reset) MUST call `send_email`
     directly to bypass the gate.
+
+    Args:
+        user_id: The recipient's user _id. Required — if you don't have a
+            user_id (e.g. sending to a raw email that isn't a user account),
+            call `send_email` and gate manually.
+        to_email: Recipient email address.
+        subject, body, html: Standard email params.
+        category: One of "booking", "promotional", "newsletter". Determines
+            which sub-preference is checked in addition to the master
+            `email_notifications` toggle.
+
+    Returns True if the send was queued, False if gated off.
     """
     try:
         from utils.notification_gate import should_notify
