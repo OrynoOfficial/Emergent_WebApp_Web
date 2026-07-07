@@ -29,6 +29,7 @@ import {
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -93,7 +94,7 @@ const BusinessAnalytics = () => {
 
 // Main Component
 export default function CinemaManagement() {
-  useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cinemas, setCinemas] = useState([]);
   const [movies, setMovies] = useState([]);
@@ -218,11 +219,11 @@ export default function CinemaManagement() {
       const res = await api.get(`/cinema/management/my-cinemas${params}`);
       setCinemas(res.data.cinemas || res.data || []);
       
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch (err) {
-        console.error('Failed to load operators:', err);
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
       }
     } catch (error) {
       console.error('Failed to load cinemas:', error);
@@ -230,7 +231,7 @@ export default function CinemaManagement() {
     } finally {
       setLoading(false);
     }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   const loadMovies = useCallback(async () => {
     try {

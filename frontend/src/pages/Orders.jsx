@@ -42,35 +42,41 @@ import ViewModeToggle from '../components/common/ViewModeToggle';
 
 const ITEMS_PER_PAGE = 10;
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'hotel', label: 'Hotels' },
-  { value: 'restaurant', label: 'Restaurants' },
-  { value: 'travel', label: 'Travel' },
-  { value: 'car_rental', label: 'Car Rental' },
-  { value: 'event', label: 'Events' },
-  { value: 'package', label: 'Packages' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest First' },
-  { value: 'oldest', label: 'Oldest First' },
-  { value: 'highest', label: 'Amount: High to Low' },
-  { value: 'lowest', label: 'Amount: Low to High' },
-];
+// Kept as static value maps; labels are translated inside the component.
+const STATUS_OPTIONS_RAW = ['all', 'pending', 'confirmed', 'completed', 'delivered', 'cancelled'];
+const CATEGORY_OPTIONS_RAW = ['all', 'hotel', 'restaurant', 'travel', 'car_rental', 'event', 'package'];
+const SORT_OPTIONS_RAW = ['newest', 'oldest', 'highest', 'lowest'];
 
 export default function Orders() {
   const { t } = useTranslation();
   const { user, isOperatorUser } = useAuth();
+
+  const STATUS_OPTIONS = STATUS_OPTIONS_RAW.map((v) => ({
+    value: v,
+    label: v === 'all' ? t('orders.all_status') :
+           v === 'pending' ? t('order_detail.status_pending') :
+           v === 'confirmed' ? t('order_detail.status_confirmed') :
+           v === 'completed' ? t('order_detail.status_completed') :
+           v === 'delivered' ? t('order_detail.status_delivered') :
+           t('order_detail.status_cancelled'),
+  }));
+  const CATEGORY_OPTIONS = CATEGORY_OPTIONS_RAW.map((v) => ({
+    value: v,
+    label: v === 'all' ? t('orders.all_categories') :
+           v === 'hotel' ? t('services.hotels') :
+           v === 'restaurant' ? t('services.restaurants') :
+           v === 'travel' ? t('services.travel') :
+           v === 'car_rental' ? t('services.car_rental') :
+           v === 'event' ? t('services.events') :
+           t('services.packages'),
+  }));
+  const SORT_OPTIONS = SORT_OPTIONS_RAW.map((v) => ({
+    value: v,
+    label: v === 'newest' ? t('orders.newest_first') :
+           v === 'oldest' ? t('orders.oldest_first') :
+           v === 'highest' ? t('orders.amount_high_low') :
+           t('orders.amount_low_high'),
+  }));
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -301,7 +307,7 @@ export default function Orders() {
         <TabsContent value="all" className="mt-4 space-y-4" forceMount>
           {/* Admin operator filter */}
           {isAllOrdersView && (
-            <SubpageCard title="Scope" icon={Building2} testId="orders-scope-card">
+            <SubpageCard title={t('orders.scope')} icon={Building2} testId="orders-scope-card">
               <OperatorScopeFilter value={operatorFilter} onChange={setOperatorFilter} />
             </SubpageCard>
           )}
@@ -309,11 +315,11 @@ export default function Orders() {
           {/* Stats Cards moved below filters */}
 
       {/* Search and Filters Section */}
-      <SubpageCard title="Filters" icon={Search} testId="orders-filters-card">
+      <SubpageCard title={t('orders.filters')} icon={Search} testId="orders-filters-card">
         <div className="flex-1 min-w-[220px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <Input
-            placeholder="Search by order number, service, or category..."
+            placeholder={t('orders.search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-8 bg-white border-slate-200 focus:border-[#082c59] focus:ring-[#082c59]/20 text-sm"
@@ -329,21 +335,21 @@ export default function Orders() {
         </div>
         <FilterChipSelect
           icon={Tag}
-          label="Category"
+          label={t('orders.category')}
           value={categoryFilter}
           onChange={setCategoryFilter}
           options={CATEGORY_OPTIONS}
         />
         <FilterChipSelect
           icon={Filter}
-          label="Status"
+          label={t('orders.status')}
           value={statusFilter}
           onChange={setStatusFilter}
           options={STATUS_OPTIONS}
         />
         <FilterChipSelect
           icon={ArrowUpDown}
-          label="Sort"
+          label={t('orders.sort')}
           value={sortBy}
           onChange={setSortBy}
           options={SORT_OPTIONS}
@@ -357,7 +363,7 @@ export default function Orders() {
             className="text-slate-500 hover:text-slate-700 h-8"
           >
             <X className="h-3.5 w-3.5 mr-1" />
-            Clear
+            {t('orders.clear')}
           </Button>
         )}
       </SubpageCard>
@@ -381,7 +387,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-amber-600 font-medium">Pending</p>
+                <p className="text-sm text-amber-600 font-medium">{t('order_detail.status_pending')}</p>
                 <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
               </div>
               <div className="p-3 bg-amber-200 rounded-full">
@@ -394,7 +400,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-emerald-600 font-medium">Completed</p>
+                <p className="text-sm text-emerald-600 font-medium">{t('order_detail.status_completed')}</p>
                 <p className="text-2xl font-bold text-emerald-700">{stats.completed}</p>
               </div>
               <div className="p-3 bg-emerald-200 rounded-full">
@@ -407,7 +413,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-red-600 font-medium">Cancelled</p>
+                <p className="text-sm text-red-600 font-medium">{t('order_detail.status_cancelled')}</p>
                 <p className="text-2xl font-bold text-red-700">{stats.cancelled}</p>
               </div>
               <div className="p-3 bg-red-200 rounded-full">
@@ -435,8 +441,8 @@ export default function Orders() {
       {!loading && (
         <div className="flex items-center justify-between text-sm text-slate-500">
           <span>
-            Showing {paginatedOrders.length} of {filteredAndSortedOrders.length} orders
-            {hasActiveFilters && ` (filtered from ${orders.length} total)`}
+            {t('orders.showing_of_orders', { shown: paginatedOrders.length, total: filteredAndSortedOrders.length })}
+            {hasActiveFilters && ` ${t('orders.filtered_from', { count: orders.length })}`}
           </span>
         </div>
       )}
@@ -718,7 +724,7 @@ export default function Orders() {
                               className="bg-white border-red-200 text-red-600 hover:bg-red-50"
                             >
                               <XCircle className="h-4 w-4 sm:mr-1.5" />
-                              <span className="hidden sm:inline">Cancel</span>
+                              <span className="hidden sm:inline">{t('orders.cancel')}</span>
                             </Button>
                           )}
                           <Button
@@ -728,7 +734,7 @@ export default function Orders() {
                             className="bg-white border-slate-200 hover:border-[#082c59] hover:text-[#082c59]"
                           >
                             <Eye className="h-4 w-4 sm:mr-1.5" />
-                            <span className="hidden sm:inline">View</span>
+                            <span className="hidden sm:inline">{t('orders.view')}</span>
                           </Button>
                           {(order.status === 'completed' || order.status === 'delivered') && (
                             <Button
@@ -737,7 +743,7 @@ export default function Orders() {
                               className="bg-white border-amber-200 text-amber-600 hover:bg-amber-50"
                             >
                               <Star className="h-4 w-4 sm:mr-1.5" />
-                              <span className="hidden sm:inline">Review</span>
+                              <span className="hidden sm:inline">{t('orders.review')}</span>
                             </Button>
                           )}
                         </div>

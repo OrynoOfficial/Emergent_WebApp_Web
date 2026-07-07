@@ -917,18 +917,18 @@ export default function Settings() {
             {/* Basic Information — fill once. Locks after first save. */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 justify-between">
-                <h4 className="font-semibold text-slate-900">Basic Information</h4>
+                <h4 className="font-semibold text-slate-900">{t('settings.basic_info')}</h4>
                 <Badge variant="outline" className="text-[11px] gap-1 border-amber-300 text-amber-700 bg-amber-50">
-                  <Lock className="h-3 w-3" /> Fill once · locks after save
+                  <Lock className="h-3 w-3" /> {t('settings.fill_once_locks')}
                 </Badge>
               </div>
               <p className="text-xs text-slate-500 -mt-2">
-                Once you save these details, only an administrator can change them via User Management.
+                {t('settings.locked_admin_note')}
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="full_name">Full Name {!!user?.full_name && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="full_name">{t('settings.full_name')} {!!user?.full_name && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <Input
                     id="full_name"
                     value={profileData.full_name}
@@ -939,7 +939,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email Address {!!user?.email && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="email">{t('settings.email_address')} {!!user?.email && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -951,7 +951,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone Number {!!user?.phone && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="phone">{t('settings.phone_number')} {!!user?.phone && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <Input
                     id="phone"
                     value={profileData.phone}
@@ -963,18 +963,18 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dob">Date of Birth {!!user?.date_of_birth && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="dob">{t('settings.date_of_birth')} {!!user?.date_of_birth && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <DatePickerField
                     value={profileData.date_of_birth}
                     onChange={(v) => setProfileData({ ...profileData, date_of_birth: v })}
-                    placeholder="Date of birth"
-                    title="Date of Birth"
+                    placeholder={t('settings.date_of_birth')}
+                    title={t('settings.date_of_birth')}
                     minDate={null}
                     disabled={!!user?.date_of_birth}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="id_doc">ID Card / Passport Number {!!user?.id_document_number && <span className="text-xs text-amber-600">(locked)</span>}</Label>
+                  <Label htmlFor="id_doc">{t('settings.id_document_number')} {!!user?.id_document_number && <span className="text-xs text-amber-600">{t('settings.locked_tag')}</span>}</Label>
                   <Input
                     id="id_doc"
                     value={profileData.id_document_number}
@@ -1008,21 +1008,21 @@ export default function Settings() {
 
             {/* Address Information */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-slate-900">Address Information</h4>
+              <h4 className="font-semibold text-slate-900">{t('settings.address_information')}</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <Label htmlFor="address">Street Address</Label>
+                  <Label htmlFor="address">{t('settings.street_address')}</Label>
                   <Input
                     id="address"
                     value={profileData.address || ''}
                     onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                    placeholder="Enter your street address"
+                    placeholder={t('settings.street_address_placeholder')}
                     className="mt-1 bg-white"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="city">City</Label>
+                  <Label htmlFor="city">{t('settings.city')}</Label>
                   <Input
                     id="city"
                     value={profileData.city || ''}
@@ -1032,7 +1032,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="region">Region/State</Label>
+                  <Label htmlFor="region">{t('settings.region_state')}</Label>
                   <Input
                     id="region"
                     value={profileData.region || ''}
@@ -1042,7 +1042,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="postal_code">Postal Code</Label>
+                  <Label htmlFor="postal_code">{t('settings.postal_code')}</Label>
                   <Input
                     id="postal_code"
                     value={profileData.postal_code || ''}
@@ -1052,7 +1052,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="country">Country</Label>
+                  <Label htmlFor="country">{t('settings.country')}</Label>
                   <Input
                     id="country"
                     value={profileData.country || 'Cameroon'}
@@ -2120,7 +2120,7 @@ export default function Settings() {
                   <LogOut className="h-5 w-5" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">Logout</p>
-                    <p className="text-xs text-red-400">Sign out of your account</p>
+                    <p className="text-xs text-red-400">{t('settings.sign_out_label')}</p>
                   </div>
                 </button>
               </div>

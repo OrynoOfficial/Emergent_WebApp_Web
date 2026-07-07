@@ -1,0 +1,77 @@
+{
+  "summary": "Tested the 4 polish items from iteration_268 follow-up. None of the 4 fixes fully landed: (1) operator role still triggers 8× 403 on /api/operators/ across management pages with 6 'Failed to load operators' console errors; (2) Orders list is only partially translated in FR — Filters card, search placeholder, status pills, row actions, and results counter are still English; (3) Settings right-pane form (Profile section) is entirely in English; (4) EventTicket right-panel description still renders the English 'Present this ticket (or QR below) at the venue entrance.' string. Admin flow (item #2 in review) does pass — GET /api/operators returns 200 and the operator picker still works.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "management/*Management.jsx (all 8 pages)", "issue": "Non-admin operator role STILL hits /api/operators/ → 403 on every page (Cinema, Events, Hotels, Banquets, CarRental, Laundry, Restaurants, Packages). Also console.error 'Failed to load operators: <err>' logged 6×. canListOperators guard is present in the page-level loadX() callbacks, but a second call site is firing anyway. Suspect an unguarded useEffect / shared shell component (e.g., OperatorScopeFilter fires /operators/by-service which is fine, but something is still hitting the bare /operators/ endpoint — possibly PodManagement.jsx (line 74), AddUserWizard.jsx (line 79), or SalesManagement.jsx which all call api.get('/operators/') unconditionally, and might be mounted in a shared admin/operator layout after login). Also note operator@test.com is being redirected to /admin/analytics on login which suggests the role gate for admin routes is too permissive.", "selector": "api.get('/operators/')", "priority": "HIGH"},
+      {"component": "pages/Orders.jsx", "issue": "FR i18n incomplete on the Orders list. Not translated: Filters card title ('Filters' still), search placeholder ('Search by order number, service, or category…'), status stat-card titles ('Pending', 'Completed', 'Cancelled'), row action buttons ('View', 'Cancel'), card labels ('TOTAL', 'CONFIRMED', 'PENDING' pills), results counter ('Showing 10 of 278 orders'). Only the page header 'Mes commandes', 'Nouvelle réservation', 'Suivez et gérez vos réservations', 'Total des commandes', and 'Total dépensé' were switched.", "selector": "Orders.jsx", "priority": "HIGH"},
+      {"component": "pages/Settings.jsx (right pane)", "issue": "Profile right-pane is entirely in English while FR is active: 'Basic Information', 'Fill once - locks after save', 'Once you save these details, only an administrator can change them via User Management.', 'Full Name (locked)', 'Email Address (locked)', 'Phone Number (locked)', 'Date of Birth', 'ID Card / Passport Number (locked)', 'Gender (locked)', gender option 'Male', 'Address Information', 'Street Address', 'City', 'Region/State', 'Postal Code', 'Country' and its default value 'Cameroon' — all NOT translated. Sidebar labels (Profil, Favoris, Localisation, Sécurité, Notifications, Préférences, Moyens de paiement, Informations légales, À propos, Paramètres) DO translate correctly, so the render-time t() calls only exist on the left nav, not on the form fields.", "selector": "Settings.jsx form column", "priority": "HIGH"},
+      {"component": "components/tickets/EventTicket.jsx", "issue": "The Right-panel 'Informations importantes' description still reads 'Present this ticket (or QR below) at the venue entrance.' in English when i18n is FR. Expected 'Présentez ce billet (ou le QR ci-dessous) à l'entrée du lieu.' The line ~104 rightPanelDescription t() replacement is not effective at runtime.", "selector": "EventTicket.jsx line 104", "priority": "HIGH"},
+      {"component": "Sidebar 'Logout' item (customer chrome)", "issue": "Bottom-of-sidebar item still reads 'Logout / Sign out of your account' in English while the rest of the sidebar is FR. The nav item just above (in the collapsed footer) does render as 'Déconnexion' correctly, so this is the standalone 'Logout' card only.", "selector": "sidebar logout card", "priority": "MEDIUM"},
+      {"component": "i18n <html lang> attribute", "issue": "document.documentElement.lang stays 'en' after localStorage 'oryno_language'='fr' is set and i18n bundle actually switched to French. i18n/index.js is supposed to sync <html lang>, but it isn't updating on locale change/first-paint.", "selector": "html[lang]", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Operator login redirect", "issue": "operator@test.com is redirected to /admin/analytics after login. If that page (or any admin shell mounted after login) calls /operators/ unconditionally, it will always 403 for the operator role even after the management-page guards are correct.", "affected_selectors": ["/admin/analytics", "GET /api/operators/"]}
+    ],
+    "design_issues": []
+  },
+  "admin_verification": {
+    "GET /api/operators/ returns 200 for admin": true,
+    "GET /api/operators/by-service returns 200 for admin": true,
+    "admin_ops_calls_logged": [
+      "/api/operators/by-service?service_type=cinema 200",
+      "/api/operators/ 200",
+      "/api/operators/by-service?service_type=events 200",
+      "/api/operators/ 200",
+      "/api/operators/by-service?service_type=hotel 200",
+      "/api/operators/ 200"
+    ]
+  },
+  "operator_verification": {
+    "403_calls_captured": 8,
+    "pages_that_403ed": ["/management/cinema","/management/events","/management/hotels","/management/banquets","/management/car-rental","/management/laundry","/management/restaurants","/management/packages"],
+    "console_errors_seen": ["error: Failed to load operators: <err> (×6)"]
+  },
+  "orders_fr_verification": {
+    "translated_ok": ["Mes commandes", "Nouvelle réservation", "Suivez et gérez vos réservations", "Total des commandes", "Total dépensé"],
+    "still_english": ["Filters", "Search by order number, service, or category…", "Pending", "Completed", "Cancelled", "TOTAL", "View", "Cancel", "Showing 10 of 278 orders", "CONFIRMED/PENDING pills"]
+  },
+  "settings_fr_verification": {
+    "sidebar_ok": true,
+    "right_pane_translated": false,
+    "logout_card_translated": false
+  },
+  "event_ticket_fr_verification": {
+    "modal_chrome_ok": true,
+    "modal_chrome_strings": ["Détails de la commande", "Récapitulatif du paiement", "Informations sur le service", "Informations importantes", "Règles du lieu", "Titulaire", "Quand", "Où", "Réservée le", "Total payé", "Sous-total", "Méthode", "Non Spécifié", "Fermer", "Imprimer"],
+    "right_panel_description_translated": false,
+    "actual_string_seen": "Present this ticket (or QR below) at the venue entrance."
+  },
+  "test_report_links": [
+    "/app/test_reports/orders_fr.jpeg",
+    "/app/test_reports/settings_fr.jpeg",
+    "/app/test_reports/event_ticket_en_leak.jpeg"
+  ],
+  "action_items": [
+    "Find the second unguarded call site for /api/operators/ that fires when operator role visits /management/* pages (candidates: /pages/admin/PodManagement.jsx line 74, /components/admin/AddUserWizard.jsx line 79, /pages/admin/SalesManagement.jsx line 148, /pages/admin/OperatorsManagement.jsx line 124, /pages/admin/OperatorCategoriesPage.jsx line 81). Wrap each with canListOperators(user) or move to /operators/by-service. Also review why operator@test.com lands on /admin/analytics after login — likely the role-gate for admin routes needs tightening.",
+    "Add missing t() wrappers on Orders.jsx: Filters card title, search placeholder, STATUS_OPTIONS labels ('All statuses', 'Pending', 'Completed', 'Cancelled'), CATEGORY_OPTIONS labels, SORT_OPTIONS labels, the stat-card titles for Pending/Completed/Cancelled cards, row action buttons ('View'/'Cancel'/'Rate'), the 'Showing X of Y orders' counter, and card badge labels (CONFIRMED/PENDING/CANCELLED pills + 'TOTAL' word).",
+    "Wrap Settings.jsx right-pane labels with t(): 'Basic Information', 'Fill once - locks after save', help text, 'Full Name', 'Email Address', 'Phone Number', 'Date of Birth', 'ID Card / Passport Number', 'Gender' + gender options ('Male'/'Female'/'Other'/'Prefer not to say'), '(locked)' suffix, 'Address Information', 'Street Address', 'City', 'Region/State', 'Postal Code', 'Country'. Also translate the sidebar 'Logout / Sign out of your account' card at the bottom.",
+    "In EventTicket.jsx line ~104, verify the t('orders.event_venue_present*') key resolves in the fr.json bundle and is actually used at render (currently the hard-coded English 'Present this ticket (or QR below) at the venue entrance.' still renders). Same check for the doors_open variant.",
+    "i18n/index.js should set document.documentElement.lang on init and on language change so html[lang] reflects the active locale."
+  ],
+  "critical_code_review_comments": [
+    "canListOperators guard is duplicated across 9 pages (loadEvents/loadHotels/…). Consider centralising into a shared hook (e.g., useOperatorsList()) so a single place owns the fetch + role gate + caching.",
+    "Multiple admin pages still call api.get('/operators/') unconditionally in useEffect (PodManagement, SalesManagement, OperatorsManagement, OperatorCategoriesPage, AddUserWizard). These will silently 403 for non-admins even if the page is technically admin-only, because the route guard elsewhere is not preventing the mount early enough.",
+    "Orders.jsx claims STATUS_OPTIONS/CATEGORY_OPTIONS/SORT_OPTIONS are translated at render — but the rendered DOM still shows English text ('Filters', 'View', 'Cancel', 'Pending', etc.). Verify the component actually reads from the memoised translated arrays instead of a top-of-file const.",
+    "Settings.jsx right-pane looks like a sibling component that was missed by the i18n pass — probably a <ProfileSection /> or inline JSX block that reads hard-coded strings rather than t() keys.",
+    "console.error('Failed to load operators:', error) leaks the raw error into user-facing devtools; wrap in a silent catch (`catch { /* silent */ }`) like other management pages already do."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "~25% (4 of 4 targeted fixes have visible regressions)"},
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login flow is a 3-step: click 'Login to Your Account' → email → 'Continue' → password → submit (French labels are 'Se connecter à votre compte' / 'Continuer'). Force-set FR before login by evaluating `localStorage.setItem('oryno_language','fr')` on the domain — the header EN/FR toggle is not visible on the customer chrome. Orders row buttons still render as 'View' (English) even when the rest of the shell is French; use text=View to open the modal. Modal chrome IS translated so `Détails de la commande` is a reliable selector. The event ticket English leak ('Present this ticket…') is visible on ANY event-category order; the first three orders in the list are Pytest Bl Show / Pytest Concert which are all event category.",
+  "test_credentials": "Operator: operator@test.com / testpassword123, Admin: admin@test.com / testpassword123, Customer: customer@test.com / testpassword123",
+  "rca of the issue": "1) Operator 403s — page-level loadX() functions correctly gate with canListOperators(user), but there is an additional /operators/ call firing 1x per management-page navigation. The 8 exact matches to 8 pages navigated suggests a shell-level or route-level fetch. Candidates: (a) an admin-only useEffect in a top-level layout still mounted for the operator role (operator@test.com is redirected to /admin/analytics on login, indicating admin routes ARE reachable), (b) one of the 5 admin pages that call api.get('/operators/') unconditionally is being visited transiently on route change, or (c) a shared 'operator selector' component in the management shell that hasn't been guarded. 2) i18n misses — the intended Orders.jsx/Settings.jsx/EventTicket.jsx render-time t() changes did not reach the actually-rendered JSX. Verify (i) that the edits were saved & the frontend has hot-reloaded (I did hard reload), (ii) that the JSX blocks reading these labels are the same ones the developer edited (there may be a duplicate/older component being rendered)."
+}

@@ -23,6 +23,7 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -131,7 +132,7 @@ const BusinessAnalytics = () => {
 };
 
 export default function LaundryManagement() {
-  useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pressings, setPressings] = useState([]);
   const [replacePressing, setReplacePressing] = useState(null);
@@ -191,12 +192,12 @@ export default function LaundryManagement() {
       // Backend returns `shops` from my-shops; older callers used `pressings`.
       setPressings(res.data.shops || res.data.pressings || res.data || []);
       
-      // Load operators
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch (err) {
-        console.error('Failed to load operators:', err);
+      // Load operators (admins only)
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
       }
     } catch (error) {
       console.error('Failed to load:', error);
@@ -204,7 +205,7 @@ export default function LaundryManagement() {
     } finally {
       setLoading(false);
     }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   useEffect(() => {
     loadPressings();

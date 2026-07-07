@@ -21,6 +21,7 @@ import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { geocodeAddress } from '@/utils/geocode';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
@@ -245,7 +246,7 @@ const EnhancedMenuItemCard = ({ item, onEdit, onDelete, canEdit, canDelete }) =>
 };
 
 export default function RestaurantManagement() {
-  useAuth();
+  const { user } = useAuth();
   const { hasPermission } = usePermissions();
   
   // Data state
@@ -310,15 +311,14 @@ export default function RestaurantManagement() {
     }
   }, []);
 
-  // Load operators
+  // Load operators (admins only — non-admins get 403)
   const loadOperators = useCallback(async () => {
+    if (!canListOperators(user)) return;
     try {
       const res = await api.get('/operators/');
       setOperators(res.data.operators || []);
-    } catch (error) {
-      console.error('Failed to load operators:', error);
-    }
-  }, []);
+    } catch { /* silent */ }
+  }, [user]);
 
   useEffect(() => {
     loadRestaurants();

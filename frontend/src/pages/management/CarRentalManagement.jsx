@@ -26,6 +26,7 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -363,7 +364,7 @@ const CarCard = ({ car, onView, onEdit, onDelete, onReplace }) => {
 
 // Main Component
 export default function CarRentalManagement() {
-  useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cars, setCars] = useState([]);
   const [operators, setOperators] = useState([]);
@@ -437,11 +438,11 @@ export default function CarRentalManagement() {
       }));
       setCars(normalised);
       
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch (err) {
-        console.error('Failed to load operators:', err);
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
       }
     } catch (error) {
       console.error('Failed to load cars:', error);
@@ -449,7 +450,7 @@ export default function CarRentalManagement() {
     } finally {
       setLoading(false);
     }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   useEffect(() => {
     loadCars();

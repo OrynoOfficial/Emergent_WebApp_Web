@@ -101,7 +101,7 @@ export default function EventTicket({ order }) {
       operatorName={order?.operator_name}
       extraSections={extraSections}
       rightPanelTitle={t("orders.important_info")}
-      rightPanelDescription={`Present this ticket (or the QR below) at the venue entrance.${doors ? ` Doors open at ${doors}.` : ''}`}
+      rightPanelDescription={doors ? t('orders.event_venue_present_with_doors', { time: doors }) : t('orders.event_venue_present')}
       rulesTitle={t("orders.venue_rules")}
       rules={policies}
     />

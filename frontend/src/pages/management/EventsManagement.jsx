@@ -22,6 +22,7 @@ import OperatorBookingsList from '@/components/management/shared/OperatorBooking
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import DatePickerField from '@/components/shared/DatePickerField';
@@ -54,7 +55,7 @@ const DEFAULT_EVENT_FORM = {
 };
 
 export default function EventsManagement() {
-  useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [mgmtSubTab, setMgmtSubTab] = useState('locations');
   const [events, setEvents] = useState([]);
@@ -113,15 +114,17 @@ export default function EventsManagement() {
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
       const res = await api.get(`/events/management/my-events${params}`);
       setEvents(res.data.events || res.data || []);
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch (err) { console.error('Failed to load operators:', err); }
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
+      }
     } catch (error) {
       console.error('Failed to load events:', error);
       setEvents([]);
     } finally { setLoading(false); }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
 

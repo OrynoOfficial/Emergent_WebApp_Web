@@ -24,6 +24,7 @@ import {
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import { toast } from 'sonner';
@@ -1310,11 +1311,11 @@ export default function BanquetManagement() {
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
       const res = await api.get(`/banquets/management/my-venues${params}`);
       setServices(res.data.venues || res.data.banquets || []);
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch (err) {
-        console.error('Failed to load operators:', err);
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
       }
     } catch (err) {
       console.error(err);
@@ -1322,7 +1323,7 @@ export default function BanquetManagement() {
     } finally {
       setLoading(false);
     }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   useEffect(() => { loadServices(); }, [loadServices]);
 

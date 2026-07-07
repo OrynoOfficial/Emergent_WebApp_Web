@@ -17,6 +17,7 @@ import {
 import api from '@/api/client';
 import { formatFCFA } from '@/utils/currency';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -149,7 +150,7 @@ const ShipmentCard = ({ pkg, onView, onDelete, onAdvance }) => {
 };
 
 export default function PackageShipments() {
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
   const [packages, setPackages] = useState([]);
   const [operators, setOperators] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,17 +181,19 @@ export default function PackageShipments() {
       if (scopeOperatorId) params.set('operator_id', scopeOperatorId);
       const res = await api.get(`/packages/?${params.toString()}`);
       setPackages(res.data.packages || []);
-      try {
-        const opRes = await api.get('/operators/');
-        setOperators(opRes.data.operators || opRes.data || []);
-      } catch { /* ignore */ }
+      if (canListOperators(user)) {
+        try {
+          const opRes = await api.get('/operators/');
+          setOperators(opRes.data.operators || opRes.data || []);
+        } catch { /* silent */ }
+      }
     } catch (error) {
       console.error('Failed to load packages:', error);
       setPackages([]);
     } finally {
       setLoading(false);
     }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   useEffect(() => { loadPackages(); }, [loadPackages]);
 

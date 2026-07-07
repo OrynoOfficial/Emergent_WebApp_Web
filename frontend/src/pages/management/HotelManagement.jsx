@@ -20,6 +20,7 @@ import ReplaceResourceModal from '@/components/management/shared/ReplaceResource
 import { geocodeAddress } from '@/utils/geocode';
 import api from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { canListOperators } from '@/utils/roleHelpers';
 import PermissionGate from '@/components/common/PermissionGate';
 import OperatorScopeFilter from '@/components/common/OperatorScopeFilter';
 import ViewModeToggle from '@/components/common/ViewModeToggle';
@@ -170,13 +171,15 @@ export default function HotelManagement() {
       const params = scopeOperatorId ? `?operator_id=${scopeOperatorId}` : '';
       const res = await api.get(`/hotels/management/my-hotels${params}`);
       setHotels(res.data.hotels || res.data || []);
-      try { 
-        const opRes = await api.get('/operators/'); 
-        setOperators(opRes.data.operators || opRes.data || []); 
-      } catch { /* ignore operators fetch error */ }
+      if (canListOperators(user)) {
+        try { 
+          const opRes = await api.get('/operators/'); 
+          setOperators(opRes.data.operators || opRes.data || []); 
+        } catch { /* silent */ }
+      }
     } catch { setHotels([]); }
     finally { setLoading(false); }
-  }, [scopeOperatorId]);
+  }, [scopeOperatorId, user]);
 
   const loadRooms = useCallback(async (hotelId) => {
     try { 
