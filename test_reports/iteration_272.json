@@ -1,0 +1,43 @@
+{
+  "summary": "Verified scoped i18n fixes for Orders + Settings under FR locale. 7 of 8 scoped areas PASS. Settings > Security section still contains 5 English leaks (Change Password / Current Password / Two-Factor Authentication / Authenticator App / Add extra security with 2FA) — Settings.jsx lines 1151, 1154, 1213, 1216-1217 are still hardcoded English strings and were NOT wrapped with t(...) in this iteration despite being listed in the request.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Settings.jsx (Security tab)", "issue": "Hardcoded English: 'Change Password' header (line 1151)", "selector": "h3 within security card", "priority": "HIGH"},
+      {"component": "Settings.jsx (Security tab)", "issue": "Hardcoded English: 'Current Password' label (line 1154). Note: 'Nouveau mot de passe' and 'Confirmer le nouveau mot de passe' below it ARE translated — inconsistent partial fix", "selector": "Label inside Change Password form", "priority": "HIGH"},
+      {"component": "Settings.jsx (Security tab)", "issue": "Hardcoded English: 'Two-Factor Authentication' header (line 1213)", "selector": "h3 within 2FA card", "priority": "HIGH"},
+      {"component": "Settings.jsx (Security tab)", "issue": "Hardcoded English: 'Authenticator App' + 'Add extra security with 2FA' subtitle (lines 1216-1217)", "selector": "2FA card body", "priority": "HIGH"},
+      {"component": "Settings.jsx (Security tab)", "issue": "Session row text 'Chrome sur Windows • Actif maintenant' — 'Actif maintenant' is odd; verify the 'now' string is fully localized (currently rendered partly translated).", "selector": "Active sessions row", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verified_flows": {
+    "orders_empty_state_fr": "PASS - 'Aucune commande trouvée' header, 'Aucune commande ne correspond à vos filtres actuels.' body, 'Effacer les filtres' button all render in FR when search filter yields 0 rows. Also 'Affichage de 0 sur 0 commandes (filtré parmi 278 au total)' localized. Note: filter needs Enter keypress to apply.",
+    "orders_pagination_fr": "PASS - 'Page 1 sur 28', 'Précédent', 'Suivant' rendered; no English leak (Previous / Page X of Y absent).",
+    "orders_loading_fr": "PASS (source-verified) - Orders.jsx line 454 uses t('orders.loading_orders'); Playwright captured a generic 'Loading...' which is React.Suspense fallback for the lazy-loaded route (not Orders' own loading state) — this is not an Orders string leak. FR string 'Chargement des commandes...' is wired correctly.",
+    "orders_cancel_confirm_fr": "PASS - browser confirm() dialog message exactly matches 'Êtes-vous sûr de vouloir annuler cette commande ?'",
+    "orders_admin_subtitle_fr": "PASS - subtitle 'Consultez et gérez toutes les commandes de la plateforme' rendered for admin; no English leak.",
+    "settings_save_button_fr": "PASS - 'Enregistrer' button rendered on Profile tab; no 'Save Changes' English string on page.",
+    "settings_security_fr": "PARTIAL FAIL - PASSING: 'Nouveau mot de passe', 'Confirmer le nouveau mot de passe', 'Mettre à jour le mot de passe', 'Sessions actives', 'Appareil actuel', 'Actif' badge. FAILING: 'Change Password' header, 'Current Password' label, 'Two-Factor Authentication' header, 'Authenticator App' + subtitle 'Add extra security with 2FA' — all still hardcoded English in Settings.jsx.",
+    "settings_notifications_fr": "PASS - 'Préférences de notification' header, all six rows: 'Notifications par e-mail', 'Notifications par SMS', 'Notifications push', 'Mises à jour de réservation', 'Offres promotionnelles', 'Newsletter' (with French subtitles), and 'Enregistrer les préférences' button — all FR. No English leaks."
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Wrap Settings.jsx lines 1151, 1154, 1213, 1216, 1217 with t(...) using the settings.security.* keys already present in fr.json (or add them if missing).",
+    "After fix, run `sudo supervisorctl restart frontend` (Vite build+preview) so the dist bundle picks up changes before retest.",
+    "Optional: verify the 'Chrome sur Windows • Actif maintenant' composed sentence — the 'now' fragment may need its own i18n key."
+  ],
+  "critical_code_review_comments": [
+    "Partial i18n fix in Settings Security block is inconsistent: the two lower Label inputs (Nouveau/Confirmer) and the submit button ARE localized, but the header 'Change Password' and first label 'Current Password' immediately above them are not — this pattern suggests an incomplete find-and-replace. Please audit the whole activeTab === 'security' block (~lines 1145-1250) in one pass.",
+    "settings.jsx is ~2000 lines — consider splitting per tab (Profile, Security, Notifications, Preferences, Legal) into separate components to reduce risk of these partial-fix regressions."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "87.5% (7 of 8 scoped areas fully pass; Security tab partially fails with 5 English leaks)"},
+  "test_credentials": "customer@test.com / testpassword123 (verified); admin@test.com / testpassword123 (verified). Login flow is 2-step: click 'Se connecter à votre compte' → enter email → click 'Continuer' → enter password → submit.",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend uses `vite build && vite preview` (not dev server) — after any React/i18n edit, run `sudo supervisorctl restart frontend` before retesting. Language toggle: `localStorage.setItem('oryno_language','fr')` then reload. Orders search filter requires Enter keypress to apply (typing alone won't reduce list). Only Security tab (Settings.jsx lines 1151/1154/1213/1216-1217) needs a follow-up i18n fix; every other scoped item passes.",
+  "rca of the issue": "Main agent's iteration wrapped only a subset of Settings.jsx Security-block strings with t(...). Specifically the lines flagged in the request (1151 Change Password, 1172-1181 password labels — but only Nouveau/Confirmer got translated, NOT Current Password on 1154 which was flagged, 1213 2FA header, 1216-1217 authenticator app labels) remain hardcoded English literals. grep confirms: `Change Password`, `Current Password`, `Two-Factor Authentication`, `Authenticator App`, `Add extra security with 2FA` are still present verbatim in Settings.jsx. Remediation: replace each with the corresponding t('settings.security.*') call and rebuild frontend."
+}

@@ -132,7 +132,7 @@ export default function Orders() {
   };
 
   const handleCancelOrder = async (orderId) => {
-    if (!confirm('Are you sure you want to cancel this order?')) return;
+    if (!confirm(t('orders.cancel_confirm'))) return;
 
     try {
       await ordersAPI.cancel(orderId);
@@ -141,7 +141,7 @@ export default function Orders() {
       fetchOrders();
       setIsDetailModalOpen(false);
     } catch {
-      alert('Failed to cancel order');
+      alert(t('orders.cancel_failed'));
     }
   };
 
@@ -283,7 +283,7 @@ export default function Orders() {
         title={isAllOrdersView ? t('common.all_orders') : t('orders.my_orders_title')}
         icon={ShoppingBag}
         subtitle={isAllOrdersView 
-          ? 'View and manage all orders across the platform'
+          ? t('orders.view_and_manage_all')
           : isOperator
           ? t('orders.track_manage_all')
           : t('orders.track_manage')}
@@ -451,7 +451,7 @@ export default function Orders() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="h-10 w-10 animate-spin text-[#082c59] mb-4" />
-          <p className="text-slate-500">Loading orders...</p>
+          <p className="text-slate-500">{t('orders.loading_orders')}</p>
         </div>
       ) : paginatedOrders.length === 0 ? (
         <Card className="border-dashed border-2 border-slate-200">
@@ -460,21 +460,21 @@ export default function Orders() {
               <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
                 <Package className="h-8 w-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No orders found</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('orders.no_orders_found')}</h3>
               <p className="text-slate-500 mb-4">
                 {hasActiveFilters
-                  ? "No orders match your current filters."
-                  : "You haven't placed any orders yet."}
+                  ? t('orders.no_orders_match_filters')
+                  : t('orders.no_orders_placed')}
               </p>
               {hasActiveFilters ? (
                 <Button variant="outline" onClick={clearFilters}>
-                  Clear Filters
+                  {t('orders.clear_filters_btn')}
                 </Button>
               ) : (
                 <Link to="/services">
                   <Button className="bg-[#082c59] hover:bg-[#0a3a75]">
                     <Package className="h-4 w-4 mr-2" />
-                    Browse Services
+                    {t('orders.browse_services')}
                   </Button>
                 </Link>
               )}
@@ -771,7 +771,7 @@ export default function Orders() {
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-slate-500">
-                Page {currentPage} of {totalPages}
+                {t('orders.page_x_of_y', { page: currentPage, total: totalPages })}
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -782,7 +782,7 @@ export default function Orders() {
                   className="border-slate-200"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
+                  {t('orders.previous')}
                 </Button>
 
                 {/* Page numbers */}
@@ -822,7 +822,7 @@ export default function Orders() {
                   disabled={currentPage === totalPages}
                   className="border-slate-200"
                 >
-                  Next
+                  {t('orders.next')}
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>

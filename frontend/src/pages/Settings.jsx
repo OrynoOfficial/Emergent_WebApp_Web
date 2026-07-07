@@ -1080,7 +1080,7 @@ export default function Settings() {
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                {saveSuccess.profile ? 'Saved!' : 'Save Changes'}
+                {saveSuccess.profile ? t('settings.saved_exclaim') : t('settings.save_changes')}
               </Button>
             </div>
           </div>
@@ -1169,7 +1169,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div>
-                  <Label>New Password</Label>
+                  <Label>{t('settings.new_password')}</Label>
                   <Input
                     type="password"
                     value={securityData.new_password}
@@ -1178,7 +1178,7 @@ export default function Settings() {
                   />
                 </div>
                 <div>
-                  <Label>Confirm New Password</Label>
+                  <Label>{t('settings.confirm_new_password')}</Label>
                   <Input
                     type="password"
                     value={securityData.confirm_password}
@@ -1202,7 +1202,7 @@ export default function Settings() {
                   ) : (
                     <Lock className="mr-2 h-4 w-4" />
                   )}
-                  {saveSuccess.security ? 'Password Updated!' : 'Update Password'}
+                  {saveSuccess.security ? t('settings.password_updated') : t('settings.update_password')}
                 </Button>
               </div>
             </div>
@@ -1226,17 +1226,17 @@ export default function Settings() {
             <Separator />
 
             <div>
-              <h3 className="font-bold text-slate-900 mb-4">Active Sessions</h3>
+              <h3 className="font-bold text-slate-900 mb-4">{t('settings.active_sessions')}</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center gap-3">
                     <Smartphone className="h-5 w-5 text-green-600" />
                     <div>
-                      <p className="font-medium text-slate-900">Current Device</p>
-                      <p className="text-sm text-slate-500">Chrome on Windows • Active now</p>
+                      <p className="font-medium text-slate-900">{t('settings.current_device')}</p>
+                      <p className="text-sm text-slate-500">{t('settings.current_device_desc')}</p>
                     </div>
                   </div>
-                  <Badge className="bg-green-100 text-green-700">Active</Badge>
+                  <Badge className="bg-green-100 text-green-700">{t('settings.active_badge')}</Badge>
                 </div>
               </div>
             </div>
@@ -1246,15 +1246,15 @@ export default function Settings() {
       case 'notifications':
         return (
           <div className="space-y-4">
-            <h3 className="font-bold text-slate-900 mb-4">Notification Preferences</h3>
+            <h3 className="font-bold text-slate-900 mb-4">{t('settings.notification_preferences')}</h3>
             
             {[
-              { key: 'email_notifications', label: 'Email Notifications', desc: 'Receive updates via email' },
-              { key: 'sms_notifications', label: 'SMS Notifications', desc: 'Receive updates via text message' },
-              { key: 'push_notifications', label: 'Push Notifications', desc: 'Browser push notifications' },
-              { key: 'booking_updates', label: 'Booking Updates', desc: 'Status changes and reminders' },
-              { key: 'promotional', label: 'Promotional', desc: 'Deals, offers, and discounts' },
-              { key: 'newsletter', label: 'Newsletter', desc: 'Weekly digest and news' },
+              { key: 'email_notifications', label: t('settings.notif_email'), desc: t('settings.notif_email_desc') },
+              { key: 'sms_notifications', label: t('settings.notif_sms'), desc: t('settings.notif_sms_desc') },
+              { key: 'push_notifications', label: t('settings.notif_push'), desc: t('settings.notif_push_desc') },
+              { key: 'booking_updates', label: t('settings.notif_booking'), desc: t('settings.notif_booking_desc') },
+              { key: 'promotional', label: t('settings.notif_promo'), desc: t('settings.notif_promo_desc') },
+              { key: 'newsletter', label: t('settings.notif_newsletter'), desc: t('settings.notif_newsletter_desc') },
             ].map((item) => (
               <div key={item.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                 <div>
@@ -1285,7 +1285,7 @@ export default function Settings() {
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                {saveSuccess.notifications ? 'Saved!' : 'Save Preferences'}
+                {saveSuccess.notifications ? t('settings.saved_exclaim') : t('settings.save_preferences')}
               </Button>
             </div>
           </div>
